@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import tokens from '../shared-design-tokens/build/ts/tokens-admin'
 
 export default {
   content: [
@@ -11,21 +12,30 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Brand & semantic colors from shared tokens
+        ...tokens.colors,
+        // Preserve sidebar shorthand (token has separate sidebar/sidebarHover keys)
         sidebar: {
-          DEFAULT: '#1e293b',
-          hover: '#334155',
+          DEFAULT: tokens.colors.brand.sidebar,
+          hover: tokens.colors.brand.sidebarHover,
         },
+        // Preserve primary palette shorthand for backward compat (bg-primary-50 etc.)
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+          50: tokens.colors.brand.primaryBg,
+          100: tokens.colors.brand.primaryBg,
+          500: tokens.colors.brand.primary,
+          600: tokens.colors.brand.primaryDark,
+          700: tokens.colors.brand.primaryDark,
         },
       },
+      borderRadius: tokens.borderRadius,
+      boxShadow: tokens.boxShadow,
       fontFamily: {
-        sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+        sans: tokens.fontFamily.sans,
       },
+      fontSize: tokens.fontSize,
+      fontWeight: tokens.fontWeight,
+      spacing: tokens.spacing,
     },
   },
   plugins: [],
