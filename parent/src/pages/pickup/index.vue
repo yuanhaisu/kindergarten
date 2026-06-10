@@ -42,17 +42,17 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx; background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx; background: $color-bg-page; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
-.page-title { color: $parent-text; font-size: 36rpx; font-weight: 800; }
+.page-title { color: $color-text-primary; font-size: 36rpx; font-weight: 800; }
 .link-btn { padding: 14rpx 28rpx; border-radius: 999rpx; background: $parent-blue; color: #fff; font-size: 24rpx; }
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $parent-muted; font-size: 28rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: 28rpx; }
 .list { display: flex; flex-direction: column; gap: 18rpx; }
-.card { padding: 26rpx; border-radius: 24rpx; background: $parent-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.card { padding: 26rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
 .card-head { display: flex; justify-content: space-between; margin-bottom: 8rpx; }
 .type { padding: 6rpx 16rpx; border-radius: 999rpx; font-size: 22rpx; }
 .type.in { background: #d4f0d0; color: #3a7a33; }
 .type.out { background: #cfe1ff; color: #2f5a8c; }
-.date { color: $parent-muted; font-size: 22rpx; }
-.person { display: block; color: $parent-text; font-size: 26rpx; }
+.date { color: $color-text-muted; font-size: 22rpx; }
+.person { display: block; color: $color-text-primary; font-size: 26rpx; }
 </style>

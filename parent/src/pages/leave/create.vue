@@ -111,30 +111,30 @@ async function handleSubmit() {
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx 160rpx; background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx 160rpx; background: $color-bg-page; }
 .spacer-h12 { height: 24rpx; }
 .spacer-h16 { height: 32rpx; }
 .spacer-h32 { height: 64rpx; }
 
-.card { padding: 32rpx; border-radius: $parent-radius-md; background: $parent-card; box-shadow: $parent-shadow; }
-.section-title { font-size: 28rpx; font-weight: 600; color: $parent-text; }
+.card { padding: 32rpx; border-radius: $border-radius-lg; background: $color-bg-card; box-shadow: $shadow-sm; }
+.section-title { font-size: 28rpx; font-weight: 600; color: $color-text-primary; }
 
 .type-row { display: flex; gap: 16rpx; }
-.type-chip { flex: 1; padding: 24rpx 16rpx; border-radius: $parent-radius; background: $parent-bg; text-align: center; border: 2rpx solid transparent; }
-.type-chip.active { background: #FFF7ED; border-color: $parent-primary; }
-.type-label { display: block; font-size: 26rpx; font-weight: 600; color: $parent-text; }
-.type-desc { display: block; margin-top: 8rpx; font-size: 22rpx; color: $parent-hint; }
-.type-chip.active .type-label { color: $parent-primary; }
+.type-chip { flex: 1; padding: 24rpx 16rpx; border-radius: $border-radius-md; background: $color-bg-page; text-align: center; border: 2rpx solid transparent; }
+.type-chip.active { background: #FFF7ED; border-color: $color-brand-primary; }
+.type-label { display: block; font-size: 26rpx; font-weight: 600; color: $color-text-primary; }
+.type-desc { display: block; margin-top: 8rpx; font-size: 22rpx; color: $color-text-hint; }
+.type-chip.active .type-label { color: $color-brand-primary; }
 
 .date-row { display: flex; align-items: center; gap: 16rpx; }
-.date-item { flex: 1; padding: 24rpx; border-radius: $parent-radius; background: $parent-bg; }
-.date-label { display: block; font-size: 24rpx; color: $parent-hint; }
-.date-val { display: block; margin-top: 8rpx; font-size: 28rpx; color: $parent-text; font-weight: 500; }
-.date-sep { font-size: 28rpx; color: $parent-hint; }
+.date-item { flex: 1; padding: 24rpx; border-radius: $border-radius-md; background: $color-bg-page; }
+.date-label { display: block; font-size: 24rpx; color: $color-text-hint; }
+.date-val { display: block; margin-top: 8rpx; font-size: 28rpx; color: $color-text-primary; font-weight: 500; }
+.date-sep { font-size: 28rpx; color: $color-text-hint; }
 
-.reason-input { width: 100%; height: 200rpx; padding: 24rpx; border-radius: $parent-radius; background: $parent-bg; font-size: 26rpx; color: $parent-text; box-sizing: border-box; }
+.reason-input { width: 100%; height: 200rpx; padding: 24rpx; border-radius: $border-radius-md; background: $color-bg-page; font-size: 26rpx; color: $color-text-primary; box-sizing: border-box; }
 
-.input { width: 100%; height: 88rpx; padding: 0 24rpx; border-radius: $parent-radius; background: $parent-bg; font-size: 26rpx; box-sizing: border-box; }
+.input { width: 100%; height: 88rpx; padding: 0 24rpx; border-radius: $border-radius-md; background: $color-bg-page; font-size: 26rpx; box-sizing: border-box; }
 
-.submit-btn { width: calc(100% - 56rpx); height: 96rpx; margin: 0 28rpx; border-radius: 9999rpx; background: $parent-primary; color: #fff; font-size: 30rpx; font-weight: 700; line-height: 96rpx; }
+.submit-btn { width: calc(100% - 56rpx); height: 96rpx; margin: 0 28rpx; border-radius: 9999rpx; background: $color-brand-primary; color: #fff; font-size: 30rpx; font-weight: 700; line-height: 96rpx; }
 </style>

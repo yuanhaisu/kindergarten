@@ -373,7 +373,7 @@ onPullDownRefresh(loadHome)
   min-width: 320px;
   max-width: 430px;
   margin: 0 auto;
-  background: $parent-bg;
+  background: $color-bg-page;
   padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 }
 
@@ -483,9 +483,9 @@ onPullDownRefresh(loadHome)
 // ---- 今日在校情况卡片 ----
 .today-card {
   background: #FFFFFF;
-  border-radius: $parent-radius-md;
+  border-radius: $border-radius-lg;
   padding: 32rpx;
-  box-shadow: $parent-shadow;
+  box-shadow: $shadow-sm;
 }
 
 .today-head {
@@ -497,12 +497,12 @@ onPullDownRefresh(loadHome)
 .today-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: $parent-text;
+  color: $color-text-primary;
 }
 
 .today-date {
   font-size: 28rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
 }
 
 .status-row {
@@ -534,12 +534,12 @@ onPullDownRefresh(loadHome)
 .status-label {
   font-size: 26rpx;
   font-weight: 500;
-  color: $parent-text;
+  color: $color-text-primary;
 }
 
 .status-sub {
   font-size: 22rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
   margin-top: 4rpx;
 }
 
@@ -547,7 +547,7 @@ onPullDownRefresh(loadHome)
   display: flex;
   align-items: center;
   background: #FFF7ED;
-  border-radius: $parent-radius;
+  border-radius: $border-radius-md;
   padding: 24rpx;
 }
 
@@ -593,14 +593,14 @@ onPullDownRefresh(loadHome)
 .switch-chip {
   padding: 14rpx 28rpx;
   border-radius: 9999rpx;
-  background: $parent-card;
-  color: $parent-muted;
+  background: $color-bg-card;
+  color: $color-text-muted;
   font-size: 24rpx;
 }
 
 .switch-chip.active {
-  background: $parent-primary-bg;
-  color: $parent-primary;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary;
   font-weight: 700;
 }
 
@@ -615,9 +615,9 @@ onPullDownRefresh(loadHome)
   grid-template-columns: repeat(4, 1fr);
   gap: 20rpx;
   padding: 32rpx;
-  background: $parent-card;
-  border-radius: $parent-radius-md;
-  box-shadow: $parent-shadow;
+  background: $color-bg-card;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-sm;
 }
 
 .action-item {
@@ -655,7 +655,7 @@ onPullDownRefresh(loadHome)
 .action-text {
   font-size: 26rpx;
   font-weight: 500;
-  color: $parent-body;
+  color: $color-text-body;
 }
 
 // ---- 通用 section ----
@@ -673,7 +673,7 @@ onPullDownRefresh(loadHome)
 .section-title {
   font-size: 36rpx;
   font-weight: 600;
-  color: $parent-text;
+  color: $color-text-primary;
 }
 
 .section-link {
@@ -684,11 +684,11 @@ onPullDownRefresh(loadHome)
 // ---- 通知列表 ----
 .notice-card {
   display: flex;
-  background: $parent-card;
-  border-radius: $parent-radius;
+  background: $color-bg-card;
+  border-radius: $border-radius-md;
   padding: 32rpx;
   margin-bottom: 16rpx;
-  box-shadow: $parent-shadow;
+  box-shadow: $shadow-sm;
 }
 
 .notice-icon-box {
@@ -721,7 +721,7 @@ onPullDownRefresh(loadHome)
 .notice-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: $parent-text;
+  color: $color-text-primary;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -739,7 +739,7 @@ onPullDownRefresh(loadHome)
 
 .notice-preview {
   font-size: 26rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -760,25 +760,25 @@ onPullDownRefresh(loadHome)
 .author-icon {
   font-family: remixicon;
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .author-name {
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .notice-time {
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 // ---- 成长动态 ----
 .growth-card {
-  background: $parent-card;
-  border-radius: $parent-radius;
+  background: $color-bg-card;
+  border-radius: $border-radius-md;
   padding: 32rpx;
-  box-shadow: $parent-shadow;
+  box-shadow: $shadow-sm;
 }
 
 .growth-author {
@@ -810,17 +810,17 @@ onPullDownRefresh(loadHome)
 .author-name-text {
   font-size: 30rpx;
   font-weight: 600;
-  color: $parent-text;
+  color: $color-text-primary;
 }
 
 .author-time {
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .growth-content {
   font-size: 28rpx;
-  color: $parent-body;
+  color: $color-text-body;
   line-height: 1.6;
 }
 
@@ -832,7 +832,7 @@ onPullDownRefresh(loadHome)
 .growth-photo {
   width: 200rpx;
   height: 200rpx;
-  border-radius: $parent-radius;
+  border-radius: $border-radius-md;
 }
 
 .growth-actions {
@@ -854,18 +854,18 @@ onPullDownRefresh(loadHome)
 .ga-icon {
   font-family: remixicon;
   font-size: 36rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .ga-num {
   font-size: 26rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
 }
 
 .ga-like-icon {
   font-family: remixicon;
   font-size: 36rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .ga-like-icon.liked {
@@ -875,26 +875,26 @@ onPullDownRefresh(loadHome)
 // ---- 空状态 / 错误 ----
 .empty-card {
   padding: 48rpx 28rpx;
-  border-radius: $parent-radius;
-  background: $parent-card;
+  border-radius: $border-radius-md;
+  background: $color-bg-card;
   text-align: center;
-  box-shadow: $parent-shadow;
+  box-shadow: $shadow-sm;
 }
 
 .empty-text {
-  color: $parent-hint;
+  color: $color-text-hint;
   font-size: 26rpx;
 }
 
 .error-card {
   padding: 38rpx 28rpx;
   margin: 24rpx;
-  border-radius: $parent-radius;
-  background: $parent-card;
-  color: $parent-muted;
+  border-radius: $border-radius-md;
+  background: $color-bg-card;
+  color: $color-text-muted;
   font-size: 26rpx;
   text-align: center;
-  box-shadow: $parent-shadow;
+  box-shadow: $shadow-sm;
 }
 
 .retry-btn {
@@ -902,7 +902,7 @@ onPullDownRefresh(loadHome)
   height: 72rpx;
   margin: 24rpx auto 0;
   border-radius: 9999rpx;
-  background: $parent-primary;
+  background: $color-brand-primary;
   color: #fff;
   font-size: 26rpx;
   line-height: 72rpx;
@@ -910,7 +910,7 @@ onPullDownRefresh(loadHome)
 
 .loading-hint {
   text-align: center;
-  color: $parent-muted;
+  color: $color-text-muted;
   font-size: 26rpx;
   padding: 32rpx;
 }

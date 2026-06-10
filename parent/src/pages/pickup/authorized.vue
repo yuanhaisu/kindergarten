@@ -73,33 +73,33 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
 .spacer-w12 { width: 24rpx; flex-shrink: 0; }
 
-.safety-card { display: flex; padding: 24rpx; border-radius: $parent-radius; background: #FFF7ED; margin-bottom: 24rpx; }
+.safety-card { display: flex; padding: 24rpx; border-radius: $border-radius-md; background: #FFF7ED; margin-bottom: 24rpx; }
 .safety-icon { font-family: remixicon; font-size: 40rpx; color: #F97316; flex-shrink: 0; }
 .safety-title { display: block; font-size: 26rpx; font-weight: 600; color: #92400E; }
 .safety-text { display: block; margin-top: 4rpx; font-size: 24rpx; color: #A16207; }
 
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
-.page-title { font-size: 36rpx; font-weight: 700; color: $parent-text; }
-.add-btn { padding: 14rpx 28rpx; border-radius: 9999rpx; background: $parent-primary; color: #fff; font-size: 24rpx; }
+.page-title { font-size: 36rpx; font-weight: 700; color: $color-text-primary; }
+.add-btn { padding: 14rpx 28rpx; border-radius: 9999rpx; background: $color-brand-primary; color: #fff; font-size: 24rpx; }
 
-.state { display: flex; align-items: center; justify-content: center; min-height: 50vh; color: $parent-hint; font-size: 28rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 50vh; color: $color-text-hint; font-size: 28rpx; }
 .list { display: flex; flex-direction: column; gap: 16rpx; }
 
-.card { display: flex; align-items: center; padding: 24rpx; border-radius: $parent-radius; background: $parent-card; box-shadow: $parent-shadow; }
+.card { display: flex; align-items: center; padding: 24rpx; border-radius: $border-radius-md; background: $color-bg-card; box-shadow: $shadow-sm; }
 .person-avatar { width: 96rpx; height: 96rpx; border-radius: 9999rpx; overflow: hidden; background: #DBEAFE; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-img { width: 100%; height: 100%; }
 .avatar-placeholder { font-family: remixicon; font-size: 40rpx; color: #2563EB; }
 
 .info { flex: 1; overflow: hidden; }
 .name-row { display: flex; align-items: center; gap: 12rpx; }
-.name { font-size: 28rpx; font-weight: 600; color: $parent-text; }
+.name { font-size: 28rpx; font-weight: 600; color: $color-text-primary; }
 .auth-badge { padding: 4rpx 16rpx; border-radius: 9999rpx; font-size: 20rpx; }
 .badge-perm { background: #DCFCE7; color: #166534; }
 .badge-temp { background: #FFEDD5; color: #92400E; }
-.relation { display: block; margin-top: 8rpx; font-size: 24rpx; color: $parent-muted; }
+.relation { display: block; margin-top: 8rpx; font-size: 24rpx; color: $color-text-muted; }
 .perm-tags { display: flex; gap: 8rpx; margin-top: 8rpx; }
 .perm-tag { padding: 4rpx 12rpx; border-radius: 9999rpx; font-size: 20rpx; }
 .perm-tag.green { background: #DCFCE7; color: #166534; }

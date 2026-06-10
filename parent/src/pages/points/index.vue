@@ -66,26 +66,26 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx; background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx; background: $color-bg-page; }
 .hero-card { padding: 40rpx; border-radius: 32rpx; background: linear-gradient(135deg, #FB923C, #F97316); text-align: center; margin-bottom: 24rpx; }
 .level { display: block; color: #FFEDD5; font-size: 24rpx; }
 .points { display: block; margin-top: 12rpx; color: #fff; font-size: 56rpx; font-weight: 800; }
 .rank { display: block; margin-top: 8rpx; color: #FFEDD5; font-size: 22rpx; }
 .tabs { display: flex; gap: 16rpx; margin: 24rpx 0; }
-.tab { flex: 1; height: 72rpx; border-radius: 999rpx; background: $parent-card; color: $parent-muted; font-size: 26rpx; line-height: 72rpx; }
-.tab.active { background: $parent-primary; color: #fff; font-weight: 700; }
-.card { padding: 28rpx; border-radius: 24rpx; background: $parent-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
-.stat-row { display: flex; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid rgba(106,77,42,0.06); color: $parent-text; font-size: 28rpx; }
-.stat-row .val { color: $parent-primary; font-weight: 700; }
+.tab { flex: 1; height: 72rpx; border-radius: 999rpx; background: $color-bg-card; color: $color-text-muted; font-size: 26rpx; line-height: 72rpx; }
+.tab.active { background: $color-brand-primary; color: #fff; font-weight: 700; }
+.card { padding: 28rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.stat-row { display: flex; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid rgba(106,77,42,0.06); color: $color-text-primary; font-size: 28rpx; }
+.stat-row .val { color: $color-brand-primary; font-weight: 700; }
 .list { display: flex; flex-direction: column; gap: 12rpx; }
-.section-title { display: block; margin-bottom: 12rpx; color: $parent-text; font-size: 28rpx; font-weight: 700; }
-.rank-item { display: flex; align-items: center; gap: 16rpx; padding: 20rpx 24rpx; border-radius: 16rpx; background: $parent-card; }
-.rank-item.self { background: #fff4df; border: 2rpx solid $parent-primary; }
-.rank-num { width: 48rpx; text-align: center; color: $parent-muted; font-size: 26rpx; font-weight: 700; }
-.rank-name { flex: 1; color: $parent-text; font-size: 26rpx; }
-.rank-points { color: $parent-primary; font-size: 24rpx; font-weight: 700; }
-.ach-card { padding: 24rpx; border-radius: 20rpx; background: $parent-card; }
+.section-title { display: block; margin-bottom: 12rpx; color: $color-text-primary; font-size: 28rpx; font-weight: 700; }
+.rank-item { display: flex; align-items: center; gap: 16rpx; padding: 20rpx 24rpx; border-radius: 16rpx; background: $color-bg-card; }
+.rank-item.self { background: #fff4df; border: 2rpx solid $color-brand-primary; }
+.rank-num { width: 48rpx; text-align: center; color: $color-text-muted; font-size: 26rpx; font-weight: 700; }
+.rank-name { flex: 1; color: $color-text-primary; font-size: 26rpx; }
+.rank-points { color: $color-brand-primary; font-size: 24rpx; font-weight: 700; }
+.ach-card { padding: 24rpx; border-radius: 20rpx; background: $color-bg-card; }
 .ach-card.earned { background: #fffaf0; border: 2rpx solid #ffda73; }
-.ach-name { display: block; color: $parent-text; font-size: 26rpx; font-weight: 700; }
-.ach-desc { display: block; margin-top: 6rpx; color: $parent-muted; font-size: 22rpx; }
+.ach-name { display: block; color: $color-text-primary; font-size: 26rpx; font-weight: 700; }
+.ach-desc { display: block; margin-top: 6rpx; color: $color-text-muted; font-size: 22rpx; }
 </style>

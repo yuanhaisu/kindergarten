@@ -92,7 +92,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .page {
   min-height: 100vh;
   padding: 24rpx 28rpx 160rpx;
-  background: $parent-bg;
+  background: $color-bg-page;
 }
 
 .spacer-w4 { width: 8rpx; flex-shrink: 0; }
@@ -106,15 +106,15 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  color: $parent-hint;
+  color: $color-text-hint;
   font-size: 28rpx;
 }
 
 .card {
   padding: 32rpx;
-  border-radius: $parent-radius-md;
-  background: $parent-card;
-  box-shadow: $parent-shadow;
+  border-radius: $border-radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
 }
 
 .card-head {
@@ -135,14 +135,14 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 
 .meta-text {
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .title {
   display: block;
   font-size: 36rpx;
   font-weight: 700;
-  color: $parent-text;
+  color: $color-text-primary;
   line-height: 1.4;
 }
 
@@ -169,14 +169,14 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 
 .author-name {
   font-size: 28rpx;
-  color: $parent-text;
+  color: $color-text-primary;
   font-weight: 500;
 }
 
 .content {
   display: block;
   font-size: 28rpx;
-  color: $parent-body;
+  color: $color-text-body;
   line-height: 1.8;
   white-space: pre-wrap;
 }
@@ -184,7 +184,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .section-label {
   font-size: 26rpx;
   font-weight: 600;
-  color: $parent-text;
+  color: $color-text-primary;
 }
 
 .attach-list {
@@ -196,18 +196,18 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .attach-img {
   width: 200rpx;
   height: 200rpx;
-  border-radius: $parent-radius;
+  border-radius: $border-radius-md;
 }
 
 .read-info {
   padding: 20rpx;
-  border-radius: $parent-radius;
-  background: $parent-bg;
+  border-radius: $border-radius-md;
+  background: $color-bg-page;
 }
 
 .read-text {
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .confirm-bar {
@@ -223,7 +223,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
   width: 100%;
   height: 88rpx;
   border-radius: 9999rpx;
-  background: $parent-primary;
+  background: $color-brand-primary;
   color: #fff;
   font-size: 28rpx;
   font-weight: 700;

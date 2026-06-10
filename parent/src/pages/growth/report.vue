@@ -132,46 +132,46 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx 160rpx; background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx 160rpx; background: $color-bg-page; }
 .spacer-w12 { width: 24rpx; flex-shrink: 0; }
 .spacer-h12 { height: 24rpx; }
 .spacer-h16 { height: 32rpx; }
 
 .type-tabs { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
-.type-tab { flex: 1; padding: 20rpx 0; border-radius: 9999rpx; background: $parent-card; text-align: center; font-size: 26rpx; color: $parent-muted; }
-.type-tab.active { background: $parent-primary; color: #fff; font-weight: 600; }
+.type-tab { flex: 1; padding: 20rpx 0; border-radius: 9999rpx; background: $color-bg-card; text-align: center; font-size: 26rpx; color: $color-text-muted; }
+.type-tab.active { background: $color-brand-primary; color: #fff; font-weight: 600; }
 
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $parent-hint; font-size: 28rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-hint; font-size: 28rpx; }
 
-.header-card { display: flex; align-items: center; padding: 32rpx; border-radius: $parent-radius-md; background: $parent-card; box-shadow: $parent-shadow; margin-bottom: 24rpx; }
+.header-card { display: flex; align-items: center; padding: 32rpx; border-radius: $border-radius-lg; background: $color-bg-card; box-shadow: $shadow-sm; margin-bottom: 24rpx; }
 .header-avatar { width: 128rpx; height: 128rpx; border-radius: 9999rpx; }
 .header-avatar-placeholder { width: 128rpx; height: 128rpx; border-radius: 9999rpx; background: #DBEAFE; display: flex; align-items: center; justify-content: center; }
 .hap-icon { font-family: remixicon; font-size: 48rpx; color: #2563EB; }
-.header-name { display: block; font-size: 36rpx; font-weight: 700; color: $parent-text; }
-.header-period { display: block; margin-top: 8rpx; font-size: 24rpx; color: $parent-hint; }
+.header-name { display: block; font-size: 36rpx; font-weight: 700; color: $color-text-primary; }
+.header-period { display: block; margin-top: 8rpx; font-size: 24rpx; color: $color-text-hint; }
 
 .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12rpx; margin-bottom: 24rpx; }
-.stat-box { padding: 24rpx 8rpx; border-radius: $parent-radius; background: $parent-card; text-align: center; box-shadow: $parent-shadow; }
-.stat-num { display: block; font-size: 32rpx; font-weight: 700; color: $parent-text; }
-.stat-label { display: block; margin-top: 8rpx; font-size: 22rpx; color: $parent-hint; }
+.stat-box { padding: 24rpx 8rpx; border-radius: $border-radius-md; background: $color-bg-card; text-align: center; box-shadow: $shadow-sm; }
+.stat-num { display: block; font-size: 32rpx; font-weight: 700; color: $color-text-primary; }
+.stat-label { display: block; margin-top: 8rpx; font-size: 22rpx; color: $color-text-hint; }
 
-.card { padding: 32rpx; border-radius: $parent-radius-md; background: $parent-card; box-shadow: $parent-shadow; }
-.card-title { font-size: 28rpx; font-weight: 600; color: $parent-text; }
+.card { padding: 32rpx; border-radius: $border-radius-lg; background: $color-bg-card; box-shadow: $shadow-sm; }
+.card-title { font-size: 28rpx; font-weight: 600; color: $color-text-primary; }
 
 .dim-list { display: flex; flex-direction: column; gap: 16rpx; }
 .dim-row { display: flex; align-items: center; }
-.dim-name { width: 80rpx; font-size: 24rpx; color: $parent-text; flex-shrink: 0; }
+.dim-name { width: 80rpx; font-size: 24rpx; color: $color-text-primary; flex-shrink: 0; }
 .dim-bar-wrap { flex: 1; height: 16rpx; margin: 0 16rpx; border-radius: 9999rpx; background: #F1F5F9; overflow: hidden; }
 .dim-bar { height: 100%; border-radius: 9999rpx; background: linear-gradient(90deg, #FB923C, #F97316); }
-.dim-score { width: 60rpx; font-size: 24rpx; font-weight: 600; color: $parent-primary; text-align: right; }
+.dim-score { width: 60rpx; font-size: 24rpx; font-weight: 600; color: $color-brand-primary; text-align: right; }
 
 .hl-item { display: flex; align-items: flex-start; margin-bottom: 12rpx; }
 .hl-dot { width: 16rpx; height: 16rpx; border-radius: 9999rpx; background: #16A34A; margin-top: 8rpx; flex-shrink: 0; margin-right: 12rpx; }
 .hl-dot.concern { background: #F59E0B; }
-.hl-text { font-size: 26rpx; color: $parent-body; line-height: 1.5; flex: 1; }
+.hl-text { font-size: 26rpx; color: $color-text-body; line-height: 1.5; flex: 1; }
 
 .teacher-row { display: flex; }
 .teacher-avatar { width: 80rpx; height: 80rpx; border-radius: 9999rpx; background: #DBEAFE; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ta-icon { font-family: remixicon; font-size: 36rpx; color: #2563EB; }
-.comment-text { font-size: 26rpx; color: $parent-body; line-height: 1.6; flex: 1; }
+.comment-text { font-size: 26rpx; color: $color-text-body; line-height: 1.6; flex: 1; }
 </style>

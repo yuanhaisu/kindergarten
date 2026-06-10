@@ -66,20 +66,20 @@ onLoad(() => {
   max-width: 600rpx;
   padding: 64rpx 48rpx;
   border-radius: 40rpx;
-  background: $parent-card;
-  box-shadow: $parent-shadow;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
   text-align: center;
 }
 
 .logo {
-  color: $parent-text;
+  color: $color-text-primary;
   font-size: 52rpx;
   font-weight: 800;
 }
 
 .desc {
   margin-top: 16rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
   font-size: 28rpx;
 }
 
@@ -91,13 +91,13 @@ onLoad(() => {
 }
 
 .welcome {
-  color: $parent-muted;
+  color: $color-text-muted;
   font-size: 26rpx;
 }
 
 .name {
   margin-top: 8rpx;
-  color: $parent-text;
+  color: $color-text-primary;
   font-size: 36rpx;
   font-weight: 700;
 }
@@ -116,7 +116,7 @@ onLoad(() => {
 
 .tip {
   margin-top: 24rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
   font-size: 22rpx;
 }
 </style>

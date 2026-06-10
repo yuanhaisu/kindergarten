@@ -1,73 +1,32 @@
 // ============================================================
-// 养成星球 · 家长端小程序 — 全局设计变量
-// 对齐 Calicat 设计稿: https://www.calicat.cn/design/2034425111476019200
+// 养成星球 · 家长端 — 全局样式入口
+// 品牌基因 token 由 shared-design-tokens 统一管理
 // ============================================================
 
-// Remix Icon 字体 (base64 embedded, subset via font)
+// 品牌基因 & 端差异化 token（自动生成，勿手动编辑）
+@import "../../shared-design-tokens/build/scss/tokens-parent.scss";
+
+// Remix Icon 字体
 @import "@/static/fonts/remixicon.css";
 
-// === 主色调 ===
-$parent-primary:        #F97316;   // 橙色主色
-$parent-primary-light:  #FB923C;   // 橙色浅（渐变起点）
-$parent-primary-dark:   #EA580C;   // 橙色深
-$parent-primary-bg:     #FFF7ED;   // 橙色浅背景
-
-// === 背景 & 卡片 ===
-$parent-bg:             #F8FAFC;   // 页面背景 slate-50
-$parent-card:           #FFFFFF;   // 卡片背景
-$parent-card-border:    rgba(0,0,0,0.05);
-
-// === 文字 ===
-$parent-text:           #1E293B;   // 标题文字 slate-800
-$parent-body:           #334155;   // 正文 slate-700
-$parent-muted:          #64748B;   // 辅助文字 slate-500
-$parent-hint:           #94A3B8;   // 提示文字 slate-400
-
-// === 功能色 ===
-$parent-green:          #16A34A;   // 出勤/饮食好
-$parent-green-bg:       #DCFCE7;
-$parent-blue:           #2563EB;   // 通知/饮食
-$parent-blue-bg:        #DBEAFE;
-$parent-purple:         #9333EA;   // 睡眠
-$parent-purple-bg:      #F3E8FF;
-$parent-yellow:         #CA8A04;   // 请假/活动
-$parent-yellow-bg:      #FEF9C3;
-$parent-pink:           #EC4899;   // 成长报告
-$parent-pink-bg:        #FCE7F3;
-$parent-cyan:           #06B6D4;   // 日历
+// ============================================================
+// 端特有变量（模块主题色，暂不进入 shared tokens）
+// ============================================================
+$parent-green:         #16A34A;
+$parent-green-bg:      #DCFCE7;
+$parent-blue:          #2563EB;
+$parent-blue-bg:       #DBEAFE;
+$parent-purple:        #9333EA;
+$parent-purple-bg:     #F3E8FF;
+$parent-yellow:        #CA8A04;
+$parent-yellow-bg:     #FEF9C3;
+$parent-pink:          #EC4899;
+$parent-pink-bg:       #FCE7F3;
+$parent-cyan:          #06B6D4;
 $parent-cyan-bg:        #CFFAFE;
-$parent-red:            #EF4444;   // 红点/错误
-$parent-gray:           #64748B;   // 中性
+$parent-red:           #EF4444;
+$parent-gray:          #64748B;
 
-// === 阴影 ===
-$parent-shadow:         0 1px 2px rgba(0, 0, 0, 0.05);
-$parent-shadow-md:      0 4px 6px rgba(0, 0, 0, 0.07);
-$parent-shadow-lg:      0 10px 15px rgba(0, 0, 0, 0.1);
-
-// === 圆角 ===
-$parent-radius-sm:      8rpx;
-$parent-radius:         12rpx;
-$parent-radius-md:      16rpx;
-$parent-radius-lg:      24rpx;
-$parent-radius-full:    9999rpx;
-
-// === 字号 (rpx) ===
-$parent-font-xs:        22rpx;    // 11px 辅助
-$parent-font-sm:        24rpx;    // 12px 提示
-$parent-font-base:      26rpx;    // 13px 正文
-$parent-font-md:        28rpx;    // 14px
-$parent-font-lg:        30rpx;    // 15px
-$parent-font-xl:        32rpx;    // 16px
-$parent-font-2xl:       36rpx;    // 18px 标题
-$parent-font-3xl:       40rpx;    // 20px
-
-// === 间距 (rpx) ===
-$parent-space-xs:        8rpx;
-$parent-space-sm:       12rpx;
-$parent-space:          16rpx;
-$parent-space-md:       24rpx;
-$parent-space-lg:       32rpx;
-
-// === 导航栏 ===
-$parent-nav-height:      88rpx;
-$parent-tab-height:      100rpx;
+// 导航栏尺寸
+$parent-nav-height:    88rpx;
+$parent-tab-height:    100rpx;

@@ -30,7 +30,7 @@ onLoad((options) => {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  color: $parent-muted;
+  color: $color-text-muted;
   font-size: 28rpx;
 }
 </style>

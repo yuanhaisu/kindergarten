@@ -76,23 +76,23 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx; background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx; background: $color-bg-page; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
-.page-title { color: $parent-text; font-size: 36rpx; font-weight: 800; }
-.add-btn { padding: 14rpx 28rpx; border-radius: 999rpx; background: $parent-primary; color: #fff; font-size: 24rpx; }
-.card { padding: 28rpx; margin-bottom: 24rpx; border-radius: 24rpx; background: $parent-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.page-title { color: $color-text-primary; font-size: 36rpx; font-weight: 800; }
+.add-btn { padding: 14rpx 28rpx; border-radius: 999rpx; background: $color-brand-primary; color: #fff; font-size: 24rpx; }
+.card { padding: 28rpx; margin-bottom: 24rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
 .cats { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
-.cat-btn { padding: 12rpx 28rpx; border-radius: 999rpx; background: #f0f0f0; color: $parent-muted; font-size: 24rpx; }
+.cat-btn { padding: 12rpx 28rpx; border-radius: 999rpx; background: #f0f0f0; color: $color-text-muted; font-size: 24rpx; }
 .cat-btn.active { background: $parent-blue; color: #fff; }
 .textarea { width: 100%; height: 180rpx; padding: 20rpx; border: 2rpx solid rgba(106,77,42,0.12); border-radius: 16rpx; font-size: 26rpx; box-sizing: border-box; }
 .submit-btn { width: 100%; height: 80rpx; margin-top: 20rpx; border-radius: 999rpx; background: $parent-blue; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 80rpx; }
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $parent-muted; font-size: 28rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: 28rpx; }
 .list { display: flex; flex-direction: column; gap: 18rpx; }
-.f-card { padding: 26rpx; border-radius: 20rpx; background: $parent-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.f-card { padding: 26rpx; border-radius: 20rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
 .f-head { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .f-cat { padding: 6rpx 16rpx; border-radius: 999rpx; background: #cfe1ff; color: #2f5a8c; font-size: 22rpx; }
-.f-status { color: $parent-muted; font-size: 22rpx; }
-.f-content { display: block; color: $parent-text; font-size: 26rpx; line-height: 1.5; }
-.f-reply { display: block; margin-top: 12rpx; padding: 16rpx; border-radius: 12rpx; background: #f0f4ff; color: $parent-text; font-size: 24rpx; }
-.f-date { display: block; margin-top: 12rpx; color: $parent-muted; font-size: 20rpx; }
+.f-status { color: $color-text-muted; font-size: 22rpx; }
+.f-content { display: block; color: $color-text-primary; font-size: 26rpx; line-height: 1.5; }
+.f-reply { display: block; margin-top: 12rpx; padding: 16rpx; border-radius: 12rpx; background: #f0f4ff; color: $color-text-primary; font-size: 24rpx; }
+.f-date { display: block; margin-top: 12rpx; color: $color-text-muted; font-size: 20rpx; }
 </style>

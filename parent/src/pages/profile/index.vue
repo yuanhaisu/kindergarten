@@ -48,15 +48,15 @@ function goPage(path) {
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx; background: $parent-bg; }
-.user-card { display: flex; flex-direction: column; align-items: center; padding: 40rpx; margin-bottom: 24rpx; border-radius: 32rpx; background: $parent-card; box-shadow: $parent-shadow; }
+.page { min-height: 100vh; padding: 24rpx 28rpx; background: $color-bg-page; }
+.user-card { display: flex; flex-direction: column; align-items: center; padding: 40rpx; margin-bottom: 24rpx; border-radius: 32rpx; background: $color-bg-card; box-shadow: $shadow-sm; }
 .avatar-placeholder { display: flex; align-items: center; justify-content: center; width: 120rpx; height: 120rpx; border-radius: 999rpx; background: linear-gradient(135deg, #FB923C, #F97316); }
 .avatar-text { color: #fff; font-size: 48rpx; font-weight: 700; }
-.name { margin-top: 18rpx; color: $parent-text; font-size: 32rpx; font-weight: 700; }
-.phone { margin-top: 8rpx; color: $parent-muted; font-size: 24rpx; }
-.menu-list { display: flex; flex-direction: column; border-radius: 24rpx; overflow: hidden; background: $parent-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.name { margin-top: 18rpx; color: $color-text-primary; font-size: 32rpx; font-weight: 700; }
+.phone { margin-top: 8rpx; color: $color-text-muted; font-size: 24rpx; }
+.menu-list { display: flex; flex-direction: column; border-radius: 24rpx; overflow: hidden; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
 .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 28rpx; border-bottom: 1rpx solid rgba(106,77,42,0.06); }
 .menu-item:last-child { border-bottom: 0; }
-.menu-title { color: $parent-text; font-size: 28rpx; }
-.arrow { color: $parent-muted; font-size: 36rpx; }
+.menu-title { color: $color-text-primary; font-size: 28rpx; }
+.arrow { color: $color-text-muted; font-size: 36rpx; }
 </style>

@@ -90,38 +90,38 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx 160rpx; background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx 160rpx; background: $color-bg-page; }
 .spacer-w12 { width: 24rpx; flex-shrink: 0; }
 .spacer-h16 { height: 32rpx; }
 
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $parent-hint; font-size: 28rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-hint; font-size: 28rpx; }
 
-.status-card { text-align: center; padding: 48rpx 32rpx; border-radius: $parent-radius-md; margin-bottom: 24rpx; }
+.status-card { text-align: center; padding: 48rpx 32rpx; border-radius: $border-radius-lg; margin-bottom: 24rpx; }
 .status-card.status-0 { background: #FFF7ED; }
 .status-card.status-1 { background: #DCFCE7; }
 .status-card.status-2 { background: #FEE2E2; }
 .status-card.status-3 { background: #F1F5F9; }
 .status-icon-box { width: 96rpx; height: 96rpx; margin: 0 auto 16rpx; border-radius: 9999rpx; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; }
-.status-icon { font-family: remixicon; font-size: 48rpx; color: $parent-primary; }
+.status-icon { font-family: remixicon; font-size: 48rpx; color: $color-brand-primary; }
 .status-card.status-1 .status-icon { color: #16A34A; }
 .status-card.status-2 .status-icon { color: #EF4444; }
 .status-card.status-3 .status-icon { color: #94A3B8; }
-.status-text { font-size: 36rpx; font-weight: 700; color: $parent-text; }
-.status-remark { display: block; margin-top: 16rpx; font-size: 26rpx; color: $parent-muted; }
+.status-text { font-size: 36rpx; font-weight: 700; color: $color-text-primary; }
+.status-remark { display: block; margin-top: 16rpx; font-size: 26rpx; color: $color-text-muted; }
 
-.card { padding: 32rpx; border-radius: $parent-radius-md; background: $parent-card; box-shadow: $parent-shadow; }
-.card-title { font-size: 28rpx; font-weight: 600; color: $parent-text; }
+.card { padding: 32rpx; border-radius: $border-radius-lg; background: $color-bg-card; box-shadow: $shadow-sm; }
+.card-title { font-size: 28rpx; font-weight: 600; color: $color-text-primary; }
 
 .info-row { display: flex; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid #F1F5F9; }
-.info-key { font-size: 26rpx; color: $parent-muted; flex-shrink: 0; }
-.info-val { font-size: 26rpx; color: $parent-text; text-align: right; max-width: 65%; }
+.info-key { font-size: 26rpx; color: $color-text-muted; flex-shrink: 0; }
+.info-val { font-size: 26rpx; color: $color-text-primary; text-align: right; max-width: 65%; }
 .info-val.reason { line-height: 1.5; }
 
 .reviewer-row { display: flex; align-items: center; }
 .reviewer-avatar { width: 80rpx; height: 80rpx; border-radius: 9999rpx; background: #DBEAFE; display: flex; align-items: center; justify-content: center; }
 .ra-icon { font-family: remixicon; font-size: 36rpx; color: #2563EB; }
-.reviewer-name { display: block; font-size: 28rpx; font-weight: 500; color: $parent-text; }
-.reviewer-time { display: block; margin-top: 4rpx; font-size: 24rpx; color: $parent-hint; }
+.reviewer-name { display: block; font-size: 28rpx; font-weight: 500; color: $color-text-primary; }
+.reviewer-time { display: block; margin-top: 4rpx; font-size: 24rpx; color: $color-text-hint; }
 
 .cancel-btn { width: calc(100% - 56rpx); height: 88rpx; margin: 48rpx 28rpx; border-radius: 9999rpx; background: #EF4444; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 88rpx; }
 </style>

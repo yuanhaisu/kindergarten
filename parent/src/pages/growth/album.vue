@@ -71,19 +71,19 @@ onPullDownRefresh(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $parent-bg; }
+.page { min-height: 100vh; padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
 .spacer-flex { flex: 1; }
 
 .month-bar { display: flex; align-items: center; margin-bottom: 24rpx; }
-.month-arrow { width: 64rpx; height: 64rpx; border-radius: 9999rpx; background: $parent-card; display: flex; align-items: center; justify-content: center; }
-.arrow-icon { font-family: remixicon; font-size: 32rpx; color: $parent-text; }
-.month-text { margin: 0 24rpx; font-size: 32rpx; font-weight: 600; color: $parent-text; }
-.count-text { font-size: 24rpx; color: $parent-hint; }
+.month-arrow { width: 64rpx; height: 64rpx; border-radius: 9999rpx; background: $color-bg-card; display: flex; align-items: center; justify-content: center; }
+.arrow-icon { font-family: remixicon; font-size: 32rpx; color: $color-text-primary; }
+.month-text { margin: 0 24rpx; font-size: 32rpx; font-weight: 600; color: $color-text-primary; }
+.count-text { font-size: 24rpx; color: $color-text-hint; }
 
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $parent-hint; font-size: 28rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-hint; font-size: 28rpx; }
 
 .group { margin-bottom: 32rpx; }
-.group-date { display: block; font-size: 28rpx; font-weight: 600; color: $parent-text; margin-bottom: 16rpx; }
+.group-date { display: block; font-size: 28rpx; font-weight: 600; color: $color-text-primary; margin-bottom: 16rpx; }
 
 .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8rpx; }
 .photo { width: 100%; aspect-ratio: 1; border-radius: 12rpx; }

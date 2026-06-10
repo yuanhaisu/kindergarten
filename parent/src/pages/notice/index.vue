@@ -142,7 +142,7 @@ onPullDownRefresh(loadData)
 .page {
   min-height: 100vh;
   padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom));
-  background: $parent-bg;
+  background: $color-bg-page;
 }
 
 .spacer-w4 { width: 8rpx; flex-shrink: 0; }
@@ -155,10 +155,10 @@ onPullDownRefresh(loadData)
 .stats-card {
   display: flex;
   align-items: center;
-  background: $parent-card;
-  border-radius: $parent-radius-md;
+  background: $color-bg-card;
+  border-radius: $border-radius-lg;
   padding: 32rpx 16rpx;
-  box-shadow: $parent-shadow;
+  box-shadow: $shadow-sm;
   margin-bottom: 24rpx;
 }
 
@@ -171,18 +171,18 @@ onPullDownRefresh(loadData)
   display: block;
   font-size: 40rpx;
   font-weight: 700;
-  color: $parent-text;
+  color: $color-text-primary;
 }
 
 .stat-num.highlight {
-  color: $parent-primary;
+  color: $color-brand-primary;
 }
 
 .stat-label {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .stat-divider {
@@ -201,16 +201,16 @@ onPullDownRefresh(loadData)
 .tab-item {
   padding: 16rpx 32rpx;
   border-radius: 9999rpx;
-  background: $parent-card;
+  background: $color-bg-card;
 }
 
 .tab-item.active {
-  background: $parent-primary;
+  background: $color-brand-primary;
 }
 
 .tab-text {
   font-size: 26rpx;
-  color: $parent-body;
+  color: $color-text-body;
 }
 
 .tab-item.active .tab-text {
@@ -224,7 +224,7 @@ onPullDownRefresh(loadData)
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  color: $parent-hint;
+  color: $color-text-hint;
   font-size: 28rpx;
 }
 
@@ -238,13 +238,13 @@ onPullDownRefresh(loadData)
   display: flex;
   align-items: flex-start;
   padding: 32rpx;
-  border-radius: $parent-radius;
-  background: $parent-card;
-  box-shadow: $parent-shadow;
+  border-radius: $border-radius-md;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
 }
 
 .card.unread {
-  border-left: 6rpx solid $parent-primary;
+  border-left: 6rpx solid $color-brand-primary;
 }
 
 .card-icon-box {
@@ -277,7 +277,7 @@ onPullDownRefresh(loadData)
 .card-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: $parent-text;
+  color: $color-text-primary;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -295,7 +295,7 @@ onPullDownRefresh(loadData)
 
 .card-preview {
   font-size: 26rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -316,18 +316,18 @@ onPullDownRefresh(loadData)
 .foot-icon {
   font-family: remixicon;
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .foot-text {
   font-size: 24rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
 }
 
 .arrow {
   font-family: remixicon;
   font-size: 36rpx;
-  color: $parent-hint;
+  color: $color-text-hint;
   align-self: center;
 }
 </style>

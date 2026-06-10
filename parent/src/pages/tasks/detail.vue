@@ -75,22 +75,22 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx 48rpx; background: $parent-bg; }
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $parent-muted; font-size: 28rpx; }
-.card { padding: 32rpx; border-radius: 24rpx; background: $parent-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
-.title { display: block; color: $parent-text; font-size: 36rpx; font-weight: 800; }
-.desc { display: block; margin-top: 12rpx; color: $parent-text; font-size: 26rpx; }
-.intro { display: block; margin-top: 16rpx; color: $parent-muted; font-size: 24rpx; line-height: 1.6; }
+.page { min-height: 100vh; padding: 24rpx 28rpx 48rpx; background: $color-bg-page; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: 28rpx; }
+.card { padding: 32rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.title { display: block; color: $color-text-primary; font-size: 36rpx; font-weight: 800; }
+.desc { display: block; margin-top: 12rpx; color: $color-text-primary; font-size: 26rpx; }
+.intro { display: block; margin-top: 16rpx; color: $color-text-muted; font-size: 24rpx; line-height: 1.6; }
 .reqs { margin-top: 16rpx; }
-.req { display: block; margin-top: 6rpx; color: $parent-muted; font-size: 24rpx; }
+.req { display: block; margin-top: 6rpx; color: $color-text-muted; font-size: 24rpx; }
 .stats { display: flex; gap: 24rpx; margin-top: 20rpx; color: $parent-blue; font-size: 24rpx; }
-.checkin-card { margin-top: 24rpx; padding: 28rpx; border-radius: 24rpx; background: $parent-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
-.section-title { display: block; margin-bottom: 16rpx; color: $parent-text; font-size: 28rpx; font-weight: 700; }
+.checkin-card { margin-top: 24rpx; padding: 28rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.section-title { display: block; margin-bottom: 16rpx; color: $color-text-primary; font-size: 28rpx; font-weight: 700; }
 .textarea { width: 100%; height: 160rpx; padding: 20rpx; border: 2rpx solid rgba(106,77,42,0.12); border-radius: 16rpx; font-size: 26rpx; box-sizing: border-box; }
-.checkin-btn { width: 100%; height: 80rpx; margin-top: 20rpx; border-radius: 999rpx; background: $parent-primary; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 80rpx; }
+.checkin-btn { width: 100%; height: 80rpx; margin-top: 20rpx; border-radius: 999rpx; background: $color-brand-primary; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 80rpx; }
 .history-section { margin-top: 24rpx; }
-.history-item { display: flex; align-items: center; gap: 16rpx; padding: 20rpx; margin-bottom: 12rpx; border-radius: 16rpx; background: $parent-card; }
-.h-date { flex: 0 0 140rpx; color: $parent-muted; font-size: 22rpx; }
-.h-content { flex: 1; color: $parent-text; font-size: 24rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.h-points { color: $parent-primary; font-size: 24rpx; font-weight: 700; }
+.history-item { display: flex; align-items: center; gap: 16rpx; padding: 20rpx; margin-bottom: 12rpx; border-radius: 16rpx; background: $color-bg-card; }
+.h-date { flex: 0 0 140rpx; color: $color-text-muted; font-size: 22rpx; }
+.h-content { flex: 1; color: $color-text-primary; font-size: 24rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h-points { color: $color-brand-primary; font-size: 24rpx; font-weight: 700; }
 </style>

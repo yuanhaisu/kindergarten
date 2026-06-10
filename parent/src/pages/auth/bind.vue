@@ -67,7 +67,7 @@ function handleScan() {
   justify-content: center;
   min-height: 100vh;
   padding: 48rpx;
-  background: $parent-bg;
+  background: $color-bg-page;
 }
 
 .card {
@@ -78,19 +78,19 @@ function handleScan() {
   max-width: 600rpx;
   padding: 64rpx 48rpx;
   border-radius: 40rpx;
-  background: $parent-card;
-  box-shadow: $parent-shadow;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
 }
 
 .title {
-  color: $parent-text;
+  color: $color-text-primary;
   font-size: 40rpx;
   font-weight: 800;
 }
 
 .desc {
   margin-top: 16rpx;
-  color: $parent-muted;
+  color: $color-text-muted;
   font-size: 26rpx;
   text-align: center;
 }
