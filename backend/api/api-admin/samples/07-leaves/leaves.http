@@ -1,0 +1,21 @@
+# Admin · 请假（依赖先登录，见 ../_login.http）
+
+@baseUrl = http://localhost:8080
+
+### 请假列表
+GET {{baseUrl}}/api/v1/admin/leaves?page=1&page_size=20
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 请假统计（可省略日期，默认当月）
+GET {{baseUrl}}/api/v1/admin/leaves/stats?start_date=2026-03-01&end_date=2026-03-31
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 审批请假（将 :id 换为待审批记录 ID）
+PUT {{baseUrl}}/api/v1/admin/leaves/101/audit
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "status": 1,
+  "review_remark": ""
+}

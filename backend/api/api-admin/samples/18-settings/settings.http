@@ -1,0 +1,50 @@
+# 18 Settings · 系统设置 / 园所信息（需先登录拿 token，见 ../_login.http 中 `# @name adminPasswordLogin`）
+
+@baseUrl = http://localhost:8080
+
+### GET 系统设置
+GET {{baseUrl}}/api/v1/admin/settings
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### PUT 系统设置（部分更新）
+PUT {{baseUrl}}/api/v1/admin/settings
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "notice": {
+    "need_audit": false
+  }
+}
+
+### GET 学年列表
+GET {{baseUrl}}/api/v1/admin/settings/academic-years
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### POST 新学年
+POST {{baseUrl}}/api/v1/admin/settings/academic-years
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "year": "2026-2027",
+  "semester_spring_start": "2027-02-20",
+  "semester_spring_end": "2027-07-10",
+  "semester_fall_start": "2026-09-01",
+  "semester_fall_end": "2027-01-20"
+}
+
+### GET 园所信息
+GET {{baseUrl}}/api/v1/admin/kindergarten/info
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### PUT 园所信息
+PUT {{baseUrl}}/api/v1/admin/kindergarten/info
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "name": "阳光幼儿园",
+  "phone": "010-12345678",
+  "principal": "张园长"
+}

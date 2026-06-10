@@ -1,0 +1,42 @@
+# 16 Admins · 管理员（需先登录，见 ../_login.http）
+
+@baseUrl = http://localhost:8080
+
+### 管理员列表
+GET {{baseUrl}}/api/v1/admin/admins?page=1&page_size=20
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 添加管理员（role_id 须为园所内存在的 admin_roles.id；园所尚无角色时会自动建「园所管理员」）
+POST {{baseUrl}}/api/v1/admin/admins
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "phone": "13700009999",
+  "nickname": "副园长",
+  "role_id": 1,
+  "password": "Abc123456"
+}
+
+### 编辑管理员
+PUT {{baseUrl}}/api/v1/admin/admins/10
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "nickname": "副园长",
+  "role_id": 1
+}
+
+### 重置密码
+PUT {{baseUrl}}/api/v1/admin/admins/10/reset-password
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "new_password": "NewPass123"
+}
+
+### 删除管理员
+DELETE {{baseUrl}}/api/v1/admin/admins/10
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}

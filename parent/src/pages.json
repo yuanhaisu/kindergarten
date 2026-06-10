@@ -1,0 +1,186 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "养成星球",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/auth/phone",
+      "style": {
+        "navigationBarTitleText": "家长登录"
+      }
+    },
+    {
+      "path": "pages/auth/bind",
+      "style": {
+        "navigationBarTitleText": "绑定孩子"
+      }
+    },
+    {
+      "path": "pages/notice/index",
+      "style": {
+        "navigationBarTitleText": "通知公告",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/notice/detail",
+      "style": {
+        "navigationBarTitleText": "通知详情"
+      }
+    },
+    {
+      "path": "pages/leave/index",
+      "style": {
+        "navigationBarTitleText": "请假记录",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/leave/create",
+      "style": {
+        "navigationBarTitleText": "请假申请"
+      }
+    },
+    {
+      "path": "pages/leave/detail",
+      "style": {
+        "navigationBarTitleText": "请假详情"
+      }
+    },
+    {
+      "path": "pages/growth/index",
+      "style": {
+        "navigationBarTitleText": "成长时光",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/growth/detail",
+      "style": {
+        "navigationBarTitleText": "成长详情"
+      }
+    },
+    {
+      "path": "pages/growth/album",
+      "style": {
+        "navigationBarTitleText": "成长相册"
+      }
+    },
+    {
+      "path": "pages/growth/report",
+      "style": {
+        "navigationBarTitleText": "成长报告"
+      }
+    },
+    {
+      "path": "pages/pickup/index",
+      "style": {
+        "navigationBarTitleText": "接送记录",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/pickup/qrcode",
+      "style": {
+        "navigationBarTitleText": "接送二维码"
+      }
+    },
+    {
+      "path": "pages/pickup/authorized",
+      "style": {
+        "navigationBarTitleText": "授权接送人"
+      }
+    },
+    {
+      "path": "pages/tasks/index",
+      "style": {
+        "navigationBarTitleText": "亲子任务",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/tasks/detail",
+      "style": {
+        "navigationBarTitleText": "任务详情"
+      }
+    },
+    {
+      "path": "pages/points/index",
+      "style": {
+        "navigationBarTitleText": "积分与成就"
+      }
+    },
+    {
+      "path": "pages/class/index",
+      "style": {
+        "navigationBarTitleText": "班级信息"
+      }
+    },
+    {
+      "path": "pages/calendar/index",
+      "style": {
+        "navigationBarTitleText": "班级日历"
+      }
+    },
+    {
+      "path": "pages/student/index",
+      "style": {
+        "navigationBarTitleText": "孩子信息"
+      }
+    },
+    {
+      "path": "pages/feedback/index",
+      "style": {
+        "navigationBarTitleText": "意见反馈"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
+    },
+    {
+      "path": "pages/messages/index",
+      "style": {
+        "navigationBarTitleText": "消息"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/webview/index",
+      "style": {
+        "navigationBarTitleText": "详情"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "养成星球",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F8FAFC",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#94A3B8",
+    "selectedColor": "#F97316",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/growth/index", "text": "成长" },
+      { "pagePath": "pages/tasks/index", "text": "任务" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  }
+}

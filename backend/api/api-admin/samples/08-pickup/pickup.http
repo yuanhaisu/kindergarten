@@ -1,0 +1,25 @@
+# Admin · 接送（依赖先登录，见 ../_login.http）
+
+@baseUrl = http://localhost:8080
+
+### 概览
+GET {{baseUrl}}/api/v1/admin/pickup/overview?date=2026-03-19
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 接送记录（分页）
+GET {{baseUrl}}/api/v1/admin/pickup/records?date=2026-03-19&page=1&page_size=20
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 异常记录
+GET {{baseUrl}}/api/v1/admin/pickup/abnormal?date=2026-03-19&page=1&page_size=20
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 审核授权接送人（将 :id 换为 review_status=0 的授权 ID）
+PUT {{baseUrl}}/api/v1/admin/pickup/authorized-persons/4/audit
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "action": "approve",
+  "remark": ""
+}

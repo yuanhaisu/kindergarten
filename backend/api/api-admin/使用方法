@@ -1,0 +1,41 @@
+这套机制的工作方式
+你的一次典型操作（比如要做 classes 模块）
+打开新 Chat
+粘贴这一句：
+请按 backend/api/api-admin/KICKOFF_PROMPT.md 开始做 02 classes 模块（只做这一个模块，完成后结账）。
+AI 会自己：
+读 SESSION_HANDOFF.md + PROGRESS.md + EXECUTION_PLAN.md
+确认 S0 是否完成（没完成会警告你）
+读 02-classes.md + admin/api/classes.ts + admin/pages/classes/index.vue
+从 _template.md 复制建 workbooks/02-classes.md
+向你汇报本次目标 + 预计改动文件，等你一句"继续"
+你说"继续"，AI 按 Recipe 9 步做 6 个接口，每完成一个就勾 PROGRESS.md + 更工作簿
+AI 跑完 go build ./...、go generate，请你启动服务跑一遍页面 CRUD
+AI 结账：更新 3 份文档、给你 commit message、给你"下次会话该粘贴这句"
+下次你想做 students 模块
+开新 Chat
+粘贴：
+请按 backend/api/api-admin/KICKOFF_PROMPT.md 开始做 03 students 模块（只做这一个模块，完成后结账）。
+AI 重走开场流程，无信息损失续接
+为什么这样能稳定不丢信息
+入口单一：KICKOFF_PROMPT.md 是唯一入口，AI 必读，避免你每次重新解释
+状态三层落盘：
+全局层：SESSION_HANDOFF.md（当前 Sprint / 模块 / Next Action）
+模块层：workbooks/XX-*.md（该模块所有上下文 + 决策档案）
+接口层：PROGRESS.md（87 行打勾表）
+强制性约束：EXECUTION_PLAN.md §0.5 的 8 条硬性约束，AI 不能跳
+收尾即交接：每次结账都会在 SESSION_HANDOFF.md 写下"下次启动该粘贴哪句话"，你照着复制就行
+建议你现在测试一下
+最小验证（不真正开发，只走流程）：
+
+打开一个新 Chat，粘贴：
+
+请按 backend/api/api-admin/KICKOFF_PROMPT.md 的 "自动续接流程" 继续执行 admin 接口计划。
+看看 AI 是否会：
+
+读那 3 份文档
+汇报"当前 Sprint=S0，Next Action=S0-1"
+问你要不要开始 S0-1
+如果流程跑通，就说明机制工作正常，后面每个模块都能这样启动。
+
+要我现在直接在本会话里演示一次"开始做 S0-1"吗？还是你想先去新 Chat 测一下流程？

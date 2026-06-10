@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Planet radial gradient -->
+    <radialGradient id="planetGrad" cx="37%" cy="30%" r="63%" fx="30%" fy="24%">
+      <stop offset="0%" stop-color="#C5E0F5"/>
+      <stop offset="12%" stop-color="#99C9E8"/>
+      <stop offset="32%" stop-color="#5B9BD5"/>
+      <stop offset="58%" stop-color="#3A7CC3"/>
+      <stop offset="82%" stop-color="#2A5F9E"/>
+      <stop offset="95%" stop-color="#1E4D80"/>
+      <stop offset="100%" stop-color="#153D6A"/>
+    </radialGradient>
+
+    <!-- Planet glow -->
+    <radialGradient id="planetGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="65%" stop-color="#2E64A0" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#2E64A0" stop-opacity="0.06"/>
+      <stop offset="92%" stop-color="#2E64A0" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#2E64A0" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Highlight spot -->
+    <radialGradient id="highlightGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.60"/>
+      <stop offset="40%" stop-color="white" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Leaf gradients -->
+    <linearGradient id="leafGradLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#66BB6A"/>
+      <stop offset="35%" stop-color="#4CAF50"/>
+      <stop offset="100%" stop-color="#388E3C"/>
+    </linearGradient>
+
+    <linearGradient id="leafGradRight" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#81C784"/>
+      <stop offset="45%" stop-color="#4CAF50"/>
+      <stop offset="100%" stop-color="#2E7D32"/>
+    </linearGradient>
+
+    <linearGradient id="stemGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#388E3C"/>
+      <stop offset="50%" stop-color="#4CAF50"/>
+      <stop offset="100%" stop-color="#66BB6A"/>
+    </linearGradient>
+
+    <!-- Star glow filter -->
+    <filter id="softGlow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0.65
+                0 1 0 0 0.40
+                0 0 1 0 0.10
+                0 0 0 0.22 0" result="colored"/>
+      <feMerge>
+        <feMergeNode in="colored"/>
+      </feMerge>
+    </filter>
+
+    <!-- Planet subtle texture ring -->
+    <radialGradient id="ringGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.04"/>
+      <stop offset="50%" stop-color="white" stop-opacity="0.06"/>
+      <stop offset="70%" stop-color="white" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ============================================ -->
+  <!-- PLANET (centered, larger radius for balance) -->
+  <!-- ============================================ -->
+
+  <!-- Glow halo -->
+  <circle cx="512" cy="535" r="385" fill="url(#planetGlow)"/>
+
+  <!-- Orbital ring arcs (behind planet) -->
+  <path d="M 147 535 A 400 140 0 0 1 877 535"
+        fill="none" stroke="#FF9800" stroke-width="16" stroke-opacity="0.14"
+        stroke-linecap="round"/>
+  <path d="M 168 535 A 388 135 0 0 0 856 535"
+        fill="none" stroke="#FF9800" stroke-width="12" stroke-opacity="0.10"
+        stroke-linecap="round"/>
+
+  <!-- Planet body -->
+  <circle cx="512" cy="535" r="340" fill="url(#planetGrad)"/>
+
+  <!-- Subtle surface texture bands -->
+  <ellipse cx="512" cy="535" rx="340" ry="100" fill="url(#ringGrad)"/>
+  <ellipse cx="512" cy="480" rx="330" ry="60" fill="url(#ringGrad)"/>
+  <ellipse cx="512" cy="620" rx="300" ry="70" fill="url(#ringGrad)"/>
+
+  <!-- Main highlight -->
+  <ellipse cx="385" cy="420" rx="120" ry="100" fill="url(#highlightGrad)"/>
+
+  <!-- Secondary spark highlight -->
+  <ellipse cx="420" cy="385" rx="40" ry="28" fill="white" fill-opacity="0.35"/>
+
+  <!-- ============================================ -->
+  <!-- ORBITAL RING (in front of planet, lower arc)  -->
+  <!-- ============================================ -->
+  <path d="M 205 560 A 385 135 0 0 0 819 560"
+        fill="none" stroke="#FF9800" stroke-width="11" stroke-opacity="0.16"
+        stroke-linecap="round"/>
+
+  <!-- ============================================ -->
+  <!-- SPROUT (shorter, more compact)                -->
+  <!-- ============================================ -->
+  <g transform="translate(518, 195)">
+    <!-- Stem: growing from planet surface, curving up -->
+    <path d="M 0 0 Q 15 -60 48 -110 Q 56 -120 62 -135"
+          fill="none" stroke="#388E3C" stroke-width="17" stroke-linecap="round"/>
+    <path d="M 0 0 Q 15 -60 48 -110 Q 56 -120 62 -135"
+          fill="none" stroke="url(#stemGrad)" stroke-width="11" stroke-linecap="round"/>
+    <!-- Stem light highlight -->
+    <path d="M -2 0 Q 12 -58 43 -107 Q 50 -116 56 -130"
+          fill="none" stroke="#81C784" stroke-width="2.8" stroke-linecap="round"
+          stroke-opacity="0.7"/>
+
+    <!-- Left leaf (larger, drooping) -->
+    <g transform="translate(16, -72) rotate(-22)">
+      <ellipse cx="-2" cy="0" rx="44" ry="16" fill="#388E3C"/>
+      <ellipse cx="-1" cy="-1" rx="38" ry="13" fill="url(#leafGradLeft)"/>
+      <ellipse cx="-7" cy="-2" rx="20" ry="3.5" fill="#A5D6A7" fill-opacity="0.45"/>
+    </g>
+
+    <!-- Right leaf (reaching up) -->
+    <g transform="translate(42, -115) rotate(28)">
+      <ellipse cx="1" cy="0" rx="38" ry="14" fill="#2E7D32"/>
+      <ellipse cx="0" cy="-1" rx="33" ry="11" fill="url(#leafGradRight)"/>
+      <ellipse cx="-4" cy="-1" rx="16" ry="3" fill="#A5D6A7" fill-opacity="0.4"/>
+    </g>
+
+    <!-- Top bud -->
+    <circle cx="62" cy="-135" r="10" fill="#66BB6A"/>
+    <ellipse cx="59" cy="-138" rx="5" ry="3.5" fill="#A5D6A7" fill-opacity="0.6"/>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- STARS                                          -->
+  <!-- ============================================ -->
+
+  <!-- Star 1 - upper left (large) -->
+  <g>
+    <g transform="translate(320, 210)" filter="url(#softGlow)">
+      <polygon points="0,-54 13,-15 54,-15 19,8 32,48 0,26 -32,48 -19,8 -54,-15 -13,-15"
+               fill="#FFB74D"/>
+    </g>
+    <polygon points="320,170 333,195 358,195 338,210 346,240 320,222 294,240 302,210 282,195 307,195"
+             fill="#FF9800"/>
+    <circle cx="320" cy="208" r="6.5" fill="#FFE0B2"/>
+  </g>
+
+  <!-- Star 2 - upper right (largest) -->
+  <g>
+    <g transform="translate(660, 175)" filter="url(#softGlow)">
+      <polygon points="0,-62 14,-18 62,-18 22,10 37,56 0,31 -37,56 -22,10 -62,-18 -14,-18"
+               fill="#FFB74D"/>
+    </g>
+    <polygon points="660,137 674,160 698,160 678,178 688,210 660,190 632,210 642,178 622,160 646,160"
+             fill="#FF9800"/>
+    <circle cx="660" cy="175" r="7.5" fill="#FFE0B2"/>
+  </g>
+
+  <!-- Star 3 - top center (small) -->
+  <g>
+    <g transform="translate(510, 105)" filter="url(#softGlow)">
+      <polygon points="0,-36 8,-10 36,-10 13,6 22,32 0,18 -22,32 -13,6 -36,-10 -8,-10"
+               fill="#FFB74D"/>
+    </g>
+    <polygon points="510,85 518,100 528,100 521,110 526,126 510,116 494,126 499,110 492,100 502,100"
+             fill="#FF9800"/>
+    <circle cx="510" cy="105" r="4.5" fill="#FFE0B2"/>
+  </g>
+
+  <!-- Star 4 - bottom right -->
+  <g>
+    <g transform="translate(730, 770)" filter="url(#softGlow)">
+      <polygon points="0,-30 7,-9 30,-9 11,4 18,26 0,15 -18,26 -11,4 -30,-9 -7,-9"
+               fill="#FFB74D"/>
+    </g>
+    <polygon points="730,750 737,764 750,764 740,772 745,788 730,778 715,788 720,772 710,764 723,764"
+             fill="#FF9800"/>
+    <circle cx="730" cy="768" r="3.8" fill="#FFE0B2"/>
+  </g>
+
+  <!-- Star 5 - left middle (small) -->
+  <g>
+    <polygon points="235,480 240,492 252,492 243,498 246,510 235,502 224,510 227,498 218,492 230,492"
+             fill="#FF9800"/>
+    <circle cx="235" cy="495" r="3.2" fill="#FFE0B2"/>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SPARKLE DOTS                                  -->
+  <!-- ============================================ -->
+  <g fill-opacity="0.60">
+    <circle cx="280" cy="280" r="5" fill="#FFB74D"/>
+    <circle cx="280" cy="280" r="2.5" fill="#FF9800" fill-opacity="0.9"/>
+
+    <circle cx="720" cy="320" r="4.5" fill="#FFB74D"/>
+    <circle cx="720" cy="320" r="2.2" fill="#FF9800" fill-opacity="0.85"/>
+
+    <circle cx="780" cy="500" r="4" fill="#FFB74D"/>
+    <circle cx="780" cy="500" r="2" fill="#FF9800" fill-opacity="0.8"/>
+
+    <circle cx="260" cy="670" r="5.5" fill="#FFB74D"/>
+    <circle cx="260" cy="670" r="2.8" fill="#FF9800" fill-opacity="0.85"/>
+
+    <circle cx="620" cy="830" r="4.5" fill="#FFB74D"/>
+    <circle cx="620" cy="830" r="2.2" fill="#FF9800" fill-opacity="0.8"/>
+
+    <circle cx="440" cy="130" r="3.5" fill="#FFB74D"/>
+    <circle cx="440" cy="130" r="1.8" fill="#FF9800" fill-opacity="0.85"/>
+
+    <circle cx="185" cy="430" r="3.2" fill="#FFB74D"/>
+    <circle cx="185" cy="430" r="1.6" fill="#FF9800" fill-opacity="0.8"/>
+
+    <circle cx="340" cy="820" r="3.5" fill="#FFB74D"/>
+    <circle cx="340" cy="820" r="1.8" fill="#FF9800" fill-opacity="0.75"/>
+  </g>
+</svg>

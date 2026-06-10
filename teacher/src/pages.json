@@ -1,0 +1,138 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "老师工作台",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/auth/phone",
+      "style": {
+        "navigationBarTitleText": "老师登录"
+      }
+    },
+    {
+      "path": "pages/notice/create",
+      "style": {
+        "navigationBarTitleText": "发布通知"
+      }
+    },
+    {
+      "path": "pages/growth/index",
+      "style": {
+        "navigationBarTitleText": "成长记录",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/growth/create",
+      "style": {
+        "navigationBarTitleText": "添加成长记录"
+      }
+    },
+    {
+      "path": "pages/growth/detail",
+      "style": {
+        "navigationBarTitleText": "成长记录详情"
+      }
+    },
+    {
+      "path": "pages/pickup/index",
+      "style": {
+        "navigationBarTitleText": "接送管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/pickup/records",
+      "style": {
+        "navigationBarTitleText": "接送记录"
+      }
+    },
+    {
+      "path": "pages/tasks/index",
+      "style": {
+        "navigationBarTitleText": "亲子任务",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/calendar/index",
+      "style": {
+        "navigationBarTitleText": "班级日历",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/calendar/create",
+      "style": {
+        "navigationBarTitleText": "添加活动"
+      }
+    },
+    {
+      "path": "pages/calendar/detail",
+      "style": {
+        "navigationBarTitleText": "活动详情"
+      }
+    },
+    {
+      "path": "pages/leave/index",
+      "style": {
+        "navigationBarTitleText": "请假审批",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/class/index",
+      "style": {
+        "navigationBarTitleText": "我的班级",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/album/index",
+      "style": {
+        "navigationBarTitleText": "班级相册"
+      }
+    },
+    {
+      "path": "pages/more/index",
+      "style": {
+        "navigationBarTitleText": "更多功能"
+      }
+    },
+    {
+      "path": "pages/messages/index",
+      "style": {
+        "navigationBarTitleText": "消息"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/webview/index",
+      "style": {
+        "navigationBarTitleText": "详情"
+      }
+    },
+    {
+      "path": "pages/doctor/checkin",
+      "style": {
+        "navigationBarTitleText": "入园晨检"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "幼儿园老师端",
+    "navigationBarBackgroundColor": "#FFF7E8",
+    "backgroundColor": "#F7F3EA",
+    "backgroundTextStyle": "dark"
+  }
+}

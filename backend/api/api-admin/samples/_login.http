@@ -1,0 +1,29 @@
+# Admin API 调试 · 登录拿 Token
+# 用法：在 VS Code REST Client 中先执行「密码登录」，再将返回 data.token 填到 @token，或依赖下方命名请求的变量引用。
+# 默认服务：http://localhost:8080 ；测试账号见 SESSION_HANDOFF.md（如 13800138000 / Admin@123）
+
+@baseUrl = http://localhost:8080
+
+### 密码登录（管理后台）
+# @name adminPasswordLogin
+POST {{baseUrl}}/api/v1/auth/login/password
+Content-Type: application/json
+
+{
+  "phone": "13800138000",
+  "password": "Admin@123"
+}
+
+### 示例：带 Bearer 调用（先执行上一请求；admin 路由实现后替换路径）
+# data.token 来自统一 Envelope
+GET {{baseUrl}}/api/v1/admin/dashboard/overview
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 刷新 access token（可选）
+# @name refreshToken
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "paste_refresh_token_here"
+}

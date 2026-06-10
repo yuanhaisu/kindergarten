@@ -1,0 +1,45 @@
+### Admin 通知（需先 @token，见 samples/_login.http）
+@base = http://localhost:8080/api/v1
+@token = <paste_access_token>
+
+### 列表
+GET {{base}}/admin/notices?page=1&page_size=20&keyword=
+Authorization: Bearer {{token}}
+
+### 详情
+GET {{base}}/admin/notices/1
+Authorization: Bearer {{token}}
+
+### 发布
+POST {{base}}/admin/notices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "class_id": 1,
+  "category": "homework",
+  "title": "周末作业",
+  "content": "请家长督促完成",
+  "need_confirm": true
+}
+
+### 编辑
+PUT {{base}}/admin/notices/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "周末作业（修订）",
+  "content": "更新后的说明"
+}
+
+### 审核通过
+PUT {{base}}/admin/notices/1/audit
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "action": "pass", "remark": "" }
+
+### 删除
+DELETE {{base}}/admin/notices/1
+Authorization: Bearer {{token}}

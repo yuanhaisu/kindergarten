@@ -1,0 +1,21 @@
+### 内容审核（需 Bearer，见 samples/_login.http）
+@base = http://localhost:8080/api/v1
+@token = <paste_access_token>
+
+### 列表
+GET {{base}}/admin/audit/list?page=1&page_size=20&type=notice&status=pending
+Authorization: Bearer {{token}}
+
+### 统计
+GET {{base}}/admin/audit/stats
+Authorization: Bearer {{token}}
+
+### 审核（:id 为 content_audits 主键）
+PUT {{base}}/admin/audit/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "action": "pass",
+  "remark": ""
+}

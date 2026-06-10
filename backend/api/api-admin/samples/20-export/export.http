@@ -1,0 +1,46 @@
+### 异步导出（需 Bearer，见 samples/_login.http）
+@base = http://localhost:8080/api/v1
+@token = <paste_access_token>
+
+### 出勤导出任务
+POST {{base}}/admin/export/attendance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "class_id": null,
+  "start_date": "2026-03-01",
+  "end_date": "2026-03-31",
+  "format": "xlsx"
+}
+
+### 学生名册
+POST {{base}}/admin/export/students
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "class_id": null,
+  "status": 1,
+  "format": "xlsx"
+}
+
+### 成长记录
+POST {{base}}/admin/export/growth
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "class_id": null,
+  "start_date": "2026-03-01",
+  "end_date": "2026-03-31",
+  "format": "xlsx"
+}
+
+### 查询任务（将 :tid 换为上一响应 data.task_id）
+GET {{base}}/admin/export/export_replace_me
+Authorization: Bearer {{token}}
+
+### 下载（将 :tid 换为 task_id）
+GET {{base}}/admin/export/download/export_replace_me
+Authorization: Bearer {{token}}

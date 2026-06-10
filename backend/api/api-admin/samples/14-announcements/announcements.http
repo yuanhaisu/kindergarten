@@ -1,0 +1,45 @@
+### 园所公告（需 Bearer，见 samples/_login.http）
+@base = http://localhost:8080/api/v1
+@token = <paste_access_token>
+
+### 列表
+GET {{base}}/admin/announcements?page=1&page_size=20
+Authorization: Bearer {{token}}
+
+### 详情
+GET {{base}}/admin/announcements/1
+Authorization: Bearer {{token}}
+
+### 发布
+POST {{base}}/admin/announcements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "家长开放日",
+  "content": "正文内容……",
+  "cover_url": "",
+  "is_important": true,
+  "is_top": false,
+  "target_roles": ["parent", "teacher"],
+  "scheduled_at": null,
+  "attachments": []
+}
+
+### 编辑
+PUT {{base}}/admin/announcements/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "家长开放日（修订）" }
+
+### 置顶
+PUT {{base}}/admin/announcements/1/top
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_top": true }
+
+### 删除
+DELETE {{base}}/admin/announcements/1
+Authorization: Bearer {{token}}

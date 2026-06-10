@@ -1,0 +1,49 @@
+# 05 家长管理（需先登录拿 token，见 ../_login.http）
+
+@baseUrl = http://localhost:8080
+
+### 家长列表
+# @name listParents
+GET {{baseUrl}}/api/v1/admin/parents?page=1&page_size=20
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 家长详情（替换 :id）
+GET {{baseUrl}}/api/v1/admin/parents/10
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 添加家长
+POST {{baseUrl}}/api/v1/admin/parents
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "real_name": "测试家长",
+  "nickname": "测试家长昵称",
+  "phone": "13700001234",
+  "gender": 1,
+  "student_bindings": [
+    { "student_id": 1, "relation": "father", "is_primary": true }
+  ]
+}
+
+### 更新家长
+PUT {{baseUrl}}/api/v1/admin/parents/10
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "nickname": "更新后昵称",
+  "student_bindings": [
+    { "student_id": 1, "relation": "father", "is_primary": true }
+  ]
+}
+
+### 更新家长状态
+PUT {{baseUrl}}/api/v1/admin/parents/10/status
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "status": 2,
+  "reason": "测试禁用"
+}

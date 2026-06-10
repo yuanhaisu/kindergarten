@@ -1,0 +1,27 @@
+# Admin · 亲子任务（依赖 ../_login.http）
+
+@baseUrl = http://localhost:8080
+@token = {{adminPasswordLogin.response.body.$.data.token}}
+
+### 列表
+GET {{baseUrl}}/api/v1/admin/tasks?page=1&page_size=20
+Authorization: Bearer {{token}}
+
+### 统计
+GET {{baseUrl}}/api/v1/admin/tasks/stats?start_date=2026-03-01&end_date=2026-03-31
+Authorization: Bearer {{token}}
+
+### 新建（class_id 换成本地班级）
+POST {{baseUrl}}/api/v1/admin/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "每日阅读10分钟",
+  "description": "测试",
+  "class_id": 1,
+  "frequency": "daily",
+  "start_date": "2026-04-01",
+  "end_date": "2026-04-30",
+  "points": 5
+}

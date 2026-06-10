@@ -1,0 +1,15 @@
+# Admin · 出勤（依赖先登录，见 ../_login.http）
+
+@baseUrl = http://localhost:8080
+
+### 出勤概览（可按 date 指定）
+GET {{baseUrl}}/api/v1/admin/attendance/overview?date=2026-03-19
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 出勤明细（分页）
+GET {{baseUrl}}/api/v1/admin/attendance/records?date=2026-03-19&page=1&page_size=20
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 导出报表（Blob）
+GET {{baseUrl}}/api/v1/admin/attendance/report?start_date=2026-03-01&end_date=2026-03-31&format=xlsx
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}

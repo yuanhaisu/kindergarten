@@ -1,0 +1,17 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.log
+
+/vendor/
+
+configs/app.local.ini
+
+.env
+.env.*
+
+tmp/

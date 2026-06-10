@@ -1,0 +1,13 @@
+{
+  "name": "kindergarten-design-tokens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "养成星球三端共享 Design Tokens — 单一数据源，多端导出",
+  "scripts": {
+    "build": "node sd.config.js",
+    "clean": "rm -rf build"
+  },
+  "devDependencies": {
+    "style-dictionary": "^3.9.2"
+  }
+}

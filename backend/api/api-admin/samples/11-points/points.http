@@ -1,0 +1,42 @@
+# Admin · 积分（依赖 ../_login.http）
+
+@baseUrl = http://localhost:8080
+@token = {{adminPasswordLogin.response.body.$.data.token}}
+
+### 概览
+GET {{baseUrl}}/api/v1/admin/points/overview
+Authorization: Bearer {{token}}
+
+### 流水
+GET {{baseUrl}}/api/v1/admin/points/records?page=1&page_size=20&type=earn
+Authorization: Bearer {{token}}
+
+### 手动调整（student_id 换成本地学生）
+POST {{baseUrl}}/api/v1/admin/points/adjust
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "student_id": 1,
+  "type": "earn",
+  "amount": 10,
+  "reason": "测试调整"
+}
+
+### 规则
+GET {{baseUrl}}/api/v1/admin/points/rules
+Authorization: Bearer {{token}}
+
+### 更新规则
+PUT {{baseUrl}}/api/v1/admin/points/rules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rules": [
+    { "id": 1, "points": 5 },
+    { "id": 2, "points": 10 },
+    { "id": 3, "points": 50 },
+    { "id": 4, "points": 20 }
+  ]
+}

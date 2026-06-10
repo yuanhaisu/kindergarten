@@ -1,0 +1,34 @@
+package repository
+
+import "github.com/google/wire"
+
+var Set = wire.NewSet(
+	NewUserRepo,
+	NewUserRoleRepo,
+	NewKindergartenRepo,
+	NewFileRepo,
+	NewMessageRepo,
+	NewDashboardRepo,
+	NewClassRepo,
+	NewStudentRepo,
+	NewTeacherRepo,
+	NewParentRepo,
+	NewOperationLogRepo,
+	NewAcademicYearRepo,
+	NewKindergartenAppSettingRepo,
+	NewAdminRepo,
+	NewAttendanceRepo,
+	NewLeaveRepo,
+	NewPickupRepo,
+	NewGrowthRepo,
+	NewTaskRepo,
+	NewPointRepo,
+	NewAchievementRepo,
+	NewNoticeRepo,
+	NewAnnouncementRepo,
+	NewAuditRepo,
+	NewExportTaskRepo,
+	NewTeacherInvitationRepo,
+	NewDictRepo,
+	NewHealthCheckRepo,
+)

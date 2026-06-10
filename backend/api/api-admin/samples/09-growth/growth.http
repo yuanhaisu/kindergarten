@@ -1,0 +1,29 @@
+# Admin · 成长记录（依赖先登录，见 ../_login.http）
+
+@baseUrl = http://localhost:8080
+
+### 列表
+GET {{baseUrl}}/api/v1/admin/growth/logs?page=1&page_size=20
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 详情（:id 换为实际日志 ID）
+GET {{baseUrl}}/api/v1/admin/growth/logs/1
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 审核
+PUT {{baseUrl}}/api/v1/admin/growth/logs/1/audit
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "action": "pass",
+  "remark": "内容合规，审核通过"
+}
+
+### 删除
+DELETE {{baseUrl}}/api/v1/admin/growth/logs/1
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 统计（可选 start_date + end_date，须同时传或同时不传）
+GET {{baseUrl}}/api/v1/admin/growth/stats?start_date=2026-03-01&end_date=2026-03-31
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}

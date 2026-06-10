@@ -1,0 +1,47 @@
+# Admin · 角色权限（依赖先登录，见 ../_login.http）
+
+@baseUrl = http://localhost:8080
+
+### 权限树
+# @name permTree
+GET {{baseUrl}}/api/v1/admin/permissions
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 角色列表
+GET {{baseUrl}}/api/v1/admin/roles
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 新建角色（示例权限）
+POST {{baseUrl}}/api/v1/admin/roles
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "name": "财务管理员",
+  "description": "查看数据报表",
+  "permissions": [
+    "dashboard:view",
+    "attendance:view",
+    "points:view"
+  ]
+}
+
+### 编辑角色（将 {{roleId}} 换成列表返回的 id）
+PUT {{baseUrl}}/api/v1/admin/roles/{{roleId}}
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "name": "财务管理员",
+  "description": "查看数据报表和积分管理",
+  "permissions": [
+    "dashboard:view",
+    "attendance:view",
+    "points:view",
+    "points:manage"
+  ]
+}
+
+### 删除角色（仅无管理员关联时可删）
+DELETE {{baseUrl}}/api/v1/admin/roles/{{roleId}}
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}

@@ -1,0 +1,15 @@
+### 看板概览（需先执行 samples/_login.http 登录）
+GET http://localhost:8080/api/v1/admin/dashboard/overview
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 出勤趋势
+GET http://localhost:8080/api/v1/admin/dashboard/attendance-trend?period=30d
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 班级排行
+GET http://localhost:8080/api/v1/admin/dashboard/class-ranking
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
+
+### 成长统计
+GET http://localhost:8080/api/v1/admin/dashboard/growth-stats?period=30d
+Authorization: Bearer {{adminPasswordLogin.response.body.$.data.token}}
