@@ -1,8 +1,19 @@
-$teacher-bg: #f7f3ea;
-$teacher-card: #fffaf0;
-$teacher-text: #2f2a22;
-$teacher-muted: #86776a;
-$teacher-primary: #ff8a3d;
-$teacher-green: #6bbf59;
-$teacher-blue: #6aa9ff;
-$teacher-shadow: 0 18rpx 48rpx rgba(106, 77, 42, 0.12);
+// ============================================================
+// 养成星球 · 老师端 — 全局样式入口
+// 品牌基因 token 由 shared-design-tokens 统一管理
+// ============================================================
+
+// 品牌基因 & 端差异化 token（自动生成，勿手动编辑）
+@import "../../shared-design-tokens/build/scss/tokens-teacher.scss";
+
+// ============================================================
+// 旧变量别名（向后兼容，标记 @deprecated，后续逐步移除）
+// ============================================================
+$teacher-bg:      $color-bg-page;
+$teacher-card:    $color-bg-card;
+$teacher-text:    $color-text-primary;
+$teacher-muted:   $color-text-muted;
+$teacher-primary: $color-brand-primary;
+$teacher-green:   $color-semantic-success;
+$teacher-blue:    $color-semantic-info;
+$teacher-shadow:  $shadow-lg;
