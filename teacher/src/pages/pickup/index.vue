@@ -152,42 +152,36 @@ onPullDownRefresh(loadPickup)
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$slate-50: #F8FAFC;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
-$slate-800: #1E293B;
-
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24rpx 28rpx;
-  background: $slate-50;
+  padding: $spacing-lg 28rpx;
+  background: $color-bg-card;
 }
 
 // ===== 统计卡片 =====
 .stats-card {
   padding: 48rpx 48rpx 40rpx;
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
   background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .stats-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 32rpx;
+  margin-bottom: $spacing-xl;
 }
 
 .stats-title {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
   color: #fff;
 }
 
 .stats-date {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: #FFEDD5;
 }
 
@@ -200,7 +194,7 @@ $slate-800: #1E293B;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .stat-num {
@@ -210,23 +204,23 @@ $slate-800: #1E293B;
 }
 
 .stat-label {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   color: #FFEDD5;
 }
 
 // ===== 操作区 =====
 .action-card {
-  padding: 32rpx;
-  border-radius: 32rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .action-grid {
   display: flex;
   justify-content: space-around;
-  margin-bottom: 32rpx;
+  margin-bottom: $spacing-xl;
 }
 
 .action-item {
@@ -242,7 +236,7 @@ $slate-800: #1E293B;
   justify-content: center;
   width: 112rpx;
   height: 112rpx;
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
 }
 
 .is-green  { background: #DCFCE7; }
@@ -259,7 +253,7 @@ $slate-800: #1E293B;
 .is-purple .action-icon-text { color: #9333EA; }
 
 .action-label {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 500;
   color: #334155;
 }
@@ -267,41 +261,41 @@ $slate-800: #1E293B;
 .action-hint {
   display: flex;
   align-items: flex-start;
-  gap: 24rpx;
-  padding: 24rpx;
-  border-radius: 24rpx;
-  background: $slate-50;
+  gap: $spacing-lg;
+  padding: $spacing-lg;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
 }
 
 .hint-icon {
   flex-shrink: 0;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   font-weight: 700;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .hint-text {
-  font-size: 26rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
   line-height: 1.5;
 }
 
 // ===== 学生列表 =====
 .student-section {
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .student-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .student-title {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .filter-btn {
@@ -310,8 +304,8 @@ $slate-800: #1E293B;
   gap: 4rpx;
 
   text {
-    font-size: 28rpx;
-    color: $blue-500;
+    font-size: $typography-font-size-md;
+    color: $color-semantic-info;
   }
 }
 
@@ -320,23 +314,23 @@ $slate-800: #1E293B;
   text-align: center;
 
   text {
-    font-size: 28rpx;
-    color: $slate-400;
+    font-size: $typography-font-size-md;
+    color: $color-text-hint;
   }
 }
 
 .student-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .student-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32rpx;
-  border-radius: 24rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
 }
@@ -344,7 +338,7 @@ $slate-800: #1E293B;
 .student-info {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
   flex: 1;
   min-width: 0;
 }
@@ -353,7 +347,7 @@ $slate-800: #1E293B;
   flex-shrink: 0;
   width: 96rpx;
   height: 96rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   overflow: hidden;
 }
 
@@ -369,9 +363,9 @@ $slate-800: #1E293B;
   width: 100%;
   height: 100%;
   background: #DBEAFE;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .student-text {
@@ -382,14 +376,14 @@ $slate-800: #1E293B;
 }
 
 .student-name {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .student-auth {
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -397,14 +391,14 @@ $slate-800: #1E293B;
 
 .register-btn {
   flex-shrink: 0;
-  padding: 12rpx 24rpx;
-  border-radius: 16rpx;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $border-radius-lg;
   background: #EFF6FF;
 
   text {
-    font-size: 26rpx;
+    font-size: $typography-font-size-base;
     font-weight: 500;
-    color: $blue-500;
+    color: $color-semantic-info;
   }
 }
 

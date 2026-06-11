@@ -73,38 +73,38 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
+.page { min-height: 100vh; padding: $spacing-lg 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
 .spacer-w12 { width: 24rpx; flex-shrink: 0; }
 
-.safety-card { display: flex; padding: 24rpx; border-radius: $border-radius-md; background: #FFF7ED; margin-bottom: 24rpx; }
-.safety-icon { font-family: remixicon; font-size: 40rpx; color: #F97316; flex-shrink: 0; }
-.safety-title { display: block; font-size: 26rpx; font-weight: 600; color: #92400E; }
-.safety-text { display: block; margin-top: 4rpx; font-size: 24rpx; color: #A16207; }
+.safety-card { display: flex; padding: $spacing-lg; border-radius: $border-radius-md; background: #FFF7ED; margin-bottom: 24rpx; }
+.safety-icon { font-family: remixicon; font-size: $typography-font-size-3xl; color: #F97316; flex-shrink: 0; }
+.safety-title { display: block; font-size: $typography-font-size-base; font-weight: 600; color: #92400E; }
+.safety-text { display: block; margin-top: 4rpx; font-size: $typography-font-size-sm; color: #A16207; }
 
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
-.page-title { font-size: 36rpx; font-weight: 700; color: $color-text-primary; }
-.add-btn { padding: 14rpx 28rpx; border-radius: 9999rpx; background: $color-brand-primary; color: #fff; font-size: 24rpx; }
+.page-title { font-size: $typography-font-size-2xl; font-weight: 700; color: $color-text-primary; }
+.add-btn { padding: 14rpx 28rpx; border-radius: 9999rpx; background: $color-brand-primary; color: #fff; font-size: $typography-font-size-sm; }
 
-.state { display: flex; align-items: center; justify-content: center; min-height: 50vh; color: $color-text-hint; font-size: 28rpx; }
-.list { display: flex; flex-direction: column; gap: 16rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 50vh; color: $color-text-hint; font-size: $typography-font-size-md; }
+.list { display: flex; flex-direction: column; gap: $spacing-md; }
 
-.card { display: flex; align-items: center; padding: 24rpx; border-radius: $border-radius-md; background: $color-bg-card; box-shadow: $shadow-sm; }
+.card { display: flex; align-items: center; padding: $spacing-lg; border-radius: $border-radius-md; background: $color-bg-card; box-shadow: $shadow-sm; }
 .person-avatar { width: 96rpx; height: 96rpx; border-radius: 9999rpx; overflow: hidden; background: #DBEAFE; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-img { width: 100%; height: 100%; }
-.avatar-placeholder { font-family: remixicon; font-size: 40rpx; color: #2563EB; }
+.avatar-placeholder { font-family: remixicon; font-size: $typography-font-size-3xl; color: #2563EB; }
 
 .info { flex: 1; overflow: hidden; }
-.name-row { display: flex; align-items: center; gap: 12rpx; }
-.name { font-size: 28rpx; font-weight: 600; color: $color-text-primary; }
+.name-row { display: flex; align-items: center; gap: $spacing-sm; }
+.name { font-size: $typography-font-size-md; font-weight: 600; color: $color-text-primary; }
 .auth-badge { padding: 4rpx 16rpx; border-radius: 9999rpx; font-size: 20rpx; }
 .badge-perm { background: #DCFCE7; color: #166534; }
 .badge-temp { background: #FFEDD5; color: #92400E; }
-.relation { display: block; margin-top: 8rpx; font-size: 24rpx; color: $color-text-muted; }
-.perm-tags { display: flex; gap: 8rpx; margin-top: 8rpx; }
+.relation { display: block; margin-top: 8rpx; font-size: $typography-font-size-sm; color: $color-text-muted; }
+.perm-tags { display: flex; gap: $spacing-xs; margin-top: 8rpx; }
 .perm-tag { padding: 4rpx 12rpx; border-radius: 9999rpx; font-size: 20rpx; }
 .perm-tag.green { background: #DCFCE7; color: #166534; }
 .perm-tag.blue { background: #DBEAFE; color: #1D4ED8; }
 .perm-tag.purple { background: #F3E8FF; color: #7E22CE; }
 
-.delete-btn { padding: 12rpx 24rpx; border-radius: 9999rpx; background: #FEE2E2; color: #DC2626; font-size: 22rpx; flex-shrink: 0; }
+.delete-btn { padding: $spacing-sm 24rpx; border-radius: 9999rpx; background: #FEE2E2; color: #DC2626; font-size: $typography-font-size-xs; flex-shrink: 0; }
 </style>

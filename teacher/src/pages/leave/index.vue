@@ -212,22 +212,17 @@ onPullDownRefresh(loadLeaves)
 </template>
 
 <style scoped lang="scss">
-$slate-50: #F8FAFC;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
-$slate-800: #1E293B;
-
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24rpx 28rpx;
-  background: $slate-50;
+  padding: $spacing-lg 28rpx;
+  background: $color-bg-page;
 }
 
 // ===== 统计卡片 =====
 .stats-card {
   padding: 40rpx 32rpx;
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
   margin-bottom: 32rpx;
@@ -242,7 +237,7 @@ $slate-800: #1E293B;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .stat-num {
@@ -252,12 +247,12 @@ $slate-800: #1E293B;
 
 .stat-num.is-red   { color: #EF4444; }
 .stat-num.is-green { color: #10B981; }
-.stat-num.is-gray  { color: $slate-500; }
+.stat-num.is-gray  { color: $color-text-muted; }
 .stat-num.is-blue  { color: #3B82F6; }
 
 .stat-label {
-  font-size: 26rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
 }
 
 // ===== 章节 =====
@@ -270,28 +265,28 @@ $slate-800: #1E293B;
 }
 
 .section-title {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .empty-state {
   padding: 80rpx 0;
   text-align: center;
 
-  text { font-size: 28rpx; color: $slate-400; }
+  text { font-size: $typography-font-size-md; color: $color-text-hint; }
 }
 
 // ===== 请假卡片 =====
 .leave-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .leave-card {
-  padding: 32rpx;
-  border-radius: 24rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
 }
@@ -304,7 +299,7 @@ $slate-800: #1E293B;
 
 .leave-user {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
   flex: 1;
   min-width: 0;
 }
@@ -327,7 +322,7 @@ $slate-800: #1E293B;
 }
 
 .avatar-text {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
   color: #3B82F6;
 }
@@ -343,60 +338,60 @@ $slate-800: #1E293B;
 .user-name-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .user-name {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .status-tag {
   padding: 4rpx 16rpx;
-  border-radius: 8rpx;
+  border-radius: $border-radius-sm;
 }
 
 .status-tag.is-pending {
   background: #FEF2F2;
-  text { font-size: 24rpx; color: #EF4444; font-weight: 500; }
+  text { font-size: $typography-font-size-sm; color: #EF4444; font-weight: 500; }
 }
 
 .status-tag.is-approved {
   background: #F0FDF4;
-  text { font-size: 24rpx; color: #10B981; font-weight: 500; }
+  text { font-size: $typography-font-size-sm; color: #10B981; font-weight: 500; }
 }
 
 .status-tag.is-rejected {
   background: #F1F5F9;
-  text { font-size: 24rpx; color: $slate-500; font-weight: 500; }
+  text { font-size: $typography-font-size-sm; color: $color-text-muted; font-weight: 500; }
 }
 
 .leave-reason, .leave-period {
-  font-size: 26rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
 }
 
 .leave-meta {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .meta-icon {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 700;
-  color: $slate-400;
+  color: $color-text-hint;
 }
 
 .meta-text {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 .approved-icon {
   flex-shrink: 0;
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
   font-weight: 700;
   color: #22C55E;
 }
@@ -404,7 +399,7 @@ $slate-800: #1E293B;
 // ===== 操作按钮 =====
 .leave-actions {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-top: 24rpx;
   padding-top: 24rpx;
   border-top: 2rpx solid #F1F5F9;
@@ -416,9 +411,9 @@ $slate-800: #1E293B;
   align-items: center;
   justify-content: center;
   height: 80rpx;
-  border-radius: 16rpx;
+  border-radius: $border-radius-lg;
 
-  text { font-size: 28rpx; font-weight: 600; }
+  text { font-size: $typography-font-size-md; font-weight: 600; }
 }
 
 .approve-btn {

@@ -12,9 +12,9 @@ defineProps({
 
 <style scoped>
 .app-card {
-  padding: 32rpx;
+  padding: $spacing-xl;
   background: #FFFFFF;
-  border-radius: 16rpx;
+  border-radius: $border-radius-lg;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 </style>

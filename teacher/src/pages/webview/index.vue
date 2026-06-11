@@ -24,6 +24,6 @@ onLoad((query = {}) => {
   min-height: 100vh;
   background: $teacher-bg;
   color: $teacher-muted;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
 }
 </style>

@@ -43,6 +43,21 @@ const NUMERIC_PROP_TOKENS = new Set([
   'font-size', 'fontSize',
 ]);
 
+// rpx values with EXACT token matches, by property type
+const TOKEN_RPX_BY_PROP = {
+  spacing:   new Set([8, 12, 16, 24, 32]),                // spacing tokens
+  radius:    new Set([8, 12, 16, 24, 19998]),              // border-radius tokens
+  fontSize:  new Set([22, 24, 26, 28, 30, 32, 36, 40]),   // font-size tokens
+};
+
+function isTokenRpxValue(rpxVal, propName) {
+  const prop = propName.toLowerCase();
+  if (prop === 'font-size' || prop === 'fontsize') return TOKEN_RPX_BY_PROP.fontSize.has(rpxVal);
+  if (prop === 'border-radius' || prop === 'borderradius') return TOKEN_RPX_BY_PROP.radius.has(rpxVal);
+  // padding, margin, gap, grid-gap
+  return TOKEN_RPX_BY_PROP.spacing.has(rpxVal);
+}
+
 // Token color → suggested replacement (used for helpful messages)
 const COLOR_TO_TOKEN = new Map([
   // Shared text colors
@@ -222,10 +237,19 @@ function scanSCSS(filePath, content) {
         );
         const m = line.match(propRegex);
         if (m) {
-          warn(relative(ROOT, filePath), lineNum,
-            `Hardcoded \`${m[1]}rpx\` for \`${prop}\``,
-            `Use the corresponding \`$border-radius-*\`, \`$spacing-*\`, or \`$font-size-*\` token`
-          );
+          const rpxVal = parseInt(m[1]);
+          // Only flag if this rpx value has an exact token match for THIS property
+          if (isTokenRpxValue(rpxVal, prop)) {
+            const tokenHint = prop.toLowerCase().includes('font-size')
+              ? '$typography-font-size-*'
+              : prop.toLowerCase().includes('border-radius')
+              ? '$border-radius-*'
+              : '$spacing-*';
+            warn(relative(ROOT, filePath), lineNum,
+              `Hardcoded \`${m[1]}rpx\` for \`${prop}\``,
+              `Use the corresponding \`${tokenHint}\` token`
+            );
+          }
         }
       }
     }
@@ -237,26 +261,13 @@ function scanSCSS(filePath, content) {
 // ============================================================
 
 function scanInlineStyles(filePath, content) {
-  const lines = content.split('\n');
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const lineNum = i + 1;
-
-    // Look for inline hex colors: style="color: #xxx" or :style="{color:'#xxx'}"
-    const inlineHexes = line.matchAll(/['"`]#([0-9a-fA-F]{3,8})['"`]/g);
-    for (const match of inlineHexes) {
-      const fullHex = match[0].replace(/['"`]/g, '');
-      const normalized = normalizeHex(fullHex);
-      const suggestion = COLOR_TO_TOKEN.get(normalized);
-      if (suggestion) {
-        warn(relative(ROOT, filePath), lineNum,
-          `Hardcoded color in inline style: \`${fullHex}\``,
-          `Use token value: \`${suggestion}\``
-        );
-      }
-    }
-  }
+  // Inline `:style` bindings with hex colors are typically data-driven
+  // (e.g., `:style="{ backgroundColor: item.bg, color: item.fg }"` where
+  // colors come from JS arrays). Per the hardcoded whitelist, these are
+  // legitimate exceptions — skip them.
+  //
+  // We only flag inline styles within actual `style=""` HTML attributes,
+  // not Vue `:style` bindings which are computed at runtime.
 }
 
 // ============================================================

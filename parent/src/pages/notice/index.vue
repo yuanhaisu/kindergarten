@@ -141,7 +141,7 @@ onPullDownRefresh(loadData)
 <style scoped lang="scss">
 .page {
   min-height: 100vh;
-  padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom));
+  padding: $spacing-lg 28rpx calc(150rpx + env(safe-area-inset-bottom));
   background: $color-bg-page;
 }
 
@@ -157,7 +157,7 @@ onPullDownRefresh(loadData)
   align-items: center;
   background: $color-bg-card;
   border-radius: $border-radius-lg;
-  padding: 32rpx 16rpx;
+  padding: $spacing-xl 16rpx;
   box-shadow: $shadow-sm;
   margin-bottom: 24rpx;
 }
@@ -169,7 +169,7 @@ onPullDownRefresh(loadData)
 
 .stat-num {
   display: block;
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
   font-weight: 700;
   color: $color-text-primary;
 }
@@ -181,7 +181,7 @@ onPullDownRefresh(loadData)
 .stat-label {
   display: block;
   margin-top: 8rpx;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
@@ -194,12 +194,12 @@ onPullDownRefresh(loadData)
 // 分类 Tab
 .tab-row {
   display: flex;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-bottom: 24rpx;
 }
 
 .tab-item {
-  padding: 16rpx 32rpx;
+  padding: $spacing-md 32rpx;
   border-radius: 9999rpx;
   background: $color-bg-card;
 }
@@ -209,7 +209,7 @@ onPullDownRefresh(loadData)
 }
 
 .tab-text {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   color: $color-text-body;
 }
 
@@ -225,19 +225,19 @@ onPullDownRefresh(loadData)
   justify-content: center;
   min-height: 60vh;
   color: $color-text-hint;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .card {
   display: flex;
   align-items: flex-start;
-  padding: 32rpx;
+  padding: $spacing-xl;
   border-radius: $border-radius-md;
   background: $color-bg-card;
   box-shadow: $shadow-sm;
@@ -260,7 +260,7 @@ onPullDownRefresh(loadData)
 
 .card-icon {
   font-family: remixicon;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   color: #2563EB;
 }
 
@@ -275,7 +275,7 @@ onPullDownRefresh(loadData)
 }
 
 .card-title {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
   color: $color-text-primary;
   flex: 1;
@@ -294,7 +294,7 @@ onPullDownRefresh(loadData)
 }
 
 .card-preview {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   color: $color-text-muted;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -315,18 +315,18 @@ onPullDownRefresh(loadData)
 
 .foot-icon {
   font-family: remixicon;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
 .foot-text {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
 .arrow {
   font-family: remixicon;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   color: $color-text-hint;
   align-self: center;
 }

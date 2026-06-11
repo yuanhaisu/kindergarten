@@ -192,12 +192,6 @@ onLoad(() => {
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$blue-600: #2563EB;
-$slate-800: #1E293B;
-$slate-500: #64748B;
-$slate-300: #CBD5E1;
-
 .page {
   min-height: 100vh;
   box-sizing: border-box;
@@ -210,7 +204,7 @@ $slate-300: #CBD5E1;
 // ===== 个人信息头部 =====
 .header-area {
   padding: 0 46rpx 62rpx;
-  background: linear-gradient(135deg, $blue-500 0%, $blue-600 100%);
+  background: linear-gradient(135deg, $color-semantic-info 0%, $color-semantic-info 100%);
 }
 
 .status-bar {
@@ -231,7 +225,7 @@ $slate-300: #CBD5E1;
   justify-content: center;
   width: 123rpx;
   height: 123rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   background: rgba(255, 255, 255, 0.2);
   border: 6rpx solid rgba(255, 255, 255, 0.4);
 }
@@ -246,7 +240,7 @@ $slate-300: #CBD5E1;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .user-name {
@@ -258,7 +252,7 @@ $slate-300: #CBD5E1;
 .school-row {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .school-icon {
@@ -282,9 +276,9 @@ $slate-300: #CBD5E1;
 .tag {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 12rpx 23rpx;
-  border-radius: 999rpx;
+  gap: $spacing-xs;
+  padding: $spacing-sm 23rpx;
+  border-radius: $border-radius-full;
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -316,7 +310,7 @@ $slate-300: #CBD5E1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .stat-num {
@@ -324,7 +318,7 @@ $slate-300: #CBD5E1;
   font-weight: 800;
 }
 
-.is-blue { color: $blue-500; }
+.is-blue { color: $color-semantic-info; }
 .is-green { color: #10B981; }
 .is-amber { color: #F59E0B; }
 
@@ -386,7 +380,7 @@ $slate-300: #CBD5E1;
 .feature-title {
   font-size: 29rpx;
   font-weight: 500;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .feature-desc {
@@ -396,7 +390,7 @@ $slate-300: #CBD5E1;
 
 .feature-arrow {
   font-size: 38rpx;
-  color: $slate-300;
+  color: #CBD5E1;
   font-weight: 300;
 }
 
@@ -405,7 +399,7 @@ $slate-300: #CBD5E1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
   margin: 62rpx 46rpx 0;
   padding: 27rpx 0;
   border-radius: 31rpx;
@@ -451,7 +445,7 @@ $slate-300: #CBD5E1;
   flex-direction: column;
   align-items: center;
   gap: 4rpx;
-  padding: 8rpx 0;
+  padding: $spacing-xs 0;
 }
 
 .nav-icon {
@@ -461,16 +455,16 @@ $slate-300: #CBD5E1;
 }
 
 .nav-label {
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
   color: #94A3B8;
 }
 
 .active-icon {
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .active-label {
-  color: $blue-500;
+  color: $color-semantic-info;
   font-weight: 600;
 }
 </style>

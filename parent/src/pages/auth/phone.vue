@@ -80,7 +80,7 @@ onLoad(() => {
 .desc {
   margin-top: 16rpx;
   color: $color-text-muted;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
 }
 
 .user-info {
@@ -92,13 +92,13 @@ onLoad(() => {
 
 .welcome {
   color: $color-text-muted;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
 }
 
 .name {
   margin-top: 8rpx;
   color: $color-text-primary;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
 }
 
@@ -109,7 +109,7 @@ onLoad(() => {
   border-radius: 999rpx;
   background: $parent-blue;
   color: #fff;
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 700;
   line-height: 96rpx;
 }
@@ -117,6 +117,6 @@ onLoad(() => {
 .tip {
   margin-top: 24rpx;
   color: $color-text-muted;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
 }
 </style>

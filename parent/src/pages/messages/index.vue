@@ -42,14 +42,14 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx; background: $color-bg-page; }
+.page { min-height: 100vh; padding: $spacing-lg 28rpx; background: $color-bg-page; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
-.page-title { color: $color-text-primary; font-size: 36rpx; font-weight: 800; }
-.badge { padding: 8rpx 20rpx; border-radius: 999rpx; background: #ff6b6b; color: #fff; font-size: 22rpx; }
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: 28rpx; }
+.page-title { color: $color-text-primary; font-size: $typography-font-size-2xl; font-weight: 800; }
+.badge { padding: $spacing-xs 20rpx; border-radius: 999rpx; background: #ff6b6b; color: #fff; font-size: $typography-font-size-xs; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: $typography-font-size-md; }
 .list { display: flex; flex-direction: column; gap: 18rpx; }
-.card { padding: 26rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
-.title { display: block; color: $color-text-primary; font-size: 28rpx; font-weight: 700; }
-.content { display: block; margin-top: 8rpx; color: $color-text-muted; font-size: 24rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card { padding: 26rpx; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.title { display: block; color: $color-text-primary; font-size: $typography-font-size-md; font-weight: 700; }
+.content { display: block; margin-top: 8rpx; color: $color-text-muted; font-size: $typography-font-size-sm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .date { display: block; margin-top: 12rpx; color: $color-text-muted; font-size: 20rpx; }
 </style>

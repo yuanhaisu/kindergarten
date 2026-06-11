@@ -47,10 +47,10 @@ onPullDownRefresh(loadTasks)
 <style scoped lang="scss">
 .page { min-height: 100vh; padding: 28rpx; background: $teacher-bg; }
 .card { margin-bottom: 20rpx; padding: 28rpx; border-radius: 30rpx; background: $teacher-card; box-shadow: $teacher-shadow; }
-.title, .task-title { display: block; color: $teacher-text; font-size: 32rpx; font-weight: 800; }
-.input, .textarea { box-sizing: border-box; width: 100%; margin-top: 18rpx; border-radius: 22rpx; background: #fff; font-size: 28rpx; }
-.input { min-height: 84rpx; padding: 0 24rpx; }
-.textarea { min-height: 180rpx; padding: 24rpx; }
+.title, .task-title { display: block; color: $teacher-text; font-size: $typography-font-size-xl; font-weight: 800; }
+.input, .textarea { box-sizing: border-box; width: 100%; margin-top: 18rpx; border-radius: 22rpx; background: #fff; font-size: $typography-font-size-md; }
+.input { min-height: 84rpx; padding: 0 $spacing-lg; }
+.textarea { min-height: 180rpx; padding: $spacing-lg; }
 .submit { min-height: 84rpx; margin-top: 18rpx; border-radius: 22rpx; background: $teacher-green; color: #fff; line-height: 84rpx; }
-.meta, .desc { display: block; margin-top: 10rpx; color: $teacher-muted; font-size: 24rpx; }
+.meta, .desc { display: block; margin-top: 10rpx; color: $teacher-muted; font-size: $typography-font-size-sm; }
 </style>

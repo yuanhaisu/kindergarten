@@ -211,30 +211,10 @@ onReachBottom(loadMore)
 </template>
 
 <style scoped lang="scss">
-// === Color Palette (from Calicat design) ===
-$blue-500: #3B82F6;
-$blue-600: #2563EB;
-$blue-50: #DBEAFE;
-$slate-50: #F8FAFC;
-$slate-100: #F1F5F9;
-$slate-200: #E2E8F0;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
-$slate-600: #475569;
-$slate-800: #1E293B;
-$red-500: #EF4444;
-$yellow-600: #CA8A04;
-$yellow-50: #FEF9C3;
-$purple-50: #F3E8FF;
-$purple-500: #A855F7;
-$orange-500: #F97316;
-$orange-50: #FFEDD5;
-$green-50: #DCFCE7;
-$green-600: #22C55E;
 
 .page {
   min-height: 100vh;
-  background: $slate-50;
+  background: $color-bg-page;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -255,8 +235,8 @@ $green-600: #22C55E;
 
 .tabs-row {
   display: flex;
-  gap: 32rpx;
-  padding: 24rpx 0;
+  gap: $spacing-xl;
+  padding: $spacing-lg 0;
 }
 
 .tab-pill {
@@ -264,14 +244,14 @@ $green-600: #22C55E;
   padding: 28rpx 32rpx;
 
   text {
-    font-size: 28rpx;
-    color: $slate-500;
+    font-size: $typography-font-size-md;
+    color: $color-text-muted;
   }
 }
 
 .tab-pill.active {
   text {
-    color: $blue-500;
+    color: $color-semantic-info;
     font-weight: 600;
   }
 }
@@ -293,16 +273,16 @@ $green-600: #22C55E;
 }
 
 .state-text {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
 .msg-card {
   background: #fff;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   padding: 28rpx 32rpx;
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
   margin-bottom: 20rpx;
   box-sizing: border-box;
@@ -323,7 +303,7 @@ $green-600: #22C55E;
   right: -4rpx;
   width: 22rpx;
   height: 20rpx;
-  background: $red-500;
+  background: $color-semantic-danger;
   border-radius: 9999rpx;
   border: 4rpx solid #fff;
   z-index: 2;
@@ -347,7 +327,7 @@ $green-600: #22C55E;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: $spacing-xs;
   overflow: hidden;
 }
 
@@ -358,8 +338,8 @@ $green-600: #22C55E;
 }
 
 .msg-sender {
-  font-size: 30rpx;
-  color: $slate-800;
+  font-size: $typography-font-size-lg;
+  color: $color-text-primary;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -371,15 +351,15 @@ $green-600: #22C55E;
 }
 
 .msg-time {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
   flex-shrink: 0;
   margin-left: 16rpx;
 }
 
 .msg-preview {
-  font-size: 26rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -395,39 +375,39 @@ $green-600: #22C55E;
 
 .msg-tag {
   padding: 4rpx 16rpx;
-  border-radius: 8rpx;
+  border-radius: $border-radius-sm;
   text {
-    font-size: 22rpx;
+    font-size: $typography-font-size-xs;
     font-weight: 500;
   }
 }
 
 // Tag colors by type
 .tag-notice {
-  background: $blue-50;
-  text { color: $blue-500; }
+  background: $color-semantic-info-bg;
+  text { color: $color-semantic-info; }
 }
 
 .tag-approval {
-  background: $yellow-50;
-  text { color: $yellow-600; }
+  background: $color-semantic-warning-bg;
+  text { color: $color-semantic-warning; }
 }
 
 .tag-system {
-  background: $slate-100;
-  text { color: $slate-500; }
+  background: $color-bg-card;
+  text { color: $color-text-muted; }
 }
 
 .badge-count {
   width: 40rpx;
   height: 40rpx;
   border-radius: 9999rpx;
-  background: $red-500;
+  background: $color-semantic-danger;
   display: flex;
   align-items: center;
   justify-content: center;
   text {
-    font-size: 22rpx;
+    font-size: $typography-font-size-xs;
     font-weight: 600;
     color: #fff;
   }

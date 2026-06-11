@@ -84,14 +84,14 @@ function handleScan() {
 
 .title {
   color: $color-text-primary;
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
   font-weight: 800;
 }
 
 .desc {
   margin-top: 16rpx;
   color: $color-text-muted;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   text-align: center;
 }
 
@@ -103,7 +103,7 @@ function handleScan() {
   border: 2rpx solid rgba(106, 77, 42, 0.12);
   border-radius: 20rpx;
   background: #fff;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   box-sizing: border-box;
 }
 
@@ -114,7 +114,7 @@ function handleScan() {
   border-radius: 999rpx;
   background: $parent-blue;
   color: #fff;
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 700;
   line-height: 96rpx;
 }
@@ -126,7 +126,7 @@ function handleScan() {
   border-radius: 999rpx;
   background: transparent;
   color: $parent-blue;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   line-height: 96rpx;
 }
 </style>

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchParentHomeOverview, fetchHomeFeeds, fetchAnnouncements, switchStudent } from "@/api/parent-home"
@@ -440,7 +440,7 @@ onPullDownRefresh(loadHome)
 
 .child-name {
   color: #FFFFFF;
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
   font-weight: 700;
 }
 
@@ -452,12 +452,12 @@ onPullDownRefresh(loadHome)
 
 .class-tag-text {
   color: #FFFFFF;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
 }
 
 .greeting {
   color: #FFEDD5;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
 }
 
 .settings-btn {
@@ -484,7 +484,7 @@ onPullDownRefresh(loadHome)
 .today-card {
   background: #FFFFFF;
   border-radius: $border-radius-lg;
-  padding: 32rpx;
+  padding: $spacing-xl;
   box-shadow: $shadow-sm;
 }
 
@@ -495,13 +495,13 @@ onPullDownRefresh(loadHome)
 }
 
 .today-title {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 600;
   color: $color-text-primary;
 }
 
 .today-date {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $color-text-muted;
 }
 
@@ -532,13 +532,13 @@ onPullDownRefresh(loadHome)
 }
 
 .status-label {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 500;
   color: $color-text-primary;
 }
 
 .status-sub {
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
   color: $color-text-muted;
   margin-top: 4rpx;
 }
@@ -548,17 +548,17 @@ onPullDownRefresh(loadHome)
   align-items: center;
   background: #FFF7ED;
   border-radius: $border-radius-md;
-  padding: 24rpx;
+  padding: $spacing-lg;
 }
 
 .perf-icon {
   font-family: remixicon;
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   color: #F97316;
 }
 
 .perf-text {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   color: #92400E;
   font-weight: 500;
 }
@@ -585,7 +585,7 @@ onPullDownRefresh(loadHome)
 // ---- 多孩切换 ----
 .student-switch {
   display: flex;
-  gap: 16rpx;
+  gap: $spacing-md;
   padding: 0 24rpx;
   margin-top: 24rpx;
 }
@@ -595,7 +595,7 @@ onPullDownRefresh(loadHome)
   border-radius: 9999rpx;
   background: $color-bg-card;
   color: $color-text-muted;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
 }
 
 .switch-chip.active {
@@ -614,7 +614,7 @@ onPullDownRefresh(loadHome)
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20rpx;
-  padding: 32rpx;
+  padding: $spacing-xl;
   background: $color-bg-card;
   border-radius: $border-radius-lg;
   box-shadow: $shadow-sm;
@@ -630,7 +630,7 @@ onPullDownRefresh(loadHome)
 .action-icon-box {
   width: 112rpx;
   height: 112rpx;
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -653,7 +653,7 @@ onPullDownRefresh(loadHome)
 }
 
 .action-text {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 500;
   color: $color-text-body;
 }
@@ -671,13 +671,13 @@ onPullDownRefresh(loadHome)
 }
 
 .section-title {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 600;
   color: $color-text-primary;
 }
 
 .section-link {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: #2563EB;
 }
 
@@ -686,7 +686,7 @@ onPullDownRefresh(loadHome)
   display: flex;
   background: $color-bg-card;
   border-radius: $border-radius-md;
-  padding: 32rpx;
+  padding: $spacing-xl;
   margin-bottom: 16rpx;
   box-shadow: $shadow-sm;
 }
@@ -704,7 +704,7 @@ onPullDownRefresh(loadHome)
 
 .notice-icon {
   font-family: remixicon;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   color: #2563EB;
 }
 
@@ -719,7 +719,7 @@ onPullDownRefresh(loadHome)
 }
 
 .notice-title {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
   color: $color-text-primary;
   flex: 1;
@@ -738,7 +738,7 @@ onPullDownRefresh(loadHome)
 }
 
 .notice-preview {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   color: $color-text-muted;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -759,17 +759,17 @@ onPullDownRefresh(loadHome)
 
 .author-icon {
   font-family: remixicon;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
 .author-name {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
 .notice-time {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
@@ -777,7 +777,7 @@ onPullDownRefresh(loadHome)
 .growth-card {
   background: $color-bg-card;
   border-radius: $border-radius-md;
-  padding: 32rpx;
+  padding: $spacing-xl;
   box-shadow: $shadow-sm;
 }
 
@@ -798,7 +798,7 @@ onPullDownRefresh(loadHome)
 
 .author-avatar-icon {
   font-family: remixicon;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   color: #2563EB;
 }
 
@@ -808,25 +808,25 @@ onPullDownRefresh(loadHome)
 }
 
 .author-name-text {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
   color: $color-text-primary;
 }
 
 .author-time {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
 .growth-content {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $color-text-body;
   line-height: 1.6;
 }
 
 .growth-photos {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .growth-photo {
@@ -853,18 +853,18 @@ onPullDownRefresh(loadHome)
 
 .ga-icon {
   font-family: remixicon;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   color: $color-text-hint;
 }
 
 .ga-num {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   color: $color-text-muted;
 }
 
 .ga-like-icon {
   font-family: remixicon;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   color: $color-text-hint;
 }
 
@@ -883,16 +883,16 @@ onPullDownRefresh(loadHome)
 
 .empty-text {
   color: $color-text-hint;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
 }
 
 .error-card {
   padding: 38rpx 28rpx;
-  margin: 24rpx;
+  margin: $spacing-lg;
   border-radius: $border-radius-md;
   background: $color-bg-card;
   color: $color-text-muted;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   text-align: center;
   box-shadow: $shadow-sm;
 }
@@ -900,19 +900,19 @@ onPullDownRefresh(loadHome)
 .retry-btn {
   width: 180rpx;
   height: 72rpx;
-  margin: 24rpx auto 0;
+  margin: $spacing-lg auto 0;
   border-radius: 9999rpx;
   background: $color-brand-primary;
   color: #fff;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   line-height: 72rpx;
 }
 
 .loading-hint {
   text-align: center;
   color: $color-text-muted;
-  font-size: 26rpx;
-  padding: 32rpx;
+  font-size: $typography-font-size-base;
+  padding: $spacing-xl;
 }
 
 // ---- 手机号绑定引导 ----
@@ -922,7 +922,7 @@ onPullDownRefresh(loadHome)
 
 .bind-card {
   background: #fff;
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
   padding: 64rpx 48rpx;
   display: flex;
   flex-direction: column;
@@ -943,7 +943,7 @@ onPullDownRefresh(loadHome)
 }
 
 .bind-desc {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   color: #94A3B8;
   text-align: center;
   line-height: 1.6;
@@ -957,7 +957,7 @@ onPullDownRefresh(loadHome)
   line-height: 96rpx;
   background: linear-gradient(135deg, #FB923C, #F97316);
   color: #fff;
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 600;
   border-radius: 48rpx;
   border: none;
@@ -971,7 +971,7 @@ onPullDownRefresh(loadHome)
 
 .bind-err {
   margin-top: 24rpx;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: #EF4444;
   text-align: center;
 }

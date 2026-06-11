@@ -162,7 +162,7 @@ onPullDownRefresh(loadLogs)
         v-model="searchQuery"
         class="search-input"
         placeholder="搜索学生姓名或记录内容"
-        placeholder-style="color: #94A3B8; font-size: 28rpx"
+        placeholder-style="color: #94A3B8; font-size: $typography-font-size-md"
       />
     </view>
 
@@ -302,26 +302,20 @@ onPullDownRefresh(loadLogs)
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$blue-50: #EFF6FF;
-$slate-50: #F8FAFC;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
 $slate-600: #475569;
-$slate-800: #1E293B;
 
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24rpx 28rpx;
-  background: $slate-50;
+  padding: $spacing-lg 28rpx;
+  background: $color-bg-card;
 }
 
 // ===== 今日待记录卡片 =====
 .pending-card {
   margin-bottom: 24rpx;
-  padding: 32rpx;
-  border-radius: 24rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
 }
@@ -335,7 +329,7 @@ $slate-800: #1E293B;
 .pending-head-left {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .pending-icon-box {
@@ -344,30 +338,30 @@ $slate-800: #1E293B;
   justify-content: center;
   width: 64rpx;
   height: 64rpx;
-  border-radius: 16rpx;
-  background: $blue-50;
+  border-radius: $border-radius-lg;
+  background: $color-semantic-info-bg;
 }
 
 .pending-icon {
   font-size: 34rpx;
   font-weight: 700;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .pending-title {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .pending-badge {
-  padding: 8rpx 24rpx;
+  padding: $spacing-xs 24rpx;
   border-radius: 999rpx;
   background: #FEF2F2;
 }
 
 .pending-badge text {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
   color: #EF4444;
 }
@@ -376,13 +370,13 @@ $slate-800: #1E293B;
   margin-top: 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .pending-item {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .pending-dot {
@@ -395,7 +389,7 @@ $slate-800: #1E293B;
 
 .pending-item-text {
   flex: 1;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $slate-600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -404,15 +398,15 @@ $slate-800: #1E293B;
 
 .pending-go-btn {
   flex-shrink: 0;
-  padding: 8rpx 24rpx;
-  border-radius: 16rpx;
-  background: $blue-50;
+  padding: $spacing-xs 24rpx;
+  border-radius: $border-radius-lg;
+  background: $color-semantic-info-bg;
 }
 
 .pending-go-btn text {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 // ===== 搜索框 =====
@@ -422,7 +416,7 @@ $slate-800: #1E293B;
   height: 88rpx;
   padding: 0 32rpx;
   border: 2rpx solid #E2E8F0;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   background: #fff;
   margin-bottom: 24rpx;
 }
@@ -431,14 +425,14 @@ $slate-800: #1E293B;
   flex-shrink: 0;
   font-size: 34rpx;
   font-weight: 700;
-  color: $slate-400;
+  color: $color-text-hint;
   margin-right: 24rpx;
 }
 
 .search-input {
   flex: 1;
-  font-size: 28rpx;
-  color: $slate-800;
+  font-size: $typography-font-size-md;
+  color: $color-text-primary;
 }
 
 // ===== 分类标签 =====
@@ -449,7 +443,7 @@ $slate-800: #1E293B;
 
 .category-row {
   display: flex;
-  gap: 16rpx;
+  gap: $spacing-md;
   flex-wrap: nowrap;
 }
 
@@ -459,8 +453,8 @@ $slate-800: #1E293B;
   border-radius: 999rpx;
   border: 2rpx solid #E2E8F0;
   background: #fff;
-  font-size: 28rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-md;
+  color: $color-text-muted;
   transition: all 0.2s;
 }
 
@@ -478,8 +472,8 @@ $slate-800: #1E293B;
 }
 
 .state-text {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
 .retry-btn {
@@ -487,9 +481,9 @@ $slate-800: #1E293B;
   height: 72rpx;
   margin-top: 28rpx;
   border-radius: 999rpx;
-  background: $blue-500;
+  background: $color-semantic-info;
   color: #fff;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
 }
 
 // ===== 月份分组 =====
@@ -500,30 +494,30 @@ $slate-800: #1E293B;
 .group-head {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-bottom: 24rpx;
 }
 
 .group-month {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .group-count {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
 // ===== 卡片列表 =====
 .card-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .card {
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -535,7 +529,7 @@ $slate-800: #1E293B;
 }
 
 .card-body {
-  padding: 32rpx;
+  padding: $spacing-xl;
 }
 
 .card-head {
@@ -552,7 +546,7 @@ $slate-800: #1E293B;
 .author-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   flex-wrap: nowrap;
 }
 
@@ -564,7 +558,7 @@ $slate-800: #1E293B;
   width: 56rpx;
   height: 56rpx;
   border-radius: 999rpx;
-  background: $blue-50;
+  background: $color-semantic-info-bg;
 }
 
 .author-avatar.is-student {
@@ -572,9 +566,9 @@ $slate-800: #1E293B;
 }
 
 .avatar-text {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 700;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .author-avatar.is-student .avatar-text {
@@ -582,45 +576,45 @@ $slate-800: #1E293B;
 }
 
 .author-name {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .cat-tag {
   flex-shrink: 0;
   padding: 4rpx 16rpx;
-  border-radius: 8rpx;
-  font-size: 24rpx;
+  border-radius: $border-radius-sm;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
 }
 
 .card-title {
   display: block;
   margin-top: 8rpx;
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .card-subtitle {
   display: block;
   margin-top: 8rpx;
-  font-size: 26rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
 }
 
 .card-date {
   flex-shrink: 0;
-  font-size: 26rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-base;
+  color: $color-text-hint;
   margin-top: 2rpx;
 }
 
 .card-content {
   display: block;
   margin-top: 16rpx;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $slate-600;
   line-height: 1.6;
   display: -webkit-box;
@@ -660,15 +654,15 @@ $slate-800: #1E293B;
 
 .student-count {
   margin-left: 16rpx;
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
 }
 
 .status-tag {
-  padding: 8rpx 24rpx;
+  padding: $spacing-xs 24rpx;
   border-radius: 999rpx;
   background: #FEF3C7;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
   color: #D97706;
 
@@ -680,24 +674,24 @@ $slate-800: #1E293B;
 
 .card-stats {
   display: flex;
-  gap: 32rpx;
+  gap: $spacing-xl;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .stat-icon {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   font-weight: 700;
-  color: $slate-400;
+  color: $color-text-hint;
 }
 
 .stat-num {
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
 }
 
 .bottom-safe {
@@ -715,7 +709,7 @@ $slate-800: #1E293B;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: $blue-500;
+  background: $color-semantic-info;
   box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.4);
   z-index: 100;
 

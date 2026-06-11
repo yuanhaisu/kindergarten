@@ -32,8 +32,6 @@ function onTab(tab, index) {
 </template>
 
 <style scoped lang="scss">
-$orange-500: #F97316;
-
 .bottom-nav {
   position: fixed;
   right: 0;
@@ -42,7 +40,7 @@ $orange-500: #F97316;
   z-index: 20;
   display: flex;
   justify-content: space-around;
-  padding: 24rpx 48rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: $spacing-lg 48rpx calc(24rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.06);
 }
@@ -60,16 +58,16 @@ $orange-500: #F97316;
 }
 
 .nav-label {
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
   color: #94A3B8;
 }
 
 .nav-item.active {
   .nav-icon {
-    color: $orange-500;
+    color: $color-brand-primary;
   }
   .nav-label {
-    color: $orange-500;
+    color: $color-brand-primary;
     font-weight: 500;
   }
 }

@@ -120,46 +120,46 @@ onPullDownRefresh(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
+.page { min-height: 100vh; padding: $spacing-lg 28rpx calc(150rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
 .spacer-w12 { width: 24rpx; flex-shrink: 0; }
 .spacer-h8 { height: 16rpx; }
 .spacer-h12 { height: 24rpx; }
 
 .stats-card {
   display: flex; align-items: center;
-  background: $color-bg-card; border-radius: $border-radius-lg; padding: 32rpx 16rpx;
+  background: $color-bg-card; border-radius: $border-radius-lg; padding: $spacing-xl 16rpx;
   box-shadow: $shadow-sm; margin-bottom: 24rpx;
 }
 .stat-item { flex: 1; text-align: center; }
-.stat-num { display: block; font-size: 40rpx; font-weight: 700; color: $color-text-primary; }
+.stat-num { display: block; font-size: $typography-font-size-3xl; font-weight: 700; color: $color-text-primary; }
 .stat-num.highlight { color: $color-brand-primary; }
-.stat-label { display: block; margin-top: 8rpx; font-size: 24rpx; color: $color-text-hint; }
+.stat-label { display: block; margin-top: 8rpx; font-size: $typography-font-size-sm; color: $color-text-hint; }
 .stat-divider { width: 2rpx; height: 60rpx; background: #E2E8F0; }
-.create-btn { padding: 14rpx 24rpx; border-radius: 9999rpx; background: $color-brand-primary; color: #fff; font-size: 24rpx; line-height: 1.4; }
+.create-btn { padding: 14rpx 24rpx; border-radius: 9999rpx; background: $color-brand-primary; color: #fff; font-size: $typography-font-size-sm; line-height: 1.4; }
 
-.tab-row { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
-.tab-item { padding: 16rpx 32rpx; border-radius: 9999rpx; background: $color-bg-card; }
+.tab-row { display: flex; gap: $spacing-md; margin-bottom: 24rpx; }
+.tab-item { padding: $spacing-md 32rpx; border-radius: 9999rpx; background: $color-bg-card; }
 .tab-item.active { background: $color-brand-primary; }
-.tab-text { font-size: 26rpx; color: $color-text-body; }
+.tab-text { font-size: $typography-font-size-base; color: $color-text-body; }
 .tab-item.active .tab-text { color: #fff; font-weight: 600; }
 
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-hint; font-size: 28rpx; }
-.list { display: flex; flex-direction: column; gap: 16rpx; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-hint; font-size: $typography-font-size-md; }
+.list { display: flex; flex-direction: column; gap: $spacing-md; }
 
-.card { padding: 32rpx; border-radius: $border-radius-md; background: $color-bg-card; box-shadow: $shadow-sm; }
+.card { padding: $spacing-xl; border-radius: $border-radius-md; background: $color-bg-card; box-shadow: $shadow-sm; }
 .card-head { display: flex; justify-content: space-between; align-items: flex-start; }
 .student-row { display: flex; align-items: center; }
 .student-avatar { width: 80rpx; height: 80rpx; border-radius: 9999rpx; overflow: hidden; background: #DBEAFE; display: flex; align-items: center; justify-content: center; }
 .avatar-img { width: 100%; height: 100%; }
-.avatar-placeholder { color: #2563EB; font-size: 32rpx; font-weight: 700; }
-.student-name { display: block; font-size: 28rpx; font-weight: 600; color: $color-text-primary; }
-.leave-days { display: block; font-size: 24rpx; color: $color-text-muted; margin-top: 4rpx; }
+.avatar-placeholder { color: #2563EB; font-size: $typography-font-size-xl; font-weight: 700; }
+.student-name { display: block; font-size: $typography-font-size-md; font-weight: 600; color: $color-text-primary; }
+.leave-days { display: block; font-size: $typography-font-size-sm; color: $color-text-muted; margin-top: 4rpx; }
 
-.status-badge { padding: 8rpx 20rpx; border-radius: 9999rpx; background: #FFEDD5; font-size: 22rpx; color: #92400E; }
+.status-badge { padding: $spacing-xs 20rpx; border-radius: 9999rpx; background: #FFEDD5; font-size: $typography-font-size-xs; color: #92400E; }
 .status-badge.status-1 { background: #DCFCE7; color: #166534; }
 .status-badge.status-2 { background: #FEE2E2; color: #991B1B; }
 .status-badge.status-3 { background: #F1F5F9; color: #64748B; }
 
-.reason { display: block; font-size: 26rpx; color: $color-text-primary; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.date-range { display: block; font-size: 24rpx; color: $color-text-muted; }
+.reason { display: block; font-size: $typography-font-size-base; color: $color-text-primary; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.date-range { display: block; font-size: $typography-font-size-sm; color: $color-text-muted; }
 </style>

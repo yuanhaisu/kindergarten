@@ -44,8 +44,6 @@ function onTab(tab, index) {
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-
 .bottom-nav {
   position: fixed;
   right: 0;
@@ -56,7 +54,7 @@ $blue-500: #3B82F6;
   justify-content: space-between;
   max-width: 430px;
   margin: 0 auto;
-  padding: 24rpx 46rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: $spacing-lg 46rpx calc($spacing-lg + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.06);
 }
@@ -66,26 +64,26 @@ $blue-500: #3B82F6;
   flex-direction: column;
   align-items: center;
   gap: 4rpx;
-  padding: 8rpx 0;
+  padding: $spacing-xs 0;
 }
 
 .nav-icon {
   font-size: 48rpx;
   font-weight: 600;
-  color: #94A3B8;
+  color: $color-text-hint;
 }
 
 .active-icon {
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .nav-label {
-  font-size: 22rpx;
-  color: #94A3B8;
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
 }
 
 .active-label {
-  color: $blue-500;
+  color: $color-semantic-info;
   font-weight: 600;
 }
 
@@ -99,7 +97,7 @@ $blue-500: #3B82F6;
   right: -8rpx;
   width: 18rpx;
   height: 16rpx;
-  background: #EF4444;
-  border-radius: 9999rpx;
+  background: $color-semantic-danger;
+  border-radius: $border-radius-full;
 }
 </style>

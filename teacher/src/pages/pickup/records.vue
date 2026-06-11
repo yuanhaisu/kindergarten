@@ -194,20 +194,11 @@ onPullDownRefresh(() => {
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$blue-50: #EFF6FF;
-$slate-50: #F8FAFC;
-$slate-200: #E2E8F0;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
-$slate-700: #334155;
-$slate-800: #1E293B;
-
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24rpx 28rpx;
-  background: $slate-50;
+  padding: $spacing-lg 28rpx;
+  background: $color-bg-card;
 }
 
 // ===== 日期筛选栏 =====
@@ -215,17 +206,17 @@ $slate-800: #1E293B;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 32rpx;
-  border-radius: 32rpx;
+  padding: $spacing-lg $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .date-selector {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .date-arrow {
@@ -234,48 +225,48 @@ $slate-800: #1E293B;
   justify-content: center;
   width: 64rpx;
   height: 64rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   background: #F1F5F9;
 }
 
 .arrow-text {
-  font-size: 32rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-xl;
+  color: $color-text-muted;
 }
 
 .date-display {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .date-icon {
-  font-size: 32rpx;
-  color: $blue-500;
+  font-size: $typography-font-size-xl;
+  color: $color-semantic-info;
 }
 
 .date-text {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   font-weight: 500;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .date-chevron {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 .filter-btn {
   display: flex;
   align-items: center;
   gap: 4rpx;
-  padding: 12rpx 24rpx;
-  border-radius: 16rpx;
-  background: $blue-50;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $border-radius-lg;
+  background: $color-semantic-info-bg;
 
   text {
-    font-size: 26rpx;
-    color: $blue-500;
+    font-size: $typography-font-size-base;
+    color: $color-semantic-info;
   }
 }
 
@@ -283,17 +274,17 @@ $slate-800: #1E293B;
 .summary-card {
   display: flex;
   align-items: center;
-  padding: 24rpx 32rpx;
-  border-radius: 32rpx;
+  padding: $spacing-lg $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .summary-item {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   flex: 1;
 }
 
@@ -303,18 +294,18 @@ $slate-800: #1E293B;
   justify-content: center;
   width: 72rpx;
   height: 72rpx;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
 }
 
-.summary-icon-box.is-blue  { background: $blue-50; }
+.summary-icon-box.is-blue  { background: $color-semantic-info-bg; }
 .summary-icon-box.is-green { background: #DCFCE7; }
 .summary-icon-box.is-amber { background: #FEF3C7; }
 
 .summary-icon {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
 
-  .is-blue &  { color: $blue-500; }
+  .is-blue &  { color: $color-semantic-info; }
   .is-green & { color: #16A34A; }
   .is-amber & { color: #D97706; }
 }
@@ -326,8 +317,8 @@ $slate-800: #1E293B;
 }
 
 .summary-label {
-  font-size: 22rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
 }
 
 .summary-value {
@@ -337,24 +328,24 @@ $slate-800: #1E293B;
 }
 
 .summary-num {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 800;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .summary-num.is-green-num { color: #16A34A; }
 .summary-num.is-amber-num { color: #D97706; }
 
 .summary-unit {
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
 }
 
 .summary-divider {
   width: 4rpx;
   height: 64rpx;
   border-radius: 2rpx;
-  background: $slate-200;
+  background: #E2E8F0;
 }
 
 // ===== 状态 =====
@@ -367,20 +358,20 @@ $slate-800: #1E293B;
 }
 
 .state-text {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
 // ===== 记录列表 =====
 .record-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .record-card {
-  padding: 32rpx;
-  border-radius: 32rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
 }
@@ -389,39 +380,39 @@ $slate-800: #1E293B;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .time-info {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
 }
 
 .time-dot {
   width: 16rpx;
   height: 16rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
 }
 
 .time-dot.is-green { background: #16A34A; }
 .time-dot.is-amber { background: #F59E0B; }
 
 .time-text {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 500;
-  color: $slate-500;
+  color: $color-text-muted;
 }
 
 .time-type {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 .status-badge {
-  padding: 8rpx 20rpx;
-  border-radius: 16rpx;
-  font-size: 24rpx;
+  padding: $spacing-xs 20rpx;
+  border-radius: $border-radius-lg;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
 }
 
@@ -444,7 +435,7 @@ $slate-800: #1E293B;
 .student-info {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
   flex: 1;
   min-width: 0;
 }
@@ -453,7 +444,7 @@ $slate-800: #1E293B;
   flex-shrink: 0;
   width: 88rpx;
   height: 88rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   overflow: hidden;
 }
 
@@ -471,7 +462,7 @@ $slate-800: #1E293B;
   background: #DBEAFE;
   font-size: 34rpx;
   font-weight: 700;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .student-detail {
@@ -482,14 +473,14 @@ $slate-800: #1E293B;
 }
 
 .student-name {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .student-meta {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 .pickup-info {
@@ -503,32 +494,32 @@ $slate-800: #1E293B;
 .pickup-row {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .pickup-icon {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 700;
-  color: $slate-500;
+  color: $color-text-muted;
 }
 
-.method-icon.is-blue   { color: $blue-500; }
+.method-icon.is-blue   { color: $color-semantic-info; }
 .method-icon.is-purple { color: #9333EA; }
-.method-icon.is-gray   { color: $slate-400; }
+.method-icon.is-gray   { color: $color-text-hint; }
 
 .pickup-text {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 500;
-  color: $slate-700;
+  color: #334155;
 }
 
 .pickup-method {
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
 }
 
-.pickup-method.is-blue   { color: $blue-500; }
+.pickup-method.is-blue   { color: $color-semantic-info; }
 .pickup-method.is-purple { color: #9333EA; }
-.pickup-method.is-gray   { color: $slate-400; }
+.pickup-method.is-gray   { color: $color-text-hint; }
 
 .bottom-safe {
   height: calc(60rpx + env(safe-area-inset-bottom));

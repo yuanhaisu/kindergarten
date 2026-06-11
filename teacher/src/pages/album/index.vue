@@ -181,28 +181,19 @@ onPullDownRefresh(loadAlbums)
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$blue-50: #EFF6FF;
-$slate-50: #F8FAFC;
-$slate-200: #E2E8F0;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
-$slate-800: #1E293B;
-
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24rpx 28rpx;
-  background: $slate-50;
+  padding: $spacing-lg 28rpx;
+  background: $color-bg-page;
 }
 
-// ===== 统计卡片 =====
 .stats-card {
-  padding: 32rpx;
-  border-radius: 32rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .stats-row {
@@ -213,7 +204,7 @@ $slate-800: #1E293B;
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   flex: 1;
 }
 
@@ -223,18 +214,18 @@ $slate-800: #1E293B;
   justify-content: center;
   width: 72rpx;
   height: 72rpx;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
 }
 
-.stat-icon-box.is-blue   { background: $blue-50; }
+.stat-icon-box.is-blue   { background: $color-semantic-info-bg; }
 .stat-icon-box.is-green  { background: #DCFCE7; }
 .stat-icon-box.is-purple { background: #F3E8FF; }
 
 .stat-icon {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
 
-  .is-blue &   { color: $blue-500; }
+  .is-blue &   { color: $color-semantic-info; }
   .is-green &  { color: #16A34A; }
   .is-purple & { color: #9333EA; }
 }
@@ -246,14 +237,14 @@ $slate-800: #1E293B;
 }
 
 .stat-label {
-  font-size: 22rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
 }
 
 .stat-num {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 800;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .stat-num.is-green-num  { color: #16A34A; }
@@ -263,36 +254,35 @@ $slate-800: #1E293B;
   width: 4rpx;
   height: 64rpx;
   border-radius: 2rpx;
-  background: $slate-200;
-  margin: 0 24rpx;
+  background: #E2E8F0;
+  margin: 0 $spacing-lg;
 }
 
-// ===== 分类标签 =====
 .category-scroll {
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
   white-space: nowrap;
 }
 
 .category-row {
   display: flex;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .category-pill {
   flex-shrink: 0;
-  padding: 16rpx 36rpx;
-  border-radius: 999rpx;
+  padding: $spacing-md 36rpx;
+  border-radius: $border-radius-full;
   background: #fff;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
 
   text {
-    font-size: 26rpx;
-    color: $slate-500;
+    font-size: $typography-font-size-base;
+    color: $color-text-muted;
   }
 }
 
 .category-pill.active {
-  background: $blue-500;
+  background: $color-semantic-info;
 
   text {
     color: #fff;
@@ -300,7 +290,6 @@ $slate-800: #1E293B;
   }
 }
 
-// ===== 状态 =====
 .state-wrap {
   display: flex;
   align-items: center;
@@ -309,28 +298,26 @@ $slate-800: #1E293B;
 }
 
 .state-text {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
-// ===== 相册列表 =====
 .album-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .album-card {
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
-// 封面区
 .cover-area {
   display: flex;
-  gap: 8rpx;
+  gap: $spacing-xs;
   height: 320rpx;
 }
 
@@ -362,7 +349,7 @@ $slate-800: #1E293B;
 .cover-side {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: $spacing-xs;
   width: 180rpx;
   flex-shrink: 0;
 }
@@ -383,9 +370,8 @@ $slate-800: #1E293B;
   background: #F1F5F9;
 }
 
-// 相册信息
 .album-info {
-  padding: 24rpx 32rpx 28rpx;
+  padding: $spacing-lg $spacing-xl 28rpx;
 }
 
 .album-head {
@@ -396,9 +382,9 @@ $slate-800: #1E293B;
 }
 
 .album-title {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -407,13 +393,13 @@ $slate-800: #1E293B;
 
 .album-count {
   flex-shrink: 0;
-  padding: 4rpx 16rpx;
-  border-radius: 8rpx;
+  padding: 4rpx $spacing-md;
+  border-radius: $border-radius-sm;
   background: #F1F5F9;
 
   text {
-    font-size: 24rpx;
-    color: $slate-500;
+    font-size: $typography-font-size-sm;
+    color: $color-text-muted;
   }
 }
 
@@ -424,20 +410,20 @@ $slate-800: #1E293B;
 }
 
 .album-date {
-  font-size: 26rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-base;
+  color: $color-text-hint;
 }
 
 .album-tag {
   padding: 6rpx 20rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
 
-  text { font-size: 24rpx; font-weight: 500; }
+  text { font-size: $typography-font-size-sm; font-weight: 500; }
 }
 
 .tag-activity { background: #DCFCE7; text { color: #16A34A; } }
 .tag-artwork  { background: #F3E8FF; text { color: #9333EA; } }
-.tag-daily    { background: $blue-50; text { color: $blue-500; } }
+.tag-daily    { background: $color-semantic-info-bg; text { color: $color-semantic-info; } }
 .tag-festival { background: #FEF3C7; text { color: #D97706; } }
 
 .bottom-safe {

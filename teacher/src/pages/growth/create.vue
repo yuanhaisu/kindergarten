@@ -362,20 +362,12 @@ async function loadPerformanceTags() {
 </template>
 
 <style scoped lang="scss">
-$blue: #3b82f6;
-$blue-dark: #2563eb;
-$text: #1e293b;
-$text-secondary: #64748b;
-$text-muted: #94a3b8;
-$border: #f1f5f9;
-$bg: #f8fafc;
-$white: #ffffff;
 
 .page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: $bg;
+  background: $color-bg-card;
 }
 
 .body { flex: 1; padding-top: 16rpx; }
@@ -385,41 +377,41 @@ $white: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32rpx 48rpx;
-  background: $white;
+  padding: $spacing-xl 48rpx;
+  background: $color-bg-card;
 }
-.date-arrow { padding: 8rpx; }
+.date-arrow { padding: $spacing-xs; }
 .date-arrow.disabled { opacity: 0.3; }
-.date-text { font-size: 32rpx; font-weight: 700; color: $text; }
+.date-text { font-size: $typography-font-size-xl; font-weight: 700; color: $color-text-primary; }
 
 /* 通用 section */
-.section { padding: 32rpx 48rpx; }
+.section { padding: $spacing-xl 48rpx; }
 .section-title {
   display: block;
   margin-bottom: 24rpx;
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  color: $text;
+  color: $color-text-primary;
 }
 
 /* 模板卡片 */
 .template-row {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-bottom: 24rpx;
 }
 .template-card {
   flex: 1;
-  padding: 32rpx;
-  background: $white;
-  border: 1rpx solid $border;
-  border-radius: 24rpx;
+  padding: $spacing-xl;
+  background: $color-bg-card;
+  border: 1rpx solid $color-bg-page;
+  border-radius: $border-radius-xl;
   box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
 }
 .card-header {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-bottom: 16rpx;
 }
 .card-icon {
@@ -428,74 +420,74 @@ $white: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16rpx;
-  font-size: 36rpx;
+  border-radius: $border-radius-lg;
+  font-size: $typography-font-size-2xl;
 }
-.card-title { font-size: 28rpx; font-weight: 700; color: $text; }
-.card-body { display: flex; flex-direction: column; gap: 8rpx; }
+.card-title { font-size: $typography-font-size-md; font-weight: 700; color: $color-text-primary; }
+.card-body { display: flex; flex-direction: column; gap: $spacing-xs; }
 .meal-row { display: flex; align-items: center; justify-content: space-between; }
-.meal-label { font-size: 26rpx; color: $text-secondary; width: 54rpx; }
-.emoji-row { display: flex; gap: 8rpx; }
+.meal-label { font-size: $typography-font-size-base; color: $color-text-muted; width: 54rpx; }
+.emoji-row { display: flex; gap: $spacing-xs; }
 .emoji-btn {
   width: 48rpx;
   height: 48rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8rpx;
-  font-size: 28rpx;
+  border-radius: $border-radius-sm;
+  font-size: $typography-font-size-md;
 }
-.field-label { font-size: 26rpx; color: $text-secondary; }
-.chip-row { display: flex; gap: 16rpx; flex-wrap: wrap; }
+.field-label { font-size: $typography-font-size-base; color: $color-text-muted; }
+.chip-row { display: flex; gap: $spacing-md; flex-wrap: wrap; }
 .chip {
-  padding: 12rpx 24rpx;
-  background: $border;
-  border-radius: 16rpx;
-  font-size: 26rpx;
-  color: $text-secondary;
-  &.active { background: #eff6ff; color: $blue; font-weight: 600; }
+  padding: $spacing-sm 24rpx;
+  background: $color-bg-page;
+  border-radius: $border-radius-lg;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
+  &.active { background: #eff6ff; color: $color-semantic-info; font-weight: 600; }
 }
-.tag-cloud { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.tag-cloud { display: flex; flex-wrap: wrap; gap: $spacing-sm; }
 .tag {
-  padding: 8rpx 16rpx;
-  background: $border;
-  border-radius: 8rpx;
-  font-size: 24rpx;
-  color: $text-secondary;
-  &.active { background: #eff6ff; color: $blue; font-weight: 600; }
+  padding: $spacing-xs 16rpx;
+  background: $color-bg-page;
+  border-radius: $border-radius-sm;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+  &.active { background: #eff6ff; color: $color-semantic-info; font-weight: 600; }
 }
 
 /* 上传 */
 .upload-card {
-  padding: 32rpx;
-  background: $white;
-  border: 1rpx solid $border;
-  border-radius: 24rpx;
+  padding: $spacing-xl;
+  background: $color-bg-card;
+  border: 1rpx solid $color-bg-page;
+  border-radius: $border-radius-xl;
   box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
 }
 .media-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 .media-item {
   width: 160rpx;
   height: 160rpx;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   overflow: hidden;
   position: relative;
 }
 .add-btn {
   border: 1rpx dashed #cbd5e1;
-  background: $bg;
+  background: $color-bg-card;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
-.add-icon { font-size: 48rpx; color: $text-muted; }
-.add-text { font-size: 24rpx; color: $text-muted; }
+.add-icon { font-size: 48rpx; color: $color-text-hint; }
+.add-text { font-size: $typography-font-size-sm; color: $color-text-hint; }
 .media-img { width: 100%; height: 100%; }
 .media-remove {
   position: absolute;
@@ -509,55 +501,55 @@ $white: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
 }
 .upload-hint {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-top: 24rpx;
-  font-size: 24rpx;
-  color: $text-muted;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 /* 记录内容 */
 .content-card {
-  padding: 32rpx;
-  background: $white;
-  border: 1rpx solid $border;
-  border-radius: 24rpx;
+  padding: $spacing-xl;
+  background: $color-bg-card;
+  border: 1rpx solid $color-bg-page;
+  border-radius: $border-radius-xl;
   box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
 }
 .content-area {
   width: 100%;
   height: 240rpx;
-  font-size: 30rpx;
-  color: $text;
+  font-size: $typography-font-size-lg;
+  color: $color-text-primary;
   box-sizing: border-box;
 }
 
 /* 底部操作栏 */
 .bottom-bar {
-  padding: 32rpx 48rpx 48rpx 48rpx;
-  background: $white;
+  padding: $spacing-xl 48rpx 48rpx 48rpx;
+  background: $color-bg-card;
 }
 .bottom-options {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-bottom: 24rpx;
 }
-.option-row { display: flex; align-items: center; gap: 16rpx; }
-.option-check { font-size: 28rpx; color: $blue; width: 40rpx; }
-.option-label { font-size: 28rpx; color: $text-muted; &.active { color: $blue; } }
+.option-row { display: flex; align-items: center; gap: $spacing-md; }
+.option-check { font-size: $typography-font-size-md; color: $color-semantic-info; width: 40rpx; }
+.option-label { font-size: $typography-font-size-md; color: $color-text-hint; &.active { color: $color-semantic-info; } }
 .publish-btn {
   width: 100%;
   height: 96rpx;
-  background: linear-gradient(135deg, $blue, $blue-dark);
+  background: linear-gradient(135deg, $color-semantic-info, $color-semantic-info);
   color: #fff;
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   border: 0;
   line-height: 96rpx;
 }
@@ -566,20 +558,20 @@ $white: #ffffff;
 .student-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .student-chip {
   padding: 14rpx 32rpx;
   border-radius: 999rpx;
-  background: $border;
-  font-size: 28rpx;
-  color: $text-secondary;
+  background: $color-bg-page;
+  font-size: $typography-font-size-md;
+  color: $color-text-muted;
   transition: all 0.2s;
 
   &.selected {
     background: #eff6ff;
-    color: $blue;
+    color: $color-semantic-info;
     font-weight: 600;
   }
 }
@@ -587,17 +579,17 @@ $white: #ffffff;
 .student-empty {
   width: 100%;
   text-align: center;
-  padding: 32rpx;
-  font-size: 26rpx;
-  color: $text-muted;
+  padding: $spacing-xl;
+  font-size: $typography-font-size-base;
+  color: $color-text-hint;
 }
 
 .option-hint {
-  padding: 12rpx 24rpx;
+  padding: $spacing-sm 24rpx;
   margin-bottom: 8rpx;
-  border-radius: 12rpx;
+  border-radius: $border-radius-md;
   background: #eff6ff;
-  font-size: 24rpx;
-  color: $blue;
+  font-size: $typography-font-size-sm;
+  color: $color-semantic-info;
 }
 </style>

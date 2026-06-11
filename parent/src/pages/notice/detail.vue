@@ -91,7 +91,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 <style scoped lang="scss">
 .page {
   min-height: 100vh;
-  padding: 24rpx 28rpx 160rpx;
+  padding: $spacing-lg 28rpx 160rpx;
   background: $color-bg-page;
 }
 
@@ -107,11 +107,11 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
   justify-content: center;
   min-height: 60vh;
   color: $color-text-hint;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
 }
 
 .card {
-  padding: 32rpx;
+  padding: $spacing-xl;
   border-radius: $border-radius-lg;
   background: $color-bg-card;
   box-shadow: $shadow-sm;
@@ -125,22 +125,22 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 }
 
 .category-tag {
-  padding: 8rpx 24rpx;
+  padding: $spacing-xs 24rpx;
   border-radius: 9999rpx;
   background: $parent-blue-bg;
   color: $parent-blue;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
 }
 
 .meta-text {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
 .title {
   display: block;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
   color: $color-text-primary;
   line-height: 1.4;
@@ -163,26 +163,26 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 
 .avatar-icon {
   font-family: remixicon;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   color: #2563EB;
 }
 
 .author-name {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $color-text-primary;
   font-weight: 500;
 }
 
 .content {
   display: block;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $color-text-body;
   line-height: 1.8;
   white-space: pre-wrap;
 }
 
 .section-label {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 600;
   color: $color-text-primary;
 }
@@ -190,7 +190,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .attach-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .attach-img {
@@ -206,7 +206,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 }
 
 .read-text {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
@@ -225,7 +225,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
   border-radius: 9999rpx;
   background: $color-brand-primary;
   color: #fff;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   font-weight: 700;
   line-height: 88rpx;
 }

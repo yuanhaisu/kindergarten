@@ -31,6 +31,6 @@ onLoad((options) => {
   justify-content: center;
   min-height: 100vh;
   color: $color-text-muted;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
 }
 </style>

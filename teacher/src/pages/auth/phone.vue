@@ -28,14 +28,12 @@ async function handleWxLogin() {
 }
 
 function goAgreement(type) {
-  // placeholder for agreement page navigation
   uni.showToast({ title: type + "页面开发中", icon: "none" })
 }
 </script>
 
 <template>
   <view class="page">
-    <!-- 顶部 logo 区域 -->
     <view class="brand-area">
       <view class="logo-box">
         <text class="logo-icon">星</text>
@@ -44,9 +42,7 @@ function goAgreement(type) {
       <text class="app-sub">幼儿园数字化管理平台 · 老师端</text>
     </view>
 
-    <!-- 登录表单卡片 -->
     <view class="form-card">
-      <!-- 微信授权登录按钮 -->
       <button
         class="wx-login-btn"
         :class="{ disabled: !agreed }"
@@ -57,7 +53,6 @@ function goAgreement(type) {
         <text class="wx-btn-text">{{ submitting ? "登录中..." : "微信授权登录" }}</text>
       </button>
 
-      <!-- 协议 -->
       <view class="agreement-row">
         <view class="checkbox" :class="{ checked: agreed }" @click="toggleAgreed">
           <text v-if="agreed" class="check-mark">✓</text>
@@ -69,7 +64,6 @@ function goAgreement(type) {
       </view>
     </view>
 
-    <!-- 底部提示 -->
     <view class="bottom-hint">
       <text>仅对幼儿园老师开放，需园方统一开通账号</text>
     </view>
@@ -77,8 +71,6 @@ function goAgreement(type) {
 </template>
 
 <style scoped lang="scss">
-$blue-900: #1E3A8A;
-
 .page {
   min-height: 100vh;
   box-sizing: border-box;
@@ -87,10 +79,9 @@ $blue-900: #1E3A8A;
   align-items: center;
   justify-content: center;
   padding: 96rpx 48rpx 96rpx;
-  background: linear-gradient(180deg, #EFF6FF 0%, #FEFCE8 100%);
+  background: linear-gradient(180deg, $color-semantic-info-bg 0%, #FEFCE8 100%);
 }
 
-// ===== Logo 区域 =====
 .brand-area {
   display: flex;
   flex-direction: column;
@@ -116,7 +107,7 @@ $blue-900: #1E3A8A;
 }
 
 .app-name {
-  margin-top: 32rpx;
+  margin-top: $spacing-xl;
   font-size: 56rpx;
   font-weight: 800;
   color: #1E40AF;
@@ -124,16 +115,15 @@ $blue-900: #1E3A8A;
 
 .app-sub {
   margin-top: 12rpx;
-  font-size: 28rpx;
-  color: #64748B;
+  font-size: $typography-font-size-md;
+  color: $color-text-muted;
 }
 
-// ===== 表单卡片 =====
 .form-card {
   width: 100%;
   max-width: 640rpx;
-  padding: 48rpx;
-  border-radius: 32rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
 }
@@ -144,7 +134,7 @@ $blue-900: #1E3A8A;
   justify-content: center;
   width: 100%;
   height: 96rpx;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   background: #07C160;
   border: none;
 
@@ -154,19 +144,18 @@ $blue-900: #1E3A8A;
 }
 
 .wx-btn-text {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 600;
   color: #fff;
 }
 
-// ===== 协议 =====
 .agreement-row {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 32rpx;
-  gap: 8rpx;
+  margin-top: $spacing-xl;
+  gap: $spacing-xs;
 }
 
 .checkbox {
@@ -175,42 +164,41 @@ $blue-900: #1E3A8A;
   justify-content: center;
   width: 32rpx;
   height: 32rpx;
-  border-radius: 8rpx;
+  border-radius: $border-radius-sm;
   border: 2rpx solid #CBD5E1;
   background: #fff;
   flex-shrink: 0;
-  margin-right: 8rpx;
+  margin-right: $spacing-xs;
 }
 
 .checkbox.checked {
-  background: #3B82F6;
-  border-color: #3B82F6;
+  background: $color-semantic-info;
+  border-color: $color-semantic-info;
 }
 
 .check-mark {
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
   font-weight: 700;
   color: #fff;
 }
 
 .agree-text {
-  font-size: 24rpx;
-  color: #64748B;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
 }
 
 .agree-link {
-  font-size: 24rpx;
-  color: #3B82F6;
+  font-size: $typography-font-size-sm;
+  color: $color-semantic-info;
 }
 
-// ===== 底部提示 =====
 .bottom-hint {
   margin-top: 64rpx;
   text-align: center;
 }
 
 .bottom-hint text {
-  font-size: 24rpx;
-  color: #94A3B8;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 </style>

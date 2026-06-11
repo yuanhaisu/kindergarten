@@ -40,14 +40,14 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx; background: $color-bg-page; }
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: 28rpx; }
-.card { padding: 28rpx; margin-bottom: 18rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
-.title { display: block; color: $color-text-primary; font-size: 36rpx; font-weight: 800; }
-.sub { display: block; margin-top: 8rpx; color: $color-text-muted; font-size: 24rpx; }
-.section-title { display: block; margin-bottom: 18rpx; color: $color-text-primary; font-size: 28rpx; font-weight: 700; }
+.page { min-height: 100vh; padding: $spacing-lg 28rpx; background: $color-bg-page; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: $typography-font-size-md; }
+.card { padding: 28rpx; margin-bottom: 18rpx; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.title { display: block; color: $color-text-primary; font-size: $typography-font-size-2xl; font-weight: 800; }
+.sub { display: block; margin-top: 8rpx; color: $color-text-muted; font-size: $typography-font-size-sm; }
+.section-title { display: block; margin-bottom: 18rpx; color: $color-text-primary; font-size: $typography-font-size-md; font-weight: 700; }
 .teacher { padding: 18rpx 0; border-bottom: 1rpx solid rgba(106,77,42,0.06); }
-.t-name { display: block; color: $color-text-primary; font-size: 28rpx; font-weight: 700; }
-.t-role { display: block; margin-top: 4rpx; color: $color-text-muted; font-size: 24rpx; }
-.t-phone { display: block; margin-top: 4rpx; color: $parent-blue; font-size: 24rpx; }
+.t-name { display: block; color: $color-text-primary; font-size: $typography-font-size-md; font-weight: 700; }
+.t-role { display: block; margin-top: 4rpx; color: $color-text-muted; font-size: $typography-font-size-sm; }
+.t-phone { display: block; margin-top: 4rpx; color: $parent-blue; font-size: $typography-font-size-sm; }
 </style>

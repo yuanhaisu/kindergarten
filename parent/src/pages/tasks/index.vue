@@ -201,23 +201,16 @@ onPullDownRefresh(loadData)
 </template>
 
 <style scoped lang="scss">
-$orange-500: #F97316;
-$orange-400: #FB923C;
 $orange-100: #FFEDD5;
-$slate-50: #F8FAFC;
-$slate-100: #F1F5F9;
 $slate-200: #E2E8F0;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
 $slate-600: #475569;
-$slate-800: #1E293B;
 $purple-500: #A855F7;
 $purple-50: #F3E8FF;
 $purple-100: #EDE9FE;
 
 .page {
   min-height: 100vh;
-  background: $slate-50;
+  background: $color-bg-page;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -226,7 +219,7 @@ $purple-100: #EDE9FE;
 
 .content-scroll {
   flex: 1;
-  padding: 24rpx 28rpx 0;
+  padding: $spacing-lg 28rpx 0;
   height: 0;
   box-sizing: border-box;
   width: 100%;
@@ -234,8 +227,8 @@ $purple-100: #EDE9FE;
 
 // ===== 积分卡片 =====
 .points-card {
-  background: linear-gradient(135deg, $orange-400, $orange-500);
-  border-radius: 32rpx;
+  background: linear-gradient(135deg, $color-brand-primary-light, $color-brand-primary);
+  border-radius: $border-radius-xl;
   padding: 48rpx;
   margin-bottom: 24rpx;
 }
@@ -247,14 +240,14 @@ $purple-100: #EDE9FE;
 }
 
 .pc-label {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $orange-100;
 }
 
 .pc-num-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-top: 8rpx;
 }
 
@@ -271,10 +264,10 @@ $purple-100: #EDE9FE;
 
 .pc-exchange {
   padding: 14rpx 28rpx;
-  border-radius: 16rpx;
+  border-radius: $border-radius-lg;
   background: rgba(255,255,255,0.2);
   text {
-    font-size: 28rpx;
+    font-size: $typography-font-size-md;
     font-weight: 500;
     color: #fff;
   }
@@ -294,33 +287,33 @@ $purple-100: #EDE9FE;
 }
 
 .pcs-num {
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
   font-weight: 800;
   color: #fff;
 }
 
 .pcs-label {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $orange-100;
 }
 
 // ===== 分类标签 =====
 .tab-bar {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-bottom: 24rpx;
 }
 
 .tab-item {
   flex: 1;
-  padding: 24rpx 0;
+  padding: $spacing-lg 0;
   border-radius: 20rpx;
   background: #fff;
   text-align: center;
   text {
-    font-size: 28rpx;
+    font-size: $typography-font-size-md;
     font-weight: 500;
-    color: $slate-500;
+    color: $color-text-muted;
   }
 }
 
@@ -339,7 +332,7 @@ $purple-100: #EDE9FE;
   justify-content: center;
   padding: 200rpx 0;
 }
-.state-text { font-size: 28rpx; color: $slate-400; }
+.state-text { font-size: $typography-font-size-md; color: $color-text-hint; }
 
 // ===== 任务卡片 =====
 .task-list {
@@ -350,8 +343,8 @@ $purple-100: #EDE9FE;
 
 .task-card {
   background: #fff;
-  border-radius: 24rpx;
-  padding: 32rpx;
+  border-radius: $border-radius-xl;
+  padding: $spacing-xl;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
 }
 
@@ -364,7 +357,7 @@ $purple-100: #EDE9FE;
 .tc-icon-box {
   width: 96rpx;
   height: 96rpx;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -382,15 +375,15 @@ $purple-100: #EDE9FE;
 
 .tc-title {
   display: block;
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .tc-desc {
   display: block;
-  font-size: 26rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-base;
+  color: $color-text-hint;
   margin-top: 8rpx;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -400,11 +393,11 @@ $purple-100: #EDE9FE;
 
 .tc-points-badge {
   padding: 6rpx 20rpx;
-  border-radius: 12rpx;
+  border-radius: $border-radius-md;
   background: $purple-50;
   flex-shrink: 0;
   text {
-    font-size: 36rpx;
+    font-size: $typography-font-size-2xl;
     font-weight: 800;
     color: $purple-500;
   }
@@ -414,7 +407,7 @@ $purple-100: #EDE9FE;
 .tc-progress {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-top: 24rpx;
 }
 
@@ -422,7 +415,7 @@ $purple-100: #EDE9FE;
   flex: 1;
   height: 16rpx;
   border-radius: 9999rpx;
-  background: $slate-100;
+  background: $color-bg-card;
   overflow: hidden;
 }
 
@@ -433,8 +426,8 @@ $purple-100: #EDE9FE;
 }
 
 .tcp-label {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
   flex-shrink: 0;
 }
 
@@ -442,35 +435,35 @@ $purple-100: #EDE9FE;
 .tc-info {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
   margin-top: 16rpx;
 }
 
 .tci-icon {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
 .tci-text {
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
 }
 
 // ===== 操作按钮 =====
 .tc-actions {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-top: 24rpx;
 }
 
 .tca-checkin {
   flex: 1;
-  padding: 24rpx 0;
+  padding: $spacing-lg 0;
   border-radius: 20rpx;
   background: $purple-500;
   text-align: center;
   text {
-    font-size: 28rpx;
+    font-size: $typography-font-size-md;
     font-weight: 600;
     color: #fff;
   }
@@ -478,12 +471,12 @@ $purple-100: #EDE9FE;
 
 .tca-detail {
   flex: 1;
-  padding: 24rpx 0;
+  padding: $spacing-lg 0;
   border-radius: 20rpx;
   background: $purple-50;
   text-align: center;
   text {
-    font-size: 28rpx;
+    font-size: $typography-font-size-md;
     font-weight: 500;
     color: $purple-500;
   }
@@ -502,13 +495,13 @@ $purple-100: #EDE9FE;
 }
 
 .bs-title {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .bs-more {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $purple-500;
 }
 
@@ -523,13 +516,13 @@ $purple-100: #EDE9FE;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
 }
 
 .bs-icon-box {
   width: 128rpx;
   height: 128rpx;
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -540,14 +533,14 @@ $purple-100: #EDE9FE;
 }
 
 .bs-name {
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
   text-align: center;
 }
 
 .bs-item.locked {
   .bs-icon-box { opacity: 0.5; }
-  .bs-name { color: $slate-400; }
+  .bs-name { color: $color-text-hint; }
 }
 
 .bottom-safe {

@@ -270,7 +270,7 @@ onLoad((options) => {
           v-model="commentText"
           class="comment-input"
           placeholder="请输入评论..."
-          placeholder-style="color: #94A3B8; font-size: 28rpx"
+          placeholder-style="color: #94A3B8; font-size: $typography-font-size-md"
           :disabled="submitting"
           confirm-type="send"
           @confirm="submitComment"
@@ -284,16 +284,9 @@ onLoad((options) => {
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$blue-50: #EFF6FF;
-$slate-50: #F8FAFC;
 $slate-200: #E2E8F0;
 $slate-300: #CBD5E1;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
 $slate-600: #475569;
-$slate-700: #334155;
-$slate-800: #1E293B;
 
 .page {
   min-height: 100vh;
@@ -311,8 +304,8 @@ $slate-800: #1E293B;
 }
 
 .state-text {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
 .retry-btn {
@@ -320,21 +313,21 @@ $slate-800: #1E293B;
   height: 72rpx;
   margin-top: 28rpx;
   border-radius: 999rpx;
-  background: $blue-500;
+  background: $color-semantic-info;
   color: #fff;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
 }
 
 // ===== 记录头部 =====
 .header-section {
-  padding: 32rpx 48rpx 32rpx;
+  padding: $spacing-xl 48rpx 32rpx;
   border-bottom: 2rpx solid $slate-200;
 }
 
 .author-row {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .author-avatar {
@@ -349,9 +342,9 @@ $slate-800: #1E293B;
 }
 
 .avatar-icon {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .author-info {
@@ -361,47 +354,47 @@ $slate-800: #1E293B;
 }
 
 .author-name {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .author-date {
-  font-size: 26rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
 }
 
 .record-title {
   display: block;
   margin-top: 32rpx;
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .record-content {
   display: block;
   margin-top: 16rpx;
-  font-size: 30rpx;
-  color: $slate-700;
+  font-size: $typography-font-size-lg;
+  color: $color-text-body;
   line-height: 1.7;
 }
 
 // ===== 照片区域 =====
 .photo-section {
-  padding: 32rpx 48rpx;
+  padding: $spacing-xl 48rpx;
 }
 
 .photo-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .photo-item {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
 }
 
 // ===== 相关孩子 =====
@@ -410,30 +403,30 @@ $slate-800: #1E293B;
 }
 
 .section-label {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
   margin-bottom: 24rpx;
 }
 
 .student-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-top: 24rpx;
 }
 
 .student-chip {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 12rpx 24rpx;
+  gap: $spacing-xs;
+  padding: $spacing-sm 24rpx;
   border-radius: 999rpx;
   background: #F1F5F9;
 }
 
 .student-chip.primary {
-  background: $blue-50;
+  background: $color-semantic-info-bg;
 }
 
 .chip-avatar {
@@ -450,15 +443,15 @@ $slate-800: #1E293B;
 }
 
 .chip-name {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
 
   .primary & {
-    color: $blue-500;
+    color: $color-semantic-info;
   }
 
   .student-chip:not(.primary):not(.more) & {
-    color: $slate-500;
+    color: $color-text-muted;
   }
 }
 
@@ -466,8 +459,8 @@ $slate-800: #1E293B;
   background: #F1F5F9;
 
   text {
-    font-size: 24rpx;
-    color: $slate-500;
+    font-size: $typography-font-size-sm;
+    color: $color-text-muted;
   }
 }
 
@@ -476,7 +469,7 @@ $slate-800: #1E293B;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32rpx 48rpx;
+  padding: $spacing-xl 48rpx;
   border-top: 2rpx solid $slate-200;
   border-bottom: 2rpx solid $slate-200;
 }
@@ -489,31 +482,31 @@ $slate-800: #1E293B;
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .stat-icon {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
-  color: $slate-400;
+  color: $color-text-hint;
 }
 
 .stat-text {
-  font-size: 28rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-md;
+  color: $color-text-muted;
 }
 
 .stats-right {
   display: flex;
-  gap: 32rpx;
+  gap: $spacing-xl;
 }
 
 .action-btn {
-  padding: 12rpx 24rpx;
-  border-radius: 16rpx;
+  padding: $spacing-sm 24rpx;
+  border-radius: $border-radius-lg;
 
   text {
-    font-size: 26rpx;
+    font-size: $typography-font-size-base;
     font-weight: 500;
   }
 }
@@ -521,18 +514,18 @@ $slate-800: #1E293B;
 .edit-btn {
   background: #F1F5F9;
 
-  text { color: $slate-500; }
+  text { color: $color-text-muted; }
 }
 
 .share-btn {
-  background: $blue-50;
+  background: $color-semantic-info-bg;
 
-  text { color: $blue-500; }
+  text { color: $color-semantic-info; }
 }
 
 // ===== 评论区域 =====
 .comment-section {
-  padding: 32rpx 48rpx;
+  padding: $spacing-xl 48rpx;
 }
 
 .comment-head {
@@ -543,25 +536,25 @@ $slate-800: #1E293B;
 }
 
 .view-all {
-  font-size: 28rpx;
-  color: $blue-500;
+  font-size: $typography-font-size-md;
+  color: $color-semantic-info;
 }
 
 .comment-list {
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
+  gap: $spacing-xl;
 }
 
 .comment-card {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .comment-main {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .comment-avatar {
@@ -582,9 +575,9 @@ $slate-800: #1E293B;
   background: #DBEAFE;
 
   text {
-    font-size: 32rpx;
+    font-size: $typography-font-size-xl;
     font-weight: 700;
-    color: $blue-500;
+    color: $color-semantic-info;
   }
 }
 
@@ -596,107 +589,107 @@ $slate-800: #1E293B;
 .comment-meta {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   flex-wrap: wrap;
 }
 
 .comment-author {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .comment-role-tag {
   padding: 4rpx 16rpx;
-  border-radius: 8rpx;
-  background: $blue-50;
+  border-radius: $border-radius-sm;
+  background: $color-semantic-info-bg;
 
   text {
-    font-size: 22rpx;
+    font-size: $typography-font-size-xs;
     font-weight: 500;
-    color: $blue-500;
+    color: $color-semantic-info;
   }
 }
 
 .comment-time {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 .comment-text {
   display: block;
   margin-top: 8rpx;
-  font-size: 28rpx;
-  color: $slate-700;
+  font-size: $typography-font-size-md;
+  color: $color-text-body;
   line-height: 1.5;
 }
 
 .comment-actions {
   display: flex;
-  gap: 32rpx;
+  gap: $spacing-xl;
   margin-top: 4rpx;
 }
 
 .comment-act {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .comment-act-icon {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   font-weight: 700;
-  color: $slate-400;
+  color: $color-text-hint;
 }
 
 .comment-act-num,
 .comment-act text:last-child {
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
 }
 
 // 老师回复
 .teacher-reply {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-left: 104rpx;
 }
 
 .reply-item {
-  padding: 24rpx;
-  border-radius: 24rpx;
-  background: $slate-50;
+  padding: $spacing-lg;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
 }
 
 .reply-author {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 600;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .reply-time {
   display: inline;
   margin-left: 16rpx;
-  font-size: 22rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
 }
 
 .reply-text {
   display: block;
   margin-top: 8rpx;
-  font-size: 26rpx;
-  color: $slate-700;
+  font-size: $typography-font-size-base;
+  color: $color-text-body;
   line-height: 1.5;
 }
 
 .show-more {
-  padding: 24rpx 0;
+  padding: $spacing-lg 0;
   text-align: center;
 
   text {
-    font-size: 28rpx;
-    color: $slate-400;
+    font-size: $typography-font-size-md;
+    color: $color-text-hint;
   }
 }
 
@@ -714,8 +707,8 @@ $slate-800: #1E293B;
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 24rpx;
-  padding: 16rpx 48rpx calc(16rpx + env(safe-area-inset-bottom));
+  gap: $spacing-lg;
+  padding: $spacing-md 48rpx calc(16rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.04);
 }
@@ -733,8 +726,8 @@ $slate-800: #1E293B;
 
 .comment-input {
   width: 100%;
-  font-size: 28rpx;
-  color: $slate-800;
+  font-size: $typography-font-size-md;
+  color: $color-text-primary;
 }
 
 .bottom-btn {
@@ -745,11 +738,11 @@ $slate-800: #1E293B;
   width: 80rpx;
   height: 80rpx;
   border-radius: 999rpx;
-  background: $blue-500;
+  background: $color-semantic-info;
 }
 
 .bottom-btn-icon {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
   color: #fff;
 }

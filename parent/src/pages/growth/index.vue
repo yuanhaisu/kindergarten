@@ -247,23 +247,13 @@ onPullDownRefresh(loadData)
 </template>
 
 <style scoped lang="scss">
-$orange-500: #F97316;
-$orange-400: #FB923C;
-$orange-50: #FFF7ED;
 $orange-100: #FFEDD5;
-$slate-50: #F8FAFC;
-$slate-100: #F1F5F9;
 $slate-200: #E2E8F0;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
 $slate-600: #475569;
-$slate-800: #1E293B;
-$red-500: #EF4444;
-$blue-500: #3B82F6;
 
 .page {
   min-height: 100vh;
-  background: $slate-50;
+  background: $color-bg-page;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -281,8 +271,8 @@ $blue-500: #3B82F6;
 
 // ===== 孩子信息卡片 =====
 .child-card {
-  background: linear-gradient(135deg, $orange-400, $orange-500);
-  border-radius: 32rpx;
+  background: linear-gradient(135deg, $color-brand-primary-light, $color-brand-primary);
+  border-radius: $border-radius-xl;
   padding: 48rpx;
   margin-bottom: 24rpx;
   margin-top: 24rpx;
@@ -297,7 +287,7 @@ $blue-500: #3B82F6;
 .child-left {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .child-avatar,
@@ -323,7 +313,7 @@ $blue-500: #3B82F6;
 .child-meta {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .child-name {
@@ -333,16 +323,16 @@ $blue-500: #3B82F6;
 }
 
 .child-sub {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $orange-100;
 }
 
 .export-btn {
-  padding: 12rpx 24rpx;
-  border-radius: 16rpx;
+  padding: $spacing-sm 24rpx;
+  border-radius: $border-radius-lg;
   background: rgba(255,255,255,0.2);
   text {
-    font-size: 26rpx;
+    font-size: $typography-font-size-base;
     font-weight: 500;
     color: #fff;
   }
@@ -362,13 +352,13 @@ $blue-500: #3B82F6;
 }
 
 .stat-num {
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
   font-weight: 800;
   color: #fff;
 }
 
 .stat-label {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   color: $orange-100;
 }
 
@@ -387,35 +377,35 @@ $blue-500: #3B82F6;
 .tl-title-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .tl-title {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .tl-year-badge {
   padding: 4rpx 16rpx;
   border-radius: 9999rpx;
-  background: $orange-50;
+  background: $color-brand-primary-bg;
   text {
-    font-size: 24rpx;
+    font-size: $typography-font-size-sm;
     font-weight: 500;
-    color: $orange-500;
+    color: $color-brand-primary;
   }
 }
 
 .tl-filter {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .tl-filter-text, .tl-filter-icon {
-  font-size: 28rpx;
-  color: $blue-500;
+  font-size: $typography-font-size-md;
+  color: $color-semantic-info;
 }
 
 .tl-cat-scroll {
@@ -424,26 +414,26 @@ $blue-500: #3B82F6;
 
 .tl-cat-row {
   display: flex;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .tl-cat-pill {
   flex-shrink: 0;
-  padding: 16rpx 32rpx;
+  padding: $spacing-md 32rpx;
   border-radius: 9999rpx;
-  background: $slate-100;
+  background: $color-bg-card;
   text {
-    font-size: 28rpx;
+    font-size: $typography-font-size-md;
     font-weight: 500;
-    color: $slate-500;
+    color: $color-text-muted;
   }
 }
 
 .tl-cat-pill.active {
   border: 2rpx solid $orange-100;
-  background: $orange-50;
+  background: $color-brand-primary-bg;
   text {
-    color: $orange-500;
+    color: $color-brand-primary;
   }
 }
 
@@ -456,8 +446,8 @@ $blue-500: #3B82F6;
 }
 
 .state-text {
-  font-size: 28rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
 }
 
 // ===== 记录列表 =====
@@ -469,27 +459,27 @@ $blue-500: #3B82F6;
 .month-marker {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  padding: 24rpx 0 20rpx;
+  gap: $spacing-md;
+  padding: $spacing-lg 0 20rpx;
 }
 
 .month-dot {
   width: 18rpx;
   height: 16rpx;
   border-radius: 9999rpx;
-  background: $orange-500;
+  background: $color-brand-primary;
 }
 
 .month-text {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .record-card {
   background: #fff;
-  border-radius: 24rpx;
-  padding: 32rpx;
+  border-radius: $border-radius-xl;
+  padding: $spacing-xl;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
   margin-bottom: 24rpx;
 }
@@ -511,7 +501,7 @@ $blue-500: #3B82F6;
 }
 
 .rc-ta-text {
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
 }
 
 .rc-teacher-meta {
@@ -523,32 +513,32 @@ $blue-500: #3B82F6;
 }
 
 .rc-teacher-name {
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .rc-time {
-  font-size: 24rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 .rc-badge {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
   padding: 4rpx 16rpx;
-  border-radius: 8rpx;
+  border-radius: $border-radius-sm;
   flex-shrink: 0;
   margin-top: 4rpx;
 }
 
 .rc-badge-icon {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
 }
 
 .rc-badge-text {
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
 }
 
@@ -556,7 +546,7 @@ $blue-500: #3B82F6;
 .rc-content {
   display: block;
   margin-top: 24rpx;
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: $slate-600;
   line-height: 1.65;
 }
@@ -564,14 +554,14 @@ $blue-500: #3B82F6;
 // ===== 照片 =====
 .rc-photos {
   display: flex;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-top: 24rpx;
 }
 
 .rc-photo-box {
   width: 200rpx;
   height: 200rpx;
-  border-radius: 24rpx;
+  border-radius: $border-radius-xl;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -583,7 +573,7 @@ $blue-500: #3B82F6;
 .rc-photo-placeholder {
   width: 100%;
   height: 100%;
-  background: $slate-100;
+  background: $color-bg-card;
 }
 
 // ===== 互动栏 =====
@@ -597,27 +587,27 @@ $blue-500: #3B82F6;
 .rca-left {
   display: flex;
   align-items: center;
-  gap: 32rpx;
+  gap: $spacing-xl;
 }
 
 .rca-item {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .rca-icon {
-  font-size: 36rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-2xl;
+  color: $color-text-hint;
 }
 
 .rca-num {
-  font-size: 26rpx;
-  color: $slate-400;
+  font-size: $typography-font-size-base;
+  color: $color-text-hint;
 }
 
 .rca-icon.liked, .rca-num.liked {
-  color: $red-500;
+  color: $color-semantic-danger;
 }
 
 .bottom-safe {

@@ -250,60 +250,50 @@ async function submit() {
 </template>
 
 <style scoped lang="scss">
-$blue: #3b82f6;
-$blue-light: #eff6ff;
-$blue-border: #bfdbfe;
-$text: #1e293b;
-$text-secondary: #64748b;
-$text-muted: #94a3b8;
-$border: #e2e8f0;
-$bg: #f8fafc;
-$white: #ffffff;
-
 .page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: $bg;
+  background: $color-bg-card;
 }
 .body { flex: 1; }
 
 .section { padding: 0 48rpx 32rpx 48rpx; }
-.section:first-child { padding-top: 32rpx; }
+.section:first-child { padding-top: $spacing-xl; }
 
 /* 卡片 */
 .card {
-  padding: 32rpx;
-  background: $white;
-  border-radius: 24rpx;
+  padding: $spacing-xl;
+  background: #ffffff;
+  border-radius: $border-radius-xl;
   box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
 }
 .card-title {
   display: block;
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 700;
-  color: $text;
-  margin-bottom: 24rpx;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
 }
-.card-sub { font-size: 26rpx; color: $text-secondary; }
+.card-sub { font-size: $typography-font-size-base; color: $color-text-muted; }
 
 /* 分类胶囊 */
 .category-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 .category-pill {
-  padding: 16rpx 32rpx;
-  border: 1rpx solid $border;
-  border-radius: 9999rpx;
+  padding: $spacing-md $spacing-xl;
+  border: 1rpx solid #E2E8F0;
+  border-radius: $border-radius-full;
   background: #f1f5f9;
-  font-size: 28rpx;
-  color: $text-secondary;
+  font-size: $typography-font-size-md;
+  color: $color-text-muted;
   &.active {
-    background: $blue-light;
-    border-color: $blue-border;
-    color: $blue;
+    background: $color-semantic-info-bg;
+    border-color: #bfdbfe;
+    color: $color-semantic-info;
     font-weight: 600;
   }
 }
@@ -312,40 +302,40 @@ $white: #ffffff;
 .input {
   width: 100%;
   height: 88rpx;
-  padding: 0 24rpx;
-  border-radius: 16rpx;
-  background: $bg;
-  font-size: 30rpx;
-  color: $text;
+  padding: 0 $spacing-lg;
+  border-radius: $border-radius-lg;
+  background: $color-bg-card;
+  font-size: $typography-font-size-lg;
+  color: $color-text-primary;
   box-sizing: border-box;
 }
 .textarea {
   width: 100%;
   height: 240rpx;
-  padding: 24rpx;
-  border-radius: 16rpx;
-  background: $bg;
-  font-size: 30rpx;
-  color: $text;
+  padding: $spacing-lg;
+  border-radius: $border-radius-lg;
+  background: $color-bg-card;
+  font-size: $typography-font-size-lg;
+  color: $color-text-primary;
   box-sizing: border-box;
 }
 
 /* 附件上传 */
-.media-row { display: flex; gap: 24rpx; flex-wrap: wrap; }
+.media-row { display: flex; gap: $spacing-lg; flex-wrap: wrap; }
 .media-add {
   width: 160rpx; height: 160rpx;
   border: 1rpx dashed #cbd5e1;
-  border-radius: 24rpx;
-  background: $bg;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
-.add-icon { font-size: 48rpx; color: $text-muted; }
-.add-text { font-size: 24rpx; color: $text-muted; }
+.add-icon { font-size: 48rpx; color: $color-text-hint; }
+.add-text { font-size: $typography-font-size-sm; color: $color-text-hint; }
 .media-item {
   width: 160rpx; height: 160rpx;
-  border-radius: 24rpx; overflow: hidden;
+  border-radius: $border-radius-xl; overflow: hidden;
   position: relative;
 }
 .media-img { width: 100%; height: 100%; }
@@ -355,7 +345,7 @@ $white: #ffffff;
   background: rgba(0,0,0,0.5); color: #fff;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 24rpx;
+  font-size: $typography-font-size-sm;
 }
 
 /* 行卡片 */
@@ -365,7 +355,7 @@ $white: #ffffff;
   justify-content: space-between;
 }
 .row-card .card-title { margin-bottom: 0; }
-.row-arrow { font-size: 28rpx; color: $text-muted; }
+.row-arrow { font-size: $typography-font-size-md; color: $color-text-hint; }
 
 /* 定时发送 */
 .schedule-field {
@@ -373,22 +363,22 @@ $white: #ffffff;
   align-items: center;
   justify-content: space-between;
   height: 80rpx;
-  padding: 0 24rpx;
-  margin-bottom: 16rpx;
-  border-radius: 16rpx;
-  background: $bg;
+  padding: 0 $spacing-lg;
+  margin-bottom: $spacing-md;
+  border-radius: $border-radius-lg;
+  background: $color-bg-card;
 }
-.field-label { font-size: 28rpx; color: $text; }
-.field-value { font-size: 26rpx; color: $text-secondary; }
+.field-label { font-size: $typography-font-size-md; color: $color-text-primary; }
+.field-value { font-size: $typography-font-size-base; color: $color-text-muted; }
 
 /* 自定义开关 */
 .toggle {
   width: 96rpx; height: 48rpx;
-  border-radius: 9999rpx;
-  background: $border;
+  border-radius: $border-radius-full;
+  background: #E2E8F0;
   position: relative;
   transition: background 0.2s;
-  &.on { background: $blue; }
+  &.on { background: $color-semantic-info; }
 }
 .toggle-knob {
   width: 42rpx; height: 42rpx;
@@ -402,34 +392,34 @@ $white: #ffffff;
 /* 模板 */
 .template-header {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
-.section-label { font-size: 32rpx; font-weight: 700; color: $text; }
-.section-link { font-size: 28rpx; color: $blue; }
+.section-label { font-size: $typography-font-size-xl; font-weight: 700; color: $color-text-primary; }
+.section-link { font-size: $typography-font-size-md; color: $color-semantic-info; }
 .template-card { margin-bottom: 24rpx; }
 .template-top {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 16rpx;
+  margin-bottom: $spacing-md;
 }
-.template-name { font-size: 28rpx; font-weight: 700; color: $text; }
+.template-name { font-size: $typography-font-size-md; font-weight: 700; color: $color-text-primary; }
 .template-use {
-  padding: 8rpx 16rpx;
-  background: $blue-light; color: $blue;
-  border-radius: 8rpx;
-  font-size: 24rpx; font-weight: 600;
+  padding: $spacing-xs $spacing-md;
+  background: $color-semantic-info-bg; color: $color-semantic-info;
+  border-radius: $border-radius-sm;
+  font-size: $typography-font-size-sm; font-weight: 600;
 }
 .template-preview {
-  font-size: 26rpx; color: $text-secondary;
+  font-size: $typography-font-size-base; color: $color-text-muted;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 /* 底部 */
-.bottom-bar { padding: 24rpx 48rpx 48rpx 48rpx; background: $white; }
+.bottom-bar { padding: $spacing-lg 48rpx 48rpx 48rpx; background: #ffffff; }
 .publish-btn {
   width: 100%; height: 96rpx;
-  background: $blue;
-  color: #fff; font-size: 32rpx; font-weight: 700;
-  border-radius: 24rpx; border: 0; line-height: 96rpx;
+  background: $color-semantic-info;
+  color: #fff; font-size: $typography-font-size-xl; font-weight: 700;
+  border-radius: $border-radius-xl; border: 0; line-height: 96rpx;
 }
 </style>

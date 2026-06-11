@@ -290,10 +290,6 @@ onShareAppMessage((res) => {
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$blue-600: #2563EB;
-$slate-800: #1E293B;
-$slate-500: #64748B;
 
 .page {
   min-height: 100vh;
@@ -307,7 +303,7 @@ $slate-500: #64748B;
 // ===== 顶部渐变区域 =====
 .header-area {
   padding: 0 46rpx 46rpx;
-  background: linear-gradient(135deg, $blue-500 0%, $blue-600 100%);
+  background: linear-gradient(135deg, $color-semantic-info 0%, $color-semantic-info 100%);
 }
 
 .status-bar {
@@ -325,7 +321,7 @@ $slate-500: #64748B;
 .user-info {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .avatar {
@@ -339,9 +335,9 @@ $slate-500: #64748B;
 }
 
 .avatar-icon {
-  font-size: 40rpx;
+  font-size: $typography-font-size-3xl;
   font-weight: 700;
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .user-text {
@@ -351,13 +347,13 @@ $slate-500: #64748B;
 }
 
 .user-name {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
   color: #fff;
 }
 
 .user-sub {
-  font-size: 28rpx;
+  font-size: $typography-font-size-md;
   color: #DBEAFE;
 }
 
@@ -383,7 +379,7 @@ $slate-500: #64748B;
 }
 
 .bell-icon {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
   color: #fff;
 }
@@ -391,8 +387,8 @@ $slate-500: #64748B;
 // ===== 今日数据卡片 =====
 .stats-card {
   margin-top: 48rpx;
-  padding: 32rpx;
-  border-radius: 32rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
 }
@@ -404,14 +400,14 @@ $slate-500: #64748B;
 }
 
 .stats-title {
-  font-size: 32rpx;
+  font-size: $typography-font-size-xl;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .stats-date {
-  font-size: 26rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-base;
+  color: $color-text-muted;
 }
 
 .stats-grid {
@@ -424,7 +420,7 @@ $slate-500: #64748B;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .stat-num {
@@ -435,18 +431,18 @@ $slate-500: #64748B;
 .is-green { color: #10B981; }
 .is-amber { color: #F59E0B; }
 .is-red   { color: #EF4444; }
-.is-blue  { color: $blue-500; }
+.is-blue  { color: $color-semantic-info; }
 
 .stat-label {
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
 }
 
 // ===== 功能入口 =====
 .feature-card {
-  margin: 32rpx 46rpx;
-  padding: 32rpx;
-  border-radius: 32rpx;
+  margin: $spacing-xl 46rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
 }
@@ -471,7 +467,7 @@ $slate-500: #64748B;
   justify-content: center;
   width: 112rpx;
   height: 112rpx;
-  border-radius: 32rpx;
+  border-radius: $border-radius-xl;
 }
 
 .feature-icon {
@@ -480,7 +476,7 @@ $slate-500: #64748B;
 }
 
 .feature-label {
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
   font-weight: 500;
   color: #334155;
 }
@@ -498,14 +494,14 @@ $slate-500: #64748B;
 }
 
 .todo-title {
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
-  color: $slate-800;
+  color: $color-text-primary;
 }
 
 .todo-more {
-  font-size: 28rpx;
-  color: $blue-500;
+  font-size: $typography-font-size-md;
+  color: $color-semantic-info;
 }
 
 .state-card {
@@ -517,8 +513,8 @@ $slate-500: #64748B;
 }
 
 .state-text {
-  font-size: 28rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-md;
+  color: $color-text-muted;
 }
 
 .retry-btn {
@@ -526,24 +522,24 @@ $slate-500: #64748B;
   height: 72rpx;
   margin: 28rpx auto 0;
   border-radius: 999rpx;
-  background: $blue-500;
+  background: $color-semantic-info;
   color: #fff;
-  font-size: 26rpx;
+  font-size: $typography-font-size-base;
 }
 
 // 待办列表
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .todo-card {
   display: flex;
   align-items: center;
-  gap: 24rpx;
-  padding: 32rpx;
-  border-radius: 24rpx;
+  gap: $spacing-lg;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
   background: #fff;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
 }
@@ -570,9 +566,9 @@ $slate-500: #64748B;
 
 .todo-item-title {
   display: block;
-  font-size: 30rpx;
+  font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $slate-800;
+  color: $color-text-primary;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -581,8 +577,8 @@ $slate-500: #64748B;
 .todo-item-desc {
   display: block;
   margin-top: 8rpx;
-  font-size: 24rpx;
-  color: $slate-500;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -591,13 +587,13 @@ $slate-500: #64748B;
 .todo-btns {
   display: flex;
   flex-shrink: 0;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .todo-btn {
-  padding: 12rpx 24rpx;
-  border-radius: 16rpx;
-  font-size: 26rpx;
+  padding: $spacing-sm 24rpx;
+  border-radius: $border-radius-lg;
+  font-size: $typography-font-size-base;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -623,7 +619,7 @@ $slate-500: #64748B;
   justify-content: space-between;
   max-width: 430px;
   margin: 0 auto;
-  padding: 24rpx 46rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: $spacing-lg 46rpx calc(24rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.06);
 }
@@ -633,7 +629,7 @@ $slate-500: #64748B;
   flex-direction: column;
   align-items: center;
   gap: 4rpx;
-  padding: 8rpx 0;
+  padding: $spacing-xs 0;
 }
 
 .nav-icon {
@@ -643,16 +639,16 @@ $slate-500: #64748B;
 }
 
 .nav-label {
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
   color: #94A3B8;
 }
 
 .active-icon {
-  color: $blue-500;
+  color: $color-semantic-info;
 }
 
 .active-label {
-  color: $blue-500;
+  color: $color-semantic-info;
   font-weight: 600;
 }
 </style>

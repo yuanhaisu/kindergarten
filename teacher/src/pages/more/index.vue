@@ -9,5 +9,5 @@
 
 <style scoped lang="scss">
 .page { min-height: 100vh; padding: 28rpx; background: $teacher-bg; }
-.card { margin-bottom: 18rpx; padding: 30rpx; border-radius: 30rpx; background: $teacher-card; color: $teacher-text; font-size: 30rpx; font-weight: 800; box-shadow: $teacher-shadow; }
+.card { margin-bottom: 18rpx; padding: 30rpx; border-radius: 30rpx; background: $teacher-card; color: $teacher-text; font-size: $typography-font-size-lg; font-weight: 800; box-shadow: $teacher-shadow; }
 </style>

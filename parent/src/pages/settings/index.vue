@@ -61,11 +61,11 @@ onLoad(loadData)
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: 24rpx 28rpx; background: $color-bg-page; }
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: 28rpx; }
-.card { padding: 28rpx; margin-bottom: 18rpx; border-radius: 24rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
-.section-title { display: block; margin-bottom: 18rpx; color: $color-text-primary; font-size: 28rpx; font-weight: 700; }
+.page { min-height: 100vh; padding: $spacing-lg 28rpx; background: $color-bg-page; }
+.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: $typography-font-size-md; }
+.card { padding: 28rpx; margin-bottom: 18rpx; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
+.section-title { display: block; margin-bottom: 18rpx; color: $color-text-primary; font-size: $typography-font-size-md; font-weight: 700; }
 .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid rgba(106,77,42,0.06); }
-.label { color: $color-text-primary; font-size: 26rpx; }
-.logout-btn { width: 100%; height: 88rpx; margin-top: 24rpx; border-radius: 999rpx; background: #fff0ef; color: #e6534f; font-size: 28rpx; font-weight: 700; line-height: 88rpx; }
+.label { color: $color-text-primary; font-size: $typography-font-size-base; }
+.logout-btn { width: 100%; height: 88rpx; margin-top: 24rpx; border-radius: 999rpx; background: #fff0ef; color: #e6534f; font-size: $typography-font-size-md; font-weight: 700; line-height: 88rpx; }
 </style>

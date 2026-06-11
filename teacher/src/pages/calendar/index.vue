@@ -10,13 +10,8 @@ const currentDate = ref(new Date())
 const year = computed(() => currentDate.value.getFullYear())
 const month = computed(() => currentDate.value.getMonth() + 1)
 const today = computed(() => new Date().getDate())
-const isCurrentMonth = computed(() => {
-  const now = new Date()
-  return year.value === now.getFullYear() && month.value === now.getMonth() + 1
-})
-
+const isCurrentMonth = computed(() => { const now = new Date(); return year.value === now.getFullYear() && month.value === now.getMonth() + 1 })
 const monthLabel = computed(() => `${year.value}年${month.value}月`)
-
 const weekDays = ["日", "一", "二", "三", "四", "五", "六"]
 
 const calendarDays = computed(() => {
@@ -25,30 +20,16 @@ const calendarDays = computed(() => {
   const firstDay = new Date(y, m, 1).getDay()
   const daysInMonth = new Date(y, m + 1, 0).getDate()
   const daysInPrevMonth = new Date(y, m, 0).getDate()
-
   const days = []
-  // Previous month tail
-  for (let i = firstDay - 1; i >= 0; i--) {
-    days.push({ day: daysInPrevMonth - i, type: "prev" })
-  }
-  // Current month
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push({ day: i, type: "current" })
-  }
-  // Next month head
+  for (let i = firstDay - 1; i >= 0; i--) { days.push({ day: daysInPrevMonth - i, type: "prev" }) }
+  for (let i = 1; i <= daysInMonth; i++) { days.push({ day: i, type: "current" }) }
   const remaining = 42 - days.length
-  for (let i = 1; i <= remaining && i <= 14; i++) {
-    days.push({ day: i, type: "next" })
-  }
+  for (let i = 1; i <= remaining && i <= 14; i++) { days.push({ day: i, type: "next" }) }
   return days
 })
 
 const selectedDay = ref(new Date().getDate())
-
-function selectDay(day) {
-  selectedDay.value = day
-}
-
+function selectDay(day) { selectedDay.value = day }
 function isSelected(day) {
   if (day === selectedDay.value) return true
   if (selectedDay.value === today.value && day === today.value && isCurrentMonth.value) return true
@@ -58,40 +39,16 @@ function isSelected(day) {
 const todayEvents = computed(() => {
   const m = String(month.value).padStart(2, "0")
   const d = String(selectedDay.value).padStart(2, "0")
-  const dateStr = `${year.value}-${m}-${d}`
-  return events.value.filter(e => e.event_date === dateStr)
+  return events.value.filter(e => e.event_date === `${year.value}-${m}-${d}`)
 })
 
-const eventDotColors = {
-  notification: "#3B82F6",
-  activity: "#22C55E",
-  holiday: "#F97316",
-  meeting: "#A855F7",
-  health: "#EF4444"
-}
-
-const eventTypeIcons = {
-  notification: "通",
-  activity: "活",
-  holiday: "假",
-  meeting: "会",
-  health: "检"
-}
-
-const eventTypeBgs = {
-  notification: "#DBEAFE",
-  activity: "#DCFCE7",
-  holiday: "#FFF7ED",
-  meeting: "#F3E8FF",
-  health: "#FEE2E2"
-}
+const eventDotColors = { notification: "#3B82F6", activity: "#22C55E", holiday: "#F97316", meeting: "#A855F7", health: "#EF4444" }
+const eventTypeIcons = { notification: "通", activity: "活", holiday: "假", meeting: "会", health: "检" }
+const eventTypeBgs = { notification: "#DBEAFE", activity: "#DCFCE7", holiday: "#FFF7ED", meeting: "#F3E8FF", health: "#FEE2E2" }
 
 const legendItems = [
-  { label: "通知", color: "#3B82F6" },
-  { label: "活动", color: "#22C55E" },
-  { label: "假期", color: "#F97316" },
-  { label: "家长会", color: "#A855F7" },
-  { label: "体检", color: "#EF4444" }
+  { label: "通知", color: "#3B82F6" }, { label: "活动", color: "#22C55E" },
+  { label: "假期", color: "#F97316" }, { label: "家长会", color: "#A855F7" }, { label: "体检", color: "#EF4444" }
 ]
 
 function getEventsForDay(day) {
@@ -100,36 +57,14 @@ function getEventsForDay(day) {
   return events.value.filter(e => e.event_date === dateStr)
 }
 
-function getDayDotColors(day) {
-  const dayEvents = getEventsForDay(day)
-  return dayEvents.map(e => eventDotColors[e.event_type] || "#3B82F6")
-}
+function getDayDotColors(day) { return getEventsForDay(day).map(e => eventDotColors[e.event_type] || "#3B82F6") }
+function isToday(day) { if (!isCurrentMonth.value) return false; return day === today.value }
 
-function isToday(day) {
-  if (!isCurrentMonth.value) return false
-  return day === today.value
-}
+function prevMonth() { const d = new Date(currentDate.value); d.setMonth(d.getMonth() - 1); currentDate.value = d; loadEvents() }
+function nextMonth() { const d = new Date(currentDate.value); d.setMonth(d.getMonth() + 1); currentDate.value = d; loadEvents() }
 
-function prevMonth() {
-  const d = new Date(currentDate.value)
-  d.setMonth(d.getMonth() - 1)
-  currentDate.value = d
-  loadEvents()
-}
-function nextMonth() {
-  const d = new Date(currentDate.value)
-  d.setMonth(d.getMonth() + 1)
-  currentDate.value = d
-  loadEvents()
-}
-
-function goAdd() {
-  uni.navigateTo({ url: "/pages/calendar/create" })
-}
-
-function editEvent(event) {
-  uni.navigateTo({ url: `/pages/calendar/detail?id=${event.id}` })
-}
+function goAdd() { uni.navigateTo({ url: "/pages/calendar/create" }) }
+function editEvent(event) { uni.navigateTo({ url: `/pages/calendar/detail?id=${event.id}` }) }
 
 const mockEvents = [
   { id: 1, title: "春季出游活动通知", event_date: "2026-03-19", event_type: "notification", description: "请各位家长提醒孩子准备出游物品，明天早上8点在幼儿园门口集合", start_time: "08:00", end_time: "15:00", location: "幼儿园操场及周边公园", classes: ["中一班", "中二班"], importance: "important", student_count: 24 },
@@ -149,12 +84,8 @@ async function loadEvents() {
     const res = await fetchTeacherCalendarEvents()
     const list = res.data?.list || []
     events.value = list.length ? list : mockEvents
-  } catch (err) {
-    events.value = mockEvents
-  } finally {
-    loading.value = false
-    uni.stopPullDownRefresh()
-  }
+  } catch (err) { events.value = mockEvents }
+  finally { loading.value = false; uni.stopPullDownRefresh() }
 }
 
 onLoad(loadEvents)
@@ -163,64 +94,25 @@ onPullDownRefresh(loadEvents)
 
 <template>
   <view class="page">
-    <!-- 月份选择栏 -->
     <view class="month-bar">
-      <view class="month-arrow" @click="prevMonth">
-        <text class="arrow-text">◂</text>
-      </view>
+      <view class="month-arrow" @click="prevMonth"><text class="arrow-text">◂</text></view>
       <text class="month-text">{{ monthLabel }}</text>
-      <view class="month-arrow" @click="nextMonth">
-        <text class="arrow-text">▸</text>
-      </view>
-      <view class="add-btn" @click="goAdd">
-        <text class="add-icon">+</text>
-        <text class="add-text">添加</text>
-      </view>
+      <view class="month-arrow" @click="nextMonth"><text class="arrow-text">▸</text></view>
+      <view class="add-btn" @click="goAdd"><text class="add-icon">+</text><text class="add-text">添加</text></view>
     </view>
 
-    <!-- 日历区域 -->
     <view class="calendar-card">
-      <!-- 星期表头 -->
       <view class="week-header">
-        <text
-          v-for="(day, idx) in weekDays"
-          :key="idx"
-          class="week-day"
-          :class="{ weekend: idx === 0 || idx === 6 }"
-        >{{ day }}</text>
+        <text v-for="(day, idx) in weekDays" :key="idx" class="week-day" :class="{ weekend: idx === 0 || idx === 6 }">{{ day }}</text>
       </view>
-
-      <!-- 日期网格 -->
       <view class="date-grid">
-        <view
-          v-for="(cell, idx) in calendarDays"
-          :key="idx"
-          class="date-cell"
-          :class="{ dimmed: cell.type !== 'current' }"
-        >
-          <view
-            class="date-num"
-            :class="{
-              'is-today': isToday(cell.day) && cell.type === 'current',
-              'is-selected': isSelected(cell.day) && cell.type === 'current'
-            }"
-            @click="cell.type === 'current' && selectDay(cell.day)"
-          >
-            <text>{{ cell.day }}</text>
-          </view>
-          <!-- 事件彩色圆点 -->
+        <view v-for="(cell, idx) in calendarDays" :key="idx" class="date-cell" :class="{ dimmed: cell.type !== 'current' }">
+          <view class="date-num" :class="{ 'is-today': isToday(cell.day) && cell.type === 'current', 'is-selected': isSelected(cell.day) && cell.type === 'current' }" @click="cell.type === 'current' && selectDay(cell.day)"><text>{{ cell.day }}</text></view>
           <view v-if="cell.type === 'current'" class="date-dots">
-            <view
-              v-for="(color, di) in getDayDotColors(cell.day).slice(0, 3)"
-              :key="di"
-              class="date-dot"
-              :style="{ backgroundColor: color }"
-            />
+            <view v-for="(color, di) in getDayDotColors(cell.day).slice(0, 3)" :key="di" class="date-dot" :style="{ backgroundColor: color }" />
           </view>
         </view>
       </view>
-
-      <!-- 图例 -->
       <view class="legend">
         <view v-for="item in legendItems" :key="item.label" class="legend-item">
           <view class="legend-dot" :style="{ backgroundColor: item.color }" />
@@ -229,356 +121,77 @@ onPullDownRefresh(loadEvents)
       </view>
     </view>
 
-    <!-- 今日活动 -->
     <view class="events-section">
-      <text class="events-title">
-        {{ month.value }}月{{ selectedDay }}日活动
-      </text>
-
-      <view v-if="todayEvents.length === 0" class="events-empty">
-        <text>{{ month.value }}月{{ selectedDay }}日暂无活动安排</text>
-      </view>
-
+      <text class="events-title">{{ month.value }}月{{ selectedDay }}日活动</text>
+      <view v-if="todayEvents.length === 0" class="events-empty"><text>{{ month.value }}月{{ selectedDay }}日暂无活动安排</text></view>
       <view v-else class="events-list">
         <view v-for="event in todayEvents" :key="event.id" class="event-card">
           <view class="event-left">
-            <view
-              class="event-icon-box"
-              :style="{ backgroundColor: eventTypeBgs[event.event_type] || '#DBEAFE' }"
-            >
-              <text
-                class="event-icon"
-                :style="{ color: eventDotColors[event.event_type] || '#3B82F6' }"
-              >{{ eventTypeIcons[event.event_type] || "事" }}</text>
+            <view class="event-icon-box" :style="{ backgroundColor: eventTypeBgs[event.event_type] || '#DBEAFE' }">
+              <text class="event-icon" :style="{ color: eventDotColors[event.event_type] || '#3B82F6' }">{{ eventTypeIcons[event.event_type] || "事" }}</text>
             </view>
             <view class="event-info">
               <text class="event-title">{{ event.title }}</text>
               <text class="event-desc">{{ event.description || event.content || "" }}</text>
               <view v-if="event.start_time || event.end_time" class="event-time-row">
                 <text class="event-time-icon">时</text>
-                <text class="event-time">
-                  {{ event.start_time || "" }}{{ event.end_time ? " - " + event.end_time : "" }}
-                </text>
+                <text class="event-time">{{ event.start_time || "" }}{{ event.end_time ? " - " + event.end_time : "" }}</text>
               </view>
             </view>
           </view>
-          <view class="event-edit" @click="editEvent(event)">
-            <text>编辑</text>
-          </view>
+          <view class="event-edit" @click="editEvent(event)"><text>编辑</text></view>
         </view>
       </view>
     </view>
-
     <view class="bottom-safe" />
   </view>
 </template>
 
 <style scoped lang="scss">
-$blue-500: #3B82F6;
-$blue-50: #EFF6FF;
-$slate-50: #F8FAFC;
-$slate-300: #CBD5E1;
-$slate-400: #94A3B8;
-$slate-500: #64748B;
-$slate-800: #1E293B;
+.page { min-height: 100vh; box-sizing: border-box; padding: $spacing-lg 28rpx; background: $color-bg-page; }
 
-.page {
-  min-height: 100vh;
-  box-sizing: border-box;
-  padding: 24rpx 28rpx;
-  background: $slate-50;
-}
+.month-bar { display: flex; align-items: center; justify-content: space-between; padding: $spacing-xl; border-radius: $border-radius-xl; background: #fff; box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05); margin-bottom: $spacing-lg; }
+.month-arrow { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $border-radius-full; background: #F1F5F9; }
+.arrow-text { font-size: $typography-font-size-md; color: $color-text-muted; }
+.month-text { font-size: $typography-font-size-2xl; font-weight: 700; color: $color-text-primary; }
+.add-btn { display: flex; align-items: center; gap: 6rpx; padding: $spacing-md $spacing-xl; border-radius: $border-radius-full; background: $color-semantic-info; }
+.add-icon { font-size: $typography-font-size-lg; font-weight: 700; color: #fff; }
+.add-text { font-size: $typography-font-size-base; font-weight: 500; color: #fff; }
 
-// ===== 月份选择栏 =====
-.month-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 32rpx 32rpx;
-  border-radius: 32rpx;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-  margin-bottom: 24rpx;
-}
+.calendar-card { padding: $spacing-xl; border-radius: $border-radius-xl; background: #fff; box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05); margin-bottom: $spacing-lg; }
+.week-header { display: flex; justify-content: space-between; margin-bottom: $spacing-lg; }
+.week-day { width: 88rpx; text-align: center; font-size: $typography-font-size-md; font-weight: 500; color: $color-text-muted; }
+.week-day.weekend { color: $color-semantic-danger; }
+.date-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: $spacing-xs; }
+.date-cell { display: flex; flex-direction: column; align-items: center; padding: 6rpx 0 10rpx; min-height: 90rpx; }
+.date-cell.dimmed { opacity: 0.35; }
+.date-num { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $border-radius-full; }
+.date-num text { font-size: $typography-font-size-md; color: $color-text-muted; }
+.date-num.is-today { background: $color-semantic-info; text { color: #fff; font-weight: 700; } }
+.date-num.is-selected { background: $color-semantic-info-bg; text { color: $color-semantic-info; font-weight: 700; } }
+.date-num.is-today.is-selected { background: $color-semantic-info; text { color: #fff; font-weight: 700; } }
+.date-dots { display: flex; gap: 6rpx; margin-top: 4rpx; }
+.date-dot { width: 14rpx; height: 14rpx; border-radius: $border-radius-full; }
 
-.month-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 999rpx;
-  background: #F1F5F9;
-}
+.legend { display: flex; justify-content: center; gap: $spacing-xl; margin-top: $spacing-lg; padding-top: $spacing-lg; border-top: 2rpx solid #F1F5F9; }
+.legend-item { display: flex; align-items: center; gap: $spacing-xs; }
+.legend-dot { width: 16rpx; height: 16rpx; border-radius: $border-radius-full; }
+.legend-label { font-size: $typography-font-size-sm; color: $color-text-muted; }
 
-.arrow-text {
-  font-size: 28rpx;
-  color: $slate-500;
-}
-
-.month-text {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: $slate-800;
-}
-
-.add-btn {
-  display: flex;
-  align-items: center;
-  gap: 6rpx;
-  padding: 16rpx 32rpx;
-  border-radius: 999rpx;
-  background: $blue-500;
-}
-
-.add-icon {
-  font-size: 30rpx;
-  font-weight: 700;
-  color: #fff;
-}
-
-.add-text {
-  font-size: 26rpx;
-  font-weight: 500;
-  color: #fff;
-}
-
-// ===== 日历卡片 =====
-.calendar-card {
-  padding: 32rpx;
-  border-radius: 32rpx;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-  margin-bottom: 24rpx;
-}
-
-.week-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 24rpx;
-}
-
-.week-day {
-  width: 88rpx;
-  text-align: center;
-  font-size: 28rpx;
-  font-weight: 500;
-  color: $slate-500;
-}
-
-.week-day.weekend {
-  color: #EF4444;
-}
-
-.date-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  row-gap: 8rpx;
-}
-
-.date-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 6rpx 0 10rpx;
-  min-height: 90rpx;
-}
-
-.date-cell.dimmed {
-  opacity: 0.35;
-}
-
-.date-num {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 999rpx;
-}
-
-.date-num text {
-  font-size: 28rpx;
-  color: $slate-500;
-}
-
-.date-num.is-today {
-  background: $blue-500;
-
-  text { color: #fff; font-weight: 700; }
-}
-
-.date-num.is-selected {
-  background: $blue-50;
-
-  text { color: $blue-500; font-weight: 700; }
-}
-
-.date-num.is-today.is-selected {
-  background: $blue-500;
-
-  text { color: #fff; font-weight: 700; }
-}
-
-.date-dots {
-  display: flex;
-  gap: 6rpx;
-  margin-top: 4rpx;
-}
-
-.date-dot {
-  width: 14rpx;
-  height: 14rpx;
-  border-radius: 999rpx;
-}
-
-// ===== 图例 =====
-.legend {
-  display: flex;
-  justify-content: center;
-  gap: 32rpx;
-  margin-top: 24rpx;
-  padding-top: 24rpx;
-  border-top: 2rpx solid #F1F5F9;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-
-.legend-dot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 999rpx;
-}
-
-.legend-label {
-  font-size: 24rpx;
-  color: $slate-500;
-}
-
-// ===== 今日活动 =====
-.events-section {
-  margin-bottom: 24rpx;
-}
-
-.events-title {
-  display: block;
-  margin-bottom: 24rpx;
-  font-size: 32rpx;
-  font-weight: 700;
-  color: $slate-800;
-}
-
-.events-empty {
-  padding: 80rpx 0;
-  text-align: center;
-
-  text {
-    font-size: 28rpx;
-    color: $slate-400;
-  }
-}
-
-.events-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx;
-}
-
-.event-card {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 32rpx;
-  border-radius: 24rpx;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-}
-
-.event-left {
-  display: flex;
-  gap: 24rpx;
-  flex: 1;
-  min-width: 0;
-}
-
-.event-icon-box {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 24rpx;
-}
-
-.event-icon {
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.event-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  min-width: 0;
-}
-
-.event-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: $slate-800;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.event-desc {
-  font-size: 26rpx;
-  color: $slate-500;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  line-height: 1.4;
-}
-
-.event-time-row {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  margin-top: 4rpx;
-}
-
-.event-time-icon {
-  font-size: 22rpx;
-  font-weight: 700;
-  color: $slate-400;
-}
-
-.event-time {
-  font-size: 24rpx;
-  color: $slate-400;
-}
-
-.event-edit {
-  flex-shrink: 0;
-  padding: 12rpx 24rpx;
-  border-radius: 16rpx;
-  background: #F1F5F9;
-  margin-top: 4rpx;
-  margin-left: 24rpx;
-
-  text {
-    font-size: 24rpx;
-    color: $slate-500;
-  }
-}
-
-.bottom-safe {
-  height: calc(60rpx + env(safe-area-inset-bottom));
-}
+.events-section { margin-bottom: $spacing-lg; }
+.events-title { display: block; margin-bottom: $spacing-lg; font-size: $typography-font-size-xl; font-weight: 700; color: $color-text-primary; }
+.events-empty { padding: 80rpx 0; text-align: center; text { font-size: $typography-font-size-md; color: $color-text-hint; } }
+.events-list { display: flex; flex-direction: column; gap: $spacing-lg; }
+.event-card { display: flex; align-items: flex-start; justify-content: space-between; padding: $spacing-xl; border-radius: $border-radius-xl; background: #fff; box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05); }
+.event-left { display: flex; gap: $spacing-lg; flex: 1; min-width: 0; }
+.event-icon-box { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 80rpx; height: 80rpx; border-radius: $border-radius-xl; }
+.event-icon { font-size: 34rpx; font-weight: 700; }
+.event-info { display: flex; flex-direction: column; gap: $spacing-xs; min-width: 0; }
+.event-title { font-size: $typography-font-size-lg; font-weight: 600; color: $color-text-primary; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-desc { font-size: $typography-font-size-base; color: $color-text-muted; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 1.4; }
+.event-time-row { display: flex; align-items: center; gap: $spacing-xs; margin-top: 4rpx; }
+.event-time-icon { font-size: $typography-font-size-xs; font-weight: 700; color: $color-text-hint; }
+.event-time { font-size: $typography-font-size-sm; color: $color-text-hint; }
+.event-edit { flex-shrink: 0; padding: $spacing-sm $spacing-lg; border-radius: $border-radius-md; background: #F1F5F9; margin-top: 4rpx; margin-left: $spacing-lg; text { font-size: $typography-font-size-sm; color: $color-text-muted; } }
+.bottom-safe { height: calc(60rpx + env(safe-area-inset-bottom)); }
 </style>

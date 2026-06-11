@@ -82,7 +82,7 @@ export default {
 
 .tab-text {
   margin-top: 4rpx;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs;
   color: #94A3B8;
   line-height: 1.2;
 }
