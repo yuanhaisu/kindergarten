@@ -242,6 +242,35 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 | 字重 | `$font-weight-normal`(400) ~ `bold`(700) | 共享 |
 | 动画 | `$animation-duration-fast`(150ms), `base`(300ms), `slow`(500ms) | 共享 |
 
+### 组件级 Token（原子 token 之上的语义层）
+
+优先使用组件级 token 描述 **UI 模式意图**，而非直接使用原始 token：
+
+```scss
+// ✅ 推荐：组件级 token 表达意图
+.card { padding: $component-card-padding; border-radius: $component-card-radius; }
+.page { padding: $component-page-padding-y $component-page-padding-x; }
+
+// ⚠️ 可接受但意图不明确
+.card { padding: $spacing-xl; border-radius: $border-radius-xl; }
+```
+
+| 分类 | Token | 值 | 说明 |
+|---|---|---|---|
+| **卡片** | `$component-card-padding` | 32rpx | 卡内边距 |
+| | `$component-card-radius` | 24rpx | 卡片圆角 |
+| | `$component-card-gap` | 24rpx | 卡片列表间距 |
+| **页面** | `$component-page-padding-x` | 28rpx | 页面水平内边距 |
+| | `$component-page-padding-y` | 24rpx | 页面垂直内边距 |
+| **头像** | `$component-avatar-sm` | 80rpx | 小头像（作者/评论） |
+| | `$component-avatar-md` | 96rpx | 中头像（学生列表） |
+| | `$component-avatar-lg` | 128rpx | 大头像（个人主页） |
+| **输入框** | `$component-input-height` | 88rpx | 输入框高度 |
+| | `$component-input-radius` | 24rpx | 输入框圆角 |
+| **标签** | `$component-badge-padding-x` | 20rpx | 标签水平内边距 |
+| | `$component-badge-radius` | 9999rpx | 标签圆角（胶囊） |
+| | `$component-badge-font-size` | 22rpx | 标签字号 |
+
 **产物路径:**
 - Teacher: `shared-design-tokens/build/scss/tokens-teacher.scss`
 - Parent: `shared-design-tokens/build/scss/tokens-parent.scss`
