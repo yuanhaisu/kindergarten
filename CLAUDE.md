@@ -272,9 +272,28 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 | | `$component-badge-font-size` | 22rpx | 标签字号 |
 
 **产物路径:**
-- Teacher: `shared-design-tokens/build/scss/tokens-teacher.scss`
-- Parent: `shared-design-tokens/build/scss/tokens-parent.scss`
-- Admin: `shared-design-tokens/build/ts/tokens-admin.ts`
+- Teacher SCSS: `kindergarten-design-tokens/tokens-teacher`
+- Parent SCSS: `kindergarten-design-tokens/tokens-parent`
+- Admin TS: `import tokens from 'kindergarten-design-tokens'`
+- CSS 变量 (Teacher): `kindergarten-design-tokens/tokens-teacher.css`
+- CSS 变量 (Parent): `kindergarten-design-tokens/tokens-parent.css`
+
+### 运行时主题切换
+
+所有 token 同时生成为 CSS 自定义属性（`--color-brand-primary` 等），在 `App.vue` 中自动注入。可通过 `theme.js` 运行时切换：
+
+```js
+import { applyTheme, resetTheme, brandToTheme, BRANDS } from 'kindergarten-design-tokens/theme'
+
+// 切换到预设品牌色
+applyTheme(brandToTheme(BRANDS.ocean))
+
+// 自定义主题
+applyTheme({ '--color-brand-primary': '#FF6B35', '--color-bg-page': '#FFFBF5' })
+
+// 恢复默认
+resetTheme()
+```
 
 ### Lint 检查
 

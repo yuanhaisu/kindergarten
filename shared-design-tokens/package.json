@@ -10,12 +10,18 @@
     "./tokens-teacher": "./tokens-teacher.scss",
     "./tokens-parent": "./tokens-parent.scss",
     "./tokens-teacher.scss": "./tokens-teacher.scss",
-    "./tokens-parent.scss": "./tokens-parent.scss"
+    "./tokens-parent.scss": "./tokens-parent.scss",
+    "./tokens-teacher.css": "./tokens-teacher.css",
+    "./tokens-parent.css": "./tokens-parent.css",
+    "./theme": "./theme.js"
   },
   "files": [
     "build/",
     "tokens-teacher.scss",
-    "tokens-parent.scss"
+    "tokens-parent.scss",
+    "tokens-teacher.css",
+    "tokens-parent.css",
+    "theme.js"
   ],
   "scripts": {
     "build": "node sd.config.js",

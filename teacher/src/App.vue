@@ -14,6 +14,9 @@ onLaunch(() => {
 </script>
 
 <style lang="scss">
+// CSS Custom Properties for runtime theme switching
+@import "kindergarten-design-tokens/tokens-teacher.css";
+
 page {
   min-height: 100%;
   background: $color-bg-page;

@@ -66,6 +66,31 @@ StyleDictionary.registerTransform({
 });
 
 // ============================================================
+// Custom Format — CSS Custom Properties (runtime theming)
+// ============================================================
+StyleDictionary.registerFormat({
+  name: 'css/custom-properties',
+  formatter: function ({ dictionary }) {
+    const lines = [
+      '/* Auto-generated from tokens.json — DO NOT EDIT MANUALLY */',
+      '/* CSS Custom Properties for runtime theme switching */',
+      ':root {',
+    ];
+
+    // Output all tokens as --category-type-item: value;
+    dictionary.allTokens.forEach(token => {
+      // Skip non-themeable tokens (spacing, animation don't need runtime override)
+      const name = token.name.replace(/\s+/g, '-'); // kebab-case
+      lines.push(`  --${name}: ${token.value};`);
+    });
+
+    lines.push('}');
+    lines.push(''); // trailing newline
+    return lines.join('\n');
+  },
+});
+
+// ============================================================
 // Custom Format — Tailwind ESM export
 // ============================================================
 StyleDictionary.registerFormat({
@@ -147,18 +172,23 @@ StyleDictionary.registerFormat({
 const platforms = {
   teacher: {
     transforms: ['attribute/cti', 'name/cti/kebab', 'size/rpx', 'fontFamily/css'],
-    format: 'scss/variables',
-    dest: 'scss/tokens-teacher.scss',
+    files: [
+      { destination: 'scss/tokens-teacher.scss', format: 'scss/variables' },
+      { destination: 'css/tokens-teacher.css',   format: 'css/custom-properties' },
+    ],
   },
   parent: {
     transforms: ['attribute/cti', 'name/cti/kebab', 'size/rpx', 'fontFamily/css'],
-    format: 'scss/variables',
-    dest: 'scss/tokens-parent.scss',
+    files: [
+      { destination: 'scss/tokens-parent.scss', format: 'scss/variables' },
+      { destination: 'css/tokens-parent.css',   format: 'css/custom-properties' },
+    ],
   },
   admin: {
     transforms: ['attribute/cti', 'name/cti/camel', 'size/px'],
-    format: 'tailwind/esm',
-    dest: 'ts/tokens-admin.ts',
+    files: [
+      { destination: 'ts/tokens-admin.ts', format: 'tailwind/esm' },
+    ],
   },
 };
 
@@ -171,12 +201,7 @@ Object.entries(platforms).forEach(([platform, config]) => {
       [platform]: {
         transforms: config.transforms,
         buildPath: 'build/',
-        files: [
-          {
-            destination: config.dest,
-            format: config.format,
-          },
-        ],
+        files: config.files,
       },
     },
   });

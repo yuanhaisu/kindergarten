@@ -10,10 +10,13 @@ onLaunch(() => {
 </script>
 
 <style lang="scss">
+// CSS Custom Properties for runtime theme switching
+@import "kindergarten-design-tokens/tokens-parent.css";
+
 page {
   min-height: 100%;
-  background: #f7f3ea;
-  color: #2f2a22;
+  background: $color-bg-page;
+  color: $color-text-primary;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
