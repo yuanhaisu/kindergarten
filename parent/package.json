@@ -4,6 +4,10 @@
   "private": true,
   "description": "幼儿园家长端微信小程序",
   "scripts": {
+    "predev:mp-weixin": "cd ../shared-design-tokens && npm run build",
+    "prebuild:mp-weixin": "cd ../shared-design-tokens && npm run build",
+    "prebuild:mp-weixin:test": "cd ../shared-design-tokens && npm run build",
+    "prebuild:mp-weixin:prod": "cd ../shared-design-tokens && npm run build",
     "dev:h5": "uni",
     "dev:mp-weixin": "uni -p mp-weixin",
     "build:mp-weixin": "uni build -p mp-weixin",

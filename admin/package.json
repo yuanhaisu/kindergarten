@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "cd ../shared-design-tokens && npm run build",
+    "predev": "cd ../shared-design-tokens && npm run build",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
