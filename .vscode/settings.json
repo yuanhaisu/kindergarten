@@ -1,0 +1,23 @@
+{
+  "editor.colorDecorators": true,
+  "scss.validate": true,
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "tokens.json": "sd.config.js, build/",
+    "*.vue": "${capture}.scss"
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.nuxt": true,
+    "**/.output": true
+  },
+  "editor.renderWhitespace": "selection",
+  "extensions": {
+    "recommendations": [
+      "Vue.volar",
+      "bradlc.vscode-tailwindcss",
+      "syler.sass-indented"
+    ]
+  }
+}

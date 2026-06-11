@@ -162,9 +162,103 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 - `src/api/` — per-module API wrappers using a shared `http.js` (uni.request interceptor with auto token refresh)
 - Login is silent at app launch; `App.vue` `onLaunch` calls `ensureLogin()`
 
+## 🎨 Design Token 规范（三端必须遵守）
+
+养成星球使用统一的 design token 系统管理三端样式。**所有颜色、圆角、阴影、间距、字号必须通过 token 引用，禁止硬编码。**
+
+单一数据源: `shared-design-tokens/tokens.json` → 构建产出三端各自格式的文件。
+
+### 决策树
+
+遇到任何样式值，先查 token：
+- `tokens.json` 里有的 → **必须用 token 变量**，禁止硬编码
+- 没有的 → 评估是否「品牌基因」级别（会被多处使用） → 在 tokens.json 中新增 → `cd shared-design-tokens && npm run build` → 引用
+- 仅一处使用的特殊值（渐变、遮罩）→ 允许局部硬编码，**加注释说明原因**
+
+### 小程序端（teacher / parent）— SCSS
+
+```scss
+// ✅ 正确：引用 token 变量
+.card {
+  background: $color-bg-card;
+  border-radius: $border-radius-lg;
+  padding: $spacing-md $spacing-lg;
+  box-shadow: $shadow-sm;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+}
+
+// ✅ 正确：语义色
+.tag-success { background: $color-semantic-success-bg; color: $color-semantic-success; }
+
+// ❌ 错误：硬编码值（这些值在 tokens.json 中都有对应 token）
+.card {
+  background: #fff;          // 应使用 $color-bg-card
+  border-radius: 12rpx;      // 应使用 $border-radius-md
+  padding: 16rpx 24rpx;      // 应使用 $spacing-md $spacing-lg
+  color: #1E293B;            // 应使用 $color-text-primary
+}
+```
+
+### 管理端（admin）— Tailwind
+
+```html
+<!-- ✅ 正确：使用 token 类名 -->
+<div class="bg-bg-card rounded-lg shadow-sm p-4 text-text-primary">
+
+<!-- ✅ 正确：语义色 -->
+<span class="bg-semantic-successBg text-semantic-success">已通过</span>
+
+<!-- ❌ 错误：Tailwind 任意值 -->
+<div class="bg-[#ffffff] rounded-[12px] p-[16px]">
+```
+
+### 禁止的行为
+
+- 组件 `<style>` 中**重复定义 token 已有变量**（如 `$blue-500: #3B82F6;`）——应直接使用 token 变量
+- 使用 Tailwind 任意值替代 token 类名（如 `bg-[#3B82F6]` 替代 `bg-brand-primary`）
+- 修改 token 值不更新 `tokens.json`（应改源头，不是改生成产物）
+- 在 `<style scoped>` 中重新声明 `$slate-50: #F8FAFC` 等已在 token 中定义的值
+
+### 新增 / 修改 Token 流程
+
+1. 编辑 `shared-design-tokens/tokens.json`（按 `category.type.item` 命名规范）
+2. `cd shared-design-tokens && npm run build`
+3. `git diff build/` 验证生成产物
+4. 提交 `tokens.json` + `build/`（产物必须提交）
+
+### Token 速查
+
+| 分类 | Token 示例 | 端差异 |
+|---|---|---|
+| 品牌主色 | `$color-brand-primary` | 老师端 #ff8a3d / 家长端 #F97316 / 管理端 #3B82F6 |
+| 背景 | `$color-bg-page`, `$color-bg-card` | 端差异 |
+| 文字 | `$color-text-primary`, `body`, `muted`, `hint` | 共享 |
+| 功能色 | `$color-semantic-success`, `warning`, `danger`, `info` + 对应的 `-bg` 浅底 | 共享 |
+| 圆角 | `$border-radius-sm`(8rpx) ~ `xl`(48rpx), `full`(9999rpx) | 共享 |
+| 阴影 | `$shadow-sm`, `md`, `lg` | 共享 |
+| 间距 | `$spacing-xs`(8rpx) ~ `xl`(64rpx) | 共享 |
+| 字号 | `$font-size-xs`(22rpx) ~ `3xl`(40rpx) | 共享 |
+| 字重 | `$font-weight-normal`(400) ~ `bold`(700) | 共享 |
+| 动画 | `$animation-duration-fast`(150ms), `base`(300ms), `slow`(500ms) | 共享 |
+
+**产物路径:**
+- Teacher: `shared-design-tokens/build/scss/tokens-teacher.scss`
+- Parent: `shared-design-tokens/build/scss/tokens-parent.scss`
+- Admin: `shared-design-tokens/build/ts/tokens-admin.ts`
+
+### Lint 检查
+
+```bash
+node scripts/check-tokens.mjs          # 扫描三端
+node scripts/check-tokens.mjs teacher  # 只扫描老师端
+```
+
+在提交代码前运行，确保无 token 违规。
+
 ## Key constraints
 
 - Never commit `configs/app.local.ini`, `.env` files, or credentials in `app.ini`
 - Wire-generated file `internal/app/wire_gen.go` must be regenerated (`make wire`) after DI changes
 - API specs in `backend/api/` are the source of truth; handlers and services must conform to them
-- Parent mini-program (`parent/`) is a planned uni-app project but has not been scaffolded yet
+- Design tokens source: `shared-design-tokens/tokens.json`. Generated `build/` files must be committed alongside source changes

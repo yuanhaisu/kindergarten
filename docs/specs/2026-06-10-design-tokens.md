@@ -1,7 +1,8 @@
 # Design Tokens 统一管理
 
-> **状态**: ✏️设计中
+> **状态**: ✅已完成
 > **创建**: 2026-06-10
+> **完成**: 2026-06-11
 > **关联 Skill**: 无（新建基础设施）
 
 ## 背景与动机
@@ -498,3 +499,15 @@ primary-color              ❌ 缺少分类层级
 - [ ] 老师在 `teacher/` 中修改 `uni.scss`，引用 tokens-teacher.scss，编译通过
 - [ ] 管理端 `tailwind.config.ts` 引用 tokens-admin.ts，`npm run dev` 正常启动
 - [ ] 三端同时运行，各自品牌色不变，但圆角/阴影/间距/功能色一致
+
+## 执行情况
+
+- [x] `shared-design-tokens/` 目录创建，含 `tokens.json`、`sd.config.js`、`package.json`
+- [x] `npm run build` 成功生成 SCSS 和 TS 产物
+- [x] 家长端 `uni.scss` 引用 tokens-parent.scss，21 个页面/组件变量替换完成，编译通过
+- [x] 老师端 `uni.scss` 引用 tokens-teacher.scss，旧变量保留别名兼容，编译通过
+- [x] 管理端 `tailwind.config.ts` 引用 tokens-admin.ts，编译通过
+- [x] 三端预构建钩子（`prebuild`/`predev`）自动执行 token 构建
+- [x] CLAUDE.md 新增 Design Token 规范章节（AI 守卫）
+- [x] `scripts/check-tokens.mjs` 零依赖 lint 脚本（人类守卫）
+- [x] `.vscode/settings.json` 工作区配置（编辑器辅助）

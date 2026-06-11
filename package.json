@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "check-tokens": "node scripts/check-tokens.mjs",
+    "check-tokens:teacher": "node scripts/check-tokens.mjs teacher",
+    "check-tokens:parent": "node scripts/check-tokens.mjs parent",
+    "check-tokens:admin": "node scripts/check-tokens.mjs admin"
+  },
   "dependencies": {
     "remixicon": "^4.9.1"
   }
