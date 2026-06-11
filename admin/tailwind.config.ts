@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss'
-import tokens from '../shared-design-tokens/build/ts/tokens-admin'
+import tokens from 'kindergarten-design-tokens'
 
 export default {
   content: [

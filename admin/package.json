@@ -12,6 +12,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "kindergarten-design-tokens": "file:../shared-design-tokens",
     "@element-plus/nuxt": "^1.1.1",
     "@pinia/nuxt": "^0.5.5",
     "@remixicon/vue": "^4.6.0",
