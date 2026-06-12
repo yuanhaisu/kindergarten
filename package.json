@@ -3,7 +3,9 @@
     "check-tokens": "node scripts/check-tokens.mjs",
     "check-tokens:teacher": "node scripts/check-tokens.mjs teacher",
     "check-tokens:parent": "node scripts/check-tokens.mjs parent",
-    "check-tokens:admin": "node scripts/check-tokens.mjs admin"
+    "check-tokens:admin": "node scripts/check-tokens.mjs admin",
+    "audit-calicat": "node scripts/audit-calicat.mjs",
+    "audit-calicat:summary": "node scripts/audit-calicat.mjs --summary"
   },
   "dependencies": {
     "remixicon": "^4.9.1"
