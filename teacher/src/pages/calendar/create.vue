@@ -4,26 +4,29 @@ import { createTeacherCalendarEvent } from "@/api/teacher-calendar"
 
 const form = ref({
   title: "",
-  type: "notification",
+  event_type: "activity",
   description: "",
-  date: "",
+  event_date: "",
   start_time: "09:00",
   end_time: "10:00",
   location: "",
-  classes: [],
-  notify_parents: true,
-  importance: "important",
+  is_all_day: false,
+  color: "",
+  importance: "normal",
   cover: "",
+  is_published: true,
   attachments: []
 })
 
 const submitting = ref(false)
-const selectedDate = ref("2026年3月19日")
+const selectedDate = ref("请选择日期")
 
 const eventTypes = [
-  { value: "notification", label: "通知" },
+  { value: "notice", label: "通知" },
   { value: "activity", label: "活动" },
-  { value: "meeting", label: "家长会" }
+  { value: "holiday", label: "假期" },
+  { value: "meeting", label: "家长会" },
+  { value: "checkup", label: "体检" }
 ]
 
 const importanceLevels = [
@@ -32,30 +35,39 @@ const importanceLevels = [
   { value: "urgent", label: "紧急" }
 ]
 
-const availableClasses = ["中一班", "中二班", "大一班", "大二班", "小一班"]
-
-function selectType(type) { form.value.type = type }
+function selectType(et) { form.value.event_type = et }
 function selectImportance(level) { form.value.importance = level }
 
-function toggleClass(className) {
-  const idx = form.value.classes.indexOf(className)
-  if (idx >= 0) form.value.classes.splice(idx, 1)
-  else form.value.classes.push(className)
-}
-
-function addMoreClass() {
-  uni.showActionSheet({
-    itemList: availableClasses.filter(c => !form.value.classes.includes(c)),
+function pickDate() {
+  const today = new Date()
+  uni.showModal({
+    title: "输入日期",
+    editable: true,
+    placeholderText: `如 ${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`,
     success(res) {
-      const cls = availableClasses.filter(c => !form.value.classes.includes(c))[res.tapIndex]
-      if (cls) form.value.classes.push(cls)
+      if (res.confirm && res.content) {
+        form.value.event_date = res.content.trim()
+        selectedDate.value = res.content.trim()
+      }
     }
   })
 }
-
-function pickDate() { uni.showToast({ title: "选择日期", icon: "none" }) }
-function pickStartTime() { uni.showToast({ title: "选择开始时间", icon: "none" }) }
-function pickEndTime() { uni.showToast({ title: "选择结束时间", icon: "none" }) }
+function pickStartTime() {
+  uni.showModal({
+    title: "输入开始时间",
+    editable: true,
+    placeholderText: "如 09:00",
+    success(res) { if (res.confirm && res.content) form.value.start_time = res.content.trim() }
+  })
+}
+function pickEndTime() {
+  uni.showModal({
+    title: "输入结束时间",
+    editable: true,
+    placeholderText: "如 17:00",
+    success(res) { if (res.confirm && res.content) form.value.end_time = res.content.trim() }
+  })
+}
 
 function uploadCover() {
   uni.chooseImage({ count: 1, success(res) { form.value.cover = res.tempFilePaths[0]; uni.showToast({ title: "封面已选择", icon: "success" }) } })
@@ -65,22 +77,26 @@ function addAttachment() {
   uni.chooseMessageFile({ count: 5, success(res) { form.value.attachments.push(...res.tempFiles.map(f => f.name)); uni.showToast({ title: `已添加 ${res.tempFiles.length} 个附件`, icon: "success" }) } })
 }
 
-function toggleNotify() { form.value.notify_parents = !form.value.notify_parents }
-
-async function saveDraft() { uni.showToast({ title: "草稿已保存", icon: "success" }) }
+function toggleNotify() { form.value.is_published = !form.value.is_published }
 
 async function submitForm() {
   if (!form.value.title.trim()) { uni.showToast({ title: "请输入活动标题", icon: "none" }); return }
-  if (!form.value.classes.length) { uni.showToast({ title: "请选择参与班级", icon: "none" }); return }
+  if (!form.value.event_date) { uni.showToast({ title: "请选择活动日期", icon: "none" }); return }
   submitting.value = true
   try {
     await createTeacherCalendarEvent({
       title: form.value.title.trim(),
-      event_date: form.value.date || new Date().toISOString().slice(0, 10),
-      event_type: form.value.type,
+      event_date: form.value.event_date,
+      event_type: form.value.event_type,
       description: form.value.description,
+      start_time: form.value.start_time,
+      end_time: form.value.end_time,
       location: form.value.location,
-      classes: form.value.classes
+      is_all_day: form.value.is_all_day,
+      color: form.value.color,
+      importance: form.value.importance,
+      cover: form.value.cover,
+      is_published: form.value.is_published
     })
     uni.showToast({ title: "发布成功", icon: "success" })
     setTimeout(() => uni.navigateBack(), 1200)
@@ -104,7 +120,7 @@ async function submitForm() {
       <view class="field">
         <view class="field-label"><text class="label-text">活动类型</text><text class="label-required">*</text></view>
         <view class="type-row">
-          <view v-for="t in eventTypes" :key="t.value" class="type-btn" :class="{ active: form.type === t.value }" @click="selectType(t.value)"><text>{{ t.label }}</text></view>
+          <view v-for="t in eventTypes" :key="t.value" class="type-btn" :class="{ active: form.event_type === t.value }" @click="selectType(t.value)"><text>{{ t.label }}</text></view>
         </view>
       </view>
       <view class="field">
@@ -136,17 +152,10 @@ async function submitForm() {
     </view>
 
     <view class="form-card">
-      <view class="section-head"><view class="indicator is-orange" /><text class="section-title">参与班级</text></view>
-      <view class="field">
-        <view class="field-label"><text class="label-text">选择班级</text><text class="label-required">*</text></view>
-        <view class="class-chips">
-          <view v-for="cls in form.classes" :key="cls" class="class-chip" @click="toggleClass(cls)"><text class="chip-name">{{ cls }}</text><text class="chip-remove">×</text></view>
-          <view class="class-chip add" @click="addMoreClass"><text class="chip-add-icon">+</text><text class="chip-add-text">添加</text></view>
-        </view>
-      </view>
+      <view class="section-head"><view class="indicator is-orange" /><text class="section-title">发布设置</text></view>
       <view class="notify-row">
         <view class="notify-left"><text class="notify-icon">铃</text><view class="notify-text"><text class="notify-title">通知家长</text><text class="notify-desc">发布后自动推送至家长端</text></view></view>
-        <view class="switch" :class="{ on: form.notify_parents }" @click="toggleNotify"><view class="switch-dot" /></view>
+        <view class="switch" :class="{ on: form.is_published }" @click="toggleNotify"><view class="switch-dot" /></view>
       </view>
     </view>
 
@@ -173,8 +182,7 @@ async function submitForm() {
     </view>
 
     <view class="bottom-actions">
-      <view class="draft-btn" @click="saveDraft"><text class="draft-icon">存</text><text class="draft-text">保存草稿</text></view>
-      <button class="submit-btn" :loading="submitting" @click="submitForm"><text class="submit-icon">发</text><text class="submit-text">立即发布</text></button>
+      <button class="submit-btn" :loading="submitting" @click="submitForm" style="flex: 1"><text class="submit-icon">发</text><text class="submit-text">立即发布</text></button>
     </view>
     <view class="bottom-safe" />
   </view>

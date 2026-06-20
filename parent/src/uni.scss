@@ -6,8 +6,8 @@
 // 品牌基因 & 端差异化 token（自动生成，勿手动编辑）
 @import "kindergarten-design-tokens/tokens-parent";
 
-// Remix Icon 字体
-@import "@/static/fonts/remixicon.css";
+// Remix Icon 字体 — 移至 App.vue <style> 中加载（uni.scss 中 @ 别名不会被 Vite 解析）
+// @import "@/static/fonts/remixicon.css";
 
 // ============================================================
 // 端特有变量（模块主题色，暂不进入 shared tokens）

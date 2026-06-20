@@ -6,7 +6,7 @@ export default {
       list: [
         { pagePath: "/pages/index/index", text: "首页", icon: "" },
         { pagePath: "/pages/growth/index", text: "成长", icon: "" },
-        { pagePath: "/pages/tasks/index", text: "任务", icon: "" },
+        { pagePath: "/pages/pickup/index", text: "接送", icon: "" },
         { pagePath: "/pages/profile/index", text: "我的", icon: "" }
       ]
     }

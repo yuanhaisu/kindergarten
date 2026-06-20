@@ -23,3 +23,7 @@ export function deleteTeacherCalendarEvent(id) {
 export function fetchTeacherCalendarDots(params = {}) {
   return requestWithAuth({ url: "/teacher/calendar/dots", method: "GET", data: params })
 }
+
+export function fetchTeacherCalendarEvent(id) {
+  return requestWithAuth({ url: `/teacher/calendar/events/detail/${id}`, method: "GET" })
+}

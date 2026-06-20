@@ -382,3 +382,178 @@ func (r *PickupRepo) ListRecordsByStudentIDs(
 		Scan(&rows).Error
 	return rows, total, err
 }
+
+// ==================== PickupAuthorizations ====================
+
+// AuthorizationListRow 授权接送人列表行。
+type AuthorizationListRow struct {
+	ID              uint64     `gorm:"column:id"`
+	StudentID       uint64     `gorm:"column:student_id"`
+	StudentName     string     `gorm:"column:student_name"`
+	ClassName       string     `gorm:"column:class_name"`
+	Name            string     `gorm:"column:name"`
+	Phone           string     `gorm:"column:phone"`
+	Relation        string     `gorm:"column:relation"`
+	IDCard          string     `gorm:"column:id_card"`
+	Avatar          string     `gorm:"column:avatar"`
+	UserID          *uint64    `gorm:"column:user_id"`
+	ExpireAt        *time.Time `gorm:"column:expire_at"`
+	Status          int8       `gorm:"column:status"`
+	CreatorID       uint64     `gorm:"column:creator_id"`
+	AuthType        string     `gorm:"column:auth_type"`
+	AllowPickup     bool       `gorm:"column:allow_pickup"`
+	AllowViewRecord bool       `gorm:"column:allow_view_record"`
+	AllowViewStatus bool       `gorm:"column:allow_view_status"`
+	AllowGrowthView bool       `gorm:"column:allow_growth_view"`
+	NotifyOnPickup  bool       `gorm:"column:notify_on_pickup"`
+	ReviewStatus    int8       `gorm:"column:review_status"`
+	AuditedAt       *time.Time `gorm:"column:audited_at"`
+	AuditRemark     string     `gorm:"column:audit_remark"`
+	CreatedAt       time.Time  `gorm:"column:created_at"`
+	UpdatedAt       time.Time  `gorm:"column:updated_at"`
+}
+
+// ListAuthorizationsByStudentIDs 根据学生 ID 列表分页查询授权接送人（家长端用）。
+func (r *PickupRepo) ListAuthorizationsByStudentIDs(
+	ctx context.Context,
+	kindergartenID uint64,
+	studentIDs []uint64,
+	offset, limit int,
+) ([]AuthorizationListRow, int64, error) {
+	if len(studentIDs) == 0 {
+		return []AuthorizationListRow{}, 0, nil
+	}
+	base := r.db.WithContext(ctx).Table("pickup_authorizations AS pa").
+		Joins("INNER JOIN students AS s ON s.id = pa.student_id AND s.deleted_at IS NULL").
+		Joins("INNER JOIN classes AS c ON c.id = s.class_id AND c.deleted_at IS NULL").
+		Where("s.kindergarten_id = ? AND pa.deleted_at IS NULL", kindergartenID).
+		Where("pa.student_id IN ?", studentIDs)
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var rows []AuthorizationListRow
+	err := base.Session(&gorm.Session{}).
+		Select(`pa.id, pa.student_id, s.name AS student_name, c.name AS class_name,
+			pa.name, pa.phone, pa.relation, pa.id_card, pa.avatar, pa.user_id,
+			pa.expire_at, pa.status, pa.creator_id, pa.auth_type,
+			pa.allow_pickup, pa.allow_view_record, pa.allow_view_status,
+			pa.allow_growth_view, pa.notify_on_pickup, pa.review_status,
+			pa.audited_at, pa.audit_remark, pa.created_at, pa.updated_at`).
+		Order("pa.created_at DESC, pa.id DESC").
+		Offset(offset).Limit(limit).
+		Scan(&rows).Error
+	return rows, total, err
+}
+
+// FindAuthorizationByStudent 根据学生ID和授权ID查询单条授权记录（归属校验）。
+func (r *PickupRepo) FindAuthorizationByStudent(
+	ctx context.Context,
+	studentID, authID uint64,
+) (*domain.PickupAuthorization, error) {
+	var pa domain.PickupAuthorization
+	err := r.db.WithContext(ctx).Model(&domain.PickupAuthorization{}).
+		Where("id = ? AND student_id = ? AND deleted_at IS NULL", authID, studentID).
+		First(&pa).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &pa, nil
+}
+
+// CreateAuthorization 创建单条授权记录。
+func (r *PickupRepo) CreateAuthorization(ctx context.Context, auth *domain.PickupAuthorization) error {
+	return r.db.WithContext(ctx).Create(auth).Error
+}
+
+// UpdateAuthorizationFields 按学生ID和授权ID部分更新字段。
+func (r *PickupRepo) UpdateAuthorizationFields(
+	ctx context.Context,
+	studentID, authID uint64,
+	updates map[string]interface{},
+) error {
+	return r.db.WithContext(ctx).Model(&domain.PickupAuthorization{}).
+		Where("id = ? AND student_id = ? AND deleted_at IS NULL", authID, studentID).
+		Updates(updates).Error
+}
+
+// SoftDeleteAuthorization 软删除一条授权记录。
+func (r *PickupRepo) SoftDeleteAuthorization(ctx context.Context, studentID, authID uint64) error {
+	return r.db.WithContext(ctx).Model(&domain.PickupAuthorization{}).
+		Where("id = ? AND student_id = ? AND deleted_at IS NULL", authID, studentID).
+		Update("deleted_at", time.Now()).Error
+}
+
+// ==================== Admin Authorization List ====================
+
+// ListAuthorizationsByKindergarten 按园所列授权接送人，支持审核状态筛选、分页。
+func (r *PickupRepo) ListAuthorizationsByKindergarten(
+	ctx context.Context,
+	kindergartenID uint64,
+	reviewStatus *int8,
+	offset, limit int,
+) ([]AuthorizationListRow, int64, error) {
+	base := r.db.WithContext(ctx).Table("pickup_authorizations AS pa").
+		Joins("INNER JOIN students AS s ON s.id = pa.student_id AND s.deleted_at IS NULL").
+		Joins("INNER JOIN classes AS c ON c.id = s.class_id AND c.deleted_at IS NULL").
+		Where("s.kindergarten_id = ? AND pa.deleted_at IS NULL", kindergartenID)
+	if reviewStatus != nil {
+		base = base.Where("pa.review_status = ?", *reviewStatus)
+	}
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var rows []AuthorizationListRow
+	err := base.Session(&gorm.Session{}).
+		Select(`pa.id, pa.student_id, s.name AS student_name, c.name AS class_name,
+			pa.name, pa.phone, pa.relation, pa.id_card, pa.avatar, pa.user_id,
+			pa.expire_at, pa.status, pa.creator_id, pa.auth_type,
+			pa.allow_pickup, pa.allow_view_record, pa.allow_view_status,
+			pa.allow_growth_view, pa.notify_on_pickup, pa.review_status,
+			pa.audited_at, pa.audit_remark, pa.created_at, pa.updated_at`).
+		Order("pa.review_status ASC, pa.created_at DESC, pa.id DESC").
+		Offset(offset).Limit(limit).
+		Scan(&rows).Error
+	return rows, total, err
+}
+
+// ==================== PickupQRCode ====================
+
+// FindActiveQRCodeByStudent 查询指定学生当前有效的接送二维码。
+func (r *PickupRepo) FindActiveQRCodeByStudent(
+	ctx context.Context,
+	studentID uint64,
+) (*domain.PickupQRCode, error) {
+	var qr domain.PickupQRCode
+	err := r.db.WithContext(ctx).Model(&domain.PickupQRCode{}).
+		Where("student_id = ? AND is_active = ?", studentID, true).
+		Order("id DESC").
+		First(&qr).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &qr, nil
+}
+
+// CreateQRCode 创建接送二维码记录。
+func (r *PickupRepo) CreateQRCode(ctx context.Context, qr *domain.PickupQRCode) error {
+	return r.db.WithContext(ctx).Create(qr).Error
+}
+
+// DeactivateStudentQRCodes 将指定学生所有有效二维码标记为失效。
+func (r *PickupRepo) DeactivateStudentQRCodes(ctx context.Context, studentID uint64) error {
+	return r.db.WithContext(ctx).Model(&domain.PickupQRCode{}).
+		Where("student_id = ? AND is_active = ?", studentID, true).
+		Update("is_active", false).Error
+}

@@ -236,3 +236,37 @@ func (r *NoticeRepo) DeleteAttachmentsByNoticeID(ctx context.Context, noticeID u
 		Where("notice_id = ?", noticeID).
 		Delete(&domain.NoticeAttachment{}).Error
 }
+
+// RecordReadLog 写入通知已读记录（幂等：同一用户+通知仅一条记录，重复调用更新 read_at）。
+func (r *NoticeRepo) RecordReadLog(ctx context.Context, noticeID, userID uint64) error {
+	now := time.Now()
+	log := domain.NoticeReadLog{NoticeID: noticeID, UserID: userID, ReadAt: now}
+	return r.db.WithContext(ctx).
+		Where("notice_id = ? AND user_id = ?", noticeID, userID).
+		Assign(map[string]any{"read_at": now}).
+		FirstOrCreate(&log).Error
+}
+
+// RecordConfirmLog 写入通知确认记录。
+func (r *NoticeRepo) RecordConfirmLog(ctx context.Context, noticeID, userID uint64) error {
+	now := time.Now()
+	return r.db.WithContext(ctx).Model(&domain.NoticeReadLog{}).
+		Where("notice_id = ? AND user_id = ?", noticeID, userID).
+		Updates(map[string]any{"confirmed_at": now}).Error
+}
+
+// CheckReadStatus 批量查询某用户对一批通知的已读状态。
+func (r *NoticeRepo) CheckReadStatus(ctx context.Context, userID uint64, noticeIDs []uint64) (map[uint64]bool, error) {
+	if len(noticeIDs) == 0 {
+		return map[uint64]bool{}, nil
+	}
+	var rows []domain.NoticeReadLog
+	if err := r.db.WithContext(ctx).Where("user_id = ? AND notice_id IN ?", userID, noticeIDs).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	result := make(map[uint64]bool, len(rows))
+	for _, row := range rows {
+		result[row.NoticeID] = !row.ReadAt.IsZero()
+	}
+	return result, nil
+}

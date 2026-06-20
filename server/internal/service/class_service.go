@@ -8,20 +8,45 @@ import (
 	"unicode/utf8"
 
 	"kindergarten-server/internal/domain"
-	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
 )
 
+// ClassRepository 班级 Service 依赖的仓库接口（由 *repository.ClassRepo 隐式实现）
+type ClassRepository interface {
+	List(ctx context.Context, kindergartenID uint64, grade, keyword string, offset, limit int) ([]domain.Class, int64, error)
+	FindByID(ctx context.Context, kindergartenID, classID uint64) (*domain.Class, error)
+	CountStudentsInClass(ctx context.Context, kindergartenID, classID uint64) (int64, error)
+	CountStudentsByClassIDs(ctx context.Context, kindergartenID uint64, classIDs []uint64) (map[uint64]int64, error)
+	ListTeachersByClassIDs(ctx context.Context, classIDs []uint64) ([]domain.ClassTeacher, error)
+	CreateClassWithTeachers(ctx context.Context, class *domain.Class, teachers []domain.ClassTeacher) error
+	Save(ctx context.Context, c *domain.Class) error
+	Delete(ctx context.Context, kindergartenID, classID uint64) error
+	ReplaceClassTeachers(ctx context.Context, classID uint64, teachers []domain.ClassTeacher) error
+	ListStudentsPreview(ctx context.Context, kindergartenID, classID uint64, limit int) ([]domain.Student, error)
+	CountStudentsInClassWithIDs(ctx context.Context, kindergartenID, classID uint64, studentIDs []uint64) (int64, error)
+	UpdateStudentsClass(ctx context.Context, kindergartenID, fromClassID, toClassID uint64, studentIDs []uint64) (int64, error)
+}
+
+// UserLookup 班级 Service 依赖的用户查询接口（由 *repository.UserRepo 隐式实现）
+type UserLookup interface {
+	FindByID(ctx context.Context, id uint64) (*domain.User, error)
+}
+
+// OpLogger 操作日志接口（由 *repository.OperationLogRepo 隐式实现）
+type OpLogger interface {
+	Create(ctx context.Context, log *domain.OperationLog) error
+}
+
 type ClassService struct {
-	classRepo *repository.ClassRepo
-	userRepo  *repository.UserRepo
-	oplog     *repository.OperationLogRepo
+	classRepo ClassRepository
+	userRepo  UserLookup
+	oplog     OpLogger
 }
 
 func NewClassService(
-	classRepo *repository.ClassRepo,
-	userRepo *repository.UserRepo,
-	oplog *repository.OperationLogRepo,
+	classRepo ClassRepository,
+	userRepo UserLookup,
+	oplog OpLogger,
 ) *ClassService {
 	return &ClassService{classRepo: classRepo, userRepo: userRepo, oplog: oplog}
 }

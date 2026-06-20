@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
-import { fetchTeacherPickupOverview, fetchTeacherPickupStudents, manualTeacherPickup } from "@/api/teacher-pickup"
+import { fetchTeacherPickupOverview, fetchTeacherPickupStudents, manualTeacherPickup, scanTeacherPickup } from "@/api/teacher-pickup"
 
 const overview = ref({})
 const students = ref([])
+const filterStatus = ref("not_picked_up") // not_picked_up | all | arrived | picked_up
 
 const todayDate = computed(() => {
   const now = new Date()
@@ -14,7 +15,7 @@ const todayDate = computed(() => {
 async function loadPickup() {
   const [overviewRes, studentsRes] = await Promise.all([
     fetchTeacherPickupOverview(),
-    fetchTeacherPickupStudents()
+    fetchTeacherPickupStudents({ status: filterStatus.value }),
   ])
   overview.value = overviewRes.data || {}
   students.value = studentsRes.data?.list || []
@@ -37,16 +38,57 @@ async function record(student) {
 }
 
 function goQrScan() {
-  uni.scanCode({ success: () => {} })
+  uni.scanCode({
+    success: async (res) => {
+      try {
+        const qrCode = res.result || res.scanCode
+        if (!qrCode) {
+          uni.showToast({ title: "二维码识别失败", icon: "none" })
+          return
+        }
+        const result = await scanTeacherPickup({ qr_code: qrCode })
+        const data = result.data
+        uni.showToast({
+          title: `${data.student?.name || ""} ${data.type_label || "接送"}登记成功`,
+          icon: "success",
+        })
+        loadPickup()
+      } catch (err) {
+        uni.showToast({ title: err?.message || "扫码登记失败", icon: "none" })
+      }
+    },
+    fail: () => {
+      uni.showToast({ title: "扫码已取消", icon: "none" })
+    },
+  })
 }
 
 function goManualRegister() {
-  uni.showToast({ title: "手动登记功能开发中", icon: "none" })
+  filterStatus.value = "all"
+  loadPickup()
 }
 
 function goRecords() {
   uni.navigateTo({ url: "/pages/pickup/records" })
 }
+
+const filterOptions = [
+  { key: "not_picked_up", label: "未接走" },
+  { key: "all", label: "全部" },
+  { key: "arrived", label: "已入园" },
+  { key: "picked_up", label: "已接走" },
+]
+let filterIdx = 0
+function toggleFilter() {
+  filterIdx = (filterIdx + 1) % filterOptions.length
+  filterStatus.value = filterOptions[filterIdx].key
+  loadPickup()
+}
+
+const studentSectionTitle = computed(() => {
+  const label = filterOptions[filterIdx].label
+  return `${label}学生（${students.value.length}人）`
+})
 
 onLoad(loadPickup)
 onPullDownRefresh(loadPickup)
@@ -111,8 +153,8 @@ onPullDownRefresh(loadPickup)
     <!-- 学生列表 -->
     <view class="student-section">
       <view class="student-head">
-        <text class="student-title">未接走学生（{{ students.length }}人）</text>
-        <view class="filter-btn">
+        <text class="student-title">{{ studentSectionTitle }}</text>
+        <view class="filter-btn" @click="toggleFilter">
           <text>筛选</text>
         </view>
       </view>

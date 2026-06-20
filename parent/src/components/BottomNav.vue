@@ -6,7 +6,7 @@ defineProps({
 const tabs = [
   { label: "首页", icon: "&#xee1c;", path: "/pages/index/index" },
   { label: "成长", icon: "&#xeda5;", path: "/pages/growth/index" },
-  { label: "任务", icon: "&#xf1e8;", path: "/pages/tasks/index" },
+  { label: "接送", icon: "&#xec79;", path: "/pages/pickup/index" },
   { label: "我的", icon: "&#xf264;", path: "/pages/profile/index" },
 ]
 

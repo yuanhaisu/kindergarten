@@ -3,7 +3,6 @@ import { ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { fetchTasks } from "@/api/parent-task"
-import BottomNav from "@/components/BottomNav.vue"
 
 const tasks = ref([])
 const loading = ref(false)
@@ -26,28 +25,6 @@ const badges = ref([
   { name: "???", iconColor: "#94A3B8", bgColor: "#F1F5F9", locked: true },
 ])
 
-// Mock task data
-const mockTasks = ref([
-  {
-    id: 1, title: "亲子阅读打卡", points: 5, iconBg: "#DBEAFE", iconColor: "#3B82F6",
-    desc: "每天陪伴孩子阅读15分钟，培养孩子良好的阅读习惯",
-    progress: 0.75, progressLabel: "已打卡15/20天", infoLabel: "每完成1次获得5积分",
-    status: "doing",
-  },
-  {
-    id: 2, title: "家务小能手", points: 3, iconBg: "#D1FAE5", iconColor: "#10B981",
-    desc: "鼓励孩子参与力所能及的家务劳动，培养独立能力",
-    progress: 0.3, progressLabel: "已打卡3/10次", infoLabel: "每完成1次获得3积分",
-    status: "doing",
-  },
-  {
-    id: 3, title: "户外运动挑战", points: 10, iconBg: "#FEF3C7", iconColor: "#F59E0B",
-    desc: "每天户外运动30分钟，强健体魄，释放活力，记录运动瞬间",
-    progress: 0.6, progressLabel: "已打卡12/20天", infoLabel: "每完成1次获得10积分",
-    status: "doing",
-  },
-])
-
 function goDetail(id) { uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` }) }
 function goCheckIn(id) { uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` }) }
 function goRule() { uni.showToast({ title: "积分规则", icon: "none" }) }
@@ -60,9 +37,10 @@ async function loadData() {
     await ensureLogin()
     const res = await fetchTasks()
     const list = res.data?.list || []
-    tasks.value = list.length > 0 ? list : mockTasks.value
+    tasks.value = list
   } catch (err) {
-    tasks.value = mockTasks.value
+    tasks.value = []
+    uni.showToast({ title: "加载任务失败", icon: "none" })
   } finally {
     loading.value = false
     uni.stopPullDownRefresh()
@@ -196,7 +174,6 @@ onPullDownRefresh(loadData)
       <view class="bottom-safe" />
     </scroll-view>
 
-    <BottomNav :active="2" />
   </view>
 </template>
 

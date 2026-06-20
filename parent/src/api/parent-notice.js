@@ -15,6 +15,14 @@ export function fetchNoticeDetail(id) {
   })
 }
 
+export function markNoticeRead(id) {
+  return requestWithAuth({
+    url: `/parent/notices/${id}/read`,
+    method: "PUT",
+    data: {}
+  })
+}
+
 export function confirmNotice(id) {
   return requestWithAuth({
     url: `/parent/notices/${id}/confirm`,

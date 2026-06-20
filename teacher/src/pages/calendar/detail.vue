@@ -1,32 +1,23 @@
 <script setup>
 import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
-import { fetchTeacherCalendarEvents } from "@/api/teacher-calendar"
+import { fetchTeacherCalendarEvent, deleteTeacherCalendarEvent } from "@/api/teacher-calendar"
 
 const event = ref({})
 const loading = ref(true)
 
-const typeLabelMap = { notification: "通知", activity: "活动", meeting: "家长会", holiday: "假期", health: "体检" }
+const typeLabelMap = { notice: "通知", activity: "活动", meeting: "家长会", holiday: "假期", checkup: "体检" }
 const typeColorMap = {
-  notification: { bg: "#DBEAFE", fg: "#3B82F6" },
+  notice: { bg: "#DBEAFE", fg: "#3B82F6" },
   activity: { bg: "#DCFCE7", fg: "#16A34A" },
   meeting: { bg: "#F3E8FF", fg: "#9333EA" },
   holiday: { bg: "#FFF7ED", fg: "#F97316" },
-  health: { bg: "#FEE2E2", fg: "#EF4444" }
+  checkup: { bg: "#FEE2E2", fg: "#EF4444" }
 }
-
-const readAvatars = Array.from({ length: 5 }, (_, i) => i)
-const unreadCount = ref(6)
-const readCount = ref(18)
 
 function getTypeStyle(type) { return typeColorMap[type] || { bg: "#F1F5F9", fg: "#64748B" } }
 
 function goEdit() { uni.navigateTo({ url: `/pages/calendar/create?id=${event.value.id}` }) }
-function notifyParents() { uni.showToast({ title: "已发送通知提醒", icon: "success" }) }
-function goAllReaders() { uni.showToast({ title: "查看全部阅读状态", icon: "none" }) }
-function downloadFile(file) { uni.showToast({ title: `下载 ${file.name}`, icon: "none" }) }
-
-function handleShare() { uni.showToast({ title: "点击右上角分享", icon: "none" }) }
 
 function handleMore() {
   uni.showActionSheet({
@@ -34,7 +25,21 @@ function handleMore() {
     success(res) {
       if (res.tapIndex === 0) goEdit()
       else if (res.tapIndex === 1) {
-        uni.showModal({ title: "删除活动", content: "确定要删除该活动吗？", success(r) { if (r.confirm) { uni.showToast({ title: "已删除", icon: "success" }); setTimeout(() => uni.navigateBack(), 1000) } } })
+        uni.showModal({
+          title: "删除活动",
+          content: "确定要删除该活动吗？",
+          success: async (r) => {
+            if (r.confirm) {
+              try {
+                await deleteTeacherCalendarEvent(event.value.id)
+                uni.showToast({ title: "已删除", icon: "success" })
+                setTimeout(() => uni.navigateBack(), 1000)
+              } catch (err) {
+                uni.showToast({ title: err?.message || "删除失败", icon: "none" })
+              }
+            }
+          }
+        })
       }
     }
   })
@@ -44,10 +49,8 @@ onLoad(async (options) => {
   const id = options?.id
   if (id) {
     try {
-      const res = await fetchTeacherCalendarEvents()
-      const list = res.data?.list || []
-      const match = list.find(function(e) { return e.id === Number(id) || String(e.id) === String(id) })
-      event.value = match || {}
+      const res = await fetchTeacherCalendarEvent(id)
+      event.value = res.data?.event || {}
     } catch { /* */ }
   }
   loading.value = false

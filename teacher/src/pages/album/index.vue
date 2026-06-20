@@ -16,7 +16,8 @@ const categoryClassMap = {
 
 const stats = ref({ total_photos: 386, monthly_new: 42, album_count: 12 })
 
-const mockAlbums = [
+// mockAlbums removed — API pending, showing empty state
+const _removed = [
   { id: 1, title: "春季出游活动", category: "活动", photo_count: 28, date: "2026-03-19", cover: "" },
   { id: 2, title: "美术课作品展", category: "作品", photo_count: 35, date: "2026-03-15", cover: "" },
   { id: 3, title: "晨间活动日常", category: "日常", photo_count: 56, date: "2026-03-10", cover: "" },
@@ -42,11 +43,10 @@ function goAlbumDetail(id) {
 async function loadAlbums() {
   loading.value = true
   try {
-    // const res = await fetchTeacherAlbums()
-    // albums.value = res.data?.list || []
-    albums.value = mockAlbums
+    // TODO: API endpoint not yet available (fetchTeacherAlbums)
+    albums.value = []
   } catch (err) {
-    albums.value = mockAlbums
+    albums.value = []
   } finally {
     loading.value = false
     uni.stopPullDownRefresh()

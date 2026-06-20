@@ -59,8 +59,8 @@ type PickupAuthorization struct {
 	AllowViewStatus   bool       `json:"allow_view_status" gorm:"default:false;comment:允许查看在校情况"`
 	AllowGrowthView   bool       `json:"allow_growth_view" gorm:"default:false;comment:允许查看成长记录"`
 	NotifyOnPickup    bool       `json:"notify_on_pickup" gorm:"default:true;comment:接送消息通知"`
-	// ReviewStatus 园所审核：0 待审核 1 通过 2 拒绝（历史数据默认 1）
-	ReviewStatus int8       `json:"review_status" gorm:"default:1;index"`
+	// ReviewStatus 园所审核：0 待审核 1 通过 2 拒绝
+	ReviewStatus int8       `json:"review_status" gorm:"default:0;index"`
 	AuditedAt    *time.Time `json:"audited_at,omitempty"`
 	AuditRemark  string     `json:"audit_remark" gorm:"size:200"`
 

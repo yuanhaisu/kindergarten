@@ -15,15 +15,35 @@ import (
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
-	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/log"
 )
 
+// AuthUserRepository AuthService 依赖的用户仓库接口（由 *repository.UserRepo 隐式实现）
+type AuthUserRepository interface {
+	FindByPhone(ctx context.Context, phone string) (*domain.User, error)
+	FindByOpenID(ctx context.Context, openID string) (*domain.User, error)
+	FindByID(ctx context.Context, id uint64) (*domain.User, error)
+	Create(ctx context.Context, user *domain.User) error
+	Update(ctx context.Context, user *domain.User) error
+	UpdateFields(ctx context.Context, id uint64, fields map[string]any) error
+}
+
+// AuthRoleRepository AuthService 依赖的角色仓库接口（由 *repository.UserRoleRepo 隐式实现）
+type AuthRoleRepository interface {
+	FindByUserID(ctx context.Context, userID uint64) ([]domain.UserRole, error)
+}
+
+// InvitationRepository AuthService 依赖的邀请仓库接口（由 *repository.TeacherInvitationRepo 隐式实现）
+type InvitationRepository interface {
+	FindByToken(ctx context.Context, token string) (*domain.TeacherInvitation, error)
+	MarkUsed(ctx context.Context, id, userID uint64, openID, unionID string) error
+}
+
 type AuthService struct {
 	db             *gorm.DB
-	userRepo       *repository.UserRepo
-	userRoleRepo   *repository.UserRoleRepo
-	invitationRepo *repository.TeacherInvitationRepo
+	userRepo       AuthUserRepository
+	userRoleRepo   AuthRoleRepository
+	invitationRepo InvitationRepository
 	rdb            *redis.Client
 	wx             *auth.WeChatClient
 	secret         []byte
@@ -33,9 +53,9 @@ type AuthService struct {
 
 func NewAuthService(
 	db *gorm.DB,
-	userRepo *repository.UserRepo,
-	userRoleRepo *repository.UserRoleRepo,
-	invitationRepo *repository.TeacherInvitationRepo,
+	userRepo AuthUserRepository,
+	userRoleRepo AuthRoleRepository,
+	invitationRepo InvitationRepository,
 	rdb *redis.Client,
 	wx *auth.WeChatClient,
 	secret []byte,
@@ -357,7 +377,7 @@ func (s *AuthService) BindInvite(ctx context.Context, currentUserID uint64, invi
 	return s.issueTokens(ctx, &domain.User{BaseModel: domain.BaseModel{ID: currentUserID}})
 }
 
-// PasswordLogin 密码登录（管理后台专用）
+// PasswordLogin 密码登录（管理后台 + 家长端共用）
 func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string) (*LoginResult, error) {
 	user, err := s.userRepo.FindByPhone(ctx, phone)
 	if err != nil {
@@ -374,17 +394,6 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
 	if err != nil {
 		return nil, err
-	}
-
-	hasAdmin := false
-	for _, r := range roles {
-		if r.Role == "admin" {
-			hasAdmin = true
-			break
-		}
-	}
-	if !hasAdmin {
-		return nil, fmt.Errorf("NOT_ADMIN")
 	}
 
 	return s.issueTokensFromRoles(ctx, user, roles)

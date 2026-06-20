@@ -2,9 +2,7 @@
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
-
-// Placeholder: replace with real API when available
-// import { fetchTeacherPickupRecords } from "@/api/teacher-pickup"
+import { fetchTeacherPickupRecords } from "@/api/teacher-pickup"
 
 const records = ref([])
 const loading = ref(false)
@@ -42,9 +40,20 @@ async function loadRecords() {
   try {
     await ensureLogin()
     const dateStr = selectedDate.value.toISOString().slice(0, 10)
-    // const res = await fetchTeacherPickupRecords({ date: dateStr })
-    // records.value = res.data?.list || []
-    uni.stopPullDownRefresh()
+    const res = await fetchTeacherPickupRecords({ date: dateStr })
+    records.value = (res.data?.list || []).map((item) => ({
+      id: item.id,
+      time: item.recorded_at?.slice(11, 16) || "",
+      type: item.type === 1 ? "入园签到" : "放学接送",
+      status: item.type === 2 ? "picked" : "pending",
+      student_name: item.student?.name || "",
+      student_class: item.student?.class_name || "",
+      student_no: "",
+      pickup_by: item.pickup_name || "",
+      pickup_method: item.method_label || "",
+      pickup_method_color: item.method === 1 ? "blue" : "purple",
+      avatar: item.student?.avatar || "",
+    }))
   } catch (err) {
     uni.showToast({ title: err?.message || "加载失败", icon: "none" })
   } finally {
@@ -53,22 +62,8 @@ async function loadRecords() {
   }
 }
 
-const mockRecords = [
-  { id: 1, time: "16:42", type: "放学接送", status: "picked", student_name: "王小明", student_class: "中一班", student_no: "20240301", pickup_by: "爸爸", pickup_method: "扫码接送", pickup_method_color: "blue", avatar: "" },
-  { id: 2, time: "16:35", type: "放学接送", status: "picked", student_name: "李小花", student_class: "中二班", student_no: "20240315", pickup_by: "妈妈", pickup_method: "扫码接送", pickup_method_color: "blue", avatar: "" },
-  { id: 3, time: "16:28", type: "放学接送", status: "picked", student_name: "张小强", student_class: "大一班", student_no: "20240208", pickup_by: "外婆", pickup_method: "手动登记", pickup_method_color: "purple", avatar: "" },
-  { id: 4, time: "08:15", type: "入园签到", status: "pending", student_name: "陈雨欣", student_class: "中一班", student_no: "20240322", pickup_by: "妈妈", pickup_method: "刷卡入园", pickup_method_color: "gray", avatar: "" },
-  { id: 5, time: "08:10", type: "入园签到", status: "picked", student_name: "刘宇轩", student_class: "大二班", student_no: "20240116", pickup_by: "爷爷", pickup_method: "刷卡入园", pickup_method_color: "gray", avatar: "" },
-]
-
-onLoad(() => {
-  records.value = mockRecords
-  // loadRecords()
-})
-onPullDownRefresh(() => {
-  records.value = mockRecords
-  // loadRecords()
-})
+onLoad(loadRecords)
+onPullDownRefresh(loadRecords)
 </script>
 
 <template>

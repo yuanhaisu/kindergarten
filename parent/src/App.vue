@@ -13,6 +13,9 @@ onLaunch(() => {
 // CSS Custom Properties for runtime theme switching
 @import "kindergarten-design-tokens/tokens-parent.css";
 
+// Remix Icon 字体（在 App.vue 中 @ 别名可被 Vite 正确解析）
+@import "@/static/fonts/remixicon.css";
+
 page {
   min-height: 100%;
   background: $color-bg-page;

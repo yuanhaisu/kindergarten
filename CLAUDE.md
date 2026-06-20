@@ -86,7 +86,31 @@ npm run build:mp-weixin       # Production build
 npm run build:mp-weixin:test  # Test env build
 ```
 
-Open `dist/dev/mp-weixin` in WeChat Developer Tools. Update `src/manifest.json` with real AppID before release.
+**WeChat Developer Tools**: Open `teacher/dist/dev/mp-weixin` (compiled output), NOT the `teacher/` source directory. MCP config in `.mcp.json` points to this path.
+
+> ⚠️ WeChat DevTools MCP (`wechat-devtools`) requires Node.js in PATH for screenshot/automator features. The IDE bundles its own Node at `D:\Program Files (x86)\微信web开发者工具\node.exe`.
+
+## 🧪 小程序测试验证纪律
+
+**MCP 导航 ≠ 用户操作验证。** `wechat_navigate` 通过 CDP 直接调用 IDE 的路由跳转 API（`reLaunch` / `switchTab`），完全绕过了页面内的业务代码。因此：
+
+1. **页面渲染验证**：用 `wechat_navigate` 跳转 + `wechat_inspector` 采集 console → 验证页面能正常加载、无 JS 报错 ✅
+2. **UI 交互验证**：点击按钮、填写表单、触发事件 → **必须**通过 `wechat_automator`（tap / input）或真机操作，不能用 MCP 导航替代 ❌
+3. **导航跳转验证**：`uni.navigateTo` vs `uni.switchTab` 的区别只在用户点击触发时才会暴露——MCP 导航不存在此限制。自查要点：
+   - 所有跳转到 tabBar 页面的地方必须用 `switchTab`，不能用 `navigateTo`
+   - tabBar 页面列表在 `pages.json` → `tabBar.list[].pagePath` 中定义
+   - 常见的 tabBar 页面：首页、成长时光、亲子任务、我的
+4. **每次功能变更后**，除了 MCP 导航遍历全部页面外，还必须检查新增/修改的函数入口（按钮 `@click`、`onLoad` 等）是否在真实交互场景下会触发错误
+
+### MCP 工具能力矩阵
+
+| 工具 | 能力 | 需要 Node.js |
+|------|------|-------------|
+| `wechat_navigate` | 跳转页面 + CDP 日志采集 | 否 |
+| `wechat_inspector` | 控制台日志/异常采集 | 否 |
+| `wechat_ide` | IDE 生命周期（打开/关闭项目） | 否 |
+| `wechat_automator` | tap / input / evaluate / page_data | **是** |
+| `wechat_screenshot` | 截图 | **是** |
 
 ## Architecture
 

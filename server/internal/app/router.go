@@ -135,6 +135,7 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 	{
 		calendar.GET("/events", h.TeacherCalendarEvents)
 		calendar.POST("/events", h.TeacherCreateCalendarEvent)
+		calendar.GET("/events/detail/:id", h.TeacherGetCalendarEvent)
 		calendar.GET("/events/:date", h.TeacherCalendarEventsByDate)
 		calendar.PUT("/events/:id", h.TeacherUpdateCalendarEvent)
 		calendar.DELETE("/events/:id", h.TeacherDeleteCalendarEvent)
@@ -276,6 +277,7 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		pk.GET("/overview", h.GetPickupOverview)
 		pk.GET("/records", h.GetPickupRecords)
 		pk.GET("/abnormal", h.GetPickupAbnormal)
+		pk.GET("/authorized-persons", h.GetAuthorizedPersons)
 		pk.PUT("/authorized-persons/:id/audit", h.AuditPickupAuthorizedPerson)
 	}
 
@@ -386,6 +388,7 @@ func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 	{
 		notices.GET("", h.ParentListNotices)
 		notices.GET("/:id", h.ParentGetNotice)
+		notices.PUT("/:id/read", h.ParentMarkNoticeRead)
 		notices.PUT("/:id/confirm", h.ParentConfirmNotice)
 	}
 

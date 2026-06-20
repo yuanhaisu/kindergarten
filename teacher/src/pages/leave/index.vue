@@ -8,17 +8,6 @@ const stats = ref({})
 const leaves = ref([])
 const activeTab = ref("pending")
 
-const mockLeaves = [
-  { id: 1, status: 0, reason: "感冒发烧，身体不适", start_date: "2026-03-19", end_date: "2026-03-21", created_at: "2026-03-19T07:30:00", parent: { nickname: "王小明妈妈" }, student: { name: "王小明" } },
-  { id: 2, status: 0, reason: "家中有事，需带孩子外出", start_date: "2026-03-20", end_date: "2026-03-20", created_at: "2026-03-18T20:15:00", parent: { nickname: "李小花爸爸" }, student: { name: "李小花" } },
-  { id: 3, status: 0, reason: "预约了疫苗接种", start_date: "2026-03-21", end_date: "2026-03-21", created_at: "2026-03-18T18:40:00", parent: { nickname: "张小强妈妈" }, student: { name: "张小强" } },
-  { id: 4, status: 1, reason: "肠胃不适，需在家休息", start_date: "2026-03-18", end_date: "2026-03-18", created_at: "2026-03-17T22:10:00", updated_at: "2026-03-18T07:50:00", parent: { nickname: "陈雨欣爸爸" }, student: { name: "陈雨欣" } },
-  { id: 5, status: 1, reason: "全家外出旅游", start_date: "2026-03-13", end_date: "2026-03-17", created_at: "2026-03-12T14:30:00", updated_at: "2026-03-12T16:20:00", parent: { nickname: "刘宇轩妈妈" }, student: { name: "刘宇轩" } },
-  { id: 6, status: 1, reason: "参加亲戚婚礼，请假半天", start_date: "2026-03-15", end_date: "2026-03-15", created_at: "2026-03-14T21:00:00", updated_at: "2026-03-15T08:10:00", parent: { nickname: "赵雅琪妈妈" }, student: { name: "赵雅琪" } },
-  { id: 7, status: 2, reason: "个人原因请假，理由不充分", start_date: "2026-03-10", end_date: "2026-03-10", created_at: "2026-03-09T19:00:00", updated_at: "2026-03-09T20:30:00", parent: { nickname: "周小宇爸爸" }, student: { name: "周小宇" } },
-  { id: 8, status: 1, reason: "孩子发烧，需在家观察", start_date: "2026-03-08", end_date: "2026-03-09", created_at: "2026-03-08T06:45:00", updated_at: "2026-03-08T07:30:00", parent: { nickname: "吴思远妈妈" }, student: { name: "吴思远" } }
-]
-
 async function loadLeaves() {
   loading.value = true
   try {
@@ -28,9 +17,10 @@ async function loadLeaves() {
     ])
     stats.value = statsRes.data || {}
     const list = listRes.data?.list || []
-    leaves.value = list.length ? list : mockLeaves
+    leaves.value = list
   } catch (err) {
-    leaves.value = mockLeaves
+    leaves.value = []
+    uni.showToast({ title: "加载请假列表失败", icon: "none" })
   } finally {
     loading.value = false
     uni.stopPullDownRefresh()

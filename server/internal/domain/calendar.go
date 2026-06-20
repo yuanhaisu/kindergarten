@@ -27,6 +27,9 @@ type CalendarEvent struct {
 	Location       string    `json:"location" gorm:"size:200"`
 	IsAllDay       bool      `json:"is_all_day" gorm:"default:false"`
 	Color          string    `json:"color" gorm:"size:20"`
+	Importance     string    `json:"importance" gorm:"size:20;default:normal;comment:normal普通 important重要 urgent紧急"`
+	Cover          string    `json:"cover" gorm:"size:500"`
+	IsPublished    bool      `json:"is_published" gorm:"default:true;comment:是否发布并通知家长"`
 	NoticeID       *uint64   `json:"notice_id,omitempty"`
 
 	Creator *User  `json:"creator,omitempty" gorm:"foreignKey:CreatorID"`

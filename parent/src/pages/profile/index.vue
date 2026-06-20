@@ -3,17 +3,21 @@ import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { getUser } from "@/utils/auth"
 import { ensureLogin } from "@/utils/login"
+import BottomNav from "@/components/BottomNav.vue"
 
 const user = ref(null)
 
 const menuItems = [
+  { title: "亲子任务", icon: "task", path: "/pages/tasks/index" },
+  { title: "积分成就", icon: "points", path: "/pages/points/index" },
+  { title: "班级日历", icon: "calendar", path: "/pages/calendar/index" },
+  { title: "成长报告", icon: "report", path: "/pages/growth/report" },
+  { title: "请假记录", icon: "leave", path: "/pages/leave/index" },
+  { title: "接送记录", icon: "pickup", path: "/pages/pickup/index" },
+  { title: "授权人管理", icon: "auth", path: "/pages/pickup/authorized" },
   { title: "我的孩子", icon: "child", path: "/pages/student/index" },
   { title: "班级信息", icon: "class", path: "/pages/class/index" },
   { title: "通知公告", icon: "notice", path: "/pages/notice/index" },
-  { title: "请假记录", icon: "leave", path: "/pages/leave/index" },
-  { title: "接送管理", icon: "pickup", path: "/pages/pickup/index" },
-  { title: "亲子任务", icon: "task", path: "/pages/tasks/index" },
-  { title: "积分成就", icon: "points", path: "/pages/points/index" },
   { title: "意见反馈", icon: "feedback", path: "/pages/feedback/index" },
   { title: "设置", icon: "settings", path: "/pages/settings/index" }
 ]
@@ -44,6 +48,7 @@ function goPage(path) {
         <text class="arrow">›</text>
       </view>
     </view>
+    <BottomNav :active="3" />
   </view>
 </template>
 

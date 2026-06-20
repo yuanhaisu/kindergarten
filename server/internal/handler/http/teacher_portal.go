@@ -48,6 +48,12 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrValidation(c, "请求参数无效")
 	case errors.Is(err, service.ErrTeacherForbidden):
 		response.ErrForbidden(c, "无权限访问该数据")
+	case errors.Is(err, service.ErrTeacherDuplicate):
+		response.ErrBadRequest(c, 40010, "该学生今日已有同类型接送记录")
+	case errors.Is(err, service.ErrTeacherPickupOrder):
+		response.ErrValidation(c, "请先登记入园再登记接走")
+	case errors.Is(err, service.ErrTeacherInvalidQRCode):
+		response.ErrValidation(c, "二维码无效或已过期")
 	default:
 		response.ErrInternal(c, fallback)
 	}
@@ -583,7 +589,8 @@ func (h *Handler) TeacherPickupStudents(c *gin.Context) {
 	if !ok {
 		return
 	}
-	data, err := h.teacherPortalSvc.PickupStudents(c.Request.Context(), tc)
+	status := c.Query("status")
+	data, err := h.teacherPortalSvc.PickupStudents(c.Request.Context(), tc, status)
 	if err != nil {
 		teacherPortalErr(c, err, "获取接送学生失败")
 		return
@@ -623,7 +630,11 @@ func (h *Handler) TeacherPickupRecords(c *gin.Context) {
 		return
 	}
 	page, pageSize := teacherPortalPage(c)
-	data, err := h.teacherPortalSvc.PickupRecords(c.Request.Context(), tc, page, pageSize)
+	date := c.Query("date")
+	studentID, _ := strconv.ParseUint(c.Query("student_id"), 10, 64)
+	var sidPtr *uint64
+	if studentID > 0 { sidPtr = &studentID }
+	data, err := h.teacherPortalSvc.PickupRecords(c.Request.Context(), tc, page, pageSize, date, sidPtr)
 	if err != nil {
 		teacherPortalErr(c, err, "获取接送记录失败")
 		return
@@ -649,7 +660,8 @@ func (h *Handler) TeacherPickupRecord(c *gin.Context) {
 }
 
 type teacherAbnormalReq struct {
-	Reason string `json:"reason"`
+	IsAbnormal     *bool  `json:"is_abnormal"`
+	AbnormalReason string `json:"abnormal_reason"`
 }
 
 func (h *Handler) TeacherPickupAbnormal(c *gin.Context) {
@@ -663,11 +675,14 @@ func (h *Handler) TeacherPickupAbnormal(c *gin.Context) {
 	}
 	var req teacherAbnormalReq
 	_ = c.ShouldBindJSON(&req)
-	if err := h.teacherPortalSvc.MarkPickupAbnormal(c.Request.Context(), tc, id, req.Reason); err != nil {
+	isAbnormal := true
+	if req.IsAbnormal != nil { isAbnormal = *req.IsAbnormal }
+	data, err := h.teacherPortalSvc.MarkPickupAbnormal(c.Request.Context(), tc, id, isAbnormal, req.AbnormalReason)
+	if err != nil {
 		teacherPortalErr(c, err, "标记异常失败")
 		return
 	}
-	response.OK(c, map[string]any{"id": id})
+	response.OK(c, data)
 }
 
 func (h *Handler) TeacherCalendarEvents(c *gin.Context) {
@@ -678,6 +693,23 @@ func (h *Handler) TeacherCalendarEvents(c *gin.Context) {
 	data, err := h.teacherPortalSvc.CalendarEvents(c.Request.Context(), tc, c.Query("start"), c.Query("end"))
 	if err != nil {
 		teacherPortalErr(c, err, "获取日历事件失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+func (h *Handler) TeacherGetCalendarEvent(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.GetCalendarEvent(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "获取日历事件详情失败")
 		return
 	}
 	response.OK(c, data)
@@ -938,26 +970,46 @@ func (h *Handler) TeacherListMessages(c *gin.Context) {
 	response.OK(c, data)
 }
 
-// TeacherGrowthLike 点赞成长记录（TODO: service层实现）
+// TeacherGrowthLike 点赞成长记录
 func (h *Handler) TeacherGrowthLike(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c); if !ok { return }
 	id, ok2 := teacherPortalID(c); if !ok2 { return }
-	response.OK(c, gin.H{"id":id,"is_liked":true})
+	data, err := h.teacherPortalSvc.LikeGrowth(c.Request.Context(), tc, id)
+	if err != nil { teacherPortalErr(c, err, "点赞失败"); return }
+	response.OK(c, data)
 }
 
-// TeacherGrowthUnlike 取消点赞（TODO: service层实现）
+// TeacherGrowthUnlike 取消点赞
 func (h *Handler) TeacherGrowthUnlike(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c); if !ok { return }
 	id, ok2 := teacherPortalID(c); if !ok2 { return }
-	response.OK(c, gin.H{"id":id,"is_liked":false})
+	data, err := h.teacherPortalSvc.UnlikeGrowth(c.Request.Context(), tc, id)
+	if err != nil { teacherPortalErr(c, err, "取消点赞失败"); return }
+	response.OK(c, data)
 }
 
-// TeacherPickupAuthApprove 审核通过授权接送人（TODO: service层实现）
+// TeacherPickupAuthApprove 审核通过授权接送人。
 func (h *Handler) TeacherPickupAuthApprove(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok { return }
 	id, ok2 := teacherPortalID(c); if !ok2 { return }
-	response.OK(c, gin.H{"id":id,"status":1,"status_label":"已通过"})
+	data, err := h.teacherPortalSvc.AuditPickupAuth(c.Request.Context(), tc, id, true, "")
+	if err != nil {
+		teacherPortalErr(c, err, "审核授权失败")
+		return
+	}
+	response.OK(c, data)
 }
 
-// TeacherPickupAuthReject 拒绝授权接送人（TODO: service层实现）
+// TeacherPickupAuthReject 拒绝授权接送人。
 func (h *Handler) TeacherPickupAuthReject(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok { return }
 	id, ok2 := teacherPortalID(c); if !ok2 { return }
-	response.OK(c, gin.H{"id":id,"status":2,"status_label":"已拒绝"})
+	data, err := h.teacherPortalSvc.AuditPickupAuth(c.Request.Context(), tc, id, false, "")
+	if err != nil {
+		teacherPortalErr(c, err, "审核授权失败")
+		return
+	}
+	response.OK(c, data)
 }

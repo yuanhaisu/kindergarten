@@ -33,16 +33,12 @@ const todayStatuses = computed(() => [
   { key: "mood", icon: "", label: summary.value.mood_label || "--", sub: "", color: "orange" }
 ])
 
-/** 8 功能入口 — 对齐 Calicat 设计稿 */
+/** 4 功能入口 — 高频优先，不与Tab重复 */
 const quickActions = [
-  { title: "成长时光", icon: "", color: "green", path: "/pages/growth/index" },
   { title: "通知公告", icon: "", color: "blue", path: "/pages/notice/index", badge: summary.value.new_notice_count },
   { title: "接送管理", icon: "", color: "orange", path: "/pages/pickup/index" },
   { title: "亲子任务", icon: "", color: "purple", path: "/pages/tasks/index" },
-  { title: "班级日历", icon: "", color: "cyan", path: "/pages/calendar/index" },
   { title: "我要请假", icon: "", color: "yellow", path: "/pages/leave/create" },
-  { title: "成长报告", icon: "", color: "pink", path: "/pages/growth/report" },
-  { title: "联系老师", icon: "", color: "gray", path: "/pages/class/index" }
 ]
 
 async function loadHome() {
@@ -99,9 +95,17 @@ async function handleSwitchStudent(student) {
   }
 }
 
+const tabBarPaths = ["/pages/growth/index", "/pages/pickup/index", "/pages/index/index", "/pages/profile/index"]
 function handleAction(action) {
-  uni.navigateTo({ url: action.path })
+  if (tabBarPaths.includes(action.path)) {
+    uni.switchTab({ url: action.path })
+  } else {
+    uni.navigateTo({ url: action.path })
+  }
 }
+
+function goNoticeDetail(id) { uni.navigateTo({ url: `/pages/notice/detail?id=${id}` }) }
+function goGrowthDetail(id) { uni.navigateTo({ url: `/pages/growth/detail?id=${id}` }) }
 
 function formatTime(ts) {
   if (!ts) return ""
@@ -241,107 +245,37 @@ onPullDownRefresh(loadHome)
       </view>
     </view>
 
-    <!-- ===== 最新通知 ===== -->
+    <!-- ===== 最新动态（通知 + 成长 混合时间线）===== -->
     <view class="section">
       <view class="section-head">
-        <text class="section-title">最新通知</text>
-        <text class="section-link" @click="uni.navigateTo({ url: '/pages/notice/index' })">查看全部</text>
+        <text class="section-title">最新动态</text>
       </view>
       <view class="spacer-h16" />
-      <view v-if="feeds.filter(f => f.type === 'notice').length === 0" class="empty-card">
-        <text class="empty-text">暂无新通知</text>
+      <view v-if="feeds.length === 0" class="empty-card">
+        <text class="empty-text">暂无最新动态</text>
       </view>
-      <view v-else class="notice-list">
+      <view v-else class="feed-list">
         <view
-          v-for="feed in feeds.filter(f => f.type === 'notice').slice(0, 2)"
+          v-for="feed in feeds"
           :key="feed.id"
-          class="notice-card"
+          class="feed-card"
+          @click="feed.type === 'notice' ? goNoticeDetail(feed.id) : goGrowthDetail(feed.id)"
         >
-          <view class="notice-icon-box">
-            <text class="notice-icon"></text>
+          <view :class="['feed-type-tag', feed.type === 'notice' ? 'tag-notice' : 'tag-growth']">
+            <text>{{ feed.type === 'notice' ? '通知' : '成长' }}</text>
           </view>
-          <view class="spacer-w12" />
-          <view class="notice-body">
-            <view class="notice-title-row">
-              <text class="notice-title">{{ feed.notice?.title || "" }}</text>
+          <template v-if="feed.type === 'notice'">
+            <view class="feed-title-row">
+              <text class="feed-title">{{ feed.notice?.title || "" }}</text>
               <view v-if="!feed.notice?.is_read" class="unread-dot" />
             </view>
-            <view class="spacer-h4" />
-            <text class="notice-preview">{{ feed.notice?.content_preview || "" }}</text>
-            <view class="spacer-h8" />
-            <view class="notice-footer">
-              <view class="notice-author">
-                <text class="author-icon"></text>
-                <view class="spacer-w4" />
-                <text class="author-name">{{ feed.notice?.creator?.nickname || "" }}</text>
-              </view>
-              <text class="notice-time">{{ formatTime(feed.created_at) }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- ===== 成长动态 ===== -->
-    <view class="section">
-      <view class="section-head">
-        <text class="section-title">成长动态</text>
-        <text class="section-link" @click="uni.navigateTo({ url: '/pages/growth/index' })">查看全部</text>
-      </view>
-      <view class="spacer-h16" />
-      <view v-if="feeds.filter(f => f.type === 'growth').length === 0" class="empty-card">
-        <text class="empty-text">暂无新动态</text>
-      </view>
-      <view v-else>
-        <view
-          v-for="feed in feeds.filter(f => f.type === 'growth').slice(0, 1)"
-          :key="feed.id"
-          class="growth-card"
-        >
-          <!-- 发布者 -->
-          <view class="growth-author">
-            <view class="author-avatar-box">
-              <text class="author-avatar-icon"></text>
-            </view>
-            <view class="spacer-w12" />
-            <view class="author-meta">
-              <text class="author-name-text">{{ feed.growth_log?.creator?.nickname || "老师" }}</text>
-              <text class="author-time">{{ formatTime(feed.created_at) }}</text>
-            </view>
-          </view>
-          <view class="spacer-h16" />
-          <!-- 正文 -->
-          <text class="growth-content">{{ feed.growth_log?.content || "" }}</text>
-          <!-- 照片预览 -->
-          <view v-if="feed.growth_log?.media_preview?.length" class="spacer-h12" />
-          <view v-if="feed.growth_log?.media_preview?.length" class="growth-photos">
-            <image
-              v-for="(m, i) in feed.growth_log.media_preview.slice(0, 2)"
-              :key="i"
-              :src="m.thumb_url"
-              class="growth-photo"
-              mode="aspectFill"
-            />
-          </view>
-          <!-- 互动栏 -->
-          <view class="spacer-h16" />
-          <view class="growth-actions">
-            <view class="ga-left">
-              <view class="ga-item">
-                <text class="ga-icon"></text>
-                <view class="spacer-w4" />
-                <text class="ga-num">{{ feed.growth_log?.likes_count || 0 }}</text>
-              </view>
-              <view class="spacer-w24" />
-              <view class="ga-item">
-                <text class="ga-icon"></text>
-                <view class="spacer-w4" />
-                <text class="ga-num">{{ feed.growth_log?.comments_count || 0 }}</text>
-              </view>
-            </view>
-            <view class="ga-right">
-              <text :class="['ga-like-icon', { liked: feed.growth_log?.is_liked }]">&#xf207;</text>
-            </view>
+            <text class="feed-preview">{{ feed.notice?.content_preview || "" }}</text>
+          </template>
+          <template v-else>
+            <text class="feed-preview">{{ feed.growth?.content || "" }}</text>
+          </template>
+          <view class="feed-footer">
+            <text class="feed-time">{{ formatTime(feed.created_at) }}</text>
           </view>
         </view>
       </view>
@@ -691,34 +625,38 @@ onPullDownRefresh(loadHome)
   box-shadow: $shadow-sm;
 }
 
-.notice-icon-box {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 9999rpx;
-  background: #DBEAFE;
+// ---- 统一动态列表 ----
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.feed-card {
+  background: $color-bg-card;
+  border-radius: $border-radius-md;
+  padding: $spacing-xl;
+  box-shadow: $shadow-sm;
+}
+
+.feed-type-tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+  margin-bottom: 12rpx;
+}
+.feed-type-tag.tag-notice { background: #DBEAFE; color: #2563EB; }
+.feed-type-tag.tag-growth { background: #DCFCE7; color: #16A34A; }
+
+.feed-title-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  margin-bottom: 8rpx;
 }
 
-.notice-icon {
-  font-family: remixicon;
-  font-size: $typography-font-size-2xl;
-  color: #2563EB;
-}
-
-.notice-body {
-  flex: 1;
-  overflow: hidden;
-}
-
-.notice-title-row {
-  display: flex;
-  align-items: center;
-}
-
-.notice-title {
+.feed-title {
   font-size: $typography-font-size-lg;
   font-weight: 600;
   color: $color-text-primary;
@@ -737,49 +675,27 @@ onPullDownRefresh(loadHome)
   margin-left: 8rpx;
 }
 
-.notice-preview {
+.feed-preview {
   font-size: $typography-font-size-base;
   color: $color-text-muted;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin-bottom: 8rpx;
 }
 
-.notice-footer {
+.feed-footer {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
 }
 
-.notice-author {
-  display: flex;
-  align-items: center;
-}
-
-.author-icon {
-  font-family: remixicon;
+.feed-time {
   font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
-.author-name {
-  font-size: $typography-font-size-sm;
-  color: $color-text-hint;
-}
-
-.notice-time {
-  font-size: $typography-font-size-sm;
-  color: $color-text-hint;
-}
-
-// ---- 成长动态 ----
-.growth-card {
-  background: $color-bg-card;
-  border-radius: $border-radius-md;
-  padding: $spacing-xl;
-  box-shadow: $shadow-sm;
-}
+// ---- 成长动态（保留旧样式，供其他页引用） ----
 
 .growth-author {
   display: flex;

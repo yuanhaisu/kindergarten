@@ -179,7 +179,7 @@
     "list": [
       { "pagePath": "pages/index/index", "text": "首页" },
       { "pagePath": "pages/growth/index", "text": "成长" },
-      { "pagePath": "pages/tasks/index", "text": "任务" },
+      { "pagePath": "pages/pickup/index", "text": "接送" },
       { "pagePath": "pages/profile/index", "text": "我的" }
     ]
   }

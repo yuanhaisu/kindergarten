@@ -157,3 +157,35 @@ func (h *Handler) AuditPickupAuthorizedPerson(c *gin.Context) {
 	}
 	response.OK(c, data)
 }
+
+type pickupAuthListQuery struct {
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
+	Status   string `form:"status"`
+}
+
+func (h *Handler) GetAuthorizedPersons(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var q pickupAuthListQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	pq := pagination.Query{Page: q.Page, PageSize: q.PageSize}
+	list, total, page, pageSize, err := h.pickupSvc.ListAuthorizations(
+		c.Request.Context(), kgID, pq, q.Status,
+	)
+	if err != nil {
+		if err.Error() == "NO_KINDERGARTEN" {
+			response.ErrForbidden(c, "未绑定园所，请重新登录")
+			return
+		}
+		response.ErrInternal(c, "获取授权接送人列表失败")
+		return
+	}
+	response.OKList(c, list, total, page, pageSize)
+}

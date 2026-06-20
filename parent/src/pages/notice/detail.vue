@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
-import { fetchNoticeDetail, confirmNotice } from "@/api/parent-notice"
+import { fetchNoticeDetail, confirmNotice, markNoticeRead } from "@/api/parent-notice"
 
 const detail = ref({})
 const loading = ref(false)
@@ -11,6 +11,7 @@ async function loadData(id) {
   try {
     const res = await fetchNoticeDetail(id)
     detail.value = res.data || {}
+    markNoticeRead(id).catch(() => {}) // 静默标记已读
   } finally {
     loading.value = false
   }

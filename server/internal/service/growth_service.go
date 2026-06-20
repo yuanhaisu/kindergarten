@@ -14,12 +14,32 @@ import (
 	"kindergarten-server/pkg/pagination"
 )
 
-type GrowthService struct {
-	growth *repository.GrowthRepo
-	oplog  *repository.OperationLogRepo
+// GrowthRepository GrowthService 依赖的成长记录仓库接口（由 *repository.GrowthRepo 隐式实现）
+type GrowthRepository interface {
+	ListLogs(ctx context.Context, kindergartenID uint64, classID, teacherID *uint64, dateStr string, offset, limit int) ([]repository.GrowthLogListRow, int64, error)
+	FindLogByID(ctx context.Context, kindergartenID, logID uint64) (*domain.GrowthDailyLog, error)
+	FindLatestAudit(ctx context.Context, kindergartenID, logID uint64) (*domain.ContentAudit, error)
+	ListMediaByLogID(ctx context.Context, logID uint64) ([]domain.GrowthMedia, error)
+	SoftDeleteLog(ctx context.Context, kindergartenID, logID uint64) (int64, error)
+	SaveContentAudit(ctx context.Context, ca *domain.ContentAudit) error
+	CountLogsInDateRange(ctx context.Context, kindergartenID uint64, start, end time.Time) (int64, error)
+	CountMediaInLogDateRange(ctx context.Context, kindergartenID uint64, start, end time.Time) (int64, error)
+	CountLikesInLogDateRange(ctx context.Context, kindergartenID uint64, start, end time.Time) (int64, error)
+	CountCommentsInLogDateRange(ctx context.Context, kindergartenID uint64, start, end time.Time) (int64, error)
+	StatsByClass(ctx context.Context, kindergartenID uint64, start, end time.Time) ([]repository.GrowthClassStatRow, error)
+	StatsDailyTrend(ctx context.Context, kindergartenID uint64, start, end time.Time) ([]repository.GrowthDailyTrendRow, error)
+	CountLikesByLogID(ctx context.Context, logID uint64) (int64, error)
+	CountCommentsByLogID(ctx context.Context, logID uint64) (int64, error)
+	FindUserDisplay(ctx context.Context, userID uint64) (nickname, avatar string, ok bool)
+	ListLogsForExportDateRange(ctx context.Context, kindergartenID uint64, classID *uint64, start, end time.Time) ([]repository.GrowthLogExportRow, error)
 }
 
-func NewGrowthService(growth *repository.GrowthRepo, oplog *repository.OperationLogRepo) *GrowthService {
+type GrowthService struct {
+	growth GrowthRepository
+	oplog  OpLogger
+}
+
+func NewGrowthService(growth GrowthRepository, oplog OpLogger) *GrowthService {
 	return &GrowthService{growth: growth, oplog: oplog}
 }
 

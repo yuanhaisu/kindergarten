@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -39,15 +40,9 @@ func ppPage(c *gin.Context) (int, int) {
 
 func (h *Handler) ParentHomeOverview(c *gin.Context) {
 	pc, ok := h.parentCtx(c); if !ok { return }
-	now := time.Now()
-	wd := []string{"星期日","星期一","星期二","星期三","星期四","星期五","星期六"}[now.Weekday()]
-	cn := ""; if pc.Class != nil { cn = pc.Class.Name }
-	response.OK(c, gin.H{
-		"date":now.Format("2006-01-02"),"weekday":wd,
-		"current_student":gin.H{"id":pc.CurrentStudent.ID,"name":pc.CurrentStudent.Name,"avatar":pc.CurrentStudent.Avatar,"class_name":cn,"class_id":pc.CurrentStudent.ClassID},
-		"students":[]any{},
-		"today_summary":gin.H{"attendance_status":"present","attendance_label":"已入园","arrive_time":"07:52","meal_rating":3,"meal_label":"很好","nap_duration":120,"sleep_quality":3,"sleep_label":"很好","mood_rating":3,"mood_label":"很好","performance_tag":"","new_growth_count":0,"new_notice_count":0,"pending_tasks":0,"points_today":0,"leave_status":nil},
-	})
+	data, err := h.parentPortalSvc.HomeOverview(c.Request.Context(), pc)
+	if err != nil { response.ErrInternal(c, "获取首页概览失败"); return }
+	response.OK(c, data)
 }
 
 func (h *Handler) ParentSwitchStudent(c *gin.Context) {
@@ -64,33 +59,113 @@ func (h *Handler) ParentSwitchStudent(c *gin.Context) {
 	response.ErrNotFound(c, "未找到该孩子")
 }
 
-func (h *Handler) ParentAnnouncements(c *gin.Context) { response.OK(c, gin.H{"list":[]any{}}) }
-func (h *Handler) ParentHomeFeeds(c *gin.Context) { response.OKList(c, []any{}, 0, 1, 10) }
+func (h *Handler) ParentAnnouncements(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	page, ps := ppPage(c)
+	result, err := h.parentPortalSvc.ListAnnouncements(c.Request.Context(), pc, page, ps)
+	if err != nil { response.ErrInternal(c, "获取公告失败"); return }
+	response.OK(c, result)
+}
+func (h *Handler) ParentHomeFeeds(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	page, ps := ppPage(c)
+	result, err := h.parentPortalSvc.ListHomeFeeds(c.Request.Context(), pc, page, ps)
+	if err != nil { response.ErrInternal(c, "获取动态失败"); return }
+	response.OK(c, result)
+}
 
 // ========== Notices ==========
 
-func (h *Handler) ParentListNotices(c *gin.Context) {
-	_, ok := h.parentCtx(c); if !ok { return }
-	page, ps := ppPage(c)
-	response.OKList(c, []any{}, 0, page, ps)
+func (h *Handler) ParentMarkNoticeRead(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	if err := h.parentPortalSvc.MarkNoticeRead(c.Request.Context(), pc, id); err != nil {
+		response.ErrInternal(c, "标记已读失败")
+		return
+	}
+	response.OK(c, gin.H{"id": id})
 }
-func (h *Handler) ParentGetNotice(c *gin.Context) { response.OK(c, gin.H{}) }
+
+func (h *Handler) ParentListNotices(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	page, ps := ppPage(c)
+	result, err := h.parentPortalSvc.ListNotices(c.Request.Context(), pc, c.Query("category"), page, ps)
+	if err != nil { response.ErrInternal(c, "获取通知列表失败"); return }
+	response.OK(c, result)
+}
+func (h *Handler) ParentGetNotice(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.GetNotice(c.Request.Context(), pc, id)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "通知不存在"); return }
+		response.ErrInternal(c, "获取通知失败"); return
+	}
+	response.OK(c, data)
+}
 func (h *Handler) ParentConfirmNotice(c *gin.Context) {
-	id, _ := ppID(c)
-	response.OK(c, gin.H{"id":id,"is_confirmed":true,"confirmed_at":time.Now().UTC().Format(time.RFC3339)})
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.ConfirmNotice(c.Request.Context(), pc, id)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "通知不存在"); return }
+		response.ErrInternal(c, "确认通知失败"); return
+	}
+	response.OK(c, data)
 }
 
 // ========== Leaves ==========
 
 func (h *Handler) ParentListLeaves(c *gin.Context) {
-	_, ok := h.parentCtx(c); if !ok { return }
+	pc, ok := h.parentCtx(c); if !ok { return }
 	page, ps := ppPage(c)
-	response.OKList(c, []any{}, 0, page, ps)
+	result, err := h.parentPortalSvc.ListLeaves(c.Request.Context(), pc, c.Query("status"), page, ps)
+	if err != nil { response.ErrInternal(c, "获取请假列表失败"); return }
+	response.OK(c, result)
 }
-func (h *Handler) ParentGetLeave(c *gin.Context) { response.OK(c, gin.H{}) }
-func (h *Handler) ParentCreateLeave(c *gin.Context) { response.OK(c, gin.H{"id":1,"status":0,"status_label":"待审批","created_at":time.Now().UTC().Format(time.RFC3339)}) }
-func (h *Handler) ParentUpdateLeave(c *gin.Context) { id, _ := ppID(c); response.OK(c, gin.H{"id":id}) }
-func (h *Handler) ParentCancelLeave(c *gin.Context) { id, _ := ppID(c); response.OK(c, gin.H{"id":id,"status":3,"status_label":"已撤销"}) }
+func (h *Handler) ParentGetLeave(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.GetLeave(c.Request.Context(), pc, id)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "请假记录不存在"); return }
+		response.ErrInternal(c, "获取请假详情失败"); return
+	}
+	response.OK(c, data)
+}
+func (h *Handler) ParentCreateLeave(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	var req service.ParentLeaveInput
+	if err := c.ShouldBindJSON(&req); err != nil { response.ErrValidation(c, "参数无效"); return }
+	data, err := h.parentPortalSvc.CreateLeave(c.Request.Context(), pc, req)
+	if err != nil {
+		if errors.Is(err, service.ErrParentInvalidParams) { response.ErrValidation(c, "参数无效"); return }
+		if errors.Is(err, service.ErrParentForbidden) { response.ErrForbidden(c, "无权为该学生请假"); return }
+		response.ErrInternal(c, "创建请假失败"); return
+	}
+	response.Created(c, data)
+}
+func (h *Handler) ParentUpdateLeave(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	var req service.ParentLeaveInput
+	if err := c.ShouldBindJSON(&req); err != nil { response.ErrValidation(c, "参数无效"); return }
+	if err := h.parentPortalSvc.UpdateLeave(c.Request.Context(), pc, id, req); err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "请假记录不存在"); return }
+		if errors.Is(err, service.ErrParentInvalidParams) { response.ErrValidation(c, "仅可编辑待审批的请假"); return }
+		response.ErrInternal(c, "更新请假失败"); return
+	}
+	response.OK(c, gin.H{"id": id})
+}
+func (h *Handler) ParentCancelLeave(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	if err := h.parentPortalSvc.CancelLeave(c.Request.Context(), pc, id); err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "请假记录不存在"); return }
+		response.ErrInternal(c, "取消请假失败"); return
+	}
+	response.OK(c, gin.H{"id": id, "status": 3, "status_label": "已撤销"})
+}
 
 // ========== Growth ==========
 
@@ -113,19 +188,88 @@ func (h *Handler) ParentGrowthFeed(c *gin.Context) {
 	total, _ := result["total"].(int64)
 	response.OKList(c, list, total, page, ps)
 }
-func (h *Handler) ParentGrowthDetail(c *gin.Context) { response.OK(c, gin.H{}) }
-func (h *Handler) ParentGrowthLike(c *gin.Context) { response.OK(c, gin.H{"is_liked":true,"likes_count":1}) }
-func (h *Handler) ParentGrowthUnlike(c *gin.Context) { response.OK(c, gin.H{"is_liked":false,"likes_count":0}) }
-func (h *Handler) ParentGrowthComments(c *gin.Context) { response.OKList(c, []any{}, 0, 1, 20) }
-func (h *Handler) ParentCreateGrowthComment(c *gin.Context) { response.OK(c, gin.H{"id":1,"created_at":time.Now().UTC().Format(time.RFC3339)}) }
-func (h *Handler) ParentGrowthAlbum(c *gin.Context) { response.OK(c, gin.H{"year":2026,"month":3,"groups":[]any{},"total":0}) }
-func (h *Handler) ParentGrowthReport(c *gin.Context) { response.OK(c, gin.H{}) }
+func (h *Handler) ParentGrowthDetail(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.GrowthFeedDetail(c.Request.Context(), pc, id)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "成长记录不存在"); return }
+		if errors.Is(err, service.ErrParentForbidden) { response.ErrForbidden(c, "无权查看"); return }
+		response.ErrInternal(c, "获取成长详情失败"); return
+	}
+	response.OK(c, data)
+}
+func (h *Handler) ParentGrowthLike(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.LikeGrowth(c.Request.Context(), pc, id)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) || errors.Is(err, service.ErrParentForbidden) { response.ErrNotFound(c, "成长记录不存在"); return }
+		response.ErrInternal(c, "点赞失败"); return
+	}
+	response.OK(c, data)
+}
+func (h *Handler) ParentGrowthUnlike(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.UnlikeGrowth(c.Request.Context(), pc, id)
+	if err != nil { response.ErrInternal(c, "取消点赞失败"); return }
+	response.OK(c, data)
+}
+func (h *Handler) ParentGrowthComments(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.ListGrowthComments(c.Request.Context(), pc, id)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) || errors.Is(err, service.ErrParentForbidden) { response.ErrNotFound(c, "成长记录不存在"); return }
+		response.ErrInternal(c, "获取评论失败"); return
+	}
+	response.OK(c, data)
+}
+func (h *Handler) ParentCreateGrowthComment(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	var req struct {
+		Content  string  `json:"content" binding:"required"`
+		ParentID *uint64 `json:"parent_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil { response.ErrValidation(c, "评论内容不能为空"); return }
+	data, err := h.parentPortalSvc.CreateGrowthComment(c.Request.Context(), pc, id, req.Content, req.ParentID)
+	if err != nil {
+		if errors.Is(err, service.ErrParentInvalidParams) { response.ErrValidation(c, "评论内容不能为空"); return }
+		if errors.Is(err, service.ErrParentNotFound) || errors.Is(err, service.ErrParentForbidden) { response.ErrNotFound(c, "成长记录不存在"); return }
+		response.ErrInternal(c, "发表评论失败"); return
+	}
+	response.Created(c, data)
+}
+func (h *Handler) ParentGrowthAlbum(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	year, _ := strconv.Atoi(c.DefaultQuery("year", "0"))
+	month, _ := strconv.Atoi(c.DefaultQuery("month", "0"))
+	data, err := h.parentPortalSvc.ListGrowthMedia(c.Request.Context(), pc, year, month)
+	if err != nil { response.ErrInternal(c, "获取相册失败"); return }
+	response.OK(c, data)
+}
+func (h *Handler) ParentGrowthReport(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	sidStr := c.Query("student_id")
+	var sid uint64
+	if sidStr != "" { sid, _ = strconv.ParseUint(sidStr, 10, 64) }
+	data, err := h.parentPortalSvc.GetGrowthReport(c.Request.Context(), pc, sid, c.Query("type"))
+	if err != nil { response.ErrInternal(c, "获取成长报告失败"); return }
+	response.OK(c, data)
+}
 
 // ========== Pickup ==========
 
 func (h *Handler) ParentPickupQRCode(c *gin.Context) {
 	pc, ok := h.parentCtx(c); if !ok { return }
-	response.OK(c, gin.H{"qr_code":"","qr_image_url":"","student":gin.H{"id":pc.CurrentStudent.ID,"name":pc.CurrentStudent.Name},"expire_at":time.Now().Add(24*time.Hour).UTC().Format(time.RFC3339)})
+	data, err := h.parentPortalSvc.GetQRCode(c.Request.Context(), pc)
+	if err != nil {
+		response.ErrInternal(c, "获取接送二维码失败")
+		return
+	}
+	response.OK(c, data)
 }
 func (h *Handler) ParentPickupRecords(c *gin.Context) {
 	pc, ok := h.parentCtx(c); if !ok { return }
@@ -137,50 +281,180 @@ func (h *Handler) ParentPickupRecords(c *gin.Context) {
 	}
 	response.OK(c, data)
 }
-func (h *Handler) ParentAuthorizedPersons(c *gin.Context) { response.OK(c, gin.H{"list":[]any{}}) }
-func (h *Handler) ParentCreateAuthorizedPerson(c *gin.Context) { response.OK(c, gin.H{"id":1,"status":0,"status_label":"待审核","created_at":time.Now().UTC().Format(time.RFC3339)}) }
-func (h *Handler) ParentUpdateAuthorizedPerson(c *gin.Context) { id, _ := ppID(c); response.OK(c, gin.H{"id":id}) }
-func (h *Handler) ParentDeleteAuthorizedPerson(c *gin.Context) { response.OK(c, gin.H{}) }
+func (h *Handler) ParentAuthorizedPersons(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	page, ps := ppPage(c)
+	data, err := h.parentPortalSvc.ListAuthorizedPersons(c.Request.Context(), pc, page, ps)
+	if err != nil {
+		response.ErrInternal(c, "获取授权接送人失败")
+		return
+	}
+	response.OK(c, data)
+}
+func (h *Handler) ParentCreateAuthorizedPerson(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	var req service.CreateAuthorizedPersonInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.parentPortalSvc.CreateAuthorizedPerson(c.Request.Context(), pc, req)
+	if err != nil {
+		if errors.Is(err, service.ErrParentInvalidParams) {
+			response.ErrValidation(c, "参数无效")
+			return
+		}
+		if errors.Is(err, service.ErrParentForbidden) {
+			response.ErrForbidden(c, "无权为该学生添加授权")
+			return
+		}
+		response.ErrInternal(c, "添加授权接送人失败")
+		return
+	}
+	response.Created(c, data)
+}
+func (h *Handler) ParentUpdateAuthorizedPerson(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	var req service.UpdateAuthorizedPersonInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.parentPortalSvc.UpdateAuthorizedPerson(c.Request.Context(), pc, id, req)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) {
+			response.ErrNotFound(c, "授权记录不存在")
+			return
+		}
+		response.ErrInternal(c, "编辑授权接送人失败")
+		return
+	}
+	response.OK(c, data)
+}
+func (h *Handler) ParentDeleteAuthorizedPerson(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	if err := h.parentPortalSvc.DeleteAuthorizedPerson(c.Request.Context(), pc, id); err != nil {
+		if errors.Is(err, service.ErrParentNotFound) {
+			response.ErrNotFound(c, "授权记录不存在")
+			return
+		}
+		response.ErrInternal(c, "删除授权接送人失败")
+		return
+	}
+	response.OK(c, gin.H{})
+}
 
 // ========== Tasks ==========
 
 func (h *Handler) ParentListTasks(c *gin.Context) {
-	_, ok := h.parentCtx(c); if !ok { return }
+	pc, ok := h.parentCtx(c); if !ok { return }
 	page, ps := ppPage(c)
-	response.OKList(c, []any{}, 0, page, ps)
+	result, err := h.parentPortalSvc.ListTasks(c.Request.Context(), pc, page, ps)
+	if err != nil { response.ErrInternal(c, "获取任务列表失败"); return }
+	response.OK(c, result)
 }
-func (h *Handler) ParentGetTask(c *gin.Context) { response.OK(c, gin.H{}) }
-func (h *Handler) ParentCheckinTask(c *gin.Context) { response.OK(c, gin.H{"id":1,"points_earned":5,"streak_days":1,"total_points":100,"message":"+5积分!","created_at":time.Now().UTC().Format(time.RFC3339)}) }
-func (h *Handler) ParentCheckinHistory(c *gin.Context) { response.OKList(c, []any{}, 0, 1, 20) }
+func (h *Handler) ParentGetTask(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.GetTask(c.Request.Context(), pc, id)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "任务不存在"); return }
+		response.ErrInternal(c, "获取任务失败"); return
+	}
+	response.OK(c, data)
+}
+func (h *Handler) ParentCheckinTask(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	var req struct {
+		Content  string `json:"content"`
+		ImageURL string `json:"image_url"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	data, err := h.parentPortalSvc.CheckinTask(c.Request.Context(), pc, id, req.Content, req.ImageURL)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "任务不存在"); return }
+		if errors.Is(err, service.ErrParentInvalidParams) { response.ErrValidation(c, "今日已打卡"); return }
+		response.ErrInternal(c, "打卡失败"); return
+	}
+	response.Created(c, data)
+}
+func (h *Handler) ParentCheckinHistory(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	data, err := h.parentPortalSvc.CheckinHistory(c.Request.Context(), pc, id)
+	if err != nil { response.ErrInternal(c, "获取打卡历史失败"); return }
+	response.OK(c, data)
+}
 
 // ========== Points ==========
 
-func (h *Handler) ParentPointsOverview(c *gin.Context) { response.OK(c, gin.H{"total_points":0,"level":1,"level_name":"新手上路","rank_in_class":0,"class_total":0,"this_week":0,"this_month":0}) }
-func (h *Handler) ParentPointsHistory(c *gin.Context) {
-	_, ok := h.parentCtx(c); if !ok { return }
-	page, ps := ppPage(c)
-	response.OKList(c, []any{}, 0, page, ps)
+func (h *Handler) ParentPointsOverview(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	data, err := h.parentPortalSvc.PointsOverview(c.Request.Context(), pc)
+	if err != nil { response.ErrInternal(c, "获取积分概览失败"); return }
+	response.OK(c, data)
 }
-func (h *Handler) ParentLeaderboard(c *gin.Context) { response.OK(c, gin.H{"period":"weekly","my_rank":0,"my_points":0,"list":[]any{}}) }
-func (h *Handler) ParentAchievements(c *gin.Context) { response.OK(c, gin.H{"earned":[]any{},"not_earned":[]any{},"earned_count":0,"total_count":0}) }
+func (h *Handler) ParentPointsHistory(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	page, ps := ppPage(c)
+	result, err := h.parentPortalSvc.PointsHistory(c.Request.Context(), pc, page, ps)
+	if err != nil { response.ErrInternal(c, "获取积分历史失败"); return }
+	response.OK(c, result)
+}
+func (h *Handler) ParentLeaderboard(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	data, err := h.parentPortalSvc.Leaderboard(c.Request.Context(), pc)
+	if err != nil { response.ErrInternal(c, "获取排行榜失败"); return }
+	response.OK(c, data)
+}
+func (h *Handler) ParentAchievements(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	data, err := h.parentPortalSvc.ListAchievements(c.Request.Context(), pc)
+	if err != nil { response.ErrInternal(c, "获取成就列表失败"); return }
+	response.OK(c, data)
+}
 
 // ========== Class ==========
 
 func (h *Handler) ParentClassInfo(c *gin.Context) {
 	pc, ok := h.parentCtx(c); if !ok { return }
 	if pc.Class == nil { response.ErrInternal(c, "未找到班级"); return }
-	response.OK(c, gin.H{"id":pc.Class.ID,"name":pc.Class.Name,"grade":pc.Class.Grade,"academic_year":"","student_count":0,"teachers":[]any{}})
+	data, err := h.parentPortalSvc.ClassInfo(c.Request.Context(), pc)
+	if err != nil { response.ErrInternal(c, "获取班级信息失败"); return }
+	response.OK(c, data)
 }
-func (h *Handler) ParentClassCalendar(c *gin.Context) { response.OK(c, gin.H{"list":[]any{},"total":0}) }
+func (h *Handler) ParentClassCalendar(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	start := c.Query("start")
+	end := c.Query("end")
+	data, err := h.parentPortalSvc.ListClassCalendar(c.Request.Context(), pc, start, end)
+	if err != nil {
+		response.ErrInternal(c, "获取班级日历失败")
+		return
+	}
+	response.OK(c, data)
+}
 
 // ========== Student ==========
 
 func (h *Handler) ParentStudentProfile(c *gin.Context) {
 	pc, ok := h.parentCtx(c); if !ok { return }
-	cn := ""; if pc.Class != nil { cn = pc.Class.Name }
-	response.OK(c, gin.H{"id":pc.CurrentStudent.ID,"name":pc.CurrentStudent.Name,"avatar":pc.CurrentStudent.Avatar,"gender":pc.CurrentStudent.Gender,"birthday":pc.CurrentStudent.Birthday,"age":"","student_no":pc.CurrentStudent.StudentNo,"health_note":pc.CurrentStudent.HealthNote,"class_name":cn,"enroll_date":pc.CurrentStudent.EnrollDate,"parents":[]any{}})
+	data, err := h.parentPortalSvc.GetStudentProfile(c.Request.Context(), pc)
+	if err != nil { response.ErrInternal(c, "获取学生资料失败"); return }
+	response.OK(c, data)
 }
-func (h *Handler) ParentUpdateStudentProfile(c *gin.Context) { response.OK(c, gin.H{"id":1}) }
+func (h *Handler) ParentUpdateStudentProfile(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	var req map[string]any
+	if err := c.ShouldBindJSON(&req); err != nil { response.ErrValidation(c, "参数无效"); return }
+	if err := h.parentPortalSvc.UpdateStudentProfile(c.Request.Context(), pc, req); err != nil {
+		response.ErrInternal(c, "更新学生资料失败"); return
+	}
+	response.OK(c, gin.H{"id": pc.CurrentStudent.ID})
+}
 func (h *Handler) ParentListStudents(c *gin.Context) {
 	pc, ok := h.parentCtx(c); if !ok { return }
 	out := make([]gin.H, 0, len(pc.Students))
@@ -190,20 +464,63 @@ func (h *Handler) ParentListStudents(c *gin.Context) {
 	}
 	response.OK(c, gin.H{"list":out})
 }
-func (h *Handler) ParentBindStudent(c *gin.Context) { response.ErrInternal(c, "绑定功能开发中") }
-func (h *Handler) ParentUnbindStudent(c *gin.Context) { response.ErrInternal(c, "解绑功能开发中") }
+func (h *Handler) ParentBindStudent(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	var req struct{ InviteCode string `json:"invite_code" binding:"required"` }
+	if err := c.ShouldBindJSON(&req); err != nil { response.ErrValidation(c, "请输入邀请码"); return }
+	data, err := h.parentPortalSvc.BindStudent(c.Request.Context(), pc, req.InviteCode)
+	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "未找到该学生，请检查邀请码"); return }
+		if errors.Is(err, service.ErrParentInvalidParams) { response.ErrValidation(c, "已绑定或邀请码无效"); return }
+		response.ErrInternal(c, "绑定学生失败"); return
+	}
+	response.Created(c, data)
+}
+func (h *Handler) ParentUnbindStudent(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	id, ok2 := ppID(c); if !ok2 { return }
+	if err := h.parentPortalSvc.UnbindStudent(c.Request.Context(), pc, id); err != nil {
+		if errors.Is(err, service.ErrParentNotFound) { response.ErrNotFound(c, "绑定记录不存在"); return }
+		response.ErrInternal(c, "解绑失败"); return
+	}
+	response.OK(c, gin.H{})
+}
 
 // ========== Feedback ==========
 
-func (h *Handler) ParentListFeedback(c *gin.Context) { response.OKList(c, []any{}, 0, 1, 20) }
-func (h *Handler) ParentCreateFeedback(c *gin.Context) { response.OK(c, gin.H{"id":1,"status":0,"status_label":"已提交","created_at":time.Now().UTC().Format(time.RFC3339)}) }
+func (h *Handler) ParentListFeedback(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	page, ps := ppPage(c)
+	result, err := h.parentPortalSvc.ListFeedback(c.Request.Context(), pc, page, ps)
+	if err != nil { response.ErrInternal(c, "获取反馈列表失败"); return }
+	response.OK(c, result)
+}
+func (h *Handler) ParentCreateFeedback(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	var req service.ParentFeedbackInput
+	if err := c.ShouldBindJSON(&req); err != nil { response.ErrValidation(c, "参数无效"); return }
+	data, err := h.parentPortalSvc.CreateFeedback(c.Request.Context(), pc, req)
+	if err != nil {
+		if errors.Is(err, service.ErrParentInvalidParams) { response.ErrValidation(c, "内容不能为空"); return }
+		response.ErrInternal(c, "提交反馈失败"); return
+	}
+	response.Created(c, data)
+}
 
 // ========== Settings ==========
 
 func (h *Handler) ParentGetSettings(c *gin.Context) {
-	response.OK(c, gin.H{
-		"notification":gin.H{"notice_push":true,"leave_push":true,"pickup_push":true,"growth_push":true,"task_push":true,"announcement_push":true},
-		"privacy":gin.H{"show_phone_to_teacher":true,"allow_growth_share":true},
-	})
+	pc, ok := h.parentCtx(c); if !ok { return }
+	data, err := h.parentPortalSvc.GetSettings(c.Request.Context(), pc)
+	if err != nil { response.ErrInternal(c, "获取设置失败"); return }
+	response.OK(c, data)
 }
-func (h *Handler) ParentUpdateSettings(c *gin.Context) { response.OK(c, gin.H{"updated_at":time.Now().UTC().Format(time.RFC3339)}) }
+func (h *Handler) ParentUpdateSettings(c *gin.Context) {
+	pc, ok := h.parentCtx(c); if !ok { return }
+	var req map[string]any
+	if err := c.ShouldBindJSON(&req); err != nil { response.ErrValidation(c, "参数无效"); return }
+	if err := h.parentPortalSvc.UpdateSettings(c.Request.Context(), pc, req); err != nil {
+		response.ErrInternal(c, "保存设置失败"); return
+	}
+	response.OK(c, gin.H{"updated_at": time.Now().UTC().Format(time.RFC3339)})
+}

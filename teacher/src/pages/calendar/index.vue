@@ -66,26 +66,20 @@ function nextMonth() { const d = new Date(currentDate.value); d.setMonth(d.getMo
 function goAdd() { uni.navigateTo({ url: "/pages/calendar/create" }) }
 function editEvent(event) { uni.navigateTo({ url: `/pages/calendar/detail?id=${event.id}` }) }
 
-const mockEvents = [
-  { id: 1, title: "春季出游活动通知", event_date: "2026-03-19", event_type: "notification", description: "请各位家长提醒孩子准备出游物品，明天早上8点在幼儿园门口集合", start_time: "08:00", end_time: "15:00", location: "幼儿园操场及周边公园", classes: ["中一班", "中二班"], importance: "important", student_count: 24 },
-  { id: 2, title: "美术课：春天的小树", event_date: "2026-03-19", event_type: "activity", description: "带领小朋友们用画笔描绘春天的景色，发挥想象力", start_time: "09:00", end_time: "10:30", location: "中一班教室", classes: ["中一班"], importance: "normal", student_count: 12 },
-  { id: 3, title: "音乐课：学习新儿歌", event_date: "2026-03-19", event_type: "activity", description: "教小朋友们唱《春天在哪里》，配合动作表演", start_time: "14:30", end_time: "15:30", location: "音乐教室", classes: ["中二班"], importance: "normal", student_count: 12 },
-  { id: 4, title: "三八妇女节放假通知", event_date: "2026-03-08", event_type: "holiday", description: "三八妇女节全体放假一天，请各位家长安排好孩子的假期生活", start_time: "", end_time: "", location: "", classes: ["中一班", "中二班", "大一班"], importance: "important", student_count: 0 },
-  { id: 5, title: "新学期家长会", event_date: "2026-03-15", event_type: "meeting", description: "召开新学期家长会，介绍本学期教学计划、活动安排及家园共育事项", start_time: "18:30", end_time: "20:00", location: "多功能厅", classes: ["中一班", "中二班"], importance: "important", student_count: 0 },
-  { id: 6, title: "春季健康体检", event_date: "2026-03-20", event_type: "health", description: "幼儿园统一组织春季体检，请确保孩子当天到园，空腹参加", start_time: "08:00", end_time: "11:00", location: "保健室", classes: ["中一班", "中二班", "大一班", "大二班"], importance: "urgent", student_count: 36 },
-  { id: 7, title: "亲子运动会", event_date: "2026-03-25", event_type: "activity", description: "举办春季亲子运动会，邀请家长与孩子一起参与趣味运动项目", start_time: "09:00", end_time: "12:00", location: "幼儿园操场", classes: ["中一班", "中二班", "大一班", "大二班", "小一班"], importance: "important", student_count: 48 },
-  { id: 8, title: "消防安全演练通知", event_date: "2026-03-22", event_type: "notification", description: "全园进行消防安全疏散演练，请家长提前给孩子讲解基本消防知识", start_time: "10:00", end_time: "10:30", location: "全园", classes: ["中一班", "中二班", "大一班", "大二班"], importance: "urgent", student_count: 36 },
-  { id: 9, title: "月度教学总结会议", event_date: "2026-03-29", event_type: "meeting", description: "全体教师参加月度教学总结，分享本月教学成果与下月计划", start_time: "16:00", end_time: "17:30", location: "会议室", classes: [], importance: "normal", student_count: 0 }
-]
-
 async function loadEvents() {
   loading.value = true
   try {
-    const res = await fetchTeacherCalendarEvents()
-    const list = res.data?.list || []
-    events.value = list.length ? list : mockEvents
-  } catch (err) { events.value = mockEvents }
-  finally { loading.value = false; uni.stopPullDownRefresh() }
+    const y = year.value
+    const m = String(month.value).padStart(2, "0")
+    const start = `${y}-${m}-01`
+    const lastDay = new Date(y, month.value, 0).getDate()
+    const end = `${y}-${m}-${String(lastDay).padStart(2, "0")}`
+    const res = await fetchTeacherCalendarEvents({ start, end })
+    events.value = res.data?.list || []
+  } catch (err) {
+    events.value = []
+    uni.showToast({ title: "加载日历失败", icon: "none" })
+  } finally { loading.value = false; uni.stopPullDownRefresh() }
 }
 
 onLoad(loadEvents)

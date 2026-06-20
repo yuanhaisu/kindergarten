@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { fetchGrowthFeed } from "@/api/parent-growth"
+import { fetchParentHomeOverview } from "@/api/parent-home"
 import BottomNav from "@/components/BottomNav.vue"
 
 const feeds = ref([])
@@ -12,42 +13,13 @@ const activeCategory = ref("全部")
 
 const categories = ["全部", "校园生活", "活动照片", "作品展示", "获奖记录"]
 
-// Mock child info stats (from design)
 const childInfo = ref({
-  name: "王小明",
-  class: "小一班",
-  age: "4岁半",
+  name: "",
+  class: "",
+  age: "",
   avatar: "",
-  stats: { records: 236, photos: 1286, medals: 18, attendance: "98%" },
+  stats: { records: 0, photos: 0, medals: 0, attendance: "" },
 })
-
-// Mock timeline data matching Calicat design
-const mockRecords = ref([
-  {
-    id: 1, month: "2026年3月",
-    teacher: "李老师", teacherAvatarBg: "#DBEAFE", teacherAvatarColor: "#3B82F6",
-    time: "3月19日 11:30", category: "美术课",
-    badge: { text: "小小艺术家", bg: "#FEF9C3", color: "#D97706", icon: "&#xea8a;" },
-    content: "今天的美术课上，小明发挥了自己的想象力，画出了自己心中的春天，色彩搭配非常棒，还主动帮助其他小朋友，表现特别优秀！",
-    photos: 2, isLiked: true, likes: 28, comments: 2,
-  },
-  {
-    id: 2, month: "",
-    teacher: "张老师", teacherAvatarBg: "#DCFCE7", teacherAvatarColor: "#22C55E",
-    time: "3月18日 15:30", category: "户外活动",
-    badge: null,
-    content: "今天户外活动玩接力赛跑，小明跑得特别快，还主动为其他小朋友加油，团队意识很强哦~",
-    photos: 1, isLiked: false, likes: 15, comments: 0,
-  },
-  {
-    id: 3, month: "2026年2月",
-    teacher: "王老师", teacherAvatarBg: "#F3E8FF", teacherAvatarColor: "#A855F7",
-    time: "2月28日 10:00", category: "开学典礼",
-    badge: { text: "全勤小明星", bg: "#DBEAFE", color: "#2563EB", icon: "&#xf1c6;" },
-    content: "恭喜小明在上个月获得全勤小明星称号，整个2月份没有请假，每天都准时到园，特别棒！继续保持哦~",
-    photos: 3, isLiked: true, likes: 36, comments: 5,
-  },
-])
 
 const categoryClassMap = {
   "全部": "cat-all",
@@ -73,15 +45,24 @@ async function loadData() {
   loadError.value = ""
   try {
     await ensureLogin()
-    const res = await fetchGrowthFeed({ page: 1, page_size: 20 })
-    const list = res.data?.list || []
-    if (list.length > 0) {
-      feeds.value = list
-    } else {
-      feeds.value = mockRecords.value
+    const [overviewRes, feedRes] = await Promise.all([
+      fetchParentHomeOverview(),
+      fetchGrowthFeed({ page: 1, page_size: 20 }),
+    ])
+    const stu = overviewRes.data?.current_student
+    if (stu) {
+      childInfo.value = {
+        name: stu.name || "",
+        class: stu.class_name || "",
+        age: "",
+        avatar: stu.avatar || "",
+        stats: childInfo.value.stats,
+      }
     }
+    feeds.value = feedRes.data?.list || []
   } catch (err) {
-    feeds.value = mockRecords.value
+    feeds.value = []
+    uni.showToast({ title: "加载成长时光失败", icon: "none" })
   } finally {
     loading.value = false
     uni.stopPullDownRefresh()

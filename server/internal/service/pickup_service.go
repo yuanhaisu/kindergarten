@@ -419,3 +419,60 @@ func (s *PickupService) AuditPickupAuthorization(
 		"audited_at":   now.Format(time.RFC3339),
 	}, nil
 }
+
+func (s *PickupService) ListAuthorizations(
+	ctx context.Context,
+	kindergartenID uint64,
+	pq pagination.Query,
+	statusFilter string,
+) ([]map[string]interface{}, int64, int, int, error) {
+	if kindergartenID == 0 {
+		return nil, 0, 0, 0, errors.New("NO_KINDERGARTEN")
+	}
+	pn := pq
+	pn.Normalize()
+	var reviewStatus *int8
+	if statusFilter == "pending" {
+		rs := pickupAuthReviewPending
+		reviewStatus = &rs
+	}
+	rows, total, err := s.pickup.ListAuthorizationsByKindergarten(ctx, kindergartenID, reviewStatus, pn.Offset(), pn.PageSize)
+	if err != nil {
+		return nil, 0, 0, 0, err
+	}
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, row := range rows {
+		reviewLabel := "已审核"
+		switch row.ReviewStatus {
+		case pickupAuthReviewPending:
+			reviewLabel = "待审核"
+		case pickupAuthReviewRejected:
+			reviewLabel = "已拒绝"
+		}
+		item := map[string]interface{}{
+			"id":               row.ID,
+			"student_id":       row.StudentID,
+			"student_name":     row.StudentName,
+			"class_name":       row.ClassName,
+			"name":             row.Name,
+			"phone":            row.Phone,
+			"relation":         row.Relation,
+			"id_card":          row.IDCard,
+			"avatar":           row.Avatar,
+			"auth_type":        row.AuthType,
+			"review_status":    row.ReviewStatus,
+			"review_label":     reviewLabel,
+			"audited_at":       nil,
+			"audit_remark":     row.AuditRemark,
+			"allow_pickup":     row.AllowPickup,
+			"allow_view_record": row.AllowViewRecord,
+			"allow_growth_view": row.AllowGrowthView,
+			"created_at":       row.CreatedAt.UTC().Format(time.RFC3339),
+		}
+		if row.AuditedAt != nil {
+			item["audited_at"] = row.AuditedAt.UTC().Format(time.RFC3339)
+		}
+		out = append(out, item)
+	}
+	return out, total, pn.Page, pn.PageSize, nil
+}

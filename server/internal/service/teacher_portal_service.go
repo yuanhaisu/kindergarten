@@ -12,15 +12,17 @@ import (
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
 )
 
 type TeacherPortalService struct {
-	db *gorm.DB
+	db       *gorm.DB
+	calendar *repository.CalendarRepo
 }
 
-func NewTeacherPortalService(db *gorm.DB) *TeacherPortalService {
-	return &TeacherPortalService{db: db}
+func NewTeacherPortalService(db *gorm.DB, calendar *repository.CalendarRepo) *TeacherPortalService {
+	return &TeacherPortalService{db: db, calendar: calendar}
 }
 
 type TeacherPortalContext struct {
@@ -36,10 +38,13 @@ type TeacherPortalContext struct {
 }
 
 var (
-	ErrTeacherContext       = errors.New("TEACHER_CONTEXT_NOT_FOUND")
-	ErrTeacherForbidden     = errors.New("TEACHER_FORBIDDEN")
-	ErrTeacherNotFound      = errors.New("TEACHER_RESOURCE_NOT_FOUND")
-	ErrTeacherInvalidParams = errors.New("TEACHER_INVALID_PARAMS")
+	ErrTeacherContext        = errors.New("TEACHER_CONTEXT_NOT_FOUND")
+	ErrTeacherForbidden      = errors.New("TEACHER_FORBIDDEN")
+	ErrTeacherNotFound       = errors.New("TEACHER_RESOURCE_NOT_FOUND")
+	ErrTeacherInvalidParams  = errors.New("TEACHER_INVALID_PARAMS")
+	ErrTeacherDuplicate      = errors.New("PICKUP_DUPLICATE")
+	ErrTeacherPickupOrder    = errors.New("PICKUP_ORDER_INVALID")
+	ErrTeacherInvalidQRCode  = errors.New("INVALID_QR_CODE")
 )
 
 func (s *TeacherPortalService) ResolveContext(ctx context.Context, userID, kindergartenID uint64) (*TeacherPortalContext, error) {
@@ -746,6 +751,26 @@ func (s *TeacherPortalService) GrowthLikes(ctx context.Context, tc *TeacherPorta
 	return map[string]any{"list": []any{}, "total": total}, nil
 }
 
+func (s *TeacherPortalService) LikeGrowth(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {
+	if _, err := s.GetGrowthLog(ctx, tc, id); err != nil { return nil, err }
+	var existing int64
+	s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ? AND user_id = ?", id, tc.UserID).Count(&existing)
+	if existing == 0 {
+		s.db.WithContext(ctx).Create(&domain.GrowthLike{LogID: id, UserID: tc.UserID})
+	}
+	var total int64
+	s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ?", id).Count(&total)
+	return map[string]any{"id": id, "is_liked": true, "likes_count": total}, nil
+}
+
+func (s *TeacherPortalService) UnlikeGrowth(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {
+	if _, err := s.GetGrowthLog(ctx, tc, id); err != nil { return nil, err }
+	s.db.WithContext(ctx).Where("log_id = ? AND user_id = ?", id, tc.UserID).Delete(&domain.GrowthLike{})
+	var total int64
+	s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ?", id).Count(&total)
+	return map[string]any{"id": id, "is_liked": false, "likes_count": total}, nil
+}
+
 func (s *TeacherPortalService) GrowthRelatedStudents(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {
 	if _, err := s.GetGrowthLog(ctx, tc, id); err != nil {
 		return nil, err
@@ -783,19 +808,96 @@ func (s *TeacherPortalService) CreateGrowthMedia(ctx context.Context, tc *Teache
 func (s *TeacherPortalService) PickupOverview(ctx context.Context, tc *TeacherPortalContext) (map[string]any, error) {
 	today := teacherPortalDay(time.Now())
 	total := s.classStudentCount(ctx, tc)
-	var arrived, picked int64
+	var arrived, picked, abnormal int64
 	_ = s.db.WithContext(ctx).Model(&domain.PickupRecord{}).Where("kindergarten_id = ? AND class_id = ? AND date = ? AND type = ?", tc.KindergartenID, tc.ClassID, today, domain.PickupTypeDropOff).Distinct("student_id").Count(&arrived).Error
 	_ = s.db.WithContext(ctx).Model(&domain.PickupRecord{}).Where("kindergarten_id = ? AND class_id = ? AND date = ? AND type = ?", tc.KindergartenID, tc.ClassID, today, domain.PickupTypePickUp).Distinct("student_id").Count(&picked).Error
-	return map[string]any{"date": teacherPortalDateString(today), "total": total, "arrived": arrived, "not_arrived": total - arrived, "picked_up": picked, "not_picked_up": total - picked}, nil
+	_ = s.db.WithContext(ctx).Model(&domain.PickupRecord{}).Where("kindergarten_id = ? AND class_id = ? AND date = ? AND is_abnormal = ?", tc.KindergartenID, tc.ClassID, today, true).Count(&abnormal).Error
+	return map[string]any{"date": teacherPortalDateString(today), "total": total, "arrived": arrived, "not_arrived": total - arrived, "picked_up": picked, "not_picked_up": total - picked, "abnormal": abnormal}, nil
 }
 
-func (s *TeacherPortalService) PickupStudents(ctx context.Context, tc *TeacherPortalContext) (map[string]any, error) {
-	var rows []domain.Student
-	if err := s.db.WithContext(ctx).Where("kindergarten_id = ? AND class_id = ? AND status = ?", tc.KindergartenID, tc.ClassID, 1).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, err
+func (s *TeacherPortalService) PickupStudents(ctx context.Context, tc *TeacherPortalContext, status string) (map[string]any, error) {
+		today := teacherPortalDay(time.Now())
+		base := s.db.WithContext(ctx).Table("students AS s").
+			Where("s.kindergarten_id = ? AND s.class_id = ? AND s.status = 1 AND s.deleted_at IS NULL", tc.KindergartenID, tc.ClassID)
+
+		switch status {
+		case "arrived":
+			// 当日有送入记录
+			base = base.Where(`EXISTS (SELECT 1 FROM pickup_records pr WHERE pr.student_id = s.id AND pr.deleted_at IS NULL AND pr.date = ? AND pr.type = ?)`, today, domain.PickupTypeDropOff)
+		case "picked_up":
+			// 当日有接走记录
+			base = base.Where(`EXISTS (SELECT 1 FROM pickup_records pr WHERE pr.student_id = s.id AND pr.deleted_at IS NULL AND pr.date = ? AND pr.type = ?)`, today, domain.PickupTypePickUp)
+		case "not_picked_up":
+			// 当日有送入但无接走
+			base = base.Where(`EXISTS (SELECT 1 FROM pickup_records pr WHERE pr.student_id = s.id AND pr.deleted_at IS NULL AND pr.date = ? AND pr.type = ?)`, today, domain.PickupTypeDropOff).
+				Where(`NOT EXISTS (SELECT 1 FROM pickup_records pr WHERE pr.student_id = s.id AND pr.deleted_at IS NULL AND pr.date = ? AND pr.type = ?)`, today, domain.PickupTypePickUp)
+		default:
+			// 不传 status 返回全部在读学生
+		}
+
+		type studentRow struct {
+			ID     uint64 `gorm:"column:id"`
+			Name   string `gorm:"column:name"`
+			Avatar string `gorm:"column:avatar"`
+		}
+		var rows []studentRow
+		if err := base.Select("s.id, s.name, COALESCE(s.avatar,'') AS avatar").Order("s.id ASC").Scan(&rows).Error; err != nil {
+			return nil, err
+		}
+
+		// 取当日到达时间 & 接送状态
+		studentIDs := make([]uint64, len(rows))
+		for i, r := range rows { studentIDs[i] = r.ID }
+
+		type pickupInfo struct {
+			StudentID uint64    `gorm:"column:student_id"`
+			PickType  int8      `gorm:"column:pick_type"`
+			PickTime  time.Time `gorm:"column:pick_time"`
+		}
+		var pickups []pickupInfo
+		_ = s.db.WithContext(ctx).Raw(`SELECT student_id, type AS pick_type, MIN(recorded_at) AS pick_time FROM pickup_records WHERE student_id IN ? AND deleted_at IS NULL AND date = ? GROUP BY student_id, type`, studentIDs, today).Scan(&pickups).Error
+
+		arriveMap := make(map[uint64]string)
+		pickupMap := make(map[uint64]bool)
+		timeLayout := "15:04"
+		for _, p := range pickups {
+			if p.PickType == int8(domain.PickupTypeDropOff) {
+				arriveMap[p.StudentID] = p.PickTime.Format(timeLayout)
+			} else if p.PickType == int8(domain.PickupTypePickUp) {
+				pickupMap[p.StudentID] = true
+			}
+		}
+
+		// 取授权接送人姓名
+		authMap := make(map[uint64]string)
+		var authRows []struct {
+			StudentID uint64 `gorm:"column:student_id"`
+			Names     string `gorm:"column:names"`
+		}
+		_ = s.db.WithContext(ctx).Raw(`SELECT student_id, GROUP_CONCAT(name SEPARATOR '、') AS names FROM pickup_authorizations WHERE student_id IN ? AND deleted_at IS NULL AND status = 1 AND review_status = 1 GROUP BY student_id`, studentIDs).Scan(&authRows).Error
+		for _, a := range authRows { authMap[a.StudentID] = a.Names }
+
+		list := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			ps := "not_picked_up"
+			if pickupMap[r.ID] { ps = "picked_up" }
+			if _, ok := arriveMap[r.ID]; !ok && !pickupMap[r.ID] { ps = "not_arrived" }
+			if arriveMap[r.ID] != "" && !pickupMap[r.ID] { ps = "not_picked_up" }
+			at := arriveMap[r.ID]
+			ap := authMap[r.ID]
+			if ap == "" { ap = "暂无" }
+			list = append(list, map[string]any{
+				"student_id":        r.ID,
+				"name":              r.Name,
+				"avatar":            r.Avatar,
+				"authorized_persons": ap,
+				"arrive_time":       at,
+				"pickup_status":     ps,
+			})
+		}
+
+		return map[string]any{"list": list, "total": len(list)}, nil
 	}
-	return map[string]any{"list": rows, "total": len(rows)}, nil
-}
 
 type TeacherPickupInput struct {
 	StudentID      uint64 `json:"student_id"`
@@ -804,50 +906,133 @@ type TeacherPickupInput struct {
 	PickupRelation string `json:"pickup_relation"`
 	Remark         string `json:"remark"`
 	Code           string `json:"code"`
+		QRCode         string `json:"qr_code"`
 }
 
 func (s *TeacherPortalService) CreatePickupRecord(ctx context.Context, tc *TeacherPortalContext, req TeacherPickupInput, method domain.PickupMethod) (map[string]any, error) {
-	if req.StudentID == 0 {
-		return nil, ErrTeacherInvalidParams
-	}
-	var st domain.Student
-	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND class_id = ?", req.StudentID, tc.KindergartenID, tc.ClassID).First(&st).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTeacherNotFound
+		if req.StudentID == 0 {
+			return nil, ErrTeacherInvalidParams
 		}
-		return nil, err
-	}
-	if req.Type == 0 {
-		req.Type = int8(domain.PickupTypeDropOff)
-	}
-	now := time.Now()
-	row := &domain.PickupRecord{KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, StudentID: req.StudentID, Date: teacherPortalDay(now), Type: domain.PickupType(req.Type), Method: method, PickupName: req.PickupName, PickupRelation: req.PickupRelation, OperatorID: tc.UserID, RecordedAt: now, Remark: req.Remark}
-	if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
-		return nil, err
+		// 兼容 code 和 qr_code 两种 key
+		if req.Code == "" { req.Code = req.QRCode }
+
+		var st domain.Student
+		if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND class_id = ?", req.StudentID, tc.KindergartenID, tc.ClassID).First(&st).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, ErrTeacherNotFound
+			}
+			return nil, err
+		}
+		if req.Type == 0 {
+			req.Type = int8(domain.PickupTypeDropOff)
+		}
+		now := time.Now()
+		today := teacherPortalDay(now)
+
+		// P1-1: 防重 — 同学生同日同类型不可重复登记
+		var duplicate int64
+		if err := s.db.WithContext(ctx).Model(&domain.PickupRecord{}).
+			Where("student_id = ? AND date = ? AND type = ? AND deleted_at IS NULL", req.StudentID, today, req.Type).
+			Count(&duplicate).Error; err != nil {
+			return nil, err
+		}
+		if duplicate > 0 {
+			return nil, ErrTeacherDuplicate
+		}
+
+		// P1-2: 接走前必须先有送入
+		isPickup := domain.PickupType(req.Type) == domain.PickupTypePickUp
+		if isPickup {
+			var dropOff int64
+			if err := s.db.WithContext(ctx).Model(&domain.PickupRecord{}).
+				Where("student_id = ? AND date = ? AND type = ? AND deleted_at IS NULL", req.StudentID, today, domain.PickupTypeDropOff).
+				Count(&dropOff).Error; err != nil {
+				return nil, err
+			}
+			if dropOff == 0 {
+				return nil, ErrTeacherPickupOrder
+			}
+		}
+
+		// P1-3: 扫码模式校验二维码有效性
+		if method == domain.PickupMethodScan {
+			if req.Code == "" {
+				return nil, ErrTeacherInvalidParams
+			}
+			var qr domain.PickupQRCode
+			err := s.db.WithContext(ctx).Where("code = ? AND is_active = ?", req.Code, true).First(&qr).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return nil, ErrTeacherInvalidQRCode
+				}
+				return nil, err
+			}
+			if qr.ExpireAt.Before(now) {
+				return nil, ErrTeacherInvalidQRCode
+			}
+			if qr.StudentID != req.StudentID {
+				return nil, ErrTeacherInvalidQRCode
+			}
+		}
+
+		// 检查是否为授权接送人
+		var isAuthorized bool
+		var pickupPersonID *uint64
+
+		row := &domain.PickupRecord{
+			KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, StudentID: req.StudentID,
+			Date: today, Type: domain.PickupType(req.Type), Method: method,
+			PickupName: req.PickupName, PickupRelation: req.PickupRelation,
+			OperatorID: tc.UserID, RecordedAt: now, Remark: req.Remark,
+			PickupPersonID: pickupPersonID,
+		}
+		if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
+			return nil, err
+		}
+
+		// P1-3: 扫码成功后失效二维码
+		if method == domain.PickupMethodScan && req.Code != "" {
+			_ = s.db.WithContext(ctx).Model(&domain.PickupQRCode{}).
+				Where("code = ?", req.Code).Update("is_active", false).Error
+		}
+
+		// 入园(type=1) → 自动生成待晨检记录
+		if row.Type == domain.PickupTypeDropOff {
+			hc := &domain.MorningHealthCheck{
+				KindergartenID: tc.KindergartenID,
+				ClassID:        tc.ClassID,
+				StudentID:      req.StudentID,
+				PickupRecordID: row.ID,
+				Date:           row.Date.Format("2006-01-02"),
+				CheckStatus:    domain.HealthCheckPending,
+			}
+			if err := s.db.WithContext(ctx).Create(hc).Error; err != nil {
+				println("auto-create health check failed:", err.Error())
+			}
+		}
+
+		resp := map[string]any{
+			"record_id":     row.ID,
+			"student":       map[string]any{"id": st.ID, "name": st.Name, "avatar": st.Avatar},
+			"type":          int(row.Type),
+			"type_label":    pickupTypeLabel(domain.PickupType(req.Type)),
+			"is_authorized": isAuthorized,
+			"recorded_at":   row.RecordedAt.UTC().Format(time.RFC3339),
+		}
+
+		return resp, nil
 	}
 
-	// 入园(type=1) → 自动生成待晨检记录
-	if row.Type == domain.PickupTypeDropOff {
-		hc := &domain.MorningHealthCheck{
-			KindergartenID: tc.KindergartenID,
-			ClassID:        tc.ClassID,
-			StudentID:      req.StudentID,
-			PickupRecordID: row.ID,
-			Date:           row.Date.Format("2006-01-02"),
-			CheckStatus:    domain.HealthCheckPending,
-		}
-		if err := s.db.WithContext(ctx).Create(hc).Error; err != nil {
-			// 晨检创建失败不阻断入园登记
-			println("auto-create health check failed:", err.Error())
-		}
-	}
-
-	return map[string]any{"id": row.ID, "student_id": row.StudentID, "recorded_at": row.RecordedAt.UTC().Format(time.RFC3339)}, nil
-}
-
-func (s *TeacherPortalService) PickupRecords(ctx context.Context, tc *TeacherPortalContext, page, pageSize int) (map[string]any, error) {
+func (s *TeacherPortalService) PickupRecords(ctx context.Context, tc *TeacherPortalContext, page, pageSize int, date string, studentID *uint64) (map[string]any, error) {
 	q := parseTeacherPortalPage(page, pageSize)
 	db := s.db.WithContext(ctx).Model(&domain.PickupRecord{}).Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
+	if date != "" {
+		d, err := time.Parse("2006-01-02", date)
+		if err == nil { db = db.Where("date = ?", d) }
+	}
+	if studentID != nil && *studentID > 0 {
+		db = db.Where("student_id = ?", *studentID)
+	}
 	var total int64
 	_ = db.Count(&total).Error
 	var rows []domain.PickupRecord
@@ -868,18 +1053,68 @@ func (s *TeacherPortalService) PickupRecord(ctx context.Context, tc *TeacherPort
 	return map[string]any{"record": row}, nil
 }
 
-func (s *TeacherPortalService) MarkPickupAbnormal(ctx context.Context, tc *TeacherPortalContext, id uint64, reason string) error {
-	res := s.db.WithContext(ctx).Model(&domain.PickupRecord{}).Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).Updates(map[string]any{"is_abnormal": true, "abnormal_reason": reason})
+func (s *TeacherPortalService) MarkPickupAbnormal(ctx context.Context, tc *TeacherPortalContext, id uint64, isAbnormal bool, reason string) (map[string]any, error) {
+	res := s.db.WithContext(ctx).Model(&domain.PickupRecord{}).Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).Updates(map[string]any{"is_abnormal": isAbnormal, "abnormal_reason": reason})
 	if res.Error != nil {
-		return res.Error
+		return nil, res.Error
 	}
 	if res.RowsAffected == 0 {
-		return ErrTeacherNotFound
+		return nil, ErrTeacherNotFound
 	}
-	return nil
+	now := time.Now().UTC().Format(time.RFC3339)
+	return map[string]any{"id": id, "is_abnormal": isAbnormal, "abnormal_reason": reason, "updated_at": now}, nil
 }
 
-type TeacherCalendarInput struct {
+	// AuditPickupAuth 老师审核授权接送人（通过/拒绝）。
+	func (s *TeacherPortalService) AuditPickupAuth(ctx context.Context, tc *TeacherPortalContext, authID uint64, approve bool, remark string) (map[string]any, error) {
+		// 查询授权记录，通过 student 做 class_id 范围校验
+		var pa domain.PickupAuthorization
+		err := s.db.WithContext(ctx).Model(&domain.PickupAuthorization{}).
+			Joins("INNER JOIN students AS st ON st.id = pickup_authorizations.student_id AND st.deleted_at IS NULL").
+			Where("pickup_authorizations.id = ? AND st.class_id = ? AND st.kindergarten_id = ?", authID, tc.ClassID, tc.KindergartenID).
+			First(&pa).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, ErrTeacherNotFound
+			}
+			return nil, err
+		}
+
+		// 只能审核待审核状态
+		if pa.ReviewStatus != 0 {
+			return nil, ErrTeacherInvalidParams
+		}
+
+		var reviewStatus int8
+		var label string
+		if approve {
+			reviewStatus = 1
+			label = "已通过"
+		} else {
+			reviewStatus = 2
+			label = "已拒绝"
+		}
+
+		now := time.Now()
+		if err := s.db.WithContext(ctx).Model(&domain.PickupAuthorization{}).
+			Where("id = ?", authID).
+			Updates(map[string]any{
+				"review_status": reviewStatus,
+				"audited_at":    now,
+				"audit_remark":  remark,
+			}).Error; err != nil {
+			return nil, err
+		}
+
+		return map[string]any{
+			"id":           authID,
+			"status":       reviewStatus,
+			"status_label": label,
+			"audited_at":   now.UTC().Format(time.RFC3339),
+		}, nil
+	}
+
+	type TeacherCalendarInput struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	EventType   string `json:"event_type"`
@@ -889,15 +1124,14 @@ type TeacherCalendarInput struct {
 	Location    string `json:"location"`
 	IsAllDay    bool   `json:"is_all_day"`
 	Color       string `json:"color"`
+	Importance  string `json:"importance"`
+	Cover       string `json:"cover"`
+	IsPublished bool   `json:"is_published"`
 }
 
 func (s *TeacherPortalService) CalendarEvents(ctx context.Context, tc *TeacherPortalContext, start, end string) (map[string]any, error) {
-	db := s.db.WithContext(ctx).Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
-	if start != "" && end != "" {
-		db = db.Where("event_date BETWEEN ? AND ?", start, end)
-	}
-	var rows []domain.CalendarEvent
-	if err := db.Order("event_date ASC, start_time ASC").Find(&rows).Error; err != nil {
+	rows, err := s.calendar.FindEvents(ctx, tc.KindergartenID, tc.ClassID, start, end)
+	if err != nil {
 		return nil, err
 	}
 	return map[string]any{"list": rows, "total": len(rows)}, nil
@@ -905,6 +1139,18 @@ func (s *TeacherPortalService) CalendarEvents(ctx context.Context, tc *TeacherPo
 
 func (s *TeacherPortalService) CalendarEventsByDate(ctx context.Context, tc *TeacherPortalContext, date string) (map[string]any, error) {
 	return s.CalendarEvents(ctx, tc, date, date)
+}
+
+// GetCalendarEvent 查询单条日历事件详情。
+func (s *TeacherPortalService) GetCalendarEvent(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {
+	row, err := s.calendar.FindEventByID(ctx, tc.KindergartenID, tc.ClassID, id)
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return nil, ErrTeacherNotFound
+	}
+	return map[string]any{"event": row}, nil
 }
 
 func (s *TeacherPortalService) CreateCalendarEvent(ctx context.Context, tc *TeacherPortalContext, req TeacherCalendarInput) (map[string]any, error) {
@@ -915,54 +1161,47 @@ func (s *TeacherPortalService) CreateCalendarEvent(ctx context.Context, tc *Teac
 	if err != nil {
 		return nil, ErrTeacherInvalidParams
 	}
-	row := &domain.CalendarEvent{KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, CreatorID: tc.UserID, Title: req.Title, Description: req.Description, EventType: domain.EventType(req.EventType), EventDate: teacherPortalDay(day), StartTime: req.StartTime, EndTime: req.EndTime, Location: req.Location, IsAllDay: req.IsAllDay, Color: req.Color}
+	row := &domain.CalendarEvent{KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, CreatorID: tc.UserID, Title: req.Title, Description: req.Description, EventType: domain.EventType(req.EventType), EventDate: teacherPortalDay(day), StartTime: req.StartTime, EndTime: req.EndTime, Location: req.Location, IsAllDay: req.IsAllDay, Color: req.Color, Importance: req.Importance, Cover: req.Cover, IsPublished: req.IsPublished}
 	if row.EventType == "" {
 		row.EventType = domain.EventTypeActivity
 	}
-	if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
+	if err := s.calendar.CreateEvent(ctx, row); err != nil {
 		return nil, err
 	}
 	return map[string]any{"id": row.ID, "created_at": row.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 func (s *TeacherPortalService) UpdateCalendarEvent(ctx context.Context, tc *TeacherPortalContext, id uint64, req TeacherCalendarInput) error {
-	updates := map[string]any{"title": req.Title, "description": req.Description, "event_type": req.EventType, "start_time": req.StartTime, "end_time": req.EndTime, "location": req.Location, "is_all_day": req.IsAllDay, "color": req.Color}
+	updates := map[string]any{"title": req.Title, "description": req.Description, "event_type": req.EventType, "start_time": req.StartTime, "end_time": req.EndTime, "location": req.Location, "is_all_day": req.IsAllDay, "color": req.Color, "importance": req.Importance, "cover": req.Cover, "is_published": req.IsPublished}
 	if req.EventDate != "" {
 		if t, err := time.ParseInLocation("2006-01-02", req.EventDate, time.Local); err == nil {
 			updates["event_date"] = teacherPortalDay(t)
 		}
 	}
-	res := s.db.WithContext(ctx).Model(&domain.CalendarEvent{}).Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).Updates(updates)
-	if res.Error != nil {
-		return res.Error
+	affected, err := s.calendar.UpdateEvent(ctx, tc.KindergartenID, tc.ClassID, id, updates)
+	if err != nil {
+		return err
 	}
-	if res.RowsAffected == 0 {
+	if affected == 0 {
 		return ErrTeacherNotFound
 	}
 	return nil
 }
 
 func (s *TeacherPortalService) DeleteCalendarEvent(ctx context.Context, tc *TeacherPortalContext, id uint64) error {
-	res := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).Delete(&domain.CalendarEvent{})
-	if res.Error != nil {
-		return res.Error
+	affected, err := s.calendar.DeleteEvent(ctx, tc.KindergartenID, tc.ClassID, id)
+	if err != nil {
+		return err
 	}
-	if res.RowsAffected == 0 {
+	if affected == 0 {
 		return ErrTeacherNotFound
 	}
 	return nil
 }
 
 func (s *TeacherPortalService) CalendarDots(ctx context.Context, tc *TeacherPortalContext, start, end string) (map[string]any, error) {
-	var rows []struct {
-		Date  time.Time
-		Count int64
-	}
-	db := s.db.WithContext(ctx).Model(&domain.CalendarEvent{}).Select("event_date as date, count(*) as count").Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID).Group("event_date")
-	if start != "" && end != "" {
-		db = db.Where("event_date BETWEEN ? AND ?", start, end)
-	}
-	if err := db.Scan(&rows).Error; err != nil {
+	rows, err := s.calendar.AggregateDots(ctx, tc.KindergartenID, tc.ClassID, start, end)
+	if err != nil {
 		return nil, err
 	}
 	list := make([]map[string]any, 0, len(rows))
@@ -981,7 +1220,7 @@ func (s *TeacherPortalService) ClassInfo(ctx context.Context, tc *TeacherPortalC
 }
 
 func (s *TeacherPortalService) ClassStudents(ctx context.Context, tc *TeacherPortalContext) (map[string]any, error) {
-	return s.PickupStudents(ctx, tc)
+	return s.PickupStudents(ctx, tc, "")
 }
 
 func (s *TeacherPortalService) ClassStudent(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {

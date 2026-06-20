@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue"
+import BottomNav from "@/components/BottomNav.vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { fetchPickupRecords } from "@/api/parent-pickup"
@@ -38,6 +39,7 @@ onLoad(loadData)
         <text class="person">{{ item.pickup_name }} ({{ item.pickup_relation }})</text>
       </view>
     </view>
+    <BottomNav :active="2" />
   </view>
 </template>
 
