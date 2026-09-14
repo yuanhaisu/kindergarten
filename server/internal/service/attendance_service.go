@@ -27,86 +27,6 @@ func NewAttendanceService(
 	return &AttendanceService{att: att, classes: classes, dash: dash}
 }
 
-func recentWorkdays(day time.Time, n int) []time.Time {
-	loc := shanghaiLoc()
-	out := make([]time.Time, 0, n)
-	cur := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
-	for len(out) < n {
-		wd := cur.Weekday()
-		if wd != time.Saturday && wd != time.Sunday {
-			out = append(out, cur)
-		}
-		cur = cur.AddDate(0, 0, -1)
-	}
-	return out
-}
-
-func synthAttendanceStatus(dayIndex, studentIndex int) domain.AttendanceStatus {
-	// Keep deterministic distribution for stable test data.
-	n := (dayIndex + studentIndex) % 10
-	switch {
-	case n <= 6:
-		return domain.AttendancePresent
-	case n == 7:
-		return domain.AttendanceLate
-	case n == 8:
-		return domain.AttendanceLeave
-	default:
-		return domain.AttendanceAbsent
-	}
-}
-
-func synthCheckIn(day time.Time, studentIndex int, status domain.AttendanceStatus) *time.Time {
-	if status != domain.AttendancePresent && status != domain.AttendanceLate {
-		return nil
-	}
-	loc := shanghaiLoc()
-	minute := (studentIndex * 7) % 30
-	hour := 8
-	if status == domain.AttendanceLate {
-		hour = 9
-	}
-	t := time.Date(day.Year(), day.Month(), day.Day(), hour, minute, 0, 0, loc)
-	return &t
-}
-
-func (s *AttendanceService) ensureBootstrapData(ctx context.Context, kindergartenID uint64, anchorDay time.Time) error {
-	loc := shanghaiLoc()
-	from, toExclusive := dayRange(loc, anchorDay)
-	total, err := s.att.CountByDateRange(ctx, kindergartenID, from, toExclusive)
-	if err != nil {
-		return err
-	}
-	if total > 0 {
-		return nil
-	}
-	students, err := s.att.ListActiveStudents(ctx, kindergartenID)
-	if err != nil {
-		return err
-	}
-	if len(students) == 0 {
-		return nil
-	}
-	days := recentWorkdays(anchorDay, 3)
-	rows := make([]domain.Attendance, 0, len(days)*len(students))
-	for di, d := range days {
-		for si, st := range students {
-			status := synthAttendanceStatus(di, si)
-			rows = append(rows, domain.Attendance{
-				KindergartenID: kindergartenID,
-				ClassID:        st.ClassID,
-				StudentID:      st.ID,
-				Date:           d,
-				Status:         status,
-				CheckInTime:    synthCheckIn(d, si, status),
-				Remark:         "",
-				RecorderID:     0,
-			})
-		}
-	}
-	return s.att.UpsertBatch(ctx, rows)
-}
-
 func parseAdminDate(dateStr string) (time.Time, error) {
 	s := strings.TrimSpace(dateStr)
 	if s == "" {
@@ -154,9 +74,6 @@ func (s *AttendanceService) Overview(ctx context.Context, kindergartenID uint64,
 	}
 	day, err := parseAdminDate(dateStr)
 	if err != nil {
-		return nil, err
-	}
-	if err := s.ensureBootstrapData(ctx, kindergartenID, day); err != nil {
 		return nil, err
 	}
 	loc := shanghaiLoc()
@@ -293,9 +210,6 @@ func (s *AttendanceService) Records(
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
-	if err := s.ensureBootstrapData(ctx, kindergartenID, day); err != nil {
-		return nil, 0, 0, 0, err
-	}
 	loc := shanghaiLoc()
 	start, end := dayRange(loc, day)
 	q.Normalize()
@@ -358,9 +272,6 @@ func (s *AttendanceService) ExportReport(
 	}
 	if endDay.Before(startDay) {
 		return nil, "", fmt.Errorf("BAD_DATE_RANGE")
-	}
-	if err := s.ensureBootstrapData(ctx, kindergartenID, endDay); err != nil {
-		return nil, "", err
 	}
 	from, toExc := dateRangeInclusive(loc, startDay, endDay)
 
