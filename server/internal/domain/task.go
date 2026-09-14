@@ -34,10 +34,17 @@ type ParentTask struct {
 func (ParentTask) TableName() string { return "parent_tasks" }
 
 // TaskCheckIn 任务打卡记录（家长提交）
+//
+// 唯一约束是 (task_id, student_id, date) 三元组——每个孩子每天每项任务打卡一次。
+// 三个字段必须都带 uniqueIndex 且同名，GORM 才会生成复合索引；只标 Date 会退化成
+// 「全平台每天只允许一条打卡」。参照 Attendance 的 idx_student_date。
+//
+// ⚠️ AutoMigrate 只增不改：已存在的错误索引 idx_task_student_date(date) 不会被
+// 自动修正，需先手工 DROP（见 docs/migrations/）。
 type TaskCheckIn struct {
 	BaseModel
-	TaskID    uint64    `json:"task_id" gorm:"not null;index"`
-	StudentID uint64    `json:"student_id" gorm:"not null;index"`
+	TaskID    uint64    `json:"task_id" gorm:"not null;index;uniqueIndex:idx_task_student_date"`
+	StudentID uint64    `json:"student_id" gorm:"not null;index;uniqueIndex:idx_task_student_date"`
 	UserID    uint64    `json:"user_id" gorm:"not null"`
 	Date      time.Time `json:"date" gorm:"type:date;not null;uniqueIndex:idx_task_student_date"`
 	Content   string    `json:"content" gorm:"size:500"`
