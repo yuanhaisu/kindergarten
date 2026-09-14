@@ -4,24 +4,42 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	gormlogger "gorm.io/gorm/logger"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
 )
 
+// 注意：本命令会 Unscoped 清空 users / user_roles / kindergartens 三张表，
+// 只能在确认过目标的测试库上运行。
 func main() {
-	dsn := "test24yangshi:test24yangshi123!@tcp(rm-bp1w012d612w344y7po.mysql.rds.aliyuncs.com:3306)/yuan-test?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+	cfg, err := config.Load("configs/app.ini")
+	if err != nil {
+		log.Fatal("load config:", err)
+	}
+	// DSN 取自 configs/app.ini，可用 MYSQL_DSN 环境变量覆盖。
+	// 不要在源码里硬编码连接串——会随 git 历史泄漏。
+	if cfg.MySQL.DSN == "" {
+		log.Fatal("MySQL DSN 为空：请检查 configs/app.ini 或设置 MYSQL_DSN")
+	}
+
+	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormlogger.Info),
 	})
 	if err != nil {
 		log.Fatal("open:", err)
+	}
+
+	adminPassword := os.Getenv("INIT_ADMIN_PASSWORD")
+	if adminPassword == "" {
+		log.Fatal("环境变量 INIT_ADMIN_PASSWORD 未设置：拒绝使用默认口令")
 	}
 
 	userRepo := repository.NewUserRepo(db)
@@ -33,7 +51,7 @@ func main() {
 	err = svc.Initialize(context.Background(), service.InitRequest{
 		KindergartenName: "TestKG",
 		AdminPhone:       "13800138000",
-		AdminPassword:    "Admin@123",
+		AdminPassword:    adminPassword,
 		AdminNickname:    "admin",
 	})
 	if err != nil {
