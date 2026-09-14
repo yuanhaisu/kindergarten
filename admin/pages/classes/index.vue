@@ -58,6 +58,34 @@
         </el-form-item>
         <el-form-item label="学年"><el-input v-model="form.academic_year" /></el-form-item>
         <el-form-item label="容量"><el-input-number v-model="form.capacity" :min="1" class="!w-full" /></el-form-item>
+        <el-form-item label="班级老师">
+          <div class="w-full">
+            <el-select
+              v-model="selectedTeacherIds"
+              multiple
+              filterable
+              placeholder="选择老师"
+              class="w-full"
+              @change="syncTeacherRows"
+            >
+              <el-option v-for="t in teacherOptions" :key="t.id" :label="t.nickname" :value="t.id" />
+            </el-select>
+            <div
+              v-for="row in form.teacher_ids"
+              :key="row.user_id"
+              class="flex items-center gap-2 mt-2"
+            >
+              <span class="text-sm text-slate-600 flex-1 truncate">
+                {{ teacherName(row.user_id) }}
+              </span>
+              <el-select v-model="row.title" size="small" class="!w-28">
+                <el-option label="班主任" value="head" />
+                <el-option label="配班" value="assistant" />
+                <el-option label="保育员" value="nursery" />
+              </el-select>
+            </div>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -68,8 +96,9 @@
 </template>
 
 <script setup lang="ts">
-import type { ClassItem } from '~/types/api'
+import type { ClassItem, TeacherItem } from '~/types/api'
 import { createClass, deleteClass, getClasses, getClassDetail, updateClass } from '~/api/classes'
+import { getTeachers } from '~/api/teachers'
 
 const { page, pageSize, total } = usePagination()
 const loading = ref(false)
@@ -98,16 +127,54 @@ async function load() {
 const dialogVisible = ref(false)
 const editId = ref<number | null>(null)
 const saving = ref(false)
+
+/**
+ * 后端 teacher_ids 的元素是 {user_id, title} 而非裸 id —— title 必填
+ * （见 server/internal/service/class_service.go 的 classTeacherAssign）。
+ * 传裸 id 数组会反序列化失败；传空数组则会被 ReplaceClassTeachers 清空该班老师。
+ */
+type TeacherAssign = { user_id: number; title: string }
+
 const form = reactive({
   name: '',
   grade: '小班',
   academic_year: '',
   capacity: 30,
+  teacher_ids: [] as TeacherAssign[],
 })
+
+const teacherOptions = ref<TeacherItem[]>([])
+const selectedTeacherIds = ref<number[]>([])
+
+async function loadTeachers() {
+  try {
+    const res = await getTeachers({ page: 1, page_size: 100, status: 1 })
+    teacherOptions.value = res.list
+  } catch (e: unknown) {
+    ElMessage.error(e instanceof Error ? e.message : '加载老师列表失败')
+  }
+}
+
+/** 把选中的 id 同步成行对象，保留已选职务，新加入的默认班主任。 */
+function syncTeacherRows(ids: number[]) {
+  const prevTitle = new Map(form.teacher_ids.map((r) => [r.user_id, r.title]))
+  form.teacher_ids = ids.map((id) => ({ user_id: id, title: prevTitle.get(id) ?? 'head' }))
+}
+
+function teacherName(id: number) {
+  return teacherOptions.value.find((t) => t.id === id)?.nickname ?? `#${id}`
+}
 
 function openCreate() {
   editId.value = null
-  Object.assign(form, { name: '', grade: '小班', academic_year: '', capacity: 30 })
+  Object.assign(form, {
+    name: '',
+    grade: '小班',
+    academic_year: '',
+    capacity: 30,
+    teacher_ids: [],
+  })
+  selectedTeacherIds.value = []
   dialogVisible.value = true
 }
 
@@ -115,12 +182,20 @@ async function openEdit(row: { id: number }) {
   editId.value = row.id
   try {
     const d = await getClassDetail(row.id)
+    // 详情已带回 teachers，必须原样回填：UpdateClass 会无条件 ReplaceClassTeachers，
+    // 不回填就等于把该班老师全部清空。
+    const assigns: TeacherAssign[] = d.teachers.map((t) => ({
+      user_id: t.id,
+      title: t.title,
+    }))
     Object.assign(form, {
       name: d.name,
       grade: d.grade,
       academic_year: d.academic_year,
       capacity: d.capacity,
+      teacher_ids: assigns,
     })
+    selectedTeacherIds.value = assigns.map((a) => a.user_id)
     dialogVisible.value = true
   } catch (e: unknown) {
     ElMessage.error(e instanceof Error ? e.message : '加载详情失败')
@@ -135,7 +210,7 @@ async function save() {
         name: form.name,
         grade: form.grade,
         capacity: form.capacity,
-        teacher_ids: [],
+        teacher_ids: form.teacher_ids,
       })
     } else {
       await createClass({
@@ -143,7 +218,7 @@ async function save() {
         grade: form.grade,
         academic_year: form.academic_year,
         capacity: form.capacity,
-        teacher_ids: [],
+        teacher_ids: form.teacher_ids,
       })
     }
     ElMessage.success('保存成功')
@@ -169,5 +244,6 @@ async function onDelete(row: { id: number; name: string }) {
 
 onMounted(() => {
   load()
+  loadTeachers()
 })
 </script>
