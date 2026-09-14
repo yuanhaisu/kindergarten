@@ -1,5 +1,8 @@
 *.exe
 *.exe~
+# Delve 调试产物：文件名形如 __debug_bin.exe1543871234，扩展名是 .exe<数字>，
+# 上面的 *.exe 匹配不到，必须单独排除
+__debug_bin*
 *.dll
 *.so
 *.dylib
@@ -9,7 +12,11 @@
 
 /vendor/
 
+# 真实配置含数据库/Redis/JWT/微信/OSS 凭据，一律不入库。
+# 首次克隆后从模板复制：cp configs/app.ini.example configs/app.ini
+configs/app.ini
 configs/app.local.ini
+!configs/app.ini.example
 
 .env
 .env.*

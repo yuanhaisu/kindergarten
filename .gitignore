@@ -1,0 +1,45 @@
+# 仓库根 .gitignore
+# 说明：各子项目（admin/ teacher/ parent/ server/ shared-design-tokens/）另有自己的
+# .gitignore 处理就近规则；此文件负责根级路径与跨端通用产物。
+
+# === 依赖 ===
+node_modules/
+
+# === uni-app / 小程序构建产物 ===
+# miniprogram_npm 是 uni-app 编译时把依赖搬进小程序包的产物，可由 npm 重建
+miniprogram_npm/
+dist/
+.hbuilderx/
+unpackage/
+
+# === Nuxt（admin） ===
+.nuxt/
+.output/
+
+# === Go 构建产物 ===
+server/bin/
+
+# === 环境变量 ===
+# 各端 .env.example 是模板，必须保留；.env.local 等本地覆盖不入库
+.env.local
+.env.*.local
+
+# === IDE ===
+.idea/
+*.swp
+*.swo
+
+# === 操作系统 ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === 日志 ===
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 注意：shared-design-tokens/build/ 是构建产物，但按 CLAUDE.md 规定
+# 「产物必须提交」——tokens.json 变更后需重建并一并提交，故此处不忽略。
