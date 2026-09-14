@@ -7,7 +7,7 @@
   "transformPx": false,
   "app-plus": {},
   "mp-weixin": {
-    "appid": "请替换为真实小程序AppID",
+    "appid": "wxdf989efff8796c53",
     "setting": {
       "urlCheck": false,
       "es6": true,
