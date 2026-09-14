@@ -25,14 +25,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **养成星球 (Nurture Planet)** — a kindergarten digital management platform. Three client apps served by one Go backend, with `kindergarten_id`-based multi-tenant isolation throughout.
 
-| App                  | Directory  | Tech                                    | Status      |
-| -------------------- | ---------- | --------------------------------------- | ----------- |
-| Teacher mini-program | `teacher/` | uni-app + Vue 3 + Vite (WeChat)         | Active      |
-| Admin web            | `admin/`   | Nuxt 3 + Element Plus + Pinia + ECharts | Active      |
-| Parent mini-program  | `parent/`  | uni-app (WeChat)                        | Not started |
-| Backend server       | `server/`  | Go + Gin + GORM + Redis + Casbin        | Active      |
+| App                  | Directory  | Tech                                    | Status |
+| -------------------- | ---------- | --------------------------------------- | ------ |
+| Teacher mini-program | `teacher/` | uni-app + Vue 3 + Vite (WeChat)         | Active |
+| Admin web            | `admin/`   | Nuxt 3 + Element Plus + Pinia + ECharts | Active |
+| Parent mini-program  | `parent/`  | uni-app + Vue 3 + Vite (WeChat)         | Active |
+| Backend server       | `server/`  | Go + Gin + GORM + Redis + Casbin        | Active |
 
-API contracts live in `backend/api/` (spec-first). Data models live in `backend/model/`. Design data JSON files live in `design-data/`.
+API contracts live in `backend/api/` (spec-first). Data models live in `server/internal/domain/`（**不是** `backend/model/`，见下方说明）. Design data JSON files live in `design-data/`.
+
+> `backend/` 下**两个子目录状态不同**，别看错：
+> - `backend/api/`（`api-admin/`、`api-teacher/`、`api-parent/`、`api-common.md`）— **仍在维护**，是接口契约的 source of truth，改接口先改这里。
+> - `backend/model/`（18 个 .go 文件，全部停留在 2026-03-22）— **早期模型草案，已停更**，被 `server/internal/domain/`（29 个文件 / 58 个 struct）取代。**以 `server/internal/domain/` 为准**。该目录的 `README.md` 本身也已漂移（例如它列出 `leave.go`，但该文件并不存在）。
 
 ## Spec Workflow (功能规格化)
 
@@ -88,7 +92,15 @@ npm run build:mp-weixin:test  # Test env build
 
 **WeChat Developer Tools**: Open `teacher/dist/dev/mp-weixin` (compiled output), NOT the `teacher/` source directory. MCP config in `.mcp.json` points to this path.
 
-> ⚠️ WeChat DevTools MCP (`wechat-devtools`) requires Node.js in PATH for screenshot/automator features. The IDE bundles its own Node at `D:\Program Files (x86)\微信web开发者工具\node.exe`.
+> ⚠️ **`wechat_automator` / `wechat_screenshot` 需要 Node.js，但开关是 `NODE_PATH`，不是 `PATH`。**
+> `wechat-devtools-mcp` 检测 Node 时**不做 PATH 查找**（源码里没有 `shutil.which`），只按顺序试 `os.environ["NODE_PATH"]` 和几个硬编码路径（`C:\Program Files\nodejs\node.exe`、`%APPDATA%\nvm\current\node.exe` 等）。
+> 本机 Node 装在 `E:\software\nodejs`，不在候选里，所以必须在 `.mcp.json` 的 `env` 中显式指定：
+>
+> ```json
+> "NODE_PATH": "E:\\software\\nodejs\\node.exe"
+> ```
+>
+> 改完**必须重启 Claude Code**（env 在进程 spawn 时固定，热改无效）。判定是否生效：`wechat_ide(action='status')` 返回的 `node_available` 字段。
 
 ## 🧪 小程序测试验证纪律
 
@@ -98,26 +110,71 @@ npm run build:mp-weixin:test  # Test env build
 2. **UI 交互验证**：点击按钮、填写表单、触发事件 → **必须**通过 `wechat_automator`（tap / input）或真机操作，不能用 MCP 导航替代 ❌
 3. **导航跳转验证**：`uni.navigateTo` vs `uni.switchTab` 的区别只在用户点击触发时才会暴露——MCP 导航不存在此限制。自查要点：
    - 所有跳转到 tabBar 页面的地方必须用 `switchTab`，不能用 `navigateTo`
-   - tabBar 页面列表在 `pages.json` → `tabBar.list[].pagePath` 中定义
-   - 常见的 tabBar 页面：首页、成长时光、亲子任务、我的
+   - tabBar 页面列表以 `pages.json` → `tabBar.list[].pagePath` 为**唯一依据**，两端的 tabBar 配置不同：
+     - **家长端**（`parent/`）**有** tabBar，4 个 tab：`pages/index/index`（首页）、`pages/growth/index`（成长时光）、`pages/pickup/index`（接送）、`pages/profile/index`（我的）
+     - **老师端**（`teacher/`）**没有** tabBar（`pages.json` 中无 `tabBar` 字段），入口靠 `pages/index/index` 工作台 + `pages/more/index` 功能聚合页。因此老师端**不存在** `switchTab` 场景
+   - ⚠️ 老师端没有 tabBar 这一点容易误判：新增跳转时不要"照着家长端的样子"补 `switchTab`
 4. **每次功能变更后**，除了 MCP 导航遍历全部页面外，还必须检查新增/修改的函数入口（按钮 `@click`、`onLoad` 等）是否在真实交互场景下会触发错误
 
 ### MCP 工具能力矩阵
 
-| 工具 | 能力 | 需要 Node.js |
-|------|------|-------------|
-| `wechat_navigate` | 跳转页面 + CDP 日志采集 | 否 |
-| `wechat_inspector` | 控制台日志/异常采集 | 否 |
-| `wechat_ide` | IDE 生命周期（打开/关闭项目） | 否 |
-| `wechat_automator` | tap / input / evaluate / page_data | **是** |
-| `wechat_screenshot` | 截图 | **是** |
+| 工具 | 能力 | 依赖 |
+|------|------|------|
+| `wechat_file` | 读取编译产物（project_info / 页面列表） | 无 |
+| `wechat_ide` | IDE 生命周期、环境诊断 | 无 |
+| `wechat_navigate` | 跳转页面 + **CDP** 日志采集 | 无（走 CDP 9222） |
+| `wechat_inspector` | 控制台日志/异常采集 | 无 |
+| `wechat_automator` | tap / input / evaluate / page_data | **Node + 自动化端口** |
+| `wechat_screenshot` | 截图（支持长图拼接） | **Node + 自动化端口** |
+
+### ⚠️ 三个会让结论失真的陷阱
+
+**1. 一次只能驱动一个端。** `wechat-devtools`（老师端）与 `wechat-devtools-parent`（家长端）是两个独立 server，但微信开发者工具是**单实例、单项目窗口**。实测：
+
+- 两个 server 各自 `automator start` 都返回 `success: true`，随后 `page_data` 却返回**逐字节相同**的数据 —— 在驱动同一个会话
+- parent server 能"成功"导航到只在老师端存在的 `pages/more/index`
+- `wechat_navigate` 走 **CDP**（两端 `cdp_port` 都默认 9222，只有一个 IDE ⇒ 端口共享），而 `wechat_automator` 走 **ws**（9420/9421）。两条通道不同：实测给两个 server 分配不同 `auto_port`（9420 / 9421）后两个端口能同时监听，但**只有一端真正可用**（老师端正常，家长端 daemon 持续超时 30s/120s）
+
+> 🔴 **`success: true` 不代表"验证的是我想要的那个项目"。**
+
+**2. appid 必须是真实值。** 占位符 `请替换为真实小程序AppID` 会让 `cli auto` 在 prepare 阶段以 `code 10 AppID 不合法` 中止 → 端口 9420 永不监听 → automator/screenshot 全废。MCP 把这个报成"CLI auto 连续 3 次返回成功但端口 9420 未监听"——**CLI 退出码是 0**，极具误导性。改完 appid **必须重新构建**（IDE 读 `dist/dev/mp-weixin/project.config.json`，不是 `src/manifest.json`）。
+
+**3. 构建可以并行，MCP 验证必须串行。** 两个 uni-app 项目的写代码/构建互不干扰；只有验证环节要一个一个来。
+
+### ✅ 可复用清单（每次用 MCP 验证前逐条过）
+
+| # | 检查项 | 怎么做 |
+|---|--------|--------|
+| 1 | **确认目标端** | 看 IDE 窗口标题，并探一个该端**独有**页面（见下表） |
+| 2 | **确认产物是新的** | 源码改过就先 `npm run dev:mp-weixin`；否则验的是陈旧产物 |
+| 3 | **确认 Node 可用** | `wechat_ide(action='status')` → `node_available: true` |
+| 4 | **确认端口就绪** | `wechat_automator(action='start')` → `tcp_ready` 与 `ws_ready` 均为 true |
+| 5 | **开始验证** | 渲染用 `wechat_navigate`；交互**必须**用 `wechat_automator` |
+| 6 | **收工清理** | 杀掉残留的 uni watcher（见下） |
+
+**判别目标端的独有页面：**
+
+| 端 | 独有页面 |
+|----|----------|
+| 老师端 | `pages/more/index`、`pages/doctor/checkin`、`pages/album/index`、`pages/notice/create` |
+| 家长端 | `pages/points/index`、`pages/student/index`、`pages/growth/report`、`pages/feedback/index` |
+
+**收工清理**：`npm run dev:mp-weixin` 是 watch 进程，`TaskStop` 只终止 shell 包装，`@dcloudio/vite-plugin-uni` 会残留并随时重新构建、弄脏工作区。按 PID 杀：
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+  Where-Object { $_.CommandLine -match "dev:mp-weixin|kindergarten\\(teacher|parent)\\node_modules" } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+```
 
 ## Architecture
 
 ### Backend layer (server/)
 
 ```
-cmd/api/main.go          # Entry: load config → init slog → Wire inject → gin.Run
+cmd/
+  api/main.go            # Entry: load config → init slog → Wire inject → gin.Run
+  <helper>/main.go       # 一次性/运维辅助命令，见下方「辅助命令」
 configs/
   app.ini                # INI config (DSN, Redis, JWT, OSS, Casbin)
   rbac_model.conf        # Casbin RBAC model definition
@@ -128,7 +185,7 @@ internal/
   auth/                  # JWT issue/parse, WeChat code2session, refresh token
   middleware/             # RequestID → CORS → Logger → AuthJWT → CasbinRBAC
   rbac/                  # Casbin enforcer init
-  domain/                # GORM entity models (~40 models covering 6 business layers)
+  domain/                # GORM entity models (58 structs covering 6 business layers)
   repository/            # Data access layer (one repo file per domain)
   service/               # Business logic layer (one service file per domain)
   handler/http/          # HTTP handlers: Handler struct aggregates all *Service fields
@@ -138,6 +195,24 @@ pkg/
   response/              # Unified JSON envelope (code/message/data/request_id)
   pagination/            # Page/PageSize helpers
 ```
+
+**辅助命令（`cmd/` 下的独立 `main.go`）**：不进 HTTP 服务，用 `go run ./cmd/<name>` 单独执行。除 `initcheck` 外均读取 `configs/app.ini`。
+
+| 命令 | 作用 | 性质 |
+| ------------ | ---------------------------------------------- | ---- |
+| `chkgrowth`  | 打印 kindergarten 4 的成长记录总数与最近 3 条 | 只读 |
+| `fixpwd`     | 把指定手机号家长的密码重置为固定值 | 写入 |
+| `linkwx`     | 打印指定手机号的 openid 绑定情况 | 只读 |
+| `openid`     | 打印最近 5 个用户 openid，并把最新 openid 绑给家长账号 | 写入 |
+| `seedgrowth` | 灌入成长记录种子数据 | 写入 |
+| `refreshtasks` | **删除** kindergarten 4 的全部 `ParentTask` / `TaskCheckIn` 后重建种子任务 | ⚠️ **破坏性** |
+| `initcheck`  | 创建测试园所+管理员并打印计数，随后 **`Unscoped().Where("1=1")` 清空 `users` / `user_roles` / `kindergartens`** | ⚠️ **破坏性** |
+
+> ⚠️ 这批命令是**针对特定 kindergarten（id=4）的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、手机号、任务文案全部硬编码。**不要在生产库上执行。**
+>
+> ⚠️ 两个破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部用户、角色与园所**。后者只适用于一次性的测试库自检。
+>
+> `initcheck` 的连接串已改为读 `configs/app.ini`（可用 `MYSQL_DSN` 覆盖），管理员口令改为读环境变量 `INIT_ADMIN_PASSWORD`（未设置则直接退出）。**不要再把凭据写回源码**——即使后续删除，git 历史仍可追溯。
 
 **Middleware chain**: `gin.Recovery → CORS → RequestID → RequestContextLogger → [AuthJWT → CasbinRBAC on authed groups]`
 
@@ -154,10 +229,16 @@ pkg/
 - `POST /auth/login/wechat|password|sms`, `POST /auth/refresh`, `POST /auth/logout`
 - `GET|PUT /common/user/profile`, `POST /common/upload`
 - `GET|PUT /common/messages`, `/common/messages/unread-count`
-- `/admin/*` — 20+ resource groups (dashboard, classes, students, teachers, parents, attendance, leaves, pickup, growth, tasks, points, achievements, notices, announcements, audit, admins, roles, settings, export, logs)
-- `/teacher/*` — 8 resource groups (home, notices, leaves, growth, pickup, calendar, class, tasks)
+- `/admin/*` — 22 个资源组：dashboard, classes, students, teachers, parents, settings, kindergarten, admins, roles, attendance, leaves, pickup, growth, tasks, points, achievements, notices, announcements, audit, export, health, dicts；另有单条路由 `GET /admin/logs`（操作日志，不构成组）
+- `/teacher/*` — 10 个资源组：home, notices, leaves, growth, pickup, calendar, class, messages, tasks, dicts
+- `/parent/*` — 9 个资源组：home, notices, leaves, growth, pickup, tasks, points, class, student
+- `/doctor/*` — 1 个资源组：health（晨检/保健医）
 
-### Data model layers (from `backend/model/README.md`)
+> 四端路由分组见 `server/internal/app/router.go`。新增端或分组时必须同步此列表与 Casbin policy。
+
+### Data model layers
+
+> 概念分层引自 `backend/model/README.md`（该文件已停更，**具体 struct 以 `server/internal/domain/` 为准**，共 58 个 struct / 29 个文件）。
 
 1. **Organization & People**: Kindergarten, Class, User (+ UserRole), Student, StudentParent, ClassTeacher
 2. **Notices & Communication**: Notice, NoticeReadLog, NoticeTemplate, LeaveRequest, Announcement
@@ -165,6 +246,8 @@ pkg/
 4. **Growth Records**: GrowthDailyLog, GrowthMedia, GrowthComment, GrowthLike, GrowthReport
 5. **Tasks & Points**: ParentTask, TaskCheckIn, PointAccount, PointTransaction, Achievement
 6. **Admin-only**: ContentAudit, AdminRole, AdminPermission, OperationLog
+
+`server/internal/domain/` 中另有上述分层未涵盖的域：`academic_year`、`calendar`（班级日历）、`daily_summary`、`dict`、`export_task`、`feedback`、`health_check`、`message`、`teacher_invitation`、`teacher_message`、`kindergarten_app_setting`；`base.go` / `file.go` 为共享基础模型（`BaseModel` / `SoftDeleteModel` / 文件表），不属于业务域。
 
 All business tables include `kindergarten_id` for multi-tenancy. Core business data uses `SoftDeleteModel`.
 
@@ -180,11 +263,58 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 ### Teacher mini-program structure (`teacher/`)
 
-- `src/pages.json` — uni-app page routing (15 pages: index, auth, notice, growth, pickup, tasks, calendar, leave, class, album, messages, more, profile, webview)
-- `src/utils/login.js` — `ensureLogin()` calls `wx.login()` → `POST /auth/login/wechat` with `role=teacher`
+- `src/pages.json` — uni-app page routing (**20 pages**, 无 tabBar):
+
+  | 模块 | 页面 |
+  | --------- | ------------------------------------------------------ |
+  | 工作台    | `index/index`                                          |
+  | 登录      | `auth/phone`                                           |
+  | 通知      | `notice/create`                                        |
+  | 成长记录  | `growth/index`、`growth/create`、`growth/detail`       |
+  | 接送      | `pickup/index`、`pickup/records`                       |
+  | 亲子任务  | `tasks/index`                                          |
+  | 班级日历  | `calendar/index`、`calendar/create`、`calendar/detail` |
+  | 请假      | `leave/index`                                          |
+  | 班级      | `class/index`                                          |
+  | 相册      | `album/index`                                          |
+  | 消息      | `messages/index`                                       |
+  | 我的/更多 | `profile/index`、`more/index`                          |
+  | 晨检      | `doctor/checkin`                                       |
+  | 内嵌网页  | `webview/index`                                        |
+
+- `src/utils/login.js` — 导出 `silentLogin` / `bindPhoneLogin` / `ensureLogin`；`ensureLogin()` 调 `uni.login()` 拿 code，转交 `src/api/auth.js` 的 `wxCodeLogin`（`role` 在此处硬编码为 `"teacher"`）
 - `src/utils/auth.js` — localStorage-based token storage (uni.setStorageSync)
 - `src/api/` — per-module API wrappers using a shared `http.js` (uni.request interceptor with auto token refresh)
 - Login is silent at app launch; `App.vue` `onLaunch` calls `ensureLogin()`
+
+### Parent mini-program structure (`parent/`)
+
+与老师端同构（同版本 uni-app、同样的 `utils/`+`api/` 分层与静默登录），差异如下：
+
+- `src/pages.json` — **26 pages，有 tabBar**（老师端没有）
+- tabBar 4 项：`index/index` 首页、`growth/index` 成长时光、`pickup/index` 接送、`profile/index` 我的
+- 页面模块：首页、登录/绑定（`auth/phone`、`auth/bind`）、通知（列表+详情）、请假（列表+新建+详情）、成长（列表+详情+相册+**报告**）、接送（+**二维码**、**授权人管理**）、亲子任务（列表+详情）、**积分**、班级、日历、**幼儿档案**、**反馈**、设置、消息、我的、webview
+- 相对老师端多出的能力：绑定关系、成长报告、接送二维码与授权人、积分、反馈
+- 登录同样静默：`App.vue` `onLaunch` → `ensureLogin()`，`role` 在 `src/api/auth.js` 硬编码为 `"parent"`
+
+> 两端登录逻辑各自独立实现（各有一份 `utils/login.js`，导出签名一致），**不是共享包**。修改登录流程时两端都要改。
+
+## ⚠️ Known Issues（已知问题，动手前先看）
+
+1. **阿里云 RDS 凭据已随 git 历史泄漏（源码已修，历史未清）** — 初始提交 `1611c61` 中，`server/cmd/initcheck/main.go` 硬编码了 RDS 连接串（账号 `test24yangshi` + 明文密码 + 实例地址 `rm-bp1w012d612w344y7po`）。
+   - ✅ **源码已修复**：改为 `config.Load()` 读 `configs/app.ini`，口令走 `INIT_ADMIN_PASSWORD` 环境变量。
+   - ❌ **仍未处理**：该凭据**依然存在于 git 历史中**（`git log -S` 可查到），克隆仓库即可读到。
+   - **待办（需人工执行）**：
+     1. **轮换该 RDS 密码** —— 这是唯一真正有效的补救，历史清理只是辅助
+     2. 清理历史：`git filter-repo` 或 BFG，之后所有协作者必须重新克隆
+     3. 检查仓库托管方是否有该仓库的公开/共享访问
+   - 在密码轮换前，**不要把该仓库公开或分享给外部**。
+
+2. **`backend/model/` 已停更，与 `server/internal/domain/` 漂移** — `backend/model/` 18 个 .go 文件全部停在 2026-03-22；`server/internal/domain/` 有 29 个文件 / 58 个 struct，是唯一实现。`backend/api/` 则相反（最近更新 2026-06-02），仍是接口契约的 source of truth。**写 model 看 `server/`，写 API 看 `backend/api/`。**
+
+3. **`server/cmd/` 下多为一次性调试脚本** — 见「辅助命令」一节的警告，`refreshtasks` 具有破坏性。
+
+4. **`.gitignore` 的 `*.exe` 匹配不到 Delve 调试产物** — `__debug_bin.exe<数字>` 的扩展名是 `.exe<数字>`，不匹配 `*.exe`，导致 3 个调试二进制被提交进仓库。修复方式见 `server/.gitignore`。
 
 ## 🎨 Design Token 规范（三端必须遵守）
 
