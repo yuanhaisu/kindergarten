@@ -205,8 +205,19 @@ pkg/
 | `linkwx`     | 打印指定手机号的 openid 绑定情况 | 只读 |
 | `openid`     | 打印最近 5 个用户 openid，并把最新 openid 绑给家长账号 | 写入 |
 | `seedgrowth` | 灌入成长记录种子数据 | 写入 |
+| `seedattendance` | 灌入出勤演示数据（3 个工作日 × 全体在读学生） | 写入 |
+| `seedleaves` | 灌入 6 条请假演示数据 | 写入 |
+| `seedpickup` | 灌入当日接送记录 + 待审核授权人 | 写入 |
 | `refreshtasks` | **删除** kindergarten 4 的全部 `ParentTask` / `TaskCheckIn` 后重建种子任务 | ⚠️ **破坏性** |
 | `initcheck`  | 创建测试园所+管理员并打印计数，随后 **`Unscoped().Where("1=1")` 清空 `users` / `user_roles` / `kindergartens`** | ⚠️ **破坏性** |
+
+> ✅ **三个 `seed*` 命令的由来**：出勤 / 请假 / 接送的演示数据原先由 service 层的
+> `ensureBootstrap*` 函数在**读取路径**上按需生成。那意味着打开一次后台看板或列表页
+> 就会往生产表写入编造数据。现已全部移出，只能由这些命令显式触发。
+> **新增种子数据时请循此例，不要再往读取路径挂写操作。**
+>
+> 三者共用 `cmd/internal/seedutil`（配置、连库、园所、时区），
+> 园所默认 4，可用 `SEED_KG_ID=7 go run ./cmd/seedleaves` 覆盖；均幂等。
 
 > ⚠️ 这批命令是**针对特定 kindergarten（id=4）的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、手机号、任务文案全部硬编码。**不要在生产库上执行。**
 >
