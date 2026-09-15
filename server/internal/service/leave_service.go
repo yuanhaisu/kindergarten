@@ -21,61 +21,6 @@ func NewLeaveService(leaves *repository.LeaveRepo, oplog *repository.OperationLo
 	return &LeaveService{leaves: leaves, oplog: oplog}
 }
 
-func (s *LeaveService) ensureBootstrapLeaves(ctx context.Context, kindergartenID uint64, anchorDay time.Time) error {
-	total, err := s.leaves.CountByKindergarten(ctx, kindergartenID)
-	if err != nil {
-		return err
-	}
-	if total >= 6 {
-		return nil
-	}
-	students, err := s.leaves.ListSeedStudents(ctx, kindergartenID, 12)
-	if err != nil {
-		return err
-	}
-	if len(students) == 0 {
-		return nil
-	}
-	loc := shanghaiLoc()
-	day := time.Date(anchorDay.Year(), anchorDay.Month(), anchorDay.Day(), 0, 0, 0, 0, loc)
-	statuses := []domain.LeaveStatus{
-		domain.LeaveStatusPending,
-		domain.LeaveStatusPending,
-		domain.LeaveStatusApproved,
-		domain.LeaveStatusApproved,
-		domain.LeaveStatusRejected,
-		domain.LeaveStatusCanceled,
-	}
-	reasons := []string{"感冒发烧", "家中临时有事", "门诊复查", "外地探亲", "身体不适", "私事处理"}
-
-	var reviewerID uint64 = 4
-	now := time.Now().UTC()
-	leaves := make([]domain.LeaveRequest, 0, len(statuses))
-	for i, st := range statuses {
-		sr := students[i%len(students)]
-		start := day.AddDate(0, 0, -(i % 3))
-		end := start
-		lr := domain.LeaveRequest{
-			KindergartenID: kindergartenID,
-			ClassID:        sr.ClassID,
-			StudentID:      sr.StudentID,
-			ApplicantID:    sr.ApplicantID,
-			Reason:         reasons[i%len(reasons)],
-			StartDate:      start,
-			EndDate:        end,
-			Days:           1,
-			Status:         st,
-		}
-		if st != domain.LeaveStatusPending && st != domain.LeaveStatusCanceled {
-			lr.ReviewerID = &reviewerID
-			lr.ReviewedAt = &now
-			lr.ReviewRemark = "系统初始化基线数据"
-		}
-		leaves = append(leaves, lr)
-	}
-	return s.leaves.CreateBatch(ctx, leaves)
-}
-
 var (
 	errLeaveNotFound   = errors.New("LEAVE_NOT_FOUND")
 	errLeaveNotPending = errors.New("LEAVE_NOT_PENDING")
@@ -151,9 +96,6 @@ func (s *LeaveService) ListLeaves(
 ) ([]map[string]interface{}, int64, int, int, error) {
 	if kindergartenID == 0 {
 		return nil, 0, 0, 0, errors.New("NO_KINDERGARTEN")
-	}
-	if err := s.ensureBootstrapLeaves(ctx, kindergartenID, time.Now().In(shanghaiLoc())); err != nil {
-		return nil, 0, 0, 0, err
 	}
 	pn := pq
 	pn.Normalize()
@@ -254,9 +196,6 @@ func (s *LeaveService) GetLeaveStats(
 		}
 		start = time.Date(a.Year(), a.Month(), a.Day(), 0, 0, 0, 0, loc)
 		end = time.Date(b.Year(), b.Month(), b.Day(), 23, 59, 59, 999999999, loc)
-	}
-	if err := s.ensureBootstrapLeaves(ctx, kindergartenID, end); err != nil {
-		return nil, err
 	}
 
 	pending, approved, rejected, _, total, err := s.leaves.CountByStatusInRange(ctx, kindergartenID, start, end)

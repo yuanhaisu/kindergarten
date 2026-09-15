@@ -34,96 +34,6 @@ func NewPickupService(
 	return &PickupService{pickup: pickup, students: students, classes: classes, oplog: oplog}
 }
 
-func (s *PickupService) ensureBootstrapPickup(ctx context.Context, kindergartenID uint64, day time.Time) error {
-	existing, err := s.pickup.CountRecordsByDate(ctx, kindergartenID, day)
-	if err != nil {
-		return err
-	}
-	students, err := s.pickup.ListSeedStudents(ctx, kindergartenID, 16)
-	if err != nil {
-		return err
-	}
-	if len(students) == 0 {
-		return nil
-	}
-	if existing == 0 {
-		loc := shanghaiLoc()
-		baseDay := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
-		rows := make([]domain.PickupRecord, 0, 24)
-		for i, st := range students {
-			arrivedAt := time.Date(baseDay.Year(), baseDay.Month(), baseDay.Day(), 7, 40+(i%20), 0, 0, loc)
-			rows = append(rows, domain.PickupRecord{
-				KindergartenID: kindergartenID,
-				ClassID:        st.ClassID,
-				StudentID:      st.StudentID,
-				Date:           baseDay,
-				Type:           domain.PickupTypeDropOff,
-				Method:         domain.PickupMethodManual,
-				PickupName:     "家长" + st.Name,
-				PickupRelation: "家长",
-				OperatorID:     4,
-				RecordedAt:     arrivedAt,
-				IsAbnormal:     false,
-				AbnormalReason: "",
-			})
-			// Keep a few "未接走" entries by not creating pickup records for last 2 students.
-			if i >= len(students)-2 {
-				continue
-			}
-			pickAt := time.Date(baseDay.Year(), baseDay.Month(), baseDay.Day(), 16, 20+(i%30), 0, 0, loc)
-			abnormal := i < 2
-			reason := ""
-			if abnormal {
-				reason = "非授权人员接送，待复核"
-			}
-			rows = append(rows, domain.PickupRecord{
-				KindergartenID: kindergartenID,
-				ClassID:        st.ClassID,
-				StudentID:      st.StudentID,
-				Date:           baseDay,
-				Type:           domain.PickupTypePickUp,
-				Method:         domain.PickupMethodManual,
-				PickupName:     "家长" + st.Name,
-				PickupRelation: "家长",
-				OperatorID:     4,
-				RecordedAt:     pickAt,
-				IsAbnormal:     abnormal,
-				AbnormalReason: reason,
-			})
-		}
-		if err := s.pickup.CreateRecordBatch(ctx, rows); err != nil {
-			return err
-		}
-	}
-
-	pendingAuth, err := s.pickup.CountPendingAuthorizations(ctx, kindergartenID)
-	if err != nil {
-		return err
-	}
-	if pendingAuth >= 2 {
-		return nil
-	}
-	need := int(2 - pendingAuth)
-	authRows := make([]domain.PickupAuthorization, 0, need)
-	now := time.Now().UTC()
-	for i := 0; i < need && i < len(students); i++ {
-		st := students[i]
-		authRows = append(authRows, domain.PickupAuthorization{
-			StudentID:    st.StudentID,
-			Name:         "临时接送人" + st.Name,
-			Phone:        fmt.Sprintf("1390000%04d", i+1),
-			Relation:     "亲属",
-			Status:       1,
-			CreatorID:    4,
-			ReviewStatus: pickupAuthReviewPending,
-			AuditedAt:    nil,
-			AuditRemark:  "",
-			ExpireAt:     &now,
-		})
-	}
-	return s.pickup.CreateAuthorizationBatch(ctx, authRows)
-}
-
 var (
 	errPickupAuthNotFound   = errors.New("PICKUP_AUTH_NOT_FOUND")
 	errPickupAuthNotPending = errors.New("PICKUP_AUTH_NOT_PENDING")
@@ -184,9 +94,6 @@ func (s *PickupService) GetPickupOverview(ctx context.Context, kindergartenID ui
 	}
 	day, err := parsePickupDate(dateStr)
 	if err != nil {
-		return nil, err
-	}
-	if err := s.ensureBootstrapPickup(ctx, kindergartenID, day); err != nil {
 		return nil, err
 	}
 	totalStudents, err := s.students.CountActiveInKindergarten(ctx, kindergartenID)
@@ -287,9 +194,6 @@ func (s *PickupService) ListPickupRecords(
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
-	if err := s.ensureBootstrapPickup(ctx, kindergartenID, day); err != nil {
-		return nil, 0, 0, 0, err
-	}
 	pn := pq
 	pn.Normalize()
 	off := pn.Offset()
@@ -336,9 +240,6 @@ func (s *PickupService) ListPickupAbnormal(
 	if strings.TrimSpace(dateStr) != "" {
 		d, err := parsePickupDate(dateStr)
 		if err != nil {
-			return nil, 0, 0, 0, err
-		}
-		if err := s.ensureBootstrapPickup(ctx, kindergartenID, d); err != nil {
 			return nil, 0, 0, 0, err
 		}
 		dayPtr = &d

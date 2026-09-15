@@ -16,50 +16,18 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"strconv"
 	"time"
 
-	gormlogger "gorm.io/gorm/logger"
-
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-
-	"kindergarten-server/internal/config"
+	"kindergarten-server/cmd/internal/seedutil"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 )
 
 func main() {
-	cfg, err := config.Load("configs/app.ini")
-	if err != nil {
-		log.Fatal("load config:", err)
-	}
-	if cfg.MySQL.DSN == "" {
-		log.Fatal("MySQL DSN 为空：请检查 configs/app.ini 或设置 MYSQL_DSN")
-	}
-
-	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
-		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
-	})
-	if err != nil {
-		log.Fatal("open:", err)
-	}
-
-	kgID := uint64(4)
-	if v := os.Getenv("SEED_KG_ID"); v != "" {
-		n, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			log.Fatalf("SEED_KG_ID 不是合法数字: %q", v)
-		}
-		kgID = n
-	}
-
-	loc, err := time.LoadLocation("Asia/Shanghai")
-	if err != nil {
-		// 不静默退回 time.Local：那会让写入的日期偏移一天（见 CLAUDE.md 时区一节）。
-		log.Fatal("加载 Asia/Shanghai 失败（容器缺 tzdata？）:", err)
-	}
+	// 先校验入参、再连库：非法 SEED_KG_ID 应当立刻报错，而不是等连库失败后才发现。
+	kgID := seedutil.KindergartenID()
+	loc := seedutil.Shanghai()
+	db := seedutil.Open()
 
 	if err := seed(context.Background(), repository.NewAttendanceRepo(db), kgID, time.Now().In(loc), loc); err != nil {
 		log.Fatal("seed:", err)
