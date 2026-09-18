@@ -27,9 +27,12 @@ type ClassRepository interface {
 	UpdateStudentsClass(ctx context.Context, kindergartenID, fromClassID, toClassID uint64, studentIDs []uint64) (int64, error)
 }
 
-// UserLookup 班级 Service 依赖的用户查询接口（由 *repository.UserRepo 隐式实现）
-type UserLookup interface {
-	FindByID(ctx context.Context, id uint64) (*domain.User, error)
+// TeacherLookup 班级 Service 依赖的教师归属查询接口（由 *repository.UserRoleRepo 隐式实现）
+//
+// 用于校验被指派的用户确实是【本园】的老师。User 是平台级实体、没有
+// kindergarten_id，租户归属记在 user_roles 上，所以不能只查用户是否存在。
+type TeacherLookup interface {
+	FindTeacherInKindergarten(ctx context.Context, userID, kindergartenID uint64) (*domain.UserRole, error)
 }
 
 // OpLogger 操作日志接口（由 *repository.OperationLogRepo 隐式实现）
@@ -39,16 +42,16 @@ type OpLogger interface {
 
 type ClassService struct {
 	classRepo ClassRepository
-	userRepo  UserLookup
+	roles     TeacherLookup
 	oplog     OpLogger
 }
 
 func NewClassService(
 	classRepo ClassRepository,
-	userRepo UserLookup,
+	roles TeacherLookup,
 	oplog OpLogger,
 ) *ClassService {
-	return &ClassService{classRepo: classRepo, userRepo: userRepo, oplog: oplog}
+	return &ClassService{classRepo: classRepo, roles: roles, oplog: oplog}
 }
 
 func (s *ClassService) logOp(
@@ -332,7 +335,7 @@ func (s *ClassService) CreateClass(
 	if ay == "" {
 		ay = defaultAcademicYear(time.Now())
 	}
-	teachers, err := s.buildClassTeachers(ctx, req.TeacherIDs)
+	teachers, err := s.buildClassTeachers(ctx, kindergartenID, req.TeacherIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +355,11 @@ func (s *ClassService) CreateClass(
 	return &createClassResp{ID: c.ID, CreatedAt: c.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
-func (s *ClassService) buildClassTeachers(ctx context.Context, rows []classTeacherAssign) ([]domain.ClassTeacher, error) {
+func (s *ClassService) buildClassTeachers(
+	ctx context.Context,
+	kindergartenID uint64,
+	rows []classTeacherAssign,
+) ([]domain.ClassTeacher, error) {
 	seen := map[uint64]struct{}{}
 	out := make([]domain.ClassTeacher, 0, len(rows))
 	for _, r := range rows {
@@ -360,12 +367,14 @@ func (s *ClassService) buildClassTeachers(ctx context.Context, rows []classTeach
 			return nil, fmt.Errorf("DUPLICATE_TEACHER")
 		}
 		seen[r.UserID] = struct{}{}
-		u, err := s.userRepo.FindByID(ctx, r.UserID)
+		// 必须校验归属，而不是只查用户是否存在：User 没有 kindergarten_id，
+		// class_teachers 也没有，这一层是防止跨园指派的唯一防线。
+		ur, err := s.roles.FindTeacherInKindergarten(ctx, r.UserID, kindergartenID)
 		if err != nil {
 			return nil, err
 		}
-		if u == nil {
-			return nil, fmt.Errorf("USER_NOT_FOUND")
+		if ur == nil {
+			return nil, fmt.Errorf("TEACHER_NOT_IN_KINDERGARTEN")
 		}
 		title, err := parseTeacherTitle(r.Title)
 		if err != nil {
@@ -413,7 +422,7 @@ func (s *ClassService) UpdateClass(
 	if c == nil {
 		return nil, fmt.Errorf("NOT_FOUND")
 	}
-	teachers, err := s.buildClassTeachers(ctx, req.TeacherIDs)
+	teachers, err := s.buildClassTeachers(ctx, kindergartenID, req.TeacherIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -545,7 +554,7 @@ func IsClientClassErr(err error) bool {
 		return false
 	}
 	switch err.Error() {
-	case "INVALID_GRADE", "INVALID_TEACHER_TITLE", "DUPLICATE_TEACHER", "USER_NOT_FOUND",
+	case "INVALID_GRADE", "INVALID_TEACHER_TITLE", "DUPLICATE_TEACHER", "TEACHER_NOT_IN_KINDERGARTEN",
 		"FROM_CLASS_REQUIRED", "FROM_CLASS_NOT_FOUND", "CLASS_NOT_EMPTY", "PARTIAL_MOVE", "INVALID_ACTION":
 		return true
 	default:

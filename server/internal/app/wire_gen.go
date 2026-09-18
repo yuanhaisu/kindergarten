@@ -45,7 +45,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	dashboardService := service.NewDashboardService(dashboardRepo, kindergartenRepo)
 	classRepo := repository.NewClassRepo(db)
 	operationLogRepo := repository.NewOperationLogRepo(db)
-	classService := service.NewClassService(classRepo, userRepo, operationLogRepo)
+	classService := service.NewClassService(classRepo, userRoleRepo, operationLogRepo)
 	studentRepo := repository.NewStudentRepo(db)
 	studentService := service.NewStudentService(db, studentRepo, classRepo, userRepo, userRoleRepo, kindergartenRepo, operationLogRepo)
 	teacherRepo := repository.NewTeacherRepo(db)
