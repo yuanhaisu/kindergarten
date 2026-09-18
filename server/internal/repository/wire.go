@@ -31,4 +31,5 @@ var Set = wire.NewSet(
 	NewTeacherInvitationRepo,
 	NewDictRepo,
 	NewHealthCheckRepo,
+	NewCalendarRepo,
 )

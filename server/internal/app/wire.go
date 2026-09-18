@@ -26,6 +26,12 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		ProvideOSSStorage,
 		rbac.NewEnforcer,
 		repository.Set,
+		// service 层为了可测试性把依赖声明成接口，Wire 不会自动把具体类型
+		// 匹配上去 —— 缺了这些 Bind 会报 "no provider found for <iface>"。
+		wire.Bind(new(service.ClassRepository), new(*repository.ClassRepo)),
+		wire.Bind(new(service.GrowthRepository), new(*repository.GrowthRepo)),
+		wire.Bind(new(service.OpLogger), new(*repository.OperationLogRepo)),
+		wire.Bind(new(service.TeacherLookup), new(*repository.UserRoleRepo)),
 		ProvideAuthService,
 		service.Set,
 		handler.Set,
