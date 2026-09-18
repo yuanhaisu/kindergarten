@@ -235,6 +235,14 @@ pkg/
 
 **Wire DI**: After adding a new repository/service/handler, run `make wire` in `server/internal/app` to regenerate `wire_gen.go`. The handler struct aggregates all services; a new module requires updates to handler struct, constructor, provider set, and router registration.
 
+> ⚠️ **Wire 不会隐式把具体类型匹配到接口。** service 层为可测试性把依赖声明成接口（`ClassRepository`、`GrowthRepository`、`OpLogger`、`TeacherLookup`），每新增一个都必须在上面的 `wire.go` 里补一条 `wire.Bind`，否则报 `no provider found for <iface>`。
+>
+> ⚠️ **wire 二进制必须用 ≥ 模块 go 指令的版本构建。** 本仓库要求 go 1.25；用旧工具链构建的 wire 会直接拒绝解析源码，报 `package requires newer Go version go1.25` —— 这个错误看起来像依赖问题，其实不是。重建：
+>
+> ```bash
+> GOTOOLCHAIN=go1.25.0 go install github.com/google/wire/cmd/wire@latest
+> ```
+
 ### API route structure (`/api/v1`)
 
 - `POST /auth/login/wechat|password|sms`, `POST /auth/refresh`, `POST /auth/logout`
