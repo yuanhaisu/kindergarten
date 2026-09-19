@@ -9,10 +9,17 @@
 --  idx_task_student_date 已存在（只是列不对）就会被跳过。
 --  必须先手工删除，下次服务启动时 AutoMigrate 会按新 tag 重建。
 --
--- 影响范围：所有已部署的数据库。列序 (task_id, student_id, date) 覆盖现有全部查询
+-- 影响范围：仅限【在建库时就有旧索引】的数据库。
+--  2026-09-18 核对过本机开发库（localhost:3316）：task_check_ins 的
+--  idx_task_student_date 已经是 (task_id, student_id, date) 三元组，
+--  即新库由 AutoMigrate 按修好后的 struct 直接建对了，**无需执行本迁移**。
+--  先跑第 1 步确认，不要盲目 DROP。
+--
+-- 列序 (task_id, student_id, date) 覆盖现有全部查询
 -- （均以 task_id 打头，无仅按 student_id 过滤的查询）。
 
 -- ── 第 1 步：查看当前索引，确认待删除的名字 ────────────────────────────
+-- 若输出中 idx_task_student_date 已是 task_id/student_id/date 三行，到此为止。
 SHOW INDEX FROM task_check_ins;
 
 -- ── 第 2 步：删除定义错误的唯一索引 ────────────────────────────────────

@@ -201,6 +201,7 @@ pkg/
 | 命令 | 作用 | 性质 |
 | ------------ | ---------------------------------------------- | ---- |
 | `chkgrowth`  | 打印 kindergarten 4 的成长记录总数与最近 3 条 | 只读 |
+| `dbcheck`    | 打印指定表的索引定义与行数，用于核对迁移是否生效 | 只读 |
 | `fixpwd`     | 把指定手机号家长的密码重置为固定值 | 写入 |
 | `linkwx`     | 打印指定手机号的 openid 绑定情况 | 只读 |
 | `openid`     | 打印最近 5 个用户 openid，并把最新 openid 绑给家长账号 | 写入 |
@@ -224,6 +225,14 @@ pkg/
 > ⚠️ 两个破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部用户、角色与园所**。后者只适用于一次性的测试库自检。
 >
 > `initcheck` 的连接串已改为读 `configs/app.ini`（可用 `MYSQL_DSN` 覆盖），管理员口令改为读环境变量 `INIT_ADMIN_PASSWORD`（未设置则直接退出）。**不要再把凭据写回源码**——即使后续删除，git 历史仍可追溯。
+
+> 🔧 **`dbcheck` 的用途**：本仓库**没有迁移工具**（只有 `AutoMigrate`，而它只增不改——同名索引已存在就会被跳过）。所以手工迁移后需要一个核实手段：
+>
+> ```bash
+> go run ./cmd/dbcheck task_check_ins
+> ```
+>
+> 会打印该表的全部索引（标注唯一/普通、列出列序）与行数。改完 struct tag 或跑完 `docs/migrations/` 下的 SQL 后，用它确认线上库真的变了，而不是假设 `AutoMigrate` 会处理。
 
 **Middleware chain**: `gin.Recovery → CORS → RequestID → RequestContextLogger → [AuthJWT → CasbinRBAC on authed groups]`
 
