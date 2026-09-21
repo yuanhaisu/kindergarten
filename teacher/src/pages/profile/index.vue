@@ -4,6 +4,7 @@ import { onLoad } from "@dcloudio/uni-app"
 import { getUser, clearAuth } from "@/utils/auth"
 import { ensureLogin } from "@/utils/login"
 import { fetchTeacherHomeOverview } from "@/api/teacher-home"
+import { goTab } from "@/utils/nav"
 
 const user = ref(getUser() || {})
 const stats = ref({ present: 0, leave: 0, pending: 0 })
@@ -75,9 +76,9 @@ function handleFeature(item) {
   uni.navigateTo({ url: item.path })
 }
 
+// 底部 tab 统一走 goTab，避免 navigateTo push 撑爆页面栈
 function navigateTo(path) {
-  if (path === "/pages/profile/index") return
-  uni.navigateTo({ url: path })
+  goTab(path)
 }
 
 function confirmLogout() {

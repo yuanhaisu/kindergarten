@@ -6,6 +6,7 @@ import { fetchTeacherPickupOverview, fetchTeacherPickupStudents, manualTeacherPi
 const overview = ref({})
 const students = ref([])
 const filterStatus = ref("not_picked_up") // not_picked_up | all | arrived | picked_up
+const loadError = ref("")
 
 const todayDate = computed(() => {
   const now = new Date()
@@ -13,19 +14,32 @@ const todayDate = computed(() => {
 })
 
 async function loadPickup() {
-  const [overviewRes, studentsRes] = await Promise.all([
-    fetchTeacherPickupOverview(),
-    fetchTeacherPickupStudents({ status: filterStatus.value }),
-  ])
-  overview.value = overviewRes.data || {}
-  students.value = studentsRes.data?.list || []
-  uni.stopPullDownRefresh()
+  loadError.value = ""
+  try {
+    const [overviewRes, studentsRes] = await Promise.all([
+      fetchTeacherPickupOverview(),
+      fetchTeacherPickupStudents({ status: filterStatus.value }),
+    ])
+    overview.value = overviewRes.data || {}
+    students.value = studentsRes.data?.list || []
+  } catch (err) {
+    // 必须显式报错，不能留着空数组：这页空列表的语义是「都接走了」，
+    // 请求失败时静默留空，等于告诉老师校内已经没有孩子了。
+    loadError.value = err?.message || "接送数据加载失败"
+    students.value = []
+    overview.value = {}
+  } finally {
+    // 放进 finally，否则失败时下拉刷新圈永远不会停
+    uni.stopPullDownRefresh()
+  }
 }
 
 async function record(student) {
   try {
     await manualTeacherPickup({
-      student_id: student.id,
+      // 后端 PickupStudents 返回的键是 student_id，没有 id —— 用 student.id 会得到
+      // undefined，序列化时被丢弃，后端 StudentID==0 直接报参数错误。
+      student_id: student.student_id,
       type: 2,
       pickup_name: "老师登记",
       pickup_relation: "teacher"
@@ -78,16 +92,17 @@ const filterOptions = [
   { key: "arrived", label: "已入园" },
   { key: "picked_up", label: "已接走" },
 ]
-let filterIdx = 0
 function toggleFilter() {
-  filterIdx = (filterIdx + 1) % filterOptions.length
-  filterStatus.value = filterOptions[filterIdx].key
+  const idx = filterOptions.findIndex((o) => o.key === filterStatus.value)
+  filterStatus.value = filterOptions[(idx + 1) % filterOptions.length].key
   loadPickup()
 }
 
+// 标题从 filterStatus 派生，不再维护第二个状态变量 —— 之前 goManualRegister()
+// 只改 filterStatus 不改索引，标题就和列表对不上了。
 const studentSectionTitle = computed(() => {
-  const label = filterOptions[filterIdx].label
-  return `${label}学生（${students.value.length}人）`
+  const opt = filterOptions.find((o) => o.key === filterStatus.value) || filterOptions[0]
+  return `${opt.label}学生（${students.value.length}人）`
 })
 
 onLoad(loadPickup)
@@ -159,11 +174,16 @@ onPullDownRefresh(loadPickup)
         </view>
       </view>
 
-      <view v-if="students.length === 0" class="empty-state">
-        <text>所有学生已全部接走</text>
+      <!-- 错误态必须排在空态之前：否则请求失败会被当成「没有学生」 -->
+      <view v-if="loadError" class="empty-state">
+        <text class="empty-text">{{ loadError }}</text>
+        <view class="retry-btn" @click="loadPickup">重试</view>
+      </view>
+      <view v-else-if="students.length === 0" class="empty-state">
+        <text class="empty-text">当前筛选下没有学生</text>
       </view>
       <view v-else class="student-list">
-        <view v-for="student in students" :key="student.id" class="student-card">
+        <view v-for="student in students" :key="student.student_id" class="student-card">
           <view class="student-info">
             <view class="student-avatar">
               <image
@@ -352,13 +372,25 @@ onPullDownRefresh(loadPickup)
 }
 
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-lg;
   padding: 80rpx 0;
   text-align: center;
+}
 
-  text {
-    font-size: $typography-font-size-md;
-    color: $color-text-hint;
-  }
+.empty-text {
+  font-size: $typography-font-size-md;
+  color: $color-text-hint;
+}
+
+.retry-btn {
+  padding: $spacing-sm $spacing-xl;
+  border-radius: $border-radius-full;
+  background: $color-semantic-info;
+  font-size: $typography-font-size-base;
+  color: #fff;
 }
 
 .student-list {

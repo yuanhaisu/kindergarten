@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue"
+import { goTab } from "@/utils/nav"
 
 const props = defineProps({
   active: { type: Number, default: 0 },
@@ -16,11 +17,12 @@ const tabs = [
 const showBadge = computed(() => props.unreadCount > 0)
 
 function onTab(tab, index) {
+  // 点当前 tab 时 goTab 内部会滚动置顶，与原来的行为一致
   if (index === props.active) {
     uni.pageScrollTo({ scrollTop: 0, duration: 300 })
     return
   }
-  uni.navigateTo({ url: tab.path })
+  goTab(tab.path)
 }
 </script>
 

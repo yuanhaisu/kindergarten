@@ -2,35 +2,43 @@
 import { ref, computed } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchTeacherClassInfo, fetchTeacherClassStudents } from "@/api/teacher-class"
+import { fetchTeacherPickupOverview } from "@/api/teacher-pickup"
+import { fetchTeacherNotices } from "@/api/teacher-notices"
 import BottomNav from "@/components/BottomNav.vue"
 
 const info = ref({})
 const students = ref([])
+const pickupStat = ref({})
 const loading = ref(false)
+const loadError = ref("")
 const searchKeyword = ref("")
 const activeFilter = ref("全部")
+const recentNotices = ref([])
 
-const filters = ["全部", "出勤", "请假", "缺勤", "迟到"]
-const statusClassMap = { "出勤": "status-present", "请假": "status-leave", "缺勤": "status-absent", "迟到": "status-late" }
+// 后端 /teacher/class/students 复用接送查询（ClassStudents → PickupStudents），
+// 返回的是真实接送状态，**没有出勤字段**。这里只展示有数据支撑的字段，
+// 不再按下标编造出勤。
+const PICKUP_STATUS_LABEL = { not_arrived: "未入园", not_picked_up: "未接走", picked_up: "已接走" }
+const PICKUP_STATUS_CLASS = { not_arrived: "status-absent", not_picked_up: "status-late", picked_up: "status-present" }
 
-const todaySnapshot = ref({ present: 26, leave: 2, late: 1, not_picked: 5 })
-const recentNotices = ref([{ id: 1, title: "明早亲子运动会通知", time: "今天 09:30", readRate: 85 }, { id: 2, title: "请带水彩笔和画纸", time: "昨天 16:00", readRate: 92 }])
-const statusOptions = ["出勤", "出勤", "出勤", "出勤", "请假", "缺勤", "迟到"]
+const filters = ["全部", "未入园", "未接走", "已接走"]
 
 const filteredStudents = computed(() => {
   let list = students.value
-  if (searchKeyword.value) { const kw = searchKeyword.value.toLowerCase(); list = list.filter(s => (s.name || "").toLowerCase().includes(kw) || (s.student_no || "").toLowerCase().includes(kw)) }
-  if (activeFilter.value !== "全部") { list = list.filter(s => (s._status || "出勤") === activeFilter.value) }
+  if (searchKeyword.value) {
+    const kw = searchKeyword.value.toLowerCase()
+    // 只按姓名搜：后端不返回 student_no，搜它恒为空
+    list = list.filter((s) => (s.name || "").toLowerCase().includes(kw))
+  }
+  if (activeFilter.value !== "全部") {
+    list = list.filter((s) => (PICKUP_STATUS_LABEL[s.pickup_status] || "") === activeFilter.value)
+  }
   return list
 })
 
 function onSearchInput(e) { searchKeyword.value = e.detail.value }
 function switchFilter(f) { activeFilter.value = f }
-function openClassSearch() {}
-function openNotices() { uni.showToast({ title: "通知铃铛", icon: "none" }) }
-function goNotice(notice) { uni.showToast({ title: `通知: ${notice.title}`, icon: "none" }) }
-function goStudent(student) { uni.showToast({ title: `查看: ${student.name}`, icon: "none" }) }
-function viewAllStudents() {}
+function openNotices() { uni.navigateTo({ url: "/pages/messages/index" }) }
 
 function quickAction(type) {
   const routes = { notice: "/pages/notice/create", growth: "/pages/growth/create", pickup: "/pages/pickup/index" }
@@ -41,21 +49,50 @@ function formatDate() { const d = new Date(); return `${d.getMonth() + 1}月${d.
 
 async function loadClass() {
   loading.value = true
+  loadError.value = ""
   try {
-    const [infoRes, studentsRes] = await Promise.all([fetchTeacherClassInfo(), fetchTeacherClassStudents()])
+    const [infoRes, studentsRes, statRes] = await Promise.all([
+      fetchTeacherClassInfo(),
+      fetchTeacherClassStudents(),
+      fetchTeacherPickupOverview(),
+    ])
     info.value = infoRes.data || {}
-    const list = studentsRes.data?.list || []
-    students.value = list.map((s, i) => ({ ...s, _status: statusOptions[i % statusOptions.length] }))
-  } catch (err) { /* keep fallback data */ }
-  finally { loading.value = false; uni.stopPullDownRefresh() }
+    students.value = studentsRes.data?.list || []
+    pickupStat.value = statRes.data || {}
+  } catch (err) {
+    // 之前这里是静默 catch + 硬编码兜底，接口挂了会渲染出一份看起来很真的假班级
+    loadError.value = err?.message || "班级数据加载失败"
+    students.value = []
+  } finally {
+    loading.value = false
+    uni.stopPullDownRefresh()
+  }
+  // 通知是非关键数据，单独 catch —— 它失败不该让整个花名册变空
+  try {
+    const noticeRes = await fetchTeacherNotices({ page: 1, page_size: 2 })
+    recentNotices.value = (noticeRes.data?.list || []).map((n) => ({
+      id: n.id,
+      title: n.title,
+      // 后端给的是 "85%" 这样的字符串；totalCount 为 0 时会是空串
+      readRate: parseInt(n.read_rate, 10) || 0,
+      time: (n.published_at || n.created_at || "").slice(5, 10),
+    }))
+  } catch {
+    recentNotices.value = []
+  }
 }
 
-const className = computed(() => info.value.name || "大一班")
-const classGrade = computed(() => info.value.grade || "大班")
-const studentCount = computed(() => info.value.student_count || students.value.length || 30)
-const teacherName = computed(() => info.value.teacher_name || "张老师")
-const roomInfo = computed(() => info.value.room || "101室")
-const academicInfo = computed(() => "2025-2026学年 · 春季学期")
+const className = computed(() => info.value.name || "")
+const studentCount = computed(() => info.value.student_count || students.value.length)
+const teacherName = computed(() => (info.value.teacher && info.value.teacher.teacher_name) || "")
+const kindergartenName = computed(() => (info.value.teacher && info.value.teacher.kindergarten_name) || "")
+const academicInfo = computed(() => info.value.academic_year || "")
+const todaySnapshot = computed(() => ({
+  arrived: pickupStat.value.arrived || 0,
+  not_arrived: pickupStat.value.not_arrived || 0,
+  picked_up: pickupStat.value.picked_up || 0,
+  not_picked_up: pickupStat.value.not_picked_up || 0,
+}))
 
 onLoad(loadClass)
 onPullDownRefresh(loadClass)
@@ -73,7 +110,6 @@ onPullDownRefresh(loadClass)
           </view>
         </view>
         <view class="header-actions">
-          <view class="hdr-btn" @click="openClassSearch"><text class="hdr-btn-icon">&#xea76;</text></view>
           <view class="hdr-btn" @click="openNotices"><text class="hdr-btn-icon">&#xef94;</text><view class="hdr-badge" /></view>
         </view>
       </view>
@@ -83,7 +119,7 @@ onPullDownRefresh(loadClass)
       <view class="info-card">
         <view class="info-head">
           <view class="info-school-icon"><text class="info-school-icon-text">&#xf036;</text></view>
-          <view class="info-head-text"><text class="info-head-title">阳光幼儿园 · {{ className }}</text><text class="info-head-sub">{{ academicInfo }}</text></view>
+          <view class="info-head-text"><text class="info-head-title">{{ kindergartenName }} · {{ className }}</text><text class="info-head-sub">{{ academicInfo }}</text></view>
         </view>
         <view class="info-divider" />
         <view class="info-row">
@@ -96,21 +132,16 @@ onPullDownRefresh(loadClass)
             <view class="info-item-icon-box"><text class="info-item-icon-text">&#xf1ae;</text></view>
             <view class="info-item-text"><text class="info-item-label">学生总数</text><text class="info-item-value">{{ studentCount }}人</text></view>
           </view>
-          <view class="info-v-divider" />
-          <view class="info-item">
-            <view class="info-item-icon-box"><text class="info-item-icon-text">&#xee16;</text></view>
-            <view class="info-item-text"><text class="info-item-label">教室</text><text class="info-item-value">{{ roomInfo }}</text></view>
-          </view>
         </view>
       </view>
 
       <view class="section">
         <view class="section-head"><text class="section-title">今日快照</text><text class="section-date">{{ formatDate() }}</text></view>
         <view class="snapshot-row">
-          <view class="snap-item"><text class="snap-num green">{{ todaySnapshot.present }}</text><text class="snap-unit">人</text><text class="snap-label">已出勤</text></view>
-          <view class="snap-item"><text class="snap-num yellow">{{ todaySnapshot.leave }}</text><text class="snap-unit">人</text><text class="snap-label">请假中</text></view>
-          <view class="snap-item"><text class="snap-num orange">{{ todaySnapshot.late }}</text><text class="snap-unit">人</text><text class="snap-label">迟到</text></view>
-          <view class="snap-item"><text class="snap-num blue">{{ todaySnapshot.not_picked }}</text><text class="snap-unit">人</text><text class="snap-label">未接走</text></view>
+          <view class="snap-item"><text class="snap-num green">{{ todaySnapshot.arrived }}</text><text class="snap-unit">人</text><text class="snap-label">已入园</text></view>
+          <view class="snap-item"><text class="snap-num yellow">{{ todaySnapshot.not_arrived }}</text><text class="snap-unit">人</text><text class="snap-label">未入园</text></view>
+          <view class="snap-item"><text class="snap-num orange">{{ todaySnapshot.picked_up }}</text><text class="snap-unit">人</text><text class="snap-label">已接走</text></view>
+          <view class="snap-item"><text class="snap-num blue">{{ todaySnapshot.not_picked_up }}</text><text class="snap-unit">人</text><text class="snap-label">未接走</text></view>
         </view>
       </view>
 
@@ -122,21 +153,19 @@ onPullDownRefresh(loadClass)
           <view class="quick-btn" @click="quickAction('pickup')"><text class="quick-icon">&#xf1ae;</text><text class="quick-label">接送</text></view>
         </view>
         <view class="sub-title-row"><text class="sub-title">最新通知</text></view>
-        <view v-for="notice in recentNotices" :key="notice.id" class="notice-card" @click="goNotice(notice)">
+        <view v-for="notice in recentNotices" :key="notice.id" class="notice-card">
           <view class="notice-icon-box"><text class="notice-icon">&#xef94;</text></view>
           <view class="notice-body"><text class="notice-title">{{ notice.title }}</text><text class="notice-time">{{ notice.time }}</text></view>
           <view class="notice-rate">
             <view class="rate-bar-bg"><view class="rate-bar-fill" :style="{ width: notice.readRate + '%' }" /></view>
             <text class="rate-text">已读 {{ notice.readRate }}%</text>
           </view>
-          <text class="arrow-icon">&#xeaa0;</text>
         </view>
       </view>
 
       <view class="section">
         <view class="section-head">
           <text class="section-title">学生花名册</text>
-          <view class="view-all" @click="viewAllStudents"><text class="view-all-text">查看全部</text><text class="arrow-icon sm">&#xeaa0;</text></view>
         </view>
         <view class="search-filter-row">
           <view class="search-box">
@@ -150,14 +179,17 @@ onPullDownRefresh(loadClass)
           </scroll-view>
         </view>
         <view v-if="loading" class="state-wrap"><text class="state-text">加载中...</text></view>
+        <view v-else-if="loadError" class="state-wrap">
+          <text class="state-text">{{ loadError }}</text>
+          <view class="retry-btn" @click="loadClass">重试</view>
+        </view>
         <view v-else-if="filteredStudents.length === 0" class="state-wrap"><text class="state-text">暂无匹配学生</text></view>
         <view v-else class="student-list">
-          <view v-for="student in filteredStudents" :key="student.id" class="student-card" @click="goStudent(student)">
+          <view v-for="student in filteredStudents" :key="student.student_id" class="student-card">
             <image v-if="student.avatar" class="stu-avatar" :src="student.avatar" mode="aspectFill" />
             <view v-else class="stu-avatar fallback"><text>{{ (student.name || "学").slice(0, 1) }}</text></view>
-            <view class="stu-info"><view class="stu-name-row"><text class="stu-name">{{ student.name }}</text><text class="stu-no">{{ student.student_no || "" }}</text></view></view>
-            <view class="stu-status" :class="statusClassMap[student._status]"><view class="status-dot" /><text class="status-text">{{ student._status }}</text></view>
-            <text class="arrow-icon">&#xeaa0;</text>
+            <view class="stu-info"><view class="stu-name-row"><text class="stu-name">{{ student.name }}</text><text class="stu-no">{{ student.arrive_time ? student.arrive_time + " 入园" : "" }}</text></view></view>
+            <view class="stu-status" :class="PICKUP_STATUS_CLASS[student.pickup_status]"><view class="status-dot" /><text class="status-text">{{ PICKUP_STATUS_LABEL[student.pickup_status] || "—" }}</text></view>
           </view>
         </view>
       </view>
@@ -249,8 +281,9 @@ onPullDownRefresh(loadClass)
 .filter-pill { flex-shrink: 0; padding: $spacing-md 28rpx; border-radius: $border-radius-full; background: #fff; border: 2rpx solid #E2E8F0; text { font-size: $typography-font-size-base; color: $color-text-muted; } }
 .filter-pill.active { background: $color-semantic-info; border-color: $color-semantic-info; text { color: #fff; font-weight: 600; } }
 
-.state-wrap { display: flex; align-items: center; justify-content: center; padding: 120rpx 0; }
+.state-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: $spacing-lg; padding: 120rpx 0; }
 .state-text { font-size: $typography-font-size-md; color: $color-text-hint; }
+.retry-btn { padding: $spacing-sm $spacing-xl; border-radius: $border-radius-full; background: $color-semantic-info; font-size: $typography-font-size-base; color: #fff; }
 
 .student-list { display: flex; flex-direction: column; gap: $spacing-md; }
 .student-card { background: #fff; border-radius: $border-radius-xl; padding: $spacing-lg 28rpx; display: flex; align-items: center; gap: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }

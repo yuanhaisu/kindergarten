@@ -15,6 +15,7 @@ function todayStr() {
 const date = ref(todayStr())
 const queue = ref([])
 const loading = ref(false)
+const loadError = ref("")
 const submitting = ref(false)
 const selectedClass = ref(0) // 0 = all
 
@@ -49,15 +50,22 @@ const classList = computed(() => {
 
 async function loadQueue() {
   loading.value = true
+  loadError.value = ""
   try {
     await ensureLogin()
     const params = { date: date.value }
     if (selectedClass.value > 0) params.class_id = selectedClass.value
     const res = await fetchHealthQueue(params)
     queue.value = res.data?.list || []
-  } catch (e) {
-    uni.showToast({ title: "加载失败", icon: "none" })
-  } finally { loading.value = false }
+  } catch (err) {
+    // 必须记错误态：队列为空在这页的含义是「全部检查完毕」，
+    // 请求失败时静默留空等于告诉保健医今天的孩子都查过了。
+    // 老师角色调用还会撞 403（Casbin 未给 teacher 开放 /doctor/*）。
+    loadError.value = err?.message || "晨检数据加载失败"
+    queue.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 function openCheck(student) {
@@ -161,6 +169,11 @@ onLoad(() => { loadQueue() })
     <!-- Pending list -->
     <view class="section-title">⏳ 待检查 ({{ pendingList.length }})</view>
     <view v-if="loading" class="state">加载中...</view>
+    <!-- 错误态必须排在空态之前：否则加载失败会被当成「今天都查完了」 -->
+    <view v-else-if="loadError" class="state">
+      <text class="state-text">{{ loadError }}</text>
+      <view class="retry-btn" @click="loadQueue">重试</view>
+    </view>
     <view v-else-if="pendingList.length === 0" class="state">全部检查完毕 ✅</view>
     <view v-else class="list">
       <view v-for="s in pendingList" :key="s.id" class="student-row" @click="openCheck(s)">
@@ -288,7 +301,9 @@ onLoad(() => { loadQueue() })
 .filter-chip { display: inline-block; padding: 10rpx 28rpx; margin-right: 16rpx; border-radius: 999rpx; background: #fff; font-size: $typography-font-size-base; color: #666; }
 .filter-chip.active { background: #3b82f6; color: #fff; }
 .section-title { font-size: $typography-font-size-md; font-weight: 700; color: #333; margin: 20rpx 0 12rpx; }
-.state { text-align: center; padding: 120rpx 0; color: #999; font-size: $typography-font-size-md; }
+.state { display: flex; flex-direction: column; align-items: center; gap: $spacing-lg; text-align: center; padding: 120rpx 0; color: #999; font-size: $typography-font-size-md; }
+.state-text { font-size: $typography-font-size-md; color: $color-text-hint; }
+.retry-btn { padding: $spacing-sm $spacing-xl; border-radius: $border-radius-full; background: $color-semantic-info; color: #fff; font-size: $typography-font-size-base; }
 .list { display: flex; flex-direction: column; gap: $spacing-sm; }
 .student-row { display: flex; align-items: center; padding: 20rpx; background: #fff; border-radius: $border-radius-lg; }
 .student-row.done { opacity: 0.7; }

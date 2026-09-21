@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh, onShareAppMessage } from "@dcloudio/uni-app"
 import { fetchTeacherHomeOverview, fetchTeacherTodos, updateTeacherTodoAction } from "@/api/teacher-home"
 import { ensureLogin } from "@/utils/login"
+import { goTab } from "@/utils/nav"
 
 const loading = ref(false)
 const overview = ref({})
@@ -69,12 +70,10 @@ function handleAction(action) {
   uni.navigateTo({ url: action.path })
 }
 
+// 底部 tab 统一走 goTab：它自带「已是当前页则滚动置顶」的处理，
+// 也避免用 navigateTo push 导致页面栈无上限增长（超过 10 层会静默失败）。
 function navigateTo(path) {
-  if (path === "/pages/index/index") {
-    uni.pageScrollTo({ scrollTop: 0, duration: 300 })
-    return
-  }
-  uni.navigateTo({ url: path })
+  goTab(path)
 }
 
 function todoActionLabel(action) {
