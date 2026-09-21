@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from "vue"
-import { onLoad } from "@dcloudio/uni-app"
+import { onShow } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchAuthorizedPersons, deleteAuthorizedPerson } from "@/api/parent-pickup"
 
 const persons = ref([])
@@ -9,9 +10,15 @@ const loading = ref(false)
 
 async function loadData() {
   loading.value = true
-  try { await ensureLogin(); const res = await fetchAuthorizedPersons(1); persons.value = res.data?.list || [] }
-  catch (err) { uni.showToast({ title: err?.message || "加载失败", icon: "none" }) }
-  finally { loading.value = false }
+  try {
+    await ensureLogin()
+    const res = await fetchAuthorizedPersons(getCurrentStudentId())
+    persons.value = res.data?.list || []
+  } catch (err) {
+    uni.showToast({ title: err?.message || "加载失败", icon: "none" })
+  } finally {
+    loading.value = false
+  }
 }
 
 async function handleDelete(person) {
@@ -21,9 +28,10 @@ async function handleDelete(person) {
   catch (err) { uni.showToast({ title: err?.message || "删除失败", icon: "none" }) }
 }
 
-function goAdd() { uni.navigateTo({ url: "/pages/pickup/authorized" }) }
+function goAdd() { uni.navigateTo({ url: "/pages/pickup/authorized-create" }) }
 
-onLoad(loadData)
+// 用 onShow 而非 onLoad：从新增页返回时要重新拉列表，否则刚添加的人看不见。
+onShow(loadData)
 </script>
 
 <template>

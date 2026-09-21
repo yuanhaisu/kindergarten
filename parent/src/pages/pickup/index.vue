@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from "vue"
 import BottomNav from "@/components/BottomNav.vue"
-import { onLoad } from "@dcloudio/uni-app"
+import { onShow } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchPickupRecords } from "@/api/parent-pickup"
 
 const records = ref([])
@@ -12,14 +13,16 @@ async function loadData() {
   loading.value = true
   try {
     await ensureLogin()
-    const res = await fetchPickupRecords()
+    // ParentPickupRecords 走 parentCtx，按 query 上的 student_id 取当前孩子
+    const res = await fetchPickupRecords({ student_id: getCurrentStudentId() || undefined })
     records.value = res.data?.list || []
   } catch (err) {
     uni.showToast({ title: err?.message || "加载失败", icon: "none" })
   } finally { loading.value = false }
 }
 
-onLoad(loadData)
+// tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad
+onShow(loadData)
 </script>
 
 <template>

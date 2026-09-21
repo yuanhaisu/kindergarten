@@ -96,6 +96,12 @@
       }
     },
     {
+      "path": "pages/pickup/authorized-create",
+      "style": {
+        "navigationBarTitleText": "添加授权接送人"
+      }
+    },
+    {
       "path": "pages/tasks/index",
       "style": {
         "navigationBarTitleText": "亲子任务",

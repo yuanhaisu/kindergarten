@@ -27,8 +27,14 @@ onLoad(async () => {
   user.value = getUser()
 })
 
+// 家长端有 tabBar（见 pages.json），跳 tabBar 页必须用 switchTab ——
+// navigateTo 到 tabBar 页会静默失败，点「接送记录」没有任何反应。
+// 列表与 pages.json → tabBar.list[].pagePath 保持一致。
+const tabBarPaths = ["/pages/index/index", "/pages/growth/index", "/pages/pickup/index", "/pages/profile/index"]
+
 function goPage(path) {
-  uni.navigateTo({ url: path })
+  if (tabBarPaths.includes(path)) uni.switchTab({ url: path })
+  else uni.navigateTo({ url: path })
 }
 </script>
 

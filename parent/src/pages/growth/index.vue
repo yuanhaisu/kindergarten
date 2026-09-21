@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref } from "vue"
-import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { fetchGrowthFeed } from "@/api/parent-growth"
 import { fetchParentHomeOverview } from "@/api/parent-home"
+import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import BottomNav from "@/components/BottomNav.vue"
 
 const feeds = ref([])
@@ -45,10 +46,13 @@ async function loadData() {
   loadError.value = ""
   try {
     await ensureLogin()
+    const sid = getCurrentStudentId()
     const [overviewRes, feedRes] = await Promise.all([
-      fetchParentHomeOverview(),
-      fetchGrowthFeed({ page: 1, page_size: 20 }),
+      fetchParentHomeOverview(sid),
+      fetchGrowthFeed({ page: 1, page_size: 20, student_id: sid || undefined }),
     ])
+    // 与首页同样承担自愈：存储为空时把服务端认定的当前孩子落盘
+    syncCurrentStudentFromOverview(overviewRes.data)
     const stu = overviewRes.data?.current_student
     if (stu) {
       childInfo.value = {
@@ -69,7 +73,8 @@ async function loadData() {
   }
 }
 
-onLoad(loadData)
+// tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad，切完孩子会看不到变化
+onShow(loadData)
 onPullDownRefresh(loadData)
 </script>
 

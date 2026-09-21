@@ -2,6 +2,7 @@
 import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchPointsOverview, fetchLeaderboard, fetchAchievements } from "@/api/parent-points"
 
 const overview = ref({})
@@ -12,10 +13,11 @@ const tab = ref("overview")
 async function loadData() {
   try {
     await ensureLogin()
+    const sid = getCurrentStudentId()
     const [o, l, a] = await Promise.all([
-      fetchPointsOverview(1),
-      fetchLeaderboard({ student_id: 1 }),
-      fetchAchievements(1)
+      fetchPointsOverview(sid),
+      fetchLeaderboard({ student_id: sid }),
+      fetchAchievements(sid)
     ])
     overview.value = o.data || {}
     leaderboard.value = l.data?.list || []

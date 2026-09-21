@@ -1,8 +1,9 @@
 <script setup>
 import { computed, ref } from "vue"
-import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchParentHomeOverview, fetchHomeFeeds, fetchAnnouncements, switchStudent } from "@/api/parent-home"
 import { ensureLogin } from "@/utils/login"
+import { getCurrentStudentId, setCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { bindParentPhone } from "@/api/auth"
 import BottomNav from "@/components/BottomNav.vue"
 
@@ -46,11 +47,16 @@ async function loadHome() {
   loadError.value = ""
   try {
     await ensureLogin()
+    // 两个请求用同一个 student_id。原先 feeds 取的是 overview 更新前的旧值，
+    // 切换孩子后会错位一次。
+    const sid = getCurrentStudentId()
     const [overviewRes, feedsRes] = await Promise.all([
-      fetchParentHomeOverview(),
-      fetchHomeFeeds({ page: 1, page_size: 5, student_id: currentStudent.value.id || undefined })
+      fetchParentHomeOverview(sid),
+      fetchHomeFeeds({ page: 1, page_size: 5, student_id: sid || undefined })
     ])
     overview.value = overviewRes.data || {}
+    // 存储为空时（首次登录 / 被清空）把服务端认定的当前孩子落盘，后续页面才有 id 可传
+    syncCurrentStudentFromOverview(overviewRes.data)
     feeds.value = feedsRes.data?.list || []
     needBindPhone.value = false
   } catch (err) {
@@ -87,12 +93,15 @@ async function handleGetPhoneNumber(e) {
 
 async function handleSwitchStudent(student) {
   if (student.id === currentStudent.value.id) return
+  // 先落盘：服务端的 switch-student 只校验归属后原样返回，不写任何存储，
+  // 当前孩子完全由本地维护。接口失败也不该阻止本地切换。
+  setCurrentStudentId(student.id)
   try {
     await switchStudent(student.id)
-    await loadHome()
-  } catch (err) {
-    uni.showToast({ title: err?.message || "切换失败", icon: "none" })
+  } catch {
+    /* 后端该接口是空操作，失败不影响本地已切换的选择 */
   }
+  await loadHome()
 }
 
 const tabBarPaths = ["/pages/growth/index", "/pages/pickup/index", "/pages/index/index", "/pages/profile/index"]
@@ -121,7 +130,9 @@ function feedTypeLabel(type) {
   return type === "growth" ? "成长记录" : "通知"
 }
 
-onLoad(loadHome)
+// 必须是 onShow：这是 tabBar 页，switchTab 切回来不会重跑 onLoad，
+// 用 onLoad 的话切完孩子再切回首页看到的还是旧数据。
+onShow(loadHome)
 onPullDownRefresh(loadHome)
 </script>
 

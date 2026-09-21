@@ -1,9 +1,12 @@
 import { requestWithAuth } from "@/api/http"
 
-export function fetchParentHomeOverview() {
+// student_id 以 query 传给后端（parentCtx 读的是 c.Query("student_id")）。
+// 不传时后端回退到绑定关系里的第一个孩子。
+export function fetchParentHomeOverview(studentId) {
   return requestWithAuth({
     url: "/parent/home/overview",
-    method: "GET"
+    method: "GET",
+    data: { student_id: studentId || undefined }
   })
 }
 

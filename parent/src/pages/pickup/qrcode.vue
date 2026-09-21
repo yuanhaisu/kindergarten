@@ -2,6 +2,7 @@
 import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchPickupQRCode } from "@/api/parent-pickup"
 
 const qrData = ref({})
@@ -11,7 +12,7 @@ async function loadData() {
   loading.value = true
   try {
     await ensureLogin()
-    const res = await fetchPickupQRCode(1)
+    const res = await fetchPickupQRCode(getCurrentStudentId())
     qrData.value = res.data || {}
   } catch (err) {
     uni.showToast({ title: err?.message || "加载失败", icon: "none" })

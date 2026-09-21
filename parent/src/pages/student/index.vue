@@ -2,6 +2,7 @@
 import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { getCurrentStudentId, setCurrentStudentId } from "@/utils/currentStudent"
 import { fetchStudentProfile, fetchStudents, unbindStudent } from "@/api/parent-student"
 
 const profile = ref({})
@@ -12,7 +13,7 @@ async function loadData() {
   loading.value = true
   try {
     await ensureLogin()
-    const [p, s] = await Promise.all([fetchStudentProfile(1), fetchStudents()])
+    const [p, s] = await Promise.all([fetchStudentProfile(getCurrentStudentId()), fetchStudents()])
     profile.value = p.data || {}
     students.value = s.data?.list || []
   } finally { loading.value = false }
@@ -23,6 +24,13 @@ async function handleUnbind(student) {
   if (!r) return
   try {
     await unbindStudent(student.id)
+    // 解绑的正好是当前孩子时，存储里会留下一个孤儿 id。
+    // ResolveContext 对不属于该家长的 id 会静默回退到第一个孩子，
+    // 界面看起来正常，用户却以为自己还在原来的孩子上。
+    if (student.id === getCurrentStudentId()) {
+      const next = students.value.find((s) => s.id !== student.id)
+      setCurrentStudentId(next ? next.id : null)
+    }
     uni.showToast({ title: "已解绑", icon: "success" })
     loadData()
   } catch (err) {

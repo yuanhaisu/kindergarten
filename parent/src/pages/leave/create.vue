@@ -1,9 +1,12 @@
 <script setup>
 import { ref } from "vue"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 import { createLeave } from "@/api/parent-leave"
 
 const form = ref({
-  student_id: 1,
+  // 后端 CreateLeave 严格校验 student_id 归属（不属于该家长直接 403），
+  // 所以这里必须是真实选中的孩子，不能是写死的 1
+  student_id: getCurrentStudentId(),
   reason: "",
   start_date: "",
   end_date: "",
@@ -22,8 +25,20 @@ function selectType(t) {
   activeType.value = t.key
 }
 
-function pickDate(field) {
-  uni.showModal({ title: "选择日期", content: "请在真实环境中使用日期选择器" })
+// 只能选今天及以后；也用作 picker 的起始边界
+const todayStr = (() => {
+  const d = new Date()
+  const p = (n) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+})()
+
+function onDateChange(field, e) {
+  const val = e.detail.value
+  form.value[field] = val
+  // 结束日期不得早于开始日期 —— 后端会把它判为参数无效直接驳回
+  if (field === "start_date" && form.value.end_date && form.value.end_date < val) {
+    form.value.end_date = val
+  }
 }
 
 async function handleSubmit() {
@@ -67,15 +82,21 @@ async function handleSubmit() {
       <text class="section-title">请假时间</text>
       <view class="spacer-h16" />
       <view class="date-row">
-        <view class="date-item" @click="pickDate('start_date')">
-          <text class="date-label">开始日期</text>
-          <text class="date-val">{{ form.start_date || "请选择" }}</text>
-        </view>
+        <picker class="date-picker" mode="date" :value="form.start_date" :start="todayStr"
+          @change="onDateChange('start_date', $event)">
+          <view class="date-item">
+            <text class="date-label">开始日期</text>
+            <text class="date-val">{{ form.start_date || "请选择" }}</text>
+          </view>
+        </picker>
         <text class="date-sep">~</text>
-        <view class="date-item" @click="pickDate('end_date')">
-          <text class="date-label">结束日期</text>
-          <text class="date-val">{{ form.end_date || "请选择" }}</text>
-        </view>
+        <picker class="date-picker" mode="date" :value="form.end_date"
+          :start="form.start_date || todayStr" @change="onDateChange('end_date', $event)">
+          <view class="date-item">
+            <text class="date-label">结束日期</text>
+            <text class="date-val">{{ form.end_date || "请选择" }}</text>
+          </view>
+        </picker>
       </view>
     </view>
 
@@ -127,7 +148,9 @@ async function handleSubmit() {
 .type-chip.active .type-label { color: $color-brand-primary; }
 
 .date-row { display: flex; align-items: center; gap: $spacing-md; }
-.date-item { flex: 1; padding: $spacing-lg; border-radius: $border-radius-md; background: $color-bg-page; }
+// picker 取代 .date-item 成为 flex 子项，不补这条两个日期框会塌成内容宽度
+.date-picker { flex: 1; }
+.date-item { flex: 1; width: 100%; padding: $spacing-lg; border-radius: $border-radius-md; background: $color-bg-page; }
 .date-label { display: block; font-size: $typography-font-size-sm; color: $color-text-hint; }
 .date-val { display: block; margin-top: 8rpx; font-size: $typography-font-size-md; color: $color-text-primary; font-weight: 500; }
 .date-sep { font-size: $typography-font-size-md; color: $color-text-hint; }

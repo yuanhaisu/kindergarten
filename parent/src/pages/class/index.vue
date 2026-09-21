@@ -2,18 +2,27 @@
 import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchClassInfo } from "@/api/parent-class"
 
 const info = ref({})
 const loading = ref(false)
+const loadError = ref("")
 
 async function loadData() {
   loading.value = true
+  loadError.value = ""
   try {
     await ensureLogin()
-    const res = await fetchClassInfo(1)
+    const res = await fetchClassInfo(getCurrentStudentId())
     info.value = res.data || {}
-  } finally { loading.value = false }
+  } catch (err) {
+    // 原先只有 finally 没有 catch：失败会变成未处理的 rejection，
+    // 页面停在空白，用户看不到任何原因
+    loadError.value = err?.message || "班级信息加载失败"
+  } finally {
+    loading.value = false
+  }
 }
 
 onLoad(loadData)
@@ -22,6 +31,7 @@ onLoad(loadData)
 <template>
   <view class="page">
     <view v-if="loading" class="state">加载中...</view>
+    <view v-else-if="loadError" class="state">{{ loadError }}</view>
     <template v-else>
       <view class="card">
         <text class="title">{{ info.name || "班级" }}</text>

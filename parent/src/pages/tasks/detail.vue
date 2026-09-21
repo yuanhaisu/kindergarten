@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchTaskDetail, checkinTask, fetchCheckinHistory } from "@/api/parent-task"
 
 const detail = ref({})
@@ -11,7 +12,11 @@ const loading = ref(false)
 async function loadData(id) {
   loading.value = true
   try {
-    const [d, h] = await Promise.all([fetchTaskDetail(id), fetchCheckinHistory(id)])
+    const [d, h] = await Promise.all([
+      fetchTaskDetail(id),
+      // 打卡记录的 handler 走 parentCtx，按 query 上的 student_id 区分孩子
+      fetchCheckinHistory(id, { student_id: getCurrentStudentId() || undefined }),
+    ])
     detail.value = d.data || {}
     history.value = h.data?.list || []
   } finally { loading.value = false }
@@ -24,7 +29,8 @@ async function handleCheckin() {
     return
   }
   try {
-    const res = await checkinTask(detail.value.id, { student_id: 1, content })
+    // student_id 走 query（第三参）：body 里的会被后端丢弃
+    const res = await checkinTask(detail.value.id, { content }, getCurrentStudentId())
     checkinContent.value = ""
     detail.value.today_checked_in = true
     detail.value.streak_days = res.data?.streak_days
