@@ -71,7 +71,7 @@ func (s *FileService) Upload(ctx context.Context, userID uint64, fh *multipart.F
 	if err != nil {
 		return nil, err
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	if err := s.oss.PutObject(objectKey, src, contentType); err != nil {
 		log.L(ctx).Error("oss put object failed", "err", err, "key", objectKey)

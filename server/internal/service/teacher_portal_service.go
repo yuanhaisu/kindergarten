@@ -388,7 +388,7 @@ func (s *TeacherPortalService) CreateNotice(ctx context.Context, tc *TeacherPort
 	status := domain.NoticeStatusPublished
 	now := time.Now()
 	var scheduledAt *time.Time
-	var publishedAt *time.Time = &now
+	publishedAt := &now
 	if req.ScheduleEnabled {
 		t, err := time.Parse(time.RFC3339, req.ScheduledAt)
 		if err != nil || !t.After(now) {

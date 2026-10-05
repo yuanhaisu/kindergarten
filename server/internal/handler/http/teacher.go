@@ -272,5 +272,6 @@ func (h *Handler) GetTeacherInviteQRCode(c *gin.Context) {
 	}
 	c.Header("Content-Type", "image/png")
 	c.Header("Cache-Control", "public, max-age=3600")
-	c.Writer.Write(png)
+	// 响应头已发出，写失败无从补救，忽略返回值
+	_, _ = c.Writer.Write(png)
 }

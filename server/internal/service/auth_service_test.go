@@ -103,9 +103,3 @@ func TestKindergartenIDFromUserRoles_NoAdmin(t *testing.T) {
 func TestKindergartenIDFromUserRoles_Empty(t *testing.T) {
 	assert.Equal(t, uint64(0), kindergartenIDFromUserRoles([]domain.UserRole{}))
 }
-
-// --- helper ---
-
-func u64ptr(v uint64) *uint64 {
-	return &v
-}

@@ -222,7 +222,7 @@ func (h *Handler) ImportStudents(c *gin.Context) {
 		response.ErrValidation(c, "无法读取上传文件")
 		return
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 	body, err := io.ReadAll(src)
 	if err != nil {
 		response.ErrInternal(c, "读取文件失败")

@@ -72,7 +72,7 @@ func (s *Storage) PutFromMultipart(c *gin.Context, formKey, objectKey string) er
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	return s.bucket.PutObject(objectKey, src,
 		alioss.ContentType(fh.Header.Get("Content-Type")),
