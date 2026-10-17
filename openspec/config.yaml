@@ -1,0 +1,107 @@
+schema: spec-driven
+
+# 注入到所有 artifact 指令的项目上下文（≤50KB）。
+# 只写 agent 读代码推不出来的硬约束；可发现的事实不要写进来。
+context: |
+  养成星球（Nurture Planet）— 幼儿园数字化管理平台。一个 Go 后端 + 三个客户端：
+  teacher/（uni-app 小程序）、parent/（uni-app 小程序）、admin/（Nuxt 3 web）。
+  全链路 kindergarten_id 多租户隔离。
+
+  【本规格层的职责边界 —— 最重要的一条】
+  仓库已有多个真相源，本规格层（openspec/specs/）只写「行为需求 + 验收标准」，
+  严禁侵入下列已饱和的语义格：
+
+    - 接口形状（路由/字段/响应包络）→ backend/api/  是唯一 SoT，改接口先改这里
+    - 数据结构（表/字段/关联）      → server/internal/domain/  是唯一 SoT（58 struct）
+    - 架构铁律/硬规则/已知坑        → CLAUDE.md  是唯一 SoT
+    - 样式/间距/色值                → shared-design-tokens/tokens.json  是唯一 SoT
+    - 测试用例编号                  → docs/tests/TEST_CATALOG.md  是唯一 SoT
+
+  规格里提到接口时只写「调用哪个端点、期望什么行为」，不要复述字段清单；
+  提到表结构时只写「需要什么数据约束」，不要复述 struct 定义。
+
+  【不可推断的硬约束】
+  1. tabBar 两端不同：家长端 pages.json 有 tabBar（4 项：index/growth/pickup/profile），
+     老师端没有 tabBar。跳转到 tabBar 页面家长端必须 uni.switchTab，
+     老师端不存在 switchTab 场景。设计任何跳转前先核对这一点。
+  2. 登录两端各自独立实现（各有 utils/login.js），不是共享包。改登录必须两端同改。
+  3. 所有颜色/圆角/阴影/间距/字号必须走 design token，禁止硬编码。
+     tokens.json 写 px 设计稿值，构建时 ×2 输出 rpx。
+  4. Wire DI：新增 repo/service/handler 后必须 make wire；
+     service 层接口依赖必须在 wire.go 里补 wire.Bind，否则报 no provider found。
+  5. Casbin RBAC：新增路由必须同步 rbac_policy.csv，否则 403。
+  6. 环境是 Windows 11 + PowerShell 5.1（无 && / 无三元）；.ps1 含中文必须 UTF-8 BOM。
+  7. 小程序 MCP 验证有陷阱：wechat_navigate 绕过业务代码，不能替代真实交互验证；
+     双端 MCP 自动化不能并行；截图需 IDE 窗口前台。验收设计时不要假设
+     "MCP 导航过了 = 功能对了"。
+  8. backend/model/ 已停更，不要引用它。cmd/ 下 seed*/refreshtasks/initcheck
+     是一次性调试脚本，refreshtasks 与 initcheck 具破坏性。
+
+rules:
+  proposal:
+    # 路由规则：别让 OpenSpec 吞掉不该它管的工作
+    - 先判断该不该走 OpenSpec。触点少于 3 层的变更（单点 bug、typo、样式微调、
+      配置调整）不使用 OpenSpec，直接修改并在 commit message 里说清
+    - 必须写清「为什么做」与「明确不做什么」（out of scope）
+    - 涉及跨端行为时，必须点名涉及哪几个端（teacher / parent / admin），不要笼统说"前端"
+    - 不得要求修改 backend/api/ 的接口形状，除非该变更本身就是在改契约；
+      若是，proposal 必须显式声明「本次将修改 backend/api/，属于契约变更」
+    - 涉及新增分类/类型/标签/状态等枚举语义时，必须先查三处权威来源：
+      design-data/ 设计稿、server/internal/domain/dict.go 字典体系、代码里已有的常量集合。
+      三处都没有 → 这是「待产品决策」的阻塞项，写进 proposal 的阻塞清单并停下，
+      不要自行拟取值往下推
+    - 【契约字段溯源】契约变更不得夹带私货。新增/修改的响应字段必须在 proposal 里
+      点名其设计稿（design-data/）出处或明确的业务场景。指认不出的字段视为多余，
+      不得写进契约。「社交接口惯例上会有」「以后可能用得上」「加上没坏处」都不是理由
+
+  specs:
+    # 行为规格格式
+    - 用 `## ADDED Requirements` / `## MODIFIED Requirements` / `## REMOVED Requirements`
+      写增量，每条 Requirement 用 `The <actor> SHALL <behavior>` 句式
+    - 每条 Requirement 下必须给出 `#### Scenario:`（WHEN/THEN），覆盖主路径
+    - 每条验收场景必须引用 docs/tests/TEST_CATALOG.md 中的 TC ID；
+      若该场景没有对应 TC，标注 `TC-NEW-<模块缩写>-<NNNN>` 并在 tasks 里登记补录
+    - 只写行为与验收，不要写接口字段清单或 struct 定义（见 context 里的职责边界）
+    - 【取值溯源】规格里出现的任何枚举取值（分类名/状态名/类型名/标签名）必须能指到
+      权威来源：design-data/ 设计稿、docs/ 已有文档、server/internal/domain/ 已有常量、
+      或 dict 字典表。禁止凭空拟取值再写成 SHALL + Scenario —— 那会把臆断固化成 11 条假 TC。
+      无权威来源的取值一律标 `[待定]`，并在 proposal 里列为阻塞项，不得写入验收场景
+
+  design:
+    # 跨端触点清单（强制枚举，防止漏改一层）
+    - 必须给出「跨端触点清单」小节，逐项列出本次会碰到的层：
+      Go domain / repository / service / handler / Casbin policy / router.go /
+      backend/api/ 契约 / 涉及的端页面（具体到 pages/*.vue）/ design token
+    - 触点清单里每一项要么写「会改」并说明改什么，要么写「不改」并说明为何不受影响
+    - 涉及跳转的设计必须核对 tabBar 差异（家长端 4 tab / 老师端无 tabBar），
+      并写明用的是 navigateTo 还是 switchTab
+    - 涉及新表/新字段时，说明 AutoMigrate 的局限（只增不改），
+      需要手工迁移的必须写 SQL 并用 go run ./cmd/dbcheck <table> 核实
+    - 【契约字段溯源】触点清单里凡标注「会改（契约变更）」的，design 必须给出字段级清单：
+      每个新增/修改的响应字段都要指到 design-data/ 设计稿的具体 UI 元素，或写明明确业务场景。
+      设计稿没画、业务场景说不清的字段不得进契约。新增字段还要说明为什么不能由已有字段派生
+      （反例：media_count 之于 media.length 是冗余派生值，应删）
+    - 【接口粒度】列表接口与详情接口的字段要分清：只有详情页渲染的字段
+      （如 related_students、完整评论列表）不得塞进列表接口的响应
+    - 复杂流程用 ASCII 时序图或状态图；不要用 Mermaid（终端渲染不保证）
+
+  tasks:
+    # 实现清单 + 验收门
+    - 任务必须按触点分组（后端 / 契约 / 端页面 / token / 测试），不要混排
+    - 涉及并行安全的任务标注 [P]
+    - 每组任务末尾必须有「验证」任务：编译（go build / npm run build:mp-weixin /
+      npm run build）、以及对照 specs 的逐条验收
+    - 实现完成后必须逐条对照 specs 验证，未验证不得宣布完成、不得 archive
+    - UI 交互验证必须用真实点击（wechat_automator 的 tap/input 或真机），
+      不能用 MCP 导航替代；导航跳转需核对 tabBar 场景
+    - 收工前必须杀掉残留的 uni watcher（dev:mp-weixin 是 watch 进程）
+
+operations:
+  apply:
+    guidance:
+      - 实现过程中若发现 spec 有误，停下来先改 spec（用 update 工作流），不要带着错误规格硬写代码
+      - 每完成一个触点分组就做一次 checkpoint，前一组异常不要进下一组
+  archive:
+    guidance:
+      - archive 前必须确认 specs 的 delta 已 sync 进 openspec/specs/ 活基线
+      - 归档说明里写清本次实际碰到的触点与设计阶段的差异，方便未来回溯
