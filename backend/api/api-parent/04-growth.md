@@ -3,12 +3,18 @@
 > 基础路径：`/api/v1/parent` | 鉴权：`Authorization: Bearer <token>`（角色 `parent`）
 >
 > Response 均为 `data` 部分，省略外层 `{ "code": 0, "message": "success" }` 包装。
+>
+> ⚠️ **2026-10 破坏性变更**：列表响应移除了 `likes_count` / `media_count` / `target_type` / `class_name` / `performance_tags`，`related_students` 移至详情；详情移除了 `media_count`。设计稿从未渲染这些字段，前端也未消费。字段溯源见 `docs/growth-feed-field-review.md`。
+>
+> ⚠️ **2026-10 增量变更**：列表与详情条目新增 `badge`（可空，获奖见证徽章）。纯增量，旧客户端忽略即可。设计依据见 `docs/achievement-badge-review.md`。
+>
+> ⚠️ **2026-10 增量变更**：列表条目新增 `scope`（`individual` / `class`），由原 `target_type` 派生，供家长端「只看孩子 / 看全部」筛选。纯增量，非破坏性；不是把 `target_type` 重新暴露给客户端。
 
 ---
 
 ### GET `/parent/growth/feed`
 
-> 成长时光流（家长端时间线）
+> 成长时光流（家长端时间线）。**列表只携带卡片实际渲染的内容**；仅详情页需要的信息（如 `related_students`）见 `GET /parent/growth/feed/:id`。
 
 ```json
 // Query: ?student_id=1&year=2026&month=3&page=1&page_size=10
@@ -18,6 +24,7 @@
   "list": [
     {
       "id": 1,
+      "scope": "class",
       "date": "2026-03-19",
       "content": "今天的美术课主题是《我心中的春天》，小朋友们都发挥了自己的想象力...",
       "media": [
@@ -25,18 +32,18 @@
           "id": 1,
           "file_url": "https://cdn.example.com/growth/1.jpg",
           "thumb_url": "https://cdn.example.com/growth/1_thumb.jpg",
-          "file_type": "image"
+          "file_type": "image",
+          "student_ids": [3, 5]
         },
         {
           "id": 2,
           "file_url": "https://cdn.example.com/growth/2.mp4",
           "thumb_url": "https://cdn.example.com/growth/2_thumb.jpg",
           "file_type": "video",
-          "duration": 30
+          "duration": 30,
+          "student_ids": []
         }
       ],
-      "media_count": 6,
-      "likes_count": 28,
       "comments_count": 12,
       "is_liked": true,
       "creator": {
@@ -53,6 +60,22 @@
 }
 ```
 
+**字段说明**
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 记录 ID，点卡片进详情用 |
+| `scope` | 记录范围：`individual`（个体记录，原 `target_type=2`）/ `class`（全班记录，原 `target_type=1`）。由 `target_type` 派生，供家长端「只看孩子 / 看全部」筛选与归属标识；不是把内部 `target_type` 暴露给客户端 |
+| `date` | 记录所属日期 `YYYY-MM-DD`，前端据此派生月份分组 |
+| `content` | 正文 |
+| `media` | 附件数组，无附件时为 `[]`（**不是 `null`**），前端按 `length` 判断是否渲染照片区 |
+| `media[].student_ids` | 该照片上**已确认**点名的孩子 ID（恒为数组，无点名为 `[]`）。家长端「只看我的孩子」按 `includes(当前孩子)` 筛选；**未确认的 AI 建议不会出现在此字段**（信任模型：AI 建议、老师背书） |
+| `comments_count` | 评论条数，0 时前端渲染「评论」 |
+| `is_liked` | 当前家长是否已点赞 |
+| `creator` | 发布者 `{id, nickname, avatar}` |
+| `created_at` | 发布时刻 ISO8601 |
+| `badge` | **可空**，仅当本条记录是某次获奖的见证时存在。形状 `{name, icon, color_kind}`，`color_kind` 取 `warning`/`info`（前端据此映射 design token 语义色，不落库） |
+
 ---
 
 ### GET `/parent/growth/feed/:id`
@@ -64,6 +87,7 @@
 {
   "id": 1,
   "date": "2026-03-19",
+  "target_type": 1,
   "breakfast_rating": 3,
   "lunch_rating": 2,
   "dinner_rating": 3,
@@ -73,15 +97,16 @@
   "afternoon_mood": 2,
   "performance_tags": ["乐于助人", "积极发言", "遵守纪律"],
   "content": "今天的美术课主题是《我心中的春天》，小朋友们都发挥了自己的想象力...",
+  "sync_to_feed": true,
   "media": [
     {
       "id": 1,
       "file_url": "https://cdn.example.com/growth/1.jpg",
       "thumb_url": "https://cdn.example.com/growth/1_thumb.jpg",
-      "file_type": "image"
+      "file_type": "image",
+      "student_ids": [3]
     }
   ],
-  "media_count": 6,
   "likes_count": 28,
   "comments_count": 12,
   "is_liked": true,
@@ -96,6 +121,18 @@
   "created_at": "2026-03-19T11:30:00Z"
 }
 ```
+
+**字段说明**
+
+| 字段 | 说明 |
+| --- | --- |
+| `performance_tags` | **数组**（不是逗号串），库内为逗号分隔字符串，服务端解析后返回。无标签时为 `[]` |
+| `related_students` | **仅发给指定学生的记录非空**；发给全班的记录不含此键。形状 `[{id, name, avatar}]` |
+| `target_type` / `sync_to_feed` | 服务端实现已返回，此处如实记录。**尚无家长端详情设计稿**可判定是否渲染，见 `openspec/changes/align-parent-growth-feed/design.md` 的「证据缺口」 |
+| `badge` | **可空**，仅当本条记录是当前孩子某次获奖的见证时存在。形状 `{name, icon, color_kind}` |
+| `media[].student_ids` | 同列表语义（仅已确认点名）。**个体记录（`target_type=2`）不做「只看我的」筛选**——照片本就属于这些孩子，仅呈现标识 |
+| ~~`media_count`~~ | **已移除**：可由 `media.length` 派生，且实现从未返回 |
+| 其余 | 与列表同名字段语义一致 |
 
 ---
 

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>小明的成长时光</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="is-loading">
+  <a class="skip-link" href="#timeline">跳到成长记录</a>
+
+  <div class="app" id="top">
+    <header class="topbar" data-od-id="topbar">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true"><span></span></span>
+        <h1 class="brand__title">小明的成长时光</h1>
+      </div>
+      <button class="icon-btn" id="moreBtn" type="button" aria-label="更多选项" aria-expanded="false" aria-controls="moreMenu">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg>
+      </button>
+      <div class="more-menu" id="moreMenu" role="menu" hidden>
+        <button type="button" role="menuitem" data-toast="消息提醒设置暂未开放">消息提醒</button>
+        <button type="button" role="menuitem" data-toast="隐私与安全说明暂未开放">隐私与安全</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="child-card" data-od-id="child-overview" aria-labelledby="childName">
+        <div class="child-head">
+          <div class="avatar-wrap" aria-hidden="true">
+            <span class="avatar">满</span>
+            <span class="avatar-orbit"></span>
+          </div>
+          <div class="child-id">
+            <p class="eyebrow">我的孩子</p>
+            <h2 class="child-name" id="childName">王小明</h2>
+            <p class="child-meta">小一班 <span aria-hidden="true">·</span> 4岁半</p>
+          </div>
+          <button class="export-btn" id="exportBtn" type="button">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+            导出相册
+          </button>
+        </div>
+        <dl class="metrics" aria-label="小明的成长数据">
+          <div class="metric"><dt>成长记录</dt><dd>3</dd></div>
+          <div class="metric"><dt>精彩照片</dt><dd>5</dd></div>
+          <div class="metric"><dt>获得奖章</dt><dd>2</dd></div>
+          <div class="metric"><dt>出勤率</dt><dd>98<span>%</span></dd></div>
+        </dl>
+      </section>
+
+      <section class="view-panel" data-od-id="view-controls" aria-labelledby="viewTitle">
+        <h2 class="sr-only" id="viewTitle">查看与筛选</h2>
+        <div class="segmented" role="group" aria-label="查看方式">
+          <button class="segment is-active" type="button" data-view="child" aria-pressed="true" aria-controls="timeline">
+            <span class="segment__label">只看孩子</span>
+            <span class="segment__count" data-count-view="child">3 条 · 5 张</span>
+          </button>
+          <button class="segment" type="button" data-view="all" aria-pressed="false" aria-controls="timeline">
+            <span class="segment__label">看全部</span>
+            <span class="segment__count" data-count-view="all">5 条 · 8 张</span>
+          </button>
+        </div>
+        <p class="view-hint" id="viewHint" aria-live="polite">只看孩子：只显示与小明确认相关的内容</p>
+        <div class="chips" role="group" aria-label="内容筛选" data-od-id="filter-chips">
+          <button class="chip is-active" type="button" data-kind="all" aria-pressed="true">全部内容</button>
+          <button class="chip" type="button" data-kind="campus" aria-pressed="false">校园生活</button>
+          <button class="chip" type="button" data-kind="activity" aria-pressed="false">活动照片</button>
+          <button class="chip" type="button" data-kind="work" aria-pressed="false">作品展示</button>
+          <button class="chip" type="button" data-kind="award" aria-pressed="false">获奖记录</button>
+        </div>
+      </section>
+
+      <p class="sr-only" id="feedSummary" aria-live="polite"></p>
+
+      <div class="skeleton" id="skeleton" role="status">
+        <span class="sr-only">正在加载成长记录</span>
+        <div class="sk-month" aria-hidden="true"></div>
+        <div class="sk-card" aria-hidden="true">
+          <div class="sk-head"><span class="sk-avatar"></span><span class="sk-line sk-line--name"></span></div>
+          <span class="sk-line sk-line--long"></span><span class="sk-line sk-line--short"></span>
+          <div class="sk-photo"></div>
+        </div>
+        <div class="sk-card" aria-hidden="true">
+          <div class="sk-head"><span class="sk-avatar"></span><span class="sk-line sk-line--name"></span></div>
+          <span class="sk-line sk-line--long"></span>
+          <div class="sk-photo"></div>
+        </div>
+      </div>
+
+      <section class="state" id="errorState" hidden aria-labelledby="errorTitle">
+        <div class="state__art state__art--error" aria-hidden="true"><span></span></div>
+        <h2 class="state__title" id="errorTitle">成长记录没能加载出来</h2>
+        <p class="state__text">网络开了个小差，请稍后再试。</p>
+        <button class="button-soft" id="retryBtn" type="button">重新加载</button>
+      </section>
+
+      <section class="state" id="emptyState" hidden aria-labelledby="emptyTitle">
+        <div class="state__art" aria-hidden="true"><span></span></div>
+        <h2 class="state__title" id="emptyTitle">还没有小明的专属记录</h2>
+        <p class="state__text" id="emptyText">换个分类看看，或切到「看全部」浏览班级动态。</p>
+        <button class="button-soft" id="emptyCta" type="button">看全部班级动态</button>
+      </section>
+
+      <section class="timeline" id="timeline" aria-labelledby="timelineTitle" data-od-id="timeline">
+        <h2 class="sr-only" id="timelineTitle">成长记录</h2>
+        <div class="month" data-month="2026-03">
+          <div class="month__head"><span class="month__dot" aria-hidden="true"></span><h3 class="month__title">2026年3月</h3><span class="month__count" data-month-count>2 条</span></div>
+          <div class="month__list">
+            <article class="record" data-od-id="record-art" data-scope="individual" data-owner="child" data-kind="work" data-comments="2" data-liked="true">
+              <span class="record__node" aria-hidden="true"></span>
+              <div class="record__card">
+                <header class="record__head">
+                  <span class="teacher-avatar" aria-hidden="true">李</span>
+                  <div class="record__who"><h4 class="record__teacher">李老师</h4><p class="record__meta">3月19日 11:30 <span aria-hidden="true">·</span> 美术课</p></div>
+                  <span class="record__owner" data-owner-badge>专属记录</span>
+                </header>
+                <p class="record__honor"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="9" r="5.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m8.8 13-1 8 4.2-2.4L16.2 21l-1-8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 6.5v5M9.5 9h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>小小艺术家</p>
+                <p class="record__copy">今天的美术课上，小明发挥了自己的想象力，画出了自己心中的春天，色彩搭配非常棒，还主动帮助其他小朋友，表现特别优秀！</p>
+                <div class="photo-grid" data-photo-grid data-count="2">
+                  <figure class="photo photo--art" data-child="true" role="group" aria-label="照片：春天的画">
+                    <figcaption class="photo__tag" aria-hidden="true">春天的画</figcaption>
+                  </figure>
+                  <figure class="photo photo--class" data-child="true" role="group" aria-label="照片：美术课堂">
+                    <figcaption class="photo__tag" aria-hidden="true">课堂瞬间</figcaption>
+                  </figure>
+                </div>
+                <p class="record__note" hidden></p>
+              </div>
+            </article>
+
+            <article class="record" data-od-id="record-relay" data-scope="class" data-owner="collective" data-kind="activity">
+              <span class="record__node" aria-hidden="true"></span>
+              <div class="record__card">
+                <header class="record__head">
+                  <span class="teacher-avatar" aria-hidden="true">张</span>
+                  <div class="record__who"><h4 class="record__teacher">张老师</h4><p class="record__meta">3月18日 15:30 <span aria-hidden="true">·</span> 户外活动</p></div>
+                  <span class="record__owner" data-owner-badge data-badge-child="集体 · 含小明" data-badge-all="集体">集体 · 含小明</span>
+                </header>
+                <p class="record__copy">今天户外活动玩接力赛跑，小明跑得特别快，还主动为其他小朋友加油，团队意识很强哦~</p>
+                <div class="photo-grid" data-photo-grid data-count="2">
+                  <figure class="photo photo--track" data-child="true" role="group" aria-label="照片：接力赛场">
+                    <figcaption class="photo__tag" aria-hidden="true">接力赛场</figcaption>
+                  </figure>
+                  <figure class="photo photo--cheer" data-child="false" role="group" aria-label="照片：为小伙伴加油的彩旗">
+                    <figcaption class="photo__tag" aria-hidden="true">加油瞬间</figcaption>
+                  </figure>
+                </div>
+                <p class="record__note" hidden></p>
+              </div>
+            </article>
+
+            <article class="record" data-od-id="record-collage" data-scope="class" data-owner="other" data-kind="work">
+              <span class="record__node" aria-hidden="true"></span>
+              <div class="record__card">
+                <header class="record__head">
+                  <span class="teacher-avatar" aria-hidden="true">陈</span>
+                  <div class="record__who"><h4 class="record__teacher">陈老师</h4><p class="record__meta">3月17日 09:40 <span aria-hidden="true">·</span> 班级活动</p></div>
+                  <span class="record__owner" data-owner-badge>其他孩子</span>
+                </header>
+                <p class="record__copy">小朋友们一起完成了春天的自然拼贴，每个人都找到了自己喜欢的叶子。照片里是小朋友 A 的作品。</p>
+                <div class="photo-grid" data-photo-grid data-count="1">
+                  <figure class="photo photo--paper photo--collage" data-child="false" role="group" aria-label="照片：小朋友 A 的自然拼贴作品">
+                    <figcaption class="photo__tag" aria-hidden="true">自然拼贴</figcaption>
+                  </figure>
+                </div>
+                <p class="record__note" hidden></p>
+              </div>
+            </article>
+
+            <article class="record" data-od-id="record-playground" data-scope="class" data-owner="collective" data-kind="campus">
+              <span class="record__node" aria-hidden="true"></span>
+              <div class="record__card">
+                <header class="record__head">
+                  <span class="teacher-avatar" aria-hidden="true">刘</span>
+                  <div class="record__who"><h4 class="record__teacher">刘老师</h4><p class="record__meta">3月15日 16:10 <span aria-hidden="true">·</span> 户外游戏</p></div>
+                  <span class="record__owner" data-owner-badge data-badge-child="集体 · 含小明" data-badge-all="集体 · 未含小明">集体 · 未含小明</span>
+                </header>
+                <p class="record__copy">午后的户外游戏时间，操场上都是奔跑和欢笑的声音。</p>
+                <div class="photo-grid" data-photo-grid data-count="1">
+                  <figure class="photo photo--play" data-child="false" role="group" aria-label="照片：操场上的呼啦圈和小球">
+                    <figcaption class="photo__tag" aria-hidden="true">户外游戏</figcaption>
+                  </figure>
+                </div>
+                <p class="record__note" hidden></p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="month" data-month="2026-02">
+          <div class="month__head"><span class="month__dot" aria-hidden="true"></span><h3 class="month__title">2026年2月</h3><span class="month__count" data-month-count>1 条</span></div>
+          <div class="month__list">
+            <article class="record" data-od-id="record-award" data-scope="individual" data-owner="child" data-kind="award" data-comments="5">
+              <span class="record__node" aria-hidden="true"></span>
+              <div class="record__card">
+                <header class="record__head">
+                  <span class="teacher-avatar" aria-hidden="true">王</span>
+                  <div class="record__who"><h4 class="record__teacher">王老师</h4><p class="record__meta">2月28日 10:00 <span aria-hidden="true">·</span> 开学典礼</p></div>
+                  <span class="record__owner" data-owner-badge>专属记录</span>
+                </header>
+                <p class="record__honor"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="9" r="5.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m8.8 13-1 8 4.2-2.4L16.2 21l-1-8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 6.5v5M9.5 9h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>全勤小明星</p>
+                <p class="record__copy">恭喜小明在上个月获得全勤小明星称号，整个2月份没有请假，每天都准时到园，特别棒！继续保持哦~</p>
+                <div class="photo-grid" data-photo-grid data-count="2">
+                  <figure class="photo photo--paper photo--cert" data-child="true" role="group" aria-label="照片：全勤小明星奖状">
+                    <figcaption class="photo__tag" aria-hidden="true">全勤奖状</figcaption>
+                  </figure>
+                  <figure class="photo photo--opening" data-child="true" role="group" aria-label="照片：开学典礼的彩旗和舞台">
+                    <figcaption class="photo__tag" aria-hidden="true">开学典礼</figcaption>
+                  </figure>
+                </div>
+                <p class="record__note" hidden></p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="主导航" data-od-id="bottom-nav">
+      <button class="nav-item" type="button" data-toast="首页暂未包含在本次原型中">
+        <svg class="nav-icon" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 8-7 8 7v10a1 1 0 0 1-1 1h-4v-7H9v7H5a1 1 0 0 1-1-1V10Z"/></svg>
+        <span class="nav-label">首页</span>
+      </button>
+      <button class="nav-item is-active" type="button" aria-current="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-8"/><path d="M12 13c0-4 3-7 8-7 0 5-3 8-8 7Z"/><path d="M12 16c-3.5 0-6-2-6-6 4 0 6 2.5 6 6Z"/></svg>
+        <span class="nav-label">成长</span>
+      </button>
+      <button class="nav-item" type="button" data-toast="接送页暂未包含在本次原型中">
+        <svg class="nav-icon" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="11" rx="2.5"/><path d="M6 17v2m12-2v2M3 12h18M7 9h3"/><circle cx="7.5" cy="14.5" r=".9" fill="currentColor" stroke="none"/><circle cx="16.5" cy="14.5" r=".9" fill="currentColor" stroke="none"/></svg>
+        <span class="nav-label">接送</span>
+      </button>
+      <button class="nav-item" type="button" data-toast="个人中心暂未包含在本次原型中">
+        <svg class="nav-icon" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+        <span class="nav-label">我的</span>
+      </button>
+    </nav>
+  </div>
+
+  <template id="engageTemplate">
+    <footer class="engage">
+      <button class="engage__btn like-btn" type="button" data-like aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20s-7-4.35-7-9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7 3.5C19 15.65 12 20 12 20Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        <span data-like-label>赞</span>
+      </button>
+      <span class="engage__stat">
+        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 9 9 0 0 1-3.2-.6L4 20l1.4-4A7.5 7.5 0 1 1 20 11.5Z"/></svg>
+        <span data-comments-text>评论</span>
+      </span>
+      <button class="engage__btn share-btn" type="button" data-share aria-label="分享这条成长记录">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5"/></svg>
+        分享
+      </button>
+    </footer>
+  </template>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>

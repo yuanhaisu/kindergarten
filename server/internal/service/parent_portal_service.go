@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	ErrParentContext      = errors.New("PARENT_CONTEXT")
-	ErrParentNotFound     = errors.New("PARENT_NOT_FOUND")
+	ErrParentContext       = errors.New("PARENT_CONTEXT")
+	ErrParentNotFound      = errors.New("PARENT_NOT_FOUND")
 	ErrParentInvalidParams = errors.New("PARENT_INVALID_PARAMS")
-	ErrParentForbidden    = errors.New("PARENT_FORBIDDEN")
+	ErrParentForbidden     = errors.New("PARENT_FORBIDDEN")
 )
 
 type ParentPortalContext struct {
@@ -133,17 +133,22 @@ func (s *ParentPortalService) ListGrowthFeed(ctx context.Context, pc *ParentPort
 		db = db.Where("growth_daily_logs.date >= ? AND growth_daily_logs.date < ?", start, end)
 	}
 
-	// 统一流: 全班记录 + 个体记录(仅目标学生)
-	db = db.Where(
-		"growth_daily_logs.target_type = 1 OR (growth_daily_logs.target_type = 2 AND growth_daily_logs.id IN (SELECT log_id FROM growth_log_students WHERE student_id IN ?))",
-		studentIDs,
-	)
-
-	if studentID != nil && *studentID != 0 {
-		db = db.Where(
-			"growth_daily_logs.target_type = 1 OR (growth_daily_logs.target_type = 2 AND growth_daily_logs.id IN (SELECT log_id FROM growth_log_students WHERE student_id = ?))",
-			*studentID,
-		)
+	// 统一流: 全班记录 + 个体记录(仅目标学生)。可见性规则由 growthLogVisibilityWhere 统一产出。
+	{
+		var single *domain.Student
+		if studentID != nil && *studentID != 0 {
+			for i := range pc.Students {
+				if pc.Students[i].ID == *studentID {
+					single = &pc.Students[i]
+					break
+				}
+			}
+			if single == nil {
+				return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil
+			}
+		}
+		visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, pc.Students, single)
+		db = db.Where(visWhere, visArgs...)
 	}
 
 	var total int64
@@ -153,19 +158,142 @@ func (s *ParentPortalService) ListGrowthFeed(ctx context.Context, pc *ParentPort
 
 	offset := (page - 1) * pageSize
 	var rows []domain.GrowthDailyLog
-	if err := db.Preload("Creator").Preload("Class").Order("growth_daily_logs.date DESC, growth_daily_logs.id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+	if err := db.Preload("Creator").Order("growth_daily_logs.date DESC, growth_daily_logs.id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 
+	// 批量取卡片渲染所需的关联数据，避免每条记录单独查（一页 20 条会退化成 60+ 次查询）。
+	// 空页时跳过全部查询：GORM 对空切片会生成 IN (NULL)。
+	logIDs := make([]uint64, 0, len(rows))
+	for _, r := range rows {
+		logIDs = append(logIDs, r.ID)
+	}
+	mediaByLog := make(map[uint64][]domain.GrowthMedia)
+	likedSet := make(map[uint64]bool)
+	commentCounts := make(map[uint64]int64)
+	if len(logIDs) > 0 {
+		var medias []domain.GrowthMedia
+		if err := s.db.WithContext(ctx).Where("log_id IN ?", logIDs).Order("sort_num ASC, id ASC").Find(&medias).Error; err != nil {
+			return nil, err
+		}
+		for _, m := range medias {
+			if m.LogID == nil {
+				continue // 未挂载的素材，不属于任何记录
+			}
+			mediaByLog[*m.LogID] = append(mediaByLog[*m.LogID], m)
+		}
+
+		var myLikes []domain.GrowthLike
+		if err := s.db.WithContext(ctx).Where("log_id IN ? AND user_id = ?", logIDs, pc.UserID).Find(&myLikes).Error; err != nil {
+			return nil, err
+		}
+		for _, l := range myLikes {
+			likedSet[l.LogID] = true
+		}
+
+		type commentCountRow struct {
+			LogID uint64
+			Cnt   int64
+		}
+		var ccRows []commentCountRow
+		if err := s.db.WithContext(ctx).Model(&domain.GrowthComment{}).
+			Where("log_id IN ?", logIDs).
+			Select("log_id, count(*) as cnt").
+			Group("log_id").
+			Scan(&ccRows).Error; err != nil {
+			return nil, err
+		}
+		for _, c := range ccRows {
+			commentCounts[c.LogID] = c.Cnt
+		}
+	}
+
+	// 徽章：只取「当前孩子」的授予记录，且见证记录落在本页里。
+	// 别的孩子的徽章不该挂到本卡片上。
+	badgeByLog := map[uint64]map[string]any{}
+	if len(logIDs) > 0 && pc.CurrentStudent != nil {
+		var grants []domain.StudentAchievement
+		if err := s.db.WithContext(ctx).
+			Where("student_id = ? AND log_id IN ?", pc.CurrentStudent.ID, logIDs).
+			Find(&grants).Error; err != nil {
+			return nil, err
+		}
+		if len(grants) > 0 {
+			achIDs := make([]uint64, 0, len(grants))
+			for _, g := range grants {
+				achIDs = append(achIDs, g.AchievementID)
+			}
+			var achs []domain.Achievement
+			if err := s.db.WithContext(ctx).Where("id IN ?", achIDs).Find(&achs).Error; err != nil {
+				return nil, err
+			}
+			byID := make(map[uint64]domain.Achievement, len(achs))
+			for _, a := range achs {
+				byID[a.ID] = a
+			}
+			for _, g := range grants {
+				if g.LogID == nil {
+					continue
+				}
+				if a, ok := byID[g.AchievementID]; ok {
+					badgeByLog[*g.LogID] = toBadge(a)
+				}
+			}
+		}
+	}
+
+	// 照片点名（仅已确认项；建议对家长不存在）
+	pageMediaIDs := make([]uint64, 0)
+	for _, ms := range mediaByLog {
+		for _, m := range ms {
+			pageMediaIDs = append(pageMediaIDs, m.ID)
+		}
+	}
+	confirmedByMedia, err := s.confirmedMediaStudents(ctx, pageMediaIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	list := assembleFeedItems(rows, mediaByLog, confirmedByMedia, likedSet, commentCounts, badgeByLog)
+
+	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
+}
+
+// feedScope 把内部发送范围映射为家长端展示层 scope。
+// 1=全班，2=个体；其他值防御性归为 class（当前可见性查询只返回 1/2）。
+// 不直接暴露 target_type，避免客户端耦合服务端数字枚举。
+func feedScope(targetType int8) string {
+	if targetType == 2 {
+		return "individual"
+	}
+	return "class"
+}
+
+// assembleFeedItems 把批量查到的关联数据装配成成长时光列表条目。
+// 抽成纯函数是为了可测：响应形状（含「不含冗余字段」）是 spec 的验收点，
+// 而批量查询本身依赖真实库，由集成验证覆盖。
+func assembleFeedItems(
+	rows []domain.GrowthDailyLog,
+	mediaByLog map[uint64][]domain.GrowthMedia,
+	confirmedByMedia map[uint64][]uint64,
+	likedSet map[uint64]bool,
+	commentCounts map[uint64]int64,
+	badgeByLog map[uint64]map[string]any,
+) []map[string]any {
 	list := make([]map[string]any, len(rows))
 	for i, r := range rows {
+		// 只输出卡片实际渲染的内容，以及「只看孩子 / 看全部」两模式必需的 scope。
+		// 列表不承载详情页才需要的信息（related_students），
+		// 也不输出设计稿从不渲染的冗余字段（target_type/class_name/likes_count/media_count/performance_tags）。
 		m := map[string]any{
-			"id":               r.ID,
-			"date":             r.Date.Format("2006-01-02"),
-			"target_type":      r.TargetType,
-			"content":          r.Content,
-			"performance_tags": r.PerformanceTags,
-			"created_at":       r.CreatedAt.UTC().Format(time.RFC3339),
+			"id":             r.ID,
+			"scope":          feedScope(r.TargetType),
+			"date":           r.Date.Format("2006-01-02"),
+			"content":        r.Content,
+			"created_at":     r.CreatedAt.UTC().Format(time.RFC3339),
+			"media":          toFeedMedia(mediaByLog[r.ID], confirmedByMedia),
+			"is_liked":       likedSet[r.ID],
+			"comments_count": commentCounts[r.ID],
 		}
 		if r.Creator != nil {
 			m["creator"] = map[string]any{
@@ -174,26 +302,107 @@ func (s *ParentPortalService) ListGrowthFeed(ctx context.Context, pc *ParentPort
 				"avatar":   r.Creator.Avatar,
 			}
 		}
-		if r.Class != nil {
-			m["class_name"] = r.Class.Name
-		}
-		// 个体记录时返回关联学生信息
-		if r.TargetType == 2 {
-			var linkedStudents []domain.Student
-			_ = s.db.WithContext(ctx).
-				Joins("INNER JOIN growth_log_students gls ON gls.student_id = students.id AND gls.log_id = ?", r.ID).
-				Find(&linkedStudents).Error
-			studentNames := make([]string, len(linkedStudents))
-			for j, st := range linkedStudents {
-				studentNames[j] = st.Name
-			}
-			m["related_students"] = studentNames
-			m["related_students_count"] = len(studentNames)
+		// 徽章只在「本条记录是该学生某次获奖的见证」时出现（design D1：见证可空）。
+		// 无见证的徽章只体现在已获数里，不落到任何卡片上。
+		if b, ok := badgeByLog[r.ID]; ok {
+			m["badge"] = b
 		}
 		list[i] = m
 	}
+	return list
+}
 
-	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
+// toBadge 徽章的对外形状。配色不落库——前端按 category 映射 design token 语义色（design D3）。
+func toBadge(a domain.Achievement) map[string]any {
+	return map[string]any{
+		"name":       a.Name,
+		"icon":       a.Icon,
+		"color_kind": badgeColorKind(a.Category),
+	}
+}
+
+// badgeColorKind 把徽章类别映射到前端可直接选 token 的色类。
+// 只表达「哪套语义色」，不带具体色值——色值 SoT 是 tokens.json。
+func badgeColorKind(category string) string {
+	switch strings.ToLower(strings.TrimSpace(category)) {
+	case "attendance", "task", "tasks", "points", "point":
+		return "info"
+	case "growth", "art", "arts":
+		return "warning"
+	default:
+		return "info"
+	}
+}
+
+// feedMediaItem 附件的对外形状。
+// 只暴露卡片/详情真正用到的字段；GrowthMedia 其余字段（class_id/log_id/uploader_id/
+// file_name/file_size/sort_num/时间戳）是服务端记账信息，序列化出去属于实现泄漏内部字段，
+// 与本次砍掉的 target_type/class_name 同类。
+// StudentIDs 为照片上「已确认点名」的孩子（家长端筛选与照片标识的依据，design D7）。
+type feedMediaItem struct {
+	ID         uint64   `json:"id"`
+	FileURL    string   `json:"file_url"`
+	ThumbURL   string   `json:"thumb_url"`
+	FileType   string   `json:"file_type"`
+	Duration   int      `json:"duration"`
+	StudentIDs []uint64 `json:"student_ids"`
+}
+
+func toFeedMedia(rows []domain.GrowthMedia, confirmedByMedia map[uint64][]uint64) []feedMediaItem {
+	// 恒返回非 nil 切片：无附件时是 [] 而非 null，前端按 length 判断是否渲染照片区。
+	out := make([]feedMediaItem, 0, len(rows))
+	for _, m := range rows {
+		ids := confirmedByMedia[m.ID]
+		if ids == nil {
+			ids = []uint64{}
+		}
+		out = append(out, feedMediaItem{
+			ID:         m.ID,
+			FileURL:    m.FileURL,
+			ThumbURL:   m.ThumbURL,
+			FileType:   m.FileType,
+			Duration:   m.Duration,
+			StudentIDs: ids,
+		})
+	}
+	return out
+}
+
+// confirmedMediaStudents 批量取照片的「已确认」点名（仅 status=1/NULL）。
+// status=0 的 AI 建议对家长不存在——这是信任模型的落点（design D6/D7）。
+func (s *ParentPortalService) confirmedMediaStudents(ctx context.Context, mediaIDs []uint64) (map[uint64][]uint64, error) {
+	out := make(map[uint64][]uint64)
+	if len(mediaIDs) == 0 {
+		return out, nil
+	}
+	type mediaStudentRow struct {
+		MediaID   uint64
+		StudentID uint64
+	}
+	var rows []mediaStudentRow
+	if err := s.db.WithContext(ctx).Model(&domain.GrowthMediaStudent{}).
+		Select("media_id, student_id").
+		Where("media_id IN ? AND (status IS NULL OR status = ?)", mediaIDs, domain.MediaStudentStatusConfirmed).
+		Order("id ASC").Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		out[r.MediaID] = append(out[r.MediaID], r.StudentID)
+	}
+	return out, nil
+}
+
+// splitPerformanceTags 把库里的逗号串解析成标签数组。
+// 契约与 detail.vue 的「表现标签」区块都按数组消费；空串返回空数组而非 [""],
+// 否则前端 v-for 会渲染出一个空标签。
+func splitPerformanceTags(raw string) []string {
+	tags := []string{}
+	for _, t := range strings.Split(raw, ",") {
+		if t = strings.TrimSpace(t); t != "" {
+			tags = append(tags, t)
+		}
+	}
+	return tags
 }
 
 // ==================== Pickup ====================
@@ -220,8 +429,12 @@ func (s *ParentPortalService) ListPickupRecords(ctx context.Context, pc *ParentP
 		studentIDs[i] = st.ID
 	}
 
-	if page <= 0 { page = 1 }
-	if pageSize <= 0 || pageSize > 50 { pageSize = 20 }
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 50 {
+		pageSize = 20
+	}
 	offset := (page - 1) * pageSize
 
 	rows, total, err := s.pickup.ListRecordsByStudentIDs(ctx, pc.KindergartenID, studentIDs, offset, pageSize)
@@ -239,6 +452,9 @@ func (s *ParentPortalService) ListPickupRecords(ctx context.Context, pc *ParentP
 		PickupName     string `json:"pickup_name"`
 		PickupRelation string `json:"pickup_relation"`
 		RecordedAt     string `json:"recorded_at"`
+		// IsAbnormal 园所是否标记该次接送为异常（老师手动标记）。
+		// 家长应能看到某次接送被园所标异常（对齐 admin-05 明细的「状态」列语义）。
+		IsAbnormal bool `json:"is_abnormal"`
 	}
 
 	list := make([]item, 0, len(rows))
@@ -253,6 +469,7 @@ func (s *ParentPortalService) ListPickupRecords(ctx context.Context, pc *ParentP
 			PickupName:     r.PickupName,
 			PickupRelation: r.PickupRelation,
 			RecordedAt:     r.RecordedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+			IsAbnormal:     r.IsAbnormal,
 		})
 	}
 
@@ -272,7 +489,9 @@ func RelationLabel(r domain.ParentRelation) string {
 		domain.RelationGrandmother: "奶奶",
 		domain.RelationOther:       "其他",
 	}
-	if v, ok := m[r]; ok { return v }
+	if v, ok := m[r]; ok {
+		return v
+	}
 	return string(r)
 }
 
@@ -287,7 +506,7 @@ type CreateAuthorizedPersonInput struct {
 	IDCardNumber    string `json:"id_card_number"`
 	Avatar          string `json:"avatar"`
 	Relation        string `json:"relation"`
-	AuthType        string `json:"auth_type"`         // permanent / temporary
+	AuthType        string `json:"auth_type"` // permanent / temporary
 	AllowPickup     *bool  `json:"allow_pickup"`
 	AllowViewRecord *bool  `json:"allow_view_record"`
 	AllowViewStatus *bool  `json:"allow_view_status"`
@@ -323,8 +542,12 @@ func (s *ParentPortalService) ListAuthorizedPersons(ctx context.Context, pc *Par
 		studentIDSet[st.ID] = true
 	}
 
-	if page <= 0 { page = 1 }
-	if pageSize <= 0 || pageSize > 50 { pageSize = 20 }
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 50 {
+		pageSize = 20
+	}
 	offset := (page - 1) * pageSize
 
 	rows, total, err := s.pickup.ListAuthorizationsByStudentIDs(ctx, pc.KindergartenID, studentIDs, offset, pageSize)
@@ -333,38 +556,44 @@ func (s *ParentPortalService) ListAuthorizedPersons(ctx context.Context, pc *Par
 	}
 
 	authTypeLabel := func(t string) string {
-		if t == "temporary" { return "临时授权" }
+		if t == "temporary" {
+			return "临时授权"
+		}
 		return "长期授权"
 	}
 	reviewStatusLabel := func(s int8) string {
 		switch s {
-		case 0: return "待审核"
-		case 1: return "已通过"
-		case 2: return "已拒绝"
-		default: return "未知"
+		case 0:
+			return "待审核"
+		case 1:
+			return "已通过"
+		case 2:
+			return "已拒绝"
+		default:
+			return "未知"
 		}
 	}
 
 	list := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
 		item := map[string]any{
-			"id":                r.ID,
-			"student_id":        r.StudentID,
-			"student_name":      r.StudentName,
-			"class_name":        r.ClassName,
-			"name":              r.Name,
-			"phone":             maskPhone(r.Phone),
-			"relation":          r.Relation,
-			"avatar":            r.Avatar,
-			"auth_type":         r.AuthType,
-			"auth_type_label":   authTypeLabel(r.AuthType),
-			"allow_pickup":      r.AllowPickup,
-			"allow_view_record": r.AllowViewRecord,
-			"allow_view_status": r.AllowViewStatus,
-			"allow_growth_view": r.AllowGrowthView,
-			"notify_on_pickup":  r.NotifyOnPickup,
-			"status":            r.Status,
-			"review_status":     r.ReviewStatus,
+			"id":                  r.ID,
+			"student_id":          r.StudentID,
+			"student_name":        r.StudentName,
+			"class_name":          r.ClassName,
+			"name":                r.Name,
+			"phone":               maskPhone(r.Phone),
+			"relation":            r.Relation,
+			"avatar":              r.Avatar,
+			"auth_type":           r.AuthType,
+			"auth_type_label":     authTypeLabel(r.AuthType),
+			"allow_pickup":        r.AllowPickup,
+			"allow_view_record":   r.AllowViewRecord,
+			"allow_view_status":   r.AllowViewStatus,
+			"allow_growth_view":   r.AllowGrowthView,
+			"notify_on_pickup":    r.NotifyOnPickup,
+			"status":              r.Status,
+			"review_status":       r.ReviewStatus,
 			"review_status_label": reviewStatusLabel(r.ReviewStatus),
 		}
 		if r.ExpireAt != nil {
@@ -400,18 +629,30 @@ func (s *ParentPortalService) CreateAuthorizedPerson(ctx context.Context, pc *Pa
 	now := time.Now()
 
 	allowPickup := true
-	if req.AllowPickup != nil { allowPickup = *req.AllowPickup }
+	if req.AllowPickup != nil {
+		allowPickup = *req.AllowPickup
+	}
 	allowViewRecord := false
-	if req.AllowViewRecord != nil { allowViewRecord = *req.AllowViewRecord }
+	if req.AllowViewRecord != nil {
+		allowViewRecord = *req.AllowViewRecord
+	}
 	allowViewStatus := false
-	if req.AllowViewStatus != nil { allowViewStatus = *req.AllowViewStatus }
+	if req.AllowViewStatus != nil {
+		allowViewStatus = *req.AllowViewStatus
+	}
 	allowGrowthView := false
-	if req.AllowGrowthView != nil { allowGrowthView = *req.AllowGrowthView }
+	if req.AllowGrowthView != nil {
+		allowGrowthView = *req.AllowGrowthView
+	}
 	notifyOnPickup := true
-	if req.NotifyOnPickup != nil { notifyOnPickup = *req.NotifyOnPickup }
+	if req.NotifyOnPickup != nil {
+		notifyOnPickup = *req.NotifyOnPickup
+	}
 
 	authType := req.AuthType
-	if authType == "" { authType = "permanent" }
+	if authType == "" {
+		authType = "permanent"
+	}
 
 	auth := &domain.PickupAuthorization{
 		StudentID:       pc.CurrentStudent.ID,
@@ -436,7 +677,9 @@ func (s *ParentPortalService) CreateAuthorizedPerson(ctx context.Context, pc *Pa
 	}
 
 	statusLabel := "待审核"
-	if auth.ReviewStatus == 1 { statusLabel = "已通过" }
+	if auth.ReviewStatus == 1 {
+		statusLabel = "已通过"
+	}
 
 	return map[string]any{
 		"id":           auth.ID,
@@ -461,16 +704,36 @@ func (s *ParentPortalService) UpdateAuthorizedPerson(ctx context.Context, pc *Pa
 	}
 
 	updates := make(map[string]interface{})
-	if req.Name != "" { updates["name"] = req.Name }
-	if req.Phone != "" { updates["phone"] = req.Phone }
-	if req.Avatar != "" { updates["avatar"] = req.Avatar }
-	if req.Relation != "" { updates["relation"] = req.Relation }
-	if req.AuthType != "" { updates["auth_type"] = req.AuthType }
-	if req.AllowPickup != nil { updates["allow_pickup"] = *req.AllowPickup }
-	if req.AllowViewRecord != nil { updates["allow_view_record"] = *req.AllowViewRecord }
-	if req.AllowViewStatus != nil { updates["allow_view_status"] = *req.AllowViewStatus }
-	if req.AllowGrowthView != nil { updates["allow_growth_view"] = *req.AllowGrowthView }
-	if req.NotifyOnPickup != nil { updates["notify_on_pickup"] = *req.NotifyOnPickup }
+	if req.Name != "" {
+		updates["name"] = req.Name
+	}
+	if req.Phone != "" {
+		updates["phone"] = req.Phone
+	}
+	if req.Avatar != "" {
+		updates["avatar"] = req.Avatar
+	}
+	if req.Relation != "" {
+		updates["relation"] = req.Relation
+	}
+	if req.AuthType != "" {
+		updates["auth_type"] = req.AuthType
+	}
+	if req.AllowPickup != nil {
+		updates["allow_pickup"] = *req.AllowPickup
+	}
+	if req.AllowViewRecord != nil {
+		updates["allow_view_record"] = *req.AllowViewRecord
+	}
+	if req.AllowViewStatus != nil {
+		updates["allow_view_status"] = *req.AllowViewStatus
+	}
+	if req.AllowGrowthView != nil {
+		updates["allow_growth_view"] = *req.AllowGrowthView
+	}
+	if req.NotifyOnPickup != nil {
+		updates["notify_on_pickup"] = *req.NotifyOnPickup
+	}
 	if req.ExpireAt != "" {
 		t, err := time.Parse(time.RFC3339, req.ExpireAt)
 		if err == nil {
@@ -504,46 +767,134 @@ func (s *ParentPortalService) DeleteAuthorizedPerson(ctx context.Context, pc *Pa
 	}
 	return s.pickup.SoftDeleteAuthorization(ctx, pc.CurrentStudent.ID, authID)
 }
+
+// ==================== 今日接走人指定 ====================
+
+// DesignatePickupInput 指定今日接走人入参。
+type DesignatePickupInput struct {
+	AuthorizationID uint64 `json:"authorization_id"`
+}
+
+// DesignatePickupPerson 家长指定「今日接走人」。
+//
+// 指定结果覆盖该孩当日此前的指定，并使该孩当日已生成的接送凭证全部失效
+// （旧凭证绑的是前任接走人，换人即作废）。
+// 被指定人必须是该孩已审核通过且有效（未撤销、未过期）的授权接送人（I1）。
+//
+// 与凭证分离的原因见 domain.PickupDailyDesignation 注释：
+// 码一次性易失，指定须独立存续，才能回答「原计划谁来接」。
+func (s *ParentPortalService) DesignatePickupPerson(ctx context.Context, pc *ParentPortalContext, req DesignatePickupInput) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	if req.AuthorizationID == 0 {
+		return nil, ErrParentInvalidParams
+	}
+
+	// 归属校验：该授权人必须属于当前学生
+	auth, err := s.pickup.FindAuthorizationByStudent(ctx, pc.CurrentStudent.ID, req.AuthorizationID)
+	if err != nil {
+		return nil, err
+	}
+	if auth == nil {
+		return nil, ErrParentForbidden
+	}
+
+	// I1：被指定人须在有效授权集合内
+	if !authorizationValid(auth, time.Now()) {
+		return nil, ErrParentForbidden
+	}
+
+	// 覆盖式指定
+	if err := s.pickup.UpsertDailyDesignation(
+		ctx, pc.KindergartenID, pc.CurrentStudent.ID, req.AuthorizationID, time.Now(),
+	); err != nil {
+		return nil, err
+	}
+
+	// 换人即作废当日全部旧凭证
+	if err := s.pickup.DeactivateStudentQRCodes(ctx, pc.CurrentStudent.ID); err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"student_id":       pc.CurrentStudent.ID,
+		"authorization_id": req.AuthorizationID,
+		"person": map[string]any{
+			"name":     auth.Name,
+			"relation": auth.Relation,
+			"avatar":   auth.Avatar,
+		},
+		"designated_at": time.Now().UTC().Format(time.RFC3339),
+	}, nil
+}
+
 // ==================== Pickup QR Code ====================
 
-// GetQRCode 家长获取接送二维码（不存在或已过期则生成新码）。
+// GetQRCode 家长获取接送二维码（绑「学生 + 今日接走人」）。
+//
+// 前提：已通过 DesignatePickupPerson 指定今日接走人。
+// 凭证当日过期、一次有效；生成时会再次校验被指定人仍在有效授权集合内。
 func (s *ParentPortalService) GetQRCode(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
 	}
 
 	now := time.Now()
-	loc := now.Location()
 
-	// 当日 23:59:59 过期
-	dayEnd := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, loc)
-
-	// 查已有有效码
-	qr, err := s.pickup.FindActiveQRCodeByStudent(ctx, pc.CurrentStudent.ID)
+	// 必须先指定今日接走人
+	desig, err := s.pickup.FindDailyDesignation(ctx, pc.CurrentStudent.ID, now)
 	if err != nil {
 		return nil, err
 	}
-	if qr != nil && qr.ExpireAt.After(now) {
+	if desig == nil {
+		return nil, ErrParentInvalidParams
+	}
+
+	// 再校验被指定人仍在有效授权集合内（I1 二次校验）
+	auth, err := s.pickup.FindAuthorizationByStudent(ctx, pc.CurrentStudent.ID, desig.AuthorizationID)
+	if err != nil {
+		return nil, err
+	}
+	if auth == nil || !authorizationValid(auth, now) {
+		return nil, ErrParentForbidden
+	}
+
+	person := map[string]any{
+		"name":     auth.Name,
+		"relation": auth.Relation,
+		"photo":    auth.Avatar,
+	}
+	student := map[string]any{
+		"id":    pc.CurrentStudent.ID,
+		"name":  pc.CurrentStudent.Name,
+		"photo": pc.CurrentStudent.Avatar, // Student 域无独立 photo 字段，复用 avatar
+	}
+
+	// 已有有效凭证且仍绑定同一接走人 → 直接复用
+	if qr, err := s.pickup.FindActiveQRCodeByStudent(ctx, pc.CurrentStudent.ID); err != nil {
+		return nil, err
+	} else if qr != nil && qr.ExpireAt.After(now) && qr.AuthorizationID == desig.AuthorizationID {
 		return map[string]any{
-			"qr_code":    qr.Code,
-			"student":    map[string]any{"id": pc.CurrentStudent.ID, "name": pc.CurrentStudent.Name},
-			"expire_at":  qr.ExpireAt.UTC().Format(time.RFC3339),
+			"qr_code":   qr.Code,
+			"student":   student,
+			"person":    person,
+			"expire_at": qr.ExpireAt.UTC().Format(time.RFC3339),
 		}, nil
 	}
 
-	// 失效旧码
+	// 失效旧码后生成新码（绑指定的接走人）
 	if err := s.pickup.DeactivateStudentQRCodes(ctx, pc.CurrentStudent.ID); err != nil {
 		return nil, err
 	}
 
-	// 生成新码
-	code := generateQRCodeToken(pc.CurrentStudent.ID, now)
-
+	dayEnd := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
 	newQR := &domain.PickupQRCode{
-		StudentID: pc.CurrentStudent.ID,
-		Code:      code,
-		ExpireAt:  dayEnd,
-		IsActive:  true,
+		StudentID:       pc.CurrentStudent.ID,
+		AuthorizationID: desig.AuthorizationID,
+		Code:            generateQRCodeToken(),
+		ExpireAt:        dayEnd,
+		IsActive:        true,
 	}
 	if err := s.pickup.CreateQRCode(ctx, newQR); err != nil {
 		return nil, err
@@ -551,16 +902,20 @@ func (s *ParentPortalService) GetQRCode(ctx context.Context, pc *ParentPortalCon
 
 	return map[string]any{
 		"qr_code":   newQR.Code,
-		"student":   map[string]any{"id": pc.CurrentStudent.ID, "name": pc.CurrentStudent.Name},
+		"student":   student,
+		"person":    person,
 		"expire_at": newQR.ExpireAt.UTC().Format(time.RFC3339),
 	}, nil
 }
 
 // generateQRCodeToken 生成接送二维码 token。
-func generateQRCodeToken(studentID uint64, now time.Time) string {
-	b := make([]byte, 8)
+//
+// 纯随机串，不内嵌 student_id 等可枚举标识（E4）：
+// 学生与接走人由后端按码查库解出，凭证本身不泄露任何 ID。
+func generateQRCodeToken() string {
+	b := make([]byte, 16)
 	_, _ = rand.Read(b)
-	return fmt.Sprintf("PKUP_%d_%s_%s", studentID, now.Format("20060102"), hex.EncodeToString(b))
+	return hex.EncodeToString(b)
 }
 
 // ==================== Leaves ====================
@@ -586,9 +941,12 @@ func parentLeaveMap(lr domain.LeaveRequest) map[string]any {
 	}
 	statusLabel := "待审批"
 	switch lr.Status {
-	case domain.LeaveStatusApproved: statusLabel = "已同意"
-	case domain.LeaveStatusRejected: statusLabel = "已拒绝"
-	case domain.LeaveStatusCanceled: statusLabel = "已取消"
+	case domain.LeaveStatusApproved:
+		statusLabel = "已同意"
+	case domain.LeaveStatusRejected:
+		statusLabel = "已拒绝"
+	case domain.LeaveStatusCanceled:
+		statusLabel = "已取消"
 	}
 	return map[string]any{
 		"id": lr.ID, "student": student, "applicant": applicant,
@@ -596,8 +954,8 @@ func parentLeaveMap(lr domain.LeaveRequest) map[string]any {
 		"end_date": lr.EndDate.Format("2006-01-02"), "days": lr.Days,
 		"status": lr.Status, "status_label": statusLabel,
 		"review_remark": lr.ReviewRemark,
-		"created_at": lr.CreatedAt.UTC().Format(time.RFC3339),
-		"reviewed_at": formatOptionalTime(lr.ReviewedAt),
+		"created_at":    lr.CreatedAt.UTC().Format(time.RFC3339),
+		"reviewed_at":   formatOptionalTime(lr.ReviewedAt),
 	}
 }
 
@@ -606,19 +964,27 @@ func (s *ParentPortalService) ListLeaves(ctx context.Context, pc *ParentPortalCo
 	db := s.db.WithContext(ctx).Model(&domain.LeaveRequest{}).
 		Where("kindergarten_id = ? AND applicant_id = ?", pc.KindergartenID, pc.UserID)
 	switch status {
-	case "pending":  db = db.Where("status = ?", domain.LeaveStatusPending)
-	case "approved": db = db.Where("status = ?", domain.LeaveStatusApproved)
-	case "rejected": db = db.Where("status = ?", domain.LeaveStatusRejected)
-	case "canceled": db = db.Where("status = ?", domain.LeaveStatusCanceled)
+	case "pending":
+		db = db.Where("status = ?", domain.LeaveStatusPending)
+	case "approved":
+		db = db.Where("status = ?", domain.LeaveStatusApproved)
+	case "rejected":
+		db = db.Where("status = ?", domain.LeaveStatusRejected)
+	case "canceled":
+		db = db.Where("status = ?", domain.LeaveStatusCanceled)
 	}
 	var total int64
-	if err := db.Count(&total).Error; err != nil { return nil, err }
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
 	var rows []domain.LeaveRequest
 	if err := db.Preload("Student").Preload("Applicant").Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	list := make([]map[string]any, len(rows))
-	for i, r := range rows { list[i] = parentLeaveMap(r) }
+	for i, r := range rows {
+		list[i] = parentLeaveMap(r)
+	}
 	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
 }
 
@@ -627,7 +993,9 @@ func (s *ParentPortalService) GetLeave(ctx context.Context, pc *ParentPortalCont
 	if err := s.db.WithContext(ctx).Preload("Student").Preload("Applicant").
 		Where("id = ? AND kindergarten_id = ? AND applicant_id = ?", id, pc.KindergartenID, pc.UserID).
 		First(&lr).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return nil, ErrParentNotFound }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
 		return nil, err
 	}
 	return parentLeaveMap(lr), nil
@@ -638,21 +1006,35 @@ func (s *ParentPortalService) CreateLeave(ctx context.Context, pc *ParentPortalC
 		return nil, ErrParentInvalidParams
 	}
 	startDate, err := time.ParseInLocation("2006-01-02", req.StartDate, time.Local)
-	if err != nil { return nil, ErrParentInvalidParams }
+	if err != nil {
+		return nil, ErrParentInvalidParams
+	}
 	endDate, err := time.ParseInLocation("2006-01-02", req.EndDate, time.Local)
-	if err != nil { return nil, ErrParentInvalidParams }
-	if endDate.Before(startDate) { return nil, ErrParentInvalidParams }
+	if err != nil {
+		return nil, ErrParentInvalidParams
+	}
+	if endDate.Before(startDate) {
+		return nil, ErrParentInvalidParams
+	}
 
 	// Verify student belongs to this parent
 	studentFound := false
 	var studentClassID uint64
 	for _, s := range pc.Students {
-		if s.ID == req.StudentID { studentFound = true; studentClassID = s.ClassID; break }
+		if s.ID == req.StudentID {
+			studentFound = true
+			studentClassID = s.ClassID
+			break
+		}
 	}
-	if !studentFound { return nil, ErrParentForbidden }
+	if !studentFound {
+		return nil, ErrParentForbidden
+	}
 
 	days := req.Days
-	if days <= 0 { days = int(endDate.Sub(startDate).Hours()/24) + 1 }
+	if days <= 0 {
+		days = int(endDate.Sub(startDate).Hours()/24) + 1
+	}
 
 	lr := &domain.LeaveRequest{
 		KindergartenID: pc.KindergartenID, ClassID: studentClassID,
@@ -660,27 +1042,43 @@ func (s *ParentPortalService) CreateLeave(ctx context.Context, pc *ParentPortalC
 		Reason: strings.TrimSpace(req.Reason), StartDate: startDate, EndDate: endDate,
 		Days: days, Status: domain.LeaveStatusPending,
 	}
-	if err := s.db.WithContext(ctx).Create(lr).Error; err != nil { return nil, err }
+	if err := s.db.WithContext(ctx).Create(lr).Error; err != nil {
+		return nil, err
+	}
 	return map[string]any{"id": lr.ID, "status": int8(lr.Status), "status_label": "待审批", "created_at": lr.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 func (s *ParentPortalService) UpdateLeave(ctx context.Context, pc *ParentPortalContext, id uint64, req ParentLeaveInput) error {
 	var lr domain.LeaveRequest
 	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND applicant_id = ?", id, pc.KindergartenID, pc.UserID).First(&lr).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return ErrParentNotFound }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrParentNotFound
+		}
 		return err
 	}
-	if lr.Status != domain.LeaveStatusPending { return ErrParentInvalidParams }
+	if lr.Status != domain.LeaveStatusPending {
+		return ErrParentInvalidParams
+	}
 	updates := map[string]any{}
-	if req.Reason != "" { updates["reason"] = strings.TrimSpace(req.Reason) }
+	if req.Reason != "" {
+		updates["reason"] = strings.TrimSpace(req.Reason)
+	}
 	if req.StartDate != "" {
-		if t, err := time.ParseInLocation("2006-01-02", req.StartDate, time.Local); err == nil { updates["start_date"] = t }
+		if t, err := time.ParseInLocation("2006-01-02", req.StartDate, time.Local); err == nil {
+			updates["start_date"] = t
+		}
 	}
 	if req.EndDate != "" {
-		if t, err := time.ParseInLocation("2006-01-02", req.EndDate, time.Local); err == nil { updates["end_date"] = t }
+		if t, err := time.ParseInLocation("2006-01-02", req.EndDate, time.Local); err == nil {
+			updates["end_date"] = t
+		}
 	}
-	if req.Days > 0 { updates["days"] = req.Days }
-	if len(updates) == 0 { return nil }
+	if req.Days > 0 {
+		updates["days"] = req.Days
+	}
+	if len(updates) == 0 {
+		return nil
+	}
 	s.db.WithContext(ctx).Model(&lr).Updates(updates)
 	return nil
 }
@@ -689,7 +1087,9 @@ func (s *ParentPortalService) CancelLeave(ctx context.Context, pc *ParentPortalC
 	res := s.db.WithContext(ctx).Model(&domain.LeaveRequest{}).
 		Where("id = ? AND kindergarten_id = ? AND applicant_id = ?", id, pc.KindergartenID, pc.UserID).
 		Update("status", domain.LeaveStatusCanceled)
-	if res.RowsAffected == 0 { return ErrParentNotFound }
+	if res.RowsAffected == 0 {
+		return ErrParentNotFound
+	}
 	return nil
 }
 
@@ -702,19 +1102,30 @@ func (s *ParentPortalService) MarkNoticeRead(ctx context.Context, pc *ParentPort
 
 func (s *ParentPortalService) ListNotices(ctx context.Context, pc *ParentPortalContext, category string, page, pageSize int) (map[string]any, error) {
 	classIDs := make([]uint64, len(pc.Students))
-	for i, st := range pc.Students { classIDs[i] = st.ClassID }
-	if len(classIDs) == 0 { return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil }
+	for i, st := range pc.Students {
+		classIDs[i] = st.ClassID
+	}
+	if len(classIDs) == 0 {
+		return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil
+	}
 
-	db := s.db.WithContext(ctx).Model(&domain.Notice{}).
-		Where("kindergarten_id = ? AND class_id IN ? AND status = ?", pc.KindergartenID, classIDs, domain.NoticeStatusPublished)
-	if category != "" { db = db.Where("category = ?", category) }
+	// EXISTS 命中判定：任一孩子班级命中目标集即可见，一条通知只出一行（多孩合并）
+	db := s.notice.FilterByTargetHit(s.db.WithContext(ctx).Model(&domain.Notice{}).
+		Where("kindergarten_id = ? AND status = ?", pc.KindergartenID, domain.NoticeStatusPublished), classIDs)
+	if category != "" {
+		db = db.Where("category = ?", category)
+	}
 
 	var total int64
-	if err := db.Count(&total).Error; err != nil { return nil, err }
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
 
 	offset := (page - 1) * pageSize
 	var rows []domain.Notice
-	if err := db.Order("published_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil { return nil, err }
+	if err := db.Order("published_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+		return nil, err
+	}
 
 	list := make([]map[string]any, len(rows))
 	for i, n := range rows {
@@ -728,16 +1139,24 @@ func (s *ParentPortalService) ListNotices(ctx context.Context, pc *ParentPortalC
 			"title": n.Title, "content": n.Content, "need_confirm": n.NeedConfirm,
 			"status": n.Status, "published_at": formatOptionalTime(n.PublishedAt),
 			"created_at": n.CreatedAt.UTC().Format(time.RFC3339),
-			"is_read": isRead, "is_confirmed": isConfirmed,
+			"is_read":    isRead, "is_confirmed": isConfirmed,
 		}
 	}
 	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
 }
 
 func (s *ParentPortalService) GetNotice(ctx context.Context, pc *ParentPortalContext, id uint64) (map[string]any, error) {
+	classIDs := make([]uint64, len(pc.Students))
+	for i, st := range pc.Students {
+		classIDs[i] = st.ClassID
+	}
 	var n domain.Notice
-	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND status = ?", id, pc.KindergartenID, domain.NoticeStatusPublished).First(&n).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return nil, ErrParentNotFound }
+	q := s.notice.FilterByTargetHit(s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND status = ?", id, pc.KindergartenID, domain.NoticeStatusPublished), classIDs)
+	if err := q.First(&n).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
 		return nil, err
 	}
 	var readLog domain.NoticeReadLog
@@ -748,15 +1167,24 @@ func (s *ParentPortalService) GetNotice(ctx context.Context, pc *ParentPortalCon
 		"id": n.ID, "category": n.Category, "title": n.Title, "content": n.Content,
 		"need_confirm": n.NeedConfirm, "status": n.Status,
 		"published_at": formatOptionalTime(n.PublishedAt),
-		"created_at": n.CreatedAt.UTC().Format(time.RFC3339),
-		"is_read": isRead, "is_confirmed": isConfirmed,
+		"created_at":   n.CreatedAt.UTC().Format(time.RFC3339),
+		"is_read":      isRead, "is_confirmed": isConfirmed,
 	}, nil
 }
 
 func (s *ParentPortalService) ConfirmNotice(ctx context.Context, pc *ParentPortalContext, id uint64) (map[string]any, error) {
+	classIDs := make([]uint64, len(pc.Students))
+	for i, st := range pc.Students {
+		classIDs[i] = st.ClassID
+	}
 	var n domain.Notice
-	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ?", id, pc.KindergartenID).First(&n).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return nil, ErrParentNotFound }
+	// 可见性以目标集判定：非目标家长不可确认（确认按用户一次，对全部孩子生效）
+	q := s.notice.FilterByTargetHit(s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ?", id, pc.KindergartenID), classIDs)
+	if err := q.First(&n).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
 		return nil, err
 	}
 	now := time.Now()
@@ -775,13 +1203,17 @@ func (s *ParentPortalService) ConfirmNotice(ctx context.Context, pc *ParentPorta
 func (s *ParentPortalService) verifyGrowthAccess(ctx context.Context, pc *ParentPortalContext, logID uint64) (*domain.GrowthDailyLog, error) {
 	var log domain.GrowthDailyLog
 	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ?", logID, pc.KindergartenID).First(&log).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return nil, ErrParentNotFound }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
 		return nil, err
 	}
 	if log.TargetType == 1 {
 		// 全班记录：验证孩子所在班级
 		for _, st := range pc.Students {
-			if st.ClassID == log.ClassID { return &log, nil }
+			if st.ClassID == log.ClassID {
+				return &log, nil
+			}
 		}
 		return nil, ErrParentForbidden
 	}
@@ -789,28 +1221,90 @@ func (s *ParentPortalService) verifyGrowthAccess(ctx context.Context, pc *Parent
 	var count int64
 	s.db.WithContext(ctx).Model(&domain.GrowthLogStudent{}).
 		Where("log_id = ? AND student_id IN ?", logID, studentIDs(pc.Students)).Count(&count)
-	if count == 0 { return nil, ErrParentForbidden }
+	if count == 0 {
+		return nil, ErrParentForbidden
+	}
 	return &log, nil
 }
 
 func studentIDs(students []domain.Student) []uint64 {
 	ids := make([]uint64, len(students))
-	for i, s := range students { ids[i] = s.ID }
+	for i, s := range students {
+		ids[i] = s.ID
+	}
 	return ids
+}
+
+// growthLogVisibilityWhere 是家长端成长记录可见性规则的唯一实现点：
+// 「记录属于孩子所在班级（target_type=1）」或「记录明确发给了孩子本人（target_type=2）」。
+// 输入学生为空时返回恒假条件；student 非 nil 时只按该学生判断。
+// 纯函数形态是为了让规则本身可被单元测试直接断言。
+func growthLogVisibilityWhere(kgID uint64, students []domain.Student, student *domain.Student) (string, []any) {
+	if student != nil {
+		return "growth_daily_logs.kindergarten_id = ? AND growth_daily_logs.class_id = ? AND (growth_daily_logs.target_type = 1 OR (growth_daily_logs.target_type = 2 AND growth_daily_logs.id IN (SELECT log_id FROM growth_log_students WHERE student_id = ?)))",
+			[]any{kgID, student.ClassID, student.ID}
+	}
+	ids := studentIDs(students)
+	if len(ids) == 0 {
+		return "1 = 0", nil
+	}
+	classIDs := make([]uint64, 0, len(ids))
+	seen := make(map[uint64]bool, len(ids))
+	for _, st := range students {
+		if !seen[st.ClassID] {
+			seen[st.ClassID] = true
+			classIDs = append(classIDs, st.ClassID)
+		}
+	}
+	return "growth_daily_logs.kindergarten_id = ? AND growth_daily_logs.class_id IN ? AND (growth_daily_logs.target_type = 1 OR (growth_daily_logs.target_type = 2 AND growth_daily_logs.id IN (SELECT log_id FROM growth_log_students WHERE student_id IN ?)))",
+		[]any{kgID, classIDs, ids}
 }
 
 func (s *ParentPortalService) GrowthFeedDetail(ctx context.Context, pc *ParentPortalContext, logID uint64) (map[string]any, error) {
 	log, err := s.verifyGrowthAccess(ctx, pc, logID)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	m := map[string]any{
 		"id": log.ID, "date": log.Date.Format("2006-01-02"), "target_type": log.TargetType,
-		"content": log.Content, "performance_tags": log.PerformanceTags,
+		"content": log.Content, "performance_tags": splitPerformanceTags(log.PerformanceTags),
 		"breakfast_rating": log.BreakfastRating, "lunch_rating": log.LunchRating,
 		"dinner_rating": log.DinnerRating, "nap_duration": log.NapDuration,
 		"sleep_quality": log.SleepQuality, "morning_mood": log.MorningMood,
 		"afternoon_mood": log.AfternoonMood, "sync_to_feed": log.SyncToFeed,
 		"created_at": log.CreatedAt.UTC().Format(time.RFC3339),
+	}
+
+	// 相关孩子是详情页语义（teacher-08 详情设计的「相关孩子」区块），只在发给指定学生的记录上有值。
+	if log.TargetType == 2 {
+		var linked []domain.Student
+		if err := s.db.WithContext(ctx).
+			Joins("INNER JOIN growth_log_students gls ON gls.student_id = students.id AND gls.log_id = ?", logID).
+			Find(&linked).Error; err != nil {
+			return nil, err
+		}
+		rs := make([]map[string]any, 0, len(linked))
+		for _, st := range linked {
+			rs = append(rs, map[string]any{"id": st.ID, "name": st.Name, "avatar": st.Avatar})
+		}
+		m["related_students"] = rs
+	}
+
+	// 徽章：本条记录是当前孩子某次获奖的见证时才有
+	if pc.CurrentStudent != nil {
+		var g domain.StudentAchievement
+		err := s.db.WithContext(ctx).
+			Where("student_id = ? AND log_id = ?", pc.CurrentStudent.ID, logID).
+			First(&g).Error
+		if err == nil {
+			var a domain.Achievement
+			if err := s.db.WithContext(ctx).First(&a, g.AchievementID).Error; err == nil {
+				m["badge"] = toBadge(a)
+			}
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
 	}
 
 	var creator domain.User
@@ -820,7 +1314,15 @@ func (s *ParentPortalService) GrowthFeedDetail(ctx context.Context, pc *ParentPo
 
 	var media []domain.GrowthMedia
 	s.db.WithContext(ctx).Where("log_id = ?", logID).Order("sort_num ASC, id ASC").Find(&media)
-	m["media"] = media
+	mediaIDs := make([]uint64, 0, len(media))
+	for _, md := range media {
+		mediaIDs = append(mediaIDs, md.ID)
+	}
+	confirmedByMedia, err := s.confirmedMediaStudents(ctx, mediaIDs)
+	if err != nil {
+		return nil, err
+	}
+	m["media"] = toFeedMedia(media, confirmedByMedia)
 
 	var likesCount int64
 	s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ?", logID).Count(&likesCount)
@@ -837,27 +1339,57 @@ func (s *ParentPortalService) GrowthFeedDetail(ctx context.Context, pc *ParentPo
 }
 
 func (s *ParentPortalService) LikeGrowth(ctx context.Context, pc *ParentPortalContext, logID uint64) (map[string]any, error) {
-	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil { return nil, err }
+	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil {
+		return nil, err
+	}
+	// growth_likes 是软删除模型，而唯一索引 idx_log_user(log_id, user_id) 不含
+	// deleted_at —— 取消点赞留下的软删行会占住唯一键，直接 Create 会撞键失败。
+	// 所以先 Unscoped 查（含软删行）：软删的就地复活，查不到才插入。
+	// 写入错误必须向上抛：此前忽略 Create 错误，接口会返回 is_liked:true 而库里没有行。
 	var existing domain.GrowthLike
-	err := s.db.WithContext(ctx).Where("log_id = ? AND user_id = ?", logID, pc.UserID).First(&existing).Error
-	if err == nil { return map[string]any{"is_liked": true, "likes_count": int64(0)}, nil } // already liked, idempotent
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) { return nil, err }
-	s.db.WithContext(ctx).Create(&domain.GrowthLike{LogID: logID, UserID: pc.UserID})
+	err := s.db.WithContext(ctx).Unscoped().
+		Where("log_id = ? AND user_id = ?", logID, pc.UserID).First(&existing).Error
+	switch {
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		if e := s.db.WithContext(ctx).Create(&domain.GrowthLike{LogID: logID, UserID: pc.UserID}).Error; e != nil {
+			return nil, e
+		}
+	case err != nil:
+		return nil, err
+	case existing.DeletedAt.Valid:
+		if e := s.db.WithContext(ctx).Unscoped().Model(&existing).
+			Update("deleted_at", nil).Error; e != nil {
+			return nil, e
+		}
+	}
 	var count int64
-	s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ?", logID).Count(&count)
+	if e := s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ?", logID).Count(&count).Error; e != nil {
+		return nil, e
+	}
 	return map[string]any{"is_liked": true, "likes_count": count}, nil
 }
 
 func (s *ParentPortalService) UnlikeGrowth(ctx context.Context, pc *ParentPortalContext, logID uint64) (map[string]any, error) {
-	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil { return nil, err }
-	s.db.WithContext(ctx).Where("log_id = ? AND user_id = ?", logID, pc.UserID).Delete(&domain.GrowthLike{})
+	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil {
+		return nil, err
+	}
+	// 硬删：点赞没有审计价值；留软删行只会占住 idx_log_user 唯一键（见 LikeGrowth）。
+	if e := s.db.WithContext(ctx).Unscoped().
+		Where("log_id = ? AND user_id = ?", logID, pc.UserID).
+		Delete(&domain.GrowthLike{}).Error; e != nil {
+		return nil, e
+	}
 	var count int64
-	s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ?", logID).Count(&count)
+	if e := s.db.WithContext(ctx).Model(&domain.GrowthLike{}).Where("log_id = ?", logID).Count(&count).Error; e != nil {
+		return nil, e
+	}
 	return map[string]any{"is_liked": false, "likes_count": count}, nil
 }
 
 func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *ParentPortalContext, logID uint64) (map[string]any, error) {
-	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil { return nil, err }
+	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil {
+		return nil, err
+	}
 	var rows []domain.GrowthComment
 	if err := s.db.WithContext(ctx).Preload("User").Where("log_id = ?", logID).Order("created_at ASC").Find(&rows).Error; err != nil {
 		return nil, err
@@ -865,23 +1397,32 @@ func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *Parent
 	list := make([]map[string]any, len(rows))
 	for i, r := range rows {
 		u := map[string]any{}
-		if r.User != nil { u = map[string]any{"id": r.User.ID, "nickname": r.User.Nickname, "avatar": r.User.Avatar} }
+		if r.User != nil {
+			u = map[string]any{"id": r.User.ID, "nickname": r.User.Nickname, "avatar": r.User.Avatar}
+		}
 		list[i] = map[string]any{"id": r.ID, "content": r.Content, "parent_id": r.ParentID, "user": u, "created_at": r.CreatedAt.UTC().Format(time.RFC3339)}
 	}
 	return map[string]any{"list": list, "total": len(rows)}, nil
 }
 
 func (s *ParentPortalService) CreateGrowthComment(ctx context.Context, pc *ParentPortalContext, logID uint64, content string, parentID *uint64) (map[string]any, error) {
-	if strings.TrimSpace(content) == "" { return nil, ErrParentInvalidParams }
-	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil { return nil, err }
+	if strings.TrimSpace(content) == "" {
+		return nil, ErrParentInvalidParams
+	}
+	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil {
+		return nil, err
+	}
 	row := &domain.GrowthComment{LogID: logID, UserID: pc.UserID, Content: strings.TrimSpace(content)}
-	if parentID != nil { row.ParentID = parentID }
-	if err := s.db.WithContext(ctx).Create(row).Error; err != nil { return nil, err }
+	if parentID != nil {
+		row.ParentID = parentID
+	}
+	if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
+		return nil, err
+	}
 	return map[string]any{"id": row.ID, "created_at": row.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 func (s *ParentPortalService) ListGrowthMedia(ctx context.Context, pc *ParentPortalContext, year, month int) (map[string]any, error) {
-	studentIDs := studentIDs(pc.Students)
 	db := s.db.WithContext(ctx).Model(&domain.GrowthMedia{}).
 		Where("kindergarten_id = ?", pc.KindergartenID)
 	if year > 0 && month > 0 {
@@ -889,24 +1430,45 @@ func (s *ParentPortalService) ListGrowthMedia(ctx context.Context, pc *ParentPor
 		end := start.AddDate(0, 1, 0)
 		db = db.Where("created_at >= ? AND created_at < ?", start, end)
 	}
-	// Filter: media belongs to class-level logs OR individual logs for these students
-	db = db.Where(
-		"log_id IN (SELECT id FROM growth_daily_logs WHERE kindergarten_id = ? AND (target_type = 1 OR id IN (SELECT log_id FROM growth_log_students WHERE student_id IN ?)))",
-		pc.KindergartenID, studentIDs,
-	)
+	// 可见性与成长时光一致：只含孩子所在班级的全班记录媒体，或发给孩子的个体记录媒体。
+	visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, pc.Students, nil)
+	db = db.Where("log_id IN (SELECT id FROM growth_daily_logs WHERE "+visWhere+")", visArgs...)
 	var rows []domain.GrowthMedia
-	if err := db.Order("created_at DESC").Find(&rows).Error; err != nil { return nil, err }
+	if err := db.Order("created_at DESC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
 	return map[string]any{"list": rows, "total": len(rows), "year": year, "month": month}, nil
 }
 
 func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPortalContext, studentID uint64, reportType string) (map[string]any, error) {
-	if studentID == 0 { studentID = pc.CurrentStudent.ID }
+	// 归属校验：请求的孩子必须在家长的孩子名单内（白名单前置，越权请求不触碰数据）
+	var target *domain.Student
+	if studentID == 0 {
+		if pc.CurrentStudent == nil {
+			return nil, ErrParentInvalidParams
+		}
+		target = pc.CurrentStudent
+	} else {
+		for i := range pc.Students {
+			if pc.Students[i].ID == studentID {
+				target = &pc.Students[i]
+				break
+			}
+		}
+		if target == nil {
+			return nil, ErrParentForbidden
+		}
+	}
 	db := s.db.WithContext(ctx).Model(&domain.GrowthReport{}).
-		Where("student_id = ?", studentID)
-	if reportType != "" { db = db.Where("report_type = ?", reportType) }
+		Where("student_id = ? AND kindergarten_id = ? AND status = ?", target.ID, pc.KindergartenID, 1)
+	if reportType != "" {
+		db = db.Where("report_type = ?", reportType)
+	}
 	var report domain.GrowthReport
 	if err := db.Order("created_at DESC").First(&report).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return map[string]any{}, nil }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return map[string]any{}, nil
+		}
 		return nil, err
 	}
 	var dims []domain.GrowthReportDimension
@@ -918,18 +1480,26 @@ func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPor
 
 func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
 	classIDs := make([]uint64, len(pc.Students))
-	for i, st := range pc.Students { classIDs[i] = st.ClassID }
-	if len(classIDs) == 0 { return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil }
+	for i, st := range pc.Students {
+		classIDs[i] = st.ClassID
+	}
+	if len(classIDs) == 0 {
+		return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil
+	}
 
 	db := s.db.WithContext(ctx).Model(&domain.ParentTask{}).
 		Where("kindergarten_id = ? AND class_id IN ? AND status = ?", pc.KindergartenID, classIDs, 1)
 
 	var total int64
-	if err := db.Count(&total).Error; err != nil { return nil, err }
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
 
 	offset := (page - 1) * pageSize
 	var rows []domain.ParentTask
-	if err := db.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil { return nil, err }
+	if err := db.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+		return nil, err
+	}
 
 	list := make([]map[string]any, len(rows))
 	for i, r := range rows {
@@ -948,7 +1518,7 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 			"start_date": r.StartDate.Format("2006-01-02"), "end_date": r.EndDate.Format("2006-01-02"),
 			"status": r.Status, "checked_in_today": checkedIn,
 			"checkin_count": checkinCount,
-			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+			"created_at":    r.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}
 	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
@@ -957,7 +1527,9 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalContext, id uint64) (map[string]any, error) {
 	var t domain.ParentTask
 	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ?", id, pc.KindergartenID).First(&t).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return nil, ErrParentNotFound }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
 		return nil, err
 	}
 	var checkedIn bool
@@ -977,23 +1549,29 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalContext, taskID uint64, content, imageURL string) (map[string]any, error) {
 	var t domain.ParentTask
 	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND status = ?", taskID, pc.KindergartenID, 1).First(&t).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return nil, ErrParentNotFound }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
 		return nil, err
 	}
 	today := time.Now().Format("2006-01-02")
 	var existing int64
 	s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND student_id = ? AND date = ?", taskID, pc.CurrentStudent.ID, today).Count(&existing)
-	if existing > 0 { return nil, ErrParentInvalidParams } // duplicate checkin
+	if existing > 0 {
+		return nil, ErrParentInvalidParams
+	} // duplicate checkin
 
 	checkin := &domain.TaskCheckIn{
 		TaskID: taskID, StudentID: pc.CurrentStudent.ID, UserID: pc.UserID,
 		Date: time.Now().Truncate(24 * time.Hour), Content: content, ImageURL: imageURL,
 		Points: t.Points,
 	}
-	if err := s.db.WithContext(ctx).Create(checkin).Error; err != nil { return nil, err }
+	if err := s.db.WithContext(ctx).Create(checkin).Error; err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"id": checkin.ID, "points_earned": t.Points,
-		"message": fmt.Sprintf("+%d积分!", t.Points),
+		"message":    fmt.Sprintf("+%d积分!", t.Points),
 		"created_at": checkin.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
 }
@@ -1002,11 +1580,15 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 	var rows []domain.TaskCheckIn
 	if err := s.db.WithContext(ctx).Preload("Student").
 		Where("task_id = ? AND student_id = ?", taskID, pc.CurrentStudent.ID).
-		Order("date DESC").Find(&rows).Error; err != nil { return nil, err }
+		Order("date DESC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
 	list := make([]map[string]any, len(rows))
 	for i, r := range rows {
 		studentName := ""
-		if r.Student != nil { studentName = r.Student.Name }
+		if r.Student != nil {
+			studentName = r.Student.Name
+		}
 		list[i] = map[string]any{
 			"id": r.ID, "date": r.Date.Format("2006-01-02"), "content": r.Content,
 			"image_url": r.ImageURL, "points": r.Points, "student_name": studentName,
@@ -1019,13 +1601,21 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 // ==================== Points & Achievements ====================
 
 func (s *ParentPortalService) PointsOverview(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
-	if pc.CurrentStudent == nil { return nil, ErrParentInvalidParams }
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
 	var account domain.PointAccount
 	s.db.WithContext(ctx).Where("student_id = ?", pc.CurrentStudent.ID).First(&account)
 	totalPoints := account.TotalPoints - account.UsedPoints
 	level := 1
 	levelName := "新手上路"
-	if totalPoints >= 500 { level = 3; levelName = "积分达人" } else if totalPoints >= 200 { level = 2; levelName = "活跃家长" }
+	if totalPoints >= 500 {
+		level = 3
+		levelName = "积分达人"
+	} else if totalPoints >= 200 {
+		level = 2
+		levelName = "活跃家长"
+	}
 	thisWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday())+1)
 	var weekPoints int64
 	s.db.WithContext(ctx).Model(&domain.PointTransaction{}).
@@ -1037,7 +1627,9 @@ func (s *ParentPortalService) PointsOverview(ctx context.Context, pc *ParentPort
 }
 
 func (s *ParentPortalService) PointsHistory(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
-	if pc.CurrentStudent == nil { return nil, ErrParentInvalidParams }
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
 	offset := (page - 1) * pageSize
 	var total int64
 	s.db.WithContext(ctx).Model(&domain.PointTransaction{}).Where("student_id = ?", pc.CurrentStudent.ID).Count(&total)
@@ -1047,7 +1639,9 @@ func (s *ParentPortalService) PointsHistory(ctx context.Context, pc *ParentPorta
 }
 
 func (s *ParentPortalService) Leaderboard(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
-	if pc.Class == nil { return map[string]any{"list": []any{}, "my_rank": 0, "my_points": 0}, nil }
+	if pc.Class == nil {
+		return map[string]any{"list": []any{}, "my_rank": 0, "my_points": 0}, nil
+	}
 	var rows []struct {
 		StudentID   uint64 `gorm:"column:student_id"`
 		TotalPoints int64  `gorm:"column:total_points"`
@@ -1062,25 +1656,53 @@ func (s *ParentPortalService) Leaderboard(ctx context.Context, pc *ParentPortalC
 	myRank, myPoints := 0, int64(0)
 	for i, r := range rows {
 		list[i] = map[string]any{"rank": i + 1, "student_id": r.StudentID, "student_name": r.StudentName, "total_points": r.TotalPoints}
-		if r.StudentID == pc.CurrentStudent.ID { myRank = i + 1; myPoints = r.TotalPoints }
+		if r.StudentID == pc.CurrentStudent.ID {
+			myRank = i + 1
+			myPoints = r.TotalPoints
+		}
 	}
 	return map[string]any{"period": "weekly", "list": list, "my_rank": myRank, "my_points": myPoints}, nil
 }
 
 func (s *ParentPortalService) ListAchievements(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
-	if pc.CurrentStudent == nil { return nil, ErrParentInvalidParams }
-	var earnedIDs []uint64
-	s.db.WithContext(ctx).Model(&domain.StudentAchievement{}).Where("student_id = ?", pc.CurrentStudent.ID).Pluck("achievement_id", &earnedIDs)
-	earnedSet := make(map[uint64]bool, len(earnedIDs))
-	for _, id := range earnedIDs { earnedSet[id] = true }
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	// 取得授予记录（含见证 log_id），而不是只取 achievement_id 集合
+	var grants []domain.StudentAchievement
+	s.db.WithContext(ctx).Where("student_id = ?", pc.CurrentStudent.ID).Find(&grants)
+	earnedByAch := make(map[uint64]*domain.StudentAchievement, len(grants))
+	for i := range grants {
+		earnedByAch[grants[i].AchievementID] = &grants[i]
+	}
 
 	var all []domain.Achievement
-	s.db.WithContext(ctx).Find(&all)
+	// 必须按园所过滤：不加的话会把其他园所配置的成就一并返回，
+	// total_count / not_earned 都会串租户（CLAUDE.md：业务表全带 kindergarten_id）。
+	s.db.WithContext(ctx).Where("kindergarten_id = ?", pc.KindergartenID).Find(&all)
 	earned := make([]map[string]any, 0)
 	notEarned := make([]map[string]any, 0)
 	for _, a := range all {
-		m := map[string]any{"id": a.ID, "name": a.Name, "icon": a.Icon, "category": a.Category, "points": a.Points}
-		if earnedSet[a.ID] { earned = append(earned, m) } else { notEarned = append(notEarned, m) }
+		// 字段名与契约 / admin 侧对齐：icon_url（不是 icon）、description
+		// （家长端 points/index.vue 渲染 a.description，之前实现没返回 → 永远空白）
+		m := map[string]any{
+			"id":          a.ID,
+			"name":        a.Name,
+			"description": a.Description,
+			"icon_url":    a.Icon,
+			"category":    a.Category,
+			"points":      a.Points,
+		}
+		if g, ok := earnedByAch[a.ID]; ok {
+			// log_id 可空：未绑定见证的授予，徽章不出现在任何成长记录卡片上
+			if g.LogID != nil && *g.LogID != 0 {
+				m["log_id"] = *g.LogID
+			}
+			m["earned_at"] = g.AchievedAt.UTC().Format(time.RFC3339)
+			earned = append(earned, m)
+		} else {
+			notEarned = append(notEarned, m)
+		}
 	}
 	return map[string]any{"earned": earned, "not_earned": notEarned, "earned_count": len(earned), "total_count": len(all)}, nil
 }
@@ -1105,7 +1727,12 @@ func (s *ParentPortalService) ListFeedback(ctx context.Context, pc *ParentPortal
 	list := make([]map[string]any, len(rows))
 	for i, r := range rows {
 		statusLabel := "已提交"
-		if r.Status == 1 { statusLabel = "已回复" } else if r.Status == 2 { statusLabel = "已关闭" }
+		switch r.Status {
+		case 1:
+			statusLabel = "已回复"
+		case 2:
+			statusLabel = "已关闭"
+		}
 		list[i] = map[string]any{
 			"id": r.ID, "category": r.Category, "content": r.Content,
 			"status": r.Status, "status_label": statusLabel,
@@ -1116,38 +1743,52 @@ func (s *ParentPortalService) ListFeedback(ctx context.Context, pc *ParentPortal
 }
 
 func (s *ParentPortalService) CreateFeedback(ctx context.Context, pc *ParentPortalContext, req ParentFeedbackInput) (map[string]any, error) {
-	if strings.TrimSpace(req.Content) == "" { return nil, ErrParentInvalidParams }
+	if strings.TrimSpace(req.Content) == "" {
+		return nil, ErrParentInvalidParams
+	}
 	fb := &domain.Feedback{
 		KindergartenID: pc.KindergartenID, UserID: pc.UserID,
 		Category: req.Category, Content: strings.TrimSpace(req.Content),
 		Contact: req.Contact, Images: req.Images, Status: 0,
 	}
-	if err := s.db.WithContext(ctx).Create(fb).Error; err != nil { return nil, err }
+	if err := s.db.WithContext(ctx).Create(fb).Error; err != nil {
+		return nil, err
+	}
 	return map[string]any{"id": fb.ID, "status": 0, "status_label": "已提交", "created_at": fb.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 // ==================== Student Bind/Unbind ====================
 
 func (s *ParentPortalService) BindStudent(ctx context.Context, pc *ParentPortalContext, inviteCode string) (map[string]any, error) {
-	if strings.TrimSpace(inviteCode) == "" { return nil, ErrParentInvalidParams }
+	if strings.TrimSpace(inviteCode) == "" {
+		return nil, ErrParentInvalidParams
+	}
 	// Find student by invite code (stored as student_no or dedicated field)
 	var student domain.Student
 	if err := s.db.WithContext(ctx).Where("student_no = ? AND kindergarten_id = ?", inviteCode, pc.KindergartenID).First(&student).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) { return nil, ErrParentNotFound }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
 		return nil, err
 	}
 	// Check not already bound
 	var existing int64
 	s.db.WithContext(ctx).Model(&domain.StudentParent{}).Where("student_id = ? AND user_id = ?", student.ID, pc.UserID).Count(&existing)
-	if existing > 0 { return nil, ErrParentInvalidParams }
+	if existing > 0 {
+		return nil, ErrParentInvalidParams
+	}
 	sp := &domain.StudentParent{StudentID: student.ID, UserID: pc.UserID, Relation: "other", IsPrimary: false}
-	if err := s.db.WithContext(ctx).Create(sp).Error; err != nil { return nil, err }
+	if err := s.db.WithContext(ctx).Create(sp).Error; err != nil {
+		return nil, err
+	}
 	return map[string]any{"id": sp.ID, "student_id": student.ID, "student_name": student.Name, "created_at": sp.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 func (s *ParentPortalService) UnbindStudent(ctx context.Context, pc *ParentPortalContext, id uint64) error {
 	res := s.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, pc.UserID).Delete(&domain.StudentParent{})
-	if res.RowsAffected == 0 { return ErrParentNotFound }
+	if res.RowsAffected == 0 {
+		return ErrParentNotFound
+	}
 	return nil
 }
 
@@ -1168,14 +1809,22 @@ func (s *ParentPortalService) UpdateSettings(ctx context.Context, pc *ParentPort
 // ==================== Home Overview ====================
 
 func (s *ParentPortalService) HomeOverview(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
-	if pc.CurrentStudent == nil { return nil, ErrParentInvalidParams }
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
 	now := time.Now()
 	today := now.Format("2006-01-02")
-	cn := ""; if pc.Class != nil { cn = pc.Class.Name }
+	cn := ""
+	if pc.Class != nil {
+		cn = pc.Class.Name
+	}
 
 	studentsList := make([]map[string]any, len(pc.Students))
 	for i, st := range pc.Students {
-		cname := ""; if st.Class != nil { cname = st.Class.Name }
+		cname := ""
+		if st.Class != nil {
+			cname = st.Class.Name
+		}
 		studentsList[i] = map[string]any{"id": st.ID, "name": st.Name, "avatar": st.Avatar, "class_name": cname, "class_id": st.ClassID}
 	}
 
@@ -1186,20 +1835,34 @@ func (s *ParentPortalService) HomeOverview(ctx context.Context, pc *ParentPortal
 	attendanceLabel := "未入园"
 	arriveTime := ""
 	if err == nil {
-		if attendance.Status == domain.AttendancePresent { attendanceStatus = "present"; attendanceLabel = "已入园" }
-		if !attendance.CheckInTime.IsZero() { arriveTime = attendance.CheckInTime.Format("15:04") }
+		if attendance.Status == domain.AttendancePresent {
+			attendanceStatus = "present"
+			attendanceLabel = "已入园"
+		}
+		if !attendance.CheckInTime.IsZero() {
+			arriveTime = attendance.CheckInTime.Format("15:04")
+		}
 	}
 
 	var summary domain.StudentDailySummary
 	s.db.WithContext(ctx).Where("student_id = ? AND date = ?", pc.CurrentStudent.ID, today).First(&summary)
 
 	var newGrowthCount int64
-	if pc.Class != nil {
-		s.db.WithContext(ctx).Model(&domain.GrowthDailyLog{}).Where("kindergarten_id = ? AND class_id = ? AND date = ?", pc.KindergartenID, pc.Class.ID, today).Count(&newGrowthCount)
+	{
+		visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, pc.Students, pc.CurrentStudent)
+		s.db.WithContext(ctx).Model(&domain.GrowthDailyLog{}).
+			Where(visWhere, visArgs...).
+			Where("growth_daily_logs.date = ?", today).Count(&newGrowthCount)
 	}
 	var newNoticeCount int64
 	if pc.Class != nil {
-		s.db.WithContext(ctx).Model(&domain.Notice{}).Where("kindergarten_id = ? AND class_id = ? AND status = ? AND published_at >= ?", pc.KindergartenID, pc.Class.ID, domain.NoticeStatusPublished, today).Count(&newNoticeCount)
+		homeClassIDs := make([]uint64, 0, len(pc.Students))
+		for _, st := range pc.Students {
+			homeClassIDs = append(homeClassIDs, st.ClassID)
+		}
+		s.notice.FilterByTargetHit(s.db.WithContext(ctx).Model(&domain.Notice{}).
+			Where("kindergarten_id = ? AND status = ? AND published_at >= ?", pc.KindergartenID, domain.NoticeStatusPublished, today),
+			homeClassIDs).Count(&newNoticeCount)
 	}
 	var pendingTasks int64
 	if pc.Class != nil {
@@ -1213,32 +1876,125 @@ func (s *ParentPortalService) HomeOverview(ctx context.Context, pc *ParentPortal
 	}
 
 	return map[string]any{
-		"date": now.Format("2006-01-02"),
-		"weekday": []string{"星期日","星期一","星期二","星期三","星期四","星期五","星期六"}[now.Weekday()],
+		"date":            now.Format("2006-01-02"),
+		"weekday":         []string{"星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"}[now.Weekday()],
 		"current_student": map[string]any{"id": pc.CurrentStudent.ID, "name": pc.CurrentStudent.Name, "avatar": pc.CurrentStudent.Avatar, "class_name": cn, "class_id": pc.CurrentStudent.ClassID},
-		"students": studentsList,
+		"students":        studentsList,
 		"today_summary": map[string]any{
 			"attendance_status": attendanceStatus, "attendance_label": attendanceLabel, "arrive_time": arriveTime,
 			"meal_rating": summary.MealRating, "meal_label": mealRatingLabel(int(summary.MealRating)),
 			"nap_duration": summary.NapDuration, "sleep_quality": summary.SleepQuality,
 			"sleep_label": sleepQualityLabel(int(summary.SleepQuality)),
 			"mood_rating": summary.MoodRating, "mood_label": moodRatingLabel(int(summary.MoodRating)),
-			"performance_tag": summary.PerformanceTag,
+			"performance_tag":  summary.PerformanceTag,
 			"new_growth_count": newGrowthCount, "new_notice_count": newNoticeCount,
 			"pending_tasks": pendingTasks, "leave_status": leaveStatus,
 		},
 	}, nil
 }
 
-func mealRatingLabel(r int) string { switch r { case 3: return "很好"; case 2: return "一般"; case 1: return "较差"; default: return "" } }
-func sleepQualityLabel(q int) string { switch q { case 3: return "很好"; case 2: return "一般"; case 1: return "较差"; default: return "" } }
-func moodRatingLabel(m int) string { switch m { case 3: return "愉快"; case 2: return "平稳"; case 1: return "低落"; default: return "" } }
+func mealRatingLabel(r int) string {
+	switch r {
+	case 3:
+		return "很好"
+	case 2:
+		return "一般"
+	case 1:
+		return "较差"
+	default:
+		return ""
+	}
+}
+func sleepQualityLabel(q int) string {
+	switch q {
+	case 3:
+		return "很好"
+	case 2:
+		return "一般"
+	case 1:
+		return "较差"
+	default:
+		return ""
+	}
+}
+func moodRatingLabel(m int) string {
+	switch m {
+	case 3:
+		return "愉快"
+	case 2:
+		return "平稳"
+	case 1:
+		return "低落"
+	default:
+		return ""
+	}
+}
+
+// ==================== Morning Health ====================
+
+type ParentHealthRecord struct {
+	CheckDate          string         `json:"check_date"`
+	OverallStatus      int8           `json:"overall_status"`
+	OverallStatusLabel string         `json:"overall_status_label"`
+	Temperature        *float64       `json:"temperature"`
+	AbnormalItems      []AbnormalItem `json:"abnormal_items"`
+	Remark             string         `json:"remark"`
+	IsIsolated         bool           `json:"is_isolated"`
+}
+
+// ListHealthRecords 返回某孩子最近 7 天已完成的晨检记录。
+// 只看本人孩子；未绑定直接拒绝，不回退到第一个孩子。
+func (s *ParentPortalService) ListHealthRecords(ctx context.Context, pc *ParentPortalContext, studentID uint64) ([]ParentHealthRecord, error) {
+	if studentID == 0 {
+		return nil, ErrParentInvalidParams
+	}
+	bound := false
+	for _, st := range pc.Students {
+		if st.ID == studentID {
+			bound = true
+			break
+		}
+	}
+	if !bound {
+		return nil, ErrParentForbidden
+	}
+
+	from := time.Now().AddDate(0, 0, -6).Format("2006-01-02")
+	var rows []domain.MorningHealthCheck
+	if err := s.db.WithContext(ctx).
+		Where("kindergarten_id = ? AND student_id = ? AND check_status = ? AND date >= ? AND deleted_at IS NULL",
+			pc.KindergartenID, studentID, domain.HealthCheckCompleted, from).
+		Order("date DESC, id DESC").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	records := make([]ParentHealthRecord, 0, len(rows))
+	for i := range rows {
+		row := &rows[i]
+		records = append(records, ParentHealthRecord{
+			CheckDate:          normalizeDate(row.Date),
+			OverallStatus:      int8(row.OverallStatus),
+			OverallStatusLabel: overallStatusLabel(row.OverallStatus),
+			Temperature:        row.Temperature,
+			AbnormalItems:      readableAbnormalItems(row),
+			Remark:             row.Remark,
+			IsIsolated:         row.IsIsolated,
+		})
+	}
+	return records, nil
+}
 
 // ==================== Student Profile ====================
 
 func (s *ParentPortalService) GetStudentProfile(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
-	if pc.CurrentStudent == nil { return nil, ErrParentInvalidParams }
-	cn := ""; if pc.Class != nil { cn = pc.Class.Name }
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	cn := ""
+	if pc.Class != nil {
+		cn = pc.Class.Name
+	}
 
 	// Calculate age
 	age := ""
@@ -1248,7 +2004,9 @@ func (s *ParentPortalService) GetStudentProfile(ctx context.Context, pc *ParentP
 		if now.Month() < pc.CurrentStudent.Birthday.Month() || (now.Month() == pc.CurrentStudent.Birthday.Month() && now.Day() < pc.CurrentStudent.Birthday.Day()) {
 			years--
 		}
-		if years > 0 { age = fmt.Sprintf("%d岁", years) }
+		if years > 0 {
+			age = fmt.Sprintf("%d岁", years)
+		}
 	}
 
 	// Get parents list
@@ -1257,7 +2015,11 @@ func (s *ParentPortalService) GetStudentProfile(ctx context.Context, pc *ParentP
 	s.db.WithContext(ctx).Preload("User").Where("student_id = ?", pc.CurrentStudent.ID).Find(&sps)
 	for _, sp := range sps {
 		p := map[string]any{"id": sp.ID, "relation": string(sp.Relation), "relation_label": RelationLabel(sp.Relation), "is_primary": sp.IsPrimary}
-		if sp.User != nil { p["nickname"] = sp.User.Nickname; p["avatar"] = sp.User.Avatar; p["phone"] = maskPhone(sp.User.Phone) }
+		if sp.User != nil {
+			p["nickname"] = sp.User.Nickname
+			p["avatar"] = sp.User.Avatar
+			p["phone"] = maskPhone(sp.User.Phone)
+		}
 		parents = append(parents, p)
 	}
 
@@ -1275,15 +2037,23 @@ func (s *ParentPortalService) GetStudentProfile(ctx context.Context, pc *ParentP
 
 func (s *ParentPortalService) ListAnnouncements(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
 	classIDs := make([]uint64, len(pc.Students))
-	for i, st := range pc.Students { classIDs[i] = st.ClassID }
-	if len(classIDs) == 0 { return map[string]any{"list": []any{}, "total": int64(0)}, nil }
+	for i, st := range pc.Students {
+		classIDs[i] = st.ClassID
+	}
+	if len(classIDs) == 0 {
+		return map[string]any{"list": []any{}, "total": int64(0)}, nil
+	}
 	offset := (page - 1) * pageSize
 	db := s.db.WithContext(ctx).Model(&domain.Announcement{}).
 		Where("kindergarten_id = ? AND (class_id IN ? OR class_id = 0) AND status = ?", pc.KindergartenID, classIDs, 1)
 	var total int64
-	if err := db.Count(&total).Error; err != nil { return nil, err }
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
 	var rows []domain.Announcement
-	if err := db.Order("is_top DESC, published_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil { return nil, err }
+	if err := db.Order("is_top DESC, published_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+		return nil, err
+	}
 	list := make([]map[string]any, len(rows))
 	for i, a := range rows {
 		list[i] = map[string]any{"id": a.ID, "title": a.Title, "content": a.Content, "is_top": a.IsTop, "published_at": a.PublishedAt.Format("2006-01-02"), "created_at": a.CreatedAt.UTC().Format(time.RFC3339)}
@@ -1313,18 +2083,22 @@ func (s *ParentPortalService) ListHomeFeeds(ctx context.Context, pc *ParentPorta
 	}
 	var items []feedItem
 
-	// 1) 通知（最近 3 条）
+	// 1) 通知（最近 3 条）——EXISTS 命中判定，一条通知只出一行（多孩合并）
 	var notices []domain.Notice
-	s.db.WithContext(ctx).Model(&domain.Notice{}).
-		Where("kindergarten_id = ? AND class_id IN ? AND status = ?", pc.KindergartenID, classIDs, domain.NoticeStatusPublished).
+	s.notice.FilterByTargetHit(s.db.WithContext(ctx).Model(&domain.Notice{}).
+		Where("kindergarten_id = ? AND status = ?", pc.KindergartenID, domain.NoticeStatusPublished), classIDs).
 		Order("published_at DESC").Limit(3).Find(&notices)
 	noticeIDs := make([]uint64, len(notices))
-	for i, n := range notices { noticeIDs[i] = n.ID }
+	for i, n := range notices {
+		noticeIDs[i] = n.ID
+	}
 	readStatus, _ := s.notice.CheckReadStatus(ctx, pc.UserID, noticeIDs)
 
 	for _, n := range notices {
 		ts := n.CreatedAt
-		if n.PublishedAt != nil { ts = *n.PublishedAt }
+		if n.PublishedAt != nil {
+			ts = *n.PublishedAt
+		}
 		items = append(items, feedItem{
 			Type: "notice", CreatedAt: ts,
 			Data: map[string]any{
@@ -1333,21 +2107,24 @@ func (s *ParentPortalService) ListHomeFeeds(ctx context.Context, pc *ParentPorta
 				"notice": map[string]any{
 					"id": n.ID, "title": n.Title,
 					"content_preview": growthContentPreview(n.Content, 80),
-					"creator":          map[string]any{"nickname": ""},
-					"is_read":          readStatus[n.ID],
+					"creator":         map[string]any{"nickname": ""},
+					"is_read":         readStatus[n.ID],
 				},
 			},
 		})
 	}
 
-	// 2) 成长记录（最近 3 条）
+	// 2) 成长记录（最近 3 条）。与成长时光同一可见性规则：不含发给其他孩子的个体记录。
 	var logs []domain.GrowthDailyLog
+	visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, pc.Students, nil)
 	s.db.WithContext(ctx).Preload("Creator").Model(&domain.GrowthDailyLog{}).
-		Where("kindergarten_id = ? AND class_id IN ?", pc.KindergartenID, classIDs).
+		Where(visWhere, visArgs...).
 		Order("date DESC, id DESC").Limit(3).Find(&logs)
 	for _, l := range logs {
 		creatorNick := ""
-		if l.Creator != nil { creatorNick = l.Creator.Nickname }
+		if l.Creator != nil {
+			creatorNick = l.Creator.Nickname
+		}
 		items = append(items, feedItem{
 			Type: "growth", CreatedAt: l.CreatedAt,
 			Data: map[string]any{
@@ -1369,7 +2146,9 @@ func (s *ParentPortalService) ListHomeFeeds(ctx context.Context, pc *ParentPorta
 		return map[string]any{"list": []any{}, "total": total, "page": page, "page_size": pageSize}, nil
 	}
 	end := offset + pageSize
-	if end > len(items) { end = len(items) }
+	if end > len(items) {
+		end = len(items)
+	}
 	pageItems := items[offset:end]
 
 	list := make([]map[string]any, len(pageItems))
@@ -1387,7 +2166,9 @@ func (s *ParentPortalService) ListHomeFeeds(ctx context.Context, pc *ParentPorta
 // ==================== Class Info ====================
 
 func (s *ParentPortalService) ClassInfo(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
-	if pc.Class == nil { return nil, ErrParentInvalidParams }
+	if pc.Class == nil {
+		return nil, ErrParentInvalidParams
+	}
 	var studentCount int64
 	s.db.WithContext(ctx).Model(&domain.Student{}).Where("kindergarten_id = ? AND class_id = ? AND status = ?", pc.KindergartenID, pc.Class.ID, 1).Count(&studentCount)
 	var teachers []map[string]any
@@ -1395,7 +2176,10 @@ func (s *ParentPortalService) ClassInfo(ctx context.Context, pc *ParentPortalCon
 	s.db.WithContext(ctx).Preload("User").Where("class_id = ? AND status = ?", pc.Class.ID, 1).Find(&cts)
 	for _, ct := range cts {
 		t := map[string]any{"id": ct.UserID, "title": string(ct.Title)}
-		if ct.User != nil { t["nickname"] = ct.User.Nickname; t["avatar"] = ct.User.Avatar }
+		if ct.User != nil {
+			t["nickname"] = ct.User.Nickname
+			t["avatar"] = ct.User.Avatar
+		}
 		teachers = append(teachers, t)
 	}
 	return map[string]any{"id": pc.Class.ID, "name": pc.Class.Name, "grade": pc.Class.Grade, "academic_year": pc.Class.AcademicYear, "student_count": studentCount, "teachers": teachers}, nil
@@ -1404,23 +2188,86 @@ func (s *ParentPortalService) ClassInfo(ctx context.Context, pc *ParentPortalCon
 // ==================== Student Profile ====================
 
 func (s *ParentPortalService) UpdateStudentProfile(ctx context.Context, pc *ParentPortalContext, req map[string]any) error {
-	if pc.CurrentStudent == nil { return ErrParentInvalidParams }
+	if pc.CurrentStudent == nil {
+		return ErrParentInvalidParams
+	}
 	updates := map[string]any{}
-	if v, ok := req["avatar"]; ok { updates["avatar"] = v }
-	if v, ok := req["health_note"]; ok { updates["health_note"] = v }
-	if v, ok := req["address"]; ok { updates["address"] = v }
-	if len(updates) == 0 { return nil }
+	if v, ok := req["avatar"]; ok {
+		updates["avatar"] = v
+	}
+	if v, ok := req["health_note"]; ok {
+		updates["health_note"] = v
+	}
+	if v, ok := req["address"]; ok {
+		updates["address"] = v
+	}
+	if len(updates) == 0 {
+		return nil
+	}
 	return s.db.WithContext(ctx).Model(pc.CurrentStudent).Updates(updates).Error
 }
 
-// ListClassCalendar 查询当前学生所在班级的日历事件。
+// ListClassCalendar 查询当前学生所在班级的日历事件（家长可见视图）：
+// 仅已发布、受众命中（本班 或 园级）；内部字段不外泄；变更要旨仅在提示窗口内下发。
 func (s *ParentPortalService) ListClassCalendar(ctx context.Context, pc *ParentPortalContext, start, end string) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return map[string]any{"list": []any{}, "total": 0}, nil
 	}
-	rows, err := s.calendar.FindEvents(ctx, pc.KindergartenID, pc.CurrentStudent.ClassID, start, end)
+	enabled, err := loadTimetableEnabled(ctx, s.db, pc.KindergartenID)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"list": rows, "total": len(rows)}, nil
+	rows, err := s.calendar.FindParentEvents(ctx, pc.KindergartenID, pc.CurrentStudent.ClassID, start, end, enabled)
+	if err != nil {
+		return nil, err
+	}
+	meta, err := loadCalendarTypeMeta(ctx, s.db, pc.KindergartenID)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	list := make([]map[string]any, 0, len(rows))
+	for i := range rows {
+		list = append(list, parentCalendarEventMap(&rows[i], meta, now))
+	}
+	return map[string]any{"list": list, "total": len(list)}, nil
+}
+
+// GetDailyDesignation 只读查「今日接走人」指定，不产生任何副作用。
+//
+// 与 GetQRCode 的区别：GetQRCode 会按需建凭证（有副作用），
+// 授权人列表页只需展示当前指定，不应因此生成凭证。
+// 未指定时返回 designated=false（不是错误）。
+func (s *ParentPortalService) GetDailyDesignation(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	desig, err := s.pickup.FindDailyDesignation(ctx, pc.CurrentStudent.ID, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	if desig == nil {
+		return map[string]any{
+			"student_id": pc.CurrentStudent.ID,
+			"designated": false,
+			"person":     nil,
+		}, nil
+	}
+	person := map[string]any{
+		"id":       desig.AuthorizationID,
+		"name":     "",
+		"relation": "",
+		"avatar":   "",
+	}
+	if desig.Authorization != nil {
+		person["name"] = desig.Authorization.Name
+		person["relation"] = desig.Authorization.Relation
+		person["avatar"] = desig.Authorization.Avatar
+	}
+	return map[string]any{
+		"student_id":       pc.CurrentStudent.ID,
+		"designated":       true,
+		"authorization_id": desig.AuthorizationID,
+		"person":           person,
+	}, nil
 }
