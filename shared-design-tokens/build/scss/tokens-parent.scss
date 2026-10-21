@@ -1,8 +1,9 @@
 
 // Do not edit directly
-// Generated on Sat, 20 Jun 2026 03:22:46 GMT
+// Generated on Wed, 21 Oct 2026 06:43:11 GMT
 
 $color-text-primary: #1E293B;
+$color-text-on-brand: #FFFFFF;
 $color-text-body: #334155;
 $color-text-muted: #64748B;
 $color-text-hint: #94A3B8;
@@ -14,6 +15,7 @@ $color-semantic-danger: #EF4444;
 $color-semantic-danger-bg: #FEE2E2;
 $color-semantic-info: #2563EB;
 $color-semantic-info-bg: #DBEAFE;
+$color-border-hairline: #CBD5E1;
 $color-brand-primary: #F97316;
 $color-brand-primary-light: #FB923C;
 $color-brand-primary-dark: #EA580C;
@@ -37,10 +39,11 @@ $border-radius-sm: 8rpx;
 $border-radius-md: 12rpx;
 $border-radius-lg: 16rpx;
 $border-radius-xl: 24rpx;
+$border-radius-2xl: 48rpx;
 $border-radius-full: 19998rpx;
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-$shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+$shadow-sm: 0 1px 2px rgba(120, 53, 15, 0.04), 0 2px 8px rgba(120, 53, 15, 0.04);
+$shadow-md: 0 2px 4px rgba(120, 53, 15, 0.05), 0 6px 16px rgba(120, 53, 15, 0.06);
+$shadow-lg: 0 4px 8px rgba(120, 53, 15, 0.06), 0 16px 32px rgba(120, 53, 15, 0.10);
 $spacing-xs: 8rpx;
 $spacing-sm: 12rpx;
 $spacing-md: 16rpx;
@@ -50,3 +53,19 @@ $animation-duration-fast: 150ms;
 $animation-duration-base: 300ms;
 $animation-duration-slow: 500ms;
 $animation-easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+$component-card-padding: 32rpx;
+$component-card-radius: 24rpx;
+$component-card-gap: 24rpx;
+$component-page-padding-x: 28rpx;
+$component-page-padding-y: 24rpx;
+$component-avatar-sm: 80rpx;
+$component-avatar-md: 96rpx;
+$component-avatar-lg: 128rpx;
+$component-input-height: 88rpx;
+$component-input-radius: 24rpx;
+$component-badge-padding-x: 20rpx;
+$component-badge-radius: 19998rpx;
+$component-badge-font-size: 22rpx;
+$gradient-brand: linear-gradient(135deg, #FB923C 0%, #F97316 100%);
+$gradient-brand-soft: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+$gradient-page: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);

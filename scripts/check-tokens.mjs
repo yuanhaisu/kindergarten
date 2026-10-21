@@ -154,15 +154,21 @@ function normalizeHex(hex) {
 
 function scanSCSS(filePath, content) {
   const lines = content.split('\n');
-  let inStyle = false;
+  // Standalone .scss files (uni.scss 等) have no <style> wrapper — scan them
+  // wholesale. Previously they were skipped entirely unless some comment
+  // happened to contain the literal "<style", which is how parent/src/uni.scss
+  // was partially scanned by accident.
+  const isVue = filePath.toLowerCase().endsWith('.vue');
+  let inStyle = !isVue;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
 
-    // Track <style> block
-    if (/<style\b/i.test(line)) { inStyle = true; continue; }
-    if (/<\/style>/i.test(line)) { inStyle = false; continue; }
+    // Track <style> block. Anchor to line start so a comment mentioning
+    // "<style>" cannot switch scanning on early.
+    if (/^\s*<style\b/i.test(line)) { inStyle = true; continue; }
+    if (/^\s*<\/style>/i.test(line)) { inStyle = false; continue; }
     if (!inStyle) continue;
 
     // Skip comment-only lines
@@ -184,7 +190,10 @@ function scanSCSS(filePath, content) {
     }
 
     // ===== Check 2: Hex colors =====
-    const hexRegex = /(?<!#)\b#([0-9a-fA-F]{3,8})\b(?![-\w])/g;
+    // (?<!#) 只用来避免匹配 "##..."。这里**不能**再加 \b：CSS 里 # 前永远是
+    // 空格 / ':' / '(' / ',' 这类非词字符，`\b` 要求前一个字符是词字符，
+    // 边界在真实样式里根本不存在 —— 加了它整条正则会静默永不命中（2026-10 修复）。
+    const hexRegex = /(?<!#)#([0-9a-fA-F]{3,8})\b(?![-\w])/g;
     let hexMatch;
     while ((hexMatch = hexRegex.exec(line)) !== null) {
       const hex = hexMatch[0];
@@ -261,13 +270,75 @@ function scanSCSS(filePath, content) {
 // ============================================================
 
 function scanInlineStyles(filePath, content) {
-  // Inline `:style` bindings with hex colors are typically data-driven
-  // (e.g., `:style="{ backgroundColor: item.bg, color: item.fg }"` where
-  // colors come from JS arrays). Per the hardcoded whitelist, these are
-  // legitimate exceptions — skip them.
+  // Vue `:style` / `v-bind:style` bindings are computed at runtime (often from
+  // API data such as `item.badge.color`), so they are intentionally NOT scanned
+  // — flagging them would produce noise on data-driven values.
   //
-  // We only flag inline styles within actual `style=""` HTML attributes,
-  // not Vue `:style` bindings which are computed at runtime.
+  // Static `style=""` attributes ARE authored literals and must obey the same
+  // token rules as <style> blocks. `placeholder-style` is reported as info
+  // rather than a violation: the mini-program API only accepts a literal there
+  // and cannot reference a SCSS variable.
+  const lines = content.split('\n');
+  let templateDepth = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Only scan inside <template> — avoids matching `style = "..."` in <script>.
+    if (/<template\b/i.test(line)) { templateDepth++; continue; }
+    if (/<\/template>/i.test(line)) { templateDepth = Math.max(0, templateDepth - 1); continue; }
+    if (templateDepth === 0) continue;
+
+    const attrRe = /([:\w-]*style)\s*=\s*"([^"]*)"/g;
+    let attrMatch;
+
+    while ((attrMatch = attrRe.exec(line)) !== null) {
+      const attrName = attrMatch[1];
+      if (attrName.includes(':')) continue; // Vue binding — runtime value
+      const body = attrMatch[2];
+      const literalOnly = attrName === 'placeholder-style';
+
+      const hexRegex = /(?<!#)#([0-9a-fA-F]{3,8})\b(?![-\w])/g;
+      let hexMatch;
+      while ((hexMatch = hexRegex.exec(body)) !== null) {
+        const hex = hexMatch[0];
+        const suggestion = COLOR_TO_TOKEN.get(normalizeHex(hex));
+
+        if (literalOnly) {
+          console.log(`  ${relative(ROOT, filePath)}:${lineNum}`);
+          console.log(`    ℹ️  Literal-only \`${attrName}\` uses \`${hex}\`${suggestion ? ` (= ${suggestion})` : ''}`);
+          console.log('    ↪ Mini-program API accepts literals only — keep this value in sync with tokens.json manually');
+          console.log('');
+          continue;
+        }
+
+        warn(relative(ROOT, filePath), lineNum,
+          `Hardcoded color in inline style: \`${hex}\``,
+          suggestion
+            ? `Use token: \`${suggestion}\``
+            : 'No matching token. Add to tokens.json first, or add comment if single-use exception'
+        );
+      }
+
+      if (literalOnly) continue;
+      for (const prop of NUMERIC_PROP_TOKENS) {
+        const propRegex = new RegExp(`\\b${prop.replace('-', '\\-')}\\s*:\\s*(\\d+)rpx`, 'i');
+        const m = body.match(propRegex);
+        if (!m) continue;
+        if (!isTokenRpxValue(parseInt(m[1]), prop)) continue;
+        const tokenHint = prop.toLowerCase().includes('font-size')
+          ? '$typography-font-size-*'
+          : prop.toLowerCase().includes('border-radius')
+          ? '$border-radius-*'
+          : '$spacing-*';
+        warn(relative(ROOT, filePath), lineNum,
+          `Hardcoded \`${m[1]}rpx\` for \`${prop}\` in inline style`,
+          `Use the corresponding \`${tokenHint}\` token`
+        );
+      }
+    }
+  }
 }
 
 // ============================================================

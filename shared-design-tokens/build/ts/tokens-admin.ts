@@ -3,6 +3,7 @@ export default {
   "colors": {
     "text": {
       "primary": "#1E293B",
+      "onBrand": "#FFFFFF",
       "body": "#334155",
       "muted": "#64748B",
       "hint": "#94A3B8"
@@ -16,6 +17,9 @@ export default {
       "dangerBg": "#FEE2E2",
       "info": "#2563EB",
       "infoBg": "#DBEAFE"
+    },
+    "border": {
+      "hairline": "#CBD5E1"
     },
     "brand": {
       "primary": "#3B82F6",
@@ -35,12 +39,13 @@ export default {
     "md": "6px",
     "lg": "8px",
     "xl": "12px",
+    "2xl": "24px",
     "full": "9999px"
   },
   "boxShadow": {
-    "sm": "0 1px 2px rgba(0, 0, 0, 0.05)",
-    "md": "0 4px 6px rgba(0, 0, 0, 0.07)",
-    "lg": "0 10px 15px rgba(0, 0, 0, 0.1)"
+    "sm": "0 1px 2px rgba(120, 53, 15, 0.04), 0 2px 8px rgba(120, 53, 15, 0.04)",
+    "md": "0 2px 4px rgba(120, 53, 15, 0.05), 0 6px 16px rgba(120, 53, 15, 0.06)",
+    "lg": "0 4px 8px rgba(120, 53, 15, 0.06), 0 16px 32px rgba(120, 53, 15, 0.10)"
   },
   "fontFamily": {
     "sans": [
