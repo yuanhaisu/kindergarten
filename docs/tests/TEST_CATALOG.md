@@ -335,8 +335,8 @@
 | TC-NEW-HTP-0001 | 未配置时使用默认策略（按需测温 / 37.3） | P0 | Unit | ✅ |
 | TC-NEW-HTP-0002 | 管理员更新全员必测与阈值 | P0 | Unit / E2E | ✅ |
 | TC-NEW-HTP-0003 | 阈值越界被拒 | P0 | Unit | ✅ |
-| TC-NEW-HTP-0004 | 按需测温策略随队列下发且页面可见 | P0 | Unit / E2E | 🚧 |
-| TC-NEW-HTP-0005 | 全员必测策略在医生页可见 | P0 | E2E | 🚧 |
+| TC-NEW-HTP-0004 | 按需测温策略随队列下发且页面可见 | P0 | Unit / E2E | ✅ |
+| TC-NEW-HTP-0005 | 全员必测策略在医生页可见 | P0 | E2E | ✅ |
 | TC-NEW-HTP-0006 | 必填模式下缺体温被拒 | P0 | Unit / E2E | ✅ |
 | TC-NEW-HTP-0007 | 必填模式下有体温通过 | P0 | Unit | ✅ |
 | TC-NEW-HTP-0008 | 未到园豁免体温 | P0 | Unit | ✅ |
@@ -673,3 +673,57 @@
 | TC-NEW-RCQ-0008 | 灰度开关生效（未开启不建任务） | P0 | Unit | ✅ |
 | TC-NEW-RCQ-0009 | 建议按记录范围过滤（跨班/范围外命中不产建议） | P0 | Unit / Integration | ✅ |
 | TC-NEW-RCQ-0011 | 建议轮询瞬时失败后自愈（退避重试，建议最终可见） | P2 | E2E | ✅ |
+
+## 亲子任务闭环（TSK-LOOP）
+
+> 对应 OpenSpec 变更 `2026-10-20-redesign-parent-task-loop`。行为规格见 `openspec/changes/2026-10-20-redesign-parent-task-loop/specs/parent-task-loop/spec.md`。
+> A 切片状态：0101–0146 全部登记，尚未逐条执行，统一标记为 🔲。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-TSK-0101 | 班级任务对本班家庭可见 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0102 | 个体任务仅目标家庭可见 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0103 | 多孩家庭按当前孩子隔离 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0104 | 一键完成提交 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0105 | 文字或照片提交 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0106 | 未开始或已结束不可提交 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0107 | 每日/每周/一次性频率 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0108 | 待回应只在老师端可见 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0109 | 单条回应闭环 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0110 | 周期汇总回应 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0111 | 批量回应部分失败可见 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0112 | 家长一键反馈 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0113 | 反馈覆盖率与正向率 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0114 | 贴纸回应 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0115 | 语音回应 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0116 | 班级星星回应 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0117 | 星星罐按任务/按班级 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0118 | 只有主回应班级星星计入 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0119 | 公开默认私密 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0120 | 申请后老师审核可见 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0121 | 撤回与个体任务不可公开 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0122 | 提交不产生积分 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0123 | 任务契约与规则无积分 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0124 | 发布通知与 action_path | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0125 | 回应按家长聚合 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0126 | 家长端小程序码 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0127 | 多班活动创建 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0128 | 参与与回应统计 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0129 | 非法媒体被拒 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0130 | 删除任务级联 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0131 | 学习关联必填 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0132 | 要求列表逐条展示 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0133 | 首页待办按孩子与周期统计 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0134 | 取消后再次申请必须重新审核 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0135 | 汇总后个别补充回应 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0136 | 给孩子看展示态 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0137 | 班级星星罐目标独立于任务 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0138 | 按活动批量编辑与统计 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0139 | 多班活动事务与跨园所校验 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0140 | 补充回应未读与读标记 | P1 | FUNC | 🔲 |
+| TC-NEW-TSK-0141 | 独立任务不能自设活动分组 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0142 | 有提交后结构字段只读 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0144 | 跨班公开墙不可见 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0146 | 更新个体任务目标跨班被拒 | P0 | FUNC | 🔲 |

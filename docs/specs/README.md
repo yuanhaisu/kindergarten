@@ -1,6 +1,23 @@
 # Feature Specs（功能规格目录）
 
-## 工作流
+> ## ⛔ 本目录已冻结（2026-10-04）
+>
+> 这是 **2026-06 之前旧规格工作流**的产物，仅作历史回溯参考。
+> **不要再往这里新增文件**——新变更一律走 OpenSpec：
+>
+> ```
+> /opsx:explore（可选）→ /opsx:propose → 用户批准 → /opsx:apply → 验证 → /opsx:archive
+> ```
+>
+> - 行为需求活基线：`openspec/specs/<capability>/spec.md`
+> - 在飞变更工件：`openspec/changes/<change>/`
+> - 项目约束注入：`openspec/config.yaml`
+> - 职责边界与流程总览：根目录 `CLAUDE.md` 的「Spec Workflow」一节
+>
+> 存量 4 份规格不迁移：OpenSpec 是 delta-first 的，规格随真实变更逐步长出来，
+> 强行回填旧文档只会产出没人信的大部头（OpenSpec 官方 `docs/existing-projects.md` 明确反对批量转换）。
+
+## 历史工作流（已废止，仅备查）
 
 ```
 讨论需求 → 写规格 → 用户确认 → 写代码 → 更新完成状态
@@ -11,7 +28,7 @@
 3. **规格文件是事后回溯的锚点**：不是为了写文档而写文档，而是确保每次动手之前有一次明确的「设计确认」。
 4. **关联 Skill**：如果某个 Skill（如 `growth-records`）覆盖了这个功能，在规格中注明。
 
-## 规格文件模板
+## 规格文件模板（已废止）
 
 复制 `TEMPLATE.md`，填入以下内容：
 

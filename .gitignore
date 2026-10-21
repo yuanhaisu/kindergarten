@@ -43,3 +43,12 @@ pnpm-debug.log*
 
 # 注意：shared-design-tokens/build/ 是构建产物，但按 CLAUDE.md 规定
 # 「产物必须提交」——tokens.json 变更后需重建并一并提交，故此处不忽略。
+
+# 人脸实测样本（含儿童照片，敏感，禁止提交）
+assets/face-img/
+
+# Ruflo local secrets and runtime data
+.env
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/

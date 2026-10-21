@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共享组件库 · 实现结果</title>
+<style>
+  /* ===== 用组件库自身的 token 渲染 ===== */
+  :root {
+    --brand: #F97316;
+    --brand-light: #FB923C;
+    --brand-dark: #EA580C;
+    --brand-bg: #FFF7ED;
+
+    --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-2xl: 24px; --r-full: 9999px;
+
+    --shadow-sm: 0 1px 2px rgba(120,53,15,.04), 0 2px 8px rgba(120,53,15,.04);
+    --shadow-md: 0 2px 4px rgba(120,53,15,.05), 0 6px 16px rgba(120,53,15,.06);
+    --shadow-lg: 0 4px 8px rgba(120,53,15,.06), 0 16px 32px rgba(120,53,15,.10);
+
+    --gradient-brand: linear-gradient(135deg, #FB923C 0%, #F97316 100%);
+    --gradient-brand-soft: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+    --gradient-page: linear-gradient(180deg, #fffaf5 0%, #fff6ee 100%);
+
+    --text: #1E293B; --text-muted: #64748B; --text-hint: #94A3B8;
+
+    --sem-success: #16A34A; --sem-success-bg: #DCFCE7;
+    --sem-warning: #CA8A04; --sem-warning-bg: #FEF9C3;
+    --sem-danger:  #DC2626; --sem-danger-bg:  #FEE2E2;
+    --sem-info:    #2563EB; --sem-info-bg:    #DBEAFE;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--gradient-page);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 40px 24px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  .hero {
+    background: var(--gradient-brand-soft);
+    border-radius: var(--r-2xl);
+    padding: 40px 44px;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; right: -30px; top: -30px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: var(--gradient-brand); opacity: .12;
+  }
+  .eyebrow {
+    display: inline-block; background: #fff; color: var(--brand-dark);
+    font-size: 12px; font-weight: 700; letter-spacing: .08em;
+    padding: 6px 14px; border-radius: var(--r-full);
+    box-shadow: var(--shadow-sm); margin-bottom: 16px;
+  }
+  h1 { font-size: 32px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+  .hero p { color: var(--text-muted); font-size: 15px; max-width: 660px; }
+  code {
+    background: rgba(255,255,255,.7); padding: 1px 7px;
+    border-radius: var(--r-sm); font-size: 12.5px;
+    font-family: "SF Mono", Consolas, monospace; color: var(--brand-dark);
+  }
+
+  section { margin-bottom: 46px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+  .sec-num {
+    width: 32px; height: 32px; flex-shrink: 0;
+    background: var(--gradient-brand); color: #fff;
+    font-weight: 800; font-size: 14px; border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  h2 { font-size: 21px; font-weight: 750; }
+  .sec-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+
+  .panel {
+    background: #fff; border-radius: var(--r-xl);
+    padding: 24px; box-shadow: var(--shadow-md);
+  }
+  .panel-label {
+    font-size: 11px; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--brand-dark);
+    margin-bottom: 16px;
+  }
+
+  /* ===== AppCard ===== */
+  .app-card {
+    padding: 20px; border-radius: var(--r-xl);
+    background: var(--brand-bg); box-shadow: var(--shadow-md);
+  }
+  .app-card.soft { box-shadow: var(--shadow-sm); background: #fff; border: 1.5px solid #FFE8D6; }
+  .card-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .card-body { font-size: 13px; color: var(--text-muted); }
+
+  /* ===== AppButton ===== */
+  .app-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; font-weight: 700; letter-spacing: .02em; cursor: pointer;
+    transition: opacity .15s ease;
+  }
+  .app-button:hover { opacity: .88; }
+  .app-button.block { width: 100%; }
+  .is-sm { height: 32px; padding: 0 16px; border-radius: var(--r-full); font-size: 12px; }
+  .is-md { height: 44px; padding: 0 20px; border-radius: var(--r-full); font-size: 14px; }
+  .is-lg { height: 48px; padding: 0 22px; border-radius: var(--r-full); font-size: 16px; }
+  .is-primary { background: var(--gradient-brand); color: #fff; box-shadow: var(--shadow-md); }
+  .is-ghost { background: var(--gradient-brand-soft); color: var(--brand-dark); box-shadow: var(--shadow-sm); }
+  .is-disabled { opacity: .55; cursor: not-allowed; }
+
+  /* ===== StateBlock ===== */
+  .state-block {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px; padding: 28px 20px; text-align: center;
+  }
+  .state-text { font-size: 14px; color: var(--text-hint); line-height: 1.5; }
+  .state-icon {
+    width: 48px; height: 48px; border-radius: var(--r-full);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700;
+  }
+  .state-icon.is-error { background: var(--sem-danger-bg); color: var(--sem-danger); }
+  .state-icon.is-empty { background: var(--brand-bg); color: var(--text-hint); }
+  .state-spinner {
+    width: 28px; height: 28px; border-radius: var(--r-full);
+    border: 3px solid var(--gradient-brand-soft);
+    border-top-color: var(--brand);
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .state-retry {
+    padding: 7px 20px; border-radius: var(--r-full);
+    background: var(--sem-info); color: #fff; font-size: 13px;
+  }
+
+  /* ===== StatusPill ===== */
+  .status-pill {
+    display: inline-flex; align-items: center;
+    padding: 5px 12px; border-radius: var(--r-full);
+    font-size: 11px; font-weight: 700; line-height: 1.4;
+    margin: 0 6px 8px 0;
+  }
+  .p-success { background: var(--sem-success-bg); color: var(--sem-success); }
+  .p-warning { background: var(--sem-warning-bg); color: var(--sem-warning); }
+  .p-danger  { background: var(--sem-danger-bg);  color: var(--sem-danger); }
+  .p-info    { background: var(--sem-info-bg);    color: var(--sem-info); }
+
+  /* ===== AvatarBadge ===== */
+  .avatar-badge {
+    position: relative; flex-shrink: 0;
+    background: var(--gradient-brand-soft);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand-dark); font-weight: 700;
+  }
+  .avatar-dot {
+    position: absolute; top: 0; right: 0;
+    width: 9px; height: 9px; border-radius: var(--r-full);
+    border: 2px solid var(--brand-bg);
+  }
+  .dot-success { background: var(--sem-success); }
+  .dot-warning { background: var(--sem-warning); }
+  .dot-danger  { background: var(--sem-danger); }
+  .dot-info    { background: var(--sem-info); }
+
+  .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+  .note {
+    background: #fff; border-left: 4px solid var(--brand);
+    border-radius: 0 var(--r-lg) var(--r-lg) 0;
+    padding: 15px 20px; font-size: 13px; color: var(--text-muted);
+    box-shadow: var(--shadow-sm); margin-top: 16px;
+  }
+  .note b { color: var(--text); }
+
+  footer { margin-top: 52px; text-align: center; color: var(--text-hint); font-size: 12px; line-height: 1.9; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">SHARED-UI · 实现结果</div>
+    <h1>共享组件库</h1>
+    <p>5 个组件、全部 token 驱动、两端共享。单一来源 <code>shared-ui/</code>，
+       构建时经 <code>scripts/sync-ui.js</code> 分发到两端 <code>components/</code>。
+       本页用组件自身的 token 渲染 —— 所见即所得。</p>
+  </div>
+
+  <!-- ========== AppCard ========== -->
+  <section>
+    <div class="sec-head"><div class="sec-num">1</div><h2>AppCard</h2></div>
+    <p class="sec-desc">卡片容器 —— 圆角 / 阴影 / 内边距全部走 <code>$component-card-*</code>，页面只管内容。</p>
+    <div class="grid g2">
+      <div class="panel">
+        <div class="panel-label">variant=default</div>
+        <div class="app-card">
+          <div class="card-title">今日在校情况</div>
+          <div class="card-body">默认卡片：中等阴影，用于主要信息块。</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">variant=soft</div>
+        <div class="app-card soft">
+          <div class="card-title">嵌套卡片</div>
+          <div class="card-body">soft 变体：更轻的阴影，用于弱化层级或嵌套场景。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== AppButton ========== -->
+  <section>
+    <div class="sec-head"><div class="sec-num">2</div><h2>AppButton</h2></div>
+    <p class="sec-desc">类型 × 尺寸共 6 种组合。<code>primary</code> 用品牌渐变（两端各自品牌色）。</p>
+    <div class="grid g2">
+      <div class="panel">
+        <div class="panel-label">primary</div>
+        <div class="row">
+          <button class="app-button is-primary is-sm">小按钮</button>
+          <button class="app-button is-primary is-md">中按钮</button>
+          <button class="app-button is-primary is-lg">大按钮</button>
+        </div>
+        <div style="margin-top:18px">
+          <button class="app-button is-primary is-lg block">通栏主按钮</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">ghost / disabled</div>
+        <div class="row">
+          <button class="app-button is-ghost is-sm">小按钮</button>
+          <button class="app-button is-ghost is-md">中按钮</button>
+          <button class="app-button is-ghost is-lg">大按钮</button>
+        </div>
+        <div style="margin-top:18px">
+          <button class="app-button is-primary is-lg block is-disabled">禁用状态</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== StateBlock ========== -->
+  <section>
+    <div class="sec-head"><div class="sec-num">3</div><h2>StateBlock</h2></div>
+    <p class="sec-desc">三态合一。<b>错误态排在空态之前判定</b> —— 空列表的语义往往危险（如接送页空 =「孩子都接走了」），组件已固化这个顺序，调用方不会误用。</p>
+    <div class="grid g3">
+      <div class="panel">
+        <div class="panel-label">loading</div>
+        <div class="state-block">
+          <div class="state-spinner"></div>
+          <div class="state-text">加载中...</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">error（优先于 empty）</div>
+        <div class="state-block">
+          <div class="state-icon is-error">!</div>
+          <div class="state-text">接送数据加载失败</div>
+          <div class="state-retry">重试</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">empty</div>
+        <div class="state-block">
+          <div class="state-icon is-empty">·</div>
+          <div class="state-text">当前筛选下没有学生</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <b>为什么重要：</b>改造前老师端接送页在请求失败时显示「所有学生已全部接走」——
+      把失败渲染成「一切正常」。StateBlock 让这类误报不可能再出现。
+    </div>
+  </section>
+
+  <!-- ========== StatusPill ========== -->
+  <section>
+    <div class="sec-head"><div class="sec-num">4</div><h2>StatusPill</h2></div>
+    <p class="sec-desc">4 种语义 tone，颜色全来自 <code>$color-semantic-*</code>（含浅底），不接受自定义色值。</p>
+    <div class="panel">
+      <div class="panel-label">tones</div>
+      <div>
+        <span class="status-pill p-success">出勤</span>
+        <span class="status-pill p-warning">迟到</span>
+        <span class="status-pill p-danger">缺勤</span>
+        <span class="status-pill p-info">待审核</span>
+      </div>
+      <div style="margin-top:14px">
+        <span class="status-pill p-success">已接走</span>
+        <span class="status-pill p-warning">未接走</span>
+        <span class="status-pill p-info">未入园</span>
+        <span class="status-pill p-danger">异常</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== AvatarBadge ========== -->
+  <section>
+    <div class="sec-head"><div class="sec-num">5</div><h2>AvatarBadge</h2></div>
+    <p class="sec-desc">size 单位 px（与 tokens.json 一致，组件内换算 rpx）。角标走语义色。</p>
+    <div class="panel">
+      <div class="panel-label">sizes</div>
+      <div class="row">
+        <div class="avatar-badge" style="width:40px;height:40px;border-radius:40px;font-size:16px">李</div>
+        <div class="avatar-badge" style="width:48px;height:48px;border-radius:48px;font-size:19px">王</div>
+        <div class="avatar-badge" style="width:64px;height:64px;border-radius:64px;font-size:26px">张</div>
+      </div>
+      <div class="panel-label" style="margin-top:22px">with dot</div>
+      <div class="row">
+        <div class="avatar-badge" style="width:48px;height:48px;border-radius:48px;font-size:19px">李<span class="avatar-dot dot-success"></span></div>
+        <div class="avatar-badge" style="width:48px;height:48px;border-radius:48px;font-size:19px">王<span class="avatar-dot dot-warning"></span></div>
+        <div class="avatar-badge" style="width:48px;height:48px;border-radius:48px;font-size:19px">张<span class="avatar-dot dot-danger"></span></div>
+        <div class="avatar-badge" style="width:48px;height:48px;border-radius:48px;font-size:19px">刘<span class="avatar-dot dot-info"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 落地示例 ========== -->
+  <section>
+    <div class="sec-head"><div class="sec-num">6</div><h2>组合落地示例</h2></div>
+    <p class="sec-desc">组件组合成真实界面（即家长端登录页的形态）。</p>
+    <div class="grid g2">
+      <div class="panel" style="background:var(--gradient-page);padding:36px">
+        <div class="app-card" style="max-width:320px;margin:0 auto;text-align:center;padding-top:32px;padding-bottom:32px">
+          <div style="font-size:26px;font-weight:800;color:var(--brand)">养成星球</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">幼儿园家园共育平台</div>
+          <div style="margin-top:22px">
+            <div style="font-size:12px;color:var(--text-muted)">欢迎回来</div>
+            <div style="font-size:19px;font-weight:700">俊彦爸爸</div>
+          </div>
+          <div style="margin-top:24px">
+            <button class="app-button is-primary is-lg block">微信一键登录</button>
+          </div>
+          <div style="margin-top:14px;font-size:11px;color:var(--text-hint)">点击登录即表示同意《用户协议》和《隐私政策》</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">组件映射</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <tr style="text-align:left"><td style="padding:8px 0;color:var(--text-muted)">容器</td><td><code>AppCard</code></td></tr>
+          <tr style="text-align:left"><td style="padding:8px 0;color:var(--text-muted)">登录按钮</td><td><code>AppButton</code> size=lg</td></tr>
+          <tr style="text-align:left"><td style="padding:8px 0;color:var(--text-muted)">标题/副标题</td><td>页面自有样式</td></tr>
+          <tr style="text-align:left"><td style="padding:8px 0;color:var(--text-muted)">圆角/阴影/底色</td><td><code>$component-card-*</code></td></tr>
+        </table>
+        <div class="note" style="margin-top:18px">
+          页面只剩<b>布局与文案</b>，视觉全部交给组件 —— 这就是组件库要达成的目标。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    养成星球 · 共享组件库（第 3 节实现结果）<br>
+    源码：<code>shared-ui/</code> → 分发：<code>scripts/sync-ui.js</code> → 两端 <code>src/components/</code><br>
+    生成于 2026-09-26
+  </footer>
+
+</div>
+</body>
+</html>

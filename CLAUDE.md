@@ -40,15 +40,53 @@ API contracts live in `backend/api/` (spec-first). Data models live in `server/i
 
 ## Spec Workflow (功能规格化)
 
-**Before implementing any non-trivial feature**, follow this workflow:
+**规格化工具：OpenSpec**（`openspec/` + `/opsx:*` 命令）。曾评估过 GitHub Spec Kit，结论是不引入——理由与翻盘条件见文末。
 
-1. Write a spec file in `docs/specs/` using the template `docs/specs/TEMPLATE.md`
-2. Name the file `YYYY-MM-DD-feature-name.md`
-3. Fill in: context → data model → API design → frontend changes → edge cases → acceptance criteria
-4. Get user approval on the spec before writing code
-5. Update the spec status to ✅ completed after implementation
+### 先判断要不要走规格
 
-Existing specs live in `docs/specs/`. Refer to them when revisiting features built under this system.
+| 变更类型 | 用什么 |
+| --- | --- |
+| 触点 < 3 层（单点 bug、typo、样式微调、配置） | **不写规格**，直接改，commit message 说清 |
+| 诊断困难的 bug | `superpowers:systematic-debugging`，不写规格 |
+| 触点 ≥ 3 层的功能切片（跨 Go/契约/端页面/token） | **走 OpenSpec** |
+| 做不做的概念决策 | `/opsx:explore`，想清楚再决定要不要 propose |
+
+### 走 OpenSpec 的流程
+
+```
+/opsx:explore（可选，想清楚）→ /opsx:propose → 用户批准 → /opsx:apply → 验证 → /opsx:archive
+```
+
+1. **propose 只产规划工件**（proposal / specs / design / tasks），不动代码。等用户明确批准后再 apply
+2. **design 必须给出「跨端触点清单」**：Go domain/repo/service/handler + Casbin + router + `backend/api/` + 各端页面 + token。每一项写「会改」或「不改」
+3. **specs 只写行为与验收**（`SHALL` + Scenario），每条场景引用 `docs/tests/TEST_CATALOG.md` 的 TC ID
+4. **archive 前必须逐条对照 specs 验证**，并把 delta 合并进 `openspec/specs/` 活基线
+
+详细约束已注入 `openspec/config.yaml` 的 `context` / `rules`，生成工件时自动生效。
+**日常使用手册（含大改/小改示例、命令速查、踩坑清单）见 `docs/openspec-usage.md`。**
+
+### 语义所有权（谁是真相源）
+
+规格层**只占「行为 + 验收」这一格**，不得侵入下列已饱和的语义：
+
+| 语义 | 唯一 SoT |
+| --- | --- |
+| 接口形状（路由/字段/包络） | `backend/api/`（改接口先改这里） |
+| 数据结构（表/字段/关联） | `server/internal/domain/` |
+| 架构铁律 / 硬规则 / 已知坑 | 本文件（CLAUDE.md） |
+| 样式 / 间距 / 色值 | `shared-design-tokens/tokens.json` |
+| 测试用例编号 | `docs/tests/TEST_CATALOG.md` |
+| **行为需求 + 验收标准** | **`openspec/specs/`** |
+
+### 历史规格
+
+`docs/specs/` 是 **2026-06 之前的旧工作流产物，已冻结**，仅作回溯参考，不要再新增文件。新变更一律走 OpenSpec。
+
+### 为什么不是 Spec Kit
+
+OpenSpec 的 delta→archive 机械同步机制对上本项目「写了就烂」的失败模式（`docs/specs/`、`backend/model/`、`backend/model/README.md` 三处腐烂是实证）；Spec Kit 默认产出 `contracts/` / `data-model.md` 会制造新的真相源。其强项（跨端触点结构、验证收敛门）已写进 `openspec/config.yaml` 的 `rules.design` / `rules.tasks`，不必为此换工具链。
+
+**翻盘条件**（任一命中就重新评估 Spec Kit）：功能切片远多于小修；决定让规划步骤直接产出 `backend/api/` 契约；出现第二位协作者需要宪法+评审流程；OpenSpec 用 2–3 个 change 后规格照样腐烂。
 
 Project-specific knowledge skills live in `.claude/skills/`:
 - `growth-records` — Growth records module business context
@@ -70,7 +108,7 @@ make tidy              # go mod tidy
 make check             # vet + lint + test
 ```
 
-Config file path via env: `CONFIG_PATH=configs/app.local.ini make run`. Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `WECHAT_APP_ID`, `WECHAT_SECRET`, `OSS_*`, etc.
+Config file path via env: `CONFIG_PATH=configs/app.local.ini make run`. Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
 
 ### Admin web (`admin/`)
 
@@ -129,17 +167,21 @@ npm run build:mp-weixin:test  # Test env build
 
 ### ⚠️ 三个会让结论失真的陷阱
 
-**1. 一次只能驱动一个端。** `wechat-devtools`（老师端）与 `wechat-devtools-parent`（家长端）是两个独立 server，但微信开发者工具是**单实例、单项目窗口**。实测：
+**1. `success: true` 不代表"验证的是我想要的那个项目"。** 两个 MCP server（`wechat-devtools` 老师端 / `wechat-devtools-parent` 家长端）共用一个 IDE 会话时，会出现：
 
 - 两个 server 各自 `automator start` 都返回 `success: true`，随后 `page_data` 却返回**逐字节相同**的数据 —— 在驱动同一个会话
 - parent server 能"成功"导航到只在老师端存在的 `pages/more/index`
-- `wechat_navigate` 走 **CDP**（两端 `cdp_port` 都默认 9222，只有一个 IDE ⇒ 端口共享），而 `wechat_automator` 走 **ws**（9420/9421）。两条通道不同：实测给两个 server 分配不同 `auto_port`（9420 / 9421）后两个端口能同时监听，但**只有一端真正可用**（老师端正常，家长端 daemon 持续超时 30s/120s）
+
+**判别是否真的双端**：探该端**独有**页面 + 比对 `page_data` 业务字段是否不同。详见下方「🔀 双端同时验证」。
 
 > 🔴 **`success: true` 不代表"验证的是我想要的那个项目"。**
 
 **2. appid 必须是真实值。** 占位符 `请替换为真实小程序AppID` 会让 `cli auto` 在 prepare 阶段以 `code 10 AppID 不合法` 中止 → 端口 9420 永不监听 → automator/screenshot 全废。MCP 把这个报成"CLI auto 连续 3 次返回成功但端口 9420 未监听"——**CLI 退出码是 0**，极具误导性。改完 appid **必须重新构建**（IDE 读 `dist/dev/mp-weixin/project.config.json`，不是 `src/manifest.json`）。
 
-**3. 构建可以并行，MCP 验证必须串行。** 两个 uni-app 项目的写代码/构建互不干扰；只有验证环节要一个一个来。
+**3. 构建永远可并行；MCP 验证能否并行取决于 IDE 拓扑。** 两个 uni-app 项目的写代码/构建互不干扰。验证环节：
+
+- **单 IDE 实例**（默认）：MCP 验证必须串行，一次驱动一个端
+- **双 IDE 实例 + 双微信账号**（`scripts/dual-ide.ps1`）：两端可同时 MCP 驱动，跨端数据流可自动化验证 —— 见下方「🔀 双端同时验证」
 
 ### ✅ 可复用清单（每次用 MCP 验证前逐条过）
 
@@ -166,6 +208,62 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
   Where-Object { $_.CommandLine -match "dev:mp-weixin|kindergarten\\(teacher|parent)\\node_modules" } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 ```
+
+### 🔀 双端同时验证（跨端数据流联调）
+
+要验证「老师端操作 → 家长端响应」这类跨端数据流，需要两端**同时在线**。有三种形态：
+
+| 形态 | 双端同时在线 | 可自动化 | 适用 |
+|---|---|---|---|
+| **双 IDE 实例 + 双微信账号** | ✅ | ✅ 两端都能 MCP 驱动 | 跨端数据流自动化验证 |
+| 单 IDE 双项目窗口 | ✅ | ❌ 只能串行 MCP | 人工对照观察 |
+| 一端 MCP + 一端真机预览 | ✅ | 半 | 一端自动化、一端人工点 |
+
+#### 双 IDE 实例方案（已实测可行，2026-10-05）
+
+**原理**：微信开发者工具的登录态是「**单账号单客户端**」。同一账号开两个实例会互踢（`islogin` 立即 `false`）。用**两个不同微信号**登录两个实例（各自独立 `--user-data-dir`），登录态不互踢，即可双端并行。
+
+**前置（一次性人工配置）**：
+
+1. 第二个微信号加为老师端小程序的开发者（[mp.weixin.qq.com](https://mp.weixin.qq.com) → 成员管理 → 开发者）
+2. 两个实例各自登录对应微信号（首次会弹二维码）
+
+**端口分配**：
+
+| 实例 | 账号 | 项目 | CDP | 服务端口 | 自动化 |
+|---|---|---|---|---|---|
+| A | 主账号 | 家长端 | 9222 | 43534 | 9420 |
+| B | 第二账号 | 老师端 | 9223 | 44500 | 9421 |
+
+**启动**：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/dual-ide.ps1 -Kill   # 先清干净
+powershell -ExecutionPolicy Bypass -File scripts/dual-ide.ps1 -Auto   # 启动两端 + 开自动化
+powershell -ExecutionPolicy Bypass -File scripts/dual-ide.ps1 -Status # 看端口状态
+```
+
+**MCP 调用时必须显式指定端口**（否则默认连 9222/9420 会驱动错端）：
+
+```
+老师端: wechat_automator(auto_port=9421)  wechat_navigate(cdp_port=9223)
+家长端: wechat_automator(auto_port=9420)  wechat_navigate(cdp_port=9222)
+```
+
+⚠️ **CLI 端口发现写死读** `%LOCALAPPDATA%\微信开发者工具\User Data\<hash>\Default\.ide`，**不认 `--user-data-dir`**。要用 `cli.bat` 驱动实例 B，先改写该文件内容为 `44500`（`dual-ide.ps1` 的 `Set-IdePort` 已封装）。`.ide` 切换只在 `cli auto`/`open` 等启动期调用时需要；automator 走 ws 直连，不受影响。
+
+⚠️ **残留 `cli login` 进程会占 3799 端口并弄死后启动的实例**。启动前先 `-Kill`，它会连带清掉 `node.exe ...cli...login` 残留。
+
+**验证双实例确实各自独立**（不要只看 `success:true`）：
+
+- 两端 `page_data` 返回的字段应明显不同（老师端有「发布通知/成长记录」，家长端有「我要请假/接送管理」）
+- 探独有页面：老师端 `pages/more/index`，家长端 `pages/points/index`
+
+#### 单 IDE 双项目窗口（人工对照）
+
+同一 IDE 实例可同时打开两个项目窗口（窗口标题分别显示「幼儿园老师端」「幼儿园家长端」）。适合人工对照观察，但 MCP 一次只能驱动一个窗口。
+
+打开方式：IDE 菜单或项目列表里打开第二个项目即可（`cli open-other --project X` **无效**——它忽略 `--project` 参数，只弹项目选择界面）。
 
 ## Architecture
 
@@ -238,6 +336,21 @@ pkg/
 
 **Auth flow (mini-program)**: Client calls `wx.login()` → gets code → `POST /api/v1/auth/login/wechat` with code + role → backend calls WeChat code2session → issues JWT access + refresh tokens.
 
+> ⚠️ **两端用两个不同的 AppID**，后端 `WeChatConfig` 是按端双对（`teacher_*` / `parent_*`），`Code2Session` 按登录 `role` 选凭据。
+>
+> | 端 | AppID | 主体 |
+> |---|---|---|
+> | 家长端 `parent/` | `wxdf989efff8796c53` | 非个人（`getPhoneNumber` 只在家长端用，个人号不支持） |
+> | 老师端 `teacher/` | `wxbfb5f81a87f73a61` | **个人号** |
+>
+> **为什么必须拆开**：openid 是「用户×小程序」二元的。共用 AppID 会让同一人在两端拿到同一个 openid，`FindByOpenID` 只命中一条 User → 另一端角色丢失 → 接口全 403。
+>
+> **老师端是个人号的两个后果**：`teacher/src/pages/webview/index.vue` 的 `<web-view>` 会白屏（个人号不支持，**已划出验收范围**）；`code2session` 不返回 `unionid`，跨端同人只能靠手机号关联。
+>
+> **跨端同人是两条 User + 关联**（不是一条 User 多角色）：unionid 优先、手机号兜底，见 `server/internal/service/cross_end_identity.go`。
+>
+> 微信侧调用各自选端：`GetPhoneNumber`（家长绑定手机号）走家长端、`GetWXACodeUnlimit`（教师邀请码二维码）走老师端、`GetAccessToken` 的 Redis 缓存键带 appid。改 AppID 后**必须 `npm run dev:mp-weixin` 重建**（IDE 读 `dist/dev/mp-weixin/project.config.json`，不是 `src/manifest.json`）。
+
 **Auth flow (admin)**: `POST /api/v1/auth/login/password` with username/password → JWT access + refresh tokens. Tokens stored in cookies (`admin_token`, `admin_refresh`).
 
 **Casbin RBAC**: Enforcer checks `(role, route_path, http_method)` for every authenticated request. `CasbinRBAC` middleware iterates user's roles and allows if any role matches. Admin-specific RBAC (roles/permissions) also stored in DB (`admin_rbac.go`).
@@ -296,7 +409,7 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
   | 模块 | 页面 |
   | --------- | ------------------------------------------------------ |
   | 工作台    | `index/index`                                          |
-  | 登录      | `auth/phone`                                           |
+  | 登录      | `auth/login`                                           |
   | 通知      | `notice/create`                                        |
   | 成长记录  | `growth/index`、`growth/create`、`growth/detail`       |
   | 接送      | `pickup/index`、`pickup/records`                       |
@@ -321,7 +434,7 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 - `src/pages.json` — **26 pages，有 tabBar**（老师端没有）
 - tabBar 4 项：`index/index` 首页、`growth/index` 成长时光、`pickup/index` 接送、`profile/index` 我的
-- 页面模块：首页、登录/绑定（`auth/phone`、`auth/bind`）、通知（列表+详情）、请假（列表+新建+详情）、成长（列表+详情+相册+**报告**）、接送（+**二维码**、**授权人管理**）、亲子任务（列表+详情）、**积分**、班级、日历、**幼儿档案**、**反馈**、设置、消息、我的、webview
+- 页面模块：首页、登录/绑定（`auth/login`、`auth/bind`）、通知（列表+详情）、请假（列表+新建+详情）、成长（列表+详情+相册+**报告**）、接送（+**二维码**、**授权人管理**）、亲子任务（列表+详情）、**积分**、班级、日历、**幼儿档案**、**反馈**、设置、消息、我的、webview
 - 相对老师端多出的能力：绑定关系、成长报告、接送二维码与授权人、积分、反馈
 - 登录同样静默：`App.vue` `onLaunch` → `ensureLogin()`，`role` 在 `src/api/auth.js` 硬编码为 `"parent"`
 
@@ -349,6 +462,8 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 养成星球使用统一的 design token 系统管理三端样式。**所有颜色、圆角、阴影、间距、字号必须通过 token 引用，禁止硬编码。**
 
 单一数据源: `shared-design-tokens/tokens.json` → 构建产出三端各自格式的文件。
+
+**前端设计探索与落地流程见 `docs/open-design-impeccable-playbook.md`**（OpenDesign 发散 → 交接卡 → Impeccable 收敛 → 验证归档）。
 
 ### 决策树
 
@@ -417,12 +532,16 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 | 背景 | `$color-bg-page`, `$color-bg-card` | 端差异 |
 | 文字 | `$color-text-primary`, `body`, `muted`, `hint` | 共享 |
 | 功能色 | `$color-semantic-success`, `warning`, `danger`, `info` + 对应的 `-bg` 浅底 | 共享 |
-| 圆角 | `$border-radius-sm`(8rpx) ~ `xl`(48rpx), `full`(9999rpx) | 共享 |
-| 阴影 | `$shadow-sm`, `md`, `lg` | 共享 |
-| 间距 | `$spacing-xs`(8rpx) ~ `xl`(64rpx) | 共享 |
+| 圆角 | `$border-radius-sm`(12rpx) ~ `2xl`(48rpx), `full`(19998rpx) | 共享 |
+| 阴影 | `$shadow-sm`, `md`, `lg`（多层琥珀暖调） | 共享 |
+| 渐变 | `$gradient-brand`, `-brand-soft`, `-page` | 共享 |
+| 间距 | `$spacing-xs`(8rpx) ~ `xl`(32rpx) | 共享 |
 | 字号 | `$font-size-xs`(22rpx) ~ `3xl`(40rpx) | 共享 |
 | 字重 | `$font-weight-normal`(400) ~ `bold`(700) | 共享 |
 | 动画 | `$animation-duration-fast`(150ms), `base`(300ms), `slow`(500ms) | 共享 |
+
+> 📐 **单位换算**：`tokens.json` 的数值是 **px 设计稿值**，`sd.config.js` 构建时 `×2` 输出 rpx。
+> 例：`borderRadius.xl = 16` → 构建产物 `$border-radius-xl: 32rpx`。**改 token 时写 px，不是 rpx。**
 
 ### 组件级 Token（原子 token 之上的语义层）
 
