@@ -4,6 +4,10 @@ export function fetchTeacherTasks(params = {}) {
   return requestWithAuth({ url: "/teacher/tasks", method: "GET", data: params })
 }
 
+export function fetchTeacherTask(id) {
+  return requestWithAuth({ url: `/teacher/tasks/${id}`, method: "GET" })
+}
+
 export function createTeacherTask(data) {
   return requestWithAuth({ url: "/teacher/tasks", method: "POST", data })
 }
@@ -20,6 +24,22 @@ export function fetchTeacherTaskStats(id) {
   return requestWithAuth({ url: `/teacher/tasks/${id}/stats`, method: "GET" })
 }
 
-export function fetchTeacherTaskCheckins(id) {
-  return requestWithAuth({ url: `/teacher/tasks/${id}/checkins`, method: "GET" })
+export function fetchTeacherTaskCheckins(id, params = {}) {
+  return requestWithAuth({ url: `/teacher/tasks/${id}/checkins`, method: "GET", data: params })
+}
+
+export function respondTeacherTask(taskId, checkinId, data) {
+  return requestWithAuth({
+    url: `/teacher/tasks/${taskId}/checkins/${checkinId}/response`,
+    method: "POST",
+    data
+  })
+}
+
+export function batchRespondTeacherTask(taskId, data) {
+  return requestWithAuth({
+    url: `/teacher/tasks/${taskId}/batch-response`,
+    method: "POST",
+    data
+  })
 }

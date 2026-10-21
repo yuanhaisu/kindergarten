@@ -1,17 +1,38 @@
 <script setup>
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
-import { fetchTeacherPickupOverview, fetchTeacherPickupStudents, manualTeacherPickup, scanTeacherPickup } from "@/api/teacher-pickup"
+import {
+  fetchTeacherPickupOverview,
+  fetchTeacherPickupStudents,
+  manualTeacherPickup,
+  scanTeacherPickup,
+  notifyOverdueParent,
+  fetchStudentAuthPersons
+} from "@/api/teacher-pickup"
 
 const overview = ref({})
 const students = ref([])
 const filterStatus = ref("not_picked_up") // not_picked_up | all | arrived | picked_up
 const loadError = ref("")
 
+// 手动登记弹窗状态
+const showManual = ref(false)
+const manualStudent = ref(null)
+const manualMode = ref("authorized") // authorized | override
+const manualRemark = ref("")
+const manualOverrideName = ref("")
+const submitting = ref(false)
+// 选授权人状态
+const authPersons = ref([])
+const selectedAuthId = ref(null)
+const authPersonsLoading = ref(false)
+
 const todayDate = computed(() => {
   const now = new Date()
   return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
 })
+
+const overdueCount = computed(() => overview.value.overdue_not_picked || 0)
 
 async function loadPickup() {
   loadError.value = ""
@@ -34,21 +55,91 @@ async function loadPickup() {
   }
 }
 
-async function record(student) {
+// 打开手动登记弹窗
+async function openManual(student) {
+  manualStudent.value = student
+  manualMode.value = "authorized"
+  manualRemark.value = ""
+  manualOverrideName.value = ""
+  selectedAuthId.value = null
+  authPersons.value = []
+  showManual.value = true
+  // 懒加载该生授权人列表
+  authPersonsLoading.value = true
+  try {
+    const res = await fetchStudentAuthPersons(student.student_id)
+    authPersons.value = res.data?.list || []
+  } catch {
+    authPersons.value = []
+  } finally {
+    authPersonsLoading.value = false
+  }
+}
+
+// 切换模式：清空选人/例外状态
+function switchManualMode(mode) {
+  manualMode.value = mode
+  selectedAuthId.value = null
+  manualOverrideName.value = ""
+}
+
+async function submitManual() {
+  if (!manualStudent.value) return
+  if (manualMode.value === "authorized" && !selectedAuthId.value) {
+    uni.showToast({ title: "请先选择一位授权接送人", icon: "none" })
+    return
+  }
+  if (manualMode.value === "override" && !manualOverrideName.value.trim()) {
+    uni.showToast({ title: "请填写例外接送人姓名", icon: "none" })
+    return
+  }
+  submitting.value = true
   try {
     await manualTeacherPickup({
-      // 后端 PickupStudents 返回的键是 student_id，没有 id —— 用 student.id 会得到
-      // undefined，序列化时被丢弃，后端 StudentID==0 直接报参数错误。
-      student_id: student.student_id,
+      student_id: manualStudent.value.student_id,
       type: 2,
-      pickup_name: "老师登记",
-      pickup_relation: "teacher"
+      authorization_id: manualMode.value === "authorized" ? selectedAuthId.value : null,
+      is_authorized_override: manualMode.value === "override",
+      override_name: manualMode.value === "override" ? manualOverrideName.value.trim() : "",
+      remark: manualRemark.value.trim(),
     })
     uni.showToast({ title: "登记成功", icon: "success" })
+    showManual.value = false
     loadPickup()
   } catch (err) {
-    uni.showToast({ title: err?.message || "登记失败", icon: "none" })
+    uni.showToast({ title: mapPickupError(err), icon: "none" })
+  } finally {
+    submitting.value = false
   }
+}
+
+// 送入（入园）一键登记，不走弹窗
+async function handleDropOff(student) {
+  try {
+    await manualTeacherPickup({
+      student_id: student.student_id,
+      type: 1,
+    })
+    uni.showToast({ title: `${student.name} 已入园`, icon: "success" })
+    loadPickup()
+  } catch (err) {
+    uni.showToast({ title: mapPickupError(err), icon: "none" })
+  }
+}
+
+// 后端错误 → 可操作提示（D5）
+function mapPickupError(err) {
+  const msg = err?.message || "登记失败"
+  if (msg.includes("先登记入园") || msg.includes("未到园")) {
+    return "该生今日尚未入园，请先登记入园（送入）后再登记接走"
+  }
+  if (msg.includes("重复接走") && msg.includes("理由")) {
+    return "重复接走需填写理由"
+  }
+  if (msg.includes("不在有效授权")) {
+    return "所选接送人授权已失效，请重新选择或标例外"
+  }
+  return msg
 }
 
 function goQrScan() {
@@ -60,6 +151,7 @@ function goQrScan() {
           uni.showToast({ title: "二维码识别失败", icon: "none" })
           return
         }
+        // 只传凭证内容，学生与接走人由后端从码自解释
         const result = await scanTeacherPickup({ qr_code: qrCode })
         const data = result.data
         uni.showToast({
@@ -75,6 +167,16 @@ function goQrScan() {
       uni.showToast({ title: "扫码已取消", icon: "none" })
     },
   })
+}
+
+// 一键通知滞留儿童家长
+async function handleNotifyOverdue(student) {
+  try {
+    await notifyOverdueParent(student.student_id)
+    uni.showToast({ title: `已通知 ${student.name} 家长`, icon: "success" })
+  } catch (err) {
+    uni.showToast({ title: err?.message || "通知失败", icon: "none" })
+  }
 }
 
 function goManualRegister() {
@@ -114,25 +216,45 @@ onPullDownRefresh(loadPickup)
     <!-- 今日接送统计卡片 -->
     <view class="stats-card">
       <view class="stats-head">
-        <text class="stats-title">今日接送统计</text>
+        <text class="stats-title">今日接送</text>
         <text class="stats-date">{{ todayDate }}</text>
       </view>
       <view class="stats-grid">
         <view class="stat-item">
-          <text class="stat-num">{{ overview.arrived || 0 }}</text>
-          <text class="stat-label">已入园</text>
+          <view class="stat-icon-box is-green">
+            <text class="stat-icon-text">入</text>
+          </view>
+          <view class="stat-text">
+            <text class="stat-num">{{ overview.arrived || 0 }}</text>
+            <text class="stat-label">已入园</text>
+          </view>
         </view>
         <view class="stat-item">
-          <text class="stat-num">{{ overview.picked_up || 0 }}</text>
-          <text class="stat-label">已接走</text>
+          <view class="stat-icon-box is-blue">
+            <text class="stat-icon-text">接</text>
+          </view>
+          <view class="stat-text">
+            <text class="stat-num">{{ overview.picked_up || 0 }}</text>
+            <text class="stat-label">已接走</text>
+          </view>
         </view>
         <view class="stat-item">
-          <text class="stat-num">{{ overview.not_picked || overview.total - overview.picked_up || 0 }}</text>
-          <text class="stat-label">未接走</text>
+          <view class="stat-icon-box is-amber">
+            <text class="stat-icon-text">待</text>
+          </view>
+          <view class="stat-text">
+            <text class="stat-num">{{ overview.not_picked || (overview.total - overview.picked_up) || 0 }}</text>
+            <text class="stat-label">未接走</text>
+          </view>
         </view>
         <view class="stat-item">
-          <text class="stat-num">{{ overview.abnormal || 0 }}</text>
-          <text class="stat-label">异常</text>
+          <view class="stat-icon-box is-danger">
+            <text class="stat-icon-text">异</text>
+          </view>
+          <view class="stat-text">
+            <text class="stat-num">{{ overview.abnormal || 0 }}</text>
+            <text class="stat-label">异常</text>
+          </view>
         </view>
       </view>
     </view>
@@ -161,7 +283,7 @@ onPullDownRefresh(loadPickup)
       </view>
       <view class="action-hint">
         <text class="hint-icon">提</text>
-        <text class="hint-text">点击右上角扫码按钮，扫描家长出示的接送二维码即可完成接送登记，操作仅需3秒</text>
+        <text class="hint-text">点击「扫码接送」，扫描家长出示的接送二维码即可完成登记，操作仅需3秒</text>
       </view>
     </view>
 
@@ -183,7 +305,11 @@ onPullDownRefresh(loadPickup)
         <text class="empty-text">当前筛选下没有学生</text>
       </view>
       <view v-else class="student-list">
-        <view v-for="student in students" :key="student.student_id" class="student-card">
+        <view
+          v-for="student in students"
+          :key="student.student_id"
+          :class="['student-card', student.is_overdue ? 'card-overdue' : '']"
+        >
           <view class="student-info">
             <view class="student-avatar">
               <image
@@ -195,14 +321,122 @@ onPullDownRefresh(loadPickup)
               <text v-else class="avatar-placeholder">{{ student.name?.[0] || "生" }}</text>
             </view>
             <view class="student-text">
-              <text class="student-name">{{ student.name }}</text>
+              <view class="name-row">
+                <text class="student-name">{{ student.name }}</text>
+                <text v-if="student.is_overdue" class="overdue-tag">滞留</text>
+                <text v-if="student.is_authorized_override" class="override-tag">例外</text>
+              </view>
               <text class="student-auth">
                 授权接送人：{{ student.authorized_persons || "暂无" }}
               </text>
+              <text v-if="student.is_overdue && student.pickup_deadline" class="overdue-hint">
+                放学时间 {{ student.pickup_deadline }}，请尽快联系家长
+              </text>
             </view>
           </view>
-          <view class="register-btn" @click="record(student)">
-            <text>登记</text>
+          <view class="action-col">
+            <view
+              v-if="student.pickup_status === 'not_arrived'"
+              class="dropoff-btn"
+              @click="handleDropOff(student)"
+            >
+              <text>入园</text>
+            </view>
+            <view class="register-btn" @click="openManual(student)">
+              <text>{{ student.pickup_status === 'picked_up' ? '再接走' : '接走' }}</text>
+            </view>
+            <view
+              v-if="student.is_overdue"
+              class="notify-btn"
+              @click="handleNotifyOverdue(student)"
+            >
+              <text>通知</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 手动登记弹窗 -->
+    <view v-if="showManual" class="modal-mask" @click="showManual = false">
+      <view class="modal-box" @click.stop>
+        <text class="modal-title">手动登记 — {{ manualStudent?.name }}</text>
+
+        <!-- 二选一：选授权人 / 标例外 -->
+        <view class="mode-switch">
+          <view
+            :class="['mode-btn', manualMode === 'authorized' ? 'mode-active' : '']"
+            @click="switchManualMode('authorized')"
+          >
+            <text>选授权人</text>
+          </view>
+          <view
+            :class="['mode-btn', manualMode === 'override' ? 'mode-active' : '']"
+            @click="switchManualMode('override')"
+          >
+            <text>标例外</text>
+          </view>
+        </view>
+
+        <!-- 选授权人：radio 卡片列表 -->
+        <view v-if="manualMode === 'authorized'" class="auth-list">
+          <view v-if="authPersonsLoading" class="auth-loading">
+            <text>加载授权人...</text>
+          </view>
+          <view v-else-if="authPersons.length === 0" class="auth-empty">
+            <text>暂无有效授权接送人</text>
+            <text class="auth-empty-hint">可切换到「标例外」模式登记</text>
+          </view>
+          <view v-else class="auth-cards">
+            <view
+              v-for="p in authPersons"
+              :key="p.id"
+              :class="['auth-card', selectedAuthId === p.id ? 'auth-card-selected' : '']"
+              @click="selectedAuthId = p.id"
+            >
+              <view class="auth-radio">
+                <view v-if="selectedAuthId === p.id" class="auth-radio-dot" />
+              </view>
+              <view class="auth-avatar">
+                <image v-if="p.avatar" :src="p.avatar" class="auth-avatar-img" mode="aspectFill" />
+                <text v-else class="auth-avatar-placeholder">{{ p.name?.[0] || "人" }}</text>
+              </view>
+              <view class="auth-info">
+                <text class="auth-name">{{ p.name }}</text>
+                <text class="auth-relation">{{ p.relation }} · {{ p.phone }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 例外模式：填写来接者姓名 -->
+        <view v-if="manualMode === 'override'" class="form-row">
+          <text class="form-label">来接者姓名</text>
+          <input
+            v-model="manualOverrideName"
+            class="form-input"
+            placeholder="如：邻居王五"
+            maxlength="50"
+          />
+        </view>
+
+        <!-- 理由（重复接走/提前接走必填，此处统一提供） -->
+        <view class="form-row">
+          <text class="form-label">理由</text>
+          <textarea
+            v-model="manualRemark"
+            class="form-textarea"
+            placeholder="重复接走/提前接走时必填"
+            maxlength="200"
+          />
+        </view>
+
+        <view class="modal-actions">
+          <view class="modal-btn cancel" @click="showManual = false">
+            <text>取消</text>
+          </view>
+          <view class="modal-btn confirm" @click="submitManual">
+            <text>{{ submitting ? "提交中..." : "确认登记" }}</text>
           </view>
         </view>
       </view>
@@ -217,15 +451,16 @@ onPullDownRefresh(loadPickup)
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: $spacing-lg 28rpx;
-  background: $color-bg-card;
+  padding: $spacing-lg $component-page-padding-x;
+  background: $color-bg-page;
 }
 
-// ===== 统计卡片 =====
+// ===== 统计卡片（紧凑风格：白底 + 语义色数字） =====
 .stats-card {
-  padding: 48rpx 48rpx 40rpx;
+  padding: $component-card-padding;
   border-radius: $border-radius-xl;
-  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
   margin-bottom: $spacing-lg;
 }
 
@@ -233,49 +468,81 @@ onPullDownRefresh(loadPickup)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-lg;
 }
 
 .stats-title {
-  font-size: $typography-font-size-xl;
-  font-weight: 700;
-  color: #fff;
+  font-size: $typography-font-size-lg;
+  font-weight: 600;
+  color: $color-text-primary;
 }
 
 .stats-date {
-  font-size: $typography-font-size-md;
-  color: #FFEDD5;
+  font-size: $typography-font-size-sm;
+  color: $color-text-hint;
 }
 
 .stats-grid {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
 }
 
 .stat-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: $spacing-xs;
+  gap: $spacing-sm;
+}
+
+.stat-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $border-radius-md;
+  flex-shrink: 0;
+}
+
+.stat-icon-box.is-green  { background: $color-semantic-success-bg; }
+.stat-icon-box.is-blue   { background: $color-semantic-info-bg; }
+.stat-icon-box.is-amber  { background: $color-semantic-warning-bg; }
+.stat-icon-box.is-danger { background: $color-semantic-danger-bg; }
+
+.stat-icon-text {
+  font-size: $typography-font-size-sm;
+  font-weight: 600;
+}
+
+.stat-icon-box.is-green  .stat-icon-text { color: $color-semantic-success; }
+.stat-icon-box.is-blue   .stat-icon-text { color: $color-semantic-info; }
+.stat-icon-box.is-amber  .stat-icon-text { color: $color-semantic-warning; }
+.stat-icon-box.is-danger .stat-icon-text { color: $color-semantic-danger; }
+
+.stat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
 }
 
 .stat-num {
-  font-size: 56rpx;
-  font-weight: 800;
-  color: #fff;
+  font-size: $typography-font-size-xl;
+  font-weight: 700;
+  color: $color-text-primary;
+  line-height: 1.2;
 }
 
 .stat-label {
-  font-size: $typography-font-size-base;
-  color: #FFEDD5;
+  font-size: $typography-font-size-xs;
+  color: $color-text-muted;
+  line-height: 1.2;
 }
 
 // ===== 操作区 =====
 .action-card {
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
   margin-bottom: $spacing-lg;
 }
 
@@ -296,28 +563,28 @@ onPullDownRefresh(loadPickup)
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 112rpx;
-  height: 112rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: $border-radius-xl;
 }
 
-.is-green  { background: #DCFCE7; }
-.is-blue   { background: #DBEAFE; }
+.is-green  { background: $color-semantic-success-bg; }
+.is-blue   { background: $color-semantic-info-bg; }
 .is-purple { background: #F3E8FF; }
 
 .action-icon-text {
-  font-size: 46rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
 }
 
-.is-green  .action-icon-text { color: #16A34A; }
-.is-blue   .action-icon-text { color: #2563EB; }
+.is-green  .action-icon-text { color: $color-semantic-success; }
+.is-blue   .action-icon-text { color: $color-semantic-info; }
 .is-purple .action-icon-text { color: #9333EA; }
 
 .action-label {
   font-size: $typography-font-size-base;
   font-weight: 500;
-  color: #334155;
+  color: $color-text-body;
 }
 
 .action-hint {
@@ -364,6 +631,8 @@ onPullDownRefresh(loadPickup)
   display: flex;
   align-items: center;
   gap: 4rpx;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $border-radius-full;
 
   text {
     font-size: $typography-font-size-md;
@@ -386,7 +655,7 @@ onPullDownRefresh(loadPickup)
 }
 
 .retry-btn {
-  padding: $spacing-sm $spacing-xl;
+  padding: $spacing-md $spacing-xl;
   border-radius: $border-radius-full;
   background: $color-semantic-info;
   font-size: $typography-font-size-base;
@@ -405,8 +674,8 @@ onPullDownRefresh(loadPickup)
   justify-content: space-between;
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
 }
 
 .student-info {
@@ -436,7 +705,7 @@ onPullDownRefresh(loadPickup)
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #DBEAFE;
+  background: $color-semantic-info-bg;
   font-size: $typography-font-size-2xl;
   font-weight: 700;
   color: $color-semantic-info;
@@ -465,9 +734,9 @@ onPullDownRefresh(loadPickup)
 
 .register-btn {
   flex-shrink: 0;
-  padding: $spacing-sm $spacing-lg;
-  border-radius: $border-radius-lg;
-  background: #EFF6FF;
+  padding: $spacing-md $spacing-xl;
+  border-radius: $border-radius-full;
+  background: $color-semantic-info-bg;
 
   text {
     font-size: $typography-font-size-base;
@@ -478,5 +747,309 @@ onPullDownRefresh(loadPickup)
 
 .bottom-safe {
   height: calc(60rpx + env(safe-area-inset-bottom));
+}
+
+// ===== 滞留高亮 =====
+.student-card.card-overdue {
+  border: 2rpx solid $color-semantic-danger;
+  background: $color-semantic-danger-bg;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.overdue-tag {
+  padding: 2rpx 12rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger;
+  color: #fff;
+  font-size: $typography-font-size-xs;
+  font-weight: 600;
+}
+
+.override-tag {
+  padding: 2rpx 12rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-warning-bg;
+  color: $color-semantic-warning;
+  font-size: $typography-font-size-xs;
+  font-weight: 600;
+}
+
+.overdue-hint {
+  font-size: $typography-font-size-xs;
+  color: $color-semantic-danger;
+  margin-top: 2rpx;
+}
+
+.action-col {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.notify-btn {
+  padding: $spacing-md $spacing-xl;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger;
+  text-align: center;
+
+  text {
+    font-size: $typography-font-size-base;
+    font-weight: 500;
+    color: #fff;
+  }
+}
+
+// ===== 手动登记弹窗 =====
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  width: 640rpx;
+  padding: $spacing-xl;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
+}
+
+.modal-title {
+  font-size: $typography-font-size-lg;
+  font-weight: 700;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+}
+
+.mode-switch {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  text-align: center;
+
+  text {
+    font-size: $typography-font-size-base;
+    color: $color-text-muted;
+  }
+}
+
+.mode-btn.mode-active {
+  background: $color-semantic-info;
+
+  text {
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.form-row {
+  margin-bottom: $spacing-lg;
+}
+
+.form-label {
+  display: block;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+  margin-bottom: $spacing-xs;
+}
+
+.form-input {
+  width: 100%;
+  height: $component-input-height;
+  padding: 0 $spacing-md;
+  border-radius: $component-input-radius;
+  background: $color-bg-page;
+  font-size: $typography-font-size-base;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  width: 100%;
+  height: 140rpx;
+  padding: $spacing-md;
+  border-radius: $component-input-radius;
+  background: $color-bg-page;
+  font-size: $typography-font-size-base;
+  box-sizing: border-box;
+}
+
+.modal-actions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-xl;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $border-radius-full;
+  text-align: center;
+
+  text {
+    font-size: $typography-font-size-base;
+    font-weight: 600;
+  }
+}
+
+.modal-btn.cancel {
+  background: $color-bg-page;
+
+  text { color: $color-text-muted; }
+}
+
+.modal-btn.confirm {
+  background: $color-brand-primary;
+
+  text { color: #fff; }
+}
+
+// ===== 选授权人列表 =====
+.auth-list {
+  margin-bottom: $spacing-lg;
+}
+
+.auth-loading {
+  padding: $spacing-xl;
+  text-align: center;
+
+  text {
+    font-size: $typography-font-size-sm;
+    color: $color-text-hint;
+  }
+}
+
+.auth-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xl;
+
+  text {
+    font-size: $typography-font-size-sm;
+    color: $color-text-muted;
+  }
+}
+
+.auth-empty-hint {
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
+}
+
+.auth-cards {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  max-height: 400rpx;
+  overflow-y: auto;
+}
+
+.auth-card {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  background: $color-bg-page;
+  border: 2rpx solid transparent;
+}
+
+.auth-card-selected {
+  border-color: $color-brand-primary;
+  background: rgba(249, 115, 22, 0.05);
+}
+
+.auth-radio {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 9999rpx;
+  border: 3rpx solid $color-text-hint;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.auth-card-selected .auth-radio {
+  border-color: $color-brand-primary;
+}
+
+.auth-radio-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 9999rpx;
+  background: $color-brand-primary;
+}
+
+.auth-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 9999rpx;
+  overflow: hidden;
+  background: $color-semantic-info-bg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.auth-avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.auth-avatar-placeholder {
+  font-size: $typography-font-size-lg;
+  font-weight: 600;
+  color: $color-semantic-info;
+}
+
+.auth-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  min-width: 0;
+  flex: 1;
+}
+
+.auth-name {
+  font-size: $typography-font-size-base;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+.auth-relation {
+  font-size: $typography-font-size-xs;
+  color: $color-text-muted;
+}
+
+// ===== 送入按钮 =====
+.dropoff-btn {
+  padding: $spacing-md $spacing-xl;
+  border-radius: $border-radius-full;
+  background: $color-semantic-success-bg;
+  text-align: center;
+
+  text {
+    font-size: $typography-font-size-base;
+    font-weight: 500;
+    color: $color-semantic-success;
+  }
 }
 </style>

@@ -296,13 +296,13 @@ onShareAppMessage((res) => {
   width: 100%;
   max-width: 430px;
   margin: 0 auto;
-  background: #F8FAFC;
+  background: $gradient-page;
 }
 
 // ===== 顶部渐变区域 =====
 .header-area {
   padding: 0 46rpx 46rpx;
-  background: linear-gradient(135deg, $color-semantic-info 0%, $color-semantic-info 100%);
+  background: $gradient-brand;
 }
 
 .status-bar {
@@ -329,7 +329,7 @@ onShareAppMessage((res) => {
   justify-content: center;
   width: 96rpx;
   height: 96rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   background: rgba(255, 255, 255, 1);
 }
 
@@ -363,7 +363,7 @@ onShareAppMessage((res) => {
   justify-content: center;
   width: 80rpx;
   height: 80rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -373,8 +373,8 @@ onShareAppMessage((res) => {
   right: 2rpx;
   width: 20rpx;
   height: 20rpx;
-  border-radius: 999rpx;
-  background: #EF4444;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger;
 }
 
 .bell-icon {
@@ -389,7 +389,7 @@ onShareAppMessage((res) => {
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
   background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  box-shadow: $shadow-md;
 }
 
 .stats-head {
@@ -427,9 +427,9 @@ onShareAppMessage((res) => {
   font-weight: 800;
 }
 
-.is-green { color: #10B981; }
-.is-amber { color: #F59E0B; }
-.is-red   { color: #EF4444; }
+.is-green { color: $color-semantic-success; }
+.is-amber { color: $color-semantic-warning; }
+.is-red   { color: $color-semantic-danger; }
 .is-blue  { color: $color-semantic-info; }
 
 .stat-label {
@@ -443,7 +443,7 @@ onShareAppMessage((res) => {
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
   background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  box-shadow: $shadow-md;
 }
 
 .feature-grid {
@@ -477,7 +477,7 @@ onShareAppMessage((res) => {
 .feature-label {
   font-size: $typography-font-size-base;
   font-weight: 500;
-  color: #334155;
+  color: $color-text-body;
 }
 
 // ===== 待办事项 =====
@@ -505,10 +505,10 @@ onShareAppMessage((res) => {
 
 .state-card {
   padding: 56rpx 32rpx;
-  border-radius: 28rpx;
+  border-radius: $border-radius-xl;
   background: #fff;
   text-align: center;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: $shadow-sm;
 }
 
 .state-text {
@@ -520,7 +520,7 @@ onShareAppMessage((res) => {
   width: 180rpx;
   height: 72rpx;
   margin: 28rpx auto 0;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   background: $color-semantic-info;
   color: #fff;
   font-size: $typography-font-size-base;
@@ -540,7 +540,7 @@ onShareAppMessage((res) => {
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
   background: #fff;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
+  box-shadow: $shadow-sm;
 }
 
 .todo-icon-box {
@@ -550,7 +550,7 @@ onShareAppMessage((res) => {
   justify-content: center;
   width: 80rpx;
   height: 80rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
 }
 
 .todo-icon {

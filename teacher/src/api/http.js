@@ -20,7 +20,9 @@ function normalizeResponse(body) {
   return { code: SUCCESS_CODE, message: "success", data: body }
 }
 
-function request({ url, method = "GET", data, header = {}, auth = false }) {
+// silent: true 时不弹全局 toast，由调用方自己渲染错误（登录页用内联错误态）。
+// 默认 false，现有调用方行为不变。
+function request({ url, method = "GET", data, header = {}, auth = false, silent = false }) {
   return new Promise((resolve, reject) => {
     const token = auth ? getToken() : ""
 
@@ -40,7 +42,7 @@ function request({ url, method = "GET", data, header = {}, auth = false }) {
 
         if (res.statusCode === 401) {
           clearAuth()
-          uni.reLaunch({ url: "/pages/auth/phone" })
+          uni.reLaunch({ url: "/pages/auth/login" })
           reject(body)
           return
         }
@@ -50,12 +52,18 @@ function request({ url, method = "GET", data, header = {}, auth = false }) {
           return
         }
 
-        uni.showToast({ title: body.message || "请求失败", icon: "none" })
+        if (!silent) {
+          uni.showToast({ title: body.message || "请求失败", icon: "none" })
+        }
         reject(body)
       },
       fail(err) {
-        uni.showToast({ title: "网络异常", icon: "none" })
-        reject(err)
+        if (!silent) {
+          uni.showToast({ title: "网络异常", icon: "none" })
+        }
+        // 归一化：调用方读 err.message，而微信 fail 对象只带 errMsg，
+        // 不补这一层则页面的 err?.message 恒为 undefined，永远走到兜底文案。
+        reject({ ...err, message: err?.message || "网络异常" })
       }
     })
   })
@@ -67,4 +75,53 @@ export function rawRequest(options) {
 
 export function requestWithAuth(options) {
   return request({ ...options, auth: true })
+}
+
+// 文件上传（multipart）：与 request() 同一套 token 注入、401 处理与错误归一化约定。
+// 服务端契约见 POST /common/upload：form 字段 file + biz_type；成功判定同为 2xx + code===0。
+// 用法（成长记录）：uploadFile({ url: "/common/upload", filePath, formData: { biz_type: "growth" } })
+export function uploadFile({ url, filePath, name = "file", formData = {}, header = {}, silent = false }) {
+  return new Promise((resolve, reject) => {
+    const token = getToken()
+    uni.uploadFile({
+      url: `${config.baseURL}${url}`,
+      filePath,
+      name,
+      formData,
+      header: {
+        platform: "mp-weixin",
+        terminal_from: "teacher",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...header
+      },
+      success(res) {
+        let body = res.data
+        if (typeof body === "string") {
+          try { body = JSON.parse(body) } catch { body = null }
+        }
+        body = normalizeResponse(body)
+
+        if (res.statusCode === 401) {
+          clearAuth()
+          uni.reLaunch({ url: "/pages/auth/login" })
+          reject(body)
+          return
+        }
+        if (res.statusCode >= 200 && res.statusCode < 300 && body.code === SUCCESS_CODE) {
+          resolve(body)
+          return
+        }
+        if (!silent) {
+          uni.showToast({ title: body.message || "上传失败", icon: "none" })
+        }
+        reject(body)
+      },
+      fail(err) {
+        if (!silent) {
+          uni.showToast({ title: "网络异常", icon: "none" })
+        }
+        reject({ ...err, message: err?.message || "上传失败" })
+      }
+    })
+  })
 }

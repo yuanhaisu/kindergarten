@@ -1,0 +1,209 @@
+<script setup>
+import { ref } from "vue"
+import { onLoad } from "@dcloudio/uni-app"
+import { fetchTeacherTask, fetchTeacherTaskCheckins, respondTeacherTask, batchRespondTeacherTask, updateTeacherTask } from "@/api/teacher-tasks"
+import config from "@/config/env"
+import { getToken } from "@/utils/auth"
+
+const taskId = ref(0)
+const rows = ref([])
+const task = ref({})
+const edit = ref({ title: "", description: "", learning_link: "", allow_public: false })
+const loading = ref(false)
+const status = ref("pending")
+const stickers = ["star", "heart", "thumb"]
+const recorder = uni.getRecorderManager()
+let recordingRow = null
+const recording = ref(false)
+
+recorder.onStop((res) => {
+  recording.value = false
+  const row = recordingRow
+  recordingRow = null
+  if (!row || !res?.tempFilePath) return
+  uni.showLoading({ title: "上传语音" })
+  uni.uploadFile({
+    url: config.uploadURL,
+    filePath: res.tempFilePath,
+    name: "file",
+    formData: { biz_type: "task" },
+    header: { Authorization: `Bearer ${getToken()}` },
+    success: (up) => {
+      try {
+        const body = JSON.parse(up.data || "{}")
+        if (body.code !== 0 || !body.data?.id) {
+          uni.showToast({ title: body.message || "上传失败", icon: "none" })
+          return
+        }
+        respondVoice(row, body.data.id)
+      } catch (e) {
+        uni.showToast({ title: "上传失败", icon: "none" })
+      }
+    },
+    fail: () => uni.showToast({ title: "上传失败", icon: "none" }),
+    complete: () => uni.hideLoading()
+  })
+})
+
+async function respondVoice(row, mediaFileID) {
+  try {
+    await respondTeacherTask(taskId.value, row.id, { ritual: "voice", media_file_id: mediaFileID })
+    uni.showToast({ title: "语音已发送", icon: "success" })
+    load()
+  } catch (e) {
+    uni.showToast({ title: e?.message || "语音回应失败", icon: "none" })
+  }
+}
+
+function startRecord(row) {
+  if (recording.value) return
+  recordingRow = row
+  recording.value = true
+  recorder.start({ format: "mp3", duration: 15000 })
+}
+
+function stopRecord() {
+  if (recording.value) recorder.stop()
+}
+
+async function loadTask() {
+  try {
+    const res = await fetchTeacherTask(taskId.value)
+    task.value = res.data || {}
+    edit.value = {
+      title: task.value.title || "",
+      description: task.value.description || "",
+      learning_link: task.value.learning_link || "",
+      allow_public: !!task.value.allow_public
+    }
+  } catch (e) {
+    // 任务详情只影响编辑区，不阻塞提交列表
+  }
+}
+
+async function saveEdit() {
+  if (!edit.value.title.trim() || !edit.value.learning_link.trim()) {
+    uni.showToast({ title: "标题和学习关联必填", icon: "none" })
+    return
+  }
+  try {
+    await updateTeacherTask(taskId.value, {
+      title: edit.value.title,
+      description: edit.value.description,
+      learning_link: edit.value.learning_link,
+      allow_public: edit.value.allow_public,
+      target_student_id: task.value.target_student_id || 0,
+      frequency: task.value.frequency,
+      start_date: task.value.start_date,
+      end_date: task.value.end_date,
+      recognition_ritual: task.value.recognition_ritual || "sticker",
+      star_scope: task.value.star_scope || "task",
+      star_goal: task.value.star_goal || 0,
+      status: task.value.status ?? 1
+    })
+    uni.showToast({ title: "已保存", icon: "success" })
+    loadTask()
+  } catch (e) {
+    uni.showToast({ title: e?.message || "保存失败", icon: "none" })
+  }
+}
+
+async function load() {
+  if (!taskId.value) return
+  loading.value = true
+  try {
+    const res = await fetchTeacherTaskCheckins(taskId.value, { status: status.value })
+    rows.value = res.data?.list || []
+  } catch (e) {
+    uni.showToast({ title: "加载提交失败", icon: "none" })
+  } finally {
+    loading.value = false
+  }
+}
+
+async function respond(row, sticker) {
+  try {
+    await respondTeacherTask(taskId.value, row.id, { ritual: "sticker", sticker_key: sticker })
+    uni.showToast({ title: "已回应", icon: "success" })
+    load()
+  } catch (e) {
+    uni.showToast({ title: e?.message || "回应失败", icon: "none" })
+  }
+}
+
+async function batchRespond() {
+  try {
+    const res = await batchRespondTeacherTask(taskId.value, { ritual: "sticker", sticker_key: "star" })
+    uni.showToast({ title: `已回应 ${res.data?.responded_count || 0} 条`, icon: "success" })
+    load()
+  } catch (e) {
+    uni.showToast({ title: e?.message || "批量回应失败", icon: "none" })
+  }
+}
+
+function switchStatus(s) {
+  status.value = s
+  load()
+}
+
+onLoad((opts) => {
+  taskId.value = Number(opts?.id || 0)
+  loadTask()
+  load()
+})
+</script>
+
+<template>
+  <view class="page">
+    <view v-if="task.id" class="card edit-card">
+      <text class="name">编辑任务</text>
+      <input v-model="edit.title" class="input" placeholder="任务标题" />
+      <textarea v-model="edit.description" class="textarea" placeholder="任务说明" />
+      <input v-model="edit.learning_link" class="input" placeholder="和幼儿园学习的关系" />
+      <view class="switch-row">
+        <text>允许申请公开</text>
+        <switch :checked="edit.allow_public" @change="edit.allow_public = $event.detail.value" />
+      </view>
+      <view class="batch" @click="saveEdit">保存</view>
+    </view>
+    <view class="tabs">
+      <view class="tab" :class="{ active: status === 'pending' }" @click="switchStatus('pending')">待回应</view>
+      <view class="tab" :class="{ active: status === 'responded' }" @click="switchStatus('responded')">已回应</view>
+    </view>
+    <view v-if="status === 'pending' && rows.length" class="batch" @click="batchRespond">一键全部送星</view>
+    <view v-if="loading" class="state">加载中...</view>
+    <view v-else-if="!rows.length" class="state">暂无提交</view>
+    <view v-for="row in rows" :key="row.id" class="card">
+      <text class="name">{{ row.student?.name || `学生 ${row.student_id}` }}</text>
+      <text class="content">{{ row.content || "（一键完成）" }}</text>
+      <text v-if="row.media_url" class="media">已附照片/语音</text>
+      <view v-if="status === 'pending'" class="actions">
+        <view v-for="s in stickers" :key="s" class="sticker" @click="respond(row, s)">{{ s }}</view>
+        <view v-if="!recording" class="sticker" @click="startRecord(row)">录音</view>
+        <view v-else class="sticker recording" @click="stopRecord">停止</view>
+      </view>
+      <text v-else class="done">{{ row.response?.content || "已回应" }}</text>
+    </view>
+  </view>
+</template>
+
+<style scoped lang="scss">
+.page { min-height: 100vh; padding: $spacing-lg 28rpx 48rpx; background: $color-bg-page; }
+.edit-card { margin-bottom: $spacing-lg; }
+.input, .textarea { box-sizing: border-box; width: 100%; margin-top: $spacing-sm; padding: $spacing-sm $spacing-md; border-radius: $border-radius-lg; background: $color-bg-page; font-size: $typography-font-size-base; }
+.textarea { min-height: 140rpx; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; margin-top: $spacing-md; color: $color-text-body; font-size: $typography-font-size-sm; }
+.tabs { display: flex; gap: $spacing-md; margin-bottom: $spacing-lg; }
+.tab { flex: 1; text-align: center; padding: $spacing-md 0; border-radius: $border-radius-lg; background: $color-bg-card; color: $color-text-muted; }
+.tab.active { background: $color-brand-primary; color: #fff; }
+.batch { margin-bottom: $spacing-lg; padding: $spacing-md; text-align: center; border-radius: $border-radius-lg; background: $color-semantic-success-bg; color: $color-semantic-success; }
+.state { padding: 120rpx 0; text-align: center; color: $color-text-hint; }
+.card { margin-bottom: $spacing-md; padding: $spacing-lg; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: $shadow-sm; }
+.name { display: block; font-size: $typography-font-size-md; font-weight: 700; color: $color-text-primary; }
+.content { display: block; margin-top: $spacing-xs; font-size: $typography-font-size-base; color: $color-text-body; }
+.media { display: block; margin-top: $spacing-xs; font-size: $typography-font-size-sm; color: $color-text-muted; }
+.actions { display: flex; gap: $spacing-md; margin-top: $spacing-md; }
+.sticker { padding: $spacing-xs $spacing-lg; border-radius: $border-radius-full; background: $color-bg-page; color: $color-brand-primary; font-size: $typography-font-size-sm; }
+.recording { background: $color-semantic-danger-bg; color: $color-semantic-danger; }
+.done { display: block; margin-top: $spacing-sm; color: $color-semantic-success; font-size: $typography-font-size-sm; }
+</style>

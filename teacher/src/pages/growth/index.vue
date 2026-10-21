@@ -1,25 +1,15 @@
 <script setup>
 import { computed, ref } from "vue"
-import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchTeacherGrowthLogs } from "@/api/teacher-growth"
 import { ensureLogin } from "@/utils/login"
+import StateBlock from "@/components/StateBlock.vue"
+import AppButton from "@/components/AppButton.vue"
 
-const logs = ref([]) 
+const logs = ref([])
 const loading = ref(false)
 const loadError = ref("")
 const searchQuery = ref("")
-const activeCategory = ref("全部")
-
-const categories = ["全部", "今日", "学习", "体能", "艺术", "其他"]
-
-const categoryStyleMap = {
-  "全部": { bg: "#EFF6FF", fg: "#3B82F6", border: "#BFDBFE" },
-  "今日": { bg: "#DCFCE7", fg: "#16A34A", border: "#BBF7D0" },
-  "学习": { bg: "#DBEAFE", fg: "#2563EB", border: "#BFDBFE" },
-  "体能": { bg: "#FFF7ED", fg: "#F97316", border: "#FED7AA" },
-  "艺术": { bg: "#F3E8FF", fg: "#9333EA", border: "#E9D5FF" },
-  "其他": { bg: "#F1F5F9", fg: "#64748B", border: "#E2E8F0" }
-}
 
 const filteredLogs = computed(() => {
   let result = logs.value
@@ -27,15 +17,7 @@ const filteredLogs = computed(() => {
     const q = searchQuery.value.trim().toLowerCase()
     result = result.filter(item =>
       (item.content || "").toLowerCase().includes(q) ||
-      (item.student_name || "").toLowerCase().includes(q) ||
-      (item.title || "").toLowerCase().includes(q) ||
       (item.creator?.nickname || "").toLowerCase().includes(q)
-    )
-  }
-  if (activeCategory.value !== "全部") {
-    result = result.filter(item =>
-      (item.category === activeCategory.value) ||
-      (item.performance_tags || []).includes(activeCategory.value)
     )
   }
   return result
@@ -61,22 +43,6 @@ function formatMonthLabel(key) {
   return `${y}年${parseInt(m)}月`
 }
 
-const pendingTasks = computed(() => {
-  return logs.value.filter(item => item.status === "pending" || item.status === "draft").slice(0, 3)
-})
-
-function getCategoryStyle(cat) {
-  const active = activeCategory.value === cat
-  const s = categoryStyleMap[cat] || categoryStyleMap["其他"]
-  if (active) return { backgroundColor: s.bg, color: s.fg, borderColor: s.border }
-  return { backgroundColor: "#FFFFFF", color: "#64748B", borderColor: "#E2E8F0" }
-}
-
-function getTagStyle(cat) {
-  const s = categoryStyleMap[cat] || categoryStyleMap["其他"]
-  return { backgroundColor: s.bg, color: s.fg }
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return ""
   const now = new Date()
@@ -92,6 +58,29 @@ function isClassRecord(item) {
   if (item.target_type === 2) return false
   return true
 }
+
+function firstThumb(item) {
+  return item.media_preview?.[0]?.thumb_url || ""
+}
+
+function todayKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+const todayLabel = computed(() => {
+  const d = new Date()
+  const week = ["日", "一", "二", "三", "四", "五", "六"]
+  return `${d.getMonth() + 1}月${d.getDate()}日 星期${week[d.getDay()]}`
+})
+
+// 「今天」与「待处理」都基于当前加载的一页（page_size=20，按日期倒序）：
+// 今天的记录在最顶部，所以今日条数准确；待处理数是这 20 条内的下界，不是全量。
+const todayCount = computed(() => logs.value.filter(l => l.date === todayKey()).length)
+const pendingCount = computed(() => logs.value.filter(l =>
+  (l.pending_suggestions_count || 0) > 0 ||
+  (!isClassRecord(l) && l.sync_to_feed === false)
+).length)
 
 async function loadLogs() {
   loading.value = true
@@ -116,83 +105,54 @@ function goDetail(id) {
   uni.navigateTo({ url: `/pages/growth/detail?id=${id}` })
 }
 
-function selectCategory(cat) {
-  activeCategory.value = cat
-}
-
-onLoad(loadLogs)
+// 必须用 onShow：create 页 navigateBack 回来后 onLoad 不再触发，
+// 刚发布的那条记录不会出现在列表里（老师端无 tabBar，故与家长端理由不同、结论相同）
+onShow(loadLogs)
 onPullDownRefresh(loadLogs)
 </script>
 
 <template>
   <view class="page">
-    <!-- 今日待记录卡片 -->
-    <view v-if="pendingTasks.length" class="pending-card">
-      <view class="pending-head">
-        <view class="pending-head-left">
-          <view class="pending-icon-box">
-            <text class="pending-icon">待</text>
-          </view>
-          <text class="pending-title">今日待记录</text>
+    <!-- 今天 · 工作台头部：首屏先回答「今天记了没、还差什么」 -->
+    <view class="today-bar">
+      <text class="today-date">{{ todayLabel }}</text>
+      <view class="today-stats">
+        <view class="today-stat">
+          <text class="today-stat-num">{{ todayCount }}</text>
+          <text class="today-stat-label">今日已记</text>
         </view>
-        <view class="pending-badge">
-          <text>{{ pendingTasks.length }}条待完成</text>
-        </view>
-      </view>
-      <view class="pending-list">
-        <view
-          v-for="task in pendingTasks"
-          :key="task.id"
-          class="pending-item"
-          @click="goDetail(task.id)"
-        >
-          <view class="pending-dot" />
-          <text class="pending-item-text">{{ task.content || task.title || "待记录事项" }}</text>
-          <view class="pending-go-btn" @click.stop="goCreate">
-            <text>去记录</text>
-          </view>
+        <view class="today-stat">
+          <text class="today-stat-num">{{ pendingCount }}</text>
+          <text class="today-stat-label">条待处理</text>
         </view>
       </view>
     </view>
 
-    <!-- 搜索框 -->
+    <!-- 快速记录 — 页面主操作（取代原 FAB）。入口式：进创建页，不在此搬表单 -->
+    <view class="quick-entry">
+      <AppButton type="primary" size="lg" @click="goCreate">快速记录</AppButton>
+    </view>
+
+    <!-- 搜索：明标真实范围（只过滤已加载的 20 条，不是全量检索） -->
     <view class="search-box">
       <text class="search-icon">搜</text>
       <input
         v-model="searchQuery"
         class="search-input"
-        placeholder="搜索学生姓名或记录内容"
-        placeholder-style="color: #94A3B8; font-size: $typography-font-size-md"
+        placeholder="搜索内容或老师（仅最近 20 条）"
+        placeholder-style="color: #94A3B8"
       />
     </view>
 
-    <!-- 分类标签 -->
-    <scroll-view scroll-x class="category-scroll" :show-scrollbar="false">
-      <view class="category-row">
-        <view
-          v-for="cat in categories"
-          :key="cat"
-          class="category-pill"
-          :class="{ active: activeCategory === cat }"
-          :style="getCategoryStyle(cat)"
-          @click="selectCategory(cat)"
-        >
-          <text>{{ cat }}</text>
-        </view>
-      </view>
-    </scroll-view>
-
-    <!-- 状态 -->
-    <view v-if="loading" class="state-wrap">
-      <text class="state-text">加载中...</text>
-    </view>
-    <view v-else-if="loadError" class="state-wrap">
-      <text class="state-text">{{ loadError }}</text>
-      <button class="retry-btn" @click="loadLogs">重试</button>
-    </view>
-    <view v-else-if="filteredLogs.length === 0" class="state-wrap">
-      <text class="state-text">暂无成长记录</text>
-    </view>
+    <!-- 状态：加载/错误/空三态合一。「错误先于空」的判定顺序由 StateBlock 内部固化 -->
+    <StateBlock
+      v-if="loading || loadError || filteredLogs.length === 0"
+      :loading="loading"
+      :error="loadError"
+      loading-text="加载成长记录..."
+      :empty-text="searchQuery.trim() ? '未找到匹配的记录' : '暂无成长记录'"
+      @retry="loadLogs"
+    />
 
     <!-- 按月分组的记录列表 -->
     <view v-else v-for="group in groupedLogs" :key="group.month" class="month-group">
@@ -206,45 +166,34 @@ onPullDownRefresh(loadLogs)
           v-for="item in group.items"
           :key="item.id"
           class="card"
-          :class="{ 'has-image': item.media?.length && isClassRecord(item) }"
           @click="goDetail(item.id)"
         >
-          <!-- 班级记录 — 顶部图片 -->
+          <!-- 班级记录 — 顶部图片（media_preview 为后端返回的缩略图预览） -->
           <image
-            v-if="item.media?.length && isClassRecord(item)"
-            :src="item.media[0].thumb_url || item.media[0].url"
+            v-if="firstThumb(item)"
+            :src="firstThumb(item)"
             mode="aspectFill"
             class="card-image"
           />
 
-          <view class="card-body" :style="{ paddingTop: (item.media?.length && isClassRecord(item)) ? '0' : '32rpx' }">
+          <view class="card-body" :class="{ 'card-body--flush': firstThumb(item) }">
             <!-- 卡片头部 -->
             <view class="card-head">
               <view class="card-head-left">
                 <view class="author-row">
                   <!-- 头像 -->
-                  <view class="author-avatar" :class="{ 'is-student': !isClassRecord(item) }">
+                  <view class="author-avatar">
                     <text class="avatar-text">
-                      {{ isClassRecord(item) ? (item.creator?.nickname || "老")[0] : (item.student_name || "生")[0] }}
+                      {{ (item.creator?.nickname || "老师")[0] }}
                     </text>
                   </view>
                   <text class="author-name">
-                    {{ isClassRecord(item) ? (item.creator?.nickname || "老师") : (item.student_name || "学生") }}
+                    {{ item.creator?.nickname || "老师" }}
                   </text>
-                  <!-- 分类标签 -->
-                  <view
-                    v-if="item.category"
-                    class="cat-tag"
-                    :style="getTagStyle(item.category)"
-                  >
-                    <text>{{ item.category }}</text>
-                  </view>
                 </view>
-                <!-- 标题（仅班级记录有独立标题） -->
-                <text v-if="isClassRecord(item) && item.title" class="card-title">{{ item.title }}</text>
-                <!-- 个体记录二级标题 -->
-                <text v-if="!isClassRecord(item) && item.performance_tags" class="card-subtitle">
-                  {{ Array.isArray(item.performance_tags) ? item.performance_tags.join(" · ") : item.performance_tags }}
+                <!-- 个体记录二级标题：表现标签 -->
+                <text v-if="!isClassRecord(item) && item.performance_tags?.length" class="card-subtitle">
+                  {{ item.performance_tags.join(" · ") }}
                 </text>
               </view>
               <text class="card-date">{{ formatDate(item.date || item.created_at) }}</text>
@@ -257,25 +206,23 @@ onPullDownRefresh(loadLogs)
             <view class="card-foot">
               <view class="card-foot-left">
                 <template v-if="isClassRecord(item)">
-                  <!-- 班级记录 — 学生头像组 -->
-                  <view class="student-avatars">
-                    <view class="mini-avatar" v-for="i in Math.min(3, item.student_count || 1)" :key="i" />
-                  </view>
-                  <text v-if="item.student_count" class="student-count">{{ item.student_count }}位小朋友</text>
+                  <text v-if="item.related_students_count" class="student-count">
+                    相关 {{ item.related_students_count }} 位小朋友
+                  </text>
                 </template>
                 <template v-else>
-                  <!-- 个体记录 — 同步状态 -->
-                  <view v-if="item.status" class="status-tag" :class="{ synced: item.status === 'synced' }">
-                    <text>{{ item.status === 'synced' ? '已同步给家长' : '待同步' }}</text>
+                  <!-- 个体记录 — 同步状态（由 sync_to_feed 驱动） -->
+                  <view class="status-tag" :class="{ synced: item.sync_to_feed }">
+                    <text>{{ item.sync_to_feed ? '已同步给家长' : '未同步给家长' }}</text>
                   </view>
                 </template>
+                <!-- 待确认建议入口（D10）：不打开详情也知道哪条待处理 -->
+                <view v-if="item.pending_suggestions_count" class="sugg-badge">
+                  <text>AI建议 {{ item.pending_suggestions_count }} 待确认</text>
+                </view>
               </view>
 
               <view class="card-stats">
-                <view class="stat-item">
-                  <text class="stat-icon">看</text>
-                  <text class="stat-num">{{ item.views_count || 0 }}</text>
-                </view>
                 <view class="stat-item">
                   <text class="stat-icon">赞</text>
                   <text class="stat-num">{{ item.likes_count || 0 }}</text>
@@ -293,11 +240,6 @@ onPullDownRefresh(loadLogs)
 
     <!-- 底部安全区 -->
     <view class="bottom-safe" />
-
-    <!-- 悬浮添加按钮 -->
-    <view class="fab-btn" @click="goCreate">
-      <text class="fab-icon">＋</text>
-    </view>
   </view>
 </template>
 
@@ -308,105 +250,52 @@ $slate-600: #475569;
   min-height: 100vh;
   box-sizing: border-box;
   padding: $spacing-lg 28rpx;
-  background: $color-bg-card;
+  background: $color-bg-page;
 }
 
-// ===== 今日待记录卡片 =====
-.pending-card {
-  margin-bottom: 24rpx;
-  padding: $spacing-xl;
-  border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-}
-
-.pending-head {
+// ===== 今天 · 工作台头部 =====
+.today-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: $spacing-lg $spacing-xl;
+  margin-bottom: $spacing-lg;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
+  box-shadow: $shadow-md;
 }
 
-.pending-head-left {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-}
-
-.pending-icon-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: $border-radius-lg;
-  background: $color-semantic-info-bg;
-}
-
-.pending-icon {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: $color-semantic-info;
-}
-
-.pending-title {
+.today-date {
   font-size: $typography-font-size-lg;
-  font-weight: 700;
+  font-weight: 600;
   color: $color-text-primary;
 }
 
-.pending-badge {
-  padding: $spacing-xs 24rpx;
-  border-radius: 999rpx;
-  background: #FEF2F2;
-}
-
-.pending-badge text {
-  font-size: $typography-font-size-sm;
-  font-weight: 500;
-  color: #EF4444;
-}
-
-.pending-list {
-  margin-top: 24rpx;
+.today-stats {
   display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
+  align-items: baseline;
+  gap: $spacing-lg;
 }
 
-.pending-item {
+.today-stat {
   display: flex;
-  align-items: center;
-  gap: $spacing-md;
+  align-items: baseline;
+  gap: $spacing-xs;
 }
 
-.pending-dot {
-  flex-shrink: 0;
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 999rpx;
-  background: #EF4444;
+.today-stat-num {
+  font-size: $typography-font-size-2xl;
+  font-weight: 700;
+  color: $color-brand-primary;
 }
 
-.pending-item-text {
-  flex: 1;
-  font-size: $typography-font-size-md;
-  color: $slate-600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pending-go-btn {
-  flex-shrink: 0;
-  padding: $spacing-xs 24rpx;
-  border-radius: $border-radius-lg;
-  background: $color-semantic-info-bg;
-}
-
-.pending-go-btn text {
+.today-stat-label {
   font-size: $typography-font-size-sm;
-  font-weight: 500;
-  color: $color-semantic-info;
+  color: $color-text-muted;
+}
+
+.quick-entry {
+  margin-bottom: $spacing-lg;
 }
 
 // ===== 搜索框 =====
@@ -433,57 +322,6 @@ $slate-600: #475569;
   flex: 1;
   font-size: $typography-font-size-md;
   color: $color-text-primary;
-}
-
-// ===== 分类标签 =====
-.category-scroll {
-  margin-bottom: 32rpx;
-  white-space: nowrap;
-}
-
-.category-row {
-  display: flex;
-  gap: $spacing-md;
-  flex-wrap: nowrap;
-}
-
-.category-pill {
-  flex-shrink: 0;
-  padding: 14rpx 40rpx;
-  border-radius: 999rpx;
-  border: 2rpx solid #E2E8F0;
-  background: #fff;
-  font-size: $typography-font-size-md;
-  color: $color-text-muted;
-  transition: all 0.2s;
-}
-
-.category-pill.active {
-  font-weight: 600;
-}
-
-// ===== 状态 =====
-.state-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 50vh;
-}
-
-.state-text {
-  font-size: $typography-font-size-md;
-  color: $color-text-hint;
-}
-
-.retry-btn {
-  width: 180rpx;
-  height: 72rpx;
-  margin-top: 28rpx;
-  border-radius: 999rpx;
-  background: $color-semantic-info;
-  color: #fff;
-  font-size: $typography-font-size-base;
 }
 
 // ===== 月份分组 =====
@@ -518,8 +356,8 @@ $slate-600: #475569;
 
 .card {
   border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  background: $color-bg-card;
+  box-shadow: $shadow-md;
   overflow: hidden;
 }
 
@@ -530,6 +368,11 @@ $slate-600: #475569;
 
 .card-body {
   padding: $spacing-xl;
+}
+
+// 有顶部缩略图时，正文不再重复上间距
+.card-body--flush {
+  padding-top: 0;
 }
 
 .card-head {
@@ -561,39 +404,15 @@ $slate-600: #475569;
   background: $color-semantic-info-bg;
 }
 
-.author-avatar.is-student {
-  background: #FEF3C7;
-}
-
 .avatar-text {
   font-size: $typography-font-size-base;
   font-weight: 700;
   color: $color-semantic-info;
 }
 
-.author-avatar.is-student .avatar-text {
-  color: #D97706;
-}
-
 .author-name {
   font-size: $typography-font-size-lg;
   font-weight: 600;
-  color: $color-text-primary;
-}
-
-.cat-tag {
-  flex-shrink: 0;
-  padding: 4rpx 16rpx;
-  border-radius: $border-radius-sm;
-  font-size: $typography-font-size-sm;
-  font-weight: 500;
-}
-
-.card-title {
-  display: block;
-  margin-top: 8rpx;
-  font-size: $typography-font-size-lg;
-  font-weight: 700;
   color: $color-text-primary;
 }
 
@@ -636,45 +455,39 @@ $slate-600: #475569;
   align-items: center;
 }
 
-.student-avatars {
-  display: flex;
-}
-
-.mini-avatar {
-  width: 50rpx;
-  height: 50rpx;
-  border: 4rpx solid #fff;
-  border-radius: 999rpx;
-  background: #F1F5F9;
-
-  &:not(:first-child) {
-    margin-left: -18rpx;
-  }
-}
-
 .student-count {
-  margin-left: 16rpx;
   font-size: $typography-font-size-sm;
   color: $color-text-muted;
 }
 
 .status-tag {
   padding: $spacing-xs 24rpx;
-  border-radius: 999rpx;
-  background: #FEF3C7;
-  font-size: $typography-font-size-sm;
-  font-weight: 500;
-  color: #D97706;
+  border-radius: $border-radius-full;
+  background: $color-semantic-warning-bg;
+  font-size: $typography-font-size-base;
+  font-weight: 600;
+  color: $color-semantic-warning;
 
   &.synced {
-    background: #F0FDF4;
-    color: #16A34A;
+    background: $color-semantic-success-bg;
+    color: $color-semantic-success;
   }
 }
 
 .card-stats {
   display: flex;
   gap: $spacing-xl;
+}
+
+/* 待确认 AI 建议角标（D10 入口）：与左侧状态标签同排 */
+.sugg-badge {
+  margin-left: $spacing-md;
+  padding: 4rpx $spacing-md;
+  border-radius: $border-radius-full;
+  background: $color-semantic-info-bg;
+  color: $color-semantic-info;
+  font-size: $typography-font-size-sm;
+  font-weight: 600;
 }
 
 .stat-item {
@@ -695,34 +508,6 @@ $slate-600: #475569;
 }
 
 .bottom-safe {
-  height: calc(120rpx + env(safe-area-inset-bottom));
-}
-
-// ===== 悬浮添加按钮 =====
-.fab-btn {
-  position: fixed;
-  right: 48rpx;
-  bottom: calc(64rpx + env(safe-area-inset-bottom));
-  width: 112rpx;
-  height: 112rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: $color-semantic-info;
-  box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.4);
-  z-index: 100;
-
-  &:active {
-    opacity: 0.85;
-    transform: scale(0.95);
-  }
-}
-
-.fab-icon {
-  font-size: 52rpx;
-  font-weight: 400;
-  color: #fff;
-  line-height: 1;
+  height: calc(32rpx + env(safe-area-inset-bottom));
 }
 </style>

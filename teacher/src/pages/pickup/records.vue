@@ -15,8 +15,9 @@ const dateLabel = computed(() => {
 
 const summary = computed(() => {
   const total = records.value.length
-  const picked = records.value.filter(r => r.status === "picked").length
-  return { total, picked, pending: total - picked }
+  const picked = records.value.filter(r => r.type === "放学接送").length
+  const arrived = records.value.filter(r => r.type === "入园签到").length
+  return { total, picked, arrived }
 })
 
 function prevDay() {
@@ -45,14 +46,17 @@ async function loadRecords() {
       id: item.id,
       time: item.recorded_at?.slice(11, 16) || "",
       type: item.type === 1 ? "入园签到" : "放学接送",
-      status: item.type === 2 ? "picked" : "pending",
+      // status 只对「接走」有意义：入园签到不是 pending 等待，而是已完成的到场动作
+      status: item.type === 2 ? "picked" : "arrived",
       student_name: item.student?.name || "",
       student_class: item.student?.class_name || "",
-      student_no: "",
       pickup_by: item.pickup_name || "",
       pickup_method: item.method_label || "",
       pickup_method_color: item.method === 1 ? "blue" : "purple",
       avatar: item.student?.avatar || "",
+      remark: item.remark || "",
+      is_override: !!item.is_authorized_override,
+      is_abnormal: !!item.is_abnormal,
     }))
   } catch (err) {
     uni.showToast({ title: err?.message || "加载失败", icon: "none" })
@@ -118,12 +122,12 @@ onPullDownRefresh(loadRecords)
       <view class="summary-divider" />
       <view class="summary-item">
         <view class="summary-icon-box is-amber">
-          <text class="summary-icon">待</text>
+          <text class="summary-icon">入</text>
         </view>
         <view class="summary-text">
-          <text class="summary-label">待接走</text>
+          <text class="summary-label">入园签到</text>
           <view class="summary-value">
-            <text class="summary-num is-amber-num">{{ summary.pending }}</text>
+            <text class="summary-num is-amber-num">{{ summary.arrived }}</text>
             <text class="summary-unit">人</text>
           </view>
         </view>
@@ -142,12 +146,12 @@ onPullDownRefresh(loadRecords)
         <!-- 卡片头部 -->
         <view class="card-head">
           <view class="time-info">
-            <view class="time-dot" :class="item.status === 'picked' ? 'is-green' : 'is-amber'" />
+            <view class="time-dot" :class="item.status === 'picked' ? 'is-green' : 'is-blue'" />
             <text class="time-text">{{ item.time }}</text>
             <text class="time-type">· {{ item.type }}</text>
           </view>
-          <view class="status-badge" :class="item.status === 'picked' ? 'is-green' : 'is-amber'">
-            <text>{{ item.status === "picked" ? "已接走" : "待接走" }}</text>
+          <view class="status-badge" :class="item.status === 'picked' ? 'is-green' : 'is-blue'">
+            <text>{{ item.status === "picked" ? "已接走" : "已入园" }}</text>
           </view>
         </view>
 
@@ -165,7 +169,7 @@ onPullDownRefresh(loadRecords)
             </view>
             <view class="student-detail">
               <text class="student-name">{{ item.student_name }}</text>
-              <text class="student-meta">{{ item.student_class }} · 学号{{ item.student_no }}</text>
+              <text class="student-meta">{{ item.student_class }}</text>
             </view>
           </view>
 
@@ -173,10 +177,18 @@ onPullDownRefresh(loadRecords)
             <view class="pickup-row">
               <text class="pickup-icon">接</text>
               <text class="pickup-text">{{ item.pickup_by }}</text>
+              <text v-if="item.is_override" class="override-badge">例外</text>
             </view>
             <view class="pickup-row">
               <text class="pickup-icon method-icon" :class="`is-${item.pickup_method_color}`">方</text>
               <text class="pickup-method" :class="`is-${item.pickup_method_color}`">{{ item.pickup_method }}</text>
+            </view>
+            <view v-if="item.remark" class="remark-row">
+              <text class="remark-label">理由：</text>
+              <text class="remark-text">{{ item.remark }}</text>
+            </view>
+            <view v-if="item.is_abnormal" class="abnormal-row">
+              <text class="abnormal-tag">异常</text>
             </view>
           </view>
         </view>
@@ -192,8 +204,8 @@ onPullDownRefresh(loadRecords)
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: $spacing-lg 28rpx;
-  background: $color-bg-card;
+  padding: $spacing-lg $component-page-padding-x;
+  background: $color-bg-page;
 }
 
 // ===== 日期筛选栏 =====
@@ -203,8 +215,8 @@ onPullDownRefresh(loadRecords)
   justify-content: space-between;
   padding: $spacing-lg $spacing-xl;
   border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
   margin-bottom: $spacing-lg;
 }
 
@@ -218,10 +230,10 @@ onPullDownRefresh(loadRecords)
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64rpx;
-  height: 64rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: $border-radius-full;
-  background: #F1F5F9;
+  background: $color-bg-page;
 }
 
 .arrow-text {
@@ -255,8 +267,8 @@ onPullDownRefresh(loadRecords)
   display: flex;
   align-items: center;
   gap: 4rpx;
-  padding: $spacing-sm $spacing-lg;
-  border-radius: $border-radius-lg;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $border-radius-full;
   background: $color-semantic-info-bg;
 
   text {
@@ -271,8 +283,8 @@ onPullDownRefresh(loadRecords)
   align-items: center;
   padding: $spacing-lg $spacing-xl;
   border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
   margin-bottom: $spacing-lg;
 }
 
@@ -293,16 +305,16 @@ onPullDownRefresh(loadRecords)
 }
 
 .summary-icon-box.is-blue  { background: $color-semantic-info-bg; }
-.summary-icon-box.is-green { background: #DCFCE7; }
-.summary-icon-box.is-amber { background: #FEF3C7; }
+.summary-icon-box.is-green { background: $color-semantic-success-bg; }
+.summary-icon-box.is-amber { background: $color-semantic-warning-bg; }
 
 .summary-icon {
   font-size: $typography-font-size-xl;
   font-weight: 700;
 
   .is-blue &  { color: $color-semantic-info; }
-  .is-green & { color: #16A34A; }
-  .is-amber & { color: #D97706; }
+  .is-green & { color: $color-semantic-success; }
+  .is-amber & { color: $color-semantic-warning; }
 }
 
 .summary-text {
@@ -324,12 +336,12 @@ onPullDownRefresh(loadRecords)
 
 .summary-num {
   font-size: $typography-font-size-xl;
-  font-weight: 800;
+  font-weight: 700;
   color: $color-text-primary;
 }
 
-.summary-num.is-green-num { color: #16A34A; }
-.summary-num.is-amber-num { color: #D97706; }
+.summary-num.is-green-num { color: $color-semantic-success; }
+.summary-num.is-amber-num { color: $color-semantic-warning; }
 
 .summary-unit {
   font-size: $typography-font-size-sm;
@@ -367,8 +379,8 @@ onPullDownRefresh(loadRecords)
 .record-card {
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
 }
 
 .card-head {
@@ -390,8 +402,9 @@ onPullDownRefresh(loadRecords)
   border-radius: $border-radius-full;
 }
 
-.time-dot.is-green { background: #16A34A; }
-.time-dot.is-amber { background: #F59E0B; }
+.time-dot.is-green { background: $color-semantic-success; }
+.time-dot.is-blue { background: $color-semantic-info; }
+.time-dot.is-amber { background: $color-semantic-warning; }
 
 .time-text {
   font-size: $typography-font-size-base;
@@ -405,20 +418,25 @@ onPullDownRefresh(loadRecords)
 }
 
 .status-badge {
-  padding: $spacing-xs 20rpx;
-  border-radius: $border-radius-lg;
+  padding: $spacing-xs $component-badge-padding-x;
+  border-radius: $border-radius-full;
   font-size: $typography-font-size-sm;
   font-weight: 500;
 }
 
 .status-badge.is-green {
-  background: #DCFCE7;
-  color: #16A34A;
+  background: $color-semantic-success-bg;
+  color: $color-semantic-success;
+}
+
+.status-badge.is-blue {
+  background: $color-semantic-info-bg;
+  color: $color-semantic-info;
 }
 
 .status-badge.is-amber {
-  background: #FEF3C7;
-  color: #D97706;
+  background: $color-semantic-warning-bg;
+  color: $color-semantic-warning;
 }
 
 .card-body {
@@ -454,8 +472,8 @@ onPullDownRefresh(loadRecords)
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #DBEAFE;
-  font-size: 34rpx;
+  background: $color-semantic-info-bg;
+  font-size: $typography-font-size-2xl;
   font-weight: 700;
   color: $color-semantic-info;
 }
@@ -505,7 +523,7 @@ onPullDownRefresh(loadRecords)
 .pickup-text {
   font-size: $typography-font-size-base;
   font-weight: 500;
-  color: #334155;
+  color: $color-text-body;
 }
 
 .pickup-method {
@@ -518,5 +536,51 @@ onPullDownRefresh(loadRecords)
 
 .bottom-safe {
   height: calc(60rpx + env(safe-area-inset-bottom));
+}
+
+// ===== 理由 / 例外标记 =====
+.override-badge {
+  padding: 2rpx 12rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-warning-bg;
+  color: $color-semantic-warning;
+  font-size: $typography-font-size-xs;
+  font-weight: 600;
+  margin-left: $spacing-xs;
+}
+
+.remark-row {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 4rpx;
+}
+
+.remark-label {
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
+  flex-shrink: 0;
+}
+
+.remark-text {
+  font-size: $typography-font-size-xs;
+  color: $color-text-muted;
+  flex: 1;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abnormal-row {
+  margin-top: 4rpx;
+}
+
+.abnormal-tag {
+  padding: 2rpx 12rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger;
+  color: #fff;
+  font-size: $typography-font-size-xs;
+  font-weight: 600;
 }
 </style>

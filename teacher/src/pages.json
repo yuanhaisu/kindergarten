@@ -8,7 +8,7 @@
       }
     },
     {
-      "path": "pages/auth/phone",
+      "path": "pages/auth/login",
       "style": {
         "navigationBarTitleText": "老师登录"
       }
@@ -56,6 +56,12 @@
       "style": {
         "navigationBarTitleText": "亲子任务",
         "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/tasks/detail",
+      "style": {
+        "navigationBarTitleText": "任务回应"
       }
     },
     {
@@ -125,6 +131,12 @@
       "path": "pages/doctor/checkin",
       "style": {
         "navigationBarTitleText": "入园晨检"
+      }
+    },
+    {
+      "path": "pages/doctor/calendar",
+      "style": {
+        "navigationBarTitleText": "园级事件"
       }
     }
   ],

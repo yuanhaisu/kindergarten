@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchTeacherCalendarEvents } from "@/api/teacher-calendar"
+import { fetchDict } from "@/api/dict"
 
 const events = ref([])
 const loading = ref(false)
@@ -42,14 +43,31 @@ const todayEvents = computed(() => {
   return events.value.filter(e => e.event_date === `${year.value}-${m}-${d}`)
 })
 
-const eventDotColors = { notification: "#3B82F6", activity: "#22C55E", holiday: "#F97316", meeting: "#A855F7", health: "#EF4444" }
-const eventTypeIcons = { notification: "通", activity: "活", holiday: "假", meeting: "会", health: "检" }
-const eventTypeBgs = { notification: "#DBEAFE", activity: "#DCFCE7", holiday: "#FFF7ED", meeting: "#F3E8FF", health: "#FEE2E2" }
+// 类型元数据唯一来源 = 园所字典 calendar_event_type（align-class-calendar D7）。
+// 说明：类型色是「数据驱动语义色」，不走 design token；字典不可用时降级中性色（不硬编码映射）。
+const typeMeta = ref({})
+async function loadTypeDict() {
+  try {
+    const res = await fetchDict("calendar_event_type")
+    const meta = {}
+    for (const it of (res.data?.items || [])) {
+      let color = ""
+      try {
+        const extra = typeof it.extra === "string" ? JSON.parse(it.extra) : it.extra
+        color = extra?.color || ""
+      } catch { color = "" }
+      meta[it.item_key] = { label: it.item_label || it.item_key, color }
+    }
+    typeMeta.value = meta
+  } catch {
+    typeMeta.value = {}
+  }
+}
+function typeOf(key) { return typeMeta.value[key] || {} }
 
-const legendItems = [
-  { label: "通知", color: "#3B82F6" }, { label: "活动", color: "#22C55E" },
-  { label: "假期", color: "#F97316" }, { label: "家长会", color: "#A855F7" }, { label: "体检", color: "#EF4444" }
-]
+const legendItems = computed(() =>
+  Object.entries(typeMeta.value).map(([key, m]) => ({ key, label: m.label, color: m.color }))
+)
 
 function getEventsForDay(day) {
   if (day <= 0) return []
@@ -57,7 +75,7 @@ function getEventsForDay(day) {
   return events.value.filter(e => e.event_date === dateStr)
 }
 
-function getDayDotColors(day) { return getEventsForDay(day).map(e => eventDotColors[e.event_type] || "#3B82F6") }
+function getDayDotColors(day) { return getEventsForDay(day).map(e => typeOf(e.event_type).color || "") }
 function isToday(day) { if (!isCurrentMonth.value) return false; return day === today.value }
 
 function prevMonth() { const d = new Date(currentDate.value); d.setMonth(d.getMonth() - 1); currentDate.value = d; loadEvents() }
@@ -82,7 +100,7 @@ async function loadEvents() {
   } finally { loading.value = false; uni.stopPullDownRefresh() }
 }
 
-onLoad(loadEvents)
+onLoad(() => { loadTypeDict(); loadEvents() })
 onPullDownRefresh(loadEvents)
 </script>
 
@@ -103,37 +121,45 @@ onPullDownRefresh(loadEvents)
         <view v-for="(cell, idx) in calendarDays" :key="idx" class="date-cell" :class="{ dimmed: cell.type !== 'current' }">
           <view class="date-num" :class="{ 'is-today': isToday(cell.day) && cell.type === 'current', 'is-selected': isSelected(cell.day) && cell.type === 'current' }" @click="cell.type === 'current' && selectDay(cell.day)"><text>{{ cell.day }}</text></view>
           <view v-if="cell.type === 'current'" class="date-dots">
-            <view v-for="(color, di) in getDayDotColors(cell.day).slice(0, 3)" :key="di" class="date-dot" :style="{ backgroundColor: color }" />
+            <view v-for="(color, di) in getDayDotColors(cell.day).slice(0, 3)" :key="di" class="date-dot" :class="{ 'is-unknown': !color }" :style="color ? { backgroundColor: color } : {}" />
           </view>
         </view>
       </view>
       <view class="legend">
-        <view v-for="item in legendItems" :key="item.label" class="legend-item">
-          <view class="legend-dot" :style="{ backgroundColor: item.color }" />
+        <view v-for="item in legendItems" :key="item.key" class="legend-item">
+          <view class="legend-dot" :class="{ 'is-unknown': !item.color }" :style="item.color ? { backgroundColor: item.color } : {}" />
           <text class="legend-label">{{ item.label }}</text>
         </view>
       </view>
     </view>
 
     <view class="events-section">
-      <text class="events-title">{{ month.value }}月{{ selectedDay }}日活动</text>
-      <view v-if="todayEvents.length === 0" class="events-empty"><text>{{ month.value }}月{{ selectedDay }}日暂无活动安排</text></view>
+      <text class="events-title">{{ month }}月{{ selectedDay }}日活动</text>
+      <view v-if="todayEvents.length === 0" class="events-empty"><text>{{ month }}月{{ selectedDay }}日暂无活动安排</text></view>
       <view v-else class="events-list">
         <view v-for="event in todayEvents" :key="event.id" class="event-card">
           <view class="event-left">
-            <view class="event-icon-box" :style="{ backgroundColor: eventTypeBgs[event.event_type] || '#DBEAFE' }">
-              <text class="event-icon" :style="{ color: eventDotColors[event.event_type] || '#3B82F6' }">{{ eventTypeIcons[event.event_type] || "事" }}</text>
+            <view class="event-icon-box" :class="{ 'is-unknown': !typeOf(event.event_type).color }" :style="typeOf(event.event_type).color ? { backgroundColor: typeOf(event.event_type).color + '1F', color: typeOf(event.event_type).color } : {}">
+              <text class="event-icon">{{ (typeOf(event.event_type).label || event.event_type_label || "事")[0] }}</text>
             </view>
             <view class="event-info">
-              <text class="event-title">{{ event.title }}</text>
-              <text class="event-desc">{{ event.description || event.content || "" }}</text>
-              <view v-if="event.start_time || event.end_time" class="event-time-row">
+              <view class="title-row">
+                <text class="event-title">{{ event.title }}</text>
+                <text v-if="event.status === 'draft'" class="mini-chip is-draft">草稿</text>
+                <text v-if="event.scope === 'kindergarten'" class="mini-chip is-garden">全园</text>
+              </view>
+              <text class="event-desc">{{ event.description || "" }}</text>
+              <view v-if="event.is_all_day" class="event-time-row">
                 <text class="event-time-icon">时</text>
-                <text class="event-time">{{ event.start_time || "" }}{{ event.end_time ? " - " + event.end_time : "" }}</text>
+                <text class="event-time">全天{{ event.location ? " · " + event.location : "" }}</text>
+              </view>
+              <view v-else-if="event.start_time || event.end_time || event.location" class="event-time-row">
+                <text class="event-time-icon">时</text>
+                <text class="event-time">{{ event.start_time || "" }}{{ event.end_time ? " - " + event.end_time : "" }}{{ event.location ? " · " + event.location : "" }}</text>
               </view>
             </view>
           </view>
-          <view class="event-edit" @click="editEvent(event)"><text>编辑</text></view>
+          <view v-if="event.scope !== 'kindergarten'" class="event-edit" @click="editEvent(event)"><text>编辑</text></view>
         </view>
       </view>
     </view>
@@ -144,15 +170,15 @@ onPullDownRefresh(loadEvents)
 <style scoped lang="scss">
 .page { min-height: 100vh; box-sizing: border-box; padding: $spacing-lg 28rpx; background: $color-bg-page; }
 
-.month-bar { display: flex; align-items: center; justify-content: space-between; padding: $spacing-xl; border-radius: $border-radius-xl; background: #fff; box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05); margin-bottom: $spacing-lg; }
-.month-arrow { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $border-radius-full; background: #F1F5F9; }
+.month-bar { display: flex; align-items: center; justify-content: space-between; padding: $spacing-xl; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: $shadow-sm; margin-bottom: $spacing-lg; }
+.month-arrow { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $border-radius-full; background: $color-bg-page; }
 .arrow-text { font-size: $typography-font-size-md; color: $color-text-muted; }
 .month-text { font-size: $typography-font-size-2xl; font-weight: 700; color: $color-text-primary; }
-.add-btn { display: flex; align-items: center; gap: 6rpx; padding: $spacing-md $spacing-xl; border-radius: $border-radius-full; background: $color-semantic-info; }
+.add-btn { display: flex; align-items: center; gap: 6rpx; padding: $spacing-md $spacing-xl; border-radius: $border-radius-full; background: $color-brand-primary; }
 .add-icon { font-size: $typography-font-size-lg; font-weight: 700; color: #fff; }
 .add-text { font-size: $typography-font-size-base; font-weight: 500; color: #fff; }
 
-.calendar-card { padding: $spacing-xl; border-radius: $border-radius-xl; background: #fff; box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05); margin-bottom: $spacing-lg; }
+.calendar-card { padding: $spacing-xl; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: $shadow-sm; margin-bottom: $spacing-lg; }
 .week-header { display: flex; justify-content: space-between; margin-bottom: $spacing-lg; }
 .week-day { width: 88rpx; text-align: center; font-size: $typography-font-size-md; font-weight: 500; color: $color-text-muted; }
 .week-day.weekend { color: $color-semantic-danger; }
@@ -161,31 +187,38 @@ onPullDownRefresh(loadEvents)
 .date-cell.dimmed { opacity: 0.35; }
 .date-num { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $border-radius-full; }
 .date-num text { font-size: $typography-font-size-md; color: $color-text-muted; }
-.date-num.is-today { background: $color-semantic-info; text { color: #fff; font-weight: 700; } }
-.date-num.is-selected { background: $color-semantic-info-bg; text { color: $color-semantic-info; font-weight: 700; } }
-.date-num.is-today.is-selected { background: $color-semantic-info; text { color: #fff; font-weight: 700; } }
+.date-num.is-today { background: $color-brand-primary; text { color: #fff; font-weight: 700; } }
+.date-num.is-selected { background: $color-brand-primary-bg; text { color: $color-brand-primary-dark; font-weight: 700; } }
+.date-num.is-today.is-selected { background: $color-brand-primary; text { color: #fff; font-weight: 700; } }
 .date-dots { display: flex; gap: 6rpx; margin-top: 4rpx; }
 .date-dot { width: 14rpx; height: 14rpx; border-radius: $border-radius-full; }
+.date-dot.is-unknown { background: $color-text-hint; }
 
-.legend { display: flex; justify-content: center; gap: $spacing-xl; margin-top: $spacing-lg; padding-top: $spacing-lg; border-top: 2rpx solid #F1F5F9; }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: $spacing-lg; margin-top: $spacing-lg; padding-top: $spacing-lg; border-top: 2rpx solid $color-bg-page; }
 .legend-item { display: flex; align-items: center; gap: $spacing-xs; }
 .legend-dot { width: 16rpx; height: 16rpx; border-radius: $border-radius-full; }
+.legend-dot.is-unknown { background: $color-text-hint; }
 .legend-label { font-size: $typography-font-size-sm; color: $color-text-muted; }
 
 .events-section { margin-bottom: $spacing-lg; }
 .events-title { display: block; margin-bottom: $spacing-lg; font-size: $typography-font-size-xl; font-weight: 700; color: $color-text-primary; }
 .events-empty { padding: 80rpx 0; text-align: center; text { font-size: $typography-font-size-md; color: $color-text-hint; } }
 .events-list { display: flex; flex-direction: column; gap: $spacing-lg; }
-.event-card { display: flex; align-items: flex-start; justify-content: space-between; padding: $spacing-xl; border-radius: $border-radius-xl; background: #fff; box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05); }
+.event-card { display: flex; align-items: flex-start; justify-content: space-between; padding: $spacing-xl; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: $shadow-sm; }
 .event-left { display: flex; gap: $spacing-lg; flex: 1; min-width: 0; }
 .event-icon-box { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 80rpx; height: 80rpx; border-radius: $border-radius-xl; }
+.event-icon-box.is-unknown { background: $color-semantic-info-bg; color: $color-semantic-info; }
 .event-icon { font-size: 34rpx; font-weight: 700; }
-.event-info { display: flex; flex-direction: column; gap: $spacing-xs; min-width: 0; }
-.event-title { font-size: $typography-font-size-lg; font-weight: 600; color: $color-text-primary; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-info { display: flex; flex-direction: column; gap: $spacing-xs; min-width: 0; flex: 1; }
+.title-row { display: flex; align-items: center; gap: $spacing-sm; min-width: 0; }
+.event-title { font-size: $typography-font-size-lg; font-weight: 600; color: $color-text-primary; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.mini-chip { flex-shrink: 0; padding: 2rpx 12rpx; border-radius: $border-radius-full; font-size: $typography-font-size-xs; font-weight: 500; }
+.mini-chip.is-draft { background: $color-semantic-warning-bg; color: $color-semantic-warning; }
+.mini-chip.is-garden { background: $color-semantic-info-bg; color: $color-semantic-info; }
 .event-desc { font-size: $typography-font-size-base; color: $color-text-muted; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 1.4; }
 .event-time-row { display: flex; align-items: center; gap: $spacing-xs; margin-top: 4rpx; }
 .event-time-icon { font-size: $typography-font-size-xs; font-weight: 700; color: $color-text-hint; }
 .event-time { font-size: $typography-font-size-sm; color: $color-text-hint; }
-.event-edit { flex-shrink: 0; padding: $spacing-sm $spacing-lg; border-radius: $border-radius-md; background: #F1F5F9; margin-top: 4rpx; margin-left: $spacing-lg; text { font-size: $typography-font-size-sm; color: $color-text-muted; } }
+.event-edit { flex-shrink: 0; padding: $spacing-sm $spacing-lg; border-radius: $border-radius-md; background: $color-bg-page; margin-top: 4rpx; margin-left: $spacing-lg; text { font-size: $typography-font-size-sm; color: $color-text-muted; } }
 .bottom-safe { height: calc(60rpx + env(safe-area-inset-bottom)); }
 </style>

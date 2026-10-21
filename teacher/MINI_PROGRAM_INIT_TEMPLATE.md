@@ -74,7 +74,7 @@ project-root/
 │  │  └─ login.js           # 静默登录 + ensureLogin
 │  ├─ pages/
 │  │  ├─ index/index.vue
-│  │  ├─ auth/phone.vue
+│  │  ├─ auth/login.vue
 │  │  └─ ...                # 业务页面
 │  ├─ components/           # 复用组件
 │  ├─ App.vue
@@ -230,7 +230,7 @@ function request({ url, method = "GET", data, header = {}, auth = false }) {
 
         if (res.statusCode === 401) {
           clearAuth()
-          uni.reLaunch({ url: "/pages/auth/phone" })
+          uni.reLaunch({ url: "/pages/auth/login" })
           reject(body)
           return
         }

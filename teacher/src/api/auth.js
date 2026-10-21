@@ -10,7 +10,10 @@ export function wxCodeLogin({ code, encryptedData, iv, inviteCode }) {
       encrypted_data: encryptedData,
       iv,
       invite_code: inviteCode || undefined
-    }
+    },
+    // 登录由登录页自己渲染错误态，不走全局 toast ——
+    // 否则 http.js 弹一次、页面 catch 再弹一次，后者还会盖掉前者更准的文案。
+    silent: true
   })
 }
 

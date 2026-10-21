@@ -20,22 +20,30 @@ const form = ref({
   scheduled_enabled: false,
   scheduled_at: "",
   attachments: [] as string[],
-  class_id: 0,
+  class_ids: [] as number[], // 接收范围：任教班级多选（notice-multitarget）
 })
 
 const classList = ref<any[]>([])
 const currentClassLabel = computed(() => {
-  const c = classList.value.find((c) => c.class_id === form.value.class_id)
-  return c ? `${c.class_name}全体家长` : "选择班级"
+  const names = classList.value
+    .filter((c) => form.value.class_ids.includes(c.class_id))
+    .map((c) => c.class_name)
+  return names.length ? `${names.join("、")}全体家长` : "请选择班级"
 })
+
+function toggleClass(classId: number) {
+  const i = form.value.class_ids.indexOf(classId)
+  if (i >= 0) form.value.class_ids.splice(i, 1)
+  else form.value.class_ids.push(classId)
+}
 
 onMounted(async () => {
   try {
     const res: any = await requestWithAuth({ url: "/teacher/class/list", method: "GET" })
     const data = res.data || res
     classList.value = Array.isArray(data) ? data : (data.list || [])
-    if (classList.value.length > 0 && form.value.class_id === 0) {
-      form.value.class_id = classList.value[0].class_id
+    if (classList.value.length > 0 && form.value.class_ids.length === 0) {
+      form.value.class_ids = [classList.value[0].class_id]
     }
   } catch { /* */ }
 })
@@ -73,6 +81,7 @@ function useTemplate(t: Record<string, any>) {
 function validate() {
   if (!form.value.title.trim()) return "请输入通知标题"
   if (!form.value.content.trim()) return "请输入通知内容"
+  if (form.value.class_ids.length === 0) return "请选择接收班级"
   if (form.value.scheduled_enabled && !form.value.scheduled_at) return "请选择发送时间"
   return ""
 }
@@ -147,21 +156,28 @@ async function submit() {
         </view>
       </view>
 
-      <!-- 接收范围 -->
+      <!-- 接收范围（任教班级多选） -->
       <view class="section">
-        <picker v-if="classList.length > 1" mode="selector" :range="classList" range-key="class_name" @change="form.class_id = classList[$event.detail.value].class_id">
-          <view class="card row-card">
+        <view class="card">
+          <view class="row-card" style="padding:0">
             <view>
               <text class="card-title" style="margin-bottom:4rpx">接收范围</text>
               <text class="card-sub">{{ currentClassLabel }}</text>
             </view>
-            <text class="row-arrow">▶</text>
           </view>
-        </picker>
-        <view v-else class="card row-card">
-          <view>
-            <text class="card-title" style="margin-bottom:4rpx">接收范围</text>
-            <text class="card-sub">{{ currentClassLabel }}</text>
+          <view v-if="classList.length > 1" class="class-options">
+            <view
+              v-for="c in classList"
+              :key="c.class_id"
+              class="class-option"
+              :class="{ checked: form.class_ids.includes(c.class_id) }"
+              @click="toggleClass(c.class_id)"
+            >
+              <view class="class-check" :class="{ on: form.class_ids.includes(c.class_id) }">
+                <text v-if="form.class_ids.includes(c.class_id)" class="class-check-mark">✓</text>
+              </view>
+              <text class="class-option-name">{{ c.class_name }}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -356,6 +372,42 @@ async function submit() {
 }
 .row-card .card-title { margin-bottom: 0; }
 .row-arrow { font-size: $typography-font-size-md; color: $color-text-hint; }
+
+/* 接收范围多选 */
+.class-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+.class-option {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  border: 1rpx solid #E2E8F0;
+  border-radius: $border-radius-full;
+  background: #f1f5f9;
+  &.checked {
+    background: $color-semantic-info-bg;
+    border-color: #bfdbfe;
+  }
+}
+.class-check {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: $border-radius-full;
+  border: 1rpx solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &.on {
+    background: $color-semantic-info;
+    border-color: $color-semantic-info;
+  }
+}
+.class-check-mark { font-size: $typography-font-size-xs; color: #fff; line-height: 1; }
+.class-option-name { font-size: $typography-font-size-md; color: $color-text-primary; }
 
 /* 定时发送 */
 .schedule-field {
