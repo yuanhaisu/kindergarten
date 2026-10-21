@@ -1,6 +1,21 @@
 <template>
   <el-card shadow="never">
-    <template #header><span>请假管理</span></template>
+    <template #header>
+      <div class="flex flex-wrap gap-2 items-center">
+        <span>请假管理</span>
+        <el-select
+          v-model="statusFilter"
+          placeholder="状态"
+          clearable
+          class="!w-32"
+          @change="onFilterChange"
+        >
+          <el-option label="待审核" value="pending" />
+          <el-option label="已同意" value="approved" />
+          <el-option label="已驳回" value="rejected" />
+        </el-select>
+      </div>
+    </template>
     <DataTable
       v-model:page="page"
       v-model:page-size="pageSize"
@@ -37,14 +52,41 @@
 import type { LeaveItem } from '~/types/api'
 import { auditLeave, getLeaves } from '~/api/leaves'
 
-const { page, pageSize, total } = usePagination()
+// 查询串用语义值（与审核页一致），接口要数字：0 待审核 / 1 同意 / 2 驳回
+const STATUS_MAP: Record<string, number> = { pending: 0, approved: 1, rejected: 2 }
+
+const route = useRoute()
+// 看板待办深链预填（/leaves?status=pending）
+const statusFilter = ref<string | undefined>(
+  typeof route.query.status === 'string' && route.query.status in STATUS_MAP
+    ? route.query.status
+    : undefined,
+)
+const { page, pageSize, total, resetPage } = usePagination()
 const loading = ref(false)
 const list = ref<LeaveItem[]>([])
+
+// 同页再次深链时组件复用，须跟随 query 更新并重查
+watch(
+  () => route.query.status,
+  (s) => {
+    const next = typeof s === 'string' && s in STATUS_MAP ? s : undefined
+    if (next !== statusFilter.value) {
+      statusFilter.value = next
+      resetPage()
+      load()
+    }
+  },
+)
 
 async function load() {
   loading.value = true
   try {
-    const res = await getLeaves({ page: page.value, page_size: pageSize.value })
+    const res = await getLeaves({
+      page: page.value,
+      page_size: pageSize.value,
+      status: statusFilter.value ? STATUS_MAP[statusFilter.value] : undefined,
+    })
     list.value = res.list
     total.value = res.total
   } catch (e: unknown) {
@@ -52,6 +94,11 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function onFilterChange() {
+  resetPage()
+  load()
 }
 
 async function onAudit(row: LeaveItem, status: number) {

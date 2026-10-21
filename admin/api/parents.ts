@@ -1,6 +1,6 @@
 import type { PageParams, PageResult, ParentItem } from '~/types/api'
 
-export function getParents(params?: PageParams & { class_id?: number }) {
+export function getParents(params?: PageParams & { class_id?: number; keyword?: string }) {
   return useHttp().get<PageResult<ParentItem>>('/admin/parents', { params })
 }
 

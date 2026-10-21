@@ -48,3 +48,41 @@ export function auditPickupAuthorizedPerson(
     body,
   )
 }
+
+// 滞留名单（实时口径：已入园且此刻仍未接走；学生挂在 by_class[].students 下）
+// 形状以 backend/api/api-admin/08-pickup.md 与 Go ListOverdueStudents 为准
+export function getPickupOverdue(params?: { date?: string }) {
+  return useHttp().get<{
+    date: string
+    overdue_total: number
+    by_class: Array<{
+      class_id: number
+      class_name: string
+      pickup_deadline: string
+      overdue_count: number
+      students: Array<{
+        student_id: number
+        name: string
+        avatar: string
+        arrive_time: string
+        pickup_deadline: string
+      }>
+    }>
+  }>('/admin/pickup/overdue', { params })
+}
+
+// 超时未接计数（累计口径：当日越过放学时刻即计一次，随后被接走也不清零）
+export function getPickupOverdueCount(params?: { date?: string }) {
+  return useHttp().get<{ date: string; overdue_not_picked: number }>(
+    '/admin/pickup/overdue/count',
+    { params },
+  )
+}
+
+// 一键通知滞留儿童家长
+export function notifyPickupOverdue(body: { student_id?: number }) {
+  return useHttp().put<{ notified: number; student_id?: number }>(
+    '/admin/pickup/overdue/notify',
+    body,
+  )
+}

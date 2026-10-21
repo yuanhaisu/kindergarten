@@ -82,7 +82,22 @@ import { getStudents } from '~/api/students'
 const { page, pageSize, total, resetPage } = usePagination()
 const loading = ref(false)
 const list = ref<ParentItem[]>([])
-const keyword = ref('')
+const route = useRoute()
+// 顶栏人员速查跳转过来时预填关键词（/parents?keyword=xxx）
+const keyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
+
+// 同页再次速查时组件被复用，须跟随 query 更新并重查
+watch(
+  () => route.query.keyword,
+  (kw) => {
+    const next = typeof kw === 'string' ? kw : ''
+    if (next !== keyword.value) {
+      keyword.value = next
+      resetPage()
+      load()
+    }
+  },
+)
 
 async function load() {
   loading.value = true

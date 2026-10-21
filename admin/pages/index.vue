@@ -90,7 +90,7 @@
         <template #header>
           <div class="flex items-center justify-between">
             <span class="text-base font-semibold text-slate-800">班级活跃度排名</span>
-            <el-button size="small" text type="primary">查看全部</el-button>
+            <el-button size="small" text type="primary" @click="router.push('/classes')">查看全部</el-button>
           </div>
         </template>
         <ClassRankingTable :list="classActivity" />
@@ -101,10 +101,10 @@
         <template #header>
           <div class="flex items-center justify-between">
             <span class="text-base font-semibold text-slate-800">待办事项</span>
-            <el-tag size="small" type="danger" round>{{ todos.length }}条待处理</el-tag>
+            <el-tag size="small" type="danger" round>{{ visibleTodos.length }}条待处理</el-tag>
           </div>
         </template>
-        <TodoList :items="todos" />
+        <TodoList :items="visibleTodos" />
       </el-card>
     </div>
   </div>
@@ -112,6 +112,7 @@
 
 <script setup lang="ts">
 import { Document, List, Tickets, UserFilled } from '@element-plus/icons-vue'
+import { matchMenuByPath } from '~/constants/menus'
 import type {
   AttendanceTrendPoint,
   ClassActivityItem,
@@ -127,6 +128,18 @@ import {
   getLeaveReasons,
   getTodoList,
 } from '~/api/dashboard'
+
+const router = useRouter()
+const perm = usePermissionStore()
+
+/** 待办只展示当前账号可落地处理的项：落点无权限的隐藏，避免点进去被守卫弹回 */
+const visibleTodos = computed(() =>
+  todos.value.filter((t) => {
+    if (!t.target) return true
+    const entry = matchMenuByPath(t.target.split('?')[0])
+    return !entry?.permission || perm.can(entry.permission)
+  }),
+)
 
 // ---- 统计卡片数据 ----
 const stats = reactive({
@@ -188,6 +201,7 @@ function mapTodos(overview: DashboardOverview): TodoItem[] {
       description: '有新的班级通知需要审核和发布',
       time_ago: '今天',
       action_type: 'view',
+      target: '/notices',
     })
   }
   if (t.pending_leaves) {
@@ -197,6 +211,7 @@ function mapTodos(overview: DashboardOverview): TodoItem[] {
       description: '家长提交的请假申请需要及时处理',
       time_ago: '今天',
       action_type: 'audit',
+      target: '/leaves?status=pending',
     })
   }
   if (t.growth_logs) {
@@ -206,6 +221,8 @@ function mapTodos(overview: DashboardOverview): TodoItem[] {
       description: '老师提交的成长记录需要审核',
       time_ago: '今天',
       action_type: 'audit',
+      // growth_logs 是「今日新增数」；成长审核（通过/驳回）在 /growth 页，不在内容审核队列
+      target: '/growth',
     })
   }
   if (t.new_tasks) {
@@ -215,6 +232,7 @@ function mapTodos(overview: DashboardOverview): TodoItem[] {
       description: '亲子任务需要分配给相应班级',
       time_ago: '今天',
       action_type: 'view',
+      target: '/tasks',
     })
   }
   return items

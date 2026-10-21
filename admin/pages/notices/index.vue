@@ -27,7 +27,11 @@
     >
       <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
       <el-table-column prop="category_label" label="分类" width="90" />
-      <el-table-column prop="class_name" label="班级" />
+      <el-table-column label="发布范围" min-width="140">
+        <template #default="{ row }">
+          {{ ((row as unknown as NoticeItem).class_names || []).join('、') || '—' }}
+        </template>
+      </el-table-column>
       <el-table-column prop="read_rate" label="已读率" width="90" />
       <el-table-column prop="status_label" label="状态" width="100" />
       <el-table-column label="操作" width="260" fixed="right">
@@ -41,10 +45,30 @@
 
     <el-dialog v-model="dialogVisible" :title="editId ? '编辑通知' : '发布通知'" width="520px" destroy-on-close>
       <el-form :model="form" label-width="96px">
-        <el-form-item label="班级" required>
-          <el-select v-model="form.class_id" placeholder="选择班级" filterable style="width: 100%">
-            <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
+        <el-form-item label="发布范围" required>
+          <div class="w-full">
+            <div class="mb-2 flex flex-wrap gap-2">
+              <el-check-tag
+                v-for="g in gradeOptions"
+                :key="g"
+                :checked="form.grades.includes(g)"
+                @change="toggleGrade(g)"
+              >
+                {{ g }}
+              </el-check-tag>
+            </div>
+            <el-select
+              v-model="form.class_ids"
+              multiple
+              filterable
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="点选班级（可与年级圈选混用）"
+              style="width: 100%"
+            >
+              <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+          </div>
         </el-form-item>
         <el-form-item label="分类" required>
           <el-select v-model="form.category" placeholder="选择分类" style="width: 100%">
@@ -145,16 +169,26 @@ async function del(id: number) {
 const dialogVisible = ref(false)
 const editId = ref<number | null>(null)
 const saving = ref(false)
+// 年级取值溯源 class_service.validateGrade（小班/中班/大班），不新增枚举
+const gradeOptions = ['小班', '中班', '大班']
 const form = reactive({
-  class_id: undefined as number | undefined,
+  class_ids: [] as number[],
+  grades: [] as string[],
   category: 'homework',
   title: '',
   content: '',
   need_confirm: false,
 })
 
+function toggleGrade(g: string) {
+  const i = form.grades.indexOf(g)
+  if (i >= 0) form.grades.splice(i, 1)
+  else form.grades.push(g)
+}
+
 function resetForm() {
-  form.class_id = classOptions.value[0]?.id
+  form.class_ids = classOptions.value[0] ? [classOptions.value[0].id] : []
+  form.grades = []
   form.category = 'homework'
   form.title = ''
   form.content = ''
@@ -171,7 +205,11 @@ async function openEdit(id: number) {
   editId.value = id
   try {
     const d = await getNotice(id)
-    form.class_id = d.class_id
+    // 详情只回 class_names（目标集），按名回填勾选
+    form.class_ids = classOptions.value
+      .filter((c) => (d.class_names || []).includes(c.name))
+      .map((c) => c.id)
+    form.grades = []
     form.category = d.category
     form.title = d.title
     form.content = d.content ?? ''
@@ -183,8 +221,8 @@ async function openEdit(id: number) {
 }
 
 async function submitForm() {
-  if (!form.class_id) {
-    ElMessage.warning('请选择班级')
+  if (form.class_ids.length === 0 && form.grades.length === 0) {
+    ElMessage.warning('请选择班级或圈选年级')
     return
   }
   if (!form.title.trim()) {
@@ -193,23 +231,19 @@ async function submitForm() {
   }
   saving.value = true
   try {
+    const body = {
+      class_ids: form.class_ids,
+      grades: form.grades,
+      category: form.category,
+      title: form.title.trim(),
+      content: form.content,
+      need_confirm: form.need_confirm,
+    }
     if (editId.value) {
-      await updateNotice(editId.value, {
-        class_id: form.class_id,
-        category: form.category,
-        title: form.title.trim(),
-        content: form.content,
-        need_confirm: form.need_confirm,
-      })
+      await updateNotice(editId.value, body)
       ElMessage.success('已更新')
     } else {
-      await createNotice({
-        class_id: form.class_id,
-        category: form.category,
-        title: form.title.trim(),
-        content: form.content,
-        need_confirm: form.need_confirm,
-      })
+      await createNotice(body)
       ElMessage.success('已发布')
     }
     dialogVisible.value = false

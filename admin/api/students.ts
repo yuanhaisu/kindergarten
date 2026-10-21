@@ -1,7 +1,13 @@
-import type { PageParams, PageResult, StudentDetail, StudentItem } from '~/types/api'
+import type {
+  PageParams,
+  PageResult,
+  StudentDetail,
+  StudentFacesResult,
+  StudentItem,
+} from '~/types/api'
 
 export function getStudents(
-  params?: PageParams & { class_id?: number; status?: number },
+  params?: PageParams & { class_id?: number; status?: number; keyword?: string },
 ) {
   return useHttp().get<PageResult<StudentItem>>('/admin/students', { params })
 }
@@ -51,4 +57,22 @@ export function exportStudentsBlob(params: { class_id?: number; status?: number;
   return useHttp()
     .getBlob('/admin/students/export', { params })
     .then((r) => r.data as Blob)
+}
+
+// ── 人脸底库（照片点名的识别底库；密钥不出后端，客户端只提交 file_id）──
+
+export function getStudentFaces(id: number) {
+  return useHttp().get<StudentFacesResult>(`/admin/students/${id}/faces`)
+}
+
+export function addStudentFaces(id: number, fileIds: number[]) {
+  return useHttp().post<StudentFacesResult>(`/admin/students/${id}/faces`, { file_ids: fileIds })
+}
+
+export function retryStudentFaces(id: number) {
+  return useHttp().post<StudentFacesResult>(`/admin/students/${id}/faces/retry`)
+}
+
+export function deleteStudentFace(id: number, faceId: number) {
+  return useHttp().delete(`/admin/students/${id}/faces/${faceId}`)
 }

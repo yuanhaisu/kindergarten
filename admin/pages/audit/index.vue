@@ -41,9 +41,26 @@
 import type { AuditListItem } from '~/types/api'
 import { auditContent, getAuditList } from '~/api/audit'
 
-const atype = ref<string | undefined>()
-const astatus = ref<string | undefined>()
-const { page, pageSize, total } = usePagination()
+const route = useRoute()
+// 看板待办深链预填（/audit?type=growth&status=pending）
+const atype = ref(typeof route.query.type === 'string' ? route.query.type : undefined)
+const astatus = ref(typeof route.query.status === 'string' ? route.query.status : undefined)
+const { page, pageSize, total, resetPage } = usePagination()
+
+// 同页再次深链时组件复用，须跟随 query 更新并重查
+watch(
+  () => [route.query.type, route.query.status],
+  ([t, s]) => {
+    const nextType = typeof t === 'string' ? t : undefined
+    const nextStatus = typeof s === 'string' ? s : undefined
+    if (nextType !== atype.value || nextStatus !== astatus.value) {
+      atype.value = nextType
+      astatus.value = nextStatus
+      resetPage()
+      load()
+    }
+  },
+)
 const loading = ref(false)
 const list = ref<AuditListItem[]>([])
 

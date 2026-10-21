@@ -36,7 +36,7 @@
             v-for="item in group.children"
             :key="item.path"
             :to="item.path"
-            class="flex items-center h-10 px-3 rounded-lg my-0.5 text-sm no-underline transition-colors"
+            class="relative flex items-center h-10 px-3 rounded-lg my-0.5 text-sm no-underline transition-colors"
             :class="[
               collapsed ? 'justify-center' : '',
               isActive(item.path)
@@ -49,6 +49,14 @@
               <component :is="item.icon" />
             </el-icon>
             <span v-if="!collapsed" class="ml-3">{{ item.title }}</span>
+            <!-- 紧急计数徽标：数字用深色保证对比度，危险色由底色与描边承担 -->
+            <span
+              v-if="badgeFor(item.path)"
+              class="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-semantic-dangerBg border border-semantic-danger text-xs font-semibold text-text-primary"
+              :class="collapsed ? 'absolute top-1 right-1' : 'ml-auto'"
+            >
+              {{ badgeFor(item.path) }}
+            </span>
           </NuxtLink>
         </template>
       </div>
@@ -86,15 +94,22 @@
 
 <script setup lang="ts">
 import { Setting, StarFilled, UserFilled } from '@element-plus/icons-vue'
-import { ADMIN_MENU_GROUPS } from '~/constants/menus'
+import { ADMIN_MENU_GROUPS, matchMenuByPath } from '~/constants/menus'
 
 const route = useRoute()
 const app = useAppStore()
 const auth = useAuthStore()
 const perm = usePermissionStore()
+const pickupAlert = usePickupAlertStore()
 const router = useRouter()
 
 const collapsed = computed(() => app.sidebarCollapsed)
+
+/** 紧急计数只挂在对应业务入口上，不污染其他菜单项 */
+function badgeFor(path: string): number {
+  if (path === '/pickup') return pickupAlert.count
+  return 0
+}
 
 const visibleGroups = computed(() =>
   ADMIN_MENU_GROUPS
@@ -106,8 +121,8 @@ const visibleGroups = computed(() =>
 )
 
 function isActive(path: string) {
-  if (path === '/') return route.path === '/'
-  return route.path.startsWith(path)
+  // 与标题/面包屑共用最长前缀匹配：/settings/dict 只亮「字典管理」，不双亮「基础设置」
+  return matchMenuByPath(route.path)?.path === path
 }
 
 function goSettings() {

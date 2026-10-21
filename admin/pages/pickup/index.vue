@@ -5,13 +5,14 @@
       <template #header>
         <div class="flex items-center gap-3">
           <span>接送概览</span>
-          <el-date-picker v-model="date" value-format="YYYY-MM-DD" @change="loadOv" />
+          <el-date-picker v-model="date" value-format="YYYY-MM-DD" @change="onDateChange" />
         </div>
       </template>
-      <div v-if="ov" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div v-if="ov" class="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard title="已到园" :value="ov.arrived" />
         <StatCard title="已接走" :value="ov.picked_up" />
         <StatCard title="未接走" :value="ov.not_picked_up" />
+        <StatCard title="超时未接" :value="ov.overdue_not_picked ?? overdueCount" color="#EF4444" />
         <StatCard title="异常" :value="ov.abnormal_count" />
       </div>
     </el-card>
@@ -38,6 +39,11 @@
             <el-table-column prop="type_label" label="类型" width="90" />
             <el-table-column prop="pickup_name" label="接送人" />
             <el-table-column prop="method_label" label="方式" width="90" />
+            <el-table-column label="核验人" width="110">
+              <template #default="{ row }">
+                {{ (row as any).operator?.nickname || "—" }}
+              </template>
+            </el-table-column>
             <el-table-column prop="recorded_at" label="时间" width="170" />
           </DataTable>
         </el-tab-pane>
@@ -83,7 +89,7 @@
         <!-- Tab 3: 授权审核 -->
         <el-tab-pane label="授权审核" name="audit">
           <div class="mb-3 flex items-center gap-2">
-            <span class="text-sm text-gray-500">筛选：</span>
+            <span class="text-sm text-text-muted">筛选：</span>
             <el-select v-model="auditStatusFilter" placeholder="审核状态" class="w-32" @change="loadAuditList">
               <el-option label="待审核" value="pending" />
               <el-option label="全部" value="" />
@@ -124,7 +130,7 @@
                   <el-button type="success" size="small" @click="handleAudit(row, 'approve')">通过</el-button>
                   <el-button type="danger" size="small" @click="handleAudit(row, 'reject')">拒绝</el-button>
                 </template>
-                <span v-else class="text-xs text-gray-400">
+                <span v-else class="text-xs text-text-hint">
                   {{ row.audited_at?.slice(0, 10) }} {{ row.audit_remark || "—" }}
                 </span>
               </template>
@@ -140,6 +146,39 @@
             />
           </div>
         </el-tab-pane>
+        <!-- Tab 4: 滞留名单 -->
+        <el-tab-pane label="滞留名单" name="overdue">
+          <div class="mb-3 flex items-center gap-2">
+            <el-button type="warning" size="small" :loading="notifyLoading" @click="handleNotifyAll">
+              一键通知全部滞留家长
+            </el-button>
+            <span class="text-sm text-text-muted">共 {{ overdueList.length }} 人滞留</span>
+          </div>
+          <el-table :data="overdueList" v-loading="overdueLoading" stripe>
+            <el-table-column prop="name" label="学生" width="120" />
+            <el-table-column prop="class_name" label="班级" width="120" />
+            <el-table-column prop="pickup_deadline" label="放学时间" width="100" />
+            <el-table-column prop="arrive_time" label="到园时间" width="100" />
+            <el-table-column label="滞留时长" width="120">
+              <template #default="{ row }">
+                <el-tag type="danger" size="small">{{ row.overdue_minutes }} 分钟</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button type="warning" size="small" @click="handleNotifyOne(row)">通知家长</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="overdueByClass.length > 0" class="mt-4">
+            <h4 class="text-sm font-medium text-text-body mb-2">各班滞留计数</h4>
+            <div class="flex flex-wrap gap-2">
+              <el-tag v-for="c in overdueByClass" :key="c.class_id" type="warning">
+                {{ c.class_name }}：{{ c.count }}人
+              </el-tag>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -147,11 +186,13 @@
 
 <script setup lang="ts">
 import type { PickupOverview, PickupRecordItem } from '~/types/api'
-import { getPickupOverview, getPickupRecords, getPickupAbnormal, auditPickupAuthorizedPerson, getAuthorizedPersons } from '~/api/pickup'
+import { getPickupOverview, getPickupRecords, getPickupAbnormal, auditPickupAuthorizedPerson, getAuthorizedPersons, getPickupOverdue, notifyPickupOverdue } from '~/api/pickup'
 
 // ---- 概览 ----
+const route = useRoute()
 const date = ref(new Date().toISOString().slice(0, 10))
 const ov = ref<PickupOverview | null>(null)
+const overdueCount = ref(0)
 async function loadOv() {
   try {
     ov.value = await getPickupOverview({ date: date.value })
@@ -161,7 +202,12 @@ async function loadOv() {
 }
 
 // ---- Tab ----
-const activeTab = ref('records')
+// 壳层紧急横幅深链 /pickup?tab=overdue 直达滞留名单
+const TAB_NAMES = ['records', 'abnormal', 'audit', 'overdue'] as const
+const queryTab = typeof route.query.tab === 'string' ? route.query.tab : 'records'
+const activeTab = ref<string>(
+  (TAB_NAMES as readonly string[]).includes(queryTab) ? queryTab : 'records',
+)
 
 // ---- 接送记录 ----
 const { page: recPage, pageSize: recPageSize, total: recTotal } = usePagination()
@@ -270,15 +316,111 @@ async function handleAudit(row: AuditRow, action: 'approve' | 'reject') {
   }
 }
 
+// ---- 滞留名单 ----
+interface OverdueRow {
+  student_id: number
+  name: string
+  class_name: string
+  pickup_deadline: string
+  arrive_time: string
+  overdue_minutes: number
+}
+const overdueList = ref<OverdueRow[]>([])
+const overdueByClass = ref<Array<{ class_id: number; class_name: string; count: number }>>([])
+const overdueLoading = ref(false)
+const notifyLoading = ref(false)
+
+/** 滞留时长（分钟）：后端未返回该字段，按班级放学时刻 HH:MM 与当前时间推算 */
+function overdueMinutesOf(deadlineHM: string): number {
+  const [h, m] = String(deadlineHM || '').split(':').map(Number)
+  if (Number.isNaN(h) || Number.isNaN(m)) return 0
+  const deadline = new Date()
+  deadline.setHours(h, m, 0, 0)
+  return Math.max(0, Math.floor((Date.now() - deadline.getTime()) / 60_000))
+}
+
+async function loadOverdue() {
+  overdueLoading.value = true
+  try {
+    const res = await getPickupOverdue({ date: date.value })
+    // 后端把学生挂在 by_class[].students 下（无扁平 list），这里摊平供表格使用
+    const rows: OverdueRow[] = []
+    const byClass: Array<{ class_id: number; class_name: string; count: number }> = []
+    for (const g of res.by_class || []) {
+      byClass.push({ class_id: g.class_id, class_name: g.class_name, count: g.overdue_count })
+      for (const s of g.students || []) {
+        rows.push({
+          student_id: s.student_id,
+          name: s.name,
+          class_name: g.class_name,
+          pickup_deadline: s.pickup_deadline,
+          arrive_time: s.arrive_time,
+          overdue_minutes: overdueMinutesOf(s.pickup_deadline),
+        })
+      }
+    }
+    overdueList.value = rows
+    overdueByClass.value = byClass
+    overdueCount.value = res.overdue_total || 0
+  } catch (e: unknown) {
+    overdueList.value = []
+    overdueByClass.value = []
+    ElMessage.error(e instanceof Error ? e.message : '加载滞留名单失败')
+  } finally {
+    overdueLoading.value = false
+  }
+}
+
+async function handleNotifyOne(row: OverdueRow) {
+  try {
+    await notifyPickupOverdue({ student_id: row.student_id })
+    ElMessage.success(`已通知 ${row.name} 家长`)
+  } catch (e: unknown) {
+    ElMessage.error(e instanceof Error ? e.message : '通知失败')
+  }
+}
+
+async function handleNotifyAll() {
+  try {
+    await ElMessageBox.confirm(`确定通知全部 ${overdueList.value.length} 位滞留儿童的家长吗？`, '一键通知', {
+      confirmButtonText: '通知',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    notifyLoading.value = true
+    await notifyPickupOverdue({})
+    ElMessage.success('已通知全部滞留家长')
+  } catch (e: unknown) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error(e instanceof Error ? e.message : '通知失败')
+    }
+  } finally {
+    notifyLoading.value = false
+  }
+}
+
 function onTabChange(tabName: string | number) {
   if (tabName === 'records') loadRecords()
   else if (tabName === 'abnormal') loadAbnormal()
   else if (tabName === 'audit') loadAuditList()
+  else if (tabName === 'overdue') loadOverdue()
+}
+
+function onDateChange() {
+  loadOv()
+  // 级联刷新当前可见表格，避免日期切换后其他 Tab 仍显示旧数据
+  if (activeTab.value === 'records') loadRecords()
+  else if (activeTab.value === 'abnormal') loadAbnormal()
+  else if (activeTab.value === 'overdue') loadOverdue()
 }
 
 // ---- Init ----
 onMounted(async () => {
   await loadOv()
   loadRecords()
+  loadOverdue()
+  // 深链到其他 tab 时补载该 tab 的数据，避免空表
+  if (activeTab.value === 'abnormal') loadAbnormal()
+  else if (activeTab.value === 'audit') loadAuditList()
 })
 </script>

@@ -20,11 +20,17 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     refreshTokenValue.value = null
     user.value = null
+    usePermissionStore().reset()
   }
 
   async function fetchProfile() {
     const { getUserProfile } = await import('~/api/common')
     user.value = await getUserProfile()
+    // 服务端下发的权限码同步进权限 store（菜单过滤与路由守卫唯一数据源）
+    const codes = (user.value.roles || [])
+      .filter((r) => r.role === 'admin')
+      .flatMap((r) => r.permissions || [])
+    usePermissionStore().setCodes(codes)
   }
 
   return { user, setSession, clearSession, fetchProfile }

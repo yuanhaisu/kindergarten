@@ -66,7 +66,10 @@ export function useHttp() {
             navigateTo('/login')
           }
         }
-        return Promise.reject(new Error(String(msg)))
+        // 保留 HTTP 状态码：调用方需要区分「无权限（403）」与真实故障
+        const wrapped = new Error(String(msg)) as Error & { status?: number }
+        wrapped.status = err.response?.status
+        return Promise.reject(wrapped)
       },
     )
   }

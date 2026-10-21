@@ -2,7 +2,7 @@
   <el-card shadow="never">
     <template #header>
       <div class="flex justify-between">
-        <span>角色与权限</span>
+        <span>角色管理</span>
         <el-button type="primary" @click="openCreate">新建角色</el-button>
       </div>
     </template>
@@ -35,17 +35,22 @@
       <el-form :model="form" label-width="88px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="说明"><el-input v-model="form.description" type="textarea" /></el-form-item>
-        <el-form-item label="权限">
-          <el-scrollbar max-height="360px">
-            <div v-for="mod in permModules" :key="mod.module" class="mb-4">
-              <div class="font-medium text-slate-700 mb-2">{{ mod.module_label }}</div>
-              <el-checkbox-group v-model="form.permissions">
-                <el-checkbox v-for="it in mod.items" :key="it.key" :label="it.key" class="!mr-4">
-                  {{ it.label }}
-                </el-checkbox>
-              </el-checkbox-group>
+        <el-form-item label="权限码">
+          <div class="w-full">
+            <div class="text-xs text-text-muted mb-2">
+              保存后对该角色名下管理员即时生效（已选 {{ form.permissions.length }} 项）
             </div>
-          </el-scrollbar>
+            <el-scrollbar max-height="360px">
+              <div v-for="mod in permModules" :key="mod.module" class="mb-4">
+                <div class="font-medium text-text-body mb-2">{{ mod.module_label }}</div>
+                <el-checkbox-group v-model="form.permissions">
+                  <el-checkbox v-for="it in mod.items" :key="it.key" :label="it.key" class="!mr-4">
+                    {{ it.label }}
+                  </el-checkbox>
+                </el-checkbox-group>
+              </div>
+            </el-scrollbar>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -134,8 +139,10 @@ async function remove(id: number) {
     await deleteRole(id)
     ElMessage.success('已删除')
     load()
-  } catch {
-    /* */
+  } catch (e: unknown) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error(e instanceof Error ? e.message : '删除失败')
+    }
   }
 }
 

@@ -31,6 +31,8 @@ export interface UserRoleItem {
   class_name?: string
   title?: string
   admin_role?: string
+  /** 管理端角色条目才有：该账号权限码集合（通配为 ["*"]） */
+  permissions?: string[]
 }
 
 export interface AuthUser {
@@ -82,6 +84,8 @@ export interface TodoItem {
   description: string
   time_ago: string
   action_type: string
+  /** 落地页路径（可带 query）；缺省时不渲染操作按钮，避免死控件 */
+  target?: string
 }
 
 export interface LeaveReason {
@@ -209,6 +213,43 @@ export interface StudentItem {
   enroll_date: string
   parents_count: number
   created_at: string
+  /** 人脸底库聚合状态：0未录入 1已注册 2注册失败 3注册中 */
+  face_status: number
+  face_status_label: string
+  face_count: number
+}
+
+/** 统一上传通道（/common/upload）的返回项 */
+export interface UploadedFile {
+  id: number
+  file_url: string
+  thumb_url?: string
+  file_name: string
+  file_size: number
+  file_type: string
+  duration: number
+}
+
+/** 学生人脸底库照片行 */
+export interface StudentFace {
+  id: number
+  face_url: string
+  /** 0待注册 1已注册 2注册失败 */
+  status: number
+  status_label: string
+  last_error: string
+  created_at: string
+}
+
+/** 学生人脸底库（照片列表 + 聚合状态） */
+export interface StudentFacesResult {
+  list: StudentFace[]
+  total: number
+  status: number
+  status_label: string
+  enabled: boolean
+  provider: string
+  max_count: number
 }
 
 export interface StudentParentDetail {
@@ -315,8 +356,7 @@ export interface NoticeItem {
   category: string
   category_label: string
   title: string
-  class_name: string
-  class_id: number
+  class_names: string[]
   creator: { id: number; nickname: string }
   status: number
   status_label: string
@@ -339,8 +379,7 @@ export interface NoticeDetail {
   category_label: string
   title: string
   content: string
-  class_id: number
-  class_name: string
+  class_names: string[]
   need_confirm: boolean
   status: number
   published_at?: string
@@ -360,7 +399,9 @@ export interface NoticeAttachmentInput {
 }
 
 export interface CreateNoticeBody {
-  class_id: number
+  class_ids: number[]
+  /** 年级圈选（小班/中班/大班），发布时展开为班级快照，与 class_ids 并集去重 */
+  grades?: string[]
   category: string
   title: string
   content?: string
@@ -370,7 +411,9 @@ export interface CreateNoticeBody {
 }
 
 export interface UpdateNoticeBody {
-  class_id?: number
+  /** 显式重选目标集（整体替换） */
+  class_ids?: number[]
+  grades?: string[]
   category?: string
   title?: string
   content?: string
@@ -419,6 +462,7 @@ export interface PickupOverview {
   arrived: number
   picked_up: number
   not_picked_up: number
+  overdue_not_picked?: number
   abnormal_count: number
   by_class: {
     class_id: number
@@ -622,6 +666,10 @@ export interface SystemSettings {
     weekly_attendance_bonus: number
     monthly_attendance_bonus: number
   }
+  health: {
+    temperature_required: boolean
+    fever_threshold: number
+  }
 }
 
 // 字典管理
@@ -669,4 +717,72 @@ export interface ExportTaskStatus {
   created_at?: string
   completed_at?: string
   message?: string
+}
+
+// 园级日历（align-class-calendar）
+export interface GardenCalendarEventItem {
+  id: number
+  title: string
+  description: string
+  event_type: string
+  event_type_label: string
+  scope: 'class' | 'kindergarten'
+  status: 'draft' | 'published'
+  event_date: string
+  start_time: string | null
+  end_time: string | null
+  location: string
+  is_all_day: boolean
+  /** 数据驱动色（来源：字典 calendar_event_type 的 Extra） */
+  color: string
+}
+
+export interface GardenCalendarListResult {
+  list: GardenCalendarEventItem[]
+  total: number
+}
+
+export interface GardenCalendarInput {
+  title: string
+  description: string
+  event_type: string
+  event_date: string
+  start_time: string
+  end_time: string
+  location: string
+  is_all_day: boolean
+  status: 'draft' | 'published'
+  notify: boolean
+}
+
+// 课表（align-class-calendar）
+export interface TimetableEntry {
+  weekday: number
+  period: number
+  title: string
+  location: string
+  start_time: string
+  end_time: string
+}
+
+export interface TimetableOverride extends TimetableEntry {
+  action: 'replace' | 'remove' | 'add'
+}
+
+export interface TimetableTemplateResult {
+  grade: string
+  entries: TimetableEntry[]
+}
+
+export interface TimetableClassOverridesResult {
+  class_id: number
+  overrides: TimetableOverride[]
+}
+
+export interface TimetableSyncResult {
+  synced: boolean
+  created: number
+  updated: number
+  deleted: number
+  skipped_overridden: number
 }

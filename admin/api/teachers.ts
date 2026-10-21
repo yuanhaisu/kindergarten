@@ -1,6 +1,6 @@
 import type { PageParams, PageResult, TeacherDetail, TeacherInvitation, TeacherItem } from '~/types/api'
 
-export function getTeachers(params?: PageParams & { class_id?: number; status?: number }) {
+export function getTeachers(params?: PageParams & { class_id?: number; status?: number; keyword?: string }) {
   return useHttp().get<PageResult<TeacherItem>>('/admin/teachers', { params })
 }
 

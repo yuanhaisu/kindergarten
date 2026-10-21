@@ -39,6 +39,8 @@ export default defineNuxtConfig({
   },
   elementPlus: {
     importStyle: 'css',
+    // 管理端界面为中文：日历/日期选择器/分页等内置文案统一走 zh-cn
+    defaultLocale: 'zh-cn',
   },
   app: {
     head: {

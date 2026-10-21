@@ -24,6 +24,18 @@
         <el-form-item label="通知需审核"><el-switch v-model="form.notice.need_audit" /></el-form-item>
         <el-form-item label="成长需审核"><el-switch v-model="form.growth.need_audit" /></el-form-item>
         <el-form-item label="接送授权需审核"><el-switch v-model="form.pickup.need_authorization_audit" /></el-form-item>
+        <el-divider content-position="left">晨检</el-divider>
+        <el-form-item label="要求全员测温"><el-switch v-model="form.health.temperature_required" /></el-form-item>
+        <el-form-item label="发烧阈值(°C)">
+          <el-input-number
+            v-model="form.health.fever_threshold"
+            :min="35"
+            :max="42"
+            :step="0.1"
+            :precision="1"
+            class="!w-full"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="saving" @click="save">保存</el-button>
         </el-form-item>
@@ -131,6 +143,10 @@ async function loadSettings() {
   loading.value = true
   try {
     form.value = await getSettings()
+    // 兼容尚未下发 health 块的旧后端，避免 v-model 绑到 undefined
+    if (!form.value.health) {
+      form.value.health = { temperature_required: false, fever_threshold: 37.3 }
+    }
   } catch (e: unknown) {
     ElMessage.error(e instanceof Error ? e.message : '加载失败')
   } finally {

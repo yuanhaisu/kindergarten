@@ -19,10 +19,16 @@
             <div class="text-xs text-slate-500 mt-0.5 line-clamp-2">
               {{ item.description }}
             </div>
-            <!-- 时间 + 操作 -->
+            <!-- 时间 + 操作：无落地页的待办不渲染按钮，杜绝死控件 -->
             <div class="flex items-center justify-between mt-2">
               <span class="text-xs text-slate-400">{{ item.time_ago }}</span>
-              <el-button size="small" type="primary" link>
+              <el-button
+                v-if="item.target"
+                size="small"
+                type="primary"
+                link
+                @click="go(item.target)"
+              >
                 {{ item.action_type === 'audit' ? '审核' : '处理' }}
               </el-button>
             </div>
@@ -41,4 +47,10 @@ import type { TodoItem } from '~/types/api'
 defineProps<{
   items: TodoItem[]
 }>()
+
+const router = useRouter()
+
+function go(target: string) {
+  router.push(target)
+}
 </script>
