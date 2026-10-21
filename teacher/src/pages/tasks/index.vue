@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from "vue"
-import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onLoad, onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { createTeacherTask, fetchTeacherTasks } from "@/api/teacher-tasks"
 import { fetchTeacherClassStudents } from "@/api/teacher-class"
 
@@ -24,6 +24,7 @@ function defaultForm() {
 }
 
 const tasks = ref([])
+const loadError = ref("")
 const students = ref([])
 const form = ref(defaultForm())
 const studentOptions = computed(() => ["班级", ...students.value.map(s => s.name)])
@@ -45,9 +46,26 @@ async function loadStudents() {
 }
 
 async function loadTasks() {
-  const res = await fetchTeacherTasks({ page: 1, page_size: 20 })
-  tasks.value = res.data?.list || []
-  uni.stopPullDownRefresh()
+  // onShow 每次可见都会调用：失败时保留旧列表，但必须显式说明「这是旧数据」，
+  // 否则失权/故障会被伪装成「没有任务」。
+  try {
+    const res = await fetchTeacherTasks({ page: 1, page_size: 20 })
+    tasks.value = res.data?.list || []
+    loadError.value = ""
+  } catch (e) {
+    loadError.value = e?.message || "加载任务失败"
+  } finally {
+    uni.stopPullDownRefresh()
+  }
+}
+
+// 汇总回应只关当前周期：两个数字不一致时把本周期数量一并说明，
+// 避免列表的「待回应 N」与详情页「一键送星」实际关闭的条数对不上。
+function pendingLabel(task) {
+  const total = task.pending_responses || 0
+  const period = task.pending_period
+  if (typeof period !== "number" || period === total) return `待回应 ${total}`
+  return `待回应 ${total}（本周期 ${period}）`
 }
 
 async function addTask() {
@@ -95,7 +113,9 @@ function onRitualChange(e) {
 
 function goDetail(id) { uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` }) }
 
-onLoad(() => { loadStudents(); loadTasks() })
+// 学生列表只在进入页面时取一次；任务列表用 onShow，详情页回应后返回才会刷新待回应数。
+onLoad(() => { loadStudents() })
+onShow(loadTasks)
 onPullDownRefresh(loadTasks)
 </script>
 
@@ -129,9 +149,14 @@ onPullDownRefresh(loadTasks)
       </view>
       <button class="submit" @click="addTask">创建任务</button>
     </view>
+    <!-- 加载失败：有旧数据时说明是旧结果，无数据时作为唯一错误态 -->
+    <view v-if="loadError" class="card error-card" @click="loadTasks">
+      <text class="error-title">{{ loadError }}</text>
+      <text class="error-hint">{{ tasks.length ? "显示的是上次拉取的结果，点击重试" : "点击重试" }}</text>
+    </view>
     <view v-for="task in tasks" :key="task.id" class="card" @click="goDetail(task.id)">
       <text class="task-title">{{ task.title }}</text>
-      <text class="meta">{{ task.frequency }} · 待回应 {{ task.pending_responses || 0 }}</text>
+      <text class="meta">{{ task.frequency }} · {{ pendingLabel(task) }}</text>
       <text class="desc">{{ task.description }}</text>
     </view>
   </view>
@@ -148,4 +173,7 @@ onPullDownRefresh(loadTasks)
 .picker { display: flex; align-items: center; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; margin-top: 18rpx; color: $teacher-text; font-size: $typography-font-size-sm; }
 .meta, .desc { display: block; margin-top: 10rpx; color: $teacher-muted; font-size: $typography-font-size-sm; }
+.error-card { background: $color-semantic-danger-bg; }
+.error-title { display: block; color: $color-semantic-danger; font-size: $typography-font-size-md; font-weight: 700; }
+.error-hint { display: block; margin-top: 8rpx; color: $color-text-muted; font-size: $typography-font-size-sm; }
 </style>

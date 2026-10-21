@@ -185,6 +185,9 @@
       "star_scope": "task",
       "star_goal": 20,
       "pending_responses": 3,
+      "pending_period": 3,
+      "period_start": "2026-03-25",
+      "period_end": "2026-03-25",
       "created_at": "2026-03-18T10:00:00Z"
     }
   ],
@@ -194,7 +197,14 @@
 }
 ```
 
-- `pending_responses` 是当前任务下 `response_id=0` 的提交数。
+- `pending_responses` 是当前任务下全部 `response_id=0` 的提交数（含旧周期遗留）。
+- `pending_period` 是**本周期内**待回应的条数，与批量回应接口的筛选条件逐字一致
+  （`task_id=? AND response_id=0 AND date BETWEEN period_start AND period_end`）：
+  每日/每周的班级任务按区间统计；一次性、个体任务以及未知 `frequency` 不支持汇总回应，
+  恒等于 `pending_responses`（这些任务调用 `POST /teacher/tasks/:id/batch-response` 会得到 422，
+  所以该字段不能当作「可以一键关闭」的承诺）。
+- `period_start` / `period_end` 与 `GET /teacher/tasks/:id` 同义（`taskPeriodRange`）。
+  列表页只在两者不等时额外提示「本周期 N」，避免与详情页的关闭条数对不上。
 - `points` 已移除。
 
 ### GET `/teacher/tasks/:id`
@@ -217,9 +227,13 @@
   "star_scope": "task",
   "star_goal": 20,
   "status": 1,
+  "period_start": "2026-03-21",
+  "period_end": "2026-03-21",
   "created_at": "2026-03-18T10:00:00Z"
 }
 ```
+
+- `period_start` / `period_end`：当前汇总回应周期（每日=当天；每周=滚动 7 天；任务结束后取最后一天/最后一周）。前端用它区分「本周期待回应」与旧周期遗留。
 
 ### POST `/teacher/tasks`
 
@@ -337,6 +351,7 @@
 
 - `ritual`：`sticker` / `voice` / `class_star`。
 - 回应后提交 `response_id` 指向该回应。
+- 提交不存在 → 422；提交已被其他回应关闭（并发/重复点击）→ **409**「该提交已被其他回应关闭，请刷新后重试」；行锁等待超时/死锁 → **503**「操作冲突，请稍后重试」。
 
 ### POST `/teacher/tasks/:id/batch-response`
 
@@ -357,8 +372,10 @@
 }
 ```
 
-- 对当前任务全部 `response_id=0` 的提交创建一条 `period` 回应。
-- 部分失败返回 `failed_ids`。
+- 只对**当前周期**内（每日=当天；每周=滚动 7 天；任务已结束时取最后一天/最后一周）仍为 `response_id=0` 的提交创建一条 `period` 回应，并写入 `period_start` / `period_end`；旧周期的待回应提交需逐条回应。
+- 只有**每日/每周的班级任务**（`target_student_id=0` 且 `frequency` 为 `daily|weekly`）支持汇总回应；个体任务、一次性任务及其它频率返回 422 `一次性任务与个体任务需逐条回应`。
+- 当前周期没有待回应提交时返回 **200** 与 `{"id": 0, "responded_count": 0, "failed_ids": []}`（空操作，不创建回应）；创建成功返回 201。
+- 有候选提交但一条都没写成功时返回 500，提交保持待回应；部分失败返回 `failed_ids` 且 `responded_count` 只计成功条数。
 
 ## 说明
 

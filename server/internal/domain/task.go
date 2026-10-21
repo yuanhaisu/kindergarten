@@ -64,10 +64,10 @@ func (ParentTask) TableName() string { return "parent_tasks" }
 // 三个字段必须都带 uniqueIndex 且同名，GORM 才会生成复合索引。
 type TaskCheckIn struct {
 	BaseModel
-	TaskID               uint64     `json:"task_id" gorm:"not null;index;uniqueIndex:idx_task_student_date"`
+	TaskID               uint64     `json:"task_id" gorm:"not null;index;uniqueIndex:idx_task_student_date;index:idx_task_response_date,priority:1"`
 	StudentID            uint64     `json:"student_id" gorm:"not null;index;uniqueIndex:idx_task_student_date"`
 	UserID               uint64     `json:"user_id" gorm:"not null"`
-	Date                 time.Time  `json:"date" gorm:"type:date;not null;uniqueIndex:idx_task_student_date"`
+	Date                 time.Time  `json:"date" gorm:"type:date;not null;uniqueIndex:idx_task_student_date;index:idx_task_response_date,priority:3"`
 	Content              string     `json:"content" gorm:"size:500"`
 	MediaFileID          uint64     `json:"media_file_id" gorm:"not null;default:0"`
 	MediaURL             string     `json:"media_url" gorm:"size:500"`
@@ -76,7 +76,7 @@ type TaskCheckIn struct {
 	PublicApprovedAt     *time.Time `json:"public_approved_at"`
 	PublicApprovedBy     uint64     `json:"public_approved_by" gorm:"not null;default:0"`
 	PublicRevokedAt      *time.Time `json:"public_revoked_at"`
-	ResponseID           uint64     `json:"response_id" gorm:"not null;default:0;index"`
+	ResponseID           uint64     `json:"response_id" gorm:"not null;default:0;index;index:idx_task_response_date,priority:2"`
 
 	Task    *ParentTask `json:"task,omitempty" gorm:"foreignKey:TaskID"`
 	Student *Student    `json:"student,omitempty" gorm:"foreignKey:StudentID"`

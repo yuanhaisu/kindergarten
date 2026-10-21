@@ -20,14 +20,6 @@ func NewDashboardService(dash *repository.DashboardRepo, kg *repository.Kinderga
 	return &DashboardService{dash: dash, kg: kg}
 }
 
-func shanghaiLoc() *time.Location {
-	loc, err := time.LoadLocation("Asia/Shanghai")
-	if err != nil {
-		return time.Local
-	}
-	return loc
-}
-
 func dayRange(loc *time.Location, t time.Time) (start, end time.Time) {
 	y, m, d := t.In(loc).Date()
 	start = time.Date(y, m, d, 0, 0, 0, 0, loc)

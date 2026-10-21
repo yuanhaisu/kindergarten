@@ -63,6 +63,14 @@ func ErrInternal(c *gin.Context, message string) {
 	Err(c, http.StatusInternalServerError, 50000, message)
 }
 
+func ErrConflict(c *gin.Context, message string) {
+	Err(c, http.StatusConflict, 40900, message)
+}
+
+func ErrUnavailable(c *gin.Context, message string) {
+	Err(c, http.StatusServiceUnavailable, 50300, message)
+}
+
 func ErrRateLimited(c *gin.Context) {
 	Err(c, http.StatusTooManyRequests, 42900, "请求过于频繁，请稍后再试")
 }

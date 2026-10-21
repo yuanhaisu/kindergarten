@@ -1480,9 +1480,16 @@ func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPor
 
 // ==================== Tasks ====================
 
+// taskScopeWhere 是家长端任务可见性的唯一实现点：班级任务按当前孩子所在班级，
+// 个体任务只按目标孩子。拆成纯函数便于钉住条件形状（执行结果由集成验证承担）。
+func taskScopeWhere(pc *ParentPortalContext) (string, []any) {
+	return "kindergarten_id = ? AND ((target_student_id = 0 AND class_id = ?) OR target_student_id = ?)",
+		[]any{pc.KindergartenID, pc.CurrentStudent.ClassID, pc.CurrentStudent.ID}
+}
+
 func taskScopeQuery(db *gorm.DB, pc *ParentPortalContext) *gorm.DB {
-	return db.Where("kindergarten_id = ? AND ((target_student_id = 0 AND class_id = ?) OR target_student_id = ?)",
-		pc.KindergartenID, pc.CurrentStudent.ClassID, pc.CurrentStudent.ID)
+	where, args := taskScopeWhere(pc)
+	return db.Where(where, args...)
 }
 
 func taskIsActive(t *domain.ParentTask, now time.Time) bool {

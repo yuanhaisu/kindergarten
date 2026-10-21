@@ -57,15 +57,33 @@ async function loadHome() {
   try {
     await ensureLogin()
     // 任务接口要求 student_id 必填且必须属于当前家长，不再回退到第一个孩子。
-    // 首次登录 / 存储被清空时先取 overview 落盘当前孩子，再并发取 feeds 与任务。
-    const overviewRes = await fetchParentHomeOverview(getCurrentStudentId())
+    // 有缓存孩子时 overview / feeds / 任务三路并发；overview 解析出的孩子变了、
+    // 或早期请求失败，再用新 sid 重取，避免 overview 串行挡住首屏。
+    const cachedSid = getCurrentStudentId()
+    const overviewP = fetchParentHomeOverview(cachedSid)
+    const earlyFeedsP = cachedSid
+      ? fetchHomeFeeds({ page: 1, page_size: 5, student_id: cachedSid }).catch(() => null)
+      : null
+    const earlyTasksP = cachedSid
+      ? fetchTasks({ student_id: cachedSid, page: 1, page_size: 20 }).catch(() => null)
+      : null
+
+    const overviewRes = await overviewP
     overview.value = overviewRes.data || {}
     syncCurrentStudentFromOverview(overviewRes.data)
     const sid = getCurrentStudentId()
-    const [feedsRes, tasksRes] = await Promise.all([
-      fetchHomeFeeds({ page: 1, page_size: 5, student_id: sid || undefined }),
-      fetchTasks({ student_id: sid || undefined, page: 1, page_size: 20 })
-    ])
+
+    let feedsRes = null
+    let tasksRes = null
+    if (cachedSid && sid === cachedSid) {
+      [feedsRes, tasksRes] = await Promise.all([earlyFeedsP, earlyTasksP])
+    }
+    if (!feedsRes || !tasksRes) {
+      [feedsRes, tasksRes] = await Promise.all([
+        fetchHomeFeeds({ page: 1, page_size: 5, student_id: sid || undefined }),
+        fetchTasks({ student_id: sid || undefined, page: 1, page_size: 20 })
+      ])
+    }
     todayTask.value = (tasksRes.data?.list || []).find(t => !t.submitted_current_period) || null
     feeds.value = feedsRes.data?.list || []
     needBindPhone.value = false

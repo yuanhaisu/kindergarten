@@ -62,6 +62,14 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrValidation(c, "接走人不在有效授权范围内")
 	case errors.Is(err, service.ErrTeacherOverrideNameRequired):
 		response.ErrValidation(c, "标记非授权接送时须填写来接者姓名")
+	case errors.Is(err, service.ErrTaskBatchNotAllowed):
+		response.ErrValidation(c, "一次性任务与个体任务需逐条回应")
+	case errors.Is(err, service.ErrTaskBatchAllFailed):
+		response.ErrInternal(c, "批量回应失败，提交仍待回应，请重试")
+	case errors.Is(err, service.ErrTaskRespondConflict):
+		response.ErrConflict(c, "该提交已被其他回应关闭，请刷新后重试")
+	case errors.Is(err, service.ErrTaskBusy):
+		response.ErrUnavailable(c, "操作冲突，请稍后重试")
 	default:
 		response.ErrInternal(c, fallback)
 	}
@@ -1141,6 +1149,11 @@ func (h *Handler) TeacherBatchRespondTask(c *gin.Context) {
 	data, err := h.teacherPortalSvc.BatchRespondTask(c.Request.Context(), tc, taskID, req.Ritual, req.StickerKey, req.Content, req.MediaFileID)
 	if err != nil {
 		teacherPortalErr(c, err, "批量回应任务失败")
+		return
+	}
+	// id=0 表示本周期没有待回应、未创建任何回应：按空操作返回 200，而不是 201 Created。
+	if id, _ := data["id"].(uint64); id == 0 {
+		response.OK(c, data)
 		return
 	}
 	response.Created(c, data)

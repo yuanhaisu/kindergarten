@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
@@ -173,10 +174,7 @@ func teacherPortalTitleLabel(t domain.TeacherTitle) string {
 }
 
 func teacherPortalDay(t time.Time) time.Time {
-	loc, _ := time.LoadLocation("Asia/Shanghai")
-	if loc == nil {
-		loc = time.Local
-	}
+	loc := shanghaiLoc()
 	lt := t.In(loc)
 	return time.Date(lt.Year(), lt.Month(), lt.Day(), 0, 0, 0, 0, loc)
 }
@@ -2870,11 +2868,26 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 	if err := db.Order("created_at DESC").Limit(q.PageSize).Offset(q.Offset()).Find(&rows).Error; err != nil {
 		return nil, err
 	}
+	now := time.Now()
 	list := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
 		var pending int64
 		_ = s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
 			Where("task_id = ? AND response_id = 0", r.ID).Count(&pending).Error
+		// 汇总回应只关当前周期，列表同时给出本周期数量与区间：
+		// 否则「待回应 N」与点进详情后「一键送星」实际关闭的条数对不上。
+		periodStart, periodEnd := taskPeriodRange(&r, now)
+		periodPending := pending
+		if pending > 0 && batchRespondAllowed(&r) {
+			periodPending = 0
+			if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+				Where("task_id = ? AND response_id = 0 AND date >= ? AND date <= ?", r.ID,
+					periodStart.Format("2006-01-02"), periodEnd.Format("2006-01-02")).Count(&periodPending).Error; err != nil {
+				// 计数失败时退回全量：宁可少一个「本周期」提示，也不要把本周期显示成 0。
+				log.L(ctx).Error("count period pending failed", "task", r.ID, "err", err)
+				periodPending = pending
+			}
+		}
 		list = append(list, map[string]any{
 			"id": r.ID, "title": r.Title, "description": r.Description, "intro": r.Intro,
 			"learning_link": r.LearningLink, "target_student_id": r.TargetStudentID,
@@ -2882,7 +2895,10 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 			"end_date": r.EndDate.Format("2006-01-02"), "status": r.Status,
 			"allow_public": r.AllowPublic, "recognition_ritual": r.RecognitionRitual,
 			"star_scope": r.StarScope, "star_goal": r.StarGoal,
-			"pending_responses": pending, "created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+			"pending_responses": pending, "pending_period": periodPending,
+			"period_start": periodStart.Format("2006-01-02"),
+			"period_end":   periodEnd.Format("2006-01-02"),
+			"created_at":   r.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return map[string]any{"list": list, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
@@ -2893,6 +2909,8 @@ func (s *TeacherPortalService) GetTask(ctx context.Context, tc *TeacherPortalCon
 	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).First(&t).Error; err != nil {
 		return nil, ErrTeacherNotFound
 	}
+	// 汇总回应只关当前周期：把区间一起返回，前端才能区分「本周期待回应」与旧周期遗留。
+	periodStart, periodEnd := taskPeriodRange(&t, time.Now())
 	return map[string]any{
 		"id": t.ID, "title": t.Title, "description": t.Description, "intro": t.Intro,
 		"learning_link": t.LearningLink, "target_student_id": t.TargetStudentID,
@@ -2900,7 +2918,9 @@ func (s *TeacherPortalService) GetTask(ctx context.Context, tc *TeacherPortalCon
 		"end_date": t.EndDate.Format("2006-01-02"), "allow_public": t.AllowPublic,
 		"recognition_ritual": t.RecognitionRitual, "star_scope": t.StarScope,
 		"star_goal": t.StarGoal, "status": t.Status,
-		"created_at": t.CreatedAt.UTC().Format(time.RFC3339),
+		"period_start": periodStart.Format("2006-01-02"),
+		"period_end":   periodEnd.Format("2006-01-02"),
+		"created_at":   t.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
 }
 
@@ -2913,10 +2933,13 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 	}
 	start := teacherPortalDay(time.Now())
 	end := start.AddDate(0, 0, 7)
-	if t, err := time.ParseInLocation("2006-01-02", req.StartDate, time.Local); err == nil {
+	// 请求里的日期是业务日期（Asia/Shanghai），必须与 taskPeriodRange 同一时区解析，
+	// 否则服务器时区偏东时会被 teacherPortalDay 换算成前一天。
+	loc := shanghaiLoc()
+	if t, err := time.ParseInLocation("2006-01-02", req.StartDate, loc); err == nil {
 		start = teacherPortalDay(t)
 	}
-	if t, err := time.ParseInLocation("2006-01-02", req.EndDate, time.Local); err == nil {
+	if t, err := time.ParseInLocation("2006-01-02", req.EndDate, loc); err == nil {
 		end = teacherPortalDay(t)
 	}
 	if end.Before(start) {
@@ -2994,8 +3017,9 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && req.StarGoal <= 0 {
 		return ErrTeacherInvalidParams
 	}
-	start, _ := time.ParseInLocation("2006-01-02", req.StartDate, time.Local)
-	end, _ := time.ParseInLocation("2006-01-02", req.EndDate, time.Local)
+	loc := shanghaiLoc()
+	start, _ := time.ParseInLocation("2006-01-02", req.StartDate, loc)
+	end, _ := time.ParseInLocation("2006-01-02", req.EndDate, loc)
 	updates := map[string]any{}
 	if req.Title != cur.Title {
 		updates["title"] = req.Title
@@ -3163,8 +3187,19 @@ func (s *TeacherPortalService) RespondTask(ctx context.Context, tc *TeacherPorta
 	var response domain.TaskResponse
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var checkin domain.TaskCheckIn
-		if err := tx.Where("id = ? AND task_id = ? AND response_id = 0", checkinID, taskID).First(&checkin).Error; err != nil {
-			return ErrTeacherInvalidParams
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND task_id = ? AND response_id = 0", checkinID, taskID).
+			First(&checkin).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// 区分「提交不存在」与「已被别的回应关闭」：后者是可重试冲突（409），
+				// 不能报成参数无效（422）。
+				var exists domain.TaskCheckIn
+				if e2 := tx.Where("id = ? AND task_id = ?", checkinID, taskID).First(&exists).Error; e2 == nil && exists.ResponseID != 0 {
+					return ErrTaskRespondConflict
+				}
+				return ErrTeacherInvalidParams
+			}
+			return err
 		}
 		response = domain.TaskResponse{
 			KindergartenID: tc.KindergartenID, TaskID: taskID, TeacherID: tc.UserID,
@@ -3174,8 +3209,19 @@ func (s *TeacherPortalService) RespondTask(ctx context.Context, tc *TeacherPorta
 		if err := tx.Create(&response).Error; err != nil {
 			return err
 		}
-		return tx.Model(&domain.TaskCheckIn{}).Where("id = ?", checkinID).Update("response_id", response.ID).Error
+		res := tx.Model(&domain.TaskCheckIn{}).Where("id = ? AND response_id = 0", checkinID).Update("response_id", response.ID)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			// 并发下被抢先关闭：回滚，避免留下没有指向任何提交的回应。
+			return ErrTaskRespondConflict
+		}
+		return nil
 	})
+	if isTaskLockConflict(err) {
+		return nil, ErrTaskBusy
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -3193,6 +3239,10 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 	if ritual != domain.TaskRitualSticker && ritual != domain.TaskRitualVoice && ritual != domain.TaskRitualClassStar {
 		return nil, ErrTeacherInvalidParams
 	}
+	// 规格：个体任务与一次性活动 MUST 逐条回应，只有每日/每周班级任务可汇总。
+	if !batchRespondAllowed(&task) {
+		return nil, ErrTaskBatchNotAllowed
+	}
 	var mediaURL string
 	if mediaFileID > 0 {
 		var f domain.File
@@ -3204,35 +3254,58 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 		}
 		mediaURL = f.FileURL
 	}
-	var rows []domain.TaskCheckIn
-	if err := s.db.WithContext(ctx).Where("task_id = ? AND response_id = 0", taskID).Find(&rows).Error; err != nil {
-		return nil, err
-	}
-	if len(rows) == 0 {
-		return map[string]any{"responded_count": 0, "failed_ids": []uint64{}}, nil
-	}
+	// 汇总回应只关闭当前周期内的待回应提交；区间在事务内锁定读取，
+	// 并发/双击时后到的事务拿不到行，不会产生孤儿回应或虚高计数。
+	periodStart, periodEnd := taskPeriodRange(&task, time.Now())
 	var response domain.TaskResponse
 	failed := []uint64{}
+	responded := 0
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var rows []domain.TaskCheckIn
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("task_id = ? AND response_id = 0 AND date >= ? AND date <= ?",
+				taskID, periodStart.Format("2006-01-02"), periodEnd.Format("2006-01-02")).
+			Find(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return errTaskBatchNothingPending
+		}
 		response = domain.TaskResponse{
 			KindergartenID: tc.KindergartenID, TaskID: taskID, TeacherID: tc.UserID,
 			Ritual: ritual, StickerKey: stickerKey, Content: content,
 			MediaFileID: mediaFileID, MediaURL: mediaURL, ResponseType: domain.TaskResponsePeriod,
+			PeriodStart: &periodStart, PeriodEnd: &periodEnd,
 		}
 		if err := tx.Create(&response).Error; err != nil {
 			return err
 		}
 		for _, r := range rows {
-			if err := tx.Model(&domain.TaskCheckIn{}).Where("id = ? AND response_id = 0", r.ID).Update("response_id", response.ID).Error; err != nil {
+			res := tx.Model(&domain.TaskCheckIn{}).Where("id = ? AND response_id = 0", r.ID).Update("response_id", response.ID)
+			if res.Error != nil || res.RowsAffected == 0 {
+				// 0 行更新说明已被其他事务关闭：计入失败项，不能静默算成功。
 				failed = append(failed, r.ID)
+				continue
 			}
+			responded++
+		}
+		if responded == 0 {
+			// 有候选却一条都没写成功：回滚，不留孤儿回应，并按失败上报（不能伪装成「没有待回应」）。
+			return ErrTaskBatchAllFailed
 		}
 		return nil
 	})
+	if errors.Is(err, errTaskBatchNothingPending) {
+		// 读取阶段就没有待回应行：这是真正的空操作。
+		return map[string]any{"id": uint64(0), "responded_count": 0, "failed_ids": []uint64{}}, nil
+	}
+	if isTaskLockConflict(err) {
+		return nil, ErrTaskBusy
+	}
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": response.ID, "responded_count": len(rows) - len(failed), "failed_ids": failed}, nil
+	return map[string]any{"id": response.ID, "responded_count": responded, "failed_ids": failed}, nil
 }
 
 // ListTeacherMessages 聚合老师端消息列表（通知发布记录 + 请假审批 + 系统消息）。

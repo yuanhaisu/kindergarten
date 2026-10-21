@@ -5,7 +5,7 @@ import { getCurrentStudentId } from "@/utils/currentStudent"
 import { ensureLogin } from "@/utils/login"
 import { getToken } from "@/utils/auth"
 import config from "@/config/env"
-import { fetchTaskDetail, checkinTask, fetchCheckinHistory, refreshCurrentStudentId } from "@/api/parent-task"
+import { fetchTaskDetail, checkinTask, fetchCheckinHistory, withStudentScope } from "@/api/parent-task"
 
 const detail = ref({})
 const history = ref([])
@@ -15,39 +15,23 @@ const mediaName = ref("")
 const loading = ref(false)
 const loadError = ref("")
 
-async function loadTask(id, sid) {
-  const [d, h] = await Promise.all([
-    fetchTaskDetail(id, { student_id: sid }),
-    fetchCheckinHistory(id, { student_id: sid }),
-  ])
-  detail.value = d.data || {}
-  history.value = h.data?.list || []
-}
-
 async function loadData(id) {
   loading.value = true
   loadError.value = ""
   try {
     await ensureLogin()
-    // 任务接口要求 student_id 必填；首次登录时先用 overview 落盘当前孩子。
-    let sid = getCurrentStudentId()
-    if (!sid) sid = await refreshCurrentStudentId()
-    if (!sid) {
+    // 当前孩子解析与 403 重试统一走 withStudentScope（与列表页同一条路径）。
+    const scoped = await withStudentScope((sid) => Promise.all([
+      fetchTaskDetail(id, { student_id: sid }),
+      fetchCheckinHistory(id, { student_id: sid }),
+    ]))
+    if (!scoped) {
       loadError.value = "未绑定孩子信息"
       return
     }
-    try {
-      await loadTask(id, sid)
-    } catch (err) {
-      // 本地缓存的孩子已被解绑/移走：刷新后重试一次。
-      if (err?.code !== 40300) throw err
-      const refreshed = await refreshCurrentStudentId()
-      if (!refreshed) {
-        loadError.value = err?.message || "无权查看该任务"
-        return
-      }
-      await loadTask(id, refreshed)
-    }
+    const [d, h] = scoped.result
+    detail.value = d.data || {}
+    history.value = h.data?.list || []
   } catch (err) {
     detail.value = {}
     history.value = []

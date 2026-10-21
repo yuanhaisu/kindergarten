@@ -691,7 +691,7 @@
 | TC-NEW-TSK-0108 | 待回应只在老师端可见 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0109 | 单条回应闭环 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0110 | 周期汇总回应 | P0 | FUNC | ✅ |
-| TC-NEW-TSK-0111 | 批量回应部分失败可见 | P1 | FUNC | ✅ / ⚠️ |
+| TC-NEW-TSK-0111 | 批量回应部分失败可见 | P1 | FUNC | ⚠️ 并发路径已验证，写入失败路径未构造 |
 | TC-NEW-TSK-0112 | 家长一键反馈 | P1 | FUNC | ⏸ |
 | TC-NEW-TSK-0113 | 反馈覆盖率与正向率 | P1 | FUNC | ⏸ |
 | TC-NEW-TSK-0114 | 贴纸回应 | P0 | FUNC | ✅ |
@@ -732,16 +732,19 @@
 
 环境：本机 Go 后端 `:8080` + 开发库（kindergarten 4）；老师 61（class 6）、老师 65（class 4）、家长 11（孩子 4）、家长 20（孩子 1）、家长 61（孩子 27/32）、家长 12（孩子 21，异班）。证据为 curl 实测，非仅 MCP 导航。
 
-**实测通过（A）**：0101–0111、0114–0116、0119、0122–0123、0129–0133、0142–0143、0145–0146。
+**实测通过（A）**：0101–0110、0114–0116、0119、0122–0123、0129–0133、0142–0143、0145–0146。
 
-其中 0111 的并发竞争路径已于同日补测：10 个并发提交只成功 1 次（201×1 / 422×9，无 5xx），打卡历史仅 1 条，列表 `submitted_current_period=true`、`checkin_count=1`。脚本 `_verify/task_concurrency_0111.mjs`。
+**并发互斥补测（对应 0107 频率约束 + `task_check_ins` 唯一键，不是 0111）**：同一任务 / 同一孩子 / 同一天 10 个并发提交，只成功 1 次（201×1 / 422×9，无 5xx），打卡历史仅 1 条，列表 `submitted_current_period=true`、`checkin_count=1`。脚本为本机一次性脚本（未入库，文件名沿用当时误记的任务号）。
+
+**0111「批量回应部分失败可见」现状（2026-10-21 修复后）**：并发竞争路径已实测——两次并发「一键送星（本周期）」，赢家 `responded_count=2`，输家返回 `responded_count=0 / id=0` 且**不留孤儿回应**，DB 中只有一条 `task_responses`（`period`，`period_start=period_end=当天`）。写入失败（DB 报错）路径未构造；该路径现在返回 500（提交保持待回应），`failed_ids` 只在部分成功时可见。
 
 **执行中发现并修复的缺陷**：
 1. `parent_portal_service.go` 更新频率状态用了不存在的列 `last_checkin_date`（实际列 `last_check_in_date`），任何打卡都 500 → 已修，并同步修正 `docs/migrations/2026-10-21-task-checkin-state-nullable.sql` 与 handoff。
 2. 家长端任务接口在 `student_id` 不属于该家长时静默回退到第一个孩子 → 新增 `parentTaskCtx`：任务链路 `student_id` 必填且必须归属当前家长（列表/详情/提交/历史统一 422/403），并同步前端首页与任务页先落盘当前孩子。
 3. `CheckinHistory` 只按 `task_id + student_id` 查询，未套任务可见范围：请求别的孩子的个体任务历史会返回 200 空列表 → 已改为先过 `taskScopeQuery`，跨家庭直接访问返回 404。
-4. 本地缓存的孩子被解绑后，任务页会持续 403 且详情页仍渲染提交入口 → 任务列表/详情在 403 时刷新 overview 并重试一次；详情增加错误态，无任务数据时不渲染提交入口。
+4. 本地缓存的孩子被解绑后，任务页一次 403 后停住（无重试、无错误态），详情页仍渲染提交入口 → 任务列表/详情在 403 时刷新 overview 并重试一次（现统一走 `withStudentScope`）；详情增加错误态，无任务数据时不渲染提交入口。
 5. 任务列表用 `onLoad` 拉数据，从详情页提交后返回不重跑，卡片一直停在「待完成 / 0+N次」直到手动下拉刷新 → 改为 `onShow`（`parent/src/pages/tasks/index.vue`），返回即刷新。
+6. 老师端任务列表同样用 `onLoad`，详情页回应后返回「待回应 N」不刷新；别处创建的任务也不会出现（本页 `addTask` 创建后会主动重拉，不受影响）→ 改为 `onLoad(loadStudents)` + `onShow(loadTasks)`（`teacher/src/pages/tasks/index.vue`），学生列表仍只取一次。
 
 **未执行/未实现（⏸）**：
 - 0112/0113 家长反馈、0120/0121 公开申请审核与撤回、0124–0125 通知聚合、0126 小程序码、0134 再次申请、0135 补充回应、0136 给孩子看、0140 读标记（B 切片）
@@ -759,8 +762,42 @@
 
 工具备注：`wechat_automator` 的 `page_data` / `element_info` / `screenshot` 与 `wechat_navigate` 在本机 daemon 上持续 90–120s 超时（`system_info`、`evaluate` 正常），改用 `_verify/wx_cdp.mjs`（CDP `Runtime.evaluate` + `Input.dispatchMouseEvent`）读取渲染文案并派发真实点击。派发触摸事件不触发 tap，鼠标事件才有效。
 
+**UI 交互验证（2026-10-21，老师端，微信开发者工具）**：`teacher/dist/dev/mp-weixin`（appid `wxbfb5f81a87f73a61`，登录老师 11 王小明妈妈 / 小一班），同样用 CDP 真实鼠标事件驱动：
+
+1. 工作台点「亲子任务」→ 列表渲染创建表单（范围/频率/日期/回应仪式/星星罐/公开开关）与任务卡片，待回应数与服务端一致（1 / 2 / 0）。
+2. 进入任务详情 → 编辑区、待回应/已回应分栏、贴纸（star/heart/thumb）与录音入口、幼儿姓名与家长提交内容均正常渲染。
+3. 点贴纸 `star` → 待回应清空；服务端 `task_responses` 生成 `single` / `sticker` / `star`（id 9）。
+4. 当时的「一键全部送星」→ 两个家庭的提交同时转为已回应；服务端两条提交共享同一 `response_id=10`（`response_type=period`）。
+   **注意**：该次点击发生在**一次性任务**（task 34）上，且当时尚未写入 `period_start/period_end`（两列为 NULL）。此后的修复已要求「只有每日/每周的班级任务」才显示汇总入口，once/个体任务会被拒绝（422），因此这条证据只证明「按钮有响应」，不证明「本周期」语义。周期语义的现行证据是 API 级：daily 任务 36 批量后 `task_responses.id=11`，`period_start=period_end=2026-10-21`，两条提交共享该回应。
+5. 返回列表：修复前仍显示旧计数且新任务不出现（缺陷 6），改 `onShow` 后计数与列表即时正确。
+
 **仍未覆盖**：
 - 照片提交的选图流程（`wx.chooseMedia` 会拉起系统文件对话框，未自动化）；上传口径由 API 层用例覆盖。
 - 真机（非模拟器）渲染差异。
-- 老师端小程序的 UI 交互（本轮只验证家长端；老师端接口已覆盖）。
-- 数据库旧列已清理：`docs/migrations/2026-10-21-drop-task-points-columns.sql` 已执行，`parent_tasks.points`、`task_check_ins.points`、`task_check_ins.image_url` 已不存在；执行前后行数不变（17 / 10）。
+- 老师端创建表单的逐项填写与提交（字段已渲染并确认，数据由 API 层创建）、语音回应（需录音设备）、公开申请/审核链路（B 切片未实现）。
+- 数据库旧列已清理：`docs/migrations/2026-10-21-drop-task-points-columns.sql` 已执行，`parent_tasks.points`、`task_check_ins.points`、`task_check_ins.image_url` 已不存在；执行前后行数不变（17 / 10，2026-10-21 迁移当天快照，非当前行数）。
+
+**批量回应并发与周期边界（2026-10-21 已修复并实测）**：
+
+- `BatchRespondTask` / `RespondTask` 改为事务内 `SELECT ... FOR UPDATE` 锁定待回应行，并检查 `RowsAffected`；一条都没抢到时回滚，不产生孤儿 `task_responses`。
+- 周期汇总按频率取区间（每日=当天、每周=滚动 7 天，锚点取 `min(今天, 任务结束日)`，已结束任务仍能关闭最后一个周期），只关闭区间内提交，并写入 `PeriodStart` / `PeriodEnd`。
+- **一次性任务与个体任务拒绝汇总回应**（422「一次性任务与个体任务需逐条回应」），前端对应隐藏批量按钮并给出提示。
+- 全部写入失败返回 500（提交保持待回应），不再伪装成「没有待回应」；只有读取阶段无候选时才返回 **200** + 空操作 `id=0`。
+- `task_check_ins` 增加 `(task_id, response_id, date)` 复合索引（`AutoMigrate` 已建，`docs/migrations/2026-10-21-task-checkin-response-date-index.sql` 供已有库），避免 `FOR UPDATE` 锁住整个任务的提交行。
+- 任务详情返回 `period_start` / `period_end`；老师端把区间外的待回应标注为「旧周期 · 请逐条回应」，避免「计数不减 / 按钮点了 no-op」的死循环感。
+- 任务**列表**同样返回 `pending_period` / `period_start` / `period_end`：`pending_responses` 是全量（含旧周期），`pending_period` 是**本周期内**的待回应条数（与批量接口的 WHERE 子句逐字相同，`task_id=? AND response_id=0 AND date BETWEEN`）。两者不等时列表显示「待回应 N（本周期 M）」。对不支持汇总回应的任务（一次性、个体、以及 `frequency` 脏数据）`pending_period` 恒等于 `pending_responses`——这些任务调用批量接口会 422，所以列表**不能**把它读成「可以一键关闭」。
+- **API 实测（2026-10-21）**：
+  - 等值路径：daily / once 各建一条当日任务 + 今日提交 → `pending=1 period=1`，daily 区间 `period_start=period_end=当天`。
+  - **错位路径**：daily 任务（task 53，起点 10 天前、终点当天）+ 今日真实提交 + 一条 10 天前的探针提交（一次性 Go 程序直插，用后已删除）→ 列表 `pending=2 / period=1`；批量 `closed=1`（只关本周期）；之后 `pending=1 / period=0`。脚本 `_verify/pending_period_mismatch.mjs`（未入库）。
+  - 上述任务（49/50/51/52/53）验证后都已通过 `DELETE /teacher/tasks/:id` **级联删除**（软删除），按 id 复查查不到，证据以脚本输出为准。
+- 老师端「一键送星」加 `batchBusy` 门闩：请求进行中（**含随后的列表刷新**，`await load()` 后才解锁）的重复点击被拦住，不会紧跟一条 `responded_count=0` 的提示被误读成失败；0 条文案改为「本周期已无待回应提交」。
+  **证据等级**：仅代码 + `build:mp-weixin` / `dev:mp-weixin` 构建通过，**未在微信模拟器里复验**（本轮 UI 未驱动）；上一轮的模拟器证据早于这次改动。
+- 业务日期与进程时区：`CreateTask` / `UpdateTask` 原用 `time.Local` 解析 `start_date` / `end_date`，与 `taskPeriodRange` 不同源；现统一用 `shanghaiLoc()`。但仅改解析还不够——MySQL DSN 是 `loc=Local`，驱动在写 DATE 列前执行 `t.In(time.Local)`，服务器 `TZ=UTC` 时「2026-10-21 00:00 +08」会被格式化成前一天。因此 `timezone.go` 的 `init()` 把 `time.Local` 对齐到 `Asia/Shanghai`，让解析、计算、落库共用同一墙钟；`teacherPortalDay` 也改用 `shanghaiLoc()`。`_ "time/tzdata"` 随两者移入该文件。
+  **证据等级**：`TestProcessTimezoneAlignedWithBusiness` 断言 `time.Local` 已指向 `Asia/Shanghai` 且业务日期经 `t.In(Local)` 后日历日不变；**但 `TZ=UTC` 的写库场景无法在本机复现**——实测 Windows 上 Go 忽略 `TZ` 环境变量（`time.Local` 始终 +08），所以这条只证明了初始化生效，没证明跨时区落库。
+- 实测：并发批量 → 赢家 `responded_count=2`、输家 `0`，DB 仅一条 `period` 回应；并发单条 → 一次 **201**、一次 **409**「该提交已被其他回应关闭，请刷新后重试」，无重复回应。
+- 周期边界实测用的是**直插库的探针行**（task 36，date=2026-10-11，非真实家长提交）：批量后该行保持 `response_id=0`；随后单条并发用例把它作为目标关闭为 `response_id=12`，所以现在查库看到的是 12，不是回归。
+
+**代码审查新增的已知缺口（2026-10-21，未修复）**：
+
+- `parentTaskCtx` 把 `ResolveContext` 的任何错误都映射成 403，数据库故障会伪装成「未绑定孩子信息」。
+- 打卡成功后详情页整页重载；重载失败会把已经提交成功的页面打成错误态。

@@ -2,11 +2,11 @@
 import { computed, ref } from "vue"
 import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
-import { getCurrentStudentId } from "@/utils/currentStudent"
-import { fetchTasks, refreshCurrentStudentId } from "@/api/parent-task"
+import { fetchTasks, withStudentScope } from "@/api/parent-task"
 
 const tasks = ref([])
 const loading = ref(false)
+const loadError = ref("")
 const activeTab = ref("进行中")
 
 const tabs = ["进行中", "已打卡", "全部"]
@@ -53,33 +53,22 @@ function goCheckIn(id) { uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
 function goBadges() { uni.navigateTo({ url: "/pages/points/index" }) }
 
 async function loadData() {
-  loading.value = true
+  // 已有数据时静默刷新：从详情页返回会走 onShow，整块列表闪成「加载中...」体验很差。
+  if (tasks.value.length === 0) loading.value = true
+  loadError.value = ""
   try {
     await ensureLogin()
-    // 任务接口要求 student_id 必填；首次登录时先用 overview 落盘当前孩子。
-    let sid = getCurrentStudentId()
-    if (!sid) sid = await refreshCurrentStudentId()
-    if (!sid) {
+    // 当前孩子解析与 403 重试统一走 withStudentScope（与详情页同一条路径）。
+    const scoped = await withStudentScope((sid) => fetchTasks({ student_id: sid }))
+    if (!scoped) {
       tasks.value = []
+      loadError.value = "未绑定孩子信息"
       return
     }
-    try {
-      const res = await fetchTasks({ student_id: sid })
-      tasks.value = res.data?.list || []
-    } catch (err) {
-      // 本地缓存的孩子已被解绑/移走：刷新后重试一次。
-      if (err?.code !== 40300) throw err
-      const refreshed = await refreshCurrentStudentId()
-      if (!refreshed) {
-        tasks.value = []
-        return
-      }
-      const res = await fetchTasks({ student_id: refreshed })
-      tasks.value = res.data?.list || []
-    }
+    tasks.value = scoped.result?.data?.list || []
   } catch (err) {
-    tasks.value = []
-    uni.showToast({ title: "加载任务失败", icon: "none" })
+    // 不清空已有列表：清空会把「刷新失败」伪装成「没有任务」。
+    loadError.value = err?.message || "加载任务失败"
   } finally {
     loading.value = false
     uni.stopPullDownRefresh()
@@ -111,10 +100,19 @@ onPullDownRefresh(loadData)
       <view v-if="loading" class="state-wrap">
         <text class="state-text">加载中...</text>
       </view>
+      <!-- 错误态与空态分开：列表为空时加载失败不能显示成「暂无任务」 -->
+      <view v-else-if="loadError && formattedTasks.length === 0" class="state-wrap">
+        <text class="state-text">{{ loadError }}</text>
+        <view class="state-action" @click="loadData">重试</view>
+      </view>
       <view v-else-if="formattedTasks.length === 0" class="state-wrap">
         <text class="state-text">暂无任务</text>
       </view>
       <view v-else class="task-list">
+        <!-- 已有数据但本次刷新失败：保留旧列表并提示，避免看起来像最新结果 -->
+        <view v-if="loadError" class="list-error" @click="loadData">
+          <text>{{ loadError }}，点击重试</text>
+        </view>
         <view v-for="item in filteredTasks" :key="item.id" class="task-card">
           <!-- 任务头部 -->
           <view class="tc-head">
@@ -218,11 +216,27 @@ $purple-100: #EDE9FE;
 // ===== 状态 =====
 .state-wrap {
   display: flex;
+  flex-direction: column;
+  gap: 24rpx;
   align-items: center;
   justify-content: center;
   padding: 200rpx 0;
 }
 .state-text { font-size: $typography-font-size-md; color: $color-text-hint; }
+.state-action {
+  padding: 12rpx 40rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-sm;
+}
+.list-error {
+  padding: 20rpx 24rpx;
+  border-radius: $border-radius-md;
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-sm;
+}
 
 // ===== 任务卡片 =====
 .task-list {

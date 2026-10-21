@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { fetchTeacherTask, fetchTeacherTaskCheckins, respondTeacherTask, batchRespondTeacherTask, updateTeacherTask } from "@/api/teacher-tasks"
 import config from "@/config/env"
@@ -8,8 +8,23 @@ import { getToken } from "@/utils/auth"
 const taskId = ref(0)
 const rows = ref([])
 const task = ref({})
+const taskError = ref("")
+// 与后端 batchRespondAllowed 对齐：只有每日/每周的班级任务提供汇总入口。
+// 任务详情没加载成功时（task.id 为空）不下结论，避免把加载失败误报成「需逐条回应」。
+const canBatch = computed(() =>
+  !!task.value.id &&
+  task.value.target_student_id === 0 &&
+  ["daily", "weekly"].includes(task.value.frequency)
+)
+// 旧周期（不在 period_start..period_end 内）的待回应只能逐条处理。
+function isCurrentPeriod(row) {
+  if (!task.value.period_start || !task.value.period_end || !row.date) return true
+  return row.date >= task.value.period_start && row.date <= task.value.period_end
+}
 const edit = ref({ title: "", description: "", learning_link: "", allow_public: false })
 const loading = ref(false)
+// 防连点：第二次请求必然拿到 0 条，紧跟在「已回应 N 条」后面会被读成失败。
+const batchBusy = ref(false)
 const status = ref("pending")
 const stickers = ["star", "heart", "thumb"]
 const recorder = uni.getRecorderManager()
@@ -70,6 +85,7 @@ async function loadTask() {
   try {
     const res = await fetchTeacherTask(taskId.value)
     task.value = res.data || {}
+    taskError.value = ""
     edit.value = {
       title: task.value.title || "",
       description: task.value.description || "",
@@ -77,7 +93,8 @@ async function loadTask() {
       allow_public: !!task.value.allow_public
     }
   } catch (e) {
-    // 任务详情只影响编辑区，不阻塞提交列表
+    // 任务详情只影响编辑区与汇总入口，不阻塞提交列表；但要显式说明加载失败。
+    taskError.value = e?.message || "任务详情加载失败"
   }
 }
 
@@ -108,11 +125,25 @@ async function saveEdit() {
   }
 }
 
+// 只刷新周期字段，不覆盖编辑区里未保存的输入。
+async function refreshPeriod() {
+  try {
+    const res = await fetchTeacherTask(taskId.value)
+    if (res.data?.period_start) task.value.period_start = res.data.period_start
+    if (res.data?.period_end) task.value.period_end = res.data.period_end
+  } catch (e) {
+    // 周期刷新失败不影响提交列表；旧区间最多导致「本周期」判断短暂陈旧
+  }
+}
+
 async function load() {
   if (!taskId.value) return
   loading.value = true
   try {
-    const res = await fetchTeacherTaskCheckins(taskId.value, { status: status.value })
+    const [res] = await Promise.all([
+      fetchTeacherTaskCheckins(taskId.value, { status: status.value }),
+      refreshPeriod()
+    ])
     rows.value = res.data?.list || []
   } catch (e) {
     uni.showToast({ title: "加载提交失败", icon: "none" })
@@ -132,12 +163,27 @@ async function respond(row, sticker) {
 }
 
 async function batchRespond() {
+  if (batchBusy.value) return
+  batchBusy.value = true
   try {
     const res = await batchRespondTeacherTask(taskId.value, { ritual: "sticker", sticker_key: "star" })
-    uni.showToast({ title: `已回应 ${res.data?.responded_count || 0} 条`, icon: "success" })
-    load()
+    // 只关闭「本周期」的待回应提交；并发/重复点击落败时 count 为 0，不能报成「已回应 0 条」。
+    const count = res.data?.responded_count || 0
+    const failed = res.data?.failed_ids?.length || 0
+    if (count === 0) {
+      uni.showToast({ title: "本周期已无待回应提交", icon: "none" })
+    } else if (failed > 0) {
+      uni.showToast({ title: `已回应 ${count} 条，${failed} 条失败`, icon: "none" })
+    } else {
+      uni.showToast({ title: `已回应 ${count} 条`, icon: "success" })
+    }
+    // 必须等刷新落地再解锁：load() 不 await 的话，finally 会立刻放开门闩，
+    // 列表还在飞行的这段时间里按钮仍可点，第二次点击会真的发请求并弹「已无待回应」。
+    await load()
   } catch (e) {
     uni.showToast({ title: e?.message || "批量回应失败", icon: "none" })
+  } finally {
+    batchBusy.value = false
   }
 }
 
@@ -155,6 +201,10 @@ onLoad((opts) => {
 
 <template>
   <view class="page">
+    <view v-if="taskError" class="card error-card" @click="loadTask">
+      <text class="error-title">{{ taskError }}</text>
+      <text class="error-hint">点击重试；任务详情未加载时无法判断批量回应范围</text>
+    </view>
     <view v-if="task.id" class="card edit-card">
       <text class="name">编辑任务</text>
       <input v-model="edit.title" class="input" placeholder="任务标题" />
@@ -170,12 +220,16 @@ onLoad((opts) => {
       <view class="tab" :class="{ active: status === 'pending' }" @click="switchStatus('pending')">待回应</view>
       <view class="tab" :class="{ active: status === 'responded' }" @click="switchStatus('responded')">已回应</view>
     </view>
-    <view v-if="status === 'pending' && rows.length" class="batch" @click="batchRespond">一键全部送星</view>
+    <!-- 与后端一致：汇总回应只关闭当前周期，旧周期的待回应走单条回应 -->
+    <view v-if="status === 'pending' && rows.length && canBatch" class="batch" :class="{ busy: batchBusy }" @click="batchRespond">一键送星（本周期）</view>
+    <!-- 任务详情没加载成功时不作结论，避免把加载失败误报成「需逐条回应」 -->
+    <view v-if="status === 'pending' && rows.length && task.id && !canBatch" class="batch-hint">一次性任务与个体任务需逐条回应</view>
     <view v-if="loading" class="state">加载中...</view>
     <view v-else-if="!rows.length" class="state">暂无提交</view>
     <view v-for="row in rows" :key="row.id" class="card">
       <text class="name">{{ row.student?.name || `学生 ${row.student_id}` }}</text>
       <text class="content">{{ row.content || "（一键完成）" }}</text>
+      <text v-if="status === 'pending' && !isCurrentPeriod(row)" class="old-period">旧周期 · 请逐条回应</text>
       <text v-if="row.media_url" class="media">已附照片/语音</text>
       <view v-if="status === 'pending'" class="actions">
         <view v-for="s in stickers" :key="s" class="sticker" @click="respond(row, s)">{{ s }}</view>
@@ -197,7 +251,13 @@ onLoad((opts) => {
 .tab { flex: 1; text-align: center; padding: $spacing-md 0; border-radius: $border-radius-lg; background: $color-bg-card; color: $color-text-muted; }
 .tab.active { background: $color-brand-primary; color: #fff; }
 .batch { margin-bottom: $spacing-lg; padding: $spacing-md; text-align: center; border-radius: $border-radius-lg; background: $color-semantic-success-bg; color: $color-semantic-success; }
+.batch.busy { opacity: 0.6; }
 .state { padding: 120rpx 0; text-align: center; color: $color-text-hint; }
+.batch-hint { margin-bottom: $spacing-lg; padding: $spacing-md; text-align: center; border-radius: $border-radius-lg; background: $color-bg-page; color: $color-text-muted; font-size: $typography-font-size-sm; }
+.old-period { display: block; margin-top: $spacing-xs; color: $color-semantic-warning; font-size: $typography-font-size-sm; }
+.error-card { background: $color-semantic-danger-bg; }
+.error-title { display: block; color: $color-semantic-danger; font-size: $typography-font-size-md; font-weight: 700; }
+.error-hint { display: block; margin-top: 8rpx; color: $color-text-muted; font-size: $typography-font-size-sm; }
 .card { margin-bottom: $spacing-md; padding: $spacing-lg; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: $shadow-sm; }
 .name { display: block; font-size: $typography-font-size-md; font-weight: 700; color: $color-text-primary; }
 .content { display: block; margin-top: $spacing-xs; font-size: $typography-font-size-base; color: $color-text-body; }

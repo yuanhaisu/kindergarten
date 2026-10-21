@@ -89,7 +89,7 @@ A 切片只做**闭环成立所需的最小集合**：班级/个体任务、提�
 
 `server/internal/service/teacher_portal_service.go`：
 
-- `ListTasks`：返回 `pending_responses`。
+- `ListTasks`：返回 `pending_responses`（全量待回应）与 `pending_period`（汇总回应实际能关闭的本周期条数）、`period_start` / `period_end`；两者不等时列表显示「待回应 N（本周期 M）」。
 - `GetTask`：任务详情，供编辑页使用。
 - `CreateTask`：校验标题、学习关联、目标孩子、频率、日期、星星罐；个体任务强制 `allow_public=false`。
 - `UpdateTask`：有提交后只允许改标题/说明/学习关联/公开开关；改个体或关公开时撤回公开。
@@ -97,7 +97,9 @@ A 切片只做**闭环成立所需的最小集合**：班级/个体任务、提�
 - `TaskStats`：提交数 / 已回应 / 待回应。
 - `TaskCheckins`：`pending` / `responded`。
 - `RespondTask`：只回应 `response_id=0` 的提交。
-- `BatchRespondTask`：一次回应覆盖全部待回应，返回 `failed_ids`。
+- `BatchRespondTask`：只覆盖**当前周期**（每日=当天；每周=滚动 7 天；任务结束后取最后一天/最后一周）的待回应提交，仅限每日/每周的班级任务；返回 `failed_ids`，全失败返回 500，无候选返回 200 + `id=0` 空操作。
+- `GetTask` 返回 `period_start` / `period_end`；老师端把区间外的待回应标注为「旧周期 · 请逐条回应」。
+- `task_check_ins` 新增 `(task_id, response_id, date)` 复合索引，缩小 `FOR UPDATE` 的锁范围。
 
 ### 4.4 共享规则
 
@@ -188,26 +190,28 @@ openspec/changes/2026-10-20-redesign-parent-task-loop/
 | `go test ./internal/service/ -run 'TestValidTaskFrequency|TestSameTaskDay'` | ✅ 通过 |
 | `go test ./internal/service/`（全包） | ✅ 通过（约 280s） |
 | `parent npm run build:mp-weixin` | ✅ 通过（含本轮 student_id 改动） |
-| `teacher npm run build:mp-weixin` | 此前通过；本轮未改 teacher |
+| `teacher npm run build:mp-weixin` | ✅ 2026-10-21 通过（含 onShow 修复） |
 | nullable 列 | ✅ `last_check_in_date` 存在且 `Null=YES`，无需迁移 |
 | 核心链路 | ✅ API 级 14 步已跑（见下） |
-| 并发竞争（0111） | ✅ 2026-10-21 补测：10 并发提交只成功 1 次（201×1 / 422×9，无 5xx），历史仅 1 条 |
-| UI 交互（家长端） | ✅ 微信开发者工具 + 真实点击（CDP 鼠标事件）：首页卡片→详情→一键提交→返回刷新→文字提交→老师回应渲染；照片选图、真机、老师端 UI 仍未覆盖 |
-| TC 0101–0146 | A 切片 ✅；B/C ⏸；明细见 `docs/tests/TEST_CATALOG.md`「A 切片执行记录」 |
+| 提交并发（0107 频率约束） | ✅ 2026-10-21 补测：10 并发提交只成功 1 次（201×1 / 422×9，无 5xx），历史仅 1 条。**不是 0111** |
+| UI 交互（家长端） | ✅ 微信开发者工具 + 真实点击（CDP 鼠标事件）：首页卡片→详情→一键提交→返回刷新→文字提交→老师回应渲染 |
+| UI 交互（老师端） | ✅ 列表/详情渲染、单条贴纸回应、一键送星（本周期，两条提交共享 response）、返回刷新；创建表单实际提交与语音回应未覆盖 |
+| TC 0101–0146 | A 切片 ✅，但 **0111 仅并发路径已验证（⚠️）**；B/C ⏸；明细见 `docs/tests/TEST_CATALOG.md`「A 切片执行记录」 |
 
-本轮实测发现并修复 4 个缺陷：
+本轮实测发现并修复 6 个缺陷：
 
 1. `CheckinTask` 更新了不存在的列 `last_checkin_date`（实际列 `last_check_in_date`），所有打卡 500。已修，并同步修正迁移 SQL、OpenSpec 与本 handoff。
 2. 家长端任务接口在 `student_id` 不属于该家长时静默回退到第一个孩子，违反规格「多孩家庭按当前孩子隔离」。已新增 `parentTaskCtx`：列表/详情/提交/历史统一要求 `student_id` 且必须归属当前家长；前端首页与任务页先用 overview 落盘当前孩子再取任务。
 3. `CheckinHistory` 未套任务可见范围：请求别的孩子的个体任务历史返回 200 空列表。已改为先过 `taskScopeQuery`，跨家庭直接访问返回 404。
 4. 本地缓存的孩子被解绑后任务页持续 403、详情页仍渲染提交入口。已改为 403 时刷新 overview 重试一次；详情增加错误态，无 `detail.id` 时不渲染提交入口。
 5. 任务列表用 `onLoad` 取数，从详情页提交后返回不刷新，卡片停在「待完成 / 0N次」。已改为 `onShow`，返回即刷新（H5 点击验证：提交后返回，卡片立刻转为已提交口径）。
+6. 老师端任务列表同样 `onLoad`，详情页回应后返回「待回应 N」不刷新；别处创建的任务也不会出现（本页 `addTask` 创建后会主动重拉，不受影响）。已改为 `onLoad(loadStudents)` + `onShow(loadTasks)`，并在微信开发者工具复验。
 
 核心链路证据（curl，2026-10-21）：班级任务 11、个体任务 12；家长 11（孩子 4）与 20（孩子 1，同班）可见性；家长 12（孩子 21，异班）不可见；一键/文字/照片提交；每日/每周/一次性重复拒绝；未开始/已结束拒绝；老师单条贴纸、语音、班级星星回应；批量回应一次覆盖 2 个家庭（`responded_count=2`，同一 `response_id`）；删除级联（任务/提交/回应软删、状态硬删）；`point_transactions` 无新增。
 
 UI 验证于 2026-10-21 在微信开发者工具完成（详见 TEST_CATALOG「UI 交互验证」）。工具备注：本机 `wechat_automator` 的 `page_data`/`element_info`/`screenshot` 与 `wechat_navigate` 持续 90–120s 超时，`system_info`/`evaluate` 正常；改用 `_verify/wx_cdp.mjs`（CDP `Runtime.evaluate` + `Input.dispatchMouseEvent`）读渲染文案并派发真实点击。触摸事件不触发 tap，鼠标事件有效。
 
-仍未覆盖：照片选图（`wx.chooseMedia` 拉系统对话框）、真机渲染、老师端小程序 UI。
+仍未覆盖：照片选图（`wx.chooseMedia` 拉系统对话框）、真机渲染、老师端创建表单的逐项填写提交与语音回应。
 
 数据库旧列已清理：`docs/migrations/2026-10-21-drop-task-points-columns.sql` 已执行，`parent_tasks.points`、`task_check_ins.points`、`task_check_ins.image_url` 三列已不存在；执行前后行数不变（parent_tasks 17 / task_check_ins 10）。
 
@@ -350,6 +354,8 @@ GET  /api/v1/parent/tasks/:id/checkin-history?student_id=...
 | 项 | 状态 |
 |---|---|
 | 发布通知 / `action_path` | 未实现；`CreateTask` 返回 `notified_count: 0` |
+| 批量回应并发 | ✅ 已修：事务内 `FOR UPDATE` + `RowsAffected` 判定；输家返回 0 且回滚，无孤儿回应 |
+| 周期汇总边界 | ✅ 已修：`taskPeriodRange` 按频率取区间并写入 `PeriodStart/PeriodEnd`；区间外提交不被关闭 |
 | 公开申请与老师审核 | 未实现；只有 `allow_public` 与撤回 |
 | 补充回应 / 家长反馈 / 未读标记 | 只有模型，无接口 |
 | 班级星星罐管理 | 只有模型与校验，无入口；A 只开放按任务 |
