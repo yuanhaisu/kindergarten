@@ -20,7 +20,9 @@ function normalizeResponse(body) {
   return { code: SUCCESS_CODE, message: "success", data: body }
 }
 
-function request({ url, method = "GET", data, header = {}, auth = false }) {
+// silent: true 时不弹全局 toast，由调用方自己渲染错误（登录页用内联错误态）。
+// 默认 false，现有调用方行为不变。
+function request({ url, method = "GET", data, header = {}, auth = false, silent = false }) {
   return new Promise((resolve, reject) => {
     const token = auth ? getToken() : ""
 
@@ -40,7 +42,7 @@ function request({ url, method = "GET", data, header = {}, auth = false }) {
 
         if (res.statusCode === 401) {
           clearAuth()
-          uni.reLaunch({ url: "/pages/auth/phone" })
+          uni.reLaunch({ url: "/pages/auth/login" })
           reject(body)
           return
         }
@@ -50,12 +52,18 @@ function request({ url, method = "GET", data, header = {}, auth = false }) {
           return
         }
 
-        uni.showToast({ title: body.message || "请求失败", icon: "none" })
+        if (!silent) {
+          uni.showToast({ title: body.message || "请求失败", icon: "none" })
+        }
         reject(body)
       },
       fail(err) {
-        uni.showToast({ title: "网络异常", icon: "none" })
-        reject(err)
+        if (!silent) {
+          uni.showToast({ title: "网络异常", icon: "none" })
+        }
+        // 归一化：调用方读 err.message，而微信 fail 对象只带 errMsg，
+        // 不补这一层则页面的 err?.message 恒为 undefined，永远走到兜底文案。
+        reject({ ...err, message: err?.message || "网络异常" })
       }
     })
   })

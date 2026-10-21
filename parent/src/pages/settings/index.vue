@@ -35,7 +35,7 @@ function handleLogout() {
     success(res) {
       if (res.confirm) {
         clearAuth()
-        uni.reLaunch({ url: "/pages/auth/phone" })
+        uni.reLaunch({ url: "/pages/auth/login" })
       }
     }
   })

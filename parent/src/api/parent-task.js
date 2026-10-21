@@ -8,10 +8,11 @@ export function fetchTasks(params = {}) {
   })
 }
 
-export function fetchTaskDetail(id) {
+export function fetchTaskDetail(id, params = {}) {
   return requestWithAuth({
     url: `/parent/tasks/${id}`,
-    method: "GET"
+    method: "GET",
+    data: params
   })
 }
 

@@ -57,7 +57,7 @@ src/
 | 页面 | 路径 | 说明 |
 |------|------|------|
 | 首页 | `pages/index/index` | 概览、快捷功能、动态流 |
-| 登录 | `pages/auth/phone` | 微信一键登录 |
+| 登录 | `pages/auth/login` | 微信一键登录 |
 | 绑定孩子 | `pages/auth/bind` | 邀请码/扫码绑定 |
 | 通知列表 | `pages/notice/index` | 通知公告列表 |
 | 通知详情 | `pages/notice/detail` | 通知详情+确认 |

@@ -77,7 +77,7 @@ function handleScan() {
   width: 100%;
   max-width: 600rpx;
   padding: 64rpx 48rpx;
-  border-radius: 40rpx;
+  border-radius: $border-radius-2xl;
   background: $color-bg-card;
   box-shadow: $shadow-sm;
 }
@@ -101,7 +101,7 @@ function handleScan() {
   margin-top: 48rpx;
   padding: 0 28rpx;
   border: 2rpx solid rgba(106, 77, 42, 0.12);
-  border-radius: 20rpx;
+  border-radius: $border-radius-lg;
   background: #fff;
   font-size: $typography-font-size-md;
   box-sizing: border-box;
@@ -111,8 +111,8 @@ function handleScan() {
   width: 100%;
   height: 96rpx;
   margin-top: 32rpx;
-  border-radius: 999rpx;
-  background: $parent-blue;
+  border-radius: $border-radius-full;
+  background: $color-semantic-info;
   color: #fff;
   font-size: $typography-font-size-lg;
   font-weight: 700;
@@ -123,9 +123,9 @@ function handleScan() {
   width: 100%;
   height: 96rpx;
   margin-top: 20rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   background: transparent;
-  color: $parent-blue;
+  color: $color-semantic-info;
   font-size: $typography-font-size-md;
   line-height: 96rpx;
 }

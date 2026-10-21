@@ -83,9 +83,9 @@ onLoad(loadData)
 .card { padding: 28rpx; margin-bottom: 24rpx; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }
 .cats { display: flex; gap: $spacing-md; margin-bottom: 20rpx; }
 .cat-btn { padding: $spacing-sm 28rpx; border-radius: 999rpx; background: #f0f0f0; color: $color-text-muted; font-size: $typography-font-size-sm; }
-.cat-btn.active { background: $parent-blue; color: #fff; }
+.cat-btn.active { background: $color-semantic-info; color: #fff; }
 .textarea { width: 100%; height: 180rpx; padding: 20rpx; border: 2rpx solid rgba(106,77,42,0.12); border-radius: $border-radius-lg; font-size: $typography-font-size-base; box-sizing: border-box; }
-.submit-btn { width: 100%; height: 80rpx; margin-top: 20rpx; border-radius: 999rpx; background: $parent-blue; color: #fff; font-size: $typography-font-size-md; font-weight: 700; line-height: 80rpx; }
+.submit-btn { width: 100%; height: 80rpx; margin-top: 20rpx; border-radius: 999rpx; background: $color-semantic-info; color: #fff; font-size: $typography-font-size-md; font-weight: 700; line-height: 80rpx; }
 .state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: $typography-font-size-md; }
 .list { display: flex; flex-direction: column; gap: 18rpx; }
 .f-card { padding: 26rpx; border-radius: 20rpx; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }

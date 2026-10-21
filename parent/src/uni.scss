@@ -11,21 +11,16 @@
 
 // ============================================================
 // 端特有变量（模块主题色，暂不进入 shared tokens）
+// 注意：值等于 shared token 的别名已移除（green/blue/yellow/red/gray 及其浅底），
+// 直接使用 $color-semantic-* / $color-text-muted —— 那是「token 重定义」，会被
+// scripts/check-tokens.mjs 判违规。下面的紫/粉/青暂未进 tokens，保留。
 // ============================================================
-$parent-green:         #16A34A;
-$parent-green-bg:      #DCFCE7;
-$parent-blue:          #2563EB;
-$parent-blue-bg:       #DBEAFE;
 $parent-purple:        #9333EA;
 $parent-purple-bg:     #F3E8FF;
-$parent-yellow:        #CA8A04;
-$parent-yellow-bg:     #FEF9C3;
 $parent-pink:          #EC4899;
 $parent-pink-bg:       #FCE7F3;
 $parent-cyan:          #06B6D4;
 $parent-cyan-bg:        #CFFAFE;
-$parent-red:           #EF4444;
-$parent-gray:          #64748B;
 
 // 导航栏尺寸
 $parent-nav-height:    88rpx;

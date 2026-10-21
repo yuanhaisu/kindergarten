@@ -50,7 +50,7 @@ onShow(loadData)
 .page { min-height: 100vh; padding: $spacing-lg 28rpx; background: $color-bg-page; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
 .page-title { color: $color-text-primary; font-size: $typography-font-size-2xl; font-weight: 800; }
-.link-btn { padding: 14rpx 28rpx; border-radius: 999rpx; background: $parent-blue; color: #fff; font-size: $typography-font-size-sm; }
+.link-btn { padding: 14rpx 28rpx; border-radius: 999rpx; background: $color-semantic-info; color: #fff; font-size: $typography-font-size-sm; }
 .state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-muted; font-size: $typography-font-size-md; }
 .list { display: flex; flex-direction: column; gap: 18rpx; }
 .card { padding: 26rpx; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: 0 8rpx 24rpx rgba(106,77,42,0.06); }

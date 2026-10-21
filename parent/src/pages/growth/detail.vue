@@ -1,7 +1,9 @@
 <script setup>
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { fetchGrowthDetail, likeGrowth, unlikeGrowth, fetchGrowthComments, postGrowthComment } from "@/api/parent-growth"
+import { fetchParentHomeOverview } from "@/api/parent-home"
+import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 
 const detail = ref({})
 const comments = ref([])
@@ -9,13 +11,52 @@ const commentText = ref("")
 const replyTo = ref(null)
 const loading = ref(false)
 
+// ---- 照片点名筛选（design D7）：默认「只看我的孩子」 ----
+const myStudentId = ref(getCurrentStudentId())
+const onlyMine = ref(true)
+// 个体记录（发给指定学生）不做筛选——照片本就属于这些孩子，仅呈现标识
+const isClassRecord = computed(() => detail.value.target_type !== 2)
+// 无当前孩子 id 时无法筛选：退化为「看全部」，不展示切换
+const canFilter = computed(() => isClassRecord.value && !!myStudentId.value)
+
+function isMyPhoto(m) {
+  return (m.student_ids || []).includes(myStudentId.value)
+}
+
+const photos = computed(() => {
+  const all = detail.value.media || []
+  if (!canFilter.value || !onlyMine.value) return all
+  return all.filter(isMyPhoto)
+})
+
+// 存储无当前孩子时自愈一次（与首页/成长列表同入口），保证筛选与服务端视角一致
+async function ensureCurrentStudent() {
+  if (myStudentId.value) return
+  try {
+    const res = await fetchParentHomeOverview(null)
+    syncCurrentStudentFromOverview(res.data)
+    myStudentId.value = getCurrentStudentId()
+  } catch (e) {
+    // 自愈失败不阻断浏览：退化为看全部
+  }
+}
+
 async function loadData(id) {
   loading.value = true
   try {
-    const [d, c] = await Promise.all([fetchGrowthDetail(id), fetchGrowthComments(id)])
+    await ensureCurrentStudent()
+    const [d, c] = await Promise.all([
+      fetchGrowthDetail(id, myStudentId.value || undefined),
+      fetchGrowthComments(id)
+    ])
     detail.value = d.data || {}
     comments.value = c.data?.list || []
   } finally { loading.value = false }
+}
+
+function previewPhoto(idx) {
+  const urls = photos.value.map(m => m.file_url || m.thumb_url)
+  uni.previewImage({ urls, current: urls[idx] })
 }
 
 async function handleLike() {
@@ -55,6 +96,11 @@ function startReply(commentId, userName) {
   uni.showToast({ title: "回复 " + userName, icon: "none" })
 }
 
+// 徽章配色按 color_kind 映射到 design token 语义色（与 index.vue 同规则，design D3）
+function badgeKind(badge) {
+  return badge && badge.color_kind === "warning" ? "warning" : "info"
+}
+
 onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 </script>
 
@@ -72,6 +118,11 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
           <view>
             <text class="author-name">{{ detail.creator?.nickname || "老师" }}</text>
             <text class="author-time">{{ detail.date }} · {{ detail.created_at?.slice(11, 16) || "" }}</text>
+          </view>
+          <!-- 获奖徽章：仅当本记录是当前孩子某次获奖的见证时渲染 -->
+          <view v-if="detail.badge" class="detail-badge" :class="'detail-badge--' + badgeKind(detail.badge)">
+            <image v-if="detail.badge.icon" :src="detail.badge.icon" class="detail-badge-icon" mode="aspectFit" />
+            <text class="detail-badge-text">{{ detail.badge.name }}</text>
           </view>
         </view>
       </view>
@@ -95,16 +146,32 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
           </view>
         </view>
 
-        <!-- 照片网格 -->
-        <view v-if="detail.media?.length" class="media-grid">
-          <image v-for="m in detail.media" :key="m.id"
-            :src="m.thumb_url || m.file_url" mode="aspectFill" class="media-item"
-            @click="uni.previewImage({ urls: detail.media.map(x => x.file_url), current: m.file_url })" />
+        <!-- 照片区：默认「只看我的孩子」，可切换看全部（个体记录不筛选） -->
+        <view v-if="detail.media?.length" class="media-block">
+          <view v-if="canFilter" class="media-filter">
+            <view class="filter-tab" :class="{ active: onlyMine }" @click="onlyMine = true">只看我的孩子</view>
+            <view class="filter-tab" :class="{ active: !onlyMine }" @click="onlyMine = false">
+              看全部（{{ detail.media.length }}）
+            </view>
+          </view>
+          <view v-if="photos.length" class="media-grid">
+            <view v-for="(m, idx) in photos" :key="m.id" class="media-cell">
+              <image :src="m.thumb_url || m.file_url" mode="aspectFill" class="media-item" @click="previewPhoto(idx)" />
+              <view v-if="myStudentId && isMyPhoto(m)" class="media-mine-badge">
+                <text>我的孩子</text>
+              </view>
+            </view>
+          </view>
+          <!-- 空态：默认视图里没有自家孩子，引导切到全部 -->
+          <view v-else class="media-empty">
+            <text class="media-empty-text">这些照片里暂时没有拍到您的孩子</text>
+            <view class="media-empty-btn" @click="onlyMine = false">查看全部照片（{{ detail.media.length }}）</view>
+          </view>
         </view>
 
-        <!-- 关联学生 -->
+        <!-- 相关孩子（设计稿 teacher-08 的「相关孩子（N人）」）：仅发给指定学生的记录有值 -->
         <view v-if="detail.related_students?.length" class="related-row">
-          <text class="related-label">关联学生：</text>
+          <text class="related-label">相关孩子（{{ detail.related_students.length }}人）：</text>
           <text v-for="s in detail.related_students" :key="s.id" class="related-name">{{ s.name }}</text>
         </view>
 
@@ -176,6 +243,21 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .author-name { display: block; font-size: $typography-font-size-md; font-weight: 600; color: $color-text-primary; }
 .author-time { display: block; font-size: $typography-font-size-sm; color: $color-text-hint; margin-top: 4rpx; }
 
+// 获奖徽章（与 index.vue 卡片同规则：彩底 + 图标 + 文字，token 语义色）
+.detail-badge {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $border-radius-md;
+  flex-shrink: 0;
+}
+.detail-badge--warning { background: $color-semantic-warning-bg; .detail-badge-text { color: $color-semantic-warning; } }
+.detail-badge--info { background: $color-semantic-info-bg; .detail-badge-text { color: $color-semantic-info; } }
+.detail-badge-icon { width: 32rpx; height: 32rpx; border-radius: $border-radius-sm; }
+.detail-badge-text { font-size: $typography-font-size-sm; font-weight: 600; }
+
 .status-tags { display: flex; gap: $spacing-md; margin-top: 24rpx; }
 .stag { flex: 1; padding: 20rpx 12rpx; border-radius: $border-radius-md; background: $color-bg-card; text-align: center; box-shadow: $shadow-sm; }
 .stag-label { display: block; font-size: $typography-font-size-xs; color: $color-text-hint; }
@@ -186,8 +268,49 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .tag-row { display: flex; flex-wrap: wrap; gap: $spacing-sm; margin-top: 20rpx; }
 .perf-tag { padding: $spacing-xs 20rpx; border-radius: 9999rpx; background: #FFF7ED; font-size: $typography-font-size-sm; color: #92400E; }
 
-.media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: $spacing-sm; margin-top: 20rpx; }
+.media-block { margin-top: 20rpx; }
+/* 筛选切换：只看我的孩子（默认）/ 看全部 */
+.media-filter { display: flex; gap: $spacing-sm; margin-bottom: $spacing-md; }
+.filter-tab {
+  padding: $spacing-xs $spacing-lg;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+}
+.filter-tab.active { background: $color-brand-primary; color: $color-text-on-brand; }
+.media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: $spacing-sm; }
+.media-cell { position: relative; }
 .media-item { width: 100%; height: 200rpx; border-radius: $border-radius-md; }
+/* 照片标识：这张照片点到了自家孩子 */
+.media-mine-badge {
+  position: absolute;
+  left: $spacing-xs;
+  bottom: $spacing-xs;
+  padding: 2rpx $spacing-sm;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary;
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-xs;
+}
+/* 空态：默认视图无自家孩子照片 */
+.media-empty {
+  padding: $spacing-xl $spacing-lg;
+  background: $color-bg-page;
+  border-radius: $border-radius-lg;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+}
+.media-empty-text { font-size: $typography-font-size-sm; color: $color-text-muted; }
+.media-empty-btn {
+  padding: $spacing-xs $spacing-lg;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary;
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-sm;
+}
 
 .related-row { display: flex; align-items: center; gap: $spacing-sm; margin-top: 20rpx; }
 .related-label { font-size: $typography-font-size-sm; color: $color-text-hint; }
@@ -198,8 +321,8 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .ab-item { display: flex; align-items: center; }
 .ab-icon { font-family: remixicon; font-size: $typography-font-size-2xl; color: $color-text-hint; }
 .ab-num { font-size: $typography-font-size-base; color: $color-text-muted; margin-left: 8rpx; }
-.ab-item.liked .ab-icon { color: #EF4444; }
-.ab-item.liked .ab-num { color: #EF4444; }
+.ab-item.liked .ab-icon { color: $color-brand-primary; }
+.ab-item.liked .ab-num { color: $color-brand-primary; }
 .ab-right { display: flex; align-items: center; }
 
 .comments-section { margin-top: 36rpx; }
@@ -211,7 +334,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .comment-relation { font-size: $typography-font-size-xs; color: $color-brand-primary; }
 .comment-time { font-size: $typography-font-size-xs; color: $color-text-hint; margin-left: auto; }
 .comment-content { display: block; font-size: $typography-font-size-base; color: $color-text-body; line-height: 1.5; }
-.comment-reply-btn { font-size: $typography-font-size-sm; color: $parent-blue; margin-top: 8rpx; display: inline-block; }
+.comment-reply-btn { font-size: $typography-font-size-sm; color: $color-semantic-info; margin-top: 8rpx; display: inline-block; }
 
 .replies { margin-top: 16rpx; padding-left: 24rpx; border-left: 3rpx solid #E2E8F0; }
 .reply-card { padding: $spacing-md; margin-bottom: 8rpx; border-radius: $border-radius-md; background: $color-bg-page; }

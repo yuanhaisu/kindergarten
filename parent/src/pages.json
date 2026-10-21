@@ -8,7 +8,7 @@
       }
     },
     {
-      "path": "pages/auth/phone",
+      "path": "pages/auth/login",
       "style": {
         "navigationBarTitleText": "家长登录"
       }

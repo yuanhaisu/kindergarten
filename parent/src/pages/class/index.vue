@@ -59,5 +59,5 @@ onLoad(loadData)
 .teacher { padding: 18rpx 0; border-bottom: 1rpx solid rgba(106,77,42,0.06); }
 .t-name { display: block; color: $color-text-primary; font-size: $typography-font-size-md; font-weight: 700; }
 .t-role { display: block; margin-top: 4rpx; color: $color-text-muted; font-size: $typography-font-size-sm; }
-.t-phone { display: block; margin-top: 4rpx; color: $parent-blue; font-size: $typography-font-size-sm; }
+.t-phone { display: block; margin-top: 4rpx; color: $color-semantic-info; font-size: $typography-font-size-sm; }
 </style>

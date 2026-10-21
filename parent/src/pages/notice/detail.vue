@@ -128,8 +128,8 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .category-tag {
   padding: $spacing-xs 24rpx;
   border-radius: 9999rpx;
-  background: $parent-blue-bg;
-  color: $parent-blue;
+  background: $color-semantic-info-bg;
+  color: $color-semantic-info;
   font-size: $typography-font-size-sm;
   font-weight: 500;
 }

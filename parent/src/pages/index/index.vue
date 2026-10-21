@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchParentHomeOverview, fetchHomeFeeds, fetchAnnouncements, switchStudent } from "@/api/parent-home"
+import { fetchTasks } from "@/api/parent-task"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, setCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { bindParentPhone } from "@/api/auth"
@@ -14,11 +15,19 @@ const bindPhoneErr = ref("")
 const loading = ref(false)
 const overview = ref({})
 const feeds = ref([])
+const todayTask = ref(null)
 const loadError = ref("")
 
 const currentStudent = computed(() => overview.value.current_student || {})
 const students = computed(() => overview.value.students || [])
 const summary = computed(() => overview.value.today_summary || {})
+
+// 今日在校情况卡片的日期：取服务端 overview.date（Asia/Shanghai 今天）格式化，
+// 此前是设计稿硬编码字面量「2026年3月19日」，一直没接数据
+const todayDateLabel = computed(() => {
+  const m = String(overview.value.date || "").match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${m[1]}年${Number(m[2])}月${Number(m[3])}日` : ""
+})
 const relationLabel = computed(() => {
   const stu = students.value.find(s => s.id === currentStudent.value.id)
   if (!stu) return "家长"
@@ -50,11 +59,13 @@ async function loadHome() {
     // 两个请求用同一个 student_id。原先 feeds 取的是 overview 更新前的旧值，
     // 切换孩子后会错位一次。
     const sid = getCurrentStudentId()
-    const [overviewRes, feedsRes] = await Promise.all([
+    const [overviewRes, feedsRes, tasksRes] = await Promise.all([
       fetchParentHomeOverview(sid),
-      fetchHomeFeeds({ page: 1, page_size: 5, student_id: sid || undefined })
+      fetchHomeFeeds({ page: 1, page_size: 5, student_id: sid || undefined }),
+      fetchTasks({ student_id: sid || undefined, page: 1, page_size: 20 })
     ])
     overview.value = overviewRes.data || {}
+    todayTask.value = (tasksRes.data?.list || []).find(t => !t.submitted_current_period) || null
     // 存储为空时（首次登录 / 被清空）把服务端认定的当前孩子落盘，后续页面才有 id 可传
     syncCurrentStudentFromOverview(overviewRes.data)
     feeds.value = feedsRes.data?.list || []
@@ -71,6 +82,10 @@ async function loadHome() {
     loading.value = false
     uni.stopPullDownRefresh()
   }
+}
+
+function goTask(id) {
+  uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
 }
 
 async function handleGetPhoneNumber(e) {
@@ -177,7 +192,7 @@ onPullDownRefresh(loadHome)
       <view class="today-card">
         <view class="today-head">
           <text class="today-title">今日在校情况</text>
-          <text class="today-date">2026年3月19日</text>
+          <text class="today-date">{{ todayDateLabel }}</text>
         </view>
         <view class="spacer-h16" />
         <!-- 4 状态 -->
@@ -207,6 +222,8 @@ onPullDownRefresh(loadHome)
         <text class="bind-icon"></text>
         <text class="bind-title">绑定手机号以关联孩子信息</text>
         <text class="bind-desc">请输入或授权微信绑定的手机号，系统将自动匹配管理员为您创建的家长账号</text>
+        <!-- 手机号用途告知（声明，不是二次勾选门）：家长端唯一采集手机号的地方 -->
+        <text class="bind-consent">授权手机号仅用于匹配园所为您创建的家长账号，不会对外公开</text>
         <button
           class="bind-phone-btn"
           open-type="getPhoneNumber"
@@ -253,6 +270,19 @@ onPullDownRefresh(loadHome)
           <view class="spacer-h8" />
           <text class="action-text">{{ action.title }}</text>
         </view>
+      </view>
+    </view>
+
+    <!-- ===== 今晚一件事 ===== -->
+    <view v-if="todayTask" class="section" @click="goTask(todayTask.id)">
+      <view class="section-head">
+        <text class="section-title">今晚一件事</text>
+      </view>
+      <view class="spacer-h16" />
+      <view class="empty-card">
+        <text class="empty-text">{{ todayTask.title }}</text>
+        <text class="empty-text">{{ todayTask.description || todayTask.learning_link }}</text>
+        <text class="empty-text">去完成 ›</text>
       </view>
     </view>
 
@@ -318,7 +348,7 @@ onPullDownRefresh(loadHome)
   min-width: 320px;
   max-width: 430px;
   margin: 0 auto;
-  background: $color-bg-page;
+  background: $gradient-page;
   padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 }
 
@@ -335,9 +365,9 @@ onPullDownRefresh(loadHome)
 
 // ---- 顶部导航栏 ----
 .nav-header {
-  background: linear-gradient(135deg, #FB923C, #F97316);
+  background: $gradient-brand;
   padding: 48rpx 24rpx 24rpx;
-  border-radius: 0 0 32rpx 32rpx;
+  border-radius: 0 0 $border-radius-xl $border-radius-xl;
 }
 
 .nav-inner {
@@ -353,14 +383,14 @@ onPullDownRefresh(loadHome)
 .child-avatar {
   width: 128rpx;
   height: 128rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   border: 4rpx solid rgba(255,255,255,0.4);
 }
 
 .child-avatar-placeholder {
   width: 128rpx;
   height: 128rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   background: rgba(255,255,255,0.25);
   display: flex;
   align-items: center;
@@ -391,7 +421,7 @@ onPullDownRefresh(loadHome)
 
 .class-tag {
   padding: 4rpx 16rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   background: rgba(255,255,255,0.2);
 }
 
@@ -408,7 +438,7 @@ onPullDownRefresh(loadHome)
 .settings-btn {
   width: 80rpx;
   height: 80rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   background: rgba(255,255,255,0.2);
   display: flex;
   align-items: center;
@@ -430,7 +460,7 @@ onPullDownRefresh(loadHome)
   background: #FFFFFF;
   border-radius: $border-radius-lg;
   padding: $spacing-xl;
-  box-shadow: $shadow-sm;
+  box-shadow: $shadow-md;
 }
 
 .today-head {
@@ -465,7 +495,7 @@ onPullDownRefresh(loadHome)
 .status-icon-box {
   width: 96rpx;
   height: 96rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -537,7 +567,7 @@ onPullDownRefresh(loadHome)
 
 .switch-chip {
   padding: 14rpx 28rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   background: $color-bg-card;
   color: $color-text-muted;
   font-size: $typography-font-size-sm;
@@ -562,7 +592,7 @@ onPullDownRefresh(loadHome)
   padding: $spacing-xl;
   background: $color-bg-card;
   border-radius: $border-radius-lg;
-  box-shadow: $shadow-sm;
+  box-shadow: $shadow-md;
 }
 
 .action-item {
@@ -593,7 +623,7 @@ onPullDownRefresh(loadHome)
   right: 8rpx;
   width: 18rpx;
   height: 18rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   background: #EF4444;
 }
 
@@ -640,7 +670,7 @@ onPullDownRefresh(loadHome)
 .feed-list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .feed-card {
@@ -653,7 +683,7 @@ onPullDownRefresh(loadHome)
 .feed-type-tag {
   display: inline-block;
   padding: 4rpx 16rpx;
-  border-radius: 999rpx;
+  border-radius: $border-radius-full;
   font-size: 20rpx;
   font-weight: 500;
   margin-bottom: 12rpx;
@@ -680,7 +710,7 @@ onPullDownRefresh(loadHome)
 .unread-dot {
   width: 16rpx;
   height: 16rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   background: #EF4444;
   flex-shrink: 0;
   margin-left: 8rpx;
@@ -716,7 +746,7 @@ onPullDownRefresh(loadHome)
 .author-avatar-box {
   width: 80rpx;
   height: 80rpx;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   background: #DBEAFE;
   display: flex;
   align-items: center;
@@ -828,7 +858,7 @@ onPullDownRefresh(loadHome)
   width: 180rpx;
   height: 72rpx;
   margin: $spacing-lg auto 0;
-  border-radius: 9999rpx;
+  border-radius: $border-radius-full;
   background: $color-brand-primary;
   color: #fff;
   font-size: $typography-font-size-base;
@@ -854,7 +884,7 @@ onPullDownRefresh(loadHome)
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: $shadow-sm;
 }
 
 .bind-icon {
@@ -877,12 +907,20 @@ onPullDownRefresh(loadHome)
   margin-top: 16rpx;
 }
 
+.bind-consent {
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
+  text-align: center;
+  line-height: 1.6;
+  margin-top: 16rpx;
+}
+
 .bind-phone-btn {
   margin-top: 48rpx;
   width: 100%;
   height: 96rpx;
   line-height: 96rpx;
-  background: linear-gradient(135deg, #FB923C, #F97316);
+  background: $gradient-brand;
   color: #fff;
   font-size: $typography-font-size-xl;
   font-weight: 600;
