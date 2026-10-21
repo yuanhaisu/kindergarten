@@ -1,9 +1,9 @@
 <script setup>
 import { computed, ref } from "vue"
-import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId } from "@/utils/currentStudent"
-import { fetchTasks } from "@/api/parent-task"
+import { fetchTasks, refreshCurrentStudentId } from "@/api/parent-task"
 
 const tasks = ref([])
 const loading = ref(false)
@@ -56,8 +56,27 @@ async function loadData() {
   loading.value = true
   try {
     await ensureLogin()
-    const res = await fetchTasks({ student_id: getCurrentStudentId() || undefined })
-    tasks.value = res.data?.list || []
+    // 任务接口要求 student_id 必填；首次登录时先用 overview 落盘当前孩子。
+    let sid = getCurrentStudentId()
+    if (!sid) sid = await refreshCurrentStudentId()
+    if (!sid) {
+      tasks.value = []
+      return
+    }
+    try {
+      const res = await fetchTasks({ student_id: sid })
+      tasks.value = res.data?.list || []
+    } catch (err) {
+      // 本地缓存的孩子已被解绑/移走：刷新后重试一次。
+      if (err?.code !== 40300) throw err
+      const refreshed = await refreshCurrentStudentId()
+      if (!refreshed) {
+        tasks.value = []
+        return
+      }
+      const res = await fetchTasks({ student_id: refreshed })
+      tasks.value = res.data?.list || []
+    }
   } catch (err) {
     tasks.value = []
     uni.showToast({ title: "加载任务失败", icon: "none" })
@@ -67,7 +86,8 @@ async function loadData() {
   }
 }
 
-onLoad(loadData)
+// 详情页提交后返回列表不重跑 onLoad，卡片会停在「待完成」；用 onShow 保证返回即刷新。
+onShow(loadData)
 onPullDownRefresh(loadData)
 </script>
 

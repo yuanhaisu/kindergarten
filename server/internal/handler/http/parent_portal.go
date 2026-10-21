@@ -28,6 +28,32 @@ func (h *Handler) parentCtx(c *gin.Context) (*service.ParentPortalContext, bool)
 	return pc, true
 }
 
+// parentTaskCtx 任务接口专用：student_id 必填且必须属于当前家长。
+// ResolveContext 在 student_id 不属于该家长时会回退到第一个孩子，
+// 任务链路不能接受这种回退（会把 A 孩子的任务显示成 B 孩子的）。
+func (h *Handler) parentTaskCtx(c *gin.Context) (*service.ParentPortalContext, bool) {
+	raw := c.Query("student_id")
+	if raw == "" {
+		response.ErrValidation(c, "缺少 student_id")
+		return nil, false
+	}
+	sid, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || sid == 0 {
+		response.ErrValidation(c, "无效的 student_id")
+		return nil, false
+	}
+	pc, err := h.parentPortalSvc.ResolveContext(c.Request.Context(), middleware.GetUserID(c), middleware.GetKindergartenID(c), &sid)
+	if err != nil {
+		response.ErrForbidden(c, "未绑定孩子信息,请联系管理员")
+		return nil, false
+	}
+	if pc.CurrentStudent == nil || pc.CurrentStudent.ID != sid {
+		response.ErrForbidden(c, "无权查看该孩子的任务")
+		return nil, false
+	}
+	return pc, true
+}
+
 func ppID(c *gin.Context) (uint64, bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
@@ -596,7 +622,7 @@ func (h *Handler) ParentDeleteAuthorizedPerson(c *gin.Context) {
 // ========== Tasks ==========
 
 func (h *Handler) ParentListTasks(c *gin.Context) {
-	pc, ok := h.parentCtx(c)
+	pc, ok := h.parentTaskCtx(c)
 	if !ok {
 		return
 	}
@@ -609,7 +635,7 @@ func (h *Handler) ParentListTasks(c *gin.Context) {
 	response.OK(c, result)
 }
 func (h *Handler) ParentGetTask(c *gin.Context) {
-	pc, ok := h.parentCtx(c)
+	pc, ok := h.parentTaskCtx(c)
 	if !ok {
 		return
 	}
@@ -629,7 +655,7 @@ func (h *Handler) ParentGetTask(c *gin.Context) {
 	response.OK(c, data)
 }
 func (h *Handler) ParentCheckinTask(c *gin.Context) {
-	pc, ok := h.parentCtx(c)
+	pc, ok := h.parentTaskCtx(c)
 	if !ok {
 		return
 	}
@@ -658,7 +684,7 @@ func (h *Handler) ParentCheckinTask(c *gin.Context) {
 	response.Created(c, data)
 }
 func (h *Handler) ParentCheckinHistory(c *gin.Context) {
-	pc, ok := h.parentCtx(c)
+	pc, ok := h.parentTaskCtx(c)
 	if !ok {
 		return
 	}
@@ -668,6 +694,10 @@ func (h *Handler) ParentCheckinHistory(c *gin.Context) {
 	}
 	data, err := h.parentPortalSvc.CheckinHistory(c.Request.Context(), pc, id)
 	if err != nil {
+		if errors.Is(err, service.ErrParentNotFound) {
+			response.ErrNotFound(c, "任务不存在")
+			return
+		}
 		response.ErrInternal(c, "获取打卡历史失败")
 		return
 	}

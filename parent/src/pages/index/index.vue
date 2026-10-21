@@ -56,18 +56,17 @@ async function loadHome() {
   loadError.value = ""
   try {
     await ensureLogin()
-    // 两个请求用同一个 student_id。原先 feeds 取的是 overview 更新前的旧值，
-    // 切换孩子后会错位一次。
+    // 任务接口要求 student_id 必填且必须属于当前家长，不再回退到第一个孩子。
+    // 首次登录 / 存储被清空时先取 overview 落盘当前孩子，再并发取 feeds 与任务。
+    const overviewRes = await fetchParentHomeOverview(getCurrentStudentId())
+    overview.value = overviewRes.data || {}
+    syncCurrentStudentFromOverview(overviewRes.data)
     const sid = getCurrentStudentId()
-    const [overviewRes, feedsRes, tasksRes] = await Promise.all([
-      fetchParentHomeOverview(sid),
+    const [feedsRes, tasksRes] = await Promise.all([
       fetchHomeFeeds({ page: 1, page_size: 5, student_id: sid || undefined }),
       fetchTasks({ student_id: sid || undefined, page: 1, page_size: 20 })
     ])
-    overview.value = overviewRes.data || {}
     todayTask.value = (tasksRes.data?.list || []).find(t => !t.submitted_current_period) || null
-    // 存储为空时（首次登录 / 被清空）把服务端认定的当前孩子落盘，后续页面才有 id 可传
-    syncCurrentStudentFromOverview(overviewRes.data)
     feeds.value = feedsRes.data?.list || []
     needBindPhone.value = false
   } catch (err) {

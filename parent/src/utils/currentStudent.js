@@ -25,8 +25,8 @@ export function setCurrentStudentId(id) {
  *
  * `uni.getStorageSync` 在 key 不存在时返回空字符串，而 `Number("") === 0`，
  * 所以判定必须用 `n > 0`。调用点统一写 `getCurrentStudentId() || undefined`，
- * 让 GET 请求省略该参数 —— 服务端在 student_id 缺失或不属于该家长时会回退到
- * 第一个孩子，这正是「没选过」时的期望行为。
+ * 让 GET 请求省略该参数。亲子任务接口要求 student_id 必填（缺失或不属于该家长
+ * 直接拒绝，不回退到第一个孩子），任务页面必须先通过 overview 落盘当前孩子。
  */
 export function getCurrentStudentId() {
   const n = Number(uni.getStorageSync(CURRENT_STUDENT_KEY))

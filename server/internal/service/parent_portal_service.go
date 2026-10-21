@@ -1651,7 +1651,7 @@ func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalC
 		if err := tx.Create(checkin).Error; err != nil {
 			return ErrParentInvalidParams
 		}
-		if err := tx.Model(&state).Update("last_checkin_date", today).Error; err != nil {
+		if err := tx.Model(&state).Update("last_check_in_date", today).Error; err != nil {
 			return err
 		}
 
@@ -1670,6 +1670,15 @@ func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalC
 func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPortalContext, taskID uint64) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
+	}
+	// 与列表/详情同口径：个体任务只对目标孩子可见，跨家庭直接访问应被拒绝，
+	// 不能返回空列表（否则「直接访问也被拒绝」的规格无法成立）。
+	var t domain.ParentTask
+	if err := taskScopeQuery(s.db.WithContext(ctx), pc).Where("id = ?", taskID).First(&t).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
+		return nil, err
 	}
 	var rows []domain.TaskCheckIn
 	if err := s.db.WithContext(ctx).Preload("Student").

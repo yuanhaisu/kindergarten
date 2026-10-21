@@ -677,53 +677,90 @@
 ## 亲子任务闭环（TSK-LOOP）
 
 > 对应 OpenSpec 变更 `2026-10-20-redesign-parent-task-loop`。行为规格见 `openspec/changes/2026-10-20-redesign-parent-task-loop/specs/parent-task-loop/spec.md`。
-> A 切片状态：0101–0146 全部登记，尚未逐条执行，统一标记为 🔲。
+> A 切片状态：2026-10-21 已按 A 切片执行 API 级核心链路；✅ = 实测通过，⚠️ = 仅覆盖主路径，⏸ = B/C 切片未实现或不在 A 范围。
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |-------|------|--------|------|------|
-| TC-NEW-TSK-0101 | 班级任务对本班家庭可见 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0102 | 个体任务仅目标家庭可见 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0103 | 多孩家庭按当前孩子隔离 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0104 | 一键完成提交 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0105 | 文字或照片提交 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0106 | 未开始或已结束不可提交 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0107 | 每日/每周/一次性频率 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0108 | 待回应只在老师端可见 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0109 | 单条回应闭环 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0110 | 周期汇总回应 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0111 | 批量回应部分失败可见 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0112 | 家长一键反馈 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0113 | 反馈覆盖率与正向率 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0114 | 贴纸回应 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0115 | 语音回应 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0116 | 班级星星回应 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0117 | 星星罐按任务/按班级 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0118 | 只有主回应班级星星计入 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0119 | 公开默认私密 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0120 | 申请后老师审核可见 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0121 | 撤回与个体任务不可公开 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0122 | 提交不产生积分 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0123 | 任务契约与规则无积分 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0124 | 发布通知与 action_path | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0125 | 回应按家长聚合 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0126 | 家长端小程序码 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0127 | 多班活动创建 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0128 | 参与与回应统计 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0129 | 非法媒体被拒 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0130 | 删除任务级联 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0131 | 学习关联必填 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0132 | 要求列表逐条展示 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0133 | 首页待办按孩子与周期统计 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0134 | 取消后再次申请必须重新审核 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0135 | 汇总后个别补充回应 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0136 | 给孩子看展示态 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0137 | 班级星星罐目标独立于任务 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0138 | 按活动批量编辑与统计 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0139 | 多班活动事务与跨园所校验 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0140 | 补充回应未读与读标记 | P1 | FUNC | 🔲 |
-| TC-NEW-TSK-0141 | 独立任务不能自设活动分组 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0142 | 有提交后结构字段只读 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0144 | 跨班公开墙不可见 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | 🔲 |
-| TC-NEW-TSK-0146 | 更新个体任务目标跨班被拒 | P0 | FUNC | 🔲 |
+| TC-NEW-TSK-0101 | 班级任务对本班家庭可见 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0102 | 个体任务仅目标家庭可见 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0103 | 多孩家庭按当前孩子隔离 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0104 | 一键完成提交 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0105 | 文字或照片提交 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0106 | 未开始或已结束不可提交 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0107 | 每日/每周/一次性频率 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0108 | 待回应只在老师端可见 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0109 | 单条回应闭环 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0110 | 周期汇总回应 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0111 | 批量回应部分失败可见 | P1 | FUNC | ✅ / ⚠️ |
+| TC-NEW-TSK-0112 | 家长一键反馈 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0113 | 反馈覆盖率与正向率 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0114 | 贴纸回应 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0115 | 语音回应 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0116 | 班级星星回应 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0117 | 星星罐按任务/按班级 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0118 | 只有主回应班级星星计入 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0119 | 公开默认私密 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0120 | 申请后老师审核可见 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0121 | 撤回与个体任务不可公开 | P0 | FUNC | ✅ / ⏸ |
+| TC-NEW-TSK-0122 | 提交不产生积分 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0123 | 任务契约与规则无积分 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0124 | 发布通知与 action_path | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0125 | 回应按家长聚合 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0126 | 家长端小程序码 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0127 | 多班活动创建 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0128 | 参与与回应统计 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0129 | 非法媒体被拒 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0130 | 删除任务级联 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0131 | 学习关联必填 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0132 | 要求列表逐条展示 | P1 | FUNC | ✅ |
+| TC-NEW-TSK-0133 | 首页待办按孩子与周期统计 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0134 | 取消后再次申请必须重新审核 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0135 | 汇总后个别补充回应 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0136 | 给孩子看展示态 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0137 | 班级星星罐目标独立于任务 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0138 | 按活动批量编辑与统计 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0139 | 多班活动事务与跨园所校验 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0140 | 补充回应未读与读标记 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0141 | 独立任务不能自设活动分组 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0142 | 有提交后结构字段只读 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0144 | 跨班公开墙不可见 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0146 | 更新个体任务目标跨班被拒 | P0 | FUNC | ✅ |
+
+### A 切片执行记录（2026-10-21）
+
+环境：本机 Go 后端 `:8080` + 开发库（kindergarten 4）；老师 61（class 6）、老师 65（class 4）、家长 11（孩子 4）、家长 20（孩子 1）、家长 61（孩子 27/32）、家长 12（孩子 21，异班）。证据为 curl 实测，非仅 MCP 导航。
+
+**实测通过（A）**：0101–0111、0114–0116、0119、0122–0123、0129–0133、0142–0143、0145–0146。
+
+其中 0111 的并发竞争路径已于同日补测：10 个并发提交只成功 1 次（201×1 / 422×9，无 5xx），打卡历史仅 1 条，列表 `submitted_current_period=true`、`checkin_count=1`。脚本 `_verify/task_concurrency_0111.mjs`。
+
+**执行中发现并修复的缺陷**：
+1. `parent_portal_service.go` 更新频率状态用了不存在的列 `last_checkin_date`（实际列 `last_check_in_date`），任何打卡都 500 → 已修，并同步修正 `docs/migrations/2026-10-21-task-checkin-state-nullable.sql` 与 handoff。
+2. 家长端任务接口在 `student_id` 不属于该家长时静默回退到第一个孩子 → 新增 `parentTaskCtx`：任务链路 `student_id` 必填且必须归属当前家长（列表/详情/提交/历史统一 422/403），并同步前端首页与任务页先落盘当前孩子。
+3. `CheckinHistory` 只按 `task_id + student_id` 查询，未套任务可见范围：请求别的孩子的个体任务历史会返回 200 空列表 → 已改为先过 `taskScopeQuery`，跨家庭直接访问返回 404。
+4. 本地缓存的孩子被解绑后，任务页会持续 403 且详情页仍渲染提交入口 → 任务列表/详情在 403 时刷新 overview 并重试一次；详情增加错误态，无任务数据时不渲染提交入口。
+5. 任务列表用 `onLoad` 拉数据，从详情页提交后返回不重跑，卡片一直停在「待完成 / 0+N次」直到手动下拉刷新 → 改为 `onShow`（`parent/src/pages/tasks/index.vue`），返回即刷新。
+
+**未执行/未实现（⏸）**：
+- 0112/0113 家长反馈、0120/0121 公开申请审核与撤回、0124–0125 通知聚合、0126 小程序码、0134 再次申请、0135 补充回应、0136 给孩子看、0140 读标记（B 切片）
+- 0117/0118 星星罐进度、0127/0128 活动、0137 班级罐目标、0138/0139 多班活动、0141 活动分组（C 切片）
+- 0144 公开墙（B 切片；公开墙查询未实现）
+
+**UI 交互验证（2026-10-21，家长端，微信开发者工具）**：`parent/dist/dev/mp-weixin`（dev watcher 构建）+ 微信开发者工具模拟器（appid `wxdf989efff8796c53`，家长 61 / 孩子 27，中二班），通过 CDP 在渲染层派发真实鼠标事件驱动，页面文案与状态均取自渲染 DOM（非接口回读）：
+
+1. 首页「今晚一件事」卡片 → 点击进入 `pages/tasks/detail`，详情渲染标题、学习关联（和幼儿园学习相关 / 本周班级主题是「我会整理」）、今日提交与打卡历史。
+2. 点「今天完成了（一键提交）」→ 页面切为「打卡历史 2026-10-21 已提交」，提交入口消失；服务端 `task_check_ins` 新增 1 条（id 16）。
+3. 返回首页 →「今晚一件事」换成另一条任务（onShow 刷新生效）。
+4. 任务列表点「去提交」→ 详情 → 一键提交 → 返回列表，「进行中」不再出现该任务（缺陷 5 的 `onShow` 修复在真机渲染层复验通过）。
+5. 详情页在文本框输入「微信端文字提交验证」→ 点「打卡」→ 打卡历史渲染该文字；服务端 `task_check_ins` id 18 的 `content` 一致。
+6. 老师 API 回应后重新进入详情 → 渲染「老师回应 / 贴纸 / 今天收得很认真，继续加油！」。
+
+工具备注：`wechat_automator` 的 `page_data` / `element_info` / `screenshot` 与 `wechat_navigate` 在本机 daemon 上持续 90–120s 超时（`system_info`、`evaluate` 正常），改用 `_verify/wx_cdp.mjs`（CDP `Runtime.evaluate` + `Input.dispatchMouseEvent`）读取渲染文案并派发真实点击。派发触摸事件不触发 tap，鼠标事件才有效。
+
+**仍未覆盖**：
+- 照片提交的选图流程（`wx.chooseMedia` 会拉起系统文件对话框，未自动化）；上传口径由 API 层用例覆盖。
+- 真机（非模拟器）渲染差异。
+- 老师端小程序的 UI 交互（本轮只验证家长端；老师端接口已覆盖）。
+- 数据库旧列已清理：`docs/migrations/2026-10-21-drop-task-points-columns.sql` 已执行，`parent_tasks.points`、`task_check_ins.points`、`task_check_ins.image_url` 已不存在；执行前后行数不变（17 / 10）。

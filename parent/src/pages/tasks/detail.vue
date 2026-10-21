@@ -5,7 +5,7 @@ import { getCurrentStudentId } from "@/utils/currentStudent"
 import { ensureLogin } from "@/utils/login"
 import { getToken } from "@/utils/auth"
 import config from "@/config/env"
-import { fetchTaskDetail, checkinTask, fetchCheckinHistory } from "@/api/parent-task"
+import { fetchTaskDetail, checkinTask, fetchCheckinHistory, refreshCurrentStudentId } from "@/api/parent-task"
 
 const detail = ref({})
 const history = ref([])
@@ -13,22 +13,50 @@ const checkinContent = ref("")
 const mediaFileID = ref(0)
 const mediaName = ref("")
 const loading = ref(false)
+const loadError = ref("")
+
+async function loadTask(id, sid) {
+  const [d, h] = await Promise.all([
+    fetchTaskDetail(id, { student_id: sid }),
+    fetchCheckinHistory(id, { student_id: sid }),
+  ])
+  detail.value = d.data || {}
+  history.value = h.data?.list || []
+}
 
 async function loadData(id) {
   loading.value = true
+  loadError.value = ""
   try {
-    const sid = getCurrentStudentId() || undefined
-    const [d, h] = await Promise.all([
-      fetchTaskDetail(id, { student_id: sid }),
-      // 打卡记录的 handler 走 parentCtx，按 query 上的 student_id 区分孩子
-      fetchCheckinHistory(id, { student_id: sid }),
-    ])
-    detail.value = d.data || {}
-    history.value = h.data?.list || []
+    await ensureLogin()
+    // 任务接口要求 student_id 必填；首次登录时先用 overview 落盘当前孩子。
+    let sid = getCurrentStudentId()
+    if (!sid) sid = await refreshCurrentStudentId()
+    if (!sid) {
+      loadError.value = "未绑定孩子信息"
+      return
+    }
+    try {
+      await loadTask(id, sid)
+    } catch (err) {
+      // 本地缓存的孩子已被解绑/移走：刷新后重试一次。
+      if (err?.code !== 40300) throw err
+      const refreshed = await refreshCurrentStudentId()
+      if (!refreshed) {
+        loadError.value = err?.message || "无权查看该任务"
+        return
+      }
+      await loadTask(id, refreshed)
+    }
+  } catch (err) {
+    detail.value = {}
+    history.value = []
+    loadError.value = err?.message || "加载任务失败"
   } finally { loading.value = false }
 }
 
 async function handleCheckin() {
+  if (!detail.value.id) return
   const content = checkinContent.value.trim()
   if (!content && !mediaFileID.value) {
     uni.showToast({ title: "请填写内容或上传照片", icon: "none" })
@@ -52,6 +80,7 @@ async function handleCheckin() {
 }
 
 async function quickCheckin() {
+  if (!detail.value.id) return
   try {
     const res = await checkinTask(detail.value.id, { content: "" }, getCurrentStudentId())
     mediaFileID.value = 0
@@ -109,6 +138,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 <template>
   <view class="page">
     <view v-if="loading" class="state">加载中...</view>
+    <view v-else-if="loadError" class="state">{{ loadError }}</view>
     <template v-else>
       <view class="card">
         <text class="title">{{ detail.title }}</text>
@@ -132,7 +162,7 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
         </view>
       </view>
 
-      <view v-if="!detail.submitted_current_period" class="checkin-card">
+      <view v-if="detail.id && !detail.submitted_current_period" class="checkin-card">
         <text class="section-title">今日提交</text>
         <view class="media-btn" @click="chooseMedia">
           <text>{{ mediaName || "＋ 添加照片（可选）" }}</text>
