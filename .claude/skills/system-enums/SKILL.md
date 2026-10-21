@@ -26,7 +26,7 @@ Every dropdown, chip selector, tab bar, and option list in this project is curre
 | 3 | 饮食/睡眠/情绪评分 | ❌ Hardcoded | — |
 | 4 | 相册分类 | ❌ Hardcoded | — |
 | 5 | 出勤状态 | ❌ Hardcoded | — |
-| 6 | 日历事件类型 | ❌ Hardcoded | — |
+| 6 | 日历事件类型 | ✅ Dict | `calendar_event_type` |
 | 7 | 消息类型 | ❌ Hardcoded | — |
 | 8 | 通知分类 | ❌ Hardcoded | — |
 | 9 | 请假状态/类型 | ❌ Hardcoded | — |
@@ -95,18 +95,19 @@ Every dropdown, chip selector, tab bar, and option list in this project is curre
 - **Values**: 全部, 出勤, 请假, 缺勤, 迟到
 - **Status class map**: 出勤→green dot, 请假→blue dot, 缺勤→red dot, 迟到→orange dot
 
-### 6. 日历事件类型 (Calendar Event Types)
+### 6. 日历事件类型 (Calendar Event Types) ✅ DICT（2026-10-17 起，align-class-calendar）
 
-- **Files**: `teacher/src/pages/calendar/index.vue` (66-95), `create.vue` (23-33), `detail.vue` (9-16)
-- **Types + Colors + Icons**:
-  - `notification`(通知) → `#3B82F6`, icon `通`
-  - `activity`(活动) → `#22C55E`, icon `活`
-  - `holiday`(假期) → `#F97316`, icon `假`
-  - `meeting`(家长会) → `#A855F7`, icon `会`
-  - `health`(体检) → `#EF4444`, icon `检`
-- **Importance levels**: `normal`(普通), `important`(重要), `urgent`(紧急)
-- **Hardcoded classes**: 中一班, 中二班, 大一班, 大二班, 小一班 (line 35 of create.vue)
-- **Note**: Create form only exposes 3 types (notification, activity, meeting); index/detail show all 5.
+- **Dict key**: `calendar_event_type`（园所级；内置 5 类 `IsSystem=true` 不可删、可改名/停用；园所可扩展自定义类型；颜色存字典项 `Extra={"color":...}`）
+- **内置项与色值**（seed 自 `design-data/teacher-06` 图例）:
+  - `notice`(通知) → `#3B82F6`
+  - `activity`(活动) → `#22C55E`
+  - `holiday`(假期) → `#F97316`
+  - `meeting`(家长会) → `#A855F7`
+  - `checkup`(体检) → `#EF4444`
+- **Backend SoT**: `server/internal/domain/calendar.go`（`EventType` 常量）+ `server/internal/app/seeder.go`（启动播种，幂等，含 kgID=0 模板）
+- **Rendering**: 两端一律按字典解析——家长端由服务端解析下发 `event_type_label`/`color`；老师端类型选择器经 `GET /teacher/dicts/calendar_event_type`。旧前端硬编码映射（`eventDotColors` 等）随本变更删除
+- **Importance levels**: `normal`(普通), `important`(重要), `urgent`(紧急) —— 仍为硬编码，产品未裁决（见 change 阻塞清单）
+- **Hardcoded classes**: 中一班, 中二班, 大一班, 大二班, 小一班 (create.vue line 35) —— 待本变更端页面改造时修复
 
 ### 7. 消息类型 (Message Types)
 
