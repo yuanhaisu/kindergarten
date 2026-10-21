@@ -4,13 +4,13 @@
 >
 > 基础路径：`/api/v1/admin`，需 `Authorization: Bearer <token>`，角色 `admin`。
 >
-> 状态：✅ 6 个接口已实现（含新建/编辑）；`admin/api/tasks.ts` 已封装 `createTask` / `updateTask`。
+> **A 切片状态**：`points` 已从 domain/契约移除；活动分组、新字段统计、班级罐配置属于 C 切片，下列标注 `[C]` 的端点/字段尚未实现。
 
 ---
 
 ## POST `/admin/tasks`
 
-> 新建任务（管理端；`creator_id` 取当前登录用户）
+> 新建独立任务（`creator_id` 取当前登录用户）
 
 ```json
 // Request
@@ -20,8 +20,7 @@
   "class_id": 1,
   "frequency": "daily",
   "start_date": "2026-03-19",
-  "end_date": "2026-03-25",
-  "points": 5
+  "end_date": "2026-03-25"
 }
 
 // Response（HTTP 201）
@@ -31,7 +30,9 @@
 }
 ```
 
-`frequency`：`daily` | `weekly` | `once`。`points` 缺省或 ≤0 时按 1。
+`frequency`：`daily` | `weekly` | `once`。不接收 `points`。
+
+> `[C]` 后续新增：`learning_link`、`target_student_id`、`allow_public`、`recognition_ritual`、`star_scope`、`star_goal`。
 
 ---
 
@@ -48,21 +49,17 @@
   "frequency": "daily",
   "start_date": "2026-03-19",
   "end_date": "2026-03-25",
-  "points": 5,
   "status": 1
 }
-
-// Response
-{ "id": 1 }
 ```
 
-`status`：`0` 已结束，`1` 进行中。
+`status`：`0` 已结束，`1` 进行中。不接收 `points`。
 
 ---
 
 ## GET `/admin/tasks`
 
-> 全园任务列表（对应前端 `getTasks`）
+> 全园任务列表
 
 ```json
 // Query: ?class_id=&status=&page=1&page_size=20
@@ -79,7 +76,6 @@
       "frequency_label": "每日任务",
       "start_date": "2026-03-19",
       "end_date": "2026-03-25",
-      "points": 5,
       "status": 1,
       "completion_rate": "57%",
       "creator": { "nickname": "李老师" },
@@ -92,25 +88,25 @@
 }
 ```
 
+- `points` 已移除。
+- `[C]` 旧 `completion_rate` 将下线，改为参与率/回应率。
+
 ---
 
 ## GET `/admin/tasks/:id`
 
-> 任务详情（含完成统计；对应前端 `getTask`）
+> 任务详情
 
 ```json
-// Response
 {
   "id": 1,
   "title": "每日阅读10分钟",
-  "description": "每天陪孩子阅读10分钟绘本，培养阅读习惯",
+  "description": "每天陪孩子阅读10分钟绘本",
   "class_id": 1,
   "class_name": "小一班",
   "frequency": "daily",
-  "frequency_label": "每日任务",
   "start_date": "2026-03-19",
   "end_date": "2026-03-25",
-  "points": 5,
   "status": 1,
   "completion_rate": "57%",
   "checkin_count": 120,
@@ -120,14 +116,15 @@
 }
 ```
 
+- 不返回 `points`。
+
 ---
 
 ## DELETE `/admin/tasks/:id`
 
-> 删除任务（管理员强制删除；对应前端 `deleteTask`）
+> 删除任务（管理员强制删除；级联删除提交/回应/读标记/状态）
 
 ```json
-// Response
 {}
 ```
 
@@ -135,7 +132,7 @@
 
 ## GET `/admin/tasks/stats`
 
-> 任务统计（对应前端 `getTaskStats`，`/statistics` 页面也使用）
+> 任务统计
 
 ```json
 // Query: ?start_date=2026-03-01&end_date=2026-03-31
@@ -147,11 +144,21 @@
   "active_tasks": 8,
   "completed_tasks": 17,
   "total_checkins": 3200,
-  "total_points_awarded": 16000,
   "avg_completion_rate": "62%",
   "by_class": [
-    { "class_name": "小一班", "tasks": 5, "avg_rate": "68%" },
-    { "class_name": "小二班", "tasks": 3, "avg_rate": "55%" }
+    { "class_name": "小一班", "tasks": 5, "avg_rate": "68%" }
   ]
 }
 ```
+
+- `total_points_awarded` 已移除。
+- `[C]` 后续新增参与率、回应率、`pending_over_48h`、反馈率、按活动统计。
+
+---
+
+## `[C]` 活动与班级罐端点（未实现）
+
+- `POST/PUT/DELETE /admin/task-activities`
+- `GET/PUT /admin/classes/:id/star-jar`
+
+这些属于 C 切片，A 不实现。

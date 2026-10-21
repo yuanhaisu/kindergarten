@@ -15,7 +15,10 @@ import (
 	"kindergarten-server/internal/repository"
 )
 
-var ErrDuplicateAcademicYear = errors.New("DUPLICATE_ACADEMIC_YEAR")
+var (
+	ErrDuplicateAcademicYear = errors.New("DUPLICATE_ACADEMIC_YEAR")
+	ErrInvalidFeverThreshold = errors.New("INVALID_FEVER_THRESHOLD")
+)
 
 type SettingsService struct {
 	db         *gorm.DB
@@ -96,12 +99,18 @@ type settingsPoints struct {
 	MonthlyAttendanceBonus  int `json:"monthly_attendance_bonus"`
 }
 
+type settingsHealth struct {
+	TemperatureRequired bool    `json:"temperature_required"`
+	FeverThreshold      float64 `json:"fever_threshold"`
+}
+
 type settingsPayload struct {
 	Attendance settingsAttendance `json:"attendance"`
 	Notice     settingsNotice     `json:"notice"`
 	Growth     settingsGrowth     `json:"growth"`
 	Pickup     settingsPickup     `json:"pickup"`
 	Points     settingsPoints     `json:"points"`
+	Health     settingsHealth     `json:"health"`
 }
 
 func defaultSettingsPayload() settingsPayload {
@@ -113,6 +122,7 @@ func defaultSettingsPayload() settingsPayload {
 		Growth: settingsGrowth{NeedAudit: false, AllowParentComment: true, AllowParentLike: true},
 		Pickup: settingsPickup{QRCodeExpireHours: 24, NeedAuthorizationAudit: true},
 		Points: settingsPoints{TaskCheckinPoints: 5, WeeklyAttendanceBonus: 10, MonthlyAttendanceBonus: 50},
+		Health: settingsHealth{TemperatureRequired: false, FeverThreshold: DefaultFeverThreshold},
 	}
 }
 
@@ -144,6 +154,12 @@ func parsePayload(raw string) settingsPayload {
 	}
 	if p.Points == (settingsPoints{}) {
 		p.Points = def.Points
+	}
+	if p.Health == (settingsHealth{}) {
+		p.Health = def.Health
+	} else if p.Health.FeverThreshold < MinFeverThreshold || p.Health.FeverThreshold > MaxFeverThreshold {
+		// 保留 temperature_required，只把非法阈值归一化，避免整块回退丢掉开关状态。
+		p.Health.FeverThreshold = def.Health.FeverThreshold
 	}
 	return p
 }
@@ -192,6 +208,7 @@ type SystemSettingsResp struct {
 	Growth     settingsGrowth     `json:"growth"`
 	Pickup     settingsPickup     `json:"pickup"`
 	Points     settingsPoints     `json:"points"`
+	Health     settingsHealth     `json:"health"`
 }
 
 func (s *SettingsService) GetSettings(ctx context.Context, kindergartenID uint64) (*SystemSettingsResp, error) {
@@ -232,7 +249,27 @@ func (s *SettingsService) GetSettings(ctx context.Context, kindergartenID uint64
 	out.Growth = payload.Growth
 	out.Pickup = payload.Pickup
 	out.Points = payload.Points
+	out.Health = payload.Health
 	return &out, nil
+}
+
+// GetHealthPolicy 只读园所晨检体温策略；配置行不存在时返回默认值，不在读取路径写库。
+func (s *SettingsService) GetHealthPolicy(ctx context.Context, kindergartenID uint64) (HealthPolicy, error) {
+	if kindergartenID == 0 {
+		return HealthPolicy{}, fmt.Errorf("NO_KINDERGARTEN")
+	}
+	row, err := s.app.FindByKindergartenID(ctx, kindergartenID)
+	if err != nil {
+		return HealthPolicy{}, err
+	}
+	p := defaultSettingsPayload()
+	if row != nil {
+		p = parsePayload(row.ExtraConfig)
+	}
+	return HealthPolicy{
+		TemperatureRequired: p.Health.TemperatureRequired,
+		FeverThreshold:      p.Health.FeverThreshold,
+	}, nil
 }
 
 type UpdateSettingsReq struct {
@@ -241,6 +278,7 @@ type UpdateSettingsReq struct {
 	Growth       *settingsGrowth     `json:"growth"`
 	Pickup       *settingsPickup     `json:"pickup"`
 	Points       *settingsPoints     `json:"points"`
+	Health       *settingsHealth     `json:"health"`
 }
 
 type UpdateSettingsResp struct {
@@ -270,6 +308,12 @@ func (s *SettingsService) UpdateSettings(ctx context.Context, kindergartenID, us
 	}
 	if req.Points != nil {
 		cur.Points = *req.Points
+	}
+	if req.Health != nil {
+		if req.Health.FeverThreshold < MinFeverThreshold || req.Health.FeverThreshold > MaxFeverThreshold {
+			return nil, ErrInvalidFeverThreshold
+		}
+		cur.Health = *req.Health
 	}
 	b, err := json.Marshal(cur)
 	if err != nil {
@@ -546,7 +590,7 @@ func IsSettingsClientErr(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, ErrDuplicateAcademicYear) {
+	if errors.Is(err, ErrDuplicateAcademicYear) || errors.Is(err, ErrInvalidFeverThreshold) {
 		return true
 	}
 	switch err.Error() {

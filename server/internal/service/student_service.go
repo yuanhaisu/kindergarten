@@ -157,6 +157,10 @@ type studentListItem struct {
 	EnrollDate   string `json:"enroll_date"`
 	ParentsCount int64  `json:"parents_count"`
 	CreatedAt    string `json:"created_at"`
+	// 人脸底库聚合状态（0未录入 1已注册 2注册失败 3注册中），列表展示用
+	FaceStatus      int8   `json:"face_status"`
+	FaceStatusLabel string `json:"face_status_label"`
+	FaceCount       int64  `json:"face_count"`
 }
 
 func (s *StudentService) ListStudents(
@@ -182,6 +186,25 @@ func (s *StudentService) ListStudents(
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
+	// 底库聚合状态：一次分组查询处理本页全部学生（避免逐行统计）
+	type faceAggRow struct {
+		StudentID uint64
+		Total     int64
+		Indexed   int64
+		Failed    int64
+	}
+	faceAgg := map[uint64]faceAggRow{}
+	if len(ids) > 0 {
+		var frs []faceAggRow
+		if err := s.db.WithContext(ctx).Model(&domain.StudentFace{}).
+			Select("student_id, COUNT(*) AS total, SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS indexed, SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS failed").
+			Where("student_id IN ?", ids).Group("student_id").Scan(&frs).Error; err != nil {
+			return nil, 0, 0, 0, err
+		}
+		for _, fr := range frs {
+			faceAgg[fr.StudentID] = fr
+		}
+	}
 	ref := time.Now()
 	out := make([]studentListItem, 0, len(list))
 	for _, st := range list {
@@ -197,21 +220,26 @@ func (s *StudentService) ListStudents(
 		if !st.EnrollDate.IsZero() {
 			ed = st.EnrollDate.Format("2006-01-02")
 		}
+		agg := faceAgg[st.ID]
+		faceStatus := aggregateFaceStatus(agg.Total, agg.Indexed, agg.Failed)
 		out = append(out, studentListItem{
-			ID:           st.ID,
-			Name:         st.Name,
-			Avatar:       st.Avatar,
-			Gender:       st.Gender,
-			Birthday:     bd,
-			Age:          ageCN(st.Birthday, ref),
-			StudentNo:    st.StudentNo,
-			ClassName:    cn,
-			ClassID:      st.ClassID,
-			Status:       st.Status,
-			StatusLabel:  statusLabel(st.Status),
-			EnrollDate:   ed,
-			ParentsCount: pc[st.ID],
-			CreatedAt:    st.CreatedAt.UTC().Format(time.RFC3339),
+			ID:              st.ID,
+			Name:            st.Name,
+			Avatar:          st.Avatar,
+			Gender:          st.Gender,
+			Birthday:        bd,
+			Age:             ageCN(st.Birthday, ref),
+			StudentNo:       st.StudentNo,
+			ClassName:       cn,
+			ClassID:         st.ClassID,
+			Status:          st.Status,
+			StatusLabel:     statusLabel(st.Status),
+			EnrollDate:      ed,
+			ParentsCount:    pc[st.ID],
+			CreatedAt:       st.CreatedAt.UTC().Format(time.RFC3339),
+			FaceStatus:      faceStatus,
+			FaceStatusLabel: faceStatusLabel(faceStatus),
+			FaceCount:       agg.Total,
 		})
 	}
 	return out, total, q.Page, q.PageSize, nil

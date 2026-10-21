@@ -21,6 +21,7 @@ type Message struct {
 	Title       string     `gorm:"size:256;not null" json:"title"`
 	Content     string     `gorm:"type:text" json:"content"`
 	ReferenceID uint64     `gorm:"default:0" json:"reference_id"`
+	ActionPath  string     `gorm:"size:255" json:"action_path"`
 	IsRead      bool       `gorm:"default:false;index" json:"is_read"`
 	ReadAt      *time.Time `json:"read_at"`
 

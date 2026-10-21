@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -8,15 +9,18 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"kindergarten-server/internal/ai/face"
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/service"
 	ossx "kindergarten-server/internal/storage/oss"
 )
 
 func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger:                                   logger.Default.LogMode(logger.Warn),
+		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
 		return nil, err
@@ -52,12 +56,14 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.Notice{},
 		&domain.NoticeAttachment{},
 		&domain.NoticeReadLog{},
+		&domain.NoticeTarget{},
 		&domain.NoticeTemplate{},
 		&domain.LeaveRequest{},
 		&domain.Attendance{},
 		&domain.PickupRecord{},
 		&domain.PickupAuthorization{},
 		&domain.PickupQRCode{},
+		&domain.PickupDailyDesignation{},
 
 		// 成长记录 / 日历 / 任务 / 积分
 		&domain.GrowthDailyLog{},
@@ -70,8 +76,16 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.GrowthReportDimension{},
 		&domain.StudentDailySummary{},
 		&domain.CalendarEvent{},
+		&domain.TimetableTemplate{},
+		&domain.TimetableOverride{},
 		&domain.ParentTask{},
 		&domain.TaskCheckIn{},
+		&domain.TaskResponse{},
+		&domain.TaskResponseSupplement{},
+		&domain.TaskResponseReaction{},
+		&domain.TaskCheckInState{},
+		&domain.ClassStarJar{},
+		&domain.TaskReadMark{},
 		&domain.PointAccount{},
 		&domain.PointTransaction{},
 		&domain.Achievement{},
@@ -94,6 +108,10 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.OperationLog{},
 		&domain.ExportTask{},
 
+		// 人脸底库与识别队列
+		&domain.StudentFace{},
+		&domain.RecognitionJob{},
+
 		// 字典
 		&domain.SysDictType{},
 		&domain.SysDictItem{},
@@ -108,6 +126,11 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 	// Seed default dictionary data (idempotent)
 	SeedDictsAfterMigration(db)
 
+	// 幂等补齐园长角色（align-class-calendar 4.3）；失败不阻断启动，与字典播种同策略
+	if err := service.SeedPrincipalRolesForAll(context.Background(), db); err != nil {
+		println("principal role seeder: " + err.Error())
+	}
+
 	return db, nil
 }
 
@@ -119,8 +142,14 @@ func ProvideRedis(cfg *config.Config) *redis.Client {
 	})
 }
 
+// ProvideWeChatClient 注入两端各自的微信凭据。
+// 返回类型保持 *auth.WeChatClient 单值，避免改动 Wire 的 provider 形状。
 func ProvideWeChatClient(cfg *config.Config, rdb *redis.Client) *auth.WeChatClient {
-	return auth.NewWeChatClient(cfg.WeChat.AppID, cfg.WeChat.Secret, rdb)
+	return auth.NewWeChatClient(
+		cfg.WeChat.TeacherAppID, cfg.WeChat.TeacherSecret,
+		cfg.WeChat.ParentAppID, cfg.WeChat.ParentSecret,
+		rdb,
+	)
 }
 
 type JWTSecret []byte
@@ -151,6 +180,17 @@ func ProvideRefreshTTL(cfg *config.Config) RefreshTTL {
 
 func ProvideCasbinConfig(cfg *config.Config) *config.CasbinConfig {
 	return &cfg.Casbin
+}
+
+// ProvideFaceConfig 暴露 [face] 配置（建议分级阈值等读取端用途）。
+func ProvideFaceConfig(cfg *config.Config) config.FaceConfig {
+	return cfg.Face
+}
+
+// ProvideFaceProvider 人脸识别 provider（face.New 按 [face].provider 选 tencent/mock）。
+// 作为服务层接口 face.Provider 的构造来源；Wire 需 Bind（见 wire.go）。
+func ProvideFaceProvider(cfg *config.Config) (face.Provider, error) {
+	return face.New(cfg.Face)
 }
 
 func ProvideOSSStorage(cfg *config.Config) (*ossx.Storage, error) {

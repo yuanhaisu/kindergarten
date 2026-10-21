@@ -4,11 +4,15 @@ package main
 // 用于核对迁移是否生效（例如 task_check_ins 的唯一索引）。
 //
 //	go run ./cmd/dbcheck task_check_ins
+//	go run ./cmd/dbcheck --query "SELECT id, phone FROM users LIMIT 10"
+//
+// --query 模式只执行只读 SQL（SELECT/SHOW/DESCRIBE），用于验收时定位测试数据。
 
 import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	gormlogger "gorm.io/gorm/logger"
 
@@ -44,6 +48,46 @@ func main() {
 	})
 	if err != nil {
 		log.Fatal("open:", err)
+	}
+
+	if table == "--query" {
+		if len(os.Args) < 3 {
+			log.Fatal("用法: go run ./cmd/dbcheck --query \"<SELECT ...>\"")
+		}
+		sql := os.Args[2]
+		upper := strings.ToUpper(strings.TrimSpace(sql))
+		if !strings.HasPrefix(upper, "SELECT") && !strings.HasPrefix(upper, "SHOW") && !strings.HasPrefix(upper, "DESCRIBE") {
+			log.Fatal("--query 只允许 SELECT / SHOW / DESCRIBE")
+		}
+		rows, err := db.Raw(sql).Rows()
+		if err != nil {
+			log.Fatal("query:", err)
+		}
+		defer func() { _ = rows.Close() }()
+		cols, _ := rows.Columns()
+		fmt.Println(strings.Join(cols, " | "))
+		vals := make([]any, len(cols))
+		ptrs := make([]any, len(cols))
+		for i := range vals {
+			ptrs[i] = &vals[i]
+		}
+		for rows.Next() {
+			if err := rows.Scan(ptrs...); err != nil {
+				log.Fatal("scan:", err)
+			}
+			line := make([]string, len(cols))
+			for i, v := range vals {
+				if v == nil {
+					line[i] = "NULL"
+				} else if b, ok := v.([]byte); ok {
+					line[i] = string(b)
+				} else {
+					line[i] = fmt.Sprint(v)
+				}
+			}
+			fmt.Println(strings.Join(line, " | "))
+		}
+		return
 	}
 
 	var rows []indexRow

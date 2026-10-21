@@ -20,19 +20,115 @@ func NewNoticeRepo(db *gorm.DB) *NoticeRepo {
 }
 
 // NoticeListRow 管理端通知列表行。
+// ClassNames 为目标班级名列表（多目标按目标表聚合），不再是单值 class_id/class_name。
 type NoticeListRow struct {
-	ID            uint64     `gorm:"column:id"`
-	Category      string     `gorm:"column:category"`
-	Title         string     `gorm:"column:title"`
-	ClassName     string     `gorm:"column:class_name"`
-	ClassID       uint64     `gorm:"column:class_id"`
-	CreatorID     uint64     `gorm:"column:creator_id"`
-	CreatorNick   string     `gorm:"column:creator_nick"`
-	Status        int8       `gorm:"column:status"`
-	PublishedAt   *time.Time `gorm:"column:published_at"`
-	CreatedAt     time.Time  `gorm:"column:created_at"`
-	ReadUsers     int64      `gorm:"column:read_users"`
-	ParentTotal   int64      `gorm:"column:parent_total"`
+	ID          uint64     `gorm:"column:id"`
+	Category    string     `gorm:"column:category"`
+	Title       string     `gorm:"column:title"`
+	ClassNames  []string   `gorm:"-"`
+	CreatorID   uint64     `gorm:"column:creator_id"`
+	CreatorNick string     `gorm:"column:creator_nick"`
+	Status      int8       `gorm:"column:status"`
+	PublishedAt *time.Time `gorm:"column:published_at"`
+	CreatedAt   time.Time  `gorm:"column:created_at"`
+	ReadUsers   int64      `gorm:"column:read_users"`
+	ParentTotal int64      `gorm:"column:parent_total"`
+}
+
+// noticeTargetParentTotalSQL 目标范围去重家长数——分母的唯一实现，两端统计共用。
+// 同一家长有多个孩子在目标范围内只计一人（COUNT(DISTINCT sp.user_id)）。
+const noticeTargetParentTotalSQL = `(SELECT COUNT(DISTINCT sp.user_id) FROM notice_targets t
+	 INNER JOIN students s ON s.class_id = t.class_id AND s.kindergarten_id = t.kindergarten_id AND s.deleted_at IS NULL
+	 INNER JOIN student_parents sp ON sp.student_id = s.id AND sp.deleted_at IS NULL
+	 WHERE t.notice_id = n.id AND t.deleted_at IS NULL)`
+
+// FilterByTargetHit 把「目标集命中任一给定班级」的 EXISTS 条件挂到 notices 查询上。
+// 家长端传孩子班级集、老师端传任教班级集：命中即可见，一条通知只出一行（多孩合并免费获得）。
+func (r *NoticeRepo) FilterByTargetHit(q *gorm.DB, classIDs []uint64) *gorm.DB {
+	if len(classIDs) == 0 {
+		return q.Where("1 = 0")
+	}
+	return q.Where(`EXISTS (SELECT 1 FROM notice_targets t
+		WHERE t.notice_id = notices.id AND t.deleted_at IS NULL AND t.class_id IN ?)`, classIDs)
+}
+
+// ExistsNoticeTargetHit 单条通知的目标集是否命中任一给定班级。
+func (r *NoticeRepo) ExistsNoticeTargetHit(ctx context.Context, noticeID uint64, classIDs []uint64) (bool, error) {
+	if len(classIDs) == 0 {
+		return false, nil
+	}
+	var n int64
+	err := r.db.WithContext(ctx).Model(&domain.NoticeTarget{}).
+		Where("notice_id = ? AND deleted_at IS NULL AND class_id IN ?", noticeID, classIDs).
+		Count(&n).Error
+	return n > 0, err
+}
+
+// ListNoticeTargetClassIDs 通知的目标班级 ID 集。
+func (r *NoticeRepo) ListNoticeTargetClassIDs(ctx context.Context, noticeID uint64) ([]uint64, error) {
+	var ids []uint64
+	err := r.db.WithContext(ctx).Model(&domain.NoticeTarget{}).
+		Where("notice_id = ? AND deleted_at IS NULL", noticeID).
+		Order("class_id ASC").
+		Pluck("class_id", &ids).Error
+	return ids, err
+}
+
+// ClassNamesByNoticeIDs 批量取通知的目标班级名（按 class_id 升序），供列表聚合。
+func (r *NoticeRepo) ClassNamesByNoticeIDs(ctx context.Context, kindergartenID uint64, noticeIDs []uint64) (map[uint64][]string, error) {
+	out := make(map[uint64][]string, len(noticeIDs))
+	if len(noticeIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		NoticeID uint64 `gorm:"column:notice_id"`
+		Name     string `gorm:"column:name"`
+	}
+	err := r.db.WithContext(ctx).Table("notice_targets AS t").
+		Select("t.notice_id, c.name").
+		Joins("INNER JOIN classes AS c ON c.id = t.class_id AND c.deleted_at IS NULL").
+		Where("t.kindergarten_id = ? AND t.deleted_at IS NULL AND t.notice_id IN ?", kindergartenID, noticeIDs).
+		Order("t.class_id ASC").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.NoticeID] = append(out[row.NoticeID], row.Name)
+	}
+	return out, nil
+}
+
+// ReplaceNoticeTargets 整体替换通知目标集（编辑时显式重选，不做增量）。
+// 目标行硬删重建：联合唯一键 (notice_id, class_id) 与软删共存会挡住重建。
+func (r *NoticeRepo) ReplaceNoticeTargets(ctx context.Context, kindergartenID, noticeID uint64, classIDs []uint64) error {
+	uniq := make([]uint64, 0, len(classIDs))
+	seen := make(map[uint64]struct{}, len(classIDs))
+	for _, id := range classIDs {
+		if id == 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+	if len(uniq) == 0 {
+		return errors.New("EMPTY_NOTICE_TARGETS")
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Where("notice_id = ?", noticeID).Delete(&domain.NoticeTarget{}).Error; err != nil {
+			return err
+		}
+		rows := make([]domain.NoticeTarget, 0, len(uniq))
+		for _, classID := range uniq {
+			rows = append(rows, domain.NoticeTarget{
+				NoticeID: noticeID, ClassID: classID, KindergartenID: kindergartenID,
+			})
+		}
+		return tx.Create(&rows).Error
+	})
 }
 
 func (r *NoticeRepo) baseNoticeListQuery(
@@ -43,11 +139,12 @@ func (r *NoticeRepo) baseNoticeListQuery(
 	keyword string,
 ) *gorm.DB {
 	q := r.db.Table("notices AS n").
-		Joins("INNER JOIN classes AS c ON c.id = n.class_id AND c.deleted_at IS NULL").
 		Joins("INNER JOIN users AS u ON u.id = n.creator_id AND u.deleted_at IS NULL").
 		Where("n.kindergarten_id = ? AND n.deleted_at IS NULL", kindergartenID)
 	if classID != nil && *classID > 0 {
-		q = q.Where("n.class_id = ?", *classID)
+		// 按目标班级过滤：命中目标集即返回
+		q = q.Where(`EXISTS (SELECT 1 FROM notice_targets t
+			WHERE t.notice_id = n.id AND t.deleted_at IS NULL AND t.class_id = ?)`, *classID)
 	}
 	if category != "" {
 		q = q.Where("n.category = ?", category)
@@ -79,22 +176,31 @@ func (r *NoticeRepo) ListNotices(
 		Select(`n.id,
 			n.category,
 			n.title,
-			c.name AS class_name,
-			n.class_id,
 			n.creator_id,
 			u.nickname AS creator_nick,
 			n.status,
 			n.published_at,
 			n.created_at,
 			(SELECT COUNT(DISTINCT rl.user_id) FROM notice_read_logs rl WHERE rl.notice_id = n.id) AS read_users,
-			(SELECT COUNT(DISTINCT sp.user_id) FROM student_parents sp
-			 INNER JOIN students s ON s.id = sp.student_id AND s.deleted_at IS NULL
-			 WHERE s.class_id = n.class_id AND s.kindergarten_id = n.kindergarten_id) AS parent_total`).
+			`+noticeTargetParentTotalSQL+` AS parent_total`).
 		Order("n.created_at DESC, n.id DESC").
 		Offset(offset).Limit(limit)
 	var rows []NoticeListRow
-	err := sel.Scan(&rows).Error
-	return rows, total, err
+	if err := sel.Scan(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	ids := make([]uint64, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	names, err := r.ClassNamesByNoticeIDs(ctx, kindergartenID, ids)
+	if err != nil {
+		return nil, 0, err
+	}
+	for i := range rows {
+		rows[i].ClassNames = names[rows[i].ID]
+	}
+	return rows, total, nil
 }
 
 // FindNoticeByID 园所内通知（未删），预加载班级与创建者。
@@ -171,14 +277,16 @@ func (r *NoticeRepo) FindUserDisplay(ctx context.Context, userID uint64) (nickna
 	return u.Nickname, u.Avatar, true
 }
 
-// NoticeReadStats 某通知下的已读人数、确认人数、班级家长总数（去重 user_id）。
-func (r *NoticeRepo) NoticeReadStats(ctx context.Context, kindergartenID, classID, noticeID uint64) (readUsers, confirmed, parentTotal int64, err error) {
+// NoticeReadStats 某通知的已读人数、确认人数、目标范围去重家长数（分母，多孩只计一人）。
+// 老师端/管理端共用这一处，保证两端 read_rate 一致。已读、已确认同为按 user_id 去重。
+func (r *NoticeRepo) NoticeReadStats(ctx context.Context, kindergartenID, noticeID uint64) (readUsers, confirmed, parentTotal int64, err error) {
 	err = r.db.WithContext(ctx).Raw(`
 SELECT COALESCE(COUNT(DISTINCT sp.user_id), 0) AS parent_total
-FROM student_parents sp
-INNER JOIN students s ON s.id = sp.student_id AND s.deleted_at IS NULL
-WHERE s.class_id = ? AND s.kindergarten_id = ?
-`, classID, kindergartenID).Scan(&parentTotal).Error
+FROM notice_targets t
+INNER JOIN students s ON s.class_id = t.class_id AND s.kindergarten_id = t.kindergarten_id AND s.deleted_at IS NULL
+INNER JOIN student_parents sp ON sp.student_id = s.id AND sp.deleted_at IS NULL
+WHERE t.notice_id = ? AND t.kindergarten_id = ? AND t.deleted_at IS NULL
+`, noticeID, kindergartenID).Scan(&parentTotal).Error
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -204,6 +312,20 @@ func (r *NoticeRepo) IsClassInKindergarten(ctx context.Context, kindergartenID, 
 		Where("kindergarten_id = ? AND id = ? AND deleted_at IS NULL", kindergartenID, classID).
 		Count(&n).Error
 	return n > 0, err
+}
+
+// ListClassIDsByGrades 年级圈选的班级快照展开：发布时刻该年级下的班级集合。
+// 调用方在发布时取一次并落目标表，之后班级增减不影响已发布通知（D2 快照语义）。
+func (r *NoticeRepo) ListClassIDsByGrades(ctx context.Context, kindergartenID uint64, grades []string) ([]uint64, error) {
+	if len(grades) == 0 {
+		return nil, nil
+	}
+	var ids []uint64
+	err := r.db.WithContext(ctx).Model(&domain.Class{}).
+		Where("kindergarten_id = ? AND grade IN ? AND deleted_at IS NULL", kindergartenID, grades).
+		Order("id ASC").
+		Pluck("id", &ids).Error
+	return ids, err
 }
 
 func (r *NoticeRepo) CreateNotice(ctx context.Context, n *domain.Notice) error {

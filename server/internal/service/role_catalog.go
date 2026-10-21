@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/repository"
 )
 
 type permissionModuleResp struct {
@@ -117,6 +118,20 @@ func adminPermissionModules() []permissionModuleResp {
 			},
 		},
 		{
+			Module: "calendar", ModuleLabel: "园级日历",
+			Items: []permissionItemResp{
+				{Key: "calendar:view", Label: "查看园级日历"},
+				{Key: "calendar:manage", Label: "管理园级事件"},
+			},
+		},
+		{
+			Module: "timetable", ModuleLabel: "课表管理",
+			Items: []permissionItemResp{
+				{Key: "timetable:view", Label: "查看课表"},
+				{Key: "timetable:manage", Label: "管理课表"},
+			},
+		},
+		{
 			Module: "admin", ModuleLabel: "管理员",
 			Items: []permissionItemResp{
 				{Key: "admin:view", Label: "查看管理员"},
@@ -184,6 +199,63 @@ func seedAdminPermissions(ctx context.Context, db *gorm.DB) error {
 		cp := row
 		if err := db.WithContext(ctx).Create(&cp).Error; err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// principalRoleNames 园级事件发布角色（align-class-calendar 产品裁决，2026-10-16）。
+var principalRoleNames = []string{"行政园长", "教学园长", "后勤园长", "招生园长"}
+
+// SeedPrincipalRolesForAll 为每个园所幂等补齐 4 个园长角色，并各挂日历管理权限码
+// （calendar:view / calendar:manage）。角色为非系统角色，园所可在角色页调整权限。
+// 先确保「园所管理员」存在：保持既有「首个后台角色 = 新管理员默认绑定角色」语义不被园长角色抢占。
+func SeedPrincipalRolesForAll(ctx context.Context, db *gorm.DB) error {
+	if err := seedAdminPermissions(ctx, db); err != nil {
+		return err
+	}
+	var perms []domain.AdminPermission
+	if err := db.WithContext(ctx).
+		Where("code IN ?", []string{"calendar:view", "calendar:manage"}).
+		Find(&perms).Error; err != nil {
+		return err
+	}
+	if len(perms) == 0 {
+		return nil // 不应发生：seedAdminPermissions 已先行
+	}
+	var kgs []domain.Kindergarten
+	if err := db.WithContext(ctx).Find(&kgs).Error; err != nil {
+		return err
+	}
+	for _, kg := range kgs {
+		if _, err := repository.NewAdminRepo(db).GetOrCreatePrimaryAdminRole(ctx, kg.ID); err != nil {
+			return err
+		}
+		for _, name := range principalRoleNames {
+			var existing domain.AdminRole
+			err := db.WithContext(ctx).
+				Where("kindergarten_id = ? AND name = ?", kg.ID, name).
+				Take(&existing).Error
+			if err == nil {
+				continue
+			}
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+			role := &domain.AdminRole{
+				KindergartenID: kg.ID, Name: name,
+				Description: "园级事件发布角色（系统初始化）", IsSystem: false,
+			}
+			if err := db.WithContext(ctx).Create(role).Error; err != nil {
+				return err
+			}
+			for _, p := range perms {
+				if err := db.WithContext(ctx).Create(&domain.AdminRolePermission{
+					RoleID: role.ID, PermissionID: p.ID,
+				}).Error; err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil

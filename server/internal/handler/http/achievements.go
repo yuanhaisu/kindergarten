@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -135,4 +136,73 @@ func (h *Handler) DeleteAchievement(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{})
+}
+
+// teacherGrantReq 老师授予徽章的请求体。
+// log_id 可选：给出时把该成长记录标为获奖见证（design D1：见证可空）。
+type teacherGrantReq struct {
+	StudentIDs []uint64 `json:"student_ids" binding:"required,min=1"`
+	LogID      *uint64  `json:"log_id"`
+}
+
+// TeacherGrantAchievement 老师把徽章授予学生，可选绑定成长记录作为获奖见证。
+// 错误映射：400 徽章未启用/见证无效/参数错 · 403 跨园所或非本班 · 409 重复授予
+func (h *Handler) TeacherGrantAchievement(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	achievementID, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	var req teacherGrantReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+
+	granted, err := h.achievementSvc.GrantToStudent(
+		c.Request.Context(),
+		tc.KindergartenID, tc.ClassID, tc.UserID, achievementID,
+		req.StudentIDs, req.LogID,
+	)
+	if err != nil {
+		// 语义化错误 → 4xx；其余走 500。不得把业务错误吞成 500。
+		switch {
+		case errors.Is(err, service.ErrAchievementDisabled):
+			response.ErrBadRequest(c, 40010, "徽章不存在或未启用")
+		case errors.Is(err, service.ErrGrantWitnessInvalid):
+			response.ErrBadRequest(c, 40011, "获奖见证记录无效，或该学生对它不可见")
+		case errors.Is(err, service.ErrGrantStudentNotFound):
+			response.ErrBadRequest(c, 40012, "学生不存在或参数为空")
+		case errors.Is(err, service.ErrGrantCrossKindergarten):
+			response.ErrForbidden(c, "只能向自己班级的学生授予本园徽章")
+		case errors.Is(err, service.ErrGrantDuplicate):
+			response.Err(c, 409, 40910, "该学生已获得过这枚徽章")
+		default:
+			response.ErrInternal(c, "授予徽章失败")
+		}
+		return
+	}
+	response.Created(c, map[string]any{
+		"achievement_id":      achievementID,
+		"granted_student_ids": granted,
+		"granted_count":       len(granted),
+		"log_id":              req.LogID,
+	})
+}
+
+// TeacherListAchievements 老师端授予入口的徽章选择器：只列本园已启用的徽章。
+func (h *Handler) TeacherListAchievements(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	list, err := h.achievementSvc.ListEnabled(c.Request.Context(), tc.KindergartenID)
+	if err != nil {
+		response.ErrInternal(c, "获取徽章列表失败")
+		return
+	}
+	response.OK(c, map[string]any{"list": list, "total": len(list)})
 }

@@ -6,21 +6,102 @@
 
 ---
 
+### POST `/parent/pickup/designate`
+
+> 指定今日接走人（本次契约变更新增）
+>
+> 指定结果覆盖该孩当日此前的指定，并使该孩当日已生成的接送凭证全部失效。
+> 被指定人必须是该孩**已审核通过且有效**（未撤销、未过期）的授权接送人。
+
+```json
+// Query: ?student_id=1        // student_id 走 query，沿用本模块既有约定
+// Body
+{
+  "authorization_id": 3
+}
+
+// Response
+{
+  "student_id": 1,
+  "authorization_id": 3,
+  "person": {
+    "name": "奶奶（张三）",
+    "relation": "grandmother",
+    "avatar": "https://cdn.example.com/pickup/person/3.jpg"
+  },
+  "designated_at": "2026-03-19T08:00:00Z"
+}
+```
+
+**错误**：被指定人未审核通过 / 已撤销 / 已过期 / 不属于该孩 → `40000x` 校验错
+
+---
+
+### GET `/parent/pickup/designation`
+
+> 只读查「今日接走人」指定（本次新增，供授权人列表展示当前指定）
+>
+> 与 `GET /pickup/qrcode` 的区别：本端点**无副作用**，不会按需生成凭证。
+> 未指定时 `designated` 为 `false`（不是错误）。
+
+```json
+// Query: ?student_id=1
+
+// Response — 已指定
+{
+  "student_id": 1,
+  "designated": true,
+  "authorization_id": 3,
+  "person": {
+    "id": 3,
+    "name": "奶奶（张三）",
+    "relation": "grandmother",
+    "avatar": "https://cdn.example.com/pickup/person/3.jpg"
+  }
+}
+
+// Response — 未指定
+{
+  "student_id": 1,
+  "designated": false,
+  "person": null
+}
+```
+
+---
+
 ### GET `/parent/pickup/qrcode`
 
-> 获取接送二维码
+> 获取接送二维码（绑「学生 + 今日接走人」）
+>
+> 前提：已通过 `POST /pickup/designate` 指定今日接走人。
+> 凭证当日过期、一次有效；生成时会再次校验被指定人仍在有效授权集合内。
 
 ```json
 // Query: ?student_id=1
 
 // Response
 {
-  "qr_code": "PICKUP_CODE_xxx_20260319_s1",
-  "qr_image_url": "https://cdn.example.com/qr/pickup_s1.png",
-  "student": { "id": 1, "name": "王小明" },
+  "qr_code": "a3f9c2e81b0d4f6a7c5e9d2b8a4f1c6e",
+  "student": {
+    "id": 1,
+    "name": "王小明",
+    "photo": "https://cdn.example.com/student/1.jpg"
+  },
+  "person": {
+    "name": "奶奶（张三）",
+    "relation": "grandmother",
+    "photo": "https://cdn.example.com/pickup/person/3.jpg"
+  },
   "expire_at": "2026-03-19T23:59:59Z"
 }
 ```
+
+**字段说明**：
+
+- `qr_code`：纯随机串，**不内嵌学生标识等可枚举数据**
+- `student.photo` / `person.photo`：供老师侧人证对照（码上带名字方案）
+- 响应**不含** `qr_image_url`（二维码图片由前端本地渲染）
 
 ---
 
@@ -65,20 +146,26 @@
 
 ### GET `/parent/pickup/authorized-persons`
 
-> 授权接送人列表
+> 授权接送人列表（分页）
+>
+> **本次契约变更**：响应字段改为与实现一致 ——
+> 移除 `id_card_tail`（不暴露证件号）、`status_label`（语义并入 `review_status_label`）；
+> `phone` 为脱敏值；补 `review_status` / `review_status_label` 与分页字段。
 
 ```json
-// Query: ?student_id=1
+// Query: ?student_id=1&page=1&page_size=20
 
 // Response
 {
   "list": [
     {
       "id": 1,
+      "student_id": 1,
+      "student_name": "王小明",
+      "class_name": "小一班",
       "name": "爸爸（王明）",
       "relation": "father",
       "phone": "138****8888",
-      "id_card_tail": "****1234",
       "avatar": "https://cdn.example.com/pickup/person/1.jpg",
       "auth_type": "permanent",
       "auth_type_label": "长期授权",
@@ -88,11 +175,23 @@
       "allow_growth_view": false,
       "notify_on_pickup": true,
       "status": 1,
-      "status_label": "已审核"
+      "review_status": 1,
+      "review_status_label": "已通过"
     }
-  ]
+  ],
+  "total": 3,
+  "page": 1,
+  "page_size": 20
 }
 ```
+
+**字段说明**：
+
+- `phone`：脱敏后返回，不返回完整号码
+- **不返回**证件号相关字段
+- `review_status`：`0` 待审核 / `1` 已通过 / `2` 已拒绝（来源 `domain.PickupAuthorization.ReviewStatus`）
+- `status`：`1` 有效 / `0` 已撤销（与 `review_status` 是两套独立状态）
+- 「有效接送人」判定口径 = `status = 1` **且** `review_status = 1`
 
 ---
 

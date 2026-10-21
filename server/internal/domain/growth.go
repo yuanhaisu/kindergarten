@@ -79,17 +79,31 @@ type GrowthMedia struct {
 	FileSize       int64   `json:"file_size"`
 	Duration       int     `json:"duration"`
 	SortNum        int     `json:"sort_num" gorm:"default:0"`
+	// RefDesc 引用层描述（L2，见 docs/media-management-design.md）：
+	// 「这次为什么用/用在哪」。素材固有描述是 files.caption（L1），两者独立。
+	RefDesc string `json:"ref_desc" gorm:"size:255"`
 }
 
 func (GrowthMedia) TableName() string { return "growth_media" }
 
-// GrowthMediaStudent 媒体-学生关联（AI 识别或手动标记）
+// GrowthMediaStudent 媒体-学生关联（AI 识别或手动标记）。
+// status：0=建议（AI 识别、待老师确认）1=确认（对家长端生效）2=拒绝（不再提示）。
+// 人工点名直接 status=1；存量行 status 为 NULL 视为确认（兼容旧数据）。
 type GrowthMediaStudent struct {
 	BaseModel
-	MediaID   uint64 `json:"media_id" gorm:"not null;uniqueIndex:idx_media_student"`
-	StudentID uint64 `json:"student_id" gorm:"not null;uniqueIndex:idx_media_student"`
-	IsAuto    bool   `json:"is_auto" gorm:"default:false"`
+	MediaID    uint64   `json:"media_id" gorm:"not null;uniqueIndex:idx_media_student"`
+	StudentID  uint64   `json:"student_id" gorm:"not null;uniqueIndex:idx_media_student"`
+	IsAuto     bool     `json:"is_auto" gorm:"default:false"`
+	Status     *int8    `json:"status" gorm:"index"`
+	Confidence *float64 `json:"confidence"`
 }
+
+// 建议状态常量（见 photo-tagging-face-recognition design D6）
+const (
+	MediaStudentStatusSuggested int8 = 0 // AI 建议，待确认
+	MediaStudentStatusConfirmed int8 = 1 // 老师确认（对家长端生效）
+	MediaStudentStatusRejected  int8 = 2 // 老师拒绝
+)
 
 func (GrowthMediaStudent) TableName() string { return "growth_media_students" }
 

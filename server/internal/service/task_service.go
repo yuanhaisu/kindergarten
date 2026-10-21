@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
@@ -16,10 +18,11 @@ import (
 type TaskService struct {
 	tasks *repository.TaskRepo
 	oplog *repository.OperationLogRepo
+	db    *gorm.DB
 }
 
-func NewTaskService(tasks *repository.TaskRepo, oplog *repository.OperationLogRepo) *TaskService {
-	return &TaskService{tasks: tasks, oplog: oplog}
+func NewTaskService(tasks *repository.TaskRepo, oplog *repository.OperationLogRepo, db *gorm.DB) *TaskService {
+	return &TaskService{tasks: tasks, oplog: oplog, db: db}
 }
 
 var errTaskNotFound = errors.New("TASK_NOT_FOUND")
@@ -129,19 +132,18 @@ func (s *TaskService) ListTasks(
 		rate, _, _ := s.completionForRow(ctx, kindergartenID, row, ci)
 		f := domain.TaskFrequency(row.Frequency)
 		out = append(out, map[string]interface{}{
-			"id":               row.ID,
-			"title":            row.Title,
-			"class_name":       row.ClassName,
-			"class_id":         row.ClassID,
-			"frequency":        string(f),
-			"frequency_label":  taskFrequencyLabel(f),
-			"start_date":       row.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
-			"end_date":         row.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
-			"points":           row.Points,
-			"status":           int(row.Status),
-			"completion_rate":  rate,
-			"creator":          map[string]interface{}{"nickname": row.CreatorNick},
-			"created_at":       row.CreatedAt.UTC().Format(time.RFC3339),
+			"id":              row.ID,
+			"title":           row.Title,
+			"class_name":      row.ClassName,
+			"class_id":        row.ClassID,
+			"frequency":       string(f),
+			"frequency_label": taskFrequencyLabel(f),
+			"start_date":      row.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
+			"end_date":        row.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
+			"status":          int(row.Status),
+			"completion_rate": rate,
+			"creator":         map[string]interface{}{"nickname": row.CreatorNick},
+			"created_at":      row.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return out, total, pn.Page, pn.PageSize, nil
@@ -178,20 +180,19 @@ func (s *TaskService) GetTaskDetail(ctx context.Context, kindergartenID, taskID 
 		creatorID = t.Creator.ID
 	}
 	return map[string]interface{}{
-		"id":               t.ID,
-		"title":            t.Title,
-		"description":      t.Description,
-		"class_id":         t.ClassID,
-		"class_name":       className,
-		"frequency":        string(t.Frequency),
-		"frequency_label":  taskFrequencyLabel(t.Frequency),
-		"start_date":       t.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
-		"end_date":         t.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
-		"points":           t.Points,
-		"status":           int(t.Status),
-		"completion_rate":  rate,
-		"checkin_count":    ci,
-		"total_possible":   tp,
+		"id":              t.ID,
+		"title":           t.Title,
+		"description":     t.Description,
+		"class_id":        t.ClassID,
+		"class_name":      className,
+		"frequency":       string(t.Frequency),
+		"frequency_label": taskFrequencyLabel(t.Frequency),
+		"start_date":      t.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
+		"end_date":        t.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
+		"status":          int(t.Status),
+		"completion_rate": rate,
+		"checkin_count":   ci,
+		"total_possible":  tp,
 		"creator": map[string]interface{}{
 			"id":       creatorID,
 			"nickname": creatorNick,
@@ -212,12 +213,13 @@ func (s *TaskService) DeleteTask(ctx context.Context, kindergartenID, adminUserI
 	if t == nil {
 		return errTaskNotFound
 	}
-	n, err := s.tasks.SoftDeleteTask(ctx, kindergartenID, taskID)
-	if err != nil {
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return deleteTaskCascade(ctx, tx, taskID)
+	}); err != nil {
+		if errors.Is(err, errTaskNotFound) {
+			return errTaskNotFound
+		}
 		return err
-	}
-	if n == 0 {
-		return errTaskNotFound
 	}
 	_ = s.oplog.Create(ctx, &domain.OperationLog{
 		KindergartenID: kindergartenID,
@@ -241,7 +243,6 @@ type CreateTaskReq struct {
 	Frequency   string `json:"frequency" binding:"required"`
 	StartDate   string `json:"start_date" binding:"required"`
 	EndDate     string `json:"end_date" binding:"required"`
-	Points      int    `json:"points"`
 }
 
 func parseTaskFrequency(s string) (domain.TaskFrequency, error) {
@@ -289,10 +290,6 @@ func (s *TaskService) CreateTask(
 	if ed.Before(sd) {
 		return nil, errors.New("BAD_DATE_RANGE")
 	}
-	points := req.Points
-	if points <= 0 {
-		points = 1
-	}
 	t := &domain.ParentTask{
 		KindergartenID: kindergartenID,
 		ClassID:        req.ClassID,
@@ -302,7 +299,6 @@ func (s *TaskService) CreateTask(
 		Frequency:      freq,
 		StartDate:      sd,
 		EndDate:        ed,
-		Points:         points,
 		Status:         1,
 	}
 	if err := s.tasks.CreateTask(ctx, t); err != nil {
@@ -333,7 +329,6 @@ type UpdateTaskReq struct {
 	Frequency   string `json:"frequency" binding:"required"`
 	StartDate   string `json:"start_date" binding:"required"`
 	EndDate     string `json:"end_date" binding:"required"`
-	Points      int    `json:"points"`
 	Status      int8   `json:"status" binding:"required"` // 0 已结束 1 进行中
 }
 
@@ -379,19 +374,14 @@ func (s *TaskService) UpdateTask(
 	if req.Status != 0 && req.Status != 1 {
 		return errors.New("BAD_STATUS")
 	}
-	points := req.Points
-	if points <= 0 {
-		points = 1
-	}
 	updates := map[string]interface{}{
-		"title":        strings.TrimSpace(req.Title),
-		"description":  strings.TrimSpace(req.Description),
-		"class_id":     req.ClassID,
-		"frequency":    string(freq),
-		"start_date":   sd,
-		"end_date":     ed,
-		"points":       points,
-		"status":       req.Status,
+		"title":       strings.TrimSpace(req.Title),
+		"description": strings.TrimSpace(req.Description),
+		"class_id":    req.ClassID,
+		"frequency":   string(freq),
+		"start_date":  sd,
+		"end_date":    ed,
+		"status":      req.Status,
 	}
 	n, err := s.tasks.UpdateTask(ctx, kindergartenID, taskID, updates)
 	if err != nil {
@@ -467,10 +457,6 @@ func (s *TaskService) GetTaskStats(ctx context.Context, kindergartenID uint64, s
 		return nil, err
 	}
 	totalCheckins, err := s.tasks.CountCheckinsInDateRange(ctx, kindergartenID, rangeStart, rangeEndDay)
-	if err != nil {
-		return nil, err
-	}
-	totalPoints, err := s.tasks.SumCheckinPointsInDateRange(ctx, kindergartenID, rangeStart, rangeEndDay)
 	if err != nil {
 		return nil, err
 	}
@@ -550,12 +536,11 @@ func (s *TaskService) GetTaskStats(ctx context.Context, kindergartenID uint64, s
 			"start": rangeStart.Format("2006-01-02"),
 			"end":   rangeEndDay.Format("2006-01-02"),
 		},
-		"total_tasks":          len(tasks),
-		"active_tasks":         active,
-		"completed_tasks":      completed,
-		"total_checkins":       totalCheckins,
-		"total_points_awarded": totalPoints,
-		"avg_completion_rate":  avgRate,
-		"by_class":             byClassOut,
+		"total_tasks":         len(tasks),
+		"active_tasks":        active,
+		"completed_tasks":     completed,
+		"total_checkins":      totalCheckins,
+		"avg_completion_rate": avgRate,
+		"by_class":            byClassOut,
 	}, nil
 }

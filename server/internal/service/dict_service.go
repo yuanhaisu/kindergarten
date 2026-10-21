@@ -344,7 +344,25 @@ func (s *DictService) UpdateItem(ctx context.Context, itemID uint64, req UpdateD
 	}, nil
 }
 
-func (s *DictService) DeleteItem(ctx context.Context, itemID uint64) error {
+func (s *DictService) DeleteItem(ctx context.Context, kgID, itemID uint64) error {
+	item, err := s.dict.FindItemByID(ctx, itemID)
+	if err != nil {
+		return err
+	}
+	if item == nil {
+		return ErrDictItemNotFound
+	}
+	// 系统内置类型（如日历事件类型）的字典项不可删除，可改名或停用 —— 删除会让历史数据失去展示元数据。
+	t, err := s.dict.FindTypeByID(ctx, kgID, item.TypeID)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return ErrDictItemNotFound // 非本园字典项
+	}
+	if t.IsSystem {
+		return fmt.Errorf("%w: 系统内置类型的字典项不可删除，请改用停用", ErrDictSystemType)
+	}
 	rows, err := s.dict.DeleteItem(ctx, itemID)
 	if err != nil {
 		return err

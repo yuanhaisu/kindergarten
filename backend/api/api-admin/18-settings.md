@@ -49,9 +49,15 @@
     "task_checkin_points": 5,
     "weekly_attendance_bonus": 10,
     "monthly_attendance_bonus": 50
+  },
+  "health": {
+    "temperature_required": false,
+    "fever_threshold": 37.3
   }
 }
 ```
+
+> `health.temperature_required` 默认 `false`（按需测温）；`health.fever_threshold` 默认 `37.3`，允许范围 `35.0–42.0`。
 
 ---
 
@@ -70,6 +76,10 @@
   },
   "notice": {
     "need_audit": false
+  },
+  "health": {
+    "temperature_required": true,
+    "fever_threshold": 37.5
   }
 }
 
@@ -78,6 +88,8 @@
   "updated_at": "2026-03-19T10:00:00Z"
 }
 ```
+
+> `health` 块为整块替换；`fever_threshold` 越界（<35.0 或 >42.0）返回 422，原策略不变。
 
 ---
 

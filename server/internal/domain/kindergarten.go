@@ -24,6 +24,11 @@ type Class struct {
 	AcademicYear     string `gorm:"size:32;not null;default:''" json:"academic_year"`
 	Capacity         int    `gorm:"not null;default:30" json:"capacity"`
 	Status           int8   `gorm:"not null;default:1" json:"status"`
+	// PickupDeadline 班级放学时刻，格式 "HH:mm"。空串表示未配置，判定时回退缺省 16:00
+	// （产品决策 2026-10-07：班级可配、默认 16:00；design-data 无出处，见 proposal 阻塞清单）。
+	// 用于「提前接走须填理由」与「超时未接」两处判定。
+	// 用 string 存时刻而非 time.Time：时刻不含日期分量，且与 EstablishedAt 的既有惯例一致。
+	PickupDeadline string `gorm:"size:5;not null;default:''" json:"pickup_deadline"`
 
 	Kindergarten *Kindergarten `json:"kindergarten,omitempty" gorm:"foreignKey:KindergartenID"`
 }

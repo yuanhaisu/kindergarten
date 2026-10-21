@@ -19,6 +19,7 @@
 | 9 | [09-student.md](09-student.md) | 学生管理 | 5 |
 | 10 | [10-feedback.md](10-feedback.md) | 意见反馈 | 2 |
 | 11 | [11-settings.md](11-settings.md) | 设置 | 2 |
+| 12 | [12-health.md](12-health.md) | 晨检记录 | 1 |
 
 ## 设计稿对照
 

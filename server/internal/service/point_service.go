@@ -92,10 +92,10 @@ func (s *PointService) GetOverview(ctx context.Context, kindergartenID uint64) (
 		})
 	}
 	return map[string]interface{}{
-		"total_points_in_circulation":       circ,
+		"total_points_in_circulation":     circ,
 		"total_points_awarded_this_month": awarded,
 		"total_points_spent_this_month":   spent,
-		"top_earners":                       topOut,
+		"top_earners":                     topOut,
 	}, nil
 }
 
@@ -139,13 +139,13 @@ func (s *PointService) ListRecords(
 				"name":       row.StudentName,
 				"class_name": row.ClassName,
 			},
-			"type":          typ,
-			"source":        row.Source,
-			"source_label":  pointSourceLabel(row.Source),
-			"amount":        row.Points,
-			"description":   row.Description,
-			"operator":      nil,
-			"created_at":    row.CreatedAt.UTC().Format(time.RFC3339),
+			"type":         typ,
+			"source":       row.Source,
+			"source_label": pointSourceLabel(row.Source),
+			"amount":       row.Points,
+			"description":  row.Description,
+			"operator":     nil,
+			"created_at":   row.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return out, total, pn.Page, pn.PageSize, nil
@@ -264,9 +264,8 @@ func (s *PointService) GetPointRules(ctx context.Context, kindergartenID uint64)
 	if row != nil {
 		extra = row.ExtraConfig
 	}
-	ti, wb, mb, gf := readPointsFromExtra(extra)
+	_, wb, mb, gf := readPointsFromExtra(extra)
 	rules := []map[string]interface{}{
-		{"id": 1, "source": "task_checkin", "label": "任务打卡", "points": ti, "editable": true},
 		{"id": 2, "source": "full_attendance_week", "label": "周全勤", "points": wb, "editable": true},
 		{"id": 3, "source": "full_attendance_month", "label": "月全勤", "points": mb, "editable": true},
 		{"id": 4, "source": "growth_featured", "label": "成长日志被推荐", "points": gf, "editable": true},
@@ -296,8 +295,6 @@ func (s *PointService) UpdatePointRules(
 			return nil, errors.New("BAD_POINTS")
 		}
 		switch r.ID {
-		case 1:
-			patch["task_checkin_points"] = r.Points
 		case 2:
 			patch["weekly_attendance_bonus"] = r.Points
 		case 3:
@@ -322,7 +319,7 @@ func (s *PointService) UpdatePointRules(
 	}
 	if row == nil {
 		row = &domain.KindergartenAppSetting{
-			KindergartenID: kindergartenID,
+			KindergartenID:  kindergartenID,
 			CurrentSemester: "spring",
 			ExtraConfig:     newExtra,
 		}

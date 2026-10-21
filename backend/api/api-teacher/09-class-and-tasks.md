@@ -1,4 +1,4 @@
-# 模块 9：班级与亲子任务 API
+﻿# 模块 9：班级与亲子任务 API
 
 > 对应开发计划：模块 9：班级、亲子任务与补充页
 >
@@ -14,6 +14,7 @@
 
 - `GET /teacher/class/info`
 - `GET /teacher/class/students`
+- `GET /teacher/class/present-students`
 - `GET /teacher/class/students/:id`
 
 亲子任务：
@@ -54,32 +55,57 @@
 
 ### GET `/teacher/class/students`
 
-> 班级学生列表
+> 班级学生列表（接送向；成长记录创建页的候选学生也取自本接口）
+>
+> 候选范围：**本班在读**（`status=1`）学生，按学生 ID 升序，一次全量返回（无分页）。
 
 ```json
-// Query: ?keyword=&page=1&page_size=50
+// Query: ?status=            // 可选，接送状态过滤（arrived/picked_up/not_picked_up/not_arrived）；不传为全部
 
 // Response
 {
   "list": [
     {
-      "id": 1,
+      "student_id": 1,
       "name": "王小明",
       "avatar": "https://cdn.example.com/avatar/s1.jpg",
-      "gender": 1,
-      "birthday": "2021-09-15",
-      "age": "4岁半",
-      "student_no": "2025001",
-      "status": 1,
-      "parents": [
-        { "user_id": 10, "name": "王明", "relation": "father", "is_primary": true },
-        { "user_id": 11, "name": "李丽", "relation": "mother", "is_primary": false }
-      ]
+      "authorized_persons": "爷爷、奶奶",
+      "arrive_time": "08:15",
+      "pickup_status": "not_picked_up",
+      "is_overdue": false,
+      "pickup_deadline": "16:00",
+      "last_remark": "",
+      "is_authorized_override": false
     }
   ],
   "total": 30
 }
 ```
+
+> 说明：响应为接送页专用形状（字段以 `student_id` 而非 `id` 为主键）；成长记录创建页只消费 `student_id` / `name` / `avatar` 三个字段。
+
+---
+
+### GET `/teacher/class/present-students`
+
+> 指定日期的**到场学生名单**（照片点名「全班」一键的名单来源）
+>
+> 口径：本班在读 ∧ **未被明确排除**（无已批准请假覆盖当日，且当日考勤非缺勤/请假）。
+> **无请假/考勤数据时保守视为到场**——家长端「漏标」（看不到孩子的照片）的成本远高于「误标」。
+> 阈值与口径由服务端判定，客户端不得重复实现。
+
+```json
+// Query: ?date=2026-10-16    // 可选，缺省为今天（Asia/Shanghai）
+// 格式错误或无法解析时按今天处理
+
+// Response
+{
+  "list": [1, 2, 3, 5],
+  "total": 4
+}
+```
+
+> `list` 为学生 ID 数组（升序不保证，客户端按 ID 匹配）；只含**本班**在读学生。
 
 ---
 
@@ -131,13 +157,14 @@
 
 ## 8. 亲子任务
 
+> A 切片：班级/个体任务、提交、老师单条/周期回应、无积分。公开审核、补充回应、分享码属于 B 切片。
+>
+> 老师端任务操作限定当前班级。
+
 ### GET `/teacher/tasks`
 
-> 任务列表
-
 ```json
-// Query: ?status=1&page=1&page_size=20
-// status: 1=进行中 0=已结束
+// Query: ?page=1&page_size=20
 
 // Response
 {
@@ -145,164 +172,196 @@
     {
       "id": 1,
       "title": "每日阅读10分钟",
-      "description": "每天陪孩子阅读10分钟绘本，培养阅读习惯",
+      "description": "每天陪孩子阅读10分钟绘本",
+      "intro": "任务详细介绍",
+      "learning_link": "延续本周班级的春天主题",
+      "target_student_id": 0,
       "frequency": "daily",
-      "frequency_label": "每日任务",
       "start_date": "2026-03-19",
       "end_date": "2026-03-25",
-      "points": 5,
       "status": 1,
-      "completion_rate": "57%",
-      "checkin_count": 120,
-      "total_possible": 210,
+      "allow_public": false,
+      "recognition_ritual": "sticker",
+      "star_scope": "task",
+      "star_goal": 20,
+      "pending_responses": 3,
       "created_at": "2026-03-18T10:00:00Z"
-    },
-    {
-      "id": 2,
-      "title": "手工制作：春天的小树",
-      "description": "和孩子一起用彩纸和剪刀制作一棵春天的小树",
-      "frequency": "once",
-      "frequency_label": "一次任务",
-      "start_date": "2026-03-18",
-      "end_date": "2026-03-23",
-      "points": 15,
-      "status": 1,
-      "completion_rate": "0%",
-      "checkin_count": 0,
-      "total_possible": 30,
-      "created_at": "2026-03-17T14:00:00Z"
     }
   ],
-  "total": 8
+  "total": 8,
+  "page": 1,
+  "page_size": 20
 }
 ```
 
----
+- `pending_responses` 是当前任务下 `response_id=0` 的提交数。
+- `points` 已移除。
+
+### GET `/teacher/tasks/:id`
+
+> 任务详情（编辑页按 id 拉取，不再依赖列表分页）
+
+```json
+{
+  "id": 1,
+  "title": "每日阅读10分钟",
+  "description": "每天陪孩子阅读10分钟绘本",
+  "intro": "任务详细介绍",
+  "learning_link": "延续本周班级的春天主题",
+  "target_student_id": 0,
+  "frequency": "daily",
+  "start_date": "2026-03-19",
+  "end_date": "2026-03-25",
+  "allow_public": false,
+  "recognition_ritual": "sticker",
+  "star_scope": "task",
+  "star_goal": 20,
+  "status": 1,
+  "created_at": "2026-03-18T10:00:00Z"
+}
+```
 
 ### POST `/teacher/tasks`
-
-> 布置新任务
 
 ```json
 // Request
 {
   "title": "每日阅读10分钟",
-  "description": "每天陪孩子阅读10分钟绘本，培养阅读习惯",
-  "frequency": "daily",         // daily=每日 / weekly=每周 / once=一次性
+  "description": "每天陪孩子阅读10分钟绘本",
+  "intro": "任务详细介绍",
+  "requirements": ["每天阅读10分钟", "上传一张阅读照片"],
+  "target_student_id": 0,
+  "learning_link": "延续本周班级的春天主题",
+  "frequency": "daily",
   "start_date": "2026-03-19",
   "end_date": "2026-03-25",
-  "points": 5
+  "allow_public": false,
+  "recognition_ritual": "sticker",
+  "star_scope": "task",
+  "star_goal": 20
 }
 
-// Response
+// Response（HTTP 201）
 {
   "id": 1,
-  "created_at": "2026-03-18T10:00:00Z"
+  "created_at": "2026-03-18T10:00:00Z",
+  "notified_count": 0,
+  "notify_failed_count": 0
 }
 ```
 
----
+- `learning_link` 必填。
+- `target_student_id > 0` 时必须是当前班级在读学生；个体任务 `allow_public` 强制 false。
+- `star_scope=class` 时必须已有班级罐目标，否则拒绝。
+- 不接收 `points`。
 
 ### PUT `/teacher/tasks/:id`
 
-> 编辑任务
-
 ```json
-// Request
+// Request：字段同创建；有提交后只允许 title/description/learning_link/allow_public
 {
   "title": "每日阅读15分钟",
-  "description": "每天陪孩子阅读15分钟绘本，培养阅读习惯（时间延长）",
-  "end_date": "2026-03-30",
-  "points": 5
-}
-
-// Response
-{
-  "id": 1,
-  "updated_at": "2026-03-19T10:00:00Z"
+  "description": "时间延长",
+  "learning_link": "延续本周班级的春天主题",
+  "allow_public": false
 }
 ```
 
----
+- 有提交后修改 `frequency`、起止日期、`target_student_id`、`star_scope`、`star_goal` 返回参数错误。
+- `allow_public=false` 时批量撤销公开（B 切片字段，A 先保留）。
 
 ### DELETE `/teacher/tasks/:id`
 
-> 删除任务
-
 ```json
-// Response
 {}
 ```
 
----
-
 ### GET `/teacher/tasks/:id/stats`
 
-> 任务完成率统计
-
 ```json
-// Response
 {
-  "task": {
-    "id": 1,
-    "title": "每日阅读10分钟",
-    "frequency": "daily",
-    "start_date": "2026-03-19",
-    "end_date": "2026-03-25",
-    "points": 5
-  },
-  "overall": {
-    "completion_rate": "57%",
-    "total_checkins": 120,
-    "total_possible": 210,
-    "total_points_awarded": 600
-  },
-  "student_stats": [
-    {
-      "student_id": 1,
-      "student_name": "王小明",
-      "avatar": "...",
-      "checkin_count": 4,
-      "total_days": 7,
-      "completion_rate": "57%",
-      "streak_days": 4
-    },
-    {
-      "student_id": 2,
-      "student_name": "李小花",
-      "avatar": "...",
-      "checkin_count": 7,
-      "total_days": 7,
-      "completion_rate": "100%",
-      "streak_days": 7
-    }
-  ]
+  "task_id": 1,
+  "total_students": 30,
+  "submission_count": 21,
+  "responded_count": 12,
+  "pending_count": 9
 }
 ```
 
----
+- 不再返回 `checkin_count` / `not_checkin_count` / `total_points_awarded`。
 
 ### GET `/teacher/tasks/:id/checkins`
 
-> 任务打卡记录
-
 ```json
-// Query: ?student_id=&date=&page=1&page_size=20
-
-// Response
+// Query: ?status=pending|responded
 {
   "list": [
     {
       "id": 1,
+      "student_id": 1,
       "student": { "id": 1, "name": "王小明", "avatar": "..." },
-      "parent": { "id": 10, "nickname": "王小明爸爸" },
       "date": "2026-03-19",
-      "content": "今天和爸爸一起读了《小王子》第三章",
-      "image_url": "https://cdn.example.com/task/checkin/1.jpg",
-      "points": 5,
+      "content": "今天和爸爸一起读了《小王子》",
+      "media_file_id": 1001,
+      "media_url": "https://cdn.example.com/task/checkin/1.jpg",
+      "is_public_requested": false,
+      "public_scope_confirmed": false,
+      "response_id": 0,
       "created_at": "2026-03-19T20:30:00Z"
     }
   ],
-  "total": 120
+  "total": 1
 }
 ```
+
+- `status=pending` 由后端按 `created_at ASC` 排序。
+- 不返回 `points`。
+
+### POST `/teacher/tasks/:id/checkins/:checkin_id/response`
+
+```json
+// Request
+{
+  "ritual": "sticker",
+  "sticker_key": "star",
+  "content": "今天读得真认真",
+  "media_file_id": 0
+}
+
+// Response（HTTP 201）
+{
+  "id": 10,
+  "created_at": "2026-03-19T20:35:00Z"
+}
+```
+
+- `ritual`：`sticker` / `voice` / `class_star`。
+- 回应后提交 `response_id` 指向该回应。
+
+### POST `/teacher/tasks/:id/batch-response`
+
+```json
+// Request：周期汇总回应
+{
+  "ritual": "class_star",
+  "sticker_key": "",
+  "content": "本周大家都很棒",
+  "media_file_id": 0
+}
+
+// Response
+{
+  "id": 11,
+  "responded_count": 20,
+  "failed_ids": []
+}
+```
+
+- 对当前任务全部 `response_id=0` 的提交创建一条 `period` 回应。
+- 部分失败返回 `failed_ids`。
+
+## 说明
+
+- 公开墙审核、补充回应、分享码、未读属于 B 切片。
+- 班级罐配置端点属于 C 切片；A 只做创建时只读校验。
+- 任务不发放积分。

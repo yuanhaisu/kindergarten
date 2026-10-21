@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
@@ -19,19 +21,23 @@ const (
 )
 
 type PickupService struct {
+	db       *gorm.DB
 	pickup   *repository.PickupRepo
 	students *repository.StudentRepo
 	classes  *repository.ClassRepo
 	oplog    *repository.OperationLogRepo
+	msg      *repository.MessageRepo
 }
 
 func NewPickupService(
+	db *gorm.DB,
 	pickup *repository.PickupRepo,
 	students *repository.StudentRepo,
 	classes *repository.ClassRepo,
 	oplog *repository.OperationLogRepo,
+	msg *repository.MessageRepo,
 ) *PickupService {
-	return &PickupService{pickup: pickup, students: students, classes: classes, oplog: oplog}
+	return &PickupService{db: db, pickup: pickup, students: students, classes: classes, oplog: oplog, msg: msg}
 }
 
 var (
@@ -376,4 +382,195 @@ func (s *PickupService) ListAuthorizations(
 		out = append(out, item)
 	}
 	return out, total, pn.Page, pn.PageSize, nil
+}
+
+
+// ==================== 滞留与超时未接（管理端）====================
+
+// classDeadline 取班级放学时刻（空串表示未配置，由 ResolvePickupDeadline 回退缺省）。
+func (s *PickupService) classDeadline(ctx context.Context, classID uint64) string {
+	var c domain.Class
+	if err := s.db.WithContext(ctx).Select("pickup_deadline").
+		Where("id = ?", classID).First(&c).Error; err != nil {
+		return ""
+	}
+	return c.PickupDeadline
+}
+
+// classDeadlineByStudent 由学生反查其班级放学时刻。
+func (s *PickupService) classDeadlineByStudent(ctx context.Context, studentID uint64) string {
+	var st domain.Student
+	if err := s.db.WithContext(ctx).Select("class_id").
+		Where("id = ?", studentID).First(&st).Error; err != nil {
+		return ""
+	}
+	return s.classDeadline(ctx, st.ClassID)
+}
+
+// studentIDsInRange 取范围内全部在读学生 ID（classID 为 0 时取全园）。
+func (s *PickupService) studentIDsInRange(ctx context.Context, kindergartenID, classID uint64) ([]uint64, error) {
+	q := s.db.WithContext(ctx).Model(&domain.Student{}).
+		Where("kindergarten_id = ? AND status = 1 AND deleted_at IS NULL", kindergartenID)
+	if classID > 0 {
+		q = q.Where("class_id = ?", classID)
+	}
+	var ids []uint64
+	if err := q.Order("id ASC").Pluck("id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// findStudent 查在读学生并校验园所归属。
+func (s *PickupService) findStudent(ctx context.Context, kindergartenID, studentID uint64) (domain.Student, error) {
+	var st domain.Student
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND status = 1 AND deleted_at IS NULL",
+			studentID, kindergartenID).
+		First(&st).Error
+	if err != nil {
+		return domain.Student{}, errPickupAuthNotFound
+	}
+	return st, nil
+}
+
+// ListOverdueStudents 全园/按班滞留名单。
+//
+// 滞留口径（实时）：当日最后一次托管转移是送入（仍在园）且当前时刻已过班级放学时刻。
+// classID 为 0 查全园，否则限该班。对应 design-data/admin-05 的「超时未接」视图。
+func (s *PickupService) ListOverdueStudents(
+	ctx context.Context,
+	kindergartenID, classID uint64,
+	dateStr string,
+) (map[string]interface{}, error) {
+	day, err := parsePickupDate(dateStr)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := s.pickup.ListOverdueStudents(ctx, kindergartenID, classID, day, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	type classGroup struct {
+		ClassID     uint64                   `json:"class_id"`
+		ClassName   string                   `json:"class_name"`
+		Deadline    string                   `json:"pickup_deadline"`
+		Count       int                      `json:"overdue_count"`
+		Students    []map[string]interface{} `json:"students"`
+	}
+	groups := make(map[uint64]*classGroup)
+	order := make([]uint64, 0, 4)
+	for _, r := range rows {
+		g, ok := groups[r.ClassID]
+		if !ok {
+			g = &classGroup{
+				ClassID:   r.ClassID,
+				ClassName: r.ClassName,
+				Deadline:  ResolvePickupDeadline(r.Deadline),
+				Students:  make([]map[string]interface{}, 0, 4),
+			}
+			groups[r.ClassID] = g
+			order = append(order, r.ClassID)
+		}
+		g.Count++
+		g.Students = append(g.Students, map[string]interface{}{
+			"student_id":      r.StudentID,
+			"name":            r.Name,
+			"avatar":          r.Avatar,
+			"arrive_time":     r.ArriveTime,
+			"pickup_deadline": ResolvePickupDeadline(r.Deadline),
+		})
+	}
+
+	out := make([]map[string]interface{}, 0, len(order))
+	for _, cid := range order {
+		g := groups[cid]
+		out = append(out, map[string]interface{}{
+			"class_id":        g.ClassID,
+			"class_name":      g.ClassName,
+			"pickup_deadline": g.Deadline,
+			"overdue_count":   g.Count,
+			"students":        g.Students,
+		})
+	}
+	return map[string]interface{}{
+		"date":          teacherPortalDateString(day),
+		"overdue_total": len(rows),
+		"by_class":      out,
+	}, nil
+}
+
+// CountOverdueNotPicked 超时未接计数（累计口径，按学生计）。
+//
+// 与 ListOverdueStudents 的实时口径不同：本口径取「在园区间末端越过班级放学时刻」，
+// 同一学生当日只计一次，随后被接走也不清零（spec TC-NEW-PKU-111）。
+func (s *PickupService) CountOverdueNotPicked(
+	ctx context.Context,
+	kindergartenID, classID uint64,
+	dateStr string,
+) (int64, error) {
+	day, err := parsePickupDate(dateStr)
+	if err != nil {
+		return 0, err
+	}
+	studentIDs, err := s.studentIDsInRange(ctx, kindergartenID, classID)
+	if err != nil {
+		return 0, err
+	}
+	deadline := ""
+	if classID > 0 {
+		deadline = s.classDeadline(ctx, classID)
+	}
+	ever, err := s.pickup.EverOverdueStudentIDs(
+		ctx, studentIDs, day, ResolvePickupDeadline(deadline), time.Now())
+	if err != nil {
+		return 0, err
+	}
+	return int64(len(ever)), nil
+}
+
+// NotifyOverdueParents 对滞留儿童一键通知家长。
+//
+// 校验该生当前确属滞留后，向其家长推送接送类站内消息。
+// 重复触发每次各写一条，不覆盖历史（spec TC-NEW-PKU-101 留痕可查）。
+// 写入走 pickup_notify.go 的共享路径（与接走通知同一入口）。
+func (s *PickupService) NotifyOverdueParents(
+	ctx context.Context,
+	kindergartenID, studentID uint64,
+) (map[string]interface{}, error) {
+	now := time.Now()
+	day := teacherPortalDay(now)
+
+	// 校验该生当前确属滞留（在园且已过放学时刻）
+	lastMap, err := s.pickup.LastRecordsOfDay(ctx, []uint64{studentID}, day)
+	if err != nil {
+		return nil, err
+	}
+	lr, ok := lastMap[studentID]
+	if !ok || lr.Type != int8(domain.PickupTypeDropOff) {
+		return nil, errPickupAuthNotFound
+	}
+	deadline := s.classDeadlineByStudent(ctx, studentID)
+	if !IsOverdueNotPicked(&domain.PickupRecord{Type: domain.PickupTypeDropOff}, now, deadline) {
+		return nil, errPickupAuthNotFound
+	}
+
+	student, err := s.findStudent(ctx, kindergartenID, studentID)
+	if err != nil {
+		return nil, err
+	}
+
+	title := "孩子尚未被接走"
+	content := fmt.Sprintf("%s 已超过放学时间（%s）仍未被接走，请尽快安排接回",
+		student.Name, ResolvePickupDeadline(deadline))
+
+	sent := notifyStudentParents(ctx, s.db, s.msg, studentID, title, content, studentID)
+	return map[string]interface{}{
+		"student_id":  studentID,
+		"notified":    sent > 0,
+		"sent_count":  sent,
+		"notified_at": now.UTC().Format(time.RFC3339),
+	}, nil
 }

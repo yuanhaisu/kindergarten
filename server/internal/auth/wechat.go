@@ -43,26 +43,58 @@ type wxacodeReq struct {
 	EnvVersion string `json:"env_version"`
 }
 
+// WeChatClient 微信小程序开放能力客户端，持有两端各自独立的凭据。
+//
+// 两端 AppID 必须分开：openid 是「用户×小程序」二元的，共用 AppID 会让同一个人
+// 在两端拿到同一个 openid，只命中一条 User，另一端角色丢失、接口全 403。
 type WeChatClient struct {
-	appID  string
-	secret string
-	rdb    *redis.Client
-	client *http.Client
+	teacherAppID  string
+	teacherSecret string
+	parentAppID   string
+	parentSecret  string
+	rdb           *redis.Client
+	client        *http.Client
 }
 
-func NewWeChatClient(appID, secret string, rdb *redis.Client) *WeChatClient {
+func NewWeChatClient(teacherAppID, teacherSecret, parentAppID, parentSecret string, rdb *redis.Client) *WeChatClient {
 	return &WeChatClient{
-		appID:  appID,
-		secret: secret,
-		rdb:    rdb,
-		client: &http.Client{Timeout: 10 * time.Second},
+		teacherAppID:  teacherAppID,
+		teacherSecret: teacherSecret,
+		parentAppID:   parentAppID,
+		parentSecret:  parentSecret,
+		rdb:           rdb,
+		client:        &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-func (w *WeChatClient) Code2Session(ctx context.Context, code string) (*Code2SessionResp, error) {
+// credentials 按端取凭据。role 只接受 "teacher" / "parent"；
+// 未知 role 或该端未配置一律报错，绝不回退到另一端——回退即重现 openid 串号。
+func (w *WeChatClient) credentials(role string) (appID, secret string, err error) {
+	switch role {
+	case "teacher":
+		appID, secret = w.teacherAppID, w.teacherSecret
+	case "parent":
+		appID, secret = w.parentAppID, w.parentSecret
+	default:
+		return "", "", fmt.Errorf("wechat credentials: unknown role %q", role)
+	}
+	if appID == "" || secret == "" {
+		return "", "", fmt.Errorf("wechat credentials: role %q not configured (need both app_id and secret)", role)
+	}
+	return appID, secret, nil
+}
+
+// Code2Session 用指定端的凭据换取微信登录会话。
+// role 决定用哪套凭据；错误里必须带微信侧 errcode/errmsg，便于区分「凭据错」与网络抖动。
+func (w *WeChatClient) Code2Session(ctx context.Context, code, role string) (*Code2SessionResp, error) {
+	appID, secret, err := w.credentials(role)
+	if err != nil {
+		return nil, err
+	}
+
 	url := fmt.Sprintf(
 		"https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-		w.appID, w.secret, code,
+		appID, secret, code,
 	)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -74,7 +106,7 @@ func (w *WeChatClient) Code2Session(ctx context.Context, code string) (*Code2Ses
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result Code2SessionResp
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -86,9 +118,15 @@ func (w *WeChatClient) Code2Session(ctx context.Context, code string) (*Code2Ses
 	return &result, nil
 }
 
+// accessTokenCacheKey 缓存键必须带 appid：两个 AppID 共用一个键会互相污染 token，
+// 后续 getPhoneNumber / 二维码全部报微信 40001，症状指向「凭据错」而非「缓存串了」。
+func accessTokenCacheKey(appID string) string {
+	return "wechat:access_token:" + appID
+}
+
 // GetAccessToken 获取微信 access_token，优先用 Redis 缓存。
-func (w *WeChatClient) GetAccessToken(ctx context.Context) (string, error) {
-	const cacheKey = "wechat:access_token"
+func (w *WeChatClient) GetAccessToken(ctx context.Context, appID, secret string) (string, error) {
+	cacheKey := accessTokenCacheKey(appID)
 
 	if cached, err := w.rdb.Get(ctx, cacheKey).Result(); err == nil && cached != "" {
 		return cached, nil
@@ -96,7 +134,7 @@ func (w *WeChatClient) GetAccessToken(ctx context.Context) (string, error) {
 
 	url := fmt.Sprintf(
 		"https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s",
-		w.appID, w.secret,
+		appID, secret,
 	)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -108,7 +146,7 @@ func (w *WeChatClient) GetAccessToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result accessTokenResp
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -129,8 +167,14 @@ func (w *WeChatClient) GetAccessToken(ctx context.Context) (string, error) {
 }
 
 // GetWXACodeUnlimit 生成不限数量的小程序码，返回 PNG 二进制。
+// 固定走老师端凭据：调用方是教师邀请码二维码（teacher_service），码必须指向老师端小程序，
+// 用家长端凭据会生成家长端小程序码，扫码进错端、重绑主路径断掉。
 func (w *WeChatClient) GetWXACodeUnlimit(ctx context.Context, scene, page string) ([]byte, error) {
-	token, err := w.GetAccessToken(ctx)
+	appID, secret, err := w.credentials("teacher")
+	if err != nil {
+		return nil, err
+	}
+	token, err := w.GetAccessToken(ctx, appID, secret)
 	if err != nil {
 		return nil, fmt.Errorf("wxacode access_token: %w", err)
 	}
@@ -158,7 +202,7 @@ func (w *WeChatClient) GetWXACodeUnlimit(ctx context.Context, scene, page string
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -180,8 +224,14 @@ func (w *WeChatClient) GetWXACodeUnlimit(ctx context.Context, scene, page string
 }
 
 // GetPhoneNumber 通过微信小程序 getPhoneNumber 返回的 code 换取手机号。
+// 固定走家长端凭据：getPhoneNumber 组件仅家长端使用（绑定手机号），
+// 该 code 由家长端小程序签发，必须用家长端凭据换取。
 func (w *WeChatClient) GetPhoneNumber(ctx context.Context, code string) (*PhoneNumberResp, error) {
-	token, err := w.GetAccessToken(ctx)
+	appID, secret, err := w.credentials("parent")
+	if err != nil {
+		return nil, err
+	}
+	token, err := w.GetAccessToken(ctx, appID, secret)
 	if err != nil {
 		return nil, fmt.Errorf("getPhoneNumber access_token: %w", err)
 	}
@@ -204,7 +254,7 @@ func (w *WeChatClient) GetPhoneNumber(ctx context.Context, code string) (*PhoneN
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result PhoneNumberResp
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

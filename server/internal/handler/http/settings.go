@@ -50,6 +50,10 @@ func (h *Handler) UpdateSettings(c *gin.Context) {
 			response.ErrNotFound(c, "设置不存在")
 			return
 		}
+		if errors.Is(err, service.ErrInvalidFeverThreshold) {
+			response.ErrValidation(c, "发烧阈值必须在 35.0–42.0°C 之间")
+			return
+		}
 		response.ErrInternal(c, "更新系统设置失败")
 		return
 	}

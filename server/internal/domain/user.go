@@ -14,7 +14,12 @@ type User struct {
 
 func (User) TableName() string { return "users" }
 
-// UserRole 用户角色关联（一个用户可有多个角色，如同时是老师和家长）
+// UserRole 用户角色关联。
+//
+// 同一端内一个用户可挂多个角色（如老师兼管理员）。
+// 但「同时是老师和家长」不再由本表聚合：两端 AppID 不同、openid 不同，
+// 同一自然人在家长端与老师端是**两条独立的 User**，靠 unionid / 手机号关联
+//（见 specs/cross-end-identity）。不要假设一条 User 能同时承载两端身份。
 type UserRole struct {
 	BaseModel
 	UserID           uint64  `gorm:"index;not null" json:"user_id"`

@@ -54,6 +54,14 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrValidation(c, "请先登记入园再登记接走")
 	case errors.Is(err, service.ErrTeacherInvalidQRCode):
 		response.ErrValidation(c, "二维码无效或已过期")
+	case errors.Is(err, service.ErrTeacherConsecutiveDirection):
+		response.ErrValidation(c, "托管序列必须交替：不可连续送入或连续接走")
+	case errors.Is(err, service.ErrTeacherRemarkRequired):
+		response.ErrValidation(c, "重复接走或提前接走需填写理由")
+	case errors.Is(err, service.ErrTeacherAuthorizationInvalid):
+		response.ErrValidation(c, "接走人不在有效授权范围内")
+	case errors.Is(err, service.ErrTeacherOverrideNameRequired):
+		response.ErrValidation(c, "标记非授权接送时须填写来接者姓名")
 	default:
 		response.ErrInternal(c, fallback)
 	}
@@ -224,7 +232,6 @@ func (h *Handler) TeacherRevokeNotice(c *gin.Context) {
 	}
 	response.OK(c, map[string]any{"id": id, "status": domain.NoticeStatusRevoked})
 }
-
 
 func (h *Handler) TeacherNoticeReadStatus(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
@@ -460,6 +467,95 @@ func (h *Handler) TeacherUpdateGrowthLog(c *gin.Context) {
 	response.OK(c, map[string]any{"id": id})
 }
 
+// TeacherReviewMediaSuggestion 照片点名的建议确认/拒绝（0→1 确认 / 0→2 拒绝）。
+func (h *Handler) TeacherReviewMediaSuggestion(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	mediaID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || mediaID == 0 {
+		response.ErrValidation(c, "无效的媒体 ID")
+		return
+	}
+	studentID, err := strconv.ParseUint(c.Param("sid"), 10, 64)
+	if err != nil || studentID == 0 {
+		response.ErrValidation(c, "无效的学生 ID")
+		return
+	}
+	var req struct {
+		Action string `json:"action"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	if req.Action != "confirm" && req.Action != "reject" {
+		response.ErrValidation(c, "action 仅支持 confirm / reject")
+		return
+	}
+	data, err := h.teacherPortalSvc.ReviewMediaSuggestion(c.Request.Context(), tc, mediaID, studentID, req.Action == "confirm")
+	if err != nil {
+		teacherPortalErr(c, err, "处理识别建议失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherConfirmHighSuggestions 一键确认该记录全部高置信建议（D10 省力路径）。
+func (h *Handler) TeacherConfirmHighSuggestions(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.ConfirmHighConfidenceSuggestions(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "批量确认失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherGrowthTaggingStatus 记录照片的识别状态与建议（老师端轮询刷新用）。
+func (h *Handler) TeacherGrowthTaggingStatus(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.GrowthTaggingStatus(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "获取识别状态失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherApplyClassRoster 大合影「一键全班」（D11）：把记录当日到场学生写为该照片的确认点名。
+func (h *Handler) TeacherApplyClassRoster(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.ApplyClassRoster(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "全班点名失败")
+		return
+	}
+	response.OK(c, data)
+}
+
 func (h *Handler) TeacherDeleteGrowthLog(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {
@@ -633,7 +729,9 @@ func (h *Handler) TeacherPickupRecords(c *gin.Context) {
 	date := c.Query("date")
 	studentID, _ := strconv.ParseUint(c.Query("student_id"), 10, 64)
 	var sidPtr *uint64
-	if studentID > 0 { sidPtr = &studentID }
+	if studentID > 0 {
+		sidPtr = &studentID
+	}
 	data, err := h.teacherPortalSvc.PickupRecords(c.Request.Context(), tc, page, pageSize, date, sidPtr)
 	if err != nil {
 		teacherPortalErr(c, err, "获取接送记录失败")
@@ -676,7 +774,9 @@ func (h *Handler) TeacherPickupAbnormal(c *gin.Context) {
 	var req teacherAbnormalReq
 	_ = c.ShouldBindJSON(&req)
 	isAbnormal := true
-	if req.IsAbnormal != nil { isAbnormal = *req.IsAbnormal }
+	if req.IsAbnormal != nil {
+		isAbnormal = *req.IsAbnormal
+	}
 	data, err := h.teacherPortalSvc.MarkPickupAbnormal(c.Request.Context(), tc, id, isAbnormal, req.AbnormalReason)
 	if err != nil {
 		teacherPortalErr(c, err, "标记异常失败")
@@ -835,6 +935,21 @@ func (h *Handler) TeacherClassStudents(c *gin.Context) {
 	response.OK(c, data)
 }
 
+// TeacherPresentStudents 当日到场学生（D11）：全班点名/大合影「全班」一键的前置名单。
+// 口径：本班在读 ∧ 无已批准请假覆盖当日 ∧ 无考勤缺席；无请假/考勤数据时保守全员。
+func (h *Handler) TeacherPresentStudents(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.PresentStudents(c.Request.Context(), tc, c.Query("date"))
+	if err != nil {
+		teacherPortalErr(c, err, "获取当日到场学生失败")
+		return
+	}
+	response.OK(c, data)
+}
+
 func (h *Handler) TeacherClassStudent(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {
@@ -921,6 +1036,23 @@ func (h *Handler) TeacherDeleteTask(c *gin.Context) {
 	response.OK(c, map[string]any{"id": id})
 }
 
+func (h *Handler) TeacherGetTask(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.GetTask(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "获取任务详情失败")
+		return
+	}
+	response.OK(c, data)
+}
+
 func (h *Handler) TeacherTaskStats(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {
@@ -947,12 +1079,71 @@ func (h *Handler) TeacherTaskCheckins(c *gin.Context) {
 	if !ok {
 		return
 	}
-	data, err := h.teacherPortalSvc.TaskCheckins(c.Request.Context(), tc, id)
+	data, err := h.teacherPortalSvc.TaskCheckins(c.Request.Context(), tc, id, c.Query("status"))
 	if err != nil {
 		teacherPortalErr(c, err, "获取任务打卡失败")
 		return
 	}
 	response.OK(c, data)
+}
+
+func (h *Handler) TeacherRespondTask(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	taskID, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	checkinID, err := strconv.ParseUint(c.Param("checkin_id"), 10, 64)
+	if err != nil || checkinID == 0 {
+		response.ErrValidation(c, "无效的提交 ID")
+		return
+	}
+	var req struct {
+		Ritual      string `json:"ritual"`
+		StickerKey  string `json:"sticker_key"`
+		Content     string `json:"content"`
+		MediaFileID uint64 `json:"media_file_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.teacherPortalSvc.RespondTask(c.Request.Context(), tc, taskID, checkinID, req.Ritual, req.StickerKey, req.Content, req.MediaFileID)
+	if err != nil {
+		teacherPortalErr(c, err, "回应任务失败")
+		return
+	}
+	response.Created(c, data)
+}
+
+func (h *Handler) TeacherBatchRespondTask(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	taskID, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Ritual      string `json:"ritual"`
+		StickerKey  string `json:"sticker_key"`
+		Content     string `json:"content"`
+		MediaFileID uint64 `json:"media_file_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.teacherPortalSvc.BatchRespondTask(c.Request.Context(), tc, taskID, req.Ritual, req.StickerKey, req.Content, req.MediaFileID)
+	if err != nil {
+		teacherPortalErr(c, err, "批量回应任务失败")
+		return
+	}
+	response.Created(c, data)
 }
 
 // TeacherListMessages 老师端消息聚合列表（通知 + 审批 + 系统消息）
@@ -972,27 +1163,50 @@ func (h *Handler) TeacherListMessages(c *gin.Context) {
 
 // TeacherGrowthLike 点赞成长记录
 func (h *Handler) TeacherGrowthLike(c *gin.Context) {
-	tc, ok := h.teacherPortalContext(c); if !ok { return }
-	id, ok2 := teacherPortalID(c); if !ok2 { return }
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok2 := teacherPortalID(c)
+	if !ok2 {
+		return
+	}
 	data, err := h.teacherPortalSvc.LikeGrowth(c.Request.Context(), tc, id)
-	if err != nil { teacherPortalErr(c, err, "点赞失败"); return }
+	if err != nil {
+		teacherPortalErr(c, err, "点赞失败")
+		return
+	}
 	response.OK(c, data)
 }
 
 // TeacherGrowthUnlike 取消点赞
 func (h *Handler) TeacherGrowthUnlike(c *gin.Context) {
-	tc, ok := h.teacherPortalContext(c); if !ok { return }
-	id, ok2 := teacherPortalID(c); if !ok2 { return }
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok2 := teacherPortalID(c)
+	if !ok2 {
+		return
+	}
 	data, err := h.teacherPortalSvc.UnlikeGrowth(c.Request.Context(), tc, id)
-	if err != nil { teacherPortalErr(c, err, "取消点赞失败"); return }
+	if err != nil {
+		teacherPortalErr(c, err, "取消点赞失败")
+		return
+	}
 	response.OK(c, data)
 }
 
 // TeacherPickupAuthApprove 审核通过授权接送人。
 func (h *Handler) TeacherPickupAuthApprove(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
-	if !ok { return }
-	id, ok2 := teacherPortalID(c); if !ok2 { return }
+	if !ok {
+		return
+	}
+	id, ok2 := teacherPortalID(c)
+	if !ok2 {
+		return
+	}
 	data, err := h.teacherPortalSvc.AuditPickupAuth(c.Request.Context(), tc, id, true, "")
 	if err != nil {
 		teacherPortalErr(c, err, "审核授权失败")
@@ -1004,11 +1218,60 @@ func (h *Handler) TeacherPickupAuthApprove(c *gin.Context) {
 // TeacherPickupAuthReject 拒绝授权接送人。
 func (h *Handler) TeacherPickupAuthReject(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
-	if !ok { return }
-	id, ok2 := teacherPortalID(c); if !ok2 { return }
+	if !ok {
+		return
+	}
+	id, ok2 := teacherPortalID(c)
+	if !ok2 {
+		return
+	}
 	data, err := h.teacherPortalSvc.AuditPickupAuth(c.Request.Context(), tc, id, false, "")
 	if err != nil {
 		teacherPortalErr(c, err, "审核授权失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherPickupNotifyOverdue 一键通知滞留儿童家长（本次契约变更新增）。
+//
+// 限本班学生；非滞留状态拒绝。重复触发每次留痕。
+type teacherNotifyOverdueReq struct {
+	StudentID uint64 `json:"student_id"`
+}
+
+func (h *Handler) TeacherPickupNotifyOverdue(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	var req teacherNotifyOverdueReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.teacherPortalSvc.NotifyOverdueParents(c.Request.Context(), tc, req.StudentID)
+	if err != nil {
+		teacherPortalErr(c, err, "一键通知失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherPickupStudentAuthPersons 按学生查有效授权接送人（手动登记选人用）
+func (h *Handler) TeacherPickupStudentAuthPersons(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	studentID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || studentID == 0 {
+		response.ErrValidation(c, "无效的学生 ID")
+		return
+	}
+	data, err := h.teacherPortalSvc.StudentAuthorizedPersons(c.Request.Context(), tc, studentID)
+	if err != nil {
+		teacherPortalErr(c, err, "获取授权接送人失败")
 		return
 	}
 	response.OK(c, data)

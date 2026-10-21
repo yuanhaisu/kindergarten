@@ -32,4 +32,5 @@ var Set = wire.NewSet(
 	NewDictRepo,
 	NewHealthCheckRepo,
 	NewCalendarRepo,
+	NewTimetableRepo,
 )

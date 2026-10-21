@@ -19,6 +19,10 @@
 - `POST /teacher/growth/logs/:id/comments`
 - `GET /teacher/growth/logs/:id/likes`
 - `GET /teacher/growth/logs/:id/related-students`
+- `GET /teacher/growth/logs/:id/tagging-status`
+- `POST /teacher/growth/logs/:id/suggestions/confirm-high`
+- `PUT /teacher/growth/media/:id/students/:sid`
+- `POST /teacher/growth/media/:id/class-roster`
 - `POST /teacher/growth/media/upload`
 
 ---
@@ -39,14 +43,15 @@
       "id": 1,
       "date": "2026-03-19",
       "content": "今天的美术课小朋友们都太棒了！...",
-      "media_count": 6,
+      "performance_tags": ["乐于助人", "积极发言"],
       "media_preview": [
         { "thumb_url": "https://cdn.example.com/thumb/1.jpg", "type": "image" },
         { "thumb_url": "https://cdn.example.com/thumb/2.jpg", "type": "image" }
       ],
       "likes_count": 28,
       "comments_count": 12,
-      "related_students_count": 28,
+      "related_students_count": 0,
+      "pending_suggestions_count": 3,
       "sync_to_feed": true,
       "target_type": 1,
       "creator": {
@@ -60,6 +65,11 @@
   "total": 236
 }
 ```
+
+> `media_preview` 只含卡片渲染所需的最小字段（仅缩略图），无附件的记录为 `[]`；
+> `related_students_count` 仅对个体记录（`target_type=2`）有非零值。
+> `pending_suggestions_count` 为该记录照片上待确认的 AI 建议数（已处理为 0）——
+> 老师不必打开详情即可知道哪条记录有待处理建议（见 `confirm-high` 端点）。
 
 ---
 
@@ -86,25 +96,36 @@
       "id": 1,
       "file_url": "https://cdn.example.com/growth/1.jpg",
       "thumb_url": "https://cdn.example.com/growth/1_thumb.jpg",
-      "file_type": "image"
+      "file_type": "image",
+      "file_name": "IMG_001.jpg",
+      "file_size": 1024000,
+      "duration": 0,
+      "ref_desc": "小明在搭积木",
+      "student_ids": [3, 5],
+      "student_suggestions": [
+        { "student_id": 7, "name": "王小明", "avatar": "https://cdn.example.com/avatar/7.jpg", "confidence": 91.5, "tier": "high" },
+        { "student_id": 9, "name": "李小红", "avatar": "https://cdn.example.com/avatar/9.jpg", "confidence": 73.2, "tier": "low" }
+      ]
     },
     {
       "id": 2,
       "file_url": "https://cdn.example.com/growth/2.jpg",
       "thumb_url": "https://cdn.example.com/growth/2_thumb.jpg",
-      "file_type": "image"
+      "file_type": "image",
+      "file_name": "IMG_002.jpg",
+      "file_size": 980000,
+      "duration": 0,
+      "ref_desc": "午餐光盘啦",
+      "student_ids": [],
+      "student_suggestions": []
     }
   ],
   "sync_to_feed": true,
   "target_type": 1,
-  "related_students": [
-    { "id": 1, "name": "王小明", "avatar": "..." },
-    { "id": 2, "name": "李小花", "avatar": "..." }
-  ],
-  "related_students_count": 28,
+  "related_students": [],
+  "related_students_count": 0,
   "likes_count": 28,
   "comments_count": 12,
-  "shares_count": 5,
   "creator": {
     "id": 1,
     "nickname": "李老师",
@@ -113,6 +134,16 @@
   "created_at": "2026-03-19T11:30:00Z"
 }
 ```
+
+> `related_students` 只对个体记录（`target_type=2`）有值，全班记录恒为 `[]`；
+> `related_students_count` 恒等于 `related_students` 的长度。
+> 视频媒体的 `duration` 为秒数，图片恒为 0。
+>
+> **照片点名（media 项）**：
+> `student_ids` 为该照片**已确认**点名的学生（人工点名与老师确认过的识别结果；恒为数组，空为 `[]`）；
+> `student_suggestions` 为**待老师处理的 AI 识别建议**（异步到达，见 `tagging-status`）：
+> `tier=high`（`confidence ≥ suggest_high`，前端预勾）与 `tier=low`（`≥ suggest_low`，仅提示）。
+> 建议须经确认端点转为点名后才生效，且**绝不出现在家长端出参**。
 
 ---
 
@@ -133,7 +164,10 @@
   "afternoon_mood": 2,
   "performance_tags": ["乐于助人", "积极发言", "遵守纪律"],
   "content": "今天的美术课小朋友们都太棒了！...",
-  "media_ids": [1, 2, 3, 4, 5, 6],
+  "media": [
+    { "file_id": 7, "ref_desc": "小明在搭积木", "student_ids": [3] },
+    { "file_id": 9, "ref_desc": "午餐光盘啦", "student_ids": [3, 5] }
+  ],
   "sync_to_feed": true,
   "target_type": 1,
   "student_ids": []
@@ -146,6 +180,15 @@
 }
 ```
 
+> `media` 语义（素材管理基线 L2，见 `docs/media-management-design.md`）：
+> 元素只传引用——`file_id` 指向上传通道返回的素材（URL 等物理属性由服务端反查，客户端不得自拼 URL）；
+> `ref_desc` 为引用层描述（这次为什么用），可空。
+> 空数组 = 无附件（合法）；上限 20；`file_id` 必须存在且未被其他记录占用，否则整条请求被拒绝。
+>
+> **`media[].student_ids`（照片点名）**：提交即该照片的最终点名名单（人工点名直接生效）。
+> 缺省（不传该字段）不触碰既有点名（兼容旧客户端）；传空数组 = 清除该照片点名；
+> 点名对象必须是本记录范围内的学生（全班记录→本班在读；个体记录→该记录关联学生），越界整条请求被拒绝（422 参数校验失败）。
+
 ---
 
 ### PUT `/teacher/growth/logs/:id`
@@ -157,7 +200,10 @@
 {
   "content": "今天的美术课小朋友们都太棒了！（已更新）",
   "performance_tags": ["乐于助人", "积极发言", "遵守纪律", "动手能力强"],
-  "media_ids": [1, 2, 3, 4, 5, 6, 7]
+  "media": [
+    { "id": 12, "file_id": 7, "ref_desc": "保留的既有图片（改描述）", "student_ids": [3, 5] },
+    { "file_id": 9, "ref_desc": "本次新增", "student_ids": [] }
+  ]
 }
 
 // Response
@@ -166,6 +212,11 @@
   "updated_at": "2026-03-19T12:00:00Z"
 }
 ```
+
+> `student_ids` 语义：`target_type=2` 时提交的目标学生名单**替换**该记录的既有学生关联（先删后插，重复提交同名单幂等）；`target_type=1`（全班）时清除既有学生关联。`target_type=2` 且 `student_ids` 为空时请求被拒绝。
+> `media` 语义：**全量替换**——提交的 `media` 即最终附件集合。带 `id` 的为保留的既有媒体（必须属于本记录当前媒体，可改 `ref_desc`）；不带 `id` 的为本次新增（`file_id` 必须存在且未被其他记录占用）；未出现在清单中的既有媒体**解除绑定**（不删文件本体——基线 §4）。空数组 = 清空附件。
+> `media[].student_ids` 同 POST 的点名语义；**提交的名单即最终名单**——该照片上未提交的点名（含尚未处理的 AI 建议）被移除。不传该字段（缺省）时保持该照片既有点名不变。
+> 记录日期（`date`）在编辑时不可改——请求体不含该字段，提交后保持原值。
 
 ---
 
@@ -304,34 +355,130 @@
 
 ---
 
-### POST `/teacher/growth/media/upload`
+### GET `/teacher/growth/logs/:id/tagging-status`
 
-> 上传成长照片 / 视频（专用上传接口，支持 AI 识别学生）
-
-```
-Content-Type: multipart/form-data
-字段: files[]     — 文件数组（必填，最多20张照片/5个视频）
-字段: date        — 日期（必填）
-字段: auto_tag    — 是否 AI 自动识别学生（可选，默认 true）
-```
+> 照片识别状态与建议（详情页轮询用；识别在发布后异步进行，不阻塞发布）
 
 ```json
 // Response
 {
+  "pending": true,
   "media": [
     {
       "id": 1,
-      "file_url": "https://cdn.example.com/growth/1.jpg",
-      "thumb_url": "https://cdn.example.com/growth/1_thumb.jpg",
-      "file_type": "image",
-      "file_name": "IMG_001.jpg",
-      "file_size": 1024000,
-      "tagged_students": [
-        { "id": 1, "name": "王小明", "is_auto": true }
+      "recognition_status": "done",
+      "last_error": "",
+      "face_count": 1,
+      "is_group_photo": false,
+      "suggestions": [
+        { "student_id": 7, "name": "王小明", "avatar": "https://cdn.example.com/avatar/7.jpg", "confidence": 91.5, "tier": "high" }
       ]
+    },
+    {
+      "id": 2,
+      "recognition_status": "done",
+      "last_error": "",
+      "face_count": 8,
+      "is_group_photo": true,
+      "suggestions": []
+    },
+    {
+      "id": 3,
+      "recognition_status": "failed",
+      "last_error": "识别失败: 取图 404",
+      "face_count": 0,
+      "is_group_photo": false,
+      "suggestions": []
     }
-  ],
-  "success_count": 6,
-  "fail_count": 0
+  ]
 }
 ```
+
+> `recognition_status`：`none`（未入队，如该园未开启识别）/`pending`/`processing`/`done`/`failed`。
+> `pending=true` 表示仍有任务未完成，客户端可间隔轮询（建议 3–5s）；`done` 后可停止。
+> `suggestions` 与详情响应 `media[].student_suggestions` **同形**——轮询到新建议可直接就地更新详情页建议区。
+> 识别未开启的园所（`[face].enabled=false`）全部为 `none`，客户端据此不展示识别相关 UI。
+>
+> `face_count` / `is_group_photo`（照片分型）：识别检测到的人脸数与**大合影判定**。
+> 人脸数达到 `[face].group_photo_min_faces`（默认 6）即 `is_group_photo=true`——
+> **全班记录**的大合影不产生逐人建议（逐人确认一张 29 人的合影注定不完整且是伪工作），
+> 客户端据此呈现「大合影 · 一键全班」入口（见下方 `class-roster`）。
+> ⚠️ 该入口**仅对全班记录（`target_type=1`）呈现**：个体记录不做全班（服务端会拒绝），
+> 客户端须以记录的 `target_type` 抑制入口（`is_group_photo` 本身是分型事实，不区分记录类型）。
+> ⚠️ 分型抑制**仅对全班记录生效**：个体记录里的大合影**照常产生建议**（其建议本就限定在该记录的目标孩子内）。
+> 分型阈值由服务端判定，**客户端不得硬编码**。`face_count=0` 表示未识别/无法识别。
+
+---
+
+### POST `/teacher/growth/logs/:id/suggestions/confirm-high`
+
+> 一键确认该记录的全部**高置信**建议（`confidence ≥ [face].suggest_high`）
+
+```json
+// Request
+{}
+
+// Response
+{ "confirmed": 3 }
+```
+
+> 省力路径：一次活动的合影可产出数十条建议，逐条确认会把「AI 加速」变成负担。
+> 仅 `status=0` 且高置信的建议转为生效（`status=1`）；**低置信建议保持待确认**（仍逐条处理）；
+> 已确认/已拒绝的行不变化。`confirmed` 为本次转为生效的条数（可能为 0）。
+> 记录必须属于本教师班级，否则 404。
+
+---
+
+### PUT `/teacher/growth/media/:id/students/:sid`
+
+> 识别建议确认 / 拒绝（建议异步到达时老师不在编辑页，故有本轻量端点）
+
+```json
+// Request
+{ "action": "confirm" }
+
+// Response
+{ "media_id": 1, "student_id": 7, "status": 1 }
+```
+
+> `action`：`confirm` → `status=1`（点名生效，家长端随即按此筛选）；`reject` → `status=2`（不再提示）。
+> 仅允许对**建议态**（`status=0`）的行流转；重复提交同一动作幂等成功；
+> 已确认/已拒绝的行调用返回 400（调整点名走编辑端点改 `media[].student_ids`）。
+> `:id` 为媒体 ID（`media[].id`），必须属于本教师班级的某条已发布记录。
+
+---
+
+### POST `/teacher/growth/media/:id/class-roster`
+
+> 大合影「一键全班」：把该照片所属记录**当日到场**的学生写为这张照片的确认点名
+
+```json
+// Request
+{}
+
+// Response
+{ "present": 28, "named": [1, 2, 3, 5] }
+```
+
+> 名单口径与 `GET /teacher/class/present-students` 一致（在读 ∧ 未被明确排除；无数据保守全员），
+> 日期取**记录自身的日期**（不是请求当天）。
+> 并集语义：既有确认不受影响；**已拒绝的行不复活**（那是老师此前的明确表态）；
+> 重复调用幂等。写入的点名与人工点名同样直接生效（家长端立即按此筛选）。
+> `named` 为**操作完成后该照片的最终确认名单**（升序）——客户端须直接以它渲染，
+> 不要自行做「本地并集」（本地算不出「已拒绝不复活」，也看不见点名与到场名单之间的时序差）。
+> 仅对**全班记录**开放——个体记录（`target_type=2`）的照片本就属于那几位孩子，调用返回 400。
+> `:id` 为媒体 ID（`media[].id`），必须属于本教师班级的某条已发布记录，否则 404。
+
+---
+
+### ~~POST `/teacher/growth/media/upload`~~（已废弃，勿使用）
+
+> **本接口不再使用，勿在新代码中调用。**
+>
+> 废弃原因：其契约与实现形状不一致（契约曾声明 multipart `files[]`，实现是按 JSON 建行且无 `log_id` 挂载入参），
+> 且全端零调用。上传统一走 `POST /common/upload`（multipart，`biz_type=growth`），
+> 返回的 `id` 即成长记录 `media[].file_id`（见「创建成长日志」的 `media` 语义）。
+>
+> 接口路由暂保留（避免破坏未知调用方），下一轮清理时移除。
+> ⚠️ 该废弃声明曾注明「AI 自动识别学生属独立变更、实现前不承诺」——**该独立变更已落地**
+> （照片点名与人脸识别：`student_suggestions` + 确认端点 + `tagging-status`，见上）。

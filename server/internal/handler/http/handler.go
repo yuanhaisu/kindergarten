@@ -37,6 +37,9 @@ type Handler struct {
 	parentPortalSvc  *service.ParentPortalService
 	dictSvc          *service.DictService
 	healthCheckSvc   *service.HealthCheckService
+	faceSvc          *service.FaceRegistryService
+	gardenCalendarSvc *service.GardenCalendarService
+	timetableSvc     *service.TimetableService
 }
 
 func NewHandler(
@@ -68,6 +71,9 @@ func NewHandler(
 	parentPortalSvc *service.ParentPortalService,
 	dictSvc *service.DictService,
 	healthCheckSvc *service.HealthCheckService,
+	faceSvc *service.FaceRegistryService,
+	gardenCalendarSvc *service.GardenCalendarService,
+	timetableSvc *service.TimetableService,
 ) *Handler {
 	return &Handler{
 		authSvc:          authSvc,
@@ -98,5 +104,8 @@ func NewHandler(
 		parentPortalSvc:  parentPortalSvc,
 		dictSvc:          dictSvc,
 		healthCheckSvc:   healthCheckSvc,
+		faceSvc:          faceSvc,
+		gardenCalendarSvc: gardenCalendarSvc,
+		timetableSvc:     timetableSvc,
 	}
 }

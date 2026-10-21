@@ -102,6 +102,9 @@
 ### GET `/parent/achievements`
 
 > 成就勋章列表
+>
+> ⚠️ **2026-10 增量变更**：`earned[]` 新增 `log_id`（可空——未绑定见证的授予不含此键）。
+> 有 `log_id` 表示该徽章有一条成长记录作为获奖见证，家长会在那条记录的卡片上看到徽章。
 
 ```json
 // Query: ?student_id=1
@@ -115,7 +118,16 @@
       "description": "连续一个月全勤",
       "icon_url": "https://cdn.example.com/badges/attendance.png",
       "category": "attendance",
-      "earned_at": "2026-03-01T08:00:00Z"
+      "points": 10,
+      "earned_at": "2026-03-01T08:00:00Z",
+      "log_id": 25
+    },
+    {
+      "id": 2,
+      "name": "小小艺术家",
+      "icon_url": "https://cdn.example.com/badges/art.png",
+      "category": "growth",
+      "earned_at": "2026-03-05T09:00:00Z"
     }
   ],
   "not_earned": [
@@ -136,3 +148,14 @@
   "total_count": 20
 }
 ```
+
+**字段说明**
+
+| 字段 | 说明 |
+| --- | --- |
+| `earned[].log_id` | **可空**。获奖见证的成长记录 ID；未绑定见证的授予不含此键 |
+| `earned[].earned_at` | 获得时刻 |
+| `not_earned[].progress` | **未实现**——属 P2 规则引擎（`Condition`/`TargetValue` 进度制），本次不实现 |
+
+> ✅ **已对齐（2026-10-06）**：实现返回 `description`（此前缺失，家长端 `points/index.vue` 渲染它但拿到空），
+> 字段名统一为 `icon_url`（与 admin 侧一致），并补记 `points`。

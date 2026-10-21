@@ -97,8 +97,7 @@ func (s *NoticeService) ListNotices(
 			"category":       row.Category,
 			"category_label": noticeCategoryLabel(cat),
 			"title":          row.Title,
-			"class_name":     row.ClassName,
-			"class_id":       row.ClassID,
+			"class_names":    row.ClassNames,
 			"creator": map[string]interface{}{
 				"id":       row.CreatorID,
 				"nickname": row.CreatorNick,
@@ -140,7 +139,7 @@ func (s *NoticeService) GetNoticeDetail(ctx context.Context, kindergartenID, not
 			"file_name": a.FileName,
 		})
 	}
-	readUsers, confirmed, parentTotal, err := s.notices.NoticeReadStats(ctx, kindergartenID, n.ClassID, noticeID)
+	readUsers, confirmed, parentTotal, err := s.notices.NoticeReadStats(ctx, kindergartenID, noticeID)
 	if err != nil {
 		return nil, err
 	}
@@ -155,9 +154,9 @@ func (s *NoticeService) GetNoticeDetail(ctx context.Context, kindergartenID, not
 		st := int8(ca.Status)
 		auditRaw = &st
 	}
-	className := ""
-	if n.Class != nil {
-		className = n.Class.Name
+	classNames, err := s.notices.ClassNamesByNoticeIDs(ctx, kindergartenID, []uint64{noticeID})
+	if err != nil {
+		return nil, err
 	}
 	creatorNick := ""
 	creatorAvatar := ""
@@ -171,8 +170,7 @@ func (s *NoticeService) GetNoticeDetail(ctx context.Context, kindergartenID, not
 		"category_label": noticeCategoryLabel(n.Category),
 		"title":          n.Title,
 		"content":        n.Content,
-		"class_id":       n.ClassID,
-		"class_name":     className,
+		"class_names":    classNames[noticeID],
 		"need_confirm":   n.NeedConfirm,
 		"status":         int(n.Status),
 		"attachments":    attachments,
@@ -320,13 +318,68 @@ type NoticeAttachmentInput struct {
 
 // CreateNoticeReq POST /admin/notices
 type CreateNoticeReq struct {
-	ClassID      uint64                  `json:"class_id" binding:"required"`
+	ClassIDs     []uint64                `json:"class_ids"`
+	Grades       []string                `json:"grades"`
 	Category     string                  `json:"category" binding:"required"`
 	Title        string                  `json:"title" binding:"required"`
 	Content      string                  `json:"content"`
 	NeedConfirm  bool                    `json:"need_confirm"`
 	ScheduledAt  *string                 `json:"scheduled_at"`
 	Attachments  []NoticeAttachmentInput `json:"attachments"`
+}
+
+// noticeGrades 年级取值溯源 class_service.validateGrade（小班/中班/大班），不新增枚举。
+var noticeGrades = map[string]struct{}{"小班": {}, "中班": {}, "大班": {}}
+
+// expandNoticeTargets 把 class_ids 与 grades 并集去重为目标班级集。
+// 年级展开是快照语义（D2）：只取当下该年级的班级，之后新开班级不卷入已发布通知。
+func (s *NoticeService) expandNoticeTargets(ctx context.Context, kindergartenID uint64, classIDs []uint64, grades []string) ([]uint64, error) {
+	seen := make(map[uint64]struct{}, len(classIDs))
+	out := make([]uint64, 0, len(classIDs))
+	add := func(id uint64) {
+		if id == 0 {
+			return
+		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	gradeNames := make([]string, 0, len(grades))
+	for _, g := range grades {
+		g = strings.TrimSpace(g)
+		if g == "" {
+			continue
+		}
+		if _, ok := noticeGrades[g]; !ok {
+			return nil, errors.New("BAD_GRADE")
+		}
+		gradeNames = append(gradeNames, g)
+	}
+	for _, id := range classIDs {
+		ok, err := s.notices.IsClassInKindergarten(ctx, kindergartenID, id)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("CLASS_NOT_FOUND")
+		}
+		add(id)
+	}
+	if len(gradeNames) > 0 {
+		ids, err := s.notices.ListClassIDsByGrades(ctx, kindergartenID, gradeNames)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range ids {
+			add(id)
+		}
+	}
+	if len(out) == 0 {
+		return nil, errors.New("EMPTY_NOTICE_TARGETS")
+	}
+	return out, nil
 }
 
 func (s *NoticeService) CreateNotice(
@@ -338,12 +391,9 @@ func (s *NoticeService) CreateNotice(
 	if kindergartenID == 0 {
 		return nil, errors.New("NO_KINDERGARTEN")
 	}
-	ok, err := s.notices.IsClassInKindergarten(ctx, kindergartenID, req.ClassID)
+	targets, err := s.expandNoticeTargets(ctx, kindergartenID, req.ClassIDs, req.Grades)
 	if err != nil {
 		return nil, err
-	}
-	if !ok {
-		return nil, errors.New("CLASS_NOT_FOUND")
 	}
 	cat, err := parseNoticeCategory(req.Category)
 	if err != nil {
@@ -376,17 +426,20 @@ func (s *NoticeService) CreateNotice(
 	}
 	n := &domain.Notice{
 		KindergartenID: kindergartenID,
-		ClassID:          req.ClassID,
-		CreatorID:        adminUserID,
-		Category:         cat,
-		Title:            title,
-		Content:          req.Content,
-		NeedConfirm:      req.NeedConfirm,
-		ScheduledAt:      scheduledAt,
-		PublishedAt:      publishedAt,
-		Status:           status,
+		ClassID:        targets[0], // 弃用列：冗余首个目标供回滚降级，新代码不读
+		CreatorID:      adminUserID,
+		Category:       cat,
+		Title:          title,
+		Content:        req.Content,
+		NeedConfirm:    req.NeedConfirm,
+		ScheduledAt:    scheduledAt,
+		PublishedAt:    publishedAt,
+		Status:         status,
 	}
 	if err := s.notices.CreateNotice(ctx, n); err != nil {
+		return nil, err
+	}
+	if err := s.notices.ReplaceNoticeTargets(ctx, kindergartenID, n.ID, targets); err != nil {
 		return nil, err
 	}
 	var attRows []domain.NoticeAttachment
@@ -419,7 +472,7 @@ func (s *NoticeService) CreateNotice(
 		Action:         "create",
 		TargetType:     "notice",
 		TargetID:       n.ID,
-		Detail:         fmt.Sprintf("class_id=%d", req.ClassID),
+		Detail:         fmt.Sprintf("class_ids=%v grades=%v", req.ClassIDs, req.Grades),
 		IP:             ip,
 		UserAgent:      truncateUA(ua),
 	})
@@ -431,8 +484,10 @@ func (s *NoticeService) CreateNotice(
 }
 
 // UpdateNoticeReq PUT /admin/notices/:id
+// ClassIDs/Grades 传了即为显式重选目标集（整体替换，不做增量）。
 type UpdateNoticeReq struct {
-	ClassID      *uint64                  `json:"class_id"`
+	ClassIDs     *[]uint64                `json:"class_ids"`
+	Grades       *[]string                `json:"grades"`
 	Category     *string                  `json:"category"`
 	Title        *string                  `json:"title"`
 	Content      *string                  `json:"content"`
@@ -459,18 +514,21 @@ func (s *NoticeService) UpdateNotice(
 		return errNoticeNotFound
 	}
 	patch := map[string]interface{}{}
-	if req.ClassID != nil {
-		if *req.ClassID == 0 {
-			return errors.New("BAD_CLASS_ID")
+	var newTargets []uint64
+	if req.ClassIDs != nil || req.Grades != nil {
+		var classIDs []uint64
+		var grades []string
+		if req.ClassIDs != nil {
+			classIDs = *req.ClassIDs
 		}
-		ok, err := s.notices.IsClassInKindergarten(ctx, kindergartenID, *req.ClassID)
+		if req.Grades != nil {
+			grades = *req.Grades
+		}
+		t, err := s.expandNoticeTargets(ctx, kindergartenID, classIDs, grades)
 		if err != nil {
 			return err
 		}
-		if !ok {
-			return errors.New("CLASS_NOT_FOUND")
-		}
-		patch["class_id"] = *req.ClassID
+		newTargets = t
 	}
 	if req.Category != nil {
 		cat, err := parseNoticeCategory(*req.Category)
@@ -518,11 +576,17 @@ func (s *NoticeService) UpdateNotice(
 			return errors.New("BAD_STATUS")
 		}
 	}
-	if len(patch) == 0 && req.Attachments == nil {
+	if len(patch) == 0 && req.Attachments == nil && newTargets == nil {
 		return errors.New("EMPTY_UPDATE")
 	}
 	if len(patch) > 0 {
 		if _, err := s.notices.UpdateNoticeFields(ctx, kindergartenID, noticeID, patch); err != nil {
+			return err
+		}
+	}
+	if newTargets != nil {
+		// 显式重选目标集：整体替换
+		if err := s.notices.ReplaceNoticeTargets(ctx, kindergartenID, noticeID, newTargets); err != nil {
 			return err
 		}
 	}

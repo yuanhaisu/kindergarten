@@ -160,6 +160,9 @@ func seedAuthorizations(
 			CreatorID:    demoCreatorID,
 			ReviewStatus: authReviewPending,
 			ExpireAt:     &now,
+			// 显式赋值：domain 不再依赖 DB 默认值（GORM 对零值会跳过字段）
+			AllowPickup:    true,
+			NotifyOnPickup: true,
 		})
 	}
 

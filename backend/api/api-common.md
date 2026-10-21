@@ -314,11 +314,26 @@ Content-Type: multipart/form-data
       "class_name": "小一班",
       "title": "head",
       "title_label": "主班老师"
+    },
+    {
+      "role": "admin",
+      "kindergarten_id": 1,
+      "kindergarten_name": "阳光幼儿园",
+      "admin_role": "园所管理员",
+      "permissions": ["dashboard:view", "student:view", "student:manage"]
     }
   ],
   "created_at": "2025-09-01T08:00:00Z"
 }
 ```
+
+**字段说明**：
+
+- `roles[]` 为当前用户全部角色条目；字段随 `role` 取值不同。
+- `role: "admin"` 的条目承载管理端角色信息：
+  - `admin_role`：管理端角色标记/名称（超管账号为 `super_admin` 标记）。
+  - `permissions`：该账号在对应园所的权限码集合，供管理端渲染菜单与拦截路由使用；**超管为通配时返回 `["*"]`**。权限码目录见 `api-admin/17-roles.md` 的 `GET /admin/permissions`。
+- 其他角色的条目不含 `admin_role` / `permissions`。
 
 ---
 
@@ -382,6 +397,7 @@ Content-Type: multipart/form-data
       "title": "请假申请已通过",
       "content": "王小明的请假申请（3月19日-3月21日）已被李老师批准",
       "reference_id": 101,
+      "action_path": "",
       "is_read": false,
       "created_at": "2026-03-19T07:35:00Z",
       "read_at": null
@@ -392,6 +408,7 @@ Content-Type: multipart/form-data
       "title": "孩子已被接走",
       "content": "王小明已于17:30被爸爸（王明）接走，门卫李师傅核验",
       "reference_id": 201,
+      "action_path": "",
       "is_read": true,
       "created_at": "2026-03-18T17:30:25Z",
       "read_at": "2026-03-18T17:31:00Z"

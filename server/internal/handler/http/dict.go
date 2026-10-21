@@ -169,12 +169,15 @@ func (h *Handler) DeleteDictItem(c *gin.Context) {
 		response.ErrValidation(c, "无效的字典项 ID")
 		return
 	}
-	if err := h.dictSvc.DeleteItem(c.Request.Context(), itemID); err != nil {
-		if errors.Is(err, service.ErrDictItemNotFound) {
+	if err := h.dictSvc.DeleteItem(c.Request.Context(), middleware.GetKindergartenID(c), itemID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrDictItemNotFound):
 			response.ErrNotFound(c, "字典项不存在")
-			return
+		case errors.Is(err, service.ErrDictSystemType):
+			response.ErrValidation(c, err.Error())
+		default:
+			response.ErrInternal(c, "删除字典项失败")
 		}
-		response.ErrInternal(c, "删除字典项失败")
 		return
 	}
 	response.OK(c, nil)

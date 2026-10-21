@@ -1,6 +1,9 @@
 package app
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 
@@ -8,7 +11,7 @@ import (
 	"kindergarten-server/internal/middleware"
 )
 
-func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret) *gin.Engine {
+func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver) (*gin.Engine, error) {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORS())
@@ -52,7 +55,9 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret) *gin.Engine 
 			authed.PUT("/common/messages/:id/read", h.inner.MarkMessageRead)
 			authed.PUT("/common/messages/read-all", h.inner.MarkAllRead)
 
+			// 管理端细闸：按路由→权限码登记表强制（AuthJWT/CasbinRBAC 之后）
 			adminG := authed.Group("/admin")
+			adminG.Use(middleware.RequirePermission(resolver))
 			registerAdminRoutes(adminG, h.inner)
 
 			teacherG := authed.Group("/teacher")
@@ -66,7 +71,13 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret) *gin.Engine 
 		}
 	}
 
-	return r
+	// 启动自检：已注册管理端路由必须全部登记权限码（wire-admin-permissions design D1）。
+	// 缺口存在即启动失败，不允许带着缺口对外服务。
+	if gaps := middleware.AdminPermissionGaps(r.Routes()); len(gaps) > 0 {
+		return nil, fmt.Errorf("admin permission registry has %d gap(s): %s", len(gaps), strings.Join(gaps, "; "))
+	}
+
+	return r, nil
 }
 
 // registerTeacherRoutes
@@ -115,18 +126,31 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 		growth.POST("/logs/:id/like", h.TeacherGrowthLike)
 		growth.DELETE("/logs/:id/like", h.TeacherGrowthUnlike)
 		growth.GET("/logs/:id/related-students", h.TeacherGrowthRelatedStudents)
+		growth.GET("/logs/:id/tagging-status", h.TeacherGrowthTaggingStatus)               // 照片识别状态（轮询）
+		growth.POST("/logs/:id/suggestions/confirm-high", h.TeacherConfirmHighSuggestions) // 一键确认高置信建议
+		growth.PUT("/media/:id/students/:sid", h.TeacherReviewMediaSuggestion)             // 识别建议确认/拒绝
+		growth.POST("/media/:id/class-roster", h.TeacherApplyClassRoster)                  // 大合影「一键全班」（D11）
 		growth.POST("/media/upload", h.TeacherGrowthMediaUpload)
+	}
+
+	// 成就徽章：老师端只列本园已启用的徽章 + 授予（授予可选绑定成长记录为获奖见证）
+	achT := teacherG.Group("/achievements")
+	{
+		achT.GET("", h.TeacherListAchievements)
+		achT.POST("/:id/grant", h.TeacherGrantAchievement)
 	}
 
 	pickup := teacherG.Group("/pickup")
 	{
 		pickup.GET("/overview", h.TeacherPickupOverview)
 		pickup.GET("/students", h.TeacherPickupStudents)
+		pickup.GET("/students/:id/authorized-persons", h.TeacherPickupStudentAuthPersons) // teacher-pickup-auth-picker
 		pickup.POST("/scan", h.TeacherPickupScan)
 		pickup.POST("/manual", h.TeacherPickupManual)
 		pickup.GET("/records", h.TeacherPickupRecords)
 		pickup.GET("/records/:id", h.TeacherPickupRecord)
 		pickup.PUT("/records/:id/abnormal", h.TeacherPickupAbnormal)
+		pickup.POST("/notify-overdue", h.TeacherPickupNotifyOverdue) // 本次新增：滞留一键通知
 		pickup.PUT("/authorized-persons/:id/approve", h.TeacherPickupAuthApprove)
 		pickup.PUT("/authorized-persons/:id/reject", h.TeacherPickupAuthReject)
 	}
@@ -145,8 +169,9 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 	class := teacherG.Group("/class")
 	{
 		class.GET("/info", h.TeacherClassInfo)
-			class.GET("/list", h.TeacherClassList)
+		class.GET("/list", h.TeacherClassList)
 		class.GET("/students", h.TeacherClassStudents)
+		class.GET("/present-students", h.TeacherPresentStudents) // 当日到场（D11）
 		class.GET("/students/:id", h.TeacherClassStudent)
 	}
 
@@ -159,19 +184,21 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 	{
 		tasks.GET("", h.TeacherListTasks)
 		tasks.POST("", h.TeacherCreateTask)
+		tasks.GET("/:id", h.TeacherGetTask)
 		tasks.PUT("/:id", h.TeacherUpdateTask)
 		tasks.DELETE("/:id", h.TeacherDeleteTask)
 		tasks.GET("/:id/stats", h.TeacherTaskStats)
 		tasks.GET("/:id/checkins", h.TeacherTaskCheckins)
+		tasks.POST("/:id/checkins/:checkin_id/response", h.TeacherRespondTask)
+		tasks.POST("/:id/batch-response", h.TeacherBatchRespondTask)
 	}
 
-		dict := teacherG.Group("/dicts")
-		{
-			dict.GET("/:type_key", h.GetDictItems)
-			dict.GET("", h.GetDictItemsBatch)
-		}
+	dict := teacherG.Group("/dicts")
+	{
+		dict.GET("/:type_key", h.GetDictItems)
+		dict.GET("", h.GetDictItemsBatch)
+	}
 }
-
 
 func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 	dash := adminG.Group("/dashboard")
@@ -202,6 +229,10 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		sg.PUT("/:id", h.UpdateStudent)
 		sg.DELETE("/:id", h.DeleteStudent)
 		sg.PUT("/:id/status", h.UpdateStudentStatus)
+		sg.GET("/:id/faces", h.ListStudentFaces)             // 人脸底库照片与注册状态
+		sg.POST("/:id/faces", h.AddStudentFaces)             // 录入底库照片（file_id 来自统一上传通道）
+		sg.POST("/:id/faces/retry", h.RetryStudentFaces)     // 重试底库注册
+		sg.DELETE("/:id/faces/:faceId", h.DeleteStudentFace) // 移除底库照片
 	}
 
 	tg := adminG.Group("/teachers")
@@ -279,6 +310,9 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		pk.GET("/abnormal", h.GetPickupAbnormal)
 		pk.GET("/authorized-persons", h.GetAuthorizedPersons)
 		pk.PUT("/authorized-persons/:id/audit", h.AuditPickupAuthorizedPerson)
+		pk.GET("/overdue", h.AdminPickupOverdue)               // 本次新增：滞留名单 + 各班计数
+		pk.GET("/overdue/count", h.AdminPickupOverdueCount)    // 本次新增：超时未接计数（累计口径）
+		pk.POST("/overdue/notify", h.AdminPickupNotifyOverdue) // 本次新增：一键通知家长
 	}
 
 	gr := adminG.Group("/growth")
@@ -355,25 +389,43 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 
 	adminG.GET("/logs", h.ListOperationLogs)
 
-		health := adminG.Group("/health")
-		{
-			health.GET("/stats", h.AdminHealthStats)
-		}
-
-		dict := adminG.Group("/dicts")
-		{
-			dict.GET("/types", h.ListDictTypes)
-			dict.POST("/types", h.CreateDictType)
-			dict.PUT("/types/:id", h.UpdateDictType)
-			dict.DELETE("/types/:id", h.DeleteDictType)
-			dict.GET("/types/:id/items", h.ListDictItems)
-			dict.POST("/types/:id/items", h.CreateDictItem)
-			dict.PUT("/items/:id", h.UpdateDictItem)
-			dict.DELETE("/items/:id", h.DeleteDictItem)
-			dict.PUT("/items/sort", h.BatchSortDictItems)
-		}
+	health := adminG.Group("/health")
+	{
+		health.GET("/stats", h.AdminHealthStats)
 	}
 
+	gcal := adminG.Group("/calendar")
+	{
+		gcal.GET("/events", h.AdminListCalendarEvents)
+		gcal.POST("/events", h.AdminCreateCalendarEvent)
+		gcal.PUT("/events/:id", h.AdminUpdateCalendarEvent)
+		gcal.DELETE("/events/:id", h.AdminDeleteCalendarEvent)
+	}
+
+	tt := adminG.Group("/timetable")
+	{
+		tt.GET("/templates/:grade", h.AdminGetTimetableTemplate)
+		tt.PUT("/templates/:grade", h.AdminSaveTimetableTemplate)
+		tt.GET("/classes/:class_id", h.AdminGetTimetableClassOverrides)
+		tt.PUT("/classes/:class_id", h.AdminSaveTimetableClassOverrides)
+		tt.GET("/setting", h.AdminGetTimetableSetting)
+		tt.PUT("/setting", h.AdminUpdateTimetableSetting)
+		tt.POST("/sync", h.AdminSyncTimetable)
+	}
+
+	dict := adminG.Group("/dicts")
+	{
+		dict.GET("/types", h.ListDictTypes)
+		dict.POST("/types", h.CreateDictType)
+		dict.PUT("/types/:id", h.UpdateDictType)
+		dict.DELETE("/types/:id", h.DeleteDictType)
+		dict.GET("/types/:id/items", h.ListDictItems)
+		dict.POST("/types/:id/items", h.CreateDictItem)
+		dict.PUT("/items/:id", h.UpdateDictItem)
+		dict.DELETE("/items/:id", h.DeleteDictItem)
+		dict.PUT("/items/sort", h.BatchSortDictItems)
+	}
+}
 
 func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 	home := pg.Group("/home")
@@ -416,6 +468,8 @@ func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 	pickup := pg.Group("/pickup")
 	{
 		pickup.GET("/qrcode", h.ParentPickupQRCode)
+		pickup.POST("/designate", h.ParentPickupDesignate)    // 本次新增：指定今日接走人
+		pickup.GET("/designation", h.ParentPickupDesignation) // 本次新增：只读查当前指定
 		pickup.GET("/records", h.ParentPickupRecords)
 		pickup.GET("/authorized-persons", h.ParentAuthorizedPersons)
 		pickup.POST("/authorized-persons", h.ParentCreateAuthorizedPerson)
@@ -452,6 +506,11 @@ func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 		student.PUT("/profile", h.ParentUpdateStudentProfile)
 	}
 
+	health := pg.Group("/health")
+	{
+		health.GET("/records", h.ParentHealthRecords)
+	}
+
 	pg.GET("/students", h.ParentListStudents)
 	pg.POST("/students/bind", h.ParentBindStudent)
 	pg.DELETE("/students/:id", h.ParentUnbindStudent)
@@ -464,6 +523,15 @@ func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 }
 
 func registerDoctorRoutes(dg *gin.RouterGroup, h *handler.Handler) {
+	// 园级日历（保健医发布体检等园级事件；对外路径 /api/v1/doctor/calendar/*）
+	cal := dg.Group("/calendar")
+	{
+		cal.GET("/events", h.DoctorListCalendarEvents)
+		cal.POST("/events", h.DoctorCreateCalendarEvent)
+		cal.PUT("/events/:id", h.DoctorUpdateCalendarEvent)
+		cal.DELETE("/events/:id", h.DoctorDeleteCalendarEvent)
+	}
+
 	health := dg.Group("/health")
 	{
 		health.GET("/queue", h.DoctorGetQueue)

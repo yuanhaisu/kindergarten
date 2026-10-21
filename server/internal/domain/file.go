@@ -11,6 +11,11 @@ type File struct {
 	FileSize int64  `json:"file_size"`
 	FileType string `gorm:"size:32" json:"file_type"`
 	Duration int    `gorm:"default:0" json:"duration"`
+	// 素材固有元数据（L1，见 docs/media-management-design.md）：
+	// Caption 描述素材本身是什么；Tags 为受控标签（逗号分隔，候选来自 sys_dict）。
+	// 与引用层描述（如 growth_media.ref_desc「这次为什么用」）是两层，勿混。
+	Caption string `gorm:"size:255" json:"caption,omitempty"`
+	Tags    string `gorm:"size:255" json:"tags,omitempty"`
 
 	User *User `json:"-" gorm:"foreignKey:UserID"`
 }

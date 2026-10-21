@@ -95,6 +95,13 @@ func (h *Handler) CreateNotice(c *gin.Context) {
 		case "CLASS_NOT_FOUND":
 			response.ErrNotFound(c, "班级不存在")
 			return
+		case "BAD_GRADE":
+			response.ErrValidation(c, "年级取值无效")
+			return
+		case "EMPTY_NOTICE_TARGETS":
+			// 旧入参只带单 class_id 也走这里：明确报参数错，不静默按单班处理
+			response.ErrValidation(c, "接收班级不能为空，请传 class_ids 或 grades")
+			return
 		case "BAD_CATEGORY", "BAD_TITLE", "BAD_SCHEDULED_AT":
 			response.ErrValidation(c, "请求参数无效")
 			return
@@ -131,7 +138,13 @@ func (h *Handler) UpdateNotice(c *gin.Context) {
 		case "CLASS_NOT_FOUND":
 			response.ErrNotFound(c, "班级不存在")
 			return
-		case "BAD_CATEGORY", "BAD_TITLE", "BAD_SCHEDULED_AT", "BAD_CLASS_ID", "BAD_STATUS", "EMPTY_UPDATE":
+		case "BAD_GRADE":
+			response.ErrValidation(c, "年级取值无效")
+			return
+		case "EMPTY_NOTICE_TARGETS":
+			response.ErrValidation(c, "接收班级不能为空，请传 class_ids 或 grades")
+			return
+		case "BAD_CATEGORY", "BAD_TITLE", "BAD_SCHEDULED_AT", "BAD_STATUS", "EMPTY_UPDATE":
 			response.ErrValidation(c, "请求参数无效")
 			return
 		default:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
@@ -1478,105 +1480,197 @@ func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPor
 
 // ==================== Tasks ====================
 
+func taskScopeQuery(db *gorm.DB, pc *ParentPortalContext) *gorm.DB {
+	return db.Where("kindergarten_id = ? AND ((target_student_id = 0 AND class_id = ?) OR target_student_id = ?)",
+		pc.KindergartenID, pc.CurrentStudent.ClassID, pc.CurrentStudent.ID)
+}
+
+func taskIsActive(t *domain.ParentTask, now time.Time) bool {
+	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, shanghaiLoc())
+	start := time.Date(t.StartDate.Year(), t.StartDate.Month(), t.StartDate.Day(), 0, 0, 0, 0, shanghaiLoc())
+	end := time.Date(t.EndDate.Year(), t.EndDate.Month(), t.EndDate.Day(), 0, 0, 0, 0, shanghaiLoc())
+	return t.Status == 1 && !day.Before(start) && !day.After(end)
+}
+
+func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTask, studentID uint64, now time.Time) bool {
+	q := db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND student_id = ?", t.ID, studentID)
+	today := now.Format("2006-01-02")
+	switch t.Frequency {
+	case domain.TaskFrequencyDaily:
+		q = q.Where("date = ?", today)
+	case domain.TaskFrequencyWeekly:
+		q = q.Where("date >= ?", now.AddDate(0, 0, -6).Format("2006-01-02"))
+	}
+	var n int64
+	_ = q.Count(&n).Error
+	return n > 0
+}
+
 func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
-	classIDs := make([]uint64, len(pc.Students))
-	for i, st := range pc.Students {
-		classIDs[i] = st.ClassID
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
 	}
-	if len(classIDs) == 0 {
-		return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil
-	}
-
-	db := s.db.WithContext(ctx).Model(&domain.ParentTask{}).
-		Where("kindergarten_id = ? AND class_id IN ? AND status = ?", pc.KindergartenID, classIDs, 1)
-
+	now := time.Now().In(shanghaiLoc())
+	today := now.Format("2006-01-02")
+	q := taskScopeQuery(s.db.WithContext(ctx).Model(&domain.ParentTask{}), pc).
+		Where("status = 1 AND start_date <= ? AND end_date >= ?", today, today)
 	var total int64
-	if err := db.Count(&total).Error; err != nil {
+	if err := q.Count(&total).Error; err != nil {
 		return nil, err
 	}
-
 	offset := (page - 1) * pageSize
 	var rows []domain.ParentTask
-	if err := db.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+	if err := q.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
 		return nil, err
 	}
-
-	list := make([]map[string]any, len(rows))
-	for i, r := range rows {
-		// Check if current student has checked in today
-		var checkedIn bool
-		s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
-			Where("task_id = ? AND student_id = ? AND date = ?", r.ID, pc.CurrentStudent.ID, time.Now().Format("2006-01-02")).
-			Select("count(*) > 0").Scan(&checkedIn)
-
-		var checkinCount int64
-		s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ?", r.ID).Count(&checkinCount)
-
-		list[i] = map[string]any{
-			"id": r.ID, "title": r.Title, "description": r.Description,
-			"intro": r.Intro, "frequency": r.Frequency, "points": r.Points,
-			"start_date": r.StartDate.Format("2006-01-02"), "end_date": r.EndDate.Format("2006-01-02"),
-			"status": r.Status, "checked_in_today": checkedIn,
-			"checkin_count": checkinCount,
-			"created_at":    r.CreatedAt.UTC().Format(time.RFC3339),
+	list := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		if !taskIsActive(&r, now) {
+			continue
 		}
+		submitted := taskSubmittedInPeriod(ctx, s.db, &r, pc.CurrentStudent.ID, now)
+		var childCount int64
+		s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+			Where("task_id = ? AND student_id = ?", r.ID, pc.CurrentStudent.ID).Count(&childCount)
+		list = append(list, map[string]any{
+			"id": r.ID, "title": r.Title, "description": r.Description, "intro": r.Intro,
+			"learning_link": r.LearningLink, "frequency": r.Frequency, "target_student_id": r.TargetStudentID,
+			"allow_public": r.AllowPublic, "recognition_ritual": r.RecognitionRitual,
+			"star_scope": r.StarScope, "star_goal": r.StarGoal,
+			"start_date": r.StartDate.Format("2006-01-02"), "end_date": r.EndDate.Format("2006-01-02"),
+			"status": r.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
+			"checkin_count": childCount, "has_unread_supplement": false,
+			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+		})
 	}
 	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
 }
 
 func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalContext, id uint64) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
 	var t domain.ParentTask
-	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ?", id, pc.KindergartenID).First(&t).Error; err != nil {
+	if err := taskScopeQuery(s.db.WithContext(ctx), pc).Where("id = ?", id).First(&t).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrParentNotFound
 		}
 		return nil, err
 	}
-	var checkedIn bool
-	s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
-		Where("task_id = ? AND student_id = ? AND date = ?", id, pc.CurrentStudent.ID, time.Now().Format("2006-01-02")).
-		Select("count(*) > 0").Scan(&checkedIn)
+	now := time.Now().In(shanghaiLoc())
+	if !taskIsActive(&t, now) {
+		return nil, ErrParentNotFound
+	}
+	submitted := taskSubmittedInPeriod(ctx, s.db, &t, pc.CurrentStudent.ID, now)
+
+	var responses []domain.TaskResponse
+	_ = s.db.WithContext(ctx).Table("task_responses AS r").
+		Joins("INNER JOIN task_check_ins AS c ON c.response_id = r.id AND c.deleted_at IS NULL").
+		Where("r.deleted_at IS NULL AND c.task_id = ? AND c.student_id = ?", id, pc.CurrentStudent.ID).
+		Order("r.created_at ASC").Find(&responses).Error
+	respOut := make([]map[string]any, 0, len(responses))
+	for _, r := range responses {
+		respOut = append(respOut, map[string]any{
+			"id": r.ID, "ritual": r.Ritual, "sticker_key": r.StickerKey, "content": r.Content,
+			"media_url": r.MediaURL, "response_type": r.ResponseType,
+			"created_at": r.CreatedAt.UTC().Format(time.RFC3339), "my_reaction": "",
+		})
+	}
+	var reqs []string
+	_ = json.Unmarshal([]byte(t.Requirements), &reqs)
+	if reqs == nil {
+		reqs = []string{}
+	}
 	return map[string]any{
 		"id": t.ID, "title": t.Title, "description": t.Description, "intro": t.Intro,
-		"requirements": t.Requirements, "rewards": t.Rewards,
-		"frequency": t.Frequency, "points": t.Points,
+		"requirements": reqs, "learning_link": t.LearningLink, "frequency": t.Frequency,
+		"target_student_id": t.TargetStudentID, "allow_public": t.AllowPublic,
+		"recognition_ritual": t.RecognitionRitual, "star_scope": t.StarScope, "star_goal": t.StarGoal,
 		"start_date": t.StartDate.Format("2006-01-02"), "end_date": t.EndDate.Format("2006-01-02"),
-		"status": t.Status, "checked_in_today": checkedIn,
-		"created_at": t.CreatedAt.UTC().Format(time.RFC3339),
+		"status": t.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
+		"has_unread_supplement": false, "responses": respOut, "created_at": t.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
 }
 
-func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalContext, taskID uint64, content, imageURL string) (map[string]any, error) {
-	var t domain.ParentTask
-	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND status = ?", taskID, pc.KindergartenID, 1).First(&t).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrParentNotFound
-		}
-		return nil, err
-	}
-	today := time.Now().Format("2006-01-02")
-	var existing int64
-	s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND student_id = ? AND date = ?", taskID, pc.CurrentStudent.ID, today).Count(&existing)
-	if existing > 0 {
+func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalContext, taskID uint64, content string, mediaFileID uint64) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
-	} // duplicate checkin
-
-	checkin := &domain.TaskCheckIn{
-		TaskID: taskID, StudentID: pc.CurrentStudent.ID, UserID: pc.UserID,
-		Date: time.Now().Truncate(24 * time.Hour), Content: content, ImageURL: imageURL,
-		Points: t.Points,
 	}
-	if err := s.db.WithContext(ctx).Create(checkin).Error; err != nil {
+	now := time.Now().In(shanghaiLoc())
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, shanghaiLoc())
+	var out map[string]any
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var t domain.ParentTask
+		if err := taskScopeQuery(tx, pc).Where("id = ? AND status = 1", taskID).First(&t).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrParentNotFound
+			}
+			return err
+		}
+		if !taskIsActive(&t, now) {
+			return ErrParentInvalidParams
+		}
+		state := domain.TaskCheckInState{TaskID: taskID, StudentID: pc.CurrentStudent.ID}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&state).Error; err != nil {
+			return err
+		}
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("task_id = ? AND student_id = ?", taskID, pc.CurrentStudent.ID).First(&state).Error; err != nil {
+			return err
+		}
+		if state.LastCheckInDate != nil {
+			last := time.Date(state.LastCheckInDate.Year(), state.LastCheckInDate.Month(), state.LastCheckInDate.Day(), 0, 0, 0, 0, shanghaiLoc())
+			switch t.Frequency {
+			case domain.TaskFrequencyDaily:
+				if !last.Before(today) {
+					return ErrParentInvalidParams
+				}
+			case domain.TaskFrequencyWeekly:
+				if !last.Before(today.AddDate(0, 0, -6)) {
+					return ErrParentInvalidParams
+				}
+			case domain.TaskFrequencyOnce:
+				return ErrParentInvalidParams
+			}
+		}
+		var mediaURL string
+		if mediaFileID > 0 {
+			var f domain.File
+			if err := tx.Where("id = ? AND user_id = ? AND biz_type = ? AND deleted_at IS NULL", mediaFileID, pc.UserID, "task").First(&f).Error; err != nil {
+				return ErrParentInvalidParams
+			}
+			if f.FileType != "image" && f.FileType != "audio" {
+				return ErrParentInvalidParams
+			}
+			mediaURL = f.FileURL
+		}
+		checkin := &domain.TaskCheckIn{
+			TaskID: taskID, StudentID: pc.CurrentStudent.ID, UserID: pc.UserID,
+			Date: today, Content: content, MediaFileID: mediaFileID, MediaURL: mediaURL,
+		}
+		if err := tx.Create(checkin).Error; err != nil {
+			return ErrParentInvalidParams
+		}
+		if err := tx.Model(&state).Update("last_checkin_date", today).Error; err != nil {
+			return err
+		}
+
+		out = map[string]any{
+			"id": checkin.ID, "message": "已提交，等待老师回应",
+			"created_at": checkin.CreatedAt.UTC().Format(time.RFC3339),
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
-		"id": checkin.ID, "points_earned": t.Points,
-		"message":    fmt.Sprintf("+%d积分!", t.Points),
-		"created_at": checkin.CreatedAt.UTC().Format(time.RFC3339),
-	}, nil
+	return out, nil
 }
 
 func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPortalContext, taskID uint64) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
 	var rows []domain.TaskCheckIn
 	if err := s.db.WithContext(ctx).Preload("Student").
 		Where("task_id = ? AND student_id = ?", taskID, pc.CurrentStudent.ID).
@@ -1591,7 +1685,7 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 		}
 		list[i] = map[string]any{
 			"id": r.ID, "date": r.Date.Format("2006-01-02"), "content": r.Content,
-			"image_url": r.ImageURL, "points": r.Points, "student_name": studentName,
+			"media_url": r.MediaURL, "student_name": studentName, "response_id": r.ResponseID,
 			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}
@@ -1865,8 +1959,26 @@ func (s *ParentPortalService) HomeOverview(ctx context.Context, pc *ParentPortal
 			homeClassIDs).Count(&newNoticeCount)
 	}
 	var pendingTasks int64
-	if pc.Class != nil {
-		s.db.WithContext(ctx).Model(&domain.ParentTask{}).Where("kindergarten_id = ? AND class_id = ? AND status = ?", pc.KindergartenID, pc.Class.ID, 1).Count(&pendingTasks)
+	if pc.CurrentStudent != nil {
+		var tasks []domain.ParentTask
+		_ = taskScopeQuery(s.db.WithContext(ctx).Model(&domain.ParentTask{}), pc).Where("status = 1").Find(&tasks).Error
+		for _, t := range tasks {
+			if !taskIsActive(&t, now) {
+				continue
+			}
+			var n int64
+			q := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND student_id = ?", t.ID, pc.CurrentStudent.ID)
+			switch t.Frequency {
+			case domain.TaskFrequencyDaily:
+				q = q.Where("date = ?", today)
+			case domain.TaskFrequencyWeekly:
+				q = q.Where("date >= ?", now.AddDate(0, 0, -6).Format("2006-01-02"))
+			}
+			_ = q.Count(&n).Error
+			if n == 0 {
+				pendingTasks++
+			}
+		}
 	}
 
 	var leave domain.LeaveRequest

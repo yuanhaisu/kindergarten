@@ -21,6 +21,9 @@ import (
 // AuthUserRepository AuthService 依赖的用户仓库接口（由 *repository.UserRepo 隐式实现）
 type AuthUserRepository interface {
 	FindByPhone(ctx context.Context, phone string) (*domain.User, error)
+	FindByUnionID(ctx context.Context, unionID string) (*domain.User, error)
+	FindOtherByUnionID(ctx context.Context, unionID string, excludeID uint64) (*domain.User, error)
+	FindOtherByPhone(ctx context.Context, phone string, excludeID uint64) (*domain.User, error)
 	FindByOpenID(ctx context.Context, openID string) (*domain.User, error)
 	FindByID(ctx context.Context, id uint64) (*domain.User, error)
 	Create(ctx context.Context, user *domain.User) error
@@ -39,11 +42,18 @@ type InvitationRepository interface {
 	MarkUsed(ctx context.Context, id, userID uint64, openID, unionID string) error
 }
 
+// AdminPermissionResolver 解析管理端账号权限码（由 *AdminAuthzService 实现）。
+// 声明在消费方，便于 AuthService 单测注入桩。
+type AdminPermissionResolver interface {
+	ResolveAdminCodes(ctx context.Context, kindergartenID, userID uint64) ([]string, bool, error)
+}
+
 type AuthService struct {
 	db             *gorm.DB
 	userRepo       AuthUserRepository
 	userRoleRepo   AuthRoleRepository
 	invitationRepo InvitationRepository
+	adminPerms     AdminPermissionResolver
 	rdb            *redis.Client
 	wx             *auth.WeChatClient
 	secret         []byte
@@ -56,6 +66,7 @@ func NewAuthService(
 	userRepo AuthUserRepository,
 	userRoleRepo AuthRoleRepository,
 	invitationRepo InvitationRepository,
+	adminPerms AdminPermissionResolver,
 	rdb *redis.Client,
 	wx *auth.WeChatClient,
 	secret []byte,
@@ -67,6 +78,7 @@ func NewAuthService(
 		userRepo:       userRepo,
 		userRoleRepo:   userRoleRepo,
 		invitationRepo: invitationRepo,
+		adminPerms:     adminPerms,
 		rdb:            rdb,
 		wx:             wx,
 		secret:         secret,
@@ -92,14 +104,15 @@ type UserInfo struct {
 }
 
 type RoleInfo struct {
-	Role             string  `json:"role"`
-	KindergartenID   *uint64 `json:"kindergarten_id,omitempty"`
-	KindergartenName string  `json:"kindergarten_name,omitempty"`
-	ClassID          *uint64 `json:"class_id,omitempty"`
-	ClassName        string  `json:"class_name,omitempty"`
-	Title            string  `json:"title,omitempty"`
-	TitleLabel       string  `json:"title_label,omitempty"`
-	AdminRole        string  `json:"admin_role,omitempty"`
+	Role             string   `json:"role"`
+	KindergartenID   *uint64  `json:"kindergarten_id,omitempty"`
+	KindergartenName string   `json:"kindergarten_name,omitempty"`
+	ClassID          *uint64  `json:"class_id,omitempty"`
+	ClassName        string   `json:"class_name,omitempty"`
+	Title            string   `json:"title,omitempty"`
+	TitleLabel       string   `json:"title_label,omitempty"`
+	AdminRole        string   `json:"admin_role,omitempty"`
+	Permissions      []string `json:"permissions,omitempty"`
 }
 
 func (s *AuthService) buildUserInfo(ctx context.Context, user *domain.User) (*UserInfo, error) {
@@ -257,8 +270,12 @@ func (s *AuthService) SMSLogin(ctx context.Context, phone, code, role string) (*
 }
 
 // WeChatLogin 微信小程序登录。inviteCode 非空时通过邀请码绑定预创建的教师账号。
+//
+// role 决定用哪端的微信凭据换取会话——两端 AppID 不同，openid 也不同，
+// 同一个人在两端会落两条 User（见 specs/wechat-login）。
+// role 未配置凭据或未知时返回明确错误，绝不回退到另一端凭据。
 func (s *AuthService) WeChatLogin(ctx context.Context, wxCode, role, inviteCode string) (*LoginResult, error) {
-	sess, err := s.wx.Code2Session(ctx, wxCode)
+	sess, err := s.wx.Code2Session(ctx, wxCode, role)
 	if err != nil {
 		return nil, fmt.Errorf("wechat code2session: %w", err)
 	}
@@ -267,22 +284,36 @@ func (s *AuthService) WeChatLogin(ctx context.Context, wxCode, role, inviteCode 
 		return s.weChatLoginWithInvite(ctx, sess, inviteCode)
 	}
 
+	user, err := s.resolveWeChatUser(ctx, sess)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueTokens(ctx, user)
+}
+
+// resolveWeChatUser 按本端 openid 解析出 User，没有就新建一条。
+//
+// 两端 AppID 不同 ⇒ 同一自然人在两端的 openid 也不同 ⇒ 必然落两条 User，
+// 彼此独立（见 specs/wechat-login）。跨端「是不是同一个人」由 unionid / 手机号
+// 关联判定负责，这里绝不合并账号。
+func (s *AuthService) resolveWeChatUser(ctx context.Context, sess *auth.Code2SessionResp) (*domain.User, error) {
 	user, err := s.userRepo.FindByOpenID(ctx, sess.OpenID)
 	if err != nil {
 		return nil, err
 	}
-	if user == nil {
-		user = &domain.User{
-			OpenID:  sess.OpenID,
-			UnionID: sess.UnionID,
-		}
-		if err := s.userRepo.Create(ctx, user); err != nil {
-			return nil, err
-		}
-		log.L(ctx).Info("new user registered via wechat", "user_id", user.ID)
+	if user != nil {
+		return user, nil
 	}
 
-	return s.issueTokens(ctx, user)
+	user = &domain.User{
+		OpenID:  sess.OpenID,
+		UnionID: sess.UnionID,
+	}
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+	log.L(ctx).Info("new user registered via wechat", "user_id", user.ID)
+	return user, nil
 }
 
 func (s *AuthService) weChatLoginWithInvite(ctx context.Context, sess *auth.Code2SessionResp, inviteCode string) (*LoginResult, error) {
@@ -506,6 +537,9 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uint64) (*ProfileIn
 			AdminRole:        r.AdminRole,
 		})
 	}
+	if err := s.fillAdminPermissions(ctx, user.ID, roleInfos); err != nil {
+		return nil, err
+	}
 
 	return &ProfileInfo{
 		ID:        user.ID,
@@ -516,6 +550,26 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uint64) (*ProfileIn
 		Roles:     roleInfos,
 		CreatedAt: user.CreatedAt,
 	}, nil
+}
+
+// fillAdminPermissions 为 admin 角色条目注入权限码（wire-admin-permissions design D6）。
+// 解析失败返回错误——profile 是管理端菜单与路由守卫的数据来源，
+// 宁可请求失败，也不静默降级为「无权限」造成界面撒谎。
+func (s *AuthService) fillAdminPermissions(ctx context.Context, userID uint64, infos []RoleInfo) error {
+	if s.adminPerms == nil {
+		return nil
+	}
+	for i := range infos {
+		if infos[i].Role != "admin" || infos[i].KindergartenID == nil {
+			continue
+		}
+		codes, _, err := s.adminPerms.ResolveAdminCodes(ctx, *infos[i].KindergartenID, userID)
+		if err != nil {
+			return fmt.Errorf("resolve admin permissions: %w", err)
+		}
+		infos[i].Permissions = codes
+	}
+	return nil
 }
 
 func (s *AuthService) UpdateProfile(ctx context.Context, userID uint64, nickname string, gender int) (*UserInfo, error) {

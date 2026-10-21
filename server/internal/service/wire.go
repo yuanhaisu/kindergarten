@@ -26,8 +26,16 @@ var Set = wire.NewSet(
 	NewAuditService,
 	NewOperationLogService,
 	NewExportService,
+	NewRecognitionQueueForApp,
 	NewTeacherPortalService,
 	NewParentPortalService,
 	NewDictService,
 	NewHealthCheckService,
+	NewGardenCalendarService,
+	NewTimetableServiceForApp,
+	NewAdminAuthzService,
+	NewFaceRegistryService,
+
+	// 晨检服务依赖策略读取接口，而不是整个 SettingsService。
+	wire.Bind(new(HealthPolicyProvider), new(*SettingsService)),
 )

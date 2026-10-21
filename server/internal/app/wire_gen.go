@@ -25,12 +25,14 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	userRepo := repository.NewUserRepo(db)
 	userRoleRepo := repository.NewUserRoleRepo(db)
 	teacherInvitationRepo := repository.NewTeacherInvitationRepo(db)
+	adminRepo := repository.NewAdminRepo(db)
+	adminAuthzService := service.NewAdminAuthzService(adminRepo, userRoleRepo)
 	client := ProvideRedis(cfg)
 	weChatClient := ProvideWeChatClient(cfg, client)
 	jwtSecret := ProvideJWTSecret(cfg)
 	accessTTL := ProvideAccessTTL(cfg)
 	refreshTTL := ProvideRefreshTTL(cfg)
-	authService := ProvideAuthService(db, userRepo, userRoleRepo, teacherInvitationRepo, client, weChatClient, jwtSecret, accessTTL, refreshTTL)
+	authService := ProvideAuthService(db, userRepo, userRoleRepo, teacherInvitationRepo, adminAuthzService, client, weChatClient, jwtSecret, accessTTL, refreshTTL)
 	fileRepo := repository.NewFileRepo(db)
 	storage, err := ProvideOSSStorage(cfg)
 	if err != nil {
@@ -55,7 +57,6 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	academicYearRepo := repository.NewAcademicYearRepo(db)
 	kindergartenAppSettingRepo := repository.NewKindergartenAppSettingRepo(db)
 	settingsService := service.NewSettingsService(db, kindergartenRepo, academicYearRepo, kindergartenAppSettingRepo, classRepo, studentRepo, userRoleRepo, operationLogRepo)
-	adminRepo := repository.NewAdminRepo(db)
 	adminService := service.NewAdminService(db, userRepo, userRoleRepo, adminRepo, kindergartenRepo, operationLogRepo)
 	roleService := service.NewRoleService(db, adminRepo, operationLogRepo)
 	attendanceRepo := repository.NewAttendanceRepo(db)
@@ -63,15 +64,15 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	leaveRepo := repository.NewLeaveRepo(db)
 	leaveService := service.NewLeaveService(leaveRepo, operationLogRepo)
 	pickupRepo := repository.NewPickupRepo(db)
-	pickupService := service.NewPickupService(pickupRepo, studentRepo, classRepo, operationLogRepo)
+	pickupService := service.NewPickupService(db, pickupRepo, studentRepo, classRepo, operationLogRepo, messageRepo)
 	growthRepo := repository.NewGrowthRepo(db)
 	growthService := service.NewGrowthService(growthRepo, operationLogRepo)
 	taskRepo := repository.NewTaskRepo(db)
-	taskService := service.NewTaskService(taskRepo, operationLogRepo)
+	taskService := service.NewTaskService(taskRepo, operationLogRepo, db)
 	pointRepo := repository.NewPointRepo(db)
 	pointService := service.NewPointService(pointRepo, kindergartenAppSettingRepo, operationLogRepo)
 	achievementRepo := repository.NewAchievementRepo(db)
-	achievementService := service.NewAchievementService(achievementRepo, operationLogRepo)
+	achievementService := service.NewAchievementService(achievementRepo, operationLogRepo, db)
 	noticeRepo := repository.NewNoticeRepo(db)
 	noticeService := service.NewNoticeService(noticeRepo, operationLogRepo)
 	announcementRepo := repository.NewAnnouncementRepo(db)
@@ -82,19 +83,32 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	exportTaskRepo := repository.NewExportTaskRepo(db)
 	exportService := service.NewExportService(exportTaskRepo, attendanceService, studentService, growthService)
 	calendarRepo := repository.NewCalendarRepo(db)
-	teacherPortalService := service.NewTeacherPortalService(db, calendarRepo)
+	provider, err := ProvideFaceProvider(cfg)
+	if err != nil {
+		return nil, err
+	}
+	recognitionQueue := service.NewRecognitionQueueForApp(db, client, cfg, provider)
+	faceConfig := ProvideFaceConfig(cfg)
+	teacherPortalService := service.NewTeacherPortalService(db, calendarRepo, pickupRepo, messageRepo, noticeRepo, recognitionQueue, faceConfig)
 	parentPortalService := service.NewParentPortalService(db, parentRepo, userRoleRepo, studentRepo, classRepo, pickupRepo, calendarRepo, noticeRepo)
 	dictRepo := repository.NewDictRepo(db)
 	dictService := service.NewDictService(db, dictRepo)
 	healthCheckRepo := repository.NewHealthCheckRepo(db)
-	healthCheckService := service.NewHealthCheckService(db, healthCheckRepo)
-	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService)
+	healthCheckService := service.NewHealthCheckService(db, healthCheckRepo, messageRepo, fileRepo, settingsService)
+	faceRegistryService := service.NewFaceRegistryService(db, provider, faceConfig)
+	gardenCalendarService := service.NewGardenCalendarService(db, calendarRepo, noticeService)
+	timetableRepo := repository.NewTimetableRepo(db)
+	timetableService := service.NewTimetableServiceForApp(db, calendarRepo, timetableRepo, kindergartenAppSettingRepo)
+	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService, faceRegistryService, gardenCalendarService, timetableService)
 	appHandler := NewAppHandler(handlerHandler)
 	casbinConfig := ProvideCasbinConfig(cfg)
 	enforcer, err := rbac.NewEnforcer(casbinConfig)
 	if err != nil {
 		return nil, err
 	}
-	engine := NewRouter(appHandler, enforcer, jwtSecret)
+	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService)
+	if err != nil {
+		return nil, err
+	}
 	return engine, nil
 }

@@ -8,6 +8,11 @@
 >
 > 以下 Response 均为 `data` 部分，省略外层 `{ "code": 0, "message": "success" }` 包装。
 
+> ⚠️ **契约变更（notice-multitarget，2026-10-09）**：
+> - 发布/编辑入参新增 `class_ids`（班级目标集合，必填非空，均须为任教班）；单值 `class_id` **删除**——多目标下保留会歧义
+> - 列表项/详情新增 `class_names`（目标班级名列表）作为「接收范围」展示字段
+> - `read_count` / `total_count` / `read_rate` / `read_stats`：**形状不变，语义变**——分母统一为「目标范围去重家长数」（同一家长多孩只计一人），不再是单班学生数
+
 ## 接口清单
 
 - `GET /teacher/notices`
@@ -45,6 +50,7 @@
       "category_label": "作业",
       "title": "周末作业通知",
       "content": "各位家长您好，本周作业如下：1. 复习本周学过的儿歌...",
+      "class_names": ["小一班", "小二班"],
       "need_confirm": true,
       "status": 2,
       "status_label": "已发布",
@@ -76,6 +82,7 @@
   "category_label": "作业",
   "title": "周末作业通知",
   "content": "各位家长您好，本周作业如下：1. 复习本周学过的儿歌；2. 完成手工制作《我的家》...",
+  "class_names": ["小一班", "小二班"],
   "need_confirm": true,
   "status": 2,
   "scheduled_at": null,
@@ -93,7 +100,7 @@
     "read_count": 25,
     "unread_count": 5,
     "confirmed_count": 20,
-    "total_count": 30,
+    "total_count": 30,            // 分母=目标范围去重家长数（多孩只计一人）；形状不变，口径已变
     "read_rate": "83%"
   },
   "creator": {
@@ -117,6 +124,7 @@
   "category": "homework",
   "title": "周末作业通知",
   "content": "各位家长您好，本周作业如下...",
+  "class_ids": [1, 2],            // 接收班级，必填非空；均须为任教班级，否则拒绝
   "attachments": [
     {
       "file_url": "https://cdn.example.com/uploads/notice/1.jpg",
@@ -150,6 +158,7 @@
   "category": "homework",
   "title": "周末作业通知（修改版）",
   "content": "各位家长您好，本周作业更新如下...",
+  "class_ids": [1, 2],            // 重选目标班级，必填非空；均须为任教班级
   "attachments": [
     {
       "file_url": "https://cdn.example.com/uploads/notice/1.jpg",

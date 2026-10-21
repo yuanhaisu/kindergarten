@@ -24,12 +24,12 @@ func (h *Handler) DoctorGetQueue(c *gin.Context) {
 		classID = &cid
 	}
 	date := c.DefaultQuery("date", "")
-	items, err := h.healthCheckSvc.GetQueue(c.Request.Context(), kgID, classID, date)
+	data, err := h.healthCheckSvc.GetQueueWithPolicy(c.Request.Context(), kgID, classID, date)
 	if err != nil {
 		response.ErrInternal(c, "获取队列失败")
 		return
 	}
-	response.OK(c, gin.H{"list": items})
+	response.OK(c, data)
 }
 
 func (h *Handler) DoctorGetCheckDetail(c *gin.Context) {
@@ -74,6 +74,14 @@ func (h *Handler) DoctorSubmitCheck(c *gin.Context) {
 			response.ErrValidation(c, "该学生已完成晨检")
 			return
 		}
+		if errors.Is(err, service.ErrHealthCheckInvalidItem) {
+			response.ErrValidation(c, err.Error())
+			return
+		}
+		if errors.Is(err, service.ErrHealthCheckTemperatureRequired) {
+			response.ErrValidation(c, "本园要求全员测温，请先录入体温")
+			return
+		}
 		response.ErrInternal(c, "提交失败")
 		return
 	}
@@ -81,24 +89,36 @@ func (h *Handler) DoctorSubmitCheck(c *gin.Context) {
 }
 
 func (h *Handler) DoctorAddMedia(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
 	checkID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || checkID == 0 {
 		response.ErrValidation(c, "无效的 ID")
 		return
 	}
 	var req struct {
-		FileURL  string `json:"file_url" binding:"required"`
-		ThumbURL string `json:"thumb_url"`
-		Category string `json:"category"`
-		FileName string `json:"file_name"`
-		FileSize int64  `json:"file_size"`
+		FileID   uint64 `json:"file_id" binding:"required"`
+		Category string `json:"category" binding:"required"`
+		RefDesc  string `json:"ref_desc"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ErrValidation(c, "参数不合法")
 		return
 	}
-	media, err := h.healthCheckSvc.AddMedia(c.Request.Context(), checkID, req.FileURL, req.ThumbURL, req.Category, req.FileName, req.FileSize)
+	media, err := h.healthCheckSvc.AddMedia(
+		c.Request.Context(), kgID, checkID, req.FileID, middleware.GetUserID(c), req.Category, req.RefDesc)
 	if err != nil {
+		if errors.Is(err, service.ErrHealthCheckNotFound) {
+			response.ErrNotFound(c, "晨检记录不存在")
+			return
+		}
+		if errors.Is(err, service.ErrHealthCheckMediaInvalid) {
+			response.ErrValidation(c, err.Error())
+			return
+		}
 		response.ErrInternal(c, "添加照片失败")
 		return
 	}

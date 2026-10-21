@@ -49,7 +49,11 @@ type StudentAchievement struct {
 	BaseModel
 	StudentID     uint64    `json:"student_id" gorm:"not null;uniqueIndex:idx_student_achievement"`
 	AchievementID uint64    `json:"achievement_id" gorm:"not null;uniqueIndex:idx_student_achievement"`
-	AchievedAt    time.Time `json:"achieved_at"`
+	// LogID 获奖见证的成长记录。可空：老师单纯表彰而不挂具体记录时为 NULL，
+	// 此时徽章不出现在任何成长记录卡片上，只体现在已获徽章数里。
+	// 有值时该记录必须对该学生可见（全班记录或含该学生的个体记录）。
+	LogID      *uint64   `json:"log_id,omitempty" gorm:"index;comment:获奖见证的成长记录 ID"`
+	AchievedAt time.Time `json:"achieved_at"`
 
 	Student     *Student     `json:"student,omitempty" gorm:"foreignKey:StudentID"`
 	Achievement *Achievement `json:"achievement,omitempty" gorm:"foreignKey:AchievementID"`

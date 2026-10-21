@@ -189,3 +189,71 @@ func (h *Handler) GetAuthorizedPersons(c *gin.Context) {
 	}
 	response.OKList(c, list, total, page, pageSize)
 }
+
+// ========== 滞留与超时未接（本次契约变更新增） ==========
+
+type pickupOverdueQuery struct {
+	ClassID uint64 `form:"class_id"`
+	Date    string `form:"date"`
+}
+
+// AdminPickupOverdue 滞留名单 + 各班超时未接计数。
+func (h *Handler) AdminPickupOverdue(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var q pickupOverdueQuery
+	_ = c.ShouldBindQuery(&q)
+	data, err := h.pickupSvc.ListOverdueStudents(c.Request.Context(), kgID, q.ClassID, q.Date)
+	if err != nil {
+		response.ErrInternal(c, "获取滞留名单失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// AdminPickupOverdueCount 超时未接计数（累计口径，按学生计）。
+func (h *Handler) AdminPickupOverdueCount(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var q pickupOverdueQuery
+	_ = c.ShouldBindQuery(&q)
+	n, err := h.pickupSvc.CountOverdueNotPicked(c.Request.Context(), kgID, q.ClassID, q.Date)
+	if err != nil {
+		response.ErrInternal(c, "获取超时未接计数失败")
+		return
+	}
+	response.OK(c, map[string]interface{}{
+		"date":               q.Date,
+		"overdue_not_picked": n,
+	})
+}
+
+// AdminPickupNotifyOverdue 管理端对滞留儿童一键通知家长。
+type adminNotifyOverdueReq struct {
+	StudentID uint64 `json:"student_id"`
+}
+
+func (h *Handler) AdminPickupNotifyOverdue(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var req adminNotifyOverdueReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.pickupSvc.NotifyOverdueParents(c.Request.Context(), kgID, req.StudentID)
+	if err != nil {
+		response.ErrValidation(c, "该生当前不属滞留状态")
+		return
+	}
+	response.OK(c, data)
+}
