@@ -250,10 +250,16 @@ func deleteTaskCascade(ctx context.Context, tx *gorm.DB, taskID uint64) error {
 }
 
 // revokePublicForTask 关闭任务公开：清空申请/批准/确认/审核人。
+//
+// 只处理**曾经有过公开状态**的提交（申请过 / 确认过 / 批准过）。
+// 从未申请过的提交本来就没有要清的东西，给它们盖 public_revoked_at 会把
+// 「从未申请」洗成「已撤回」，让 public_status 与撤回时间对家长和老师都失真。
+// 这些行上 D7 要求的「清空」本来就是空操作，收窄不改变任何可见性。
 func revokePublicForTask(ctx context.Context, tx *gorm.DB, taskID uint64) error {
 	now := time.Now()
 	return tx.WithContext(ctx).Model(&domain.TaskCheckIn{}).
-		Where("task_id = ?", taskID).
+		Where("task_id = ? AND (is_public_requested = ? OR public_scope_confirmed = ? OR public_approved_at IS NOT NULL)",
+			taskID, true, true).
 		Updates(map[string]any{
 			"is_public_requested":    false,
 			"public_scope_confirmed": false,
@@ -300,9 +306,13 @@ func publicCheckinStatus(c *domain.TaskCheckIn) string {
 
 // publicCheckinVisible 公开墙可见条件，逐字对应 design D7 与 tasks 4.3。
 //
-// classID 传 0 表示「不看读者班级」（老师/管理端回显 public_visible 时用：
-// 他们的问题是「这条现在是否生效」，而不是「某个家长能不能看到」）。
-func publicCheckinVisible(t *domain.ParentTask, c *domain.TaskCheckIn, classID uint64, today time.Time) bool {
+// submitterClassID 是**提交者孩子当前所在班级**（不是读者班级）：
+//   - 公开墙要求「提交者班级 = 任务班级」，少了这条，转班或任务改派会把内容
+//     漏给一个不该看到它的班级；
+//   - 传 0 表示调用方拿不到提交者班级（学生记录缺失），此时只校验任务侧条件。
+//
+// 「读者是否属于任务班级」由公开墙查询自己按读者 `student_id` 判定，不在本函数内。
+func publicCheckinVisible(t *domain.ParentTask, c *domain.TaskCheckIn, submitterClassID uint64, today time.Time) bool {
 	if t == nil || c == nil {
 		return false
 	}
@@ -312,7 +322,7 @@ func publicCheckinVisible(t *domain.ParentTask, c *domain.TaskCheckIn, classID u
 	if !t.AllowPublic || t.Status != 1 || t.TargetStudentID > 0 {
 		return false
 	}
-	if classID > 0 && t.ClassID != classID {
+	if submitterClassID > 0 && t.ClassID != submitterClassID {
 		return false
 	}
 	if taskDayOf(t.EndDate).Before(taskDayOf(today)) {
@@ -380,23 +390,28 @@ func publicCheckinView(t *domain.ParentTask, c *domain.TaskCheckIn, classID uint
 	}
 }
 
-// checkinLocate 仅用于定位提交所属任务与孩子。
+// checkinLocate 仅用于定位提交所属任务、孩子与孩子当前班级。
 type checkinLocate struct {
-	TaskID    uint64 `gorm:"column:task_id"`
-	StudentID uint64 `gorm:"column:student_id"`
+	TaskID         uint64 `gorm:"column:task_id"`
+	StudentID      uint64 `gorm:"column:student_id"`
+	StudentClassID uint64 `gorm:"column:student_class_id"`
 }
 
-// locateCheckin 用**非锁定读**拿到提交的 task_id / student_id。
+// locateCheckin 用**非锁定读**拿到提交的 task_id / student_id / 学生当前班级。
 //
 // 这里刻意不用 FOR UPDATE：公开相关的写路径必须以 parent_tasks 行作为第一把锁
 // （见 handoff §12.2），而按 checkin_id 进来的请求事先不知道 task_id。
 // InnoDB 的一致性非锁定读不取任何行锁，因此不参与死锁的加锁顺序；
 // 真正的校验在拿到任务锁之后用 FOR UPDATE 重读一次完成。
+//
+// 顺带取学生班级：`public_visible` 要按公开墙同一套条件算（提交者班级 = 任务班级），
+// 否则老师/管理端会看到「已公开」，而墙上其实因为转班已经隐藏。
 func locateCheckin(ctx context.Context, tx *gorm.DB, checkinID uint64) (*checkinLocate, error) {
 	var row checkinLocate
-	if err := tx.WithContext(ctx).Table("task_check_ins").
-		Select("task_id, student_id").
-		Where("id = ? AND deleted_at IS NULL", checkinID).
+	if err := tx.WithContext(ctx).Table("task_check_ins AS c").
+		Select("c.task_id, c.student_id, COALESCE(s.class_id, 0) AS student_class_id").
+		Joins("LEFT JOIN students AS s ON s.id = c.student_id AND s.deleted_at IS NULL").
+		Where("c.id = ? AND c.deleted_at IS NULL", checkinID).
 		Take(&row).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errTaskNotFound

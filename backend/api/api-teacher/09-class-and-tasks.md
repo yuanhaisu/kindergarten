@@ -447,7 +447,7 @@
 - 批准写 `public_scope_confirmed=true`、`public_approved_at=now`、`public_approved_by=当前老师`、`public_revoked_at=null`。
 - **拒绝/撤回**（`approve=false`）清空 `public_scope_confirmed`、`public_approved_at`、`public_approved_by`，写 `public_revoked_at=now`，`is_public_requested=false`；对从未申请过的提交调用是幂等空操作。
 - 只有处于**待审核**（家长已申请且未撤回）的提交可以批准；未申请 / 已取消 / 已撤回 → **409**「该提交当前不在待审核状态，请让家长重新申请」。已批准时重复批准是幂等空操作。
-- 前置：**批准**要求任务 `allow_public=true` 且不是个体任务，否则 **422**（个体任务与未开启公开的任务不提供公开入口）。**拒绝/撤回不受此限**——任务被关掉公开开关或改成个体任务后，老师仍必须能把残留的公开状态清干净，此时 `approve=false` 照常返回 200。
+- 前置：**批准**要求任务 `allow_public=true` 且不是个体任务，并且提交者孩子**当前仍在该任务班级**（转班后拒绝，否则只会造出一个永远不上墙的「已公开」状态），否则 **422**。**拒绝/撤回不受此限**——任务被关掉公开开关、改成个体任务或孩子已转班后，老师仍必须能把残留的公开状态清干净，此时 `approve=false` 照常返回 200。
 - 任务不属于当前老师班级 → **404**；提交不属于该任务 → **422**；行锁等待超时/死锁 → **503**。
 - 再次申请必须重新批准、重新勾确认：取消/撤回会把 `public_scope_confirmed` 清成 `false`，不会沿用。
 

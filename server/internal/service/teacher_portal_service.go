@@ -3083,10 +3083,14 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 			return err
 		}
 		// 只在公开状态真的发生收缩时撤销：任务本来就不公开时也调一次，
-		// 会给全部提交反复写 public_revoked_at，把「从未申请」洗成「已撤回」，
+		// 会给提交反复写 public_revoked_at，把「从未申请」洗成「已撤回」，
 		// 并让撤回时间随每次无关编辑漂移（B2 的 public_status 会把这种脏数据暴露出来）。
+		//
+		// 判定要用**落库后的有效值**：个体任务会被强制 allow_public=false，
+		// 用原始 req.AllowPublic 判定会在 clamp 逻辑变化时漏掉撤销。
+		effectiveAllowPublic := allowPublic && req.TargetStudentID == 0
 		becameIndividual := req.TargetStudentID > 0 && cur.TargetStudentID == 0
-		if becameIndividual || (cur.AllowPublic && !allowPublic) {
+		if becameIndividual || (cur.AllowPublic && !effectiveAllowPublic) {
 			return revokePublicForTask(ctx, tx, id)
 		}
 		return nil
@@ -3194,12 +3198,18 @@ func (s *TeacherPortalService) TaskCheckins(ctx context.Context, tc *TeacherPort
 		if r.PublicRevokedAt != nil {
 			revokedAt = r.PublicRevokedAt.UTC().Format(time.RFC3339)
 		}
+		// public_visible 要和公开墙同口径：提交者当前班级必须等于任务班级，
+		// 否则孩子转班后老师仍看到「已公开」，而墙上其实已经隐藏。
+		var submitterClass uint64
+		if r.Student != nil {
+			submitterClass = r.Student.ClassID
+		}
 		item := map[string]any{
 			"id": r.ID, "student_id": r.StudentID, "content": r.Content,
 			"media_file_id": r.MediaFileID, "media_url": r.MediaURL,
 			"is_public_requested": r.IsPublicRequested, "public_scope_confirmed": r.PublicScopeConfirmed,
 			"public_approved_at": approvedAt, "public_revoked_at": revokedAt,
-			"public_status": publicCheckinStatus(&rows[i]), "public_visible": publicCheckinVisible(&task, &rows[i], 0, now),
+			"public_status": publicCheckinStatus(&rows[i]), "public_visible": publicCheckinVisible(&task, &rows[i], submitterClass, now),
 			"response_id": r.ResponseID, "created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 			"date": r.Date.Format("2006-01-02"),
 		}
@@ -3540,6 +3550,18 @@ func (s *TeacherPortalService) ReviewPublicCheckin(ctx context.Context, tc *Teac
 			}
 			return err
 		}
+		// 提交者现在必须还在本班：公开墙要求「提交者班级 = 任务班级」，
+		// 孩子转班后批准只会得到一个永远不上墙的「已公开」状态。
+		var submitter domain.Student
+		if err := tx.Select("class_id").Where("id = ?", c.StudentID).Take(&submitter).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherInvalidParams
+			}
+			return err
+		}
+		if approve && submitter.ClassID != locked.ClassID {
+			return ErrTaskPublicNotAllowed
+		}
 		var updates map[string]any
 		if approve {
 			switch publicCheckinStatus(&c) {
@@ -3569,7 +3591,7 @@ func (s *TeacherPortalService) ReviewPublicCheckin(ctx context.Context, tc *Teac
 			}
 			c = fresh
 		}
-		out = publicCheckinView(&locked, &c, 0, now)
+		out = publicCheckinView(&locked, &c, submitter.ClassID, now)
 		return nil
 	})
 	if isTaskLockConflict(err) {

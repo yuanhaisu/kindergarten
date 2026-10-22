@@ -506,10 +506,29 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 
 审查确认无问题的部分：状态机逐条对应 D7、幂等语义、锁序无反向、手写 SQL 的软删过滤、权限边界。
 
+### 12.10 第二轮审查（针对修复本身，2026-10-22）
+
+对「修完的那版」再做一轮对抗审查，发现 3 个问题（均已修）：
+
+| # | 问题 | 修法 |
+| --- | --- | --- |
+| 6 | 关闭 `allow_public` 的撤销只有 helper 级测试，**真实编辑路径没被覆盖**（spec 0143 可能回归而全绿） | 新增 `TestTeacherUpdateTaskClosingPublicRevokes` + 变异「彻底不撤销公开」 |
+| 7 | `public_visible` 在老师/管理端按 0 计算，不校验提交者班级，与契约「等价于公开墙」不符 | `locateCheckin` 带出学生当前班级；老师列表、老师审核、管理端撤回都用它；新增 `TestTeacherCheckinsPublicVisibleFollowsStudentClass` |
+| 8 | 提交者已转班仍可批准 → 造出永远不上墙的「已公开」状态 | 批准时校验「提交者班级 = 任务班级」，不满足 422；拒绝/撤回仍可用（`TestTeacherApproveRejectedAfterStudentLeavesClass`） |
+| 9 | `revokePublicForTask` 给**从未申请**的提交也盖 `public_revoked_at`，`public_status` 与撤回时间失真 | WHERE 收窄为「仍有公开状态」的行（申请过/确认过/批准过）；D7 的「清空」在这些行上本就是空操作，可见性不变；`TestTeacherUpdateTaskClosingPublicRevokes` 断言同伴提交保持 `none` |
+| 10 | `UpdateTask` 撤销判定用的是原始 `req.AllowPublic`，落库值却被「个体任务强制 false」夹过 | 改用 `effectiveAllowPublic = allowPublic && target==0` 判定（防御 7.1 放宽结构锁后的耦合） |
+
+第二轮变异项从 22 条增加到 25 条，全部 detected。另按审查建议修正了两处测试口径：
+
+- 0143：改为由**真实编辑路径**的用例守护（此前只有 helper 直调）。
+- 0145：注明「有提交后 `assertTaskEditable` 拒绝改 target，转换路径不可达」，已验证的只是公开墙侧排除个体任务，不能说成端到端已验证。
+- 「老师审核锁内再校验园所/班级」是 TOCTOU 兜底，串行测试观测不到，代码保留但不计入变异。
+- 「编辑时无条件调用 revoke」已不是可观测缺陷（收窄后的 WHERE 清空后再调匹配不到），`UpdateTask` 里的条件只为少写无用 UPDATE；不变量由 `TestEditingTaskDoesNotRefreshRevokedAt` 守护。
+
 ### 12.8 B2 验证状态
 
 - `go build ./...`、`go vet ./...`、`go test ./... -timeout 900s` 全绿（2026-10-22；跑全量前先停掉 `:8080` 的 `kg-server.exe`，否则识别队列测试会被抢任务）。
-- `server/internal/service/task_public_test.go`：40 个真实 MySQL 用例；`_verify/mutate_b2.py` 22 项变异全部 detected。
+- `server/internal/service/task_public_test.go`：44 个真实 MySQL 用例；`_verify/mutate_b2.py` 25 项变异全部 detected。
 - HTTP 冒烟（真实网关 + 中间件 + handler，2026-10-22）：公开墙 200、缺 `student_id` 422、不存在提交 404、管理端 `revoke=false` 422、跨班任务 404。
 - TEST_CATALOG 的 0119/0120/0121/0134/0143/0144/0145 已从 ⏸ 改为「后端已验证 ⚠️」，UI 仍待 9.3/10.x/11.4。
 - 未做：审核/申请/公开墙界面（9.3、10.x、11.4）；「含他人内容」只能靠老师勾选，无自动识别；`GET /parent/tasks` 与详情尚未返回 `public_*`（归 8.1）；`CheckinHistory` 仍按任务可见范围收窄（转班后家长查不到旧任务历史，但撤回接口可用）。

@@ -753,6 +753,33 @@ func TestEditingNonPublicTaskDoesNotStampRevokedAt(t *testing.T) {
 	assert.False(t, row.IsPublicRequested)
 }
 
+// 与公开无关的编辑不得刷新已有撤回时间：否则审计时间每次改标题都会漂移。
+// （「从未申请不被盖章」已由 revokePublicForTask 的 WHERE 收窄兜住，
+//  这里守的是「已经撤回过的行」不被反复覆盖。）
+func TestEditingTaskDoesNotRefreshRevokedAt(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	f.requestAndApprove(t, &f.taskPub, c.ID)
+
+	require.NoError(t, f.svcT.UpdateTask(context.Background(), f.tc, f.taskPub.ID, TeacherTaskInput{
+		Title: f.taskPub.Title, LearningLink: "B2学习关联", AllowPublic: false,
+	}))
+	require.NotNil(t, f.reload(t, c.ID).PublicRevokedAt)
+
+	pinned := time.Date(2026, 1, 2, 3, 4, 5, 0, shanghaiLoc())
+	require.NoError(t, f.db.Model(&domain.TaskCheckIn{}).Where("id = ?", c.ID).
+		Update("public_revoked_at", pinned).Error)
+
+	// 任务此时已经不公开，再改标题不该再走一遍撤销。
+	require.NoError(t, f.svcT.UpdateTask(context.Background(), f.tc, f.taskPub.ID, TeacherTaskInput{
+		Title: "B2再次改名", LearningLink: "B2学习关联",
+	}))
+
+	got := f.reload(t, c.ID).PublicRevokedAt
+	require.NotNil(t, got)
+	assert.True(t, pinned.Equal(*got), "无关编辑不得刷新撤回时间：want %v, got %v", pinned, *got)
+}
+
 func TestPublicWallCrossClassIsolation(t *testing.T) {
 	f := setupB2(t)
 	mine := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
@@ -875,6 +902,76 @@ func TestTeacherApproveAfterParentCancelConflicts(t *testing.T) {
 	_, err = f.svcT.ReviewPublicCheckin(context.Background(), f.tc, f.taskPub.ID, c.ID, true, true)
 	assert.ErrorIs(t, err, ErrTaskPublicStateConflict)
 	assert.NotContains(t, f.wallIDs(t, f.pcPeer), c.ID)
+}
+
+// 关闭公开开关必须走真实编辑路径把内容撤下（spec 0143）。
+func TestTeacherUpdateTaskClosingPublicRevokes(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	// 同任务、另一家的提交：从未申请过公开，关闭开关时不该被盖上撤回时间。
+	peer := f.checkin(t, &f.taskPub, testB2StudentPeer, testB2ParentPeer)
+	f.requestAndApprove(t, &f.taskPub, c.ID)
+	require.Contains(t, f.wallIDs(t, f.pcPeer), c.ID)
+
+	require.NoError(t, f.svcT.UpdateTask(context.Background(), f.tc, f.taskPub.ID, TeacherTaskInput{
+		Title: f.taskPub.Title, LearningLink: "B2学习关联", AllowPublic: false,
+	}))
+
+	var updated domain.ParentTask
+	require.NoError(t, f.db.First(&updated, f.taskPub.ID).Error)
+	assert.False(t, updated.AllowPublic, "编辑必须真的关闭公开开关")
+
+	row := f.reload(t, c.ID)
+	assert.False(t, row.IsPublicRequested)
+	assert.False(t, row.PublicScopeConfirmed)
+	assert.Nil(t, row.PublicApprovedAt)
+	assert.Zero(t, row.PublicApprovedBy)
+	require.NotNil(t, row.PublicRevokedAt, "关闭公开必须批量写撤回时间")
+	assert.NotContains(t, f.wallIDs(t, f.pcPeer), c.ID)
+
+	peerRow := f.reload(t, peer.ID)
+	assert.Nil(t, peerRow.PublicRevokedAt, "从未申请的提交不该被洗成已撤回")
+	assert.Equal(t, TaskPublicNone, publicCheckinStatus(&peerRow))
+}
+
+// 老师端 public_visible 必须和公开墙同口径：孩子转班后不能再显示「已公开」。
+func TestTeacherCheckinsPublicVisibleFollowsStudentClass(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	f.requestAndApprove(t, &f.taskPub, c.ID)
+
+	first := func() map[string]any {
+		out, err := f.svcT.TaskCheckins(context.Background(), f.tc, f.taskPub.ID, "")
+		require.NoError(t, err)
+		rows := out["list"].([]map[string]any)
+		require.Len(t, rows, 1)
+		return rows[0]
+	}
+	assert.Equal(t, true, first()["public_visible"])
+
+	require.NoError(t, f.db.Model(&domain.Student{}).Where("id = ?", testB2Student).
+		Update("class_id", testB2ClassOther).Error)
+	assert.Equal(t, false, first()["public_visible"], "转班后墙上已隐藏，老师端不能仍显示已公开")
+}
+
+// 孩子已经不在本班时，批准公开只会造出一个永远不上墙的「已公开」状态。
+func TestTeacherApproveRejectedAfterStudentLeavesClass(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	_, err := f.svcP.RequestPublicCheckin(context.Background(), f.pc, c.ID)
+	require.NoError(t, err)
+
+	require.NoError(t, f.db.Model(&domain.Student{}).Where("id = ?", testB2Student).
+		Update("class_id", testB2ClassOther).Error)
+
+	_, err = f.svcT.ReviewPublicCheckin(context.Background(), f.tc, f.taskPub.ID, c.ID, true, true)
+	assert.ErrorIs(t, err, ErrTaskPublicNotAllowed)
+	assert.Nil(t, f.reload(t, c.ID).PublicApprovedAt)
+
+	// 拒绝/撤回仍可用，能把待审核状态清掉。
+	out, err := f.svcT.ReviewPublicCheckin(context.Background(), f.tc, f.taskPub.ID, c.ID, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, TaskPublicRevoked, out["public_status"])
 }
 
 // ---------- 4.4 管理端撤回 ----------

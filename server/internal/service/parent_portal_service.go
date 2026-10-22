@@ -1846,35 +1846,35 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 //     内容都撤不下来，而内容仍留在原班级墙上——同意无法撤回。
 //
 // 「任务是否还能公开」只在申请时校验（见 RequestPublicCheckin）；取消/撤回永远可用。
-func (s *ParentPortalService) lockCheckinForPublic(ctx context.Context, tx *gorm.DB, pc *ParentPortalContext, checkinID uint64) (*domain.ParentTask, *domain.TaskCheckIn, error) {
+func (s *ParentPortalService) lockCheckinForPublic(ctx context.Context, tx *gorm.DB, pc *ParentPortalContext, checkinID uint64) (*domain.ParentTask, *domain.TaskCheckIn, *checkinLocate, error) {
 	loc, err := locateCheckin(ctx, tx, checkinID)
 	if err != nil {
 		if errors.Is(err, errTaskNotFound) {
-			return nil, nil, ErrParentNotFound
+			return nil, nil, nil, ErrParentNotFound
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if loc.StudentID != pc.CurrentStudent.ID {
-		return nil, nil, ErrParentForbidden
+		return nil, nil, nil, ErrParentForbidden
 	}
 	var t domain.ParentTask
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("id = ? AND kindergarten_id = ?", loc.TaskID, pc.KindergartenID).First(&t).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil, ErrParentNotFound
+			return nil, nil, nil, ErrParentNotFound
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var c domain.TaskCheckIn
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("id = ? AND task_id = ? AND student_id = ?", checkinID, t.ID, pc.CurrentStudent.ID).
 		First(&c).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil, ErrParentNotFound
+			return nil, nil, nil, ErrParentNotFound
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return &t, &c, nil
+	return &t, &c, loc, nil
 }
 
 // taskAccessibleToChild 是 taskScopeWhere 的 Go 侧等价物：判断任务对这个孩子是否可见。
@@ -1898,7 +1898,7 @@ func (s *ParentPortalService) RequestPublicCheckin(ctx context.Context, pc *Pare
 	now := time.Now().In(shanghaiLoc())
 	var out map[string]any
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		t, c, err := s.lockCheckinForPublic(ctx, tx, pc, checkinID)
+		t, c, loc, err := s.lockCheckinForPublic(ctx, tx, pc, checkinID)
 		if err != nil {
 			return err
 		}
@@ -1928,7 +1928,7 @@ func (s *ParentPortalService) RequestPublicCheckin(ctx context.Context, pc *Pare
 			}
 			c = &fresh
 		}
-		out = publicCheckinView(t, c, pc.CurrentStudent.ClassID, now)
+		out = publicCheckinView(t, c, loc.StudentClassID, now)
 		return nil
 	})
 	if isTaskLockConflict(err) {
@@ -1948,7 +1948,7 @@ func (s *ParentPortalService) CancelPublicCheckin(ctx context.Context, pc *Paren
 	now := time.Now().In(shanghaiLoc())
 	var out map[string]any
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		t, c, err := s.lockCheckinForPublic(ctx, tx, pc, checkinID)
+		t, c, loc, err := s.lockCheckinForPublic(ctx, tx, pc, checkinID)
 		if err != nil {
 			return err
 		}
@@ -1966,7 +1966,7 @@ func (s *ParentPortalService) CancelPublicCheckin(ctx context.Context, pc *Paren
 			}
 			c = &fresh
 		}
-		out = publicCheckinView(t, c, pc.CurrentStudent.ClassID, now)
+		out = publicCheckinView(t, c, loc.StudentClassID, now)
 		return nil
 	})
 	if isTaskLockConflict(err) {

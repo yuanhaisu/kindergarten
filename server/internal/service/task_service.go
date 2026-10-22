@@ -299,7 +299,7 @@ func (s *TaskService) RevokePublicCheckin(ctx context.Context, kindergartenID, a
 			c = fresh
 			changed = true
 		}
-		out = publicCheckinView(&t, &c, 0, now)
+		out = publicCheckinView(&t, &c, loc.StudentClassID, now)
 		return nil
 	})
 	if err != nil {

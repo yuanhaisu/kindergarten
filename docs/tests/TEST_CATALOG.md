@@ -723,9 +723,9 @@
 | TC-NEW-TSK-0140 | 补充回应未读与读标记 | P1 | FUNC | ⏸ |
 | TC-NEW-TSK-0141 | 独立任务不能自设活动分组 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0142 | 有提交后结构字段只读 | P0 | FUNC | ✅ |
-| TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：开关关闭即不可见、`revokePublicForTask` 撤销后重开不恢复旧批准）；管理端 UI 待 11.1 |
+| TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | ⚠️ 后端已验证（`TestTeacherUpdateTaskClosingPublicRevokes` 走真实编辑路径：开关落库 false、申请/确认/批准/审核人清空、写撤回时间、墙上消失；从未申请的提交不被盖章；重开不恢复旧批准）；管理端 UI 待 11.1 |
 | TC-NEW-TSK-0144 | 跨班公开墙不可见 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：两个班互相看不到对方公开内容；任务结束/关闭/软删后不展示）；家长端 UI 待 10.x |
-| TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | ⚠️ 后端已验证（A 切片 `UpdateTask` + `task_public_test.go`：公开墙自己排除个体任务，即使残留 allow_public=true 也不展示） |
+| TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | ⚠️ 部分验证：有提交后 `assertTaskEditable` 会直接拒绝改 `target_student_id`，所以「班级任务→个体任务」的转换路径当前**不可达**；已验证的是公开墙侧排除个体任务（即使残留 `allow_public=true` 也不展示，`TestPublicWallNeverShowsIndividualTask`） |
 | TC-NEW-TSK-0146 | 更新个体任务目标跨班被拒 | P0 | FUNC | ✅ |
 
 ### A 切片执行记录（2026-10-21）
@@ -856,9 +856,9 @@
 
 读路径同步补 `public_*` / `public_status` / `public_visible`（`checkin-history`、老师端 `checkins`），`public_visible` 由服务端按公开墙同一套条件算出，客户端不得自己拼。
 
-**测试**：`server/internal/service/task_public_test.go`（真实 MySQL，固定夹具 992701–992711，`Unscoped` 清理）。40 个用例覆盖：申请允许/任务未开公开/个体任务/跨家庭/已结束任务、幂等（已批准不被打回）、取消清空（含任务关公开或结束后仍可撤回、从未申请不写撤回时间）、老师必须勾确认、必须处于待审核、留痕审核人、拒绝清空、跨班 404、提交与任务不匹配 422、公开墙九条件逐条、跨班隔离、只带提交者孩子、重新申请需重新审核、取消后老师批准 409、管理端撤回与跨园所 404/空操作不写日志。
+**测试**：`server/internal/service/task_public_test.go`（真实 MySQL，固定夹具 992701–992711，`Unscoped` 清理）。44 个用例覆盖：申请允许/任务未开公开/个体任务/跨家庭/已结束任务、幂等（已批准不被打回）、取消清空（含任务关公开或结束后仍可撤回、从未申请不写撤回时间）、老师必须勾确认、必须处于待审核、留痕审核人、拒绝清空、跨班 404、提交与任务不匹配 422、公开墙九条件逐条、跨班隔离、只带提交者孩子、重新申请需重新审核、取消后老师批准 409、管理端撤回与跨园所 404/空操作不写日志。
 
-**变异验证（22 项，全部 detected）**：逐条删掉公开墙的 `is_public_requested` / `public_scope_confirmed` / `allow_public` / `status` / `target_student_id` / `end_date` / 任务 `deleted_at` / 提交 `deleted_at` / 班级 / 提交者班级=任务班级 / `public_approved_at IS NOT NULL` / `public_revoked_at IS NULL` 条件与排序，以及申请的有效期检查、申请幂等保护、取消清 `approved_at`、审核 `scope_confirmed` 必填、审核待审核状态、锁内复核 `allow_public`、编辑不公开任务无条件撤销、管理端空操作不写日志——每次只改一处，对应测试都会变红，改后 `go build ./...` 通过。脚本 `_verify/mutate_b2.py`（未入库，`_verify/` 已在 `.gitignore`）。
+**变异验证（25 项，全部 detected）**：逐条删掉公开墙的 `is_public_requested` / `public_scope_confirmed` / `allow_public` / `status` / `target_student_id` / `end_date` / 任务 `deleted_at` / 提交 `deleted_at` / 班级 / 提交者班级=任务班级 / `public_approved_at IS NOT NULL` / `public_revoked_at IS NULL` 条件与排序，以及申请的有效期检查、申请幂等保护、取消清 `approved_at`、审核 `scope_confirmed` 必填、审核待审核状态、锁内复核 `allow_public`、关闭公开走真实编辑路径、转班后审核与老师端 public_visible、关闭公开时只撤销仍有公开状态的行——每次只改一处，对应测试都会变红，改后 `go build ./...` 通过。脚本 `_verify/mutate_b2.py`（未入库，`_verify/` 已在 `.gitignore`）。
 
 > 「老师审核锁内再校验园所/班级」属 TOCTOU 兜底，串行测试观测不到（需要并发改派任务），未做变异，代码保留。
 
@@ -869,6 +869,14 @@
 3. **老师审核锁内缺班级/园所条件（TOCTOU）**：预检有、锁定读没有，任务在老师点确认前被改派时旧班老师仍能操作。已在锁定读补上同样条件。
 4. **编辑不公开任务会反复盖撤回时间**：`UpdateTask` 原本在「任务不公开」时无条件 `revokePublicForTask`，把从未申请的提交洗成「已撤回」，且时间随每次无关编辑漂移。已改为只在 `allow_public` 真发生 true→false 或班级任务改个体时撤销。
 5. **测试守卫缺口**：补上 `public_approved_at IS NOT NULL`、`c.deleted_at`、排序、转班/改派、编辑不盖时间五条独立用例（对应变异全部 detected）。
+
+第二轮（针对修复本身）再发现 3 个问题，已修：
+
+6. **关闭公开开关的真实编辑路径没有被测**（只有 helper 级用例，spec 0143 可静默回归）：补 `TestTeacherUpdateTaskClosingPublicRevokes`。
+7. **`public_visible` 在老师/管理端按「不校验班级」计算**，与契约「等价于公开墙」不符：`locateCheckin` 带出学生当前班级，四处统一；补 `TestTeacherCheckinsPublicVisibleFollowsStudentClass`。
+8. **提交者已转班仍可批准**，造出永远不上墙的「已公开」：批准时校验提交者班级，撤回仍可用；补 `TestTeacherApproveRejectedAfterStudentLeavesClass`。
+
+另按同轮审查建议收窄 `revokePublicForTask`：只撤销**仍有公开状态**的提交，不再给从未申请的行盖 `public_revoked_at`（D7 的「清空」在这些行上本就是空操作），并加 `TestEditingTaskDoesNotRefreshRevokedAt` 守住撤回时间不被无关编辑刷新。
 
 **状态机语义决定（后续不要改错）**：
 
