@@ -25,6 +25,9 @@ const edit = ref({ title: "", description: "", learning_link: "", allow_public: 
 const loading = ref(false)
 // 防连点：第二次请求必然拿到 0 条，紧跟在「已回应 N 条」后面会被读成失败。
 const batchBusy = ref(false)
+// 单条回应的门闩。贴纸是并排的小按钮，连点两下会真发两次请求，
+// 第二下必然落到 409，用户看到的是「回应失败」——明明第一次已经成功了。
+const respondBusy = ref(false)
 const status = ref("pending")
 const stickers = ["star", "heart", "thumb"]
 const recorder = uni.getRecorderManager()
@@ -159,12 +162,18 @@ async function load() {
 }
 
 async function respond(row, sticker) {
+  if (respondBusy.value) return
+  respondBusy.value = true
   try {
     await respondTeacherTask(taskId.value, row.id, { ritual: "sticker", sticker_key: sticker })
     uni.showToast({ title: "已回应", icon: "success" })
-    load()
+    // 与 batchRespond 同形状：等刷新落地再解锁，否则列表还在飞行期间按钮又活了。
+    // uni.request 没设 timeout，走微信默认 60s，卡住时门闩不能一直锁着。
+    await Promise.race([load(), new Promise((r) => setTimeout(r, 3000))])
   } catch (e) {
     uni.showToast({ title: e?.message || "回应失败", icon: "none" })
+  } finally {
+    respondBusy.value = false
   }
 }
 
@@ -238,7 +247,7 @@ onLoad((opts) => {
       <text class="content">{{ row.content || "（一键完成）" }}</text>
       <text v-if="status === 'pending' && !isCurrentPeriod(row)" class="old-period">旧周期 · 请逐条回应</text>
       <text v-if="row.media_url" class="media">已附照片/语音</text>
-      <view v-if="status === 'pending'" class="actions">
+      <view v-if="status === 'pending'" class="actions" :class="{ busy: respondBusy }">
         <view v-for="s in stickers" :key="s" class="sticker" @click="respond(row, s)">{{ s }}</view>
         <view v-if="!recording" class="sticker" @click="startRecord(row)">录音</view>
         <view v-else class="sticker recording" @click="stopRecord">停止</view>
@@ -270,6 +279,7 @@ onLoad((opts) => {
 .content { display: block; margin-top: $spacing-xs; font-size: $typography-font-size-base; color: $color-text-body; }
 .media { display: block; margin-top: $spacing-xs; font-size: $typography-font-size-sm; color: $color-text-muted; }
 .actions { display: flex; gap: $spacing-md; margin-top: $spacing-md; }
+.actions.busy { opacity: 0.6; }
 .sticker { padding: $spacing-xs $spacing-lg; border-radius: $border-radius-full; background: $color-bg-page; color: $color-brand-primary; font-size: $typography-font-size-sm; }
 .recording { background: $color-semantic-danger-bg; color: $color-semantic-danger; }
 .done { display: block; margin-top: $spacing-sm; color: $color-semantic-success; font-size: $typography-font-size-sm; }

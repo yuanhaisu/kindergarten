@@ -799,7 +799,7 @@
   3. 返回列表（`onShow` 刷新）：自动变为 `待回应 1（本周期 0）`，无需下拉。
   4. `once` 任务详情：无批量按钮，显示「一次性任务与个体任务需逐条回应」。
   5. 停掉后端后返回列表：「网络异常」+「显示的是上次拉取的结果，点击重试」，旧数据保留；点错误卡后列表重新加载、错误卡消失。
-  **未覆盖**：toast 文案（小程序原生 UI，不在 DOM 内，无法读取）；连点门闩只能通过「第二次点击后接口状态不变」间接确认。
+  **未覆盖**：toast 文案（小程序原生 UI，不在 DOM 内，无法读取）；批量按钮的连点门闩只能通过「第二次点击后接口状态不变」间接确认（单条回应的门闩在 2026-10-22 用请求计数做了直接测量，见下条）。
 - **老师端 UI 复验（2026-10-22，改后代码：`loadSeq` + 刷新 3 秒封顶）**：
   1. 登录后工作台日期 `2026年10月22日 星期四`，跨日后显示正常。
   2. 列表：`once · 待回应 1`、`daily · 待回应 1`。
@@ -807,6 +807,13 @@
   4. 重新进入列表：`daily · 待回应 0`，与 `GET /teacher/tasks` 一致。
   **未复验**：旧周期行与加载失败错误卡（代码未变，沿用 10-21 的证据）；连点门闩的中间态仍不可观测。
   **工具备注**：本轮遇到 `navigateTo:fail timeout`——详情 pageframe 建好但空白、导航被回滚，重试一次即成功。失败的 pageframe 会残留在 CDP target 列表**首位**，导致 `wx_cdp.mjs` 默认选错目标读到空 DOM；脚本已支持 `WX_TARGET=pages/xxx` 指定页面。另：`wx.navigateBack` 连续执行会多弹一层，读页面栈前先确认。
+- **单条「贴纸」回应门闩（2026-10-22 修复并做对照实验）**：`respond()` 原先没有门闩，贴纸是并排小按钮，连点两下会真发两次请求，第二次必落 409，用户看到「回应失败」——而第一次其实已经成功。现加 `respondBusy`，与 `batchRespond` 同形状（成功后等列表刷新落地再解锁，3 秒封顶），并给 `.actions` 加 `busy` 0.6 透明度让锁定可见。
+  **测量方法**：请求由 appservice（worker）发出、元素在 pageframe（renderer），所以同时连两个 CDP target——在 appservice 上开 `Network` 监听，在 pageframe 上对同一坐标**背靠背**派发两次真实鼠标 press/release，统计落到 `/checkins/:id/response` 的请求数。
+  **结果（对照组即证伪）**：
+  - 修复后两次点击 → **1 次** `POST /teacher/tasks/62/checkins/55/response`，页面变「暂无提交」，无失败提示。
+  - 把门闩临时摘掉重新编译（控制组），同样两次点击 → **2 次**同一 URL 的 POST（第二次 409）。两次实验只差门闩本身，说明这个测法确实能抓到这个缺陷，第一组不是空转。
+  **测量前提**：页面内合成的 `TouchEvent` 到不了 uni 的 tap 处理（实测 0 次请求，会**假通过**），必须用 CDP `Input.dispatchMouseEvent`。脚本 `_verify/double_tap_latch.mjs`，未入库。
+  被测任务 62/63 已 `DELETE /teacher/tasks/:id`（均 http=200）。
 - 业务日期与进程时区：`CreateTask` / `UpdateTask` 原用 `time.Local` 解析 `start_date` / `end_date`，与 `taskPeriodRange` 不同源；现统一用 `shanghaiLoc()`。但仅改解析还不够——MySQL DSN 是 `loc=Local`，驱动在写 DATE 列前执行 `t.In(time.Local)`，服务器 `TZ=UTC` 时「2026-10-21 00:00 +08」会被格式化成前一天。因此 `timezone.go` 的 `init()` 把 `time.Local` 对齐到 `Asia/Shanghai`，让解析、计算、落库共用同一墙钟；`teacherPortalDay` 也改用 `shanghaiLoc()`。`_ "time/tzdata"` 随两者移入该文件。
   **证据等级**：`TestProcessTimezoneAlignedWithBusiness` 断言 `time.Local` 已指向 `Asia/Shanghai` 且业务日期经 `t.In(Local)` 后日历日不变；**但 `TZ=UTC` 的写库场景无法在本机复现**——实测 Windows 上 Go 忽略 `TZ` 环境变量（`time.Local` 始终 +08），所以这条只证明了初始化生效，没证明跨时区落库。
  **前提与代价**（审查补充）：
