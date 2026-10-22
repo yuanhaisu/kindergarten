@@ -52,3 +52,53 @@ assets/face-img/
 .claude-flow/data/
 .claude-flow/logs/
 .claude-flow/sessions/
+
+# === 本地验证脚本（含临时 JWT 签名密钥，禁止提交）===
+# _verify/ 下的脚本会自行签发测试用 JWT，密钥明文写在源码里。
+# 它们是一次性的验证工具，不是项目产物；一旦入库就等于又泄漏一次凭据。
+# 这个仓库的历史已经因明文凭据欠了一笔账，不要再欠第二笔。
+_verify/
+
+# === Ruflo 本地运行时状态 ===
+# 向量库、记忆库、agent 工作区都是本机工具链状态，跨机器不可复用
+# 整目录忽略：上面按子目录逐条列会漏掉 daemon-state / metrics / memory 等状态文件
+.claude-flow/
+.swarm/
+.agents/
+agentdb.rvf
+agentdb.rvf.lock
+ruvector.db
+.claude/settings.json
+.claude/settings.local.json
+.claude/proven-config.json
+.claude/.proven-config-version
+.claude/*.bak
+.claude/*.bak-*
+
+# Python 字节码
+__pycache__/
+
+# `ruflo init` 自动灌入的通用技能目录。
+# 项目自有的技能（growth-records / system-enums / golang-wechat-backend 等）
+# 仍在 .claude/skills/ 下正常跟踪，不受此段影响。
+.claude/skills/agentdb-advanced/
+.claude/skills/agentdb-learning/
+.claude/skills/agentdb-memory-patterns/
+.claude/skills/agentdb-optimization/
+.claude/skills/agentdb-vector-search/
+.claude/skills/browser/
+.claude/skills/github-code-review/
+.claude/skills/github-multi-repo/
+.claude/skills/github-project-management/
+.claude/skills/github-release-management/
+.claude/skills/github-workflow-automation/
+.claude/skills/hooks-automation/
+.claude/skills/pair-programming/
+.claude/skills/reasoningbank-agentdb/
+.claude/skills/reasoningbank-intelligence/
+.claude/skills/skill-builder/
+.claude/skills/sparc-methodology/
+.claude/skills/stream-chain/
+.claude/skills/swarm-advanced/
+.claude/skills/swarm-orchestration/
+.claude/skills/verification-quality/

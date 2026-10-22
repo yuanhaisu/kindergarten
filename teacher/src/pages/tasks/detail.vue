@@ -136,19 +136,25 @@ async function refreshPeriod() {
   }
 }
 
+// 请求序号：切 tab 会并发发起两次 load，后返回的旧请求不能覆盖新页签的数据。
+let loadSeq = 0
+
 async function load() {
   if (!taskId.value) return
+  const seq = ++loadSeq
   loading.value = true
   try {
     const [res] = await Promise.all([
       fetchTeacherTaskCheckins(taskId.value, { status: status.value }),
       refreshPeriod()
     ])
+    if (seq !== loadSeq) return
     rows.value = res.data?.list || []
   } catch (e) {
+    if (seq !== loadSeq) return
     uni.showToast({ title: "加载提交失败", icon: "none" })
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
 
@@ -179,7 +185,8 @@ async function batchRespond() {
     }
     // 必须等刷新落地再解锁：load() 不 await 的话，finally 会立刻放开门闩，
     // 列表还在飞行的这段时间里按钮仍可点，第二次点击会真的发请求并弹「已无待回应」。
-    await load()
+    // 但要封顶：uni.request 没设 timeout，走微信默认 60s，卡住时门闩不能一直锁着。
+    await Promise.race([load(), new Promise((r) => setTimeout(r, 3000))])
   } catch (e) {
     uni.showToast({ title: e?.message || "批量回应失败", icon: "none" })
   } finally {

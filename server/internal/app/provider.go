@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
+	mysqldrv "github.com/go-sql-driver/mysql"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -17,7 +19,27 @@ import (
 	ossx "kindergarten-server/internal/storage/oss"
 )
 
+// dsnLocIssue 检查 DSN 的 loc 是否与进程时区一致（配置正确时返回空串）。
+// 业务日期依赖两者同源：MYSQL_DSN 环境变量会整体替换配置里的 DSN，
+// 漏写 loc 时驱动默认 UTC，写 DATE 列会整体差一天且没有任何报错。
+func dsnLocIssue(dsn string) string {
+	dsnCfg, err := mysqldrv.ParseDSN(dsn)
+	if err != nil {
+		return "MySQL DSN 解析失败，无法校验 loc: " + err.Error()
+	}
+	// 驱动 ParseDSN 的 Loc 默认就是 time.UTC（不会是 nil），
+	// 所以「未写 loc」与「loc=UTC」在这里是同一个分支。
+	if dsnCfg.Loc.String() != time.Local.String() {
+		return "MySQL DSN 的 loc(" + dsnCfg.Loc.String() + ") 与进程时区(" + time.Local.String() + ") 不一致（未写 loc 时驱动默认 UTC），DATE 列可能差一天"
+	}
+	return ""
+}
+
 func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
+	if issue := dsnLocIssue(cfg.MySQL.DSN); issue != "" {
+		slog.Warn(issue)
+	}
+
 	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
 		Logger:                                   logger.Default.LogMode(logger.Warn),
 		DisableForeignKeyConstraintWhenMigrating: true,

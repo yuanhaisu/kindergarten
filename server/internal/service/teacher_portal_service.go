@@ -2863,7 +2863,10 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 	q := parseTeacherPortalPage(page, pageSize)
 	db := s.db.WithContext(ctx).Model(&domain.ParentTask{}).Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
 	var total int64
-	_ = db.Count(&total).Error
+	// 计数失败必须上报：静默返回 0 会让老师看到「没有待回应」，而实际上只是查询失败。
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
 	var rows []domain.ParentTask
 	if err := db.Order("created_at DESC").Limit(q.PageSize).Offset(q.Offset()).Find(&rows).Error; err != nil {
 		return nil, err
@@ -2872,20 +2875,22 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 	list := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
 		var pending int64
-		_ = s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
-			Where("task_id = ? AND response_id = 0", r.ID).Count(&pending).Error
+		if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+			Where("task_id = ? AND response_id = 0", r.ID).Count(&pending).Error; err != nil {
+			return nil, err
+		}
 		// 汇总回应只关当前周期，列表同时给出本周期数量与区间：
 		// 否则「待回应 N」与点进详情后「一键送星」实际关闭的条数对不上。
 		periodStart, periodEnd := taskPeriodRange(&r, now)
 		periodPending := pending
 		if pending > 0 && batchRespondAllowed(&r) {
 			periodPending = 0
+			// 同上报错，不回退成全量：回退值看起来和「没有旧周期遗留」完全一样，
+			// 会把「查询失败」伪装成「本周期全都关得掉」。
 			if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
 				Where("task_id = ? AND response_id = 0 AND date >= ? AND date <= ?", r.ID,
 					periodStart.Format("2006-01-02"), periodEnd.Format("2006-01-02")).Count(&periodPending).Error; err != nil {
-				// 计数失败时退回全量：宁可少一个「本周期」提示，也不要把本周期显示成 0。
-				log.L(ctx).Error("count period pending failed", "task", r.ID, "err", err)
-				periodPending = pending
+				return nil, err
 			}
 		}
 		list = append(list, map[string]any{

@@ -785,15 +785,34 @@
 - 全部写入失败返回 500（提交保持待回应），不再伪装成「没有待回应」；只有读取阶段无候选时才返回 **200** + 空操作 `id=0`。
 - `task_check_ins` 增加 `(task_id, response_id, date)` 复合索引（`AutoMigrate` 已建，`docs/migrations/2026-10-21-task-checkin-response-date-index.sql` 供已有库），避免 `FOR UPDATE` 锁住整个任务的提交行。
 - 任务详情返回 `period_start` / `period_end`；老师端把区间外的待回应标注为「旧周期 · 请逐条回应」，避免「计数不减 / 按钮点了 no-op」的死循环感。
-- 任务**列表**同样返回 `pending_period` / `period_start` / `period_end`：`pending_responses` 是全量（含旧周期），`pending_period` 是**本周期内**的待回应条数（与批量接口的 WHERE 子句逐字相同，`task_id=? AND response_id=0 AND date BETWEEN`）。两者不等时列表显示「待回应 N（本周期 M）」。对不支持汇总回应的任务（一次性、个体、以及 `frequency` 脏数据）`pending_period` 恒等于 `pending_responses`——这些任务调用批量接口会 422，所以列表**不能**把它读成「可以一键关闭」。
-- **API 实测（2026-10-21）**：
+- 任务**列表**同样返回 `pending_period` / `period_start` / `period_end`：`pending_responses` 是全量（含旧周期），`pending_period` 是**本周期内**的待回应条数（与批量接口的筛选条件逐字相同：`task_id = ? AND response_id = 0 AND date >= ? AND date <= ?`）。两者不等时列表显示「待回应 N（本周期 M）」。对不支持汇总回应的任务（一次性、个体、以及 `frequency` 脏数据）`pending_period` 恒等于 `pending_responses`——这些任务调用批量接口会 422，所以列表**不能**把它读成「可以一键关闭」。三个 COUNT（total / 全量待回应 / 本周期待回应）失败时整个列表返回错误，由前端错误卡提示重试；不回退成 0，也不回退成全量（回退值看起来与正常态一模一样）。
+- **API 实测（2026-10-21 当日快照，复跑会因日期不同得到不同区间）**：
   - 等值路径：daily / once 各建一条当日任务 + 今日提交 → `pending=1 period=1`，daily 区间 `period_start=period_end=当天`。
-  - **错位路径**：daily 任务（task 53，起点 10 天前、终点当天）+ 今日真实提交 + 一条 10 天前的探针提交（一次性 Go 程序直插，用后已删除）→ 列表 `pending=2 / period=1`；批量 `closed=1`（只关本周期）；之后 `pending=1 / period=0`。脚本 `_verify/pending_period_mismatch.mjs`（未入库）。
-  - 上述任务（49/50/51/52/53）验证后都已通过 `DELETE /teacher/tasks/:id` **级联删除**（软删除），按 id 复查查不到，证据以脚本输出为准。
-- 老师端「一键送星」加 `batchBusy` 门闩：请求进行中（**含随后的列表刷新**，`await load()` 后才解锁）的重复点击被拦住，不会紧跟一条 `responded_count=0` 的提示被误读成失败；0 条文案改为「本周期已无待回应提交」。
-  **证据等级**：仅代码 + `build:mp-weixin` / `dev:mp-weixin` 构建通过，**未在微信模拟器里复验**（本轮 UI 未驱动）；上一轮的模拟器证据早于这次改动。
+  - **错位路径**：daily 任务（task 53，起点 10 天前、终点当天）+ 今日真实提交 + 一条 10 天前的探针提交（一次性 Go 程序直插）→ 列表 `pending=2 / period=1`；批量 `closed=1`（只关本周期）；之后 `pending=1 / period=0`。
+  - 被测任务（49/50/51/52/53）验证后都已 `DELETE /teacher/tasks/:id`：`ParentTask` / `TaskCheckIn` 走软删除，`task_response_supplements` / `task_response_reactions` / `task_check_in_states` / `task_read_marks` 是 `Unscoped()` 硬删除，按 id 复查查不到，证据以脚本输出为准。
+  - 两个脚本都**未入库**：`_verify/pending_period_mismatch.mjs` 依赖已删除的一次性探针程序，重跑前需按同样逻辑重建（插一条 `date` 为 10 天前的 `TaskCheckIn`）。
+- 老师端「一键送星」加 `batchBusy` 门闩：请求进行中（**含随后的列表刷新**，刷新最长等 3 秒，避免 `uni.request` 无 timeout 时门闩锁死 60s）的重复点击被拦住，不会紧跟一条 `responded_count=0` 的提示被误读成失败；0 条文案改为「本周期已无待回应提交」。
+- 任务详情 `load()` 加请求序号：切「待回应/已回应」会并发两次加载，后返回的旧请求不再覆盖当前页签的列表。
+- **老师端 UI 交互复验（2026-10-21，微信开发者工具 `teacher/dist/dev/mp-weixin`，CDP 派发真实鼠标事件，文案取自渲染 DOM）**：
+  1. 列表三种分支：`daily · 待回应 2（本周期 1）`（有旧周期遗留）、`once · 待回应 1`（不支持汇总，无括号）、`daily · 待回应 1`（等值，无括号）。
+  2. 详情：今日提交与旧周期行并列，后者标「旧周期 · 请逐条回应」；点「一键送星」后今日行消失、旧行保留；接口复核 `pending=1 / period=0`。
+  3. 返回列表（`onShow` 刷新）：自动变为 `待回应 1（本周期 0）`，无需下拉。
+  4. `once` 任务详情：无批量按钮，显示「一次性任务与个体任务需逐条回应」。
+  5. 停掉后端后返回列表：「网络异常」+「显示的是上次拉取的结果，点击重试」，旧数据保留；点错误卡后列表重新加载、错误卡消失。
+  **未覆盖**：toast 文案（小程序原生 UI，不在 DOM 内，无法读取）；连点门闩只能通过「第二次点击后接口状态不变」间接确认。
+- **老师端 UI 复验（2026-10-22，改后代码：`loadSeq` + 刷新 3 秒封顶）**：
+  1. 登录后工作台日期 `2026年10月22日 星期四`，跨日后显示正常。
+  2. 列表：`once · 待回应 1`、`daily · 待回应 1`。
+  3. 详情点「一键送星」→ 待回应变「暂无提交」、批量按钮消失；切「已回应」显示该条与「已回应」标记；切回「待回应」仍为空（无过期请求覆盖）。
+  4. 重新进入列表：`daily · 待回应 0`，与 `GET /teacher/tasks` 一致。
+  **未复验**：旧周期行与加载失败错误卡（代码未变，沿用 10-21 的证据）；连点门闩的中间态仍不可观测。
+  **工具备注**：本轮遇到 `navigateTo:fail timeout`——详情 pageframe 建好但空白、导航被回滚，重试一次即成功。失败的 pageframe 会残留在 CDP target 列表**首位**，导致 `wx_cdp.mjs` 默认选错目标读到空 DOM；脚本已支持 `WX_TARGET=pages/xxx` 指定页面。另：`wx.navigateBack` 连续执行会多弹一层，读页面栈前先确认。
 - 业务日期与进程时区：`CreateTask` / `UpdateTask` 原用 `time.Local` 解析 `start_date` / `end_date`，与 `taskPeriodRange` 不同源；现统一用 `shanghaiLoc()`。但仅改解析还不够——MySQL DSN 是 `loc=Local`，驱动在写 DATE 列前执行 `t.In(time.Local)`，服务器 `TZ=UTC` 时「2026-10-21 00:00 +08」会被格式化成前一天。因此 `timezone.go` 的 `init()` 把 `time.Local` 对齐到 `Asia/Shanghai`，让解析、计算、落库共用同一墙钟；`teacherPortalDay` 也改用 `shanghaiLoc()`。`_ "time/tzdata"` 随两者移入该文件。
   **证据等级**：`TestProcessTimezoneAlignedWithBusiness` 断言 `time.Local` 已指向 `Asia/Shanghai` 且业务日期经 `t.In(Local)` 后日历日不变；**但 `TZ=UTC` 的写库场景无法在本机复现**——实测 Windows 上 Go 忽略 `TZ` 环境变量（`time.Local` 始终 +08），所以这条只证明了初始化生效，没证明跨时区落库。
+ **前提与代价**（审查补充）：
+ - 修复成立的前提是 **DSN 的 `loc` 与进程时区一致**。`MYSQL_DSN` 环境变量会整体替换配置，漏写 `loc` 时驱动默认 UTC，`init` 对驱动无效、DATE 仍会差一天。已在 `ProvideGorm` 启动时检测并 `slog.Warn`（不自动改写 DSN——那会把既有 DATETIME 的解释一起改掉）。
+ - 若某次部署曾以 `TZ=UTC` + `loc=Local` 运行，`created_at` 等 **DATETIME** 列存的是 UTC 墙钟；对齐到 +08 后这些历史行会被按 +08 解析，显示偏移 8 小时。**DATE 列只取日期部分，不受影响**。当前部署本来就是 +08，无影响。
+ - `cmd/*` 下的独立二进制多数不导入 `service`，不会继承这次对齐（`fixpwd` / `initcheck` / `setpwd` 导入，会继承）。非 +08 机器上 seed/refreshtasks 与 API 的日期口径会分叉。
 - 实测：并发批量 → 赢家 `responded_count=2`、输家 `0`，DB 仅一条 `period` 回应；并发单条 → 一次 **201**、一次 **409**「该提交已被其他回应关闭，请刷新后重试」，无重复回应。
 - 周期边界实测用的是**直插库的探针行**（task 36，date=2026-10-11，非真实家长提交）：批量后该行保持 `response_id=0`；随后单条并发用例把它作为目标关闭为 `response_id=12`，所以现在查库看到的是 12，不是回归。
 

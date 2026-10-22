@@ -89,7 +89,7 @@ A 切片只做**闭环成立所需的最小集合**：班级/个体任务、提�
 
 `server/internal/service/teacher_portal_service.go`：
 
-- `ListTasks`：返回 `pending_responses`（全量待回应）与 `pending_period`（汇总回应实际能关闭的本周期条数）、`period_start` / `period_end`；两者不等时列表显示「待回应 N（本周期 M）」。
+- `ListTasks`：返回 `pending_responses`（全量待回应）与 `pending_period`（**本周期内**的待回应条数，与批量的筛选条件一致）、`period_start` / `period_end`；两者不等时列表显示「待回应 N（本周期 M）」。不支持汇总回应的任务（一次性、个体、未知频率）`pending_period` 恒等于全量，不能当成「可以一键关闭」。
 - `GetTask`：任务详情，供编辑页使用。
 - `CreateTask`：校验标题、学习关联、目标孩子、频率、日期、星星罐；个体任务强制 `allow_public=false`。
 - `UpdateTask`：有提交后只允许改标题/说明/学习关联/公开开关；改个体或关公开时撤回公开。
