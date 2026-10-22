@@ -1,0 +1,31 @@
+#!/bin/sh
+# 提交前扫一遍暂存区，拦下已知的凭据形态。
+#
+# 为什么需要这一层：.gitignore 只按**路径**挡，`git add -f` 一路畅通；而这个仓库的
+# 历史已经因为明文凭据欠过账（初始提交里的 RDS 连接串、cc.ps1 里的 DeepSeek key）。
+# 路径规则会随着目录改名、临时脚本搬家而失效，内容特征不会。
+#
+# 启用（每个克隆各做一次）：
+#   git config core.hooksPath .githooks
+# 临时跳过：
+#   git commit --no-verify
+
+PATTERNS='test24yangshi123|rm-bp1w012d612w344y7po|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|mysql://[^[:space:]]*:[^[:space:]@]*@'
+
+# 排除 .githooks/ 自己：下面 PATTERNS 里就写着要拦的那串口令，扫自己必然误报。
+added=$(git diff --cached -U0 -- . ':(exclude).githooks/' | grep -E '^\+' | grep -Ev '^\+\+\+' || true)
+
+if [ -n "$added" ] && printf '%s\n' "$added" | grep -qE "$PATTERNS"; then
+  echo "✖ 暂存区里有疑似凭据，已阻止提交：" >&2
+  printf '%s\n' "$added" | grep -nE "$PATTERNS" | head -5 >&2
+  echo "  确认是误报时用 git commit --no-verify 跳过。" >&2
+  exit 1
+fi
+
+# 本地配置文件永远不该入库（模板文件 .env.example 不受影响）
+if git diff --cached --name-only | grep -qE '(^|/)\.env$|(^|/)\.env\.local$|(^|/)app\.local\.ini$'; then
+  echo "✖ 暂存区里有本地配置文件（.env / .env.local / app.local.ini），已阻止提交。" >&2
+  exit 1
+fi
+
+exit 0

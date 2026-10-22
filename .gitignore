@@ -78,27 +78,37 @@ ruvector.db
 # Python 字节码
 __pycache__/
 
-# `ruflo init` 自动灌入的通用技能目录。
-# 项目自有的技能（growth-records / system-enums / golang-wechat-backend 等）
-# 仍在 .claude/skills/ 下正常跟踪，不受此段影响。
-.claude/skills/agentdb-advanced/
-.claude/skills/agentdb-learning/
-.claude/skills/agentdb-memory-patterns/
-.claude/skills/agentdb-optimization/
-.claude/skills/agentdb-vector-search/
-.claude/skills/browser/
-.claude/skills/github-code-review/
-.claude/skills/github-multi-repo/
-.claude/skills/github-project-management/
-.claude/skills/github-release-management/
-.claude/skills/github-workflow-automation/
-.claude/skills/hooks-automation/
-.claude/skills/pair-programming/
-.claude/skills/reasoningbank-agentdb/
-.claude/skills/reasoningbank-intelligence/
-.claude/skills/skill-builder/
-.claude/skills/sparc-methodology/
-.claude/skills/stream-chain/
-.claude/skills/swarm-advanced/
-.claude/skills/swarm-orchestration/
-.claude/skills/verification-quality/
+# `ruflo init` 之类的工具会不断往 .claude/skills/ 塞通用技能，黑名单永远追不上。
+# 改成白名单：默认忽略，项目自有的技能逐个放行。
+# ⚠️ 新增项目技能时，必须在这里补一条 `!`，否则它会被静默忽略、永远进不了仓库。
+.claude/skills/*
+!.claude/skills/admin-run/
+!.claude/skills/algorithmic-art/
+!.claude/skills/brand-guidelines/
+!.claude/skills/canvas-design/
+!.claude/skills/claude-api/
+!.claude/skills/doc-coauthoring/
+!.claude/skills/docx/
+!.claude/skills/dual-ide-verification/
+!.claude/skills/frontend-design/
+!.claude/skills/golang-wechat-backend/
+!.claude/skills/growth-records/
+!.claude/skills/impeccable/
+!.claude/skills/internal-comms/
+!.claude/skills/mcp-builder/
+!.claude/skills/openspec-apply-change/
+!.claude/skills/openspec-archive-change/
+!.claude/skills/openspec-explore/
+!.claude/skills/openspec-propose/
+!.claude/skills/openspec-sync-specs/
+!.claude/skills/openspec-update-change/
+!.claude/skills/pdf/
+!.claude/skills/pptx/
+!.claude/skills/skill-creator/
+!.claude/skills/slack-gif-creator/
+!.claude/skills/system-enums/
+!.claude/skills/template/
+!.claude/skills/theme-factory/
+!.claude/skills/webapp-testing/
+!.claude/skills/web-artifacts-builder/
+!.claude/skills/xlsx/

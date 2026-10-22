@@ -61,7 +61,8 @@
     {
       "path": "pages/tasks/detail",
       "style": {
-        "navigationBarTitleText": "任务回应"
+        "navigationBarTitleText": "任务回应",
+        "enablePullDownRefresh": true
       }
     },
     {

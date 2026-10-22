@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from "vue"
-import { onLoad } from "@dcloudio/uni-app"
+import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchTeacherTask, fetchTeacherTaskCheckins, respondTeacherTask, batchRespondTeacherTask, updateTeacherTask } from "@/api/teacher-tasks"
 import config from "@/config/env"
 import { getToken } from "@/utils/auth"
@@ -163,6 +163,14 @@ async function load() {
   }
 }
 
+// 等列表刷新落地再解锁：刷新还在飞时解锁，按钮立刻又活了，等于没加闩。
+// 但 `uni.request` 没设 timeout（走微信默认 60s），封顶 3 秒，卡住时不能一直锁着。
+// 封顶命中时把 loading 一并收回——否则闩开了、按钮可点，屏幕上还写着「加载中...」。
+async function refreshWithCap() {
+  await Promise.race([load(), new Promise((r) => setTimeout(r, 3000))])
+  if (loading.value) loading.value = false
+}
+
 async function respond(row, sticker) {
   // 批量在飞时单条必然撞车：那一行可能刚被批量关掉，再发就 409。两个闩互相感知。
   if (isResponding(row.id) || batchBusy.value) return
@@ -170,9 +178,8 @@ async function respond(row, sticker) {
   try {
     await respondTeacherTask(taskId.value, row.id, { ritual: "sticker", sticker_key: sticker })
     uni.showToast({ title: "已回应", icon: "success" })
-    // 与 batchRespond 同形状：等刷新落地再解锁，否则列表还在飞行期间按钮又活了。
     // 这里不会 reject——load() 自己吞掉异常并显示「加载提交失败」。
-    await Promise.race([load(), new Promise((r) => setTimeout(r, 3000))])
+    await refreshWithCap()
   } catch (e) {
     uni.showToast({ title: e?.message || "回应失败", icon: "none" })
   } finally {
@@ -199,8 +206,7 @@ async function batchRespond() {
     }
     // 必须等刷新落地再解锁：load() 不 await 的话，finally 会立刻放开门闩，
     // 列表还在飞行的这段时间里按钮仍可点，第二次点击会真的发请求并弹「已无待回应」。
-    // 但要封顶：uni.request 没设 timeout，走微信默认 60s，卡住时门闩不能一直锁着。
-    await Promise.race([load(), new Promise((r) => setTimeout(r, 3000))])
+    await refreshWithCap()
   } catch (e) {
     uni.showToast({ title: e?.message || "批量回应失败", icon: "none" })
   } finally {
@@ -217,6 +223,13 @@ onLoad((opts) => {
   taskId.value = Number(opts?.id || 0)
   loadTask()
   load()
+})
+
+// 409 的文案是「请刷新后重试」，而这一页原先没有任何刷新手段：没有 onShow、
+// 也没开下拉刷新，撞上「该提交已被其他回应关闭」只能退出重进，那条陈旧行还
+// 一直在屏幕上，再点还是 409。
+onPullDownRefresh(() => {
+  Promise.all([loadTask(), load()]).finally(() => uni.stopPullDownRefresh())
 })
 </script>
 

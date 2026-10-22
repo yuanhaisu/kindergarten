@@ -818,7 +818,10 @@
   - 中间态直接测量（渲染数据 `data.y[].i`）：飞行中 `[{k:A,i:1},{k:B,i:""}]`——只有被点的那一行变暗。
   **测量前提**：页面内合成的 `TouchEvent` 到不了 uni 的 tap 处理（实测 0 次请求，会**假通过**），必须用 CDP `Input.dispatchMouseEvent`。
   **一个会读错的坑**：详情页栈里残留旧实例时，`getCurrentPages()` 取到的和 pageframe 实际渲染的可能不是同一个页面，曾据此读出「两行同时变暗」的假象。测量前先 `wx.reLaunch` 清栈。
-  脚本 `_verify/latch_scope.mjs`、`latch_matrix.mjs`、`seed_two_rows.mjs`，均未入库；被测任务 62–63、64–73 已 `DELETE`（均 http=200）。
+- **详情页补下拉刷新（2026-10-22）**：409 的文案是「请刷新后重试」，但这一页原先既没有 `onShow` 也没开下拉刷新——撞上「该提交已被其他回应关闭」只能退出重进，那条陈旧行还会一直留在屏幕上，再点仍是 409。现 `pages.json` 给 `pages/tasks/detail` 开 `enablePullDownRefresh`，`onPullDownRefresh` 里 `Promise.all([loadTask(), load()])` 后 `stopPullDownRefresh()`。
+  **验证**：CDP 派发真实下拉手势（touchStart 120 → 多次 touchMove 至 400 → touchEnd）后，Network 上出现 `GET /teacher/tasks/74` ×2 + `GET /teacher/tasks/74/checkins?status=pending` ×1，即页面按手势重新拉了数据。
+- **刷新封顶的收尾**：`refreshWithCap()` 在 3 秒封顶命中时把 `loading` 一并收回。原先封顶后门闩已开、按钮可点，屏幕却还挂着「加载中...」，两处状态互相矛盾。
+  脚本 `_verify/latch_scope.mjs`、`latch_matrix.mjs`、`seed_two_rows.mjs`，均未入库；被测任务 62–63、64–74 已 `DELETE`（均 http=200）。
 - 业务日期与进程时区：`CreateTask` / `UpdateTask` 原用 `time.Local` 解析 `start_date` / `end_date`，与 `taskPeriodRange` 不同源；现统一用 `shanghaiLoc()`。但仅改解析还不够——MySQL DSN 是 `loc=Local`，驱动在写 DATE 列前执行 `t.In(time.Local)`，服务器 `TZ=UTC` 时「2026-10-21 00:00 +08」会被格式化成前一天。因此 `timezone.go` 的 `init()` 把 `time.Local` 对齐到 `Asia/Shanghai`，让解析、计算、落库共用同一墙钟；`teacherPortalDay` 也改用 `shanghaiLoc()`。`_ "time/tzdata"` 随两者移入该文件。
   **证据等级**：`TestProcessTimezoneAlignedWithBusiness` 断言 `time.Local` 已指向 `Asia/Shanghai` 且业务日期经 `t.In(Local)` 后日历日不变；**但 `TZ=UTC` 的写库场景无法在本机复现**——实测 Windows 上 Go 忽略 `TZ` 环境变量（`time.Local` 始终 +08），所以这条只证明了初始化生效，没证明跨时区落库。
  **前提与代价**（审查补充）：
