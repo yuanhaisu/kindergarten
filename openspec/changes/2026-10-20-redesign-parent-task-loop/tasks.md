@@ -54,10 +54,10 @@
 
 ## 4. 后端 · 公开审核
 
-- [ ] 4.1 家长公开申请/取消：新增 `POST /parent/tasks/checkins/:checkin_id/public-request` 与取消接口；仅当任务 `allow_public=true` 且非个体任务、且提交属于当前孩子时允许；申请时清空 `PublicApprovedAt` / `PublicApprovedBy` / `PublicScopeConfirmed`；取消时清空批准/审核人、`PublicScopeConfirmed=false` 并写 `PublicRevokedAt`；验证：单测覆盖允许、任务不允许、个体任务拒绝、跨家庭拒绝、取消后确认与审核人清除
-- [ ] 4.2 老师审核：新增 `PUT /teacher/tasks/:id/checkins/:checkin_id/public`，校验提交属于该任务与班级，并要求老师勾选 `PublicScopeConfirmed`（内容中只有提交者孩子，图片/语音/文字均适用）；批准时该字段必须为 true，写 `PublicApprovedAt/By`；拒绝/撤回清空批准/审核人、`PublicScopeConfirmed=false` 并写 `PublicRevokedAt`；再次申请必须重新批准并重新确认；含其他孩子的内容不得批准；验证：单测覆盖批准、拒绝、撤回、取消/撤回后再次申请不沿用旧批准或旧确认、未勾选/含他人内容被拒、审核留痕
-- [ ] 4.3 公开墙查询：join 任务，只返回 `Task.AllowPublic && Task.DeletedAt IS NULL && Task.Status=1 && Task.EndDate>=今天 && Task.ClassID = 当前孩子班级 && IsPublicRequested && PublicScopeConfirmed && PublicApprovedAt != nil && PublicRevokedAt == nil` 的提交；读取时实时过滤；任务结束后不展示，跨班不可见；只展示提交者孩子的内容；验证：单测覆盖默认私密、批准可见、撤回不可见、allow_public 关闭不可见、任务结束不可见、跨班不可见、含他人内容不展示
-- [ ] 4.4 管理端撤回：管理员可撤回公开内容；验证：单测覆盖撤回后不可见
+- [x] 4.1 家长公开申请/取消：新增 `POST /parent/tasks/checkins/:checkin_id/public-request` 与取消接口；仅当任务 `allow_public=true` 且非个体任务、且提交属于当前孩子时允许；申请时清空 `PublicApprovedAt` / `PublicApprovedBy` / `PublicScopeConfirmed`；取消时清空批准/审核人、`PublicScopeConfirmed=false` 并写 `PublicRevokedAt`；验证：单测覆盖允许、任务不允许、个体任务拒绝、跨家庭拒绝、取消后确认与审核人清除
+- [x] 4.2 老师审核：新增 `PUT /teacher/tasks/:id/checkins/:checkin_id/public`，校验提交属于该任务与班级，并要求老师勾选 `PublicScopeConfirmed`（内容中只有提交者孩子，图片/语音/文字均适用）；批准时该字段必须为 true，写 `PublicApprovedAt/By`；拒绝/撤回清空批准/审核人、`PublicScopeConfirmed=false` 并写 `PublicRevokedAt`；再次申请必须重新批准并重新确认；含其他孩子的内容不得批准；验证：单测覆盖批准、拒绝、撤回、取消/撤回后再次申请不沿用旧批准或旧确认、未勾选/含他人内容被拒、审核留痕
+- [x] 4.3 公开墙查询：join 任务，只返回 `Task.AllowPublic && Task.DeletedAt IS NULL && Task.Status=1 && Task.EndDate>=今天 && Task.ClassID = 当前孩子班级 && IsPublicRequested && PublicScopeConfirmed && PublicApprovedAt != nil && PublicRevokedAt == nil` 的提交；读取时实时过滤；任务结束后不展示，跨班不可见；只展示提交者孩子的内容；验证：单测覆盖默认私密、批准可见、撤回不可见、allow_public 关闭不可见、任务结束不可见、跨班不可见、含他人内容不展示
+- [x] 4.4 管理端撤回：管理员可撤回公开内容；验证：单测覆盖撤回后不可见
 - [ ] [P2] 4.5 一键完成（无文字无媒体）不可申请公开；验证：单测/真实点击
 - [ ] [P2] 4.6 任务结束后公开内容的老师回看/导出能力：明确不提供或加只读入口；验证：产品确认
 - [ ] [P2] 4.7 `PublicApprovedBy` 清空后的审计历史：写入只读操作日志或明确不保留；验证：审计页

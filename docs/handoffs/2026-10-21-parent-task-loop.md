@@ -407,7 +407,7 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 | 窗口 | 任务组 | 状态 |
 | --- | --- | --- |
 | **B1** | 3.5 补充回应 + 3.6 家长反馈 | ✅ 2026-10-22 完成（后端） |
-| B2 | 4.1–4.4 公开审核 + 公开墙 | 未开始 |
+| **B2** | 4.1–4.4 公开审核 + 公开墙 | ✅ 2026-10-22 完成（后端，无界面） |
 | B3 | 5.1–5.5 通知聚合 + 读标记 + 小程序码 | 未开始 |
 | B4 | 9.5/9.7 + 10.5–10.8 前端 + 12.3/12.4/12.6 | 未开始 |
 
@@ -464,3 +464,100 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 - 老师端与家长端共用同一个 IDE 实例：用 `wechat_ide(open)` 切项目后，**另一端的 automator 会失效**，需要重新 `start`；切换后 storage 仍在，但页面可能停在 login，重新走一次授权登录即可。
 
 未覆盖（前端尚未实现，不是回归遗漏）：老师端补充回应入口（9.3）、家长端反馈按钮与补充回应渲染（10.3/10.5）。
+
+---
+
+## 12.6 B2 落地内容（2026-10-22）
+
+起点 `393a3e3`。按 §13.2 先写契约再写代码；**没有界面**，全部 API/服务层验证。
+
+新增端点（契约已在 `backend/api/`）：
+
+- `POST /parent/tasks/checkins/:checkin_id/public-request` / `DELETE …/public-request`（取消；二选一里选了 DELETE）
+- `GET /parent/tasks/public-wall`
+- `PUT /teacher/tasks/:id/checkins/:checkin_id/public`（`{approve, scope_confirmed}`）
+- `PUT /admin/tasks/checkins/:checkin_id/public`（只接受 `{revoke:true}`，已登记 `task:manage`）
+
+读路径补 `public_*` / `public_status` / `public_visible`（`checkin-history`、老师端 `checkins`）。`public_visible` 由服务端按公开墙同一套条件算出。
+
+### 12.7 B2 的语义决定（后续不要改错）
+
+- **取消/撤回不受任务状态限制**：任务关了公开开关或已结束，家长仍必须能撤回自己的内容；只有「申请」要求 `allow_public=true`、非个体任务、任务有效。最初的实现把两者都套上这组前置，导致撤回入口被任务状态锁死——已修，`TestPublicCancelWorksAfterPublicDisabled/AfterTaskEnded` 守护。
+- **重复申请不降级**：已批准且未撤回时再点申请是幂等空操作，避免手滑把墙上记录打回待审核。
+- **空操作不写时间戳/日志**：从未申请时取消不写 `revoked_at`；管理端撤回空操作不写 `operation_logs`。
+- **个体任务三重拒绝**：申请 422、审核 422、公开墙查询侧再排除一次（即使 2.9 回归留下 `allow_public=true` 也不展示）。
+- **归属按「自己孩子」**：同一孩子的另一位家长（有绑定）也能申请/取消，与 3.6 反馈权限口径一致；不是「必须本人提交」。
+- **按 checkin_id 进来的写路径**先用**非锁定读**定位 task_id，再锁 `parent_tasks`、最后锁 `task_check_ins`——锁序仍是任务行优先，非锁定读不参与死锁顺序。
+- **审核允许在任务最后一天/结束后进行**，但公开墙按 `end_date >= 今天` 实时过滤，响应里的 `public_visible` 会如实返回 false。
+- **公开墙多一条安全补强：`st.class_id = t.class_id`**。D7 的九条只约束任务侧，不约束提交者侧；少了它，孩子转班后内容会留在原班级墙上，管理员把任务改派到别的班时原班孩子的照片会漏给新班家长。
+- **取消不套 `taskScopeQuery`**：孩子转班后原班级任务不再匹配，套上去会让家长撤不回自己的内容。归属只看「提交属于当前孩子」；「任务是否可见」只在申请时校验。
+
+### 12.9 B2 限制性对抗性审查结论（2026-10-22）
+
+审查方独立复核（未参与实现）后给出的 CONFIRMED / POSSIBLE，逐条处置：
+
+| # | 级别 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| 1 | CONFIRMED | 转班后撤回入口 404，内容仍留在原班级墙 | ✅ 已修：取消改为按 `id + kindergarten_id` 锁任务；新增 `TestPublicContentFollowsStudentClassMove` |
+| 2 | POSSIBLE | 管理端改派任务班级 → 原班孩子内容出现在新班墙 | ✅ 已修：公开墙加 `st.class_id = t.class_id`；新增 `TestPublicWallHidesWhenTaskReassignedToOtherClass` |
+| 3 | POSSIBLE | 老师审核锁内缺班级/园所条件（TOCTOU） | ✅ 已修：锁定读补 `kindergarten_id + class_id`（串行测试不可观测，未做变异） |
+| 4 | POSSIBLE | `UpdateTask` 对不公开任务无条件撤销，反复给从未申请的提交盖撤回时间 | ✅ 已修：只在 `allow_public` true→false 或班级任务改个体时撤销；新增 `TestEditingNonPublicTaskDoesNotStampRevokedAt` |
+| 5 | POSSIBLE | 测试缺 `approved_at IS NOT NULL`、提交软删、排序守卫 | ✅ 已补 3 条用例 + 3 项变异 |
+
+审查确认无问题的部分：状态机逐条对应 D7、幂等语义、锁序无反向、手写 SQL 的软删过滤、权限边界。
+
+### 12.8 B2 验证状态
+
+- `go build ./...`、`go vet ./...`、`go test ./... -timeout 900s` 全绿（2026-10-22；跑全量前先停掉 `:8080` 的 `kg-server.exe`，否则识别队列测试会被抢任务）。
+- `server/internal/service/task_public_test.go`：40 个真实 MySQL 用例；`_verify/mutate_b2.py` 22 项变异全部 detected。
+- HTTP 冒烟（真实网关 + 中间件 + handler，2026-10-22）：公开墙 200、缺 `student_id` 422、不存在提交 404、管理端 `revoke=false` 422、跨班任务 404。
+- TEST_CATALOG 的 0119/0120/0121/0134/0143/0144/0145 已从 ⏸ 改为「后端已验证 ⚠️」，UI 仍待 9.3/10.x/11.4。
+- 未做：审核/申请/公开墙界面（9.3、10.x、11.4）；「含他人内容」只能靠老师勾选，无自动识别；`GET /parent/tasks` 与详情尚未返回 `public_*`（归 8.1）；`CheckinHistory` 仍按任务可见范围收窄（转班后家长查不到旧任务历史，但撤回接口可用）。
+
+---
+
+## 13. B2 开工清单（公开审核 + 公开墙）
+
+### 13.1 起点状态
+
+- B1 已提交并推送：`393a3e3 feat(tasks): B1 补充回应与家长反馈`（分支 `feat/parent-growth-scope`）。
+- `openspec/.../tasks.md` 已是 3/89 勾选（3.5、3.6，另新增 3.11 待做）；B2 = **4.1–4.4**（4.5–4.7 是 P2）。
+- 全量测试在 B1 收口时全绿；`go test ./internal/service -run 'TestSupplement|TestParentGetTask|TestReactToResponse|TestRitualPayload|TestDeleteTask'` 约 55s。
+- 本地后端跑在 `:8080`（新构建），家长端 IDE 登录 user 61 / 学生 27，老师端登录 user 11（**小一班 class 1**）——两者不同班，跨端 UI 验证要造数，见 §12.5。
+
+### 13.2 第一步：先把端点写进契约
+
+`backend/api/` 目前**只声明**「公开相关属于 B 切片」，没有任何具体端点。按仓库铁律「改接口先改这里」，B2 的第一件事是把形状定下来，建议：
+
+| 用途 | 建议路径 | 备注 |
+| --- | --- | --- |
+| 家长申请公开 | `POST /parent/tasks/checkins/:checkin_id/public-request?student_id=` | 校验提交属于当前孩子 |
+| 家长取消申请 | `POST /parent/tasks/checkins/:checkin_id/public-cancel?student_id=` | 也可用 DELETE，二选一并写进契约 |
+| 老师审核 | `PUT /teacher/tasks/:id/checkins/:checkin_id/public` | body `{approve, scope_confirmed}`；批准时 `scope_confirmed` 必须 true |
+| 公开墙 | `GET /parent/tasks/public-wall?student_id=` | 只返回本班、仅含提交者孩子的内容 |
+| 管理端撤回 | `PUT /admin/tasks/checkins/:checkin_id/public` body `{revoke:true}` | 走管理端权限登记表 |
+
+> 管理端新增路由必须登记到权限注册表，否则 `NewRouter` 直接报错（`router_perm_test.go` 会红）。
+
+### 13.3 状态机（design.md D7，逐字实现）
+
+- 申请：`is_public_requested=true`、`public_scope_confirmed=false`、`public_approved_at=nil`、`public_revoked_at=nil`
+- 批准：`scope_confirmed=true`、`public_approved_at=now`、`public_approved_by=teacher`
+- 取消 / 撤回 / 关闭 allow_public：`is_public_requested=false`、`scope_confirmed=false`、`approved_*=清空`、`public_revoked_at=now`
+- 再次申请：必须重新批准、重新勾确认，**不得沿用**旧批准或旧确认
+- 可见条件（公开墙逐字照抄）：`allow_public && task.deleted_at IS NULL && task.status=1 && end_date >= 今天 && task.class_id = 当前孩子班级 && is_public_requested && public_scope_confirmed && public_approved_at IS NOT NULL && public_revoked_at IS NULL`
+- 个体任务强制不可公开；一键完成（无文字无媒体）不可申请（P2 4.5）
+
+### 13.4 必须遵守的既有约束
+
+- **锁序**：任何任务写路径的第一条语句都是 `SELECT ... FOR UPDATE` 锁 `parent_tasks` 行，否则与 `deleteTaskCascade`（锁回应 → 删 checkin）成反序死锁。
+- `BaseModel` 自带 `DeletedAt`，手写 `.Table()` 查询要自己补 `deleted_at IS NULL`；upsert 命中软删行要清 `deleted_at`。
+- 已有 helper：`revokePublicForTask`（`task_rules.go`，清申请/批准/确认/审核人并写 revoked_at）——关闭 `allow_public` 时直接复用，不要重写。
+- 老师审核的权限校验照 `SupplementResponse` 的写法：任务 `id + kindergarten_id + class_id`，提交 `id + task_id`。
+- 错误码：参数/状态 422、跨家庭 403、并发关闭 409、锁冲突 503。
+
+### 13.5 验证怎么做
+
+- 后端：真实 MySQL 集成测试（照 `task_response_supplement_test.go` 的结构：固定 ID 夹具 + `Unscoped` 清理 + `clean()` 先跑一次）。**每条关键断言都要做变异验证**。
+- 场景清单见 spec.md「活动公开需老师审核」的 7 个 Scenario（默认私密、申请后审核可见、跨班不可见、撤回与个体任务不可公开、关闭开关、更新为个体强制关闭、取消后重审）。
+- UI：家长申请/老师审核的界面属 9.3、10.x，B2 仍然**没有界面可点**；只能走 HTTP + 必要时造数。造数用一次性 `cmd/tmp*` 程序，**用完立即删除**。

@@ -699,9 +699,9 @@
 | TC-NEW-TSK-0116 | 班级星星回应 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0117 | 星星罐按任务/按班级 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0118 | 只有主回应班级星星计入 | P0 | FUNC | ⏸ |
-| TC-NEW-TSK-0119 | 公开默认私密 | P0 | FUNC | ✅ |
-| TC-NEW-TSK-0120 | 申请后老师审核可见 | P0 | FUNC | ⏸ |
-| TC-NEW-TSK-0121 | 撤回与个体任务不可公开 | P0 | FUNC | ✅ / ⏸ |
+| TC-NEW-TSK-0119 | 公开默认私密 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：未申请时本家庭与其他家庭都看不到）；家长端 UI 待 10.3 |
+| TC-NEW-TSK-0120 | 申请后老师审核可见 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：未勾确认 422、留痕 approved_by/at、批准后本班可见/跨班不可见）；老师端审核 UI 待 9.3 |
+| TC-NEW-TSK-0121 | 撤回与个体任务不可公开 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：老师撤回与家长取消都清空确认/审核人/批准并写 revoked_at、立即不可见；个体任务申请与审核均 422）；UI 待 9.3/10.3 |
 | TC-NEW-TSK-0122 | 提交不产生积分 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0123 | 任务契约与规则无积分 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0124 | 发布通知与 action_path | P0 | FUNC | ⏸ |
@@ -714,7 +714,7 @@
 | TC-NEW-TSK-0131 | 学习关联必填 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0132 | 要求列表逐条展示 | P1 | FUNC | ✅ |
 | TC-NEW-TSK-0133 | 首页待办按孩子与周期统计 | P0 | FUNC | ✅ |
-| TC-NEW-TSK-0134 | 取消后再次申请必须重新审核 | P0 | FUNC | ⏸ |
+| TC-NEW-TSK-0134 | 取消后再次申请必须重新审核 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：取消后再次申请回到 pending、不沿用旧批准/旧确认、未重新确认不能批准）；UI 待 10.3 |
 | TC-NEW-TSK-0135 | 汇总后个别补充回应 | P1 | FUNC | ⚠️ 后端已验证（汇总后贴纸/语音可追加、`response_id` 不变、pending 拒绝、`class_star` 拒绝、默认贴纸不继承任务仪式、跨班/跨园所拒绝、媒体归属校验、仪式载体必填、家长端只看到本孩子的补充、period 回应不重复、删任务不留孤儿）；老师端 UI 待 9.3 |
 | TC-NEW-TSK-0136 | 给孩子看展示态 | P1 | FUNC | ⏸ |
 | TC-NEW-TSK-0137 | 班级星星罐目标独立于任务 | P0 | FUNC | ⏸ |
@@ -723,9 +723,9 @@
 | TC-NEW-TSK-0140 | 补充回应未读与读标记 | P1 | FUNC | ⏸ |
 | TC-NEW-TSK-0141 | 独立任务不能自设活动分组 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0142 | 有提交后结构字段只读 | P0 | FUNC | ✅ |
-| TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | ✅ |
-| TC-NEW-TSK-0144 | 跨班公开墙不可见 | P0 | FUNC | ⏸ |
-| TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | ✅ |
+| TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：开关关闭即不可见、`revokePublicForTask` 撤销后重开不恢复旧批准）；管理端 UI 待 11.1 |
+| TC-NEW-TSK-0144 | 跨班公开墙不可见 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：两个班互相看不到对方公开内容；任务结束/关闭/软删后不展示）；家长端 UI 待 10.x |
+| TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | ⚠️ 后端已验证（A 切片 `UpdateTask` + `task_public_test.go`：公开墙自己排除个体任务，即使残留 allow_public=true 也不展示） |
 | TC-NEW-TSK-0146 | 更新个体任务目标跨班被拒 | P0 | FUNC | ✅ |
 
 ### A 切片执行记录（2026-10-21）
@@ -747,9 +747,10 @@
 6. 老师端任务列表同样用 `onLoad`，详情页回应后返回「待回应 N」不刷新；别处创建的任务也不会出现（本页 `addTask` 创建后会主动重拉，不受影响）→ 改为 `onLoad(loadStudents)` + `onShow(loadTasks)`（`teacher/src/pages/tasks/index.vue`），学生列表仍只取一次。
 
 **未执行/未实现（⏸）**：
-- 0112/0113 家长反馈、0120/0121 公开申请审核与撤回、0124–0125 通知聚合、0126 小程序码、0134 再次申请、0135 补充回应、0136 给孩子看、0140 读标记（B 切片）
+- 0124–0125 通知聚合、0126 小程序码、0136 给孩子看、0140 读标记（B 切片剩余）
 - 0117/0118 星星罐进度、0127/0128 活动、0137 班级罐目标、0138/0139 多班活动、0141 活动分组（C 切片）
-- 0144 公开墙（B 切片；公开墙查询未实现）
+
+> 0112/0113、0120/0121、0134、0135、0144 已于 B1/B2 补齐后端验证，见上表 ⚠️ 行（UI 仍未做，原因见各行的「待 9.x/10.x」）。
 
 **UI 交互验证（2026-10-21，家长端，微信开发者工具）**：`parent/dist/dev/mp-weixin`（dev watcher 构建）+ 微信开发者工具模拟器（appid `wxdf989efff8796c53`，家长 61 / 孩子 27，中二班），通过 CDP 在渲染层派发真实鼠标事件驱动，页面文案与状态均取自渲染 DOM（非接口回读）：
 
@@ -838,3 +839,47 @@
 
 - `parentTaskCtx` 把 `ResolveContext` 的任何错误都映射成 403，数据库故障会伪装成「未绑定孩子信息」。
 - 打卡成功后详情页整页重载；重载失败会把已经提交成功的页面打成错误态。
+
+### B2 执行记录（2026-10-22，公开申请 + 老师审核 + 公开墙 + 管理端撤回）
+
+起点：`393a3e3`（B1 收口）。按仓库铁律先改契约，再实现后端；**本次无界面**，全部为 API/服务层验证。
+
+**落地端点**（契约：`backend/api/api-parent/06-task.md`、`api-teacher/09-class-and-tasks.md`、`api-admin/10-tasks.md`）：
+
+| 端 | 端点 | 语义 |
+| --- | --- | --- |
+| 家长 | `POST /parent/tasks/checkins/:checkin_id/public-request` | 申请公开；清空旧批准/旧确认/旧撤回时间 |
+| 家长 | `DELETE /parent/tasks/checkins/:checkin_id/public-request` | 取消/撤下；清空确认+批准+审核人并写 `public_revoked_at` |
+| 家长 | `GET /parent/tasks/public-wall` | 本班公开墙，逐字按 D7 九条件过滤 |
+| 老师 | `PUT /teacher/tasks/:id/checkins/:checkin_id/public` | `{approve, scope_confirmed}`；批准必须勾确认 |
+| 管理端 | `PUT /admin/tasks/checkins/:checkin_id/public` | 只接受 `{revoke:true}`，写操作日志 |
+
+读路径同步补 `public_*` / `public_status` / `public_visible`（`checkin-history`、老师端 `checkins`），`public_visible` 由服务端按公开墙同一套条件算出，客户端不得自己拼。
+
+**测试**：`server/internal/service/task_public_test.go`（真实 MySQL，固定夹具 992701–992711，`Unscoped` 清理）。40 个用例覆盖：申请允许/任务未开公开/个体任务/跨家庭/已结束任务、幂等（已批准不被打回）、取消清空（含任务关公开或结束后仍可撤回、从未申请不写撤回时间）、老师必须勾确认、必须处于待审核、留痕审核人、拒绝清空、跨班 404、提交与任务不匹配 422、公开墙九条件逐条、跨班隔离、只带提交者孩子、重新申请需重新审核、取消后老师批准 409、管理端撤回与跨园所 404/空操作不写日志。
+
+**变异验证（22 项，全部 detected）**：逐条删掉公开墙的 `is_public_requested` / `public_scope_confirmed` / `allow_public` / `status` / `target_student_id` / `end_date` / 任务 `deleted_at` / 提交 `deleted_at` / 班级 / 提交者班级=任务班级 / `public_approved_at IS NOT NULL` / `public_revoked_at IS NULL` 条件与排序，以及申请的有效期检查、申请幂等保护、取消清 `approved_at`、审核 `scope_confirmed` 必填、审核待审核状态、锁内复核 `allow_public`、编辑不公开任务无条件撤销、管理端空操作不写日志——每次只改一处，对应测试都会变红，改后 `go build ./...` 通过。脚本 `_verify/mutate_b2.py`（未入库，`_verify/` 已在 `.gitignore`）。
+
+> 「老师审核锁内再校验园所/班级」属 TOCTOU 兜底，串行测试观测不到（需要并发改派任务），未做变异，代码保留。
+
+**限制性对抗性审查（2026-10-22）发现并修复**：
+
+1. **转班后撤回入口锁死（CONFIRMED）**：取消路径原本套 `taskScopeQuery`，孩子转班后原班级任务不再匹配 → 家长撤不回来，而内容仍留在原班级墙上。已改为「锁任务行只按 `id + kindergarten_id`，归属由提交的孩子判定」；「任务是否可见」只在**申请**时校验。
+2. **转班/改派让内容出现在不属于它的班级墙上**：公开墙补 `st.class_id = t.class_id`——孩子转班后原班级墙不再展示；管理员把任务改派到别的班时（7.1 结构字段锁定落地前可达），原班孩子的照片/文字也不会漏到新班家长面前。
+3. **老师审核锁内缺班级/园所条件（TOCTOU）**：预检有、锁定读没有，任务在老师点确认前被改派时旧班老师仍能操作。已在锁定读补上同样条件。
+4. **编辑不公开任务会反复盖撤回时间**：`UpdateTask` 原本在「任务不公开」时无条件 `revokePublicForTask`，把从未申请的提交洗成「已撤回」，且时间随每次无关编辑漂移。已改为只在 `allow_public` 真发生 true→false 或班级任务改个体时撤销。
+5. **测试守卫缺口**：补上 `public_approved_at IS NOT NULL`、`c.deleted_at`、排序、转班/改派、编辑不盖时间五条独立用例（对应变异全部 detected）。
+
+**状态机语义决定（后续不要改错）**：
+
+- **取消/撤回不受任务状态限制**：任务关了公开或已结束，家长仍必须能撤回自己的内容；只有「申请」要求 `allow_public=true`、非个体任务、任务在有效期内。
+- **重复申请不降级**：已批准且未撤回时再点申请是幂等空操作，避免手滑把墙上的记录打回待审核。
+- **空操作不写时间戳**：从未申请时取消不写 `public_revoked_at`；管理端撤回空操作不写操作日志。
+- **个体任务三重拒绝**：申请 422、审核 422、公开墙查询侧再排除一次（即使 2.9 回归留下 `allow_public=true` 也不会漏出）。
+- **归按「自己孩子」**：`student_id` 决定提交归属，同一孩子的另一位家长（有绑定）也能申请/取消——与 3.6 反馈权限口径一致，不是「必须本人提交」。
+
+**本次未覆盖**：
+
+- 老师端审核 UI（9.3）、家长端申请开关与公开墙页面（10.3/10.x）、管理端撤回入口（11.4）——B2 无界面可点。
+- 「内容中只有提交者孩子」只能由老师勾选确认，服务端无法自动识别图片/语音里出现了谁。
+- 任务列表/详情（`GET /parent/tasks`、`GET /parent/tasks/:id`）尚未返回 `public_*`；家长端要展示某条提交的公开状态目前走 `checkin-history`。字段补齐归契约任务 8.1。

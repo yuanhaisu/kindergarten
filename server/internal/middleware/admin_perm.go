@@ -128,6 +128,8 @@ var adminRoutePermission = map[string]string{
 	"GET /api/v1/admin/tasks/:id":    "task:view",
 	"PUT /api/v1/admin/tasks/:id":    "task:manage",
 	"DELETE /api/v1/admin/tasks/:id": "task:manage",
+	// 管理端撤回公开内容：静态段 checkins 优先于 :id 匹配，不会与上面的任务详情路由冲突。
+	"PUT /api/v1/admin/tasks/checkins/:checkin_id/public": "task:manage",
 
 	// points
 	"GET /api/v1/admin/points/overview": "points:view",

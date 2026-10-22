@@ -191,6 +191,7 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 		tasks.GET("/:id/checkins", h.TeacherTaskCheckins)
 		tasks.POST("/:id/checkins/:checkin_id/response", h.TeacherRespondTask)
 		tasks.POST("/:id/checkins/:checkin_id/supplement", h.TeacherSupplementResponse)
+		tasks.PUT("/:id/checkins/:checkin_id/public", h.TeacherReviewTaskPublic)
 		tasks.POST("/:id/batch-response", h.TeacherBatchRespondTask)
 	}
 
@@ -333,6 +334,7 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		tk.GET("/:id", h.GetTask)
 		tk.PUT("/:id", h.UpdateTask)
 		tk.DELETE("/:id", h.DeleteTask)
+		tk.PUT("/checkins/:checkin_id/public", h.RevokeTaskPublicCheckin)
 	}
 
 	po := adminG.Group("/points")
@@ -485,6 +487,9 @@ func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 		tasks.POST("/:id/checkin", h.ParentCheckinTask)
 		tasks.GET("/:id/checkin-history", h.ParentCheckinHistory)
 		tasks.POST("/responses/:response_id/reaction", h.ParentReactResponse)
+		tasks.POST("/checkins/:checkin_id/public-request", h.ParentRequestTaskPublic)
+		tasks.DELETE("/checkins/:checkin_id/public-request", h.ParentCancelTaskPublic)
+		tasks.GET("/public-wall", h.ParentTaskPublicWall)
 	}
 
 	points := pg.Group("/points")

@@ -741,6 +741,83 @@ func (h *Handler) ParentReactResponse(c *gin.Context) {
 	response.OK(c, data)
 }
 
+// ========== 公开墙 ==========
+
+// parentPublicErr 公开相关端点的错误映射：422 参数/状态、403 跨家庭、404 不存在、503 锁冲突。
+func parentPublicErr(c *gin.Context, err error, fallback string) {
+	switch {
+	case errors.Is(err, service.ErrParentNotFound):
+		response.ErrNotFound(c, "提交或任务不存在")
+	case errors.Is(err, service.ErrParentForbidden):
+		response.ErrForbidden(c, "只能申请自己孩子的提交")
+	case errors.Is(err, service.ErrParentInvalidParams):
+		response.ErrValidation(c, "请求参数无效")
+	case errors.Is(err, service.ErrTaskPublicNotAllowed):
+		response.ErrValidation(c, "该任务不支持公开：请确认任务已开启公开、不是个体任务且仍在进行中")
+	case errors.Is(err, service.ErrTaskBusy):
+		response.ErrUnavailable(c, "操作冲突，请稍后重试")
+	default:
+		response.ErrInternal(c, fallback)
+	}
+}
+
+func (h *Handler) ParentRequestTaskPublic(c *gin.Context) {
+	pc, ok := h.parentTaskCtx(c)
+	if !ok {
+		return
+	}
+	checkinID, ok := ppCheckinID(c)
+	if !ok {
+		return
+	}
+	data, err := h.parentPortalSvc.RequestPublicCheckin(c.Request.Context(), pc, checkinID)
+	if err != nil {
+		parentPublicErr(c, err, "申请公开失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+func (h *Handler) ParentCancelTaskPublic(c *gin.Context) {
+	pc, ok := h.parentTaskCtx(c)
+	if !ok {
+		return
+	}
+	checkinID, ok := ppCheckinID(c)
+	if !ok {
+		return
+	}
+	data, err := h.parentPortalSvc.CancelPublicCheckin(c.Request.Context(), pc, checkinID)
+	if err != nil {
+		parentPublicErr(c, err, "取消公开失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+func (h *Handler) ParentTaskPublicWall(c *gin.Context) {
+	pc, ok := h.parentTaskCtx(c)
+	if !ok {
+		return
+	}
+	page, ps := ppPage(c)
+	data, err := h.parentPortalSvc.PublicWall(c.Request.Context(), pc, page, ps)
+	if err != nil {
+		response.ErrInternal(c, "获取班级墙失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+func ppCheckinID(c *gin.Context) (uint64, bool) {
+	id, err := strconv.ParseUint(c.Param("checkin_id"), 10, 64)
+	if err != nil || id == 0 {
+		response.ErrValidation(c, "无效的提交 ID")
+		return 0, false
+	}
+	return id, true
+}
+
 // ========== Points ==========
 
 func (h *Handler) ParentPointsOverview(c *gin.Context) {

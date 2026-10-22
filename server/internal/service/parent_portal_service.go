@@ -1805,18 +1805,250 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 		return nil, err
 	}
 	list := make([]map[string]any, len(rows))
+	now := time.Now().In(shanghaiLoc())
 	for i, r := range rows {
 		studentName := ""
 		if r.Student != nil {
 			studentName = r.Student.Name
 		}
+		var approvedAt, revokedAt any
+		if r.PublicApprovedAt != nil {
+			approvedAt = r.PublicApprovedAt.UTC().Format(time.RFC3339)
+		}
+		if r.PublicRevokedAt != nil {
+			revokedAt = r.PublicRevokedAt.UTC().Format(time.RFC3339)
+		}
 		list[i] = map[string]any{
 			"id": r.ID, "date": r.Date.Format("2006-01-02"), "content": r.Content,
 			"media_url": r.MediaURL, "student_name": studentName, "response_id": r.ResponseID,
-			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+			"is_public_requested":    r.IsPublicRequested,
+			"public_scope_confirmed": r.PublicScopeConfirmed,
+			"public_approved_at":     approvedAt,
+			"public_revoked_at":      revokedAt,
+			// 可见性由服务端按公开墙同一套条件算出，前端不要自己拼。
+			"public_visible": publicCheckinVisible(&t, &rows[i], pc.CurrentStudent.ClassID, now),
+			"created_at":     r.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}
 	return map[string]any{"list": list, "total": total}, nil
+}
+
+// ==================== 公开申请 / 取消 / 班级公开墙 ====================
+
+// lockCheckinForPublic 家长公开写路径的公共前置：定位 → 锁任务行 → 锁提交行 → 归属校验。
+//
+// 锁序固定为 parent_tasks → task_check_ins（handoff §12.2）：反过来会与
+// deleteTaskCascade 的「锁回应 → 删 checkin」形成反序死锁。
+//
+// 这里刻意**不套** taskScopeQuery：
+//   - 归属由「提交属于当前孩子」判定，已经足够（跨家庭 403）；
+//   - 套上任务可见范围后，孩子转班会让原班级任务不再匹配，家长连自己的
+//     内容都撤不下来，而内容仍留在原班级墙上——同意无法撤回。
+//
+// 「任务是否还能公开」只在申请时校验（见 RequestPublicCheckin）；取消/撤回永远可用。
+func (s *ParentPortalService) lockCheckinForPublic(ctx context.Context, tx *gorm.DB, pc *ParentPortalContext, checkinID uint64) (*domain.ParentTask, *domain.TaskCheckIn, error) {
+	loc, err := locateCheckin(ctx, tx, checkinID)
+	if err != nil {
+		if errors.Is(err, errTaskNotFound) {
+			return nil, nil, ErrParentNotFound
+		}
+		return nil, nil, err
+	}
+	if loc.StudentID != pc.CurrentStudent.ID {
+		return nil, nil, ErrParentForbidden
+	}
+	var t domain.ParentTask
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ? AND kindergarten_id = ?", loc.TaskID, pc.KindergartenID).First(&t).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrParentNotFound
+		}
+		return nil, nil, err
+	}
+	var c domain.TaskCheckIn
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ? AND task_id = ? AND student_id = ?", checkinID, t.ID, pc.CurrentStudent.ID).
+		First(&c).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrParentNotFound
+		}
+		return nil, nil, err
+	}
+	return &t, &c, nil
+}
+
+// taskAccessibleToChild 是 taskScopeWhere 的 Go 侧等价物：判断任务对这个孩子是否可见。
+// 两份实现必须同时改——SQL 版在 taskScopeWhere，这里只在已经锁住任务行之后用。
+func taskAccessibleToChild(t *domain.ParentTask, pc *ParentPortalContext) bool {
+	if t.KindergartenID != pc.KindergartenID {
+		return false
+	}
+	if t.TargetStudentID == 0 {
+		return t.ClassID == pc.CurrentStudent.ClassID
+	}
+	return t.TargetStudentID == pc.CurrentStudent.ID
+}
+
+// RequestPublicCheckin 家长申请把这条提交公开到班级墙。
+// 申请不等于公开：清空旧批准与旧确认，等老师重新审核。
+func (s *ParentPortalService) RequestPublicCheckin(ctx context.Context, pc *ParentPortalContext, checkinID uint64) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	now := time.Now().In(shanghaiLoc())
+	var out map[string]any
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		t, c, err := s.lockCheckinForPublic(ctx, tx, pc, checkinID)
+		if err != nil {
+			return err
+		}
+		// 申请必须落在「这个孩子当前可见的任务」上：转班后原班级任务不再属于他，
+		// 提交回来只会让内容出现在一个他已经不属于的班级墙上。
+		if !taskAccessibleToChild(t, pc) {
+			return ErrParentNotFound
+		}
+		// 个体任务与未开启公开的任务根本不该有公开入口；已结束/未开始的任务
+		// 放上去也永远不会出现在墙上——直接拒绝比静默排进审核队列更诚实。
+		if !t.AllowPublic || t.TargetStudentID > 0 {
+			return ErrTaskPublicNotAllowed
+		}
+		if !taskIsActive(t, now) {
+			return ErrTaskPublicNotAllowed
+		}
+		// 已批准且未撤回时重复点击是幂等空操作：不能把已经公开的内容打回待审核，
+		// 否则家长手滑点两下，墙上的记录就消失了。
+		if publicCheckinStatus(c) != TaskPublicApproved {
+			if err := tx.Model(&domain.TaskCheckIn{}).Where("id = ?", c.ID).
+				Updates(publicRequestUpdates()).Error; err != nil {
+				return err
+			}
+			var fresh domain.TaskCheckIn
+			if err := tx.Where("id = ?", c.ID).First(&fresh).Error; err != nil {
+				return err
+			}
+			c = &fresh
+		}
+		out = publicCheckinView(t, c, pc.CurrentStudent.ClassID, now)
+		return nil
+	})
+	if isTaskLockConflict(err) {
+		return nil, ErrTaskBusy
+	}
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CancelPublicCheckin 家长取消公开申请（也用于撤下已公开的内容）。
+func (s *ParentPortalService) CancelPublicCheckin(ctx context.Context, pc *ParentPortalContext, checkinID uint64) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	now := time.Now().In(shanghaiLoc())
+	var out map[string]any
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		t, c, err := s.lockCheckinForPublic(ctx, tx, pc, checkinID)
+		if err != nil {
+			return err
+		}
+		// 从未申请 / 已取消：幂等空操作，不刷新 public_revoked_at
+		// （否则每点一次取消都会产生一条「新撤回」记录）。
+		switch publicCheckinStatus(c) {
+		case TaskPublicPending, TaskPublicApproved:
+			if err := tx.Model(&domain.TaskCheckIn{}).Where("id = ?", c.ID).
+				Updates(publicRevokeUpdates(now)).Error; err != nil {
+				return err
+			}
+			var fresh domain.TaskCheckIn
+			if err := tx.Where("id = ?", c.ID).First(&fresh).Error; err != nil {
+				return err
+			}
+			c = &fresh
+		}
+		out = publicCheckinView(t, c, pc.CurrentStudent.ClassID, now)
+		return nil
+	})
+	if isTaskLockConflict(err) {
+		return nil, ErrTaskBusy
+	}
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// publicWallRow 公开墙一行。
+type publicWallRow struct {
+	CheckinID     uint64    `gorm:"column:checkin_id"`
+	TaskID        uint64    `gorm:"column:task_id"`
+	TaskTitle     string    `gorm:"column:task_title"`
+	StudentID     uint64    `gorm:"column:student_id"`
+	StudentName   string    `gorm:"column:student_name"`
+	StudentAvatar string    `gorm:"column:student_avatar"`
+	Date          time.Time `gorm:"column:date"`
+	Content       string    `gorm:"column:content"`
+	MediaURL      string    `gorm:"column:media_url"`
+	CreatedAt     time.Time `gorm:"column:created_at"`
+}
+
+// publicWallQuery 构建公开墙查询。每次调用都新建一个 *gorm.DB：
+// 同一个对象先 Count 再 Select 会被 GORM 的 Statement 复用污染（SELECT 子句残留），
+// 所以这里做成工厂而不是在调用方复用它。
+//
+// `st.class_id = t.class_id` 是第九条之外的**安全补强**（D7「公开范围：本班家长可见」）：
+//   - 孩子转班后，原班级墙不得继续展示他的内容；
+//   - 管理员把任务改派到别的班（7.1 的结构字段锁定落地前可达）时，
+//     原班孩子的照片/文字不得出现在新班家长面前。
+// 左连接下学生缺失或已软删会得到 NULL，条件自然不成立。
+func (s *ParentPortalService) publicWallQuery(ctx context.Context, pc *ParentPortalContext, today string) *gorm.DB {
+	return s.db.WithContext(ctx).Table("task_check_ins AS c").
+		Joins("INNER JOIN parent_tasks AS t ON t.id = c.task_id AND t.deleted_at IS NULL").
+		Joins("LEFT JOIN students AS st ON st.id = c.student_id AND st.deleted_at IS NULL").
+		Where("c.deleted_at IS NULL").
+		Where("st.class_id = t.class_id").
+		Where("t.kindergarten_id = ? AND t.class_id = ?", pc.KindergartenID, pc.CurrentStudent.ClassID).
+		Where("t.allow_public = ? AND t.target_student_id = 0 AND t.status = 1", true).
+		Where("t.end_date >= ?", today).
+		Where("c.is_public_requested = ? AND c.public_scope_confirmed = ?", true, true).
+		Where("c.public_approved_at IS NOT NULL AND c.public_revoked_at IS NULL")
+}
+
+// PublicWall 本班公开墙。可见条件逐字对应 design D7 / tasks 4.3。
+//
+// 用 Table(...) 手写查询时 GORM **不会**自动补软删除条件，c/t/st 三张表的
+// deleted_at IS NULL 都必须自己写（handoff §12.2 的同类坑）。
+func (s *ParentPortalService) PublicWall(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	now := time.Now().In(shanghaiLoc())
+	today := now.Format("2006-01-02")
+	var total int64
+	if err := s.publicWallQuery(ctx, pc, today).Count(&total).Error; err != nil {
+		log.L(ctx).Error("parent public wall count failed", "err", err)
+		return nil, err
+	}
+	var rows []publicWallRow
+	if err := s.publicWallQuery(ctx, pc, today).
+		Select("c.id AS checkin_id, c.task_id, t.title AS task_title, c.student_id, " +
+			"st.name AS student_name, st.avatar AS student_avatar, c.date, c.content, c.media_url, c.created_at").
+		Order("c.created_at DESC, c.id DESC").
+		Offset((page - 1) * pageSize).Limit(pageSize).
+		Scan(&rows).Error; err != nil {
+		log.L(ctx).Error("parent public wall list failed", "err", err)
+		return nil, err
+	}
+	list := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		list = append(list, map[string]any{
+			"checkin_id": r.CheckinID, "task_id": r.TaskID, "task_title": r.TaskTitle,
+			"student": map[string]any{"id": r.StudentID, "name": r.StudentName, "avatar": r.StudentAvatar},
+			"date":    r.Date.Format("2006-01-02"), "content": r.Content, "media_url": r.MediaURL,
+			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
 }
 
 // ReactToResponse 家长对老师回应做一键反馈（child_happy / received / thanks）。

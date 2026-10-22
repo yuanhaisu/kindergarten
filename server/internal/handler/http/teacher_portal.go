@@ -74,6 +74,12 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrValidation(c, "补充回应仅支持贴纸或语音")
 	case errors.Is(err, service.ErrTaskRitualPayload):
 		response.ErrValidation(c, "贴纸需要选择具体贴纸，语音需要先录制并上传")
+	case errors.Is(err, service.ErrTaskPublicNotAllowed):
+		response.ErrValidation(c, "该任务未开启公开或是个体任务，不能公开")
+	case errors.Is(err, service.ErrTaskPublicScopeUnconfirmed):
+		response.ErrValidation(c, "批准公开前必须确认内容中只有提交者孩子")
+	case errors.Is(err, service.ErrTaskPublicStateConflict):
+		response.ErrConflict(c, "该提交当前不在待审核状态，请让家长重新申请")
 	case errors.Is(err, service.ErrTeacherRitualMediaType):
 		response.ErrValidation(c, "语音回应必须使用音频文件")
 	case errors.Is(err, service.ErrTaskBusy):
@@ -113,6 +119,36 @@ func (h *Handler) TeacherSupplementResponse(c *gin.Context) {
 		return
 	}
 	response.Created(c, data)
+}
+
+func (h *Handler) TeacherReviewTaskPublic(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	taskID, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	checkinID, err := strconv.ParseUint(c.Param("checkin_id"), 10, 64)
+	if err != nil || checkinID == 0 {
+		response.ErrValidation(c, "无效的提交 ID")
+		return
+	}
+	var req struct {
+		Approve        bool `json:"approve"`
+		ScopeConfirmed bool `json:"scope_confirmed"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, svcErr := h.teacherPortalSvc.ReviewPublicCheckin(c.Request.Context(), tc, taskID, checkinID, req.Approve, req.ScopeConfirmed)
+	if svcErr != nil {
+		teacherPortalErr(c, svcErr, "审核公开失败")
+		return
+	}
+	response.OK(c, data)
 }
 
 func (h *Handler) TeacherHomeOverview(c *gin.Context) {

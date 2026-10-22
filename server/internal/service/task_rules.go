@@ -33,6 +33,12 @@ var (
 	ErrTaskSupplementRitual = errors.New("TASK_SUPPLEMENT_RITUAL")
 	// 仪式缺少载体：贴纸没选具体贴纸，或语音没有媒体。
 	ErrTaskRitualPayload = errors.New("TASK_RITUAL_PAYLOAD")
+	// 任务不允许公开：未开启 allow_public、是个体任务，或任务已不在有效期内。
+	ErrTaskPublicNotAllowed = errors.New("TASK_PUBLIC_NOT_ALLOWED")
+	// 提交当前不在待审核/已公开状态：并发取消、或从未申请就批准。
+	ErrTaskPublicStateConflict = errors.New("TASK_PUBLIC_STATE_CONFLICT")
+	// 老师批准前没有勾选「内容中只有提交者孩子」。
+	ErrTaskPublicScopeUnconfirmed = errors.New("TASK_PUBLIC_SCOPE_UNCONFIRMED")
 )
 
 // isTaskLockConflict 判定 MySQL 锁等待超时（1205）与死锁（1213）。
@@ -255,4 +261,147 @@ func revokePublicForTask(ctx context.Context, tx *gorm.DB, taskID uint64) error 
 			"public_approved_by":     0,
 			"public_revoked_at":      &now,
 		}).Error
+}
+
+// ==================== 公开墙状态机（design D7 / tasks 4.1-4.4） ====================
+
+// 公开状态取值，与契约里的 public_status 一致。
+const (
+	TaskPublicNone     = "none"     // 从未申请
+	TaskPublicPending  = "pending"  // 已申请，待老师审核
+	TaskPublicApproved = "approved" // 已批准且未撤回（老师确认过内容边界）
+	TaskPublicRevoked  = "revoked"  // 已取消或已撤回
+)
+
+// taskDayOf 把时间归一到上海墙钟的当天零点。
+// 与 taskIsActive 同口径：直接用值自身的年月日，不做时区换算——
+// time.Local 已被初始化成 Asia/Shanghai，DSN loc=Local，读回来的 DATE 就是上海零点。
+func taskDayOf(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, shanghaiLoc())
+}
+
+// publicCheckinStatus 由字段推导状态，避免客户端各自拼条件拼错。
+//
+// 「已批准」要求四个条件同时成立：申请中、确认过、有批准时间、未撤回。
+// 任何一项缺失都只能算 pending——宁可让家长重走一次审核，也不能把
+// 未确认内容边界的记录当已公开放上墙。
+func publicCheckinStatus(c *domain.TaskCheckIn) string {
+	if !c.IsPublicRequested {
+		if c.PublicRevokedAt != nil {
+			return TaskPublicRevoked
+		}
+		return TaskPublicNone
+	}
+	if c.PublicApprovedAt != nil && c.PublicScopeConfirmed && c.PublicRevokedAt == nil {
+		return TaskPublicApproved
+	}
+	return TaskPublicPending
+}
+
+// publicCheckinVisible 公开墙可见条件，逐字对应 design D7 与 tasks 4.3。
+//
+// classID 传 0 表示「不看读者班级」（老师/管理端回显 public_visible 时用：
+// 他们的问题是「这条现在是否生效」，而不是「某个家长能不能看到」）。
+func publicCheckinVisible(t *domain.ParentTask, c *domain.TaskCheckIn, classID uint64, today time.Time) bool {
+	if t == nil || c == nil {
+		return false
+	}
+	if t.DeletedAt.Valid || c.DeletedAt.Valid {
+		return false
+	}
+	if !t.AllowPublic || t.Status != 1 || t.TargetStudentID > 0 {
+		return false
+	}
+	if classID > 0 && t.ClassID != classID {
+		return false
+	}
+	if taskDayOf(t.EndDate).Before(taskDayOf(today)) {
+		return false
+	}
+	return c.IsPublicRequested && c.PublicScopeConfirmed &&
+		c.PublicApprovedAt != nil && c.PublicRevokedAt == nil
+}
+
+// publicRequestUpdates 申请公开：清空旧批准、旧确认与旧的撤回时间。
+// 重新申请必须重新审核，不得沿用旧批准（design D7 状态转换）。
+func publicRequestUpdates() map[string]any {
+	return map[string]any{
+		"is_public_requested":    true,
+		"public_scope_confirmed": false,
+		"public_approved_at":     nil,
+		"public_approved_by":     0,
+		"public_revoked_at":      nil,
+	}
+}
+
+// publicApproveUpdates 批准公开：老师已确认内容中只有提交者孩子。
+func publicApproveUpdates(now time.Time, teacherID uint64) map[string]any {
+	return map[string]any{
+		"is_public_requested":    true,
+		"public_scope_confirmed": true,
+		"public_approved_at":     &now,
+		"public_approved_by":     teacherID,
+		"public_revoked_at":      nil,
+	}
+}
+
+// publicRevokeUpdates 取消/撤回：清空确认与审核人，写撤回时间。
+func publicRevokeUpdates(now time.Time) map[string]any {
+	return map[string]any{
+		"is_public_requested":    false,
+		"public_scope_confirmed": false,
+		"public_approved_at":     nil,
+		"public_approved_by":     0,
+		"public_revoked_at":      &now,
+	}
+}
+
+// publicCheckinView 四个公开端点共用的响应形状。
+// public_visible 由服务端算好：客户端不要自己拼条件，否则条件一改就会出现
+// 「界面显示已公开、墙上却没有」的漂移。
+func publicCheckinView(t *domain.ParentTask, c *domain.TaskCheckIn, classID uint64, now time.Time) map[string]any {
+	var approvedAt, revokedAt any
+	if c.PublicApprovedAt != nil {
+		approvedAt = c.PublicApprovedAt.UTC().Format(time.RFC3339)
+	}
+	if c.PublicRevokedAt != nil {
+		revokedAt = c.PublicRevokedAt.UTC().Format(time.RFC3339)
+	}
+	return map[string]any{
+		"checkin_id":             c.ID,
+		"task_id":                t.ID,
+		"is_public_requested":    c.IsPublicRequested,
+		"public_scope_confirmed": c.PublicScopeConfirmed,
+		"public_approved_at":     approvedAt,
+		"public_approved_by":     c.PublicApprovedBy,
+		"public_revoked_at":      revokedAt,
+		"public_status":          publicCheckinStatus(c),
+		"public_visible":         publicCheckinVisible(t, c, classID, now),
+	}
+}
+
+// checkinLocate 仅用于定位提交所属任务与孩子。
+type checkinLocate struct {
+	TaskID    uint64 `gorm:"column:task_id"`
+	StudentID uint64 `gorm:"column:student_id"`
+}
+
+// locateCheckin 用**非锁定读**拿到提交的 task_id / student_id。
+//
+// 这里刻意不用 FOR UPDATE：公开相关的写路径必须以 parent_tasks 行作为第一把锁
+// （见 handoff §12.2），而按 checkin_id 进来的请求事先不知道 task_id。
+// InnoDB 的一致性非锁定读不取任何行锁，因此不参与死锁的加锁顺序；
+// 真正的校验在拿到任务锁之后用 FOR UPDATE 重读一次完成。
+func locateCheckin(ctx context.Context, tx *gorm.DB, checkinID uint64) (*checkinLocate, error) {
+	var row checkinLocate
+	if err := tx.WithContext(ctx).Table("task_check_ins").
+		Select("task_id, student_id").
+		Where("id = ? AND deleted_at IS NULL", checkinID).
+		Take(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errTaskNotFound
+		}
+		return nil, err
+	}
+	return &row, nil
 }

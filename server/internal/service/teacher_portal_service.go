@@ -3082,7 +3082,11 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 		if err := tx.Model(&domain.ParentTask{}).Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).Updates(updates).Error; err != nil {
 			return err
 		}
-		if req.TargetStudentID > 0 || !allowPublic {
+		// 只在公开状态真的发生收缩时撤销：任务本来就不公开时也调一次，
+		// 会给全部提交反复写 public_revoked_at，把「从未申请」洗成「已撤回」，
+		// 并让撤回时间随每次无关编辑漂移（B2 的 public_status 会把这种脏数据暴露出来）。
+		becameIndividual := req.TargetStudentID > 0 && cur.TargetStudentID == 0
+		if becameIndividual || (cur.AllowPublic && !allowPublic) {
 			return revokePublicForTask(ctx, tx, id)
 		}
 		return nil
@@ -3181,11 +3185,21 @@ func (s *TeacherPortalService) TaskCheckins(ctx context.Context, tc *TeacherPort
 		return nil, err
 	}
 	list := make([]map[string]any, 0, len(rows))
-	for _, r := range rows {
+	now := time.Now().In(shanghaiLoc())
+	for i, r := range rows {
+		var approvedAt, revokedAt any
+		if r.PublicApprovedAt != nil {
+			approvedAt = r.PublicApprovedAt.UTC().Format(time.RFC3339)
+		}
+		if r.PublicRevokedAt != nil {
+			revokedAt = r.PublicRevokedAt.UTC().Format(time.RFC3339)
+		}
 		item := map[string]any{
 			"id": r.ID, "student_id": r.StudentID, "content": r.Content,
 			"media_file_id": r.MediaFileID, "media_url": r.MediaURL,
 			"is_public_requested": r.IsPublicRequested, "public_scope_confirmed": r.PublicScopeConfirmed,
+			"public_approved_at": approvedAt, "public_revoked_at": revokedAt,
+			"public_status": publicCheckinStatus(&rows[i]), "public_visible": publicCheckinVisible(&task, &rows[i], 0, now),
 			"response_id": r.ResponseID, "created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 			"date": r.Date.Format("2006-01-02"),
 		}
@@ -3476,6 +3490,95 @@ func (s *TeacherPortalService) SupplementResponse(ctx context.Context, tc *Teach
 		"id":         response.ID,
 		"created_at": response.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
+}
+
+// ReviewPublicCheckin 老师审核家长提交的公开申请（批准 / 拒绝或撤回）。
+//
+// 批准时必须 scopeConfirmed=true：规格要求老师确认「内容中只有提交者孩子」，
+// 服务端无法自动判断内容边界，只能用这个显式确认承载责任（并留痕 approved_by）。
+func (s *TeacherPortalService) ReviewPublicCheckin(ctx context.Context, tc *TeacherPortalContext, taskID, checkinID uint64, approve, scopeConfirmed bool) (map[string]any, error) {
+	// 先做一次非锁定校验，把 404（任务不在本班）与 422（参数/状态）分开。
+	// 真正的判定在锁内重做——老师从打开页面到点确认之间，任务可能被改成个体任务。
+	var task domain.ParentTask
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND class_id = ?", taskID, tc.KindergartenID, tc.ClassID).
+		First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTeacherNotFound
+		}
+		log.L(ctx).Error("task public review load task failed", "task", taskID, "err", err)
+		return nil, err
+	}
+	if approve && !scopeConfirmed {
+		return nil, ErrTaskPublicScopeUnconfirmed
+	}
+	now := time.Now().In(shanghaiLoc())
+	var out map[string]any
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 第一把锁：parent_tasks 行（锁序见 handoff §12.2）。
+		// 条件必须和预检一致地带上园所/班级：否则老师打开审核页之后任务被改派到
+		// 别的班，这把锁仍能拿到行，旧班老师就操作了已不属于自己的任务。
+		var locked domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND kindergarten_id = ? AND class_id = ? AND deleted_at IS NULL",
+				taskID, tc.KindergartenID, tc.ClassID).First(&locked).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherNotFound
+			}
+			return err
+		}
+		// 只有「批准」需要任务本身还支持公开；「拒绝/撤回」必须永远可用，
+		// 否则任务被关掉公开开关后，老师连撤下都做不到（与家长取消同理）。
+		if approve && (!locked.AllowPublic || locked.TargetStudentID > 0) {
+			return ErrTaskPublicNotAllowed
+		}
+		var c domain.TaskCheckIn
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND task_id = ?", checkinID, taskID).First(&c).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherInvalidParams
+			}
+			return err
+		}
+		var updates map[string]any
+		if approve {
+			switch publicCheckinStatus(&c) {
+			case TaskPublicApproved:
+				// 幂等：重复批准不刷新审核时间，避免审计记录被反复覆盖。
+			case TaskPublicPending:
+				updates = publicApproveUpdates(now, tc.UserID)
+			default:
+				// 家长已取消或撤回：必须等家长重新申请再批准，不能凭老师记忆直接放行。
+				return ErrTaskPublicStateConflict
+			}
+		} else {
+			switch publicCheckinStatus(&c) {
+			case TaskPublicNone, TaskPublicRevoked:
+				// 幂等：没有可撤回的东西，不刷新撤回时间。
+			default:
+				updates = publicRevokeUpdates(now)
+			}
+		}
+		if updates != nil {
+			if err := tx.Model(&domain.TaskCheckIn{}).Where("id = ?", c.ID).Updates(updates).Error; err != nil {
+				return err
+			}
+			var fresh domain.TaskCheckIn
+			if err := tx.Where("id = ?", c.ID).First(&fresh).Error; err != nil {
+				return err
+			}
+			c = fresh
+		}
+		out = publicCheckinView(&locked, &c, 0, now)
+		return nil
+	})
+	if isTaskLockConflict(err) {
+		return nil, ErrTaskBusy
+	}
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // ListTeacherMessages 聚合老师端消息列表（通知发布记录 + 请假审批 + 系统消息）。

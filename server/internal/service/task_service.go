@@ -252,6 +252,83 @@ func (s *TaskService) DeleteTask(ctx context.Context, kindergartenID, adminUserI
 	return nil
 }
 
+// RevokePublicCheckin 管理端强制撤回一条已公开（或待审核）的提交。
+//
+// 管理端只能撤回：不允许代替家长申请，也不允许绕过老师审核直接批准——
+// 否则「内容中只有提交者孩子」这条人为确认就失去了唯一责任人。
+func (s *TaskService) RevokePublicCheckin(ctx context.Context, kindergartenID, adminUserID, checkinID uint64, ip, ua string) (map[string]any, error) {
+	if kindergartenID == 0 {
+		return nil, errors.New("NO_KINDERGARTEN")
+	}
+	now := time.Now().In(shanghaiLoc())
+	var out map[string]any
+	changed := false
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		loc, err := locateCheckin(ctx, tx, checkinID)
+		if err != nil {
+			return err
+		}
+		// 第一把锁：parent_tasks 行，与老师端/家长端同一锁序（handoff §12.2）。
+		var t domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND kindergarten_id = ? AND deleted_at IS NULL", loc.TaskID, kindergartenID).
+			First(&t).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errTaskNotFound
+			}
+			return err
+		}
+		var c domain.TaskCheckIn
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND task_id = ?", checkinID, t.ID).First(&c).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errTaskNotFound
+			}
+			return err
+		}
+		switch publicCheckinStatus(&c) {
+		case TaskPublicPending, TaskPublicApproved:
+			if err := tx.Model(&domain.TaskCheckIn{}).Where("id = ?", c.ID).
+				Updates(publicRevokeUpdates(now)).Error; err != nil {
+				return err
+			}
+			var fresh domain.TaskCheckIn
+			if err := tx.Where("id = ?", c.ID).First(&fresh).Error; err != nil {
+				return err
+			}
+			c = fresh
+			changed = true
+		}
+		out = publicCheckinView(&t, &c, 0, now)
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, errTaskNotFound) {
+			return nil, errTaskNotFound
+		}
+		// 死锁/锁等待超时是可重试冲突，不能报成 500。
+		if isTaskLockConflict(err) {
+			return nil, ErrTaskBusy
+		}
+		return nil, err
+	}
+	// 空操作不写操作日志：否则「点了但什么都没撤」会被记成一次撤回。
+	if changed {
+		_ = s.oplog.Create(ctx, &domain.OperationLog{
+			KindergartenID: kindergartenID,
+			UserID:         adminUserID,
+			Module:         "tasks",
+			Action:         "revoke_public",
+			TargetType:     "task_check_in",
+			TargetID:       checkinID,
+			Detail:         fmt.Sprintf("task_id=%d", out["task_id"]),
+			IP:             ip,
+			UserAgent:      truncateUA(ua),
+		})
+	}
+	return out, nil
+}
+
 // CreateTaskReq POST /admin/tasks
 type CreateTaskReq struct {
 	Title       string `json:"title" binding:"required,max=200"`

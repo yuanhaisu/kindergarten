@@ -130,6 +130,36 @@
 
 ---
 
+## PUT `/admin/tasks/checkins/:checkin_id/public`
+
+> 管理员强制撤回一条已公开（或待审核）的提交
+
+```json
+// Request
+{ "revoke": true }
+
+// Response（HTTP 200）
+{
+  "checkin_id": 42,
+  "task_id": 1,
+  "is_public_requested": false,
+  "public_scope_confirmed": false,
+  "public_approved_at": null,
+  "public_approved_by": 0,
+  "public_revoked_at": "2026-03-21T09:00:00Z",
+  "public_status": "revoked",
+  "public_visible": false
+}
+```
+
+- 只有 `revoke=true` 是合法请求；缺省或 `false` → **422**「仅支持撤回操作」（管理端不得代替家长发起申请，也不得绕过老师审核直接批准）。
+- 撤回后清空 `public_scope_confirmed` / `public_approved_at` / `public_approved_by`，写 `public_revoked_at`，置 `is_public_requested=false`；公开墙下一次读取即不可见。
+- 提交不属于当前园所 → **404**；行锁等待超时/死锁 → **503**。
+- 撤回动作写操作日志（`module=tasks`、`action=revoke_public`、`target_type=task_check_in`）。
+- 权限码：`task:manage`。
+
+---
+
 ## GET `/admin/tasks/stats`
 
 > 任务统计

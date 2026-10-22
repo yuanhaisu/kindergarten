@@ -160,7 +160,7 @@
 
 ## 8. 亲子任务
 
-> A 切片：班级/个体任务、提交、老师单条/周期回应、无积分。B 切片已补：汇总后个别补充回应。公开审核、分享码仍待补。
+> A 切片：班级/个体任务、提交、老师单条/周期回应、无积分。B 切片已补：汇总后个别补充回应、公开审核。分享码仍待补。
 >
 > 老师端任务操作限定当前班级。
 
@@ -323,6 +323,10 @@
       "media_url": "https://cdn.example.com/task/checkin/1.jpg",
       "is_public_requested": false,
       "public_scope_confirmed": false,
+      "public_approved_at": null,
+      "public_revoked_at": null,
+      "public_status": "none",
+      "public_visible": false,
       "response_id": 0,
       "created_at": "2026-03-19T20:30:00Z"
     }
@@ -332,6 +336,7 @@
 ```
 
 - `status=pending` 由后端按 `created_at ASC` 排序。
+- `public_status`：`none` / `pending` / `approved` / `revoked`，供审核徽标与筛选使用。
 - 不返回 `points`。
 
 ### POST `/teacher/tasks/:id/checkins/:checkin_id/response`
@@ -409,8 +414,46 @@
 - 仪式载体必填：`sticker` 必须带 `sticker_key`、`voice` 必须带 `media_file_id` 且文件类型为音频，否则 422「贴纸需要选择具体贴纸，语音需要先录制并上传」/「语音回应必须使用音频文件」。主回应与批量回应同口径。
 - 提交不属于该任务 → 422；任务不属于当前老师班级 → 404；行锁等待超时/死锁 → 503。
 
+### PUT `/teacher/tasks/:id/checkins/:checkin_id/public`
+
+> 老师审核家长提交的公开申请（批准 / 拒绝或撤回）
+
+```json
+// Request：批准
+{
+  "approve": true,
+  "scope_confirmed": true
+}
+
+// Response（HTTP 200）
+{
+  "checkin_id": 1,
+  "is_public_requested": true,
+  "public_scope_confirmed": true,
+  "public_approved_at": "2026-03-19T21:00:00Z",
+  "public_approved_by": 11,
+  "public_revoked_at": null,
+  "public_status": "approved",
+  "public_visible": true
+}
+```
+
+```json
+// Request：拒绝 / 撤回
+{ "approve": false }
+```
+
+- **批准**时 `scope_confirmed` 必须为 `true`（老师确认「内容中只有提交者孩子」）；缺失或为 `false` → **422**「批准公开前必须确认内容中只有提交者孩子」。图片/语音/文字均适用，含其他孩子的内容不得批准。
+- 批准写 `public_scope_confirmed=true`、`public_approved_at=now`、`public_approved_by=当前老师`、`public_revoked_at=null`。
+- **拒绝/撤回**（`approve=false`）清空 `public_scope_confirmed`、`public_approved_at`、`public_approved_by`，写 `public_revoked_at=now`，`is_public_requested=false`；对从未申请过的提交调用是幂等空操作。
+- 只有处于**待审核**（家长已申请且未撤回）的提交可以批准；未申请 / 已取消 / 已撤回 → **409**「该提交当前不在待审核状态，请让家长重新申请」。已批准时重复批准是幂等空操作。
+- 前置：**批准**要求任务 `allow_public=true` 且不是个体任务，否则 **422**（个体任务与未开启公开的任务不提供公开入口）。**拒绝/撤回不受此限**——任务被关掉公开开关或改成个体任务后，老师仍必须能把残留的公开状态清干净，此时 `approve=false` 照常返回 200。
+- 任务不属于当前老师班级 → **404**；提交不属于该任务 → **422**；行锁等待超时/死锁 → **503**。
+- 再次申请必须重新批准、重新勾确认：取消/撤回会把 `public_scope_confirmed` 清成 `false`，不会沿用。
+
 ## 说明
 
-- 公开墙审核、分享码、未读属于 B 切片，详见对应端点。
+- 公开审核见上方 `PUT /teacher/tasks/:id/checkins/:checkin_id/public`；公开墙本身只在家长端。
+- 分享码、未读属于 B 切片剩余部分。
 - 班级罐配置端点属于 C 切片；A 只做创建时只读校验。
 - 任务不发放积分。

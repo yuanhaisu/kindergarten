@@ -102,6 +102,51 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 	response.OK(c, gin.H{})
 }
 
+// RevokeTaskPublicCheckin PUT /admin/tasks/checkins/:checkin_id/public
+// 管理端只能撤回：不接受 approve=true，避免绕过老师的内容边界确认。
+func (h *Handler) RevokeTaskPublicCheckin(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	checkinID, err := strconv.ParseUint(c.Param("checkin_id"), 10, 64)
+	if err != nil || checkinID == 0 {
+		response.ErrValidation(c, "无效的提交 ID")
+		return
+	}
+	var req struct {
+		Revoke bool `json:"revoke"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	if !req.Revoke {
+		response.ErrValidation(c, "仅支持撤回操作")
+		return
+	}
+	uid := middleware.GetUserID(c)
+	data, err := h.taskSvc.RevokePublicCheckin(c.Request.Context(), kgID, uid, checkinID, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		if err.Error() == "NO_KINDERGARTEN" {
+			response.ErrForbidden(c, "未绑定园所，请重新登录")
+			return
+		}
+		if service.IsTaskNotFound(err) {
+			response.ErrNotFound(c, "提交不存在")
+			return
+		}
+		if errors.Is(err, service.ErrTaskBusy) {
+			response.ErrUnavailable(c, "操作冲突，请稍后重试")
+			return
+		}
+		response.ErrInternal(c, "撤回公开内容失败")
+		return
+	}
+	response.OK(c, data)
+}
+
 type taskStatsQuery struct {
 	StartDate string `form:"start_date"`
 	EndDate   string `form:"end_date"`
