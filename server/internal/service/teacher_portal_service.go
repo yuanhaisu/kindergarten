@@ -2864,7 +2864,10 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 	db := s.db.WithContext(ctx).Model(&domain.ParentTask{}).Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
 	var total int64
 	// 计数失败必须上报：静默返回 0 会让老师看到「没有待回应」，而实际上只是查询失败。
+	// 上报前先落日志——handler 层只回「获取亲子任务失败」，ctx 里的原始错误若不在这里打，
+	// 服务端就一行痕迹都不留，排障只能靠猜（超时？连接池耗尽？哪个任务？）。
 	if err := db.Count(&total).Error; err != nil {
+		log.L(ctx).Error("list tasks count failed", "scope", "total", "err", err)
 		return nil, err
 	}
 	var rows []domain.ParentTask
@@ -2877,6 +2880,7 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 		var pending int64
 		if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
 			Where("task_id = ? AND response_id = 0", r.ID).Count(&pending).Error; err != nil {
+			log.L(ctx).Error("list tasks count failed", "scope", "pending", "task", r.ID, "err", err)
 			return nil, err
 		}
 		// 汇总回应只关当前周期，列表同时给出本周期数量与区间：
@@ -2890,6 +2894,7 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 			if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
 				Where("task_id = ? AND response_id = 0 AND date >= ? AND date <= ?", r.ID,
 					periodStart.Format("2006-01-02"), periodEnd.Format("2006-01-02")).Count(&periodPending).Error; err != nil {
+				log.L(ctx).Error("list tasks count failed", "scope", "period_pending", "task", r.ID, "err", err)
 				return nil, err
 			}
 		}

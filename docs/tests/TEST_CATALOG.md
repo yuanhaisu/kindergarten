@@ -807,17 +807,25 @@
   4. 重新进入列表：`daily · 待回应 0`，与 `GET /teacher/tasks` 一致。
   **未复验**：旧周期行与加载失败错误卡（代码未变，沿用 10-21 的证据）；连点门闩的中间态仍不可观测。
   **工具备注**：本轮遇到 `navigateTo:fail timeout`——详情 pageframe 建好但空白、导航被回滚，重试一次即成功。失败的 pageframe 会残留在 CDP target 列表**首位**，导致 `wx_cdp.mjs` 默认选错目标读到空 DOM；脚本已支持 `WX_TARGET=pages/xxx` 指定页面。另：`wx.navigateBack` 连续执行会多弹一层，读页面栈前先确认。
-- **单条「贴纸」回应门闩（2026-10-22 修复并做对照实验）**：`respond()` 原先没有门闩，贴纸是并排小按钮，连点两下会真发两次请求，第二次必落 409，用户看到「回应失败」——而第一次其实已经成功。现加 `respondBusy`，与 `batchRespond` 同形状（成功后等列表刷新落地再解锁，3 秒封顶），并给 `.actions` 加 `busy` 0.6 透明度让锁定可见。
-  **测量方法**：请求由 appservice（worker）发出、元素在 pageframe（renderer），所以同时连两个 CDP target——在 appservice 上开 `Network` 监听，在 pageframe 上对同一坐标**背靠背**派发两次真实鼠标 press/release，统计落到 `/checkins/:id/response` 的请求数。
-  **结果（对照组即证伪）**：
-  - 修复后两次点击 → **1 次** `POST /teacher/tasks/62/checkins/55/response`，页面变「暂无提交」，无失败提示。
-  - 把门闩临时摘掉重新编译（控制组），同样两次点击 → **2 次**同一 URL 的 POST（第二次 409）。两次实验只差门闩本身，说明这个测法确实能抓到这个缺陷，第一组不是空转。
-  **测量前提**：页面内合成的 `TouchEvent` 到不了 uni 的 tap 处理（实测 0 次请求，会**假通过**），必须用 CDP `Input.dispatchMouseEvent`。脚本 `_verify/double_tap_latch.mjs`，未入库。
-  被测任务 62/63 已 `DELETE /teacher/tasks/:id`（均 http=200）。
+- **单条「贴纸」回应门闩（2026-10-22 修复并做对照实验）**：`respond()` 原先没有门闩，贴纸是并排小按钮，连点两下会真发两次请求，第二次必落 409，用户看到「回应失败」——而第一次其实已经成功。
+  实现：`respondingIds` 记「正在回应的提交行 id」，**按行加闩**（不是全页开关），成功后等列表刷新落地再解锁（3 秒封顶）；`.actions` 加 `busy` 0.6 透明度让锁定可见。
+  **为什么按行**：全页单闩会把「A 在飞时去回应 B」这种正常操作一起挡掉，且请求挂住时（`uni.request` 默认 60s）整页贴纸都点不动。
+  **与批量的互斥**：`respond()` 检查 `batchBusy`，`batchRespond()` 检查 `respondingIds.length`——两条路径并发必然撞上同一行，撞出来的就是「已回应 1 条，1 条失败」这种假失败。
+  **测量方法**：请求由 appservice（worker）发出、元素在 pageframe（renderer），所以同时连两个 CDP target——在 appservice 上开 `Network` 监听请求，在 pageframe 上派发真实鼠标事件。
+  **结果**：
+  - 同一行背靠背两次点击 → **1 次** `POST .../checkins/:id/response`（对照组：临时摘掉门闩重编译后再点 → **2 次**同一 URL，第二次 409。只差门闩本身，说明测法能抓到缺陷，不是空转）。
+  - 跨行：点第一行后 60ms 点第二行 → **2 次**、两个不同 checkin id，证明按行加闩没有误伤其他学生。
+  - 中间态直接测量（渲染数据 `data.y[].i`）：飞行中 `[{k:A,i:1},{k:B,i:""}]`——只有被点的那一行变暗。
+  **测量前提**：页面内合成的 `TouchEvent` 到不了 uni 的 tap 处理（实测 0 次请求，会**假通过**），必须用 CDP `Input.dispatchMouseEvent`。
+  **一个会读错的坑**：详情页栈里残留旧实例时，`getCurrentPages()` 取到的和 pageframe 实际渲染的可能不是同一个页面，曾据此读出「两行同时变暗」的假象。测量前先 `wx.reLaunch` 清栈。
+  脚本 `_verify/latch_scope.mjs`、`latch_matrix.mjs`、`seed_two_rows.mjs`，均未入库；被测任务 62–63、64–73 已 `DELETE`（均 http=200）。
 - 业务日期与进程时区：`CreateTask` / `UpdateTask` 原用 `time.Local` 解析 `start_date` / `end_date`，与 `taskPeriodRange` 不同源；现统一用 `shanghaiLoc()`。但仅改解析还不够——MySQL DSN 是 `loc=Local`，驱动在写 DATE 列前执行 `t.In(time.Local)`，服务器 `TZ=UTC` 时「2026-10-21 00:00 +08」会被格式化成前一天。因此 `timezone.go` 的 `init()` 把 `time.Local` 对齐到 `Asia/Shanghai`，让解析、计算、落库共用同一墙钟；`teacherPortalDay` 也改用 `shanghaiLoc()`。`_ "time/tzdata"` 随两者移入该文件。
   **证据等级**：`TestProcessTimezoneAlignedWithBusiness` 断言 `time.Local` 已指向 `Asia/Shanghai` 且业务日期经 `t.In(Local)` 后日历日不变；**但 `TZ=UTC` 的写库场景无法在本机复现**——实测 Windows 上 Go 忽略 `TZ` 环境变量（`time.Local` 始终 +08），所以这条只证明了初始化生效，没证明跨时区落库。
  **前提与代价**（审查补充）：
  - 修复成立的前提是 **DSN 的 `loc` 与进程时区一致**。`MYSQL_DSN` 环境变量会整体替换配置，漏写 `loc` 时驱动默认 UTC，`init` 对驱动无效、DATE 仍会差一天。已在 `ProvideGorm` 启动时检测并 `slog.Warn`（不自动改写 DSN——那会把既有 DATETIME 的解释一起改掉）。
+ - **告警比偏移、不比名字**：`loc=PRC` / `Asia/Chongqing` / `Asia/Harbin` 是 +08 的链接名，按名字比较会把完全正确的配置判成「DATE 可能差一天」。一条会说谎的启动告警，等于让真正漏写 `loc` 的那次被当噪音忽略。现在取冬夏两个时刻各比一次偏移（冬夏都测，是为了覆盖 DST 时区：只看一个时刻，UTC 与 Europe/London 在冬季会相等而漏报）。`TestDSNLocIssue` 钉住了 PRC / Chongqing（不报）与 UTC / Asia/Urumqi（报）。
+ - **这道闸偏软**：`slog.Warn` 受日志级别约束，`[log] level = error` 时检查静默消失；也从不阻断启动。当前 `app.ini` 是 `debug`，无影响，但别把它当成硬保证。
+ - **`ListTasks` 的三条错误路径没有测试覆盖**：全量 `go test ./internal/service/` 通过只说明没碰坏别的，不说明这三条分支被测过（`grep ListTasks *_test.go` 为空）。改动前的 500 只有响应体、没有服务端日志，现在三条 COUNT 失败都会先 `log.L(ctx).Error(...)` 再返回，排障时能从日志看出是超时、连接池还是哪个任务。
  - 若某次部署曾以 `TZ=UTC` + `loc=Local` 运行，`created_at` 等 **DATETIME** 列存的是 UTC 墙钟；对齐到 +08 后这些历史行会被按 +08 解析，显示偏移 8 小时。**DATE 列只取日期部分，不受影响**。当前部署本来就是 +08，无影响。
  - `cmd/*` 下的独立二进制多数不导入 `service`，不会继承这次对齐（`fixpwd` / `initcheck` / `setpwd` 导入，会继承）。非 +08 机器上 seed/refreshtasks 与 API 的日期口径会分叉。
 - 实测：并发批量 → 赢家 `responded_count=2`、输家 `0`，DB 仅一条 `period` 回应；并发单条 → 一次 **201**、一次 **409**「该提交已被其他回应关闭，请刷新后重试」，无重复回应。

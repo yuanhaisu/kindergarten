@@ -27,7 +27,9 @@ const loading = ref(false)
 const batchBusy = ref(false)
 // 单条回应的门闩。贴纸是并排的小按钮，连点两下会真发两次请求，
 // 第二下必然落到 409，用户看到的是「回应失败」——明明第一次已经成功了。
-const respondBusy = ref(false)
+// 闩在「行」上而不是全页开关：A 的请求还在飞时去回应 B 是正常操作，不该一起被挡住。
+const respondingIds = ref([])
+const isResponding = (id) => respondingIds.value.includes(id)
 const status = ref("pending")
 const stickers = ["star", "heart", "thumb"]
 const recorder = uni.getRecorderManager()
@@ -162,23 +164,26 @@ async function load() {
 }
 
 async function respond(row, sticker) {
-  if (respondBusy.value) return
-  respondBusy.value = true
+  // 批量在飞时单条必然撞车：那一行可能刚被批量关掉，再发就 409。两个闩互相感知。
+  if (isResponding(row.id) || batchBusy.value) return
+  respondingIds.value = [...respondingIds.value, row.id]
   try {
     await respondTeacherTask(taskId.value, row.id, { ritual: "sticker", sticker_key: sticker })
     uni.showToast({ title: "已回应", icon: "success" })
     // 与 batchRespond 同形状：等刷新落地再解锁，否则列表还在飞行期间按钮又活了。
-    // uni.request 没设 timeout，走微信默认 60s，卡住时门闩不能一直锁着。
+    // 这里不会 reject——load() 自己吞掉异常并显示「加载提交失败」。
     await Promise.race([load(), new Promise((r) => setTimeout(r, 3000))])
   } catch (e) {
     uni.showToast({ title: e?.message || "回应失败", icon: "none" })
   } finally {
-    respondBusy.value = false
+    respondingIds.value = respondingIds.value.filter((id) => id !== row.id)
   }
 }
 
 async function batchRespond() {
-  if (batchBusy.value) return
+  // 反向也必须拦：单条在飞时点「一键送星」，会撞上正在关闭的那一行，
+  // 返回里就会带 failed_ids，用户看到「已回应 1 条，1 条失败」——又是一种假失败。
+  if (batchBusy.value || respondingIds.value.length) return
   batchBusy.value = true
   try {
     const res = await batchRespondTeacherTask(taskId.value, { ritual: "sticker", sticker_key: "star" })
@@ -237,7 +242,7 @@ onLoad((opts) => {
       <view class="tab" :class="{ active: status === 'responded' }" @click="switchStatus('responded')">已回应</view>
     </view>
     <!-- 与后端一致：汇总回应只关闭当前周期，旧周期的待回应走单条回应 -->
-    <view v-if="status === 'pending' && rows.length && canBatch" class="batch" :class="{ busy: batchBusy }" @click="batchRespond">一键送星（本周期）</view>
+    <view v-if="status === 'pending' && rows.length && canBatch" class="batch" :class="{ busy: batchBusy || respondingIds.length }" @click="batchRespond">一键送星（本周期）</view>
     <!-- 任务详情没加载成功时不作结论，避免把加载失败误报成「需逐条回应」 -->
     <view v-if="status === 'pending' && rows.length && task.id && !canBatch" class="batch-hint">一次性任务与个体任务需逐条回应</view>
     <view v-if="loading" class="state">加载中...</view>
@@ -247,7 +252,7 @@ onLoad((opts) => {
       <text class="content">{{ row.content || "（一键完成）" }}</text>
       <text v-if="status === 'pending' && !isCurrentPeriod(row)" class="old-period">旧周期 · 请逐条回应</text>
       <text v-if="row.media_url" class="media">已附照片/语音</text>
-      <view v-if="status === 'pending'" class="actions" :class="{ busy: respondBusy }">
+      <view v-if="status === 'pending'" class="actions" :class="{ busy: batchBusy || isResponding(row.id) }">
         <view v-for="s in stickers" :key="s" class="sticker" @click="respond(row, s)">{{ s }}</view>
         <view v-if="!recording" class="sticker" @click="startRecord(row)">录音</view>
         <view v-else class="sticker recording" @click="stopRecord">停止</view>

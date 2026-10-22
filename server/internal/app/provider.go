@@ -19,7 +19,7 @@ import (
 	ossx "kindergarten-server/internal/storage/oss"
 )
 
-// dsnLocIssue 检查 DSN 的 loc 是否与进程时区一致（配置正确时返回空串）。
+// dsnLocIssue 检查 DSN 的 loc 是否与进程时区同源（配置正确时返回空串）。
 // 业务日期依赖两者同源：MYSQL_DSN 环境变量会整体替换配置里的 DSN，
 // 漏写 loc 时驱动默认 UTC，写 DATE 列会整体差一天且没有任何报错。
 func dsnLocIssue(dsn string) string {
@@ -27,10 +27,20 @@ func dsnLocIssue(dsn string) string {
 	if err != nil {
 		return "MySQL DSN 解析失败，无法校验 loc: " + err.Error()
 	}
-	// 驱动 ParseDSN 的 Loc 默认就是 time.UTC（不会是 nil），
-	// 所以「未写 loc」与「loc=UTC」在这里是同一个分支。
-	if dsnCfg.Loc.String() != time.Local.String() {
-		return "MySQL DSN 的 loc(" + dsnCfg.Loc.String() + ") 与进程时区(" + time.Local.String() + ") 不一致（未写 loc 时驱动默认 UTC），DATE 列可能差一天"
+	// 比行为、不比名字：tzdata 里 PRC / Asia/Chongqing / Asia/Harbin 都是 +08 的链接名，
+	// 按名字比较会把完全正确的配置判成「DATE 可能差一天」——那条 warn 一旦开始说谎，
+	// 真正漏写 loc 的那次也会被当成噪音忽略掉。
+	// 取冬夏各一个时刻：只看一个时刻，UTC 与 Europe/London 在冬季会相等而漏报。
+	for _, probe := range []time.Time{
+		time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC),
+		time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC),
+	} {
+		_, procOff := probe.In(time.Local).Zone()
+		_, dsnOff := probe.In(dsnCfg.Loc).Zone()
+		if procOff != dsnOff {
+			return "MySQL DSN 的 loc(" + dsnCfg.Loc.String() + ") 与进程时区(" + time.Local.String() +
+				") 偏移不一致（未写 loc 时驱动默认 UTC），DATE 列可能差一天"
+		}
 	}
 	return ""
 }
