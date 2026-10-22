@@ -9,6 +9,9 @@ import { fetchTaskDetail, checkinTask, fetchCheckinHistory, withStudentScope } f
 
 const detail = ref({})
 const history = ref([])
+// 后端分页上限 50。超出时页面要说明「只显示最近的」，
+// 否则每日任务跑满一个月后，更早的提交会悄无声息地不见。
+const historyTotal = ref(0)
 const checkinContent = ref("")
 const mediaFileID = ref(0)
 const mediaName = ref("")
@@ -23,7 +26,9 @@ async function loadData(id) {
     // 当前孩子解析与 403 重试统一走 withStudentScope（与列表页同一条路径）。
     const scoped = await withStudentScope((sid) => Promise.all([
       fetchTaskDetail(id, { student_id: sid }),
-      fetchCheckinHistory(id, { student_id: sid }),
+      // 后端已分页（默认 20 条）；这里一次取到上限 50，并记下 total，
+      // 超出一页时在页面上说明「只显示最近 N 条」，而不是静默少显示。
+      fetchCheckinHistory(id, { student_id: sid, page: 1, page_size: 50 }),
     ]))
     if (!scoped) {
       loadError.value = "未绑定孩子信息"
@@ -32,6 +37,7 @@ async function loadData(id) {
     const [d, h] = scoped.result
     detail.value = d.data || {}
     history.value = h.data?.list || []
+    historyTotal.value = Number(h.data?.total || history.value.length)
   } catch (err) {
     detail.value = {}
     history.value = []
@@ -164,6 +170,9 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
           <text class="h-date">{{ h.date }}</text>
           <text class="h-content">{{ h.content || "已提交" }}</text>
         </view>
+        <text v-if="historyTotal > history.length" class="history-hint">
+          仅显示最近 {{ history.length }} 条提交（共 {{ historyTotal }} 条）
+        </text>
       </view>
     </template>
   </view>
@@ -188,5 +197,6 @@ onLoad((opts) => { if (opts?.id) loadData(opts.id) })
 .history-item { display: flex; align-items: center; gap: $spacing-md; padding: 20rpx; margin-bottom: 12rpx; border-radius: $border-radius-lg; background: $color-bg-card; }
 .h-date { flex: 0 0 140rpx; color: $color-text-muted; font-size: $typography-font-size-xs; }
 .h-content { flex: 1; color: $color-text-primary; font-size: $typography-font-size-sm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-hint { display: block; margin-top: $spacing-xs; color: $color-text-muted; font-size: $typography-font-size-xs; }
 .h-points { color: $color-brand-primary; font-size: $typography-font-size-sm; font-weight: 700; }
 </style>

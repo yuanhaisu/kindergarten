@@ -1693,7 +1693,7 @@ func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalC
 	return out, nil
 }
 
-func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPortalContext, taskID uint64) (map[string]any, error) {
+func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPortalContext, taskID uint64, page, pageSize int) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
 	}
@@ -1706,10 +1706,20 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 		}
 		return nil, err
 	}
+	// 契约写了 page/page_size/total：先按总数分页，total 必须是全量条数而不是当前页长度，
+	// 否则前端没法判断还有没有下一页。
+	var total int64
+	if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+		Where("task_id = ? AND student_id = ?", taskID, pc.CurrentStudent.ID).Count(&total).Error; err != nil {
+		log.L(ctx).Error("parent checkin history count failed", "task", taskID, "err", err)
+		return nil, err
+	}
 	var rows []domain.TaskCheckIn
 	if err := s.db.WithContext(ctx).Preload("Student").
 		Where("task_id = ? AND student_id = ?", taskID, pc.CurrentStudent.ID).
-		Order("date DESC").Find(&rows).Error; err != nil {
+		Order("date DESC").Offset((page - 1) * pageSize).Limit(pageSize).
+		Find(&rows).Error; err != nil {
+		log.L(ctx).Error("parent checkin history list failed", "task", taskID, "err", err)
 		return nil, err
 	}
 	list := make([]map[string]any, len(rows))
@@ -1724,7 +1734,7 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}
-	return map[string]any{"list": list, "total": len(rows)}, nil
+	return map[string]any{"list": list, "total": total}, nil
 }
 
 // ==================== Points & Achievements ====================

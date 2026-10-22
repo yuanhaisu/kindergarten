@@ -692,7 +692,8 @@ func (h *Handler) ParentCheckinHistory(c *gin.Context) {
 	if !ok2 {
 		return
 	}
-	data, err := h.parentPortalSvc.CheckinHistory(c.Request.Context(), pc, id)
+	page, ps := ppPage(c)
+	data, err := h.parentPortalSvc.CheckinHistory(c.Request.Context(), pc, id, page, ps)
 	if err != nil {
 		if errors.Is(err, service.ErrParentNotFound) {
 			response.ErrNotFound(c, "任务不存在")
