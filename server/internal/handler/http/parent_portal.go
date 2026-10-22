@@ -753,7 +753,7 @@ func parentPublicErr(c *gin.Context, err error, fallback string) {
 	case errors.Is(err, service.ErrParentInvalidParams):
 		response.ErrValidation(c, "请求参数无效")
 	case errors.Is(err, service.ErrTaskPublicNotAllowed):
-		response.ErrValidation(c, "该任务不支持公开：请确认任务已开启公开、不是个体任务且仍在进行中")
+		response.ErrValidation(c, "该任务不支持公开：请确认任务已开启公开、不是个体任务、仍在进行中，且仍属于孩子当前班级")
 	case errors.Is(err, service.ErrTaskBusy):
 		response.ErrUnavailable(c, "操作冲突，请稍后重试")
 	default:

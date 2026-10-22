@@ -75,7 +75,7 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 	case errors.Is(err, service.ErrTaskRitualPayload):
 		response.ErrValidation(c, "贴纸需要选择具体贴纸，语音需要先录制并上传")
 	case errors.Is(err, service.ErrTaskPublicNotAllowed):
-		response.ErrValidation(c, "该任务未开启公开或是个体任务，不能公开")
+		response.ErrValidation(c, "该任务未开启公开、是个体任务，或提交者已不在本班，不能批准公开")
 	case errors.Is(err, service.ErrTaskPublicScopeUnconfirmed):
 		response.ErrValidation(c, "批准公开前必须确认内容中只有提交者孩子")
 	case errors.Is(err, service.ErrTaskPublicStateConflict):

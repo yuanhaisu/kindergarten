@@ -1877,18 +1877,6 @@ func (s *ParentPortalService) lockCheckinForPublic(ctx context.Context, tx *gorm
 	return &t, &c, loc, nil
 }
 
-// taskAccessibleToChild 是 taskScopeWhere 的 Go 侧等价物：判断任务对这个孩子是否可见。
-// 两份实现必须同时改——SQL 版在 taskScopeWhere，这里只在已经锁住任务行之后用。
-func taskAccessibleToChild(t *domain.ParentTask, pc *ParentPortalContext) bool {
-	if t.KindergartenID != pc.KindergartenID {
-		return false
-	}
-	if t.TargetStudentID == 0 {
-		return t.ClassID == pc.CurrentStudent.ClassID
-	}
-	return t.TargetStudentID == pc.CurrentStudent.ID
-}
-
 // RequestPublicCheckin 家长申请把这条提交公开到班级墙。
 // 申请不等于公开：清空旧批准与旧确认，等老师重新审核。
 func (s *ParentPortalService) RequestPublicCheckin(ctx context.Context, pc *ParentPortalContext, checkinID uint64) (map[string]any, error) {
@@ -1904,8 +1892,16 @@ func (s *ParentPortalService) RequestPublicCheckin(ctx context.Context, pc *Pare
 		}
 		// 申请必须落在「这个孩子当前可见的任务」上：转班后原班级任务不再属于他，
 		// 提交回来只会让内容出现在一个他已经不属于的班级墙上。
-		if !taskAccessibleToChild(t, pc) {
+		//
+		// 契约把「任务仍属于孩子当前班级」列为允许条件（不满足 → 422）；
+		// 任务指向别的孩子属于「不可见」，仍按 404，避免泄漏任务存在性。
+		// 园所相等由 lockCheckinForPublic 的锁条件保证，这里只做防御。
+		if t.KindergartenID != pc.KindergartenID ||
+			(t.TargetStudentID > 0 && t.TargetStudentID != pc.CurrentStudent.ID) {
 			return ErrParentNotFound
+		}
+		if t.ClassID != pc.CurrentStudent.ClassID {
+			return ErrTaskPublicNotAllowed
 		}
 		// 个体任务与未开启公开的任务根本不该有公开入口；已结束/未开始的任务
 		// 放上去也永远不会出现在墙上——直接拒绝比静默排进审核队列更诚实。

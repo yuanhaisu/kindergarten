@@ -309,7 +309,8 @@ func publicCheckinStatus(c *domain.TaskCheckIn) string {
 // submitterClassID 是**提交者孩子当前所在班级**（不是读者班级）：
 //   - 公开墙要求「提交者班级 = 任务班级」，少了这条，转班或任务改派会把内容
 //     漏给一个不该看到它的班级；
-//   - 传 0 表示调用方拿不到提交者班级（学生记录缺失），此时只校验任务侧条件。
+//   - 0 表示提交者学生记录缺失或已删除。公开墙的 join 拿不到班级时整行被排除，
+//     所以这里也必须判不可见——否则老师/管理端会显示「已公开」而墙上没有。
 //
 // 「读者是否属于任务班级」由公开墙查询自己按读者 `student_id` 判定，不在本函数内。
 func publicCheckinVisible(t *domain.ParentTask, c *domain.TaskCheckIn, submitterClassID uint64, today time.Time) bool {
@@ -322,7 +323,7 @@ func publicCheckinVisible(t *domain.ParentTask, c *domain.TaskCheckIn, submitter
 	if !t.AllowPublic || t.Status != 1 || t.TargetStudentID > 0 {
 		return false
 	}
-	if submitterClassID > 0 && t.ClassID != submitterClassID {
+	if submitterClassID == 0 || t.ClassID != submitterClassID {
 		return false
 	}
 	if taskDayOf(t.EndDate).Before(taskDayOf(today)) {

@@ -856,9 +856,9 @@
 
 读路径同步补 `public_*` / `public_status` / `public_visible`（`checkin-history`、老师端 `checkins`），`public_visible` 由服务端按公开墙同一套条件算出，客户端不得自己拼。
 
-**测试**：`server/internal/service/task_public_test.go`（真实 MySQL，固定夹具 992701–992711，`Unscoped` 清理）。44 个用例覆盖：申请允许/任务未开公开/个体任务/跨家庭/已结束任务、幂等（已批准不被打回）、取消清空（含任务关公开或结束后仍可撤回、从未申请不写撤回时间）、老师必须勾确认、必须处于待审核、留痕审核人、拒绝清空、跨班 404、提交与任务不匹配 422、公开墙九条件逐条、跨班隔离、只带提交者孩子、重新申请需重新审核、取消后老师批准 409、管理端撤回与跨园所 404/空操作不写日志。
+**测试**：`server/internal/service/task_public_test.go`（真实 MySQL，固定夹具 992701–992711，`Unscoped` 清理）。47 个用例覆盖：申请允许/任务未开公开/个体任务/跨家庭/已结束任务/转班后拒绝、幂等（已批准不被打回）、取消清空（含任务关公开或结束后仍可撤回、从未申请不写撤回时间）、老师必须勾确认、必须处于待审核、留痕审核人、拒绝清空、跨班 404、提交与任务不匹配 422、公开墙九条件逐条、跨班隔离、只带提交者孩子、重新申请需重新审核、取消后老师批准 409、管理端撤回与跨园所 404/空操作不写日志、学生记录软删后的 `public_visible`/批准/撤回边界。
 
-**变异验证（25 项，全部 detected）**：逐条删掉公开墙的 `is_public_requested` / `public_scope_confirmed` / `allow_public` / `status` / `target_student_id` / `end_date` / 任务 `deleted_at` / 提交 `deleted_at` / 班级 / 提交者班级=任务班级 / `public_approved_at IS NOT NULL` / `public_revoked_at IS NULL` 条件与排序，以及申请的有效期检查、申请幂等保护、取消清 `approved_at`、审核 `scope_confirmed` 必填、审核待审核状态、锁内复核 `allow_public`、关闭公开走真实编辑路径、转班后审核与老师端 public_visible、关闭公开时只撤销仍有公开状态的行——每次只改一处，对应测试都会变红，改后 `go build ./...` 通过。脚本 `_verify/mutate_b2.py`（未入库，`_verify/` 已在 `.gitignore`）。
+**变异验证（28 项，全部 detected）**：逐条删掉公开墙的 `is_public_requested` / `public_scope_confirmed` / `allow_public` / `status` / `target_student_id` / `end_date` / 任务 `deleted_at` / 提交 `deleted_at` / 班级 / 提交者班级=任务班级 / `public_approved_at IS NOT NULL` / `public_revoked_at IS NULL` 条件与排序，以及申请的有效期检查、申请幂等保护、取消清 `approved_at`、审核 `scope_confirmed` 必填、审核待审核状态、锁内复核 `allow_public`、关闭公开走真实编辑路径、转班后审核与老师端 public_visible、关闭公开时只撤销仍有公开状态的行、学生记录软删后的可见性判定、撤回对缺失学生的容忍、转班后申请公开的状态码——每次只改一处，对应测试都会变红，改后 `go build ./...` 通过。脚本 `_verify/mutate_b2.py`（未入库，`_verify/` 已在 `.gitignore`）。
 
 > 「老师审核锁内再校验园所/班级」属 TOCTOU 兜底，串行测试观测不到（需要并发改派任务），未做变异，代码保留。
 
@@ -877,6 +877,15 @@
 8. **提交者已转班仍可批准**，造出永远不上墙的「已公开」：批准时校验提交者班级，撤回仍可用；补 `TestTeacherApproveRejectedAfterStudentLeavesClass`。
 
 另按同轮审查建议收窄 `revokePublicForTask`：只撤销**仍有公开状态**的提交，不再给从未申请的行盖 `public_revoked_at`（D7 的「清空」在这些行上本就是空操作），并加 `TestEditingTaskDoesNotRefreshRevokedAt` 守住撤回时间不被无关编辑刷新。
+
+第三轮（换切入面：契约逐字对齐 + RBAC/路由接线 + `public_visible` 与公开墙 SQL 的逐条等价）再发现 2 个 CONFIRMED、1 个契约分歧、3 处文档漂移，已修：
+
+9. **学生记录软删后 `public_visible` 仍报 true（CONFIRMED）**：`submitterClassID=0` 被当成「跳过班级校验」，而公开墙的 `st.class_id = t.class_id` 会把该行排除——违反契约「`public_visible` 等价于公开墙会不会返回它」。已改为 0 一律判不可见，补 `TestTeacherCheckinsPublicVisibleHidesDeletedStudent`。
+10. **同一状态下老师撤回被 422（CONFIRMED）**：提交者载入失败被当成参数错误，违反契约「撤回永远可用」。已改为只在查库真出错时中断（学生缺失时班级为 0，批准自然被拒、撤回照常），补 `TestTeacherRevokeWorksAfterStudentDeleted`。
+11. **转班后申请公开返回 404，契约要求 422**：`taskAccessibleToChild` 失败统一映射成 `ErrParentNotFound`。已把「班级不再匹配」单独映射为 `ErrTaskPublicNotAllowed`（422），个体任务指向别的孩子仍按 404 处理。
+12. **契约与实现的四处漂移**：家长 `public_status=approved` 原本被定义为「已批准且可见」（任务结束后并非如此）→ 改为「审核状态，是否在墙只以 `public_visible` 为准」；老师审核响应补 `task_id`；家长申请/取消补 503 与「学生记录已删除」；老师 checkins 列表补 `response` 对象说明（B1 遗留字段）。
+
+**复核确认无问题**：Casbin `keyMatch2` + `/api/v1/{parent,teacher,admin}/*` 覆盖 5 条新路由（真加载 policy 跑过 Enforce，跨角色拒绝）；路由无参数名冲突（`NewRouter` 构建通过）；`end_date` 两种比较口径等价；学生 `status` 两侧都不过滤（行为一致）；公开墙不排除读者自己孩子的提交（D7 未要求）。
 
 **状态机语义决定（后续不要改错）**：
 

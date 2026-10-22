@@ -513,7 +513,7 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 | # | 问题 | 修法 |
 | --- | --- | --- |
 | 6 | 关闭 `allow_public` 的撤销只有 helper 级测试，**真实编辑路径没被覆盖**（spec 0143 可能回归而全绿） | 新增 `TestTeacherUpdateTaskClosingPublicRevokes` + 变异「彻底不撤销公开」 |
-| 7 | `public_visible` 在老师/管理端按 0 计算，不校验提交者班级，与契约「等价于公开墙」不符 | `locateCheckin` 带出学生当前班级；老师列表、老师审核、管理端撤回都用它；新增 `TestTeacherCheckinsPublicVisibleFollowsStudentClass` |
+| 7 | `public_visible` 在老师/管理端按 0 计算，不校验提交者班级，与契约「等价于公开墙」不符 | 家长申请/取消与管理端撤回用 `locateCheckin` 带出学生当前班级；老师审核直接载入提交者班级；老师列表用 `Preload("Student")` 取班级。新增 `TestTeacherCheckinsPublicVisibleFollowsStudentClass` |
 | 8 | 提交者已转班仍可批准 → 造出永远不上墙的「已公开」状态 | 批准时校验「提交者班级 = 任务班级」，不满足 422；拒绝/撤回仍可用（`TestTeacherApproveRejectedAfterStudentLeavesClass`） |
 | 9 | `revokePublicForTask` 给**从未申请**的提交也盖 `public_revoked_at`，`public_status` 与撤回时间失真 | WHERE 收窄为「仍有公开状态」的行（申请过/确认过/批准过）；D7 的「清空」在这些行上本就是空操作，可见性不变；`TestTeacherUpdateTaskClosingPublicRevokes` 断言同伴提交保持 `none` |
 | 10 | `UpdateTask` 撤销判定用的是原始 `req.AllowPublic`，落库值却被「个体任务强制 false」夹过 | 改用 `effectiveAllowPublic = allowPublic && target==0` 判定（防御 7.1 放宽结构锁后的耦合） |
@@ -523,12 +523,34 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 - 0143：改为由**真实编辑路径**的用例守护（此前只有 helper 直调）。
 - 0145：注明「有提交后 `assertTaskEditable` 拒绝改 target，转换路径不可达」，已验证的只是公开墙侧排除个体任务，不能说成端到端已验证。
 - 「老师审核锁内再校验园所/班级」是 TOCTOU 兜底，串行测试观测不到，代码保留但不计入变异。
+
+### 12.11 第三轮审查（契约 / 接线 / 可见性等价，2026-10-22）
+
+这轮换了切入面：不再只看 service 语义，而是逐字核对 `backend/api/` 契约、Casbin/路由接线，并把 `public_visible` 的判定与公开墙 SQL 做逐条对照。发现 2 个 CONFIRMED（同一根因的两面）、1 个契约分歧、3 处契约漂移：
+
+| # | 问题 | 后果 | 修法 |
+| --- | --- | --- | --- |
+| 11 | 提交者**学生记录被软删**后，`locateCheckin`/`Preload` 拿到的班级为 0，而 `publicCheckinVisible` 把 0 当成「跳过班级校验」 | 老师 `checkins` 列表报 `public_visible=true`，公开墙的 `st.class_id = t.class_id` 却把该行排除——违反契约「`public_visible` 等价于公开墙会不会返回它」 | `submitterClassID == 0` 一律判不可见；补 `TestTeacherCheckinsPublicVisibleHidesDeletedStudent` |
+| 12 | 同一状态下老师**撤回**返回 422（`TEACHER_INVALID_PARAMS`），因为提交者载入失败被当成参数错误 | 违反契约「撤回永远可用」；老师清不掉残留公开状态（管理端仍可撤） | 只在查库真出错时中断；学生缺失时班级为 0，批准自然被拒、撤回照常；补 `TestTeacherRevokeWorksAfterStudentDeleted` |
+| 13 | §12.10 行 7 把「老师列表取班级」写成用 `locateCheckin`，实际是 `Preload("Student")` | 文档夸大了覆盖范围，正是本轮暴露 #11 的原因 | 已更正为真实实现 |
+| 14 | 家长契约把 `public_status=approved` 定义为「已批准**且可见**」，但任务结束/关闭公开/转班后仍是 approved 而 `public_visible=false` | 客户端若用 `status` 判断上墙，会在任务结束后继续显示「已公开」 | 契约改为「审核状态」，并写明「是否在墙只以 `public_visible` 为准」 |
+| 15 | 转班后申请公开返回 **404**（`ErrParentNotFound`），而契约把「任务仍属于孩子当前班级」列为允许条件并写明「不满足 → 422」 | 客户端按 404 显示「任务不存在」，与契约语义不符；测试还把错误码固化了 | 班级不再匹配 → `ErrTaskPublicNotAllowed`（422）；个体任务指向别的孩子仍按 404（不可见，不泄漏存在性）；更新测试断言 |
+| 16 | 契约漂移：老师审核响应漏写 `task_id`；老师 checkins 漏写 B1 的 `response` 对象；家长申请/取消漏写 503 | 契约不再是准确的 source of truth | 三处契约补齐（实现不变） |
+
+**复核对确认无问题的部分**：
+
+- 公开墙与 `publicCheckinVisible` 的 `end_date` 口径等价（DATE 列 + 上海时区，`taskDayOf` 与字符串比较同一天）。
+- 读者维度（`t.class_id = 读者孩子班级`）只属于墙查询，不属于 `public_visible`；后者回答的是「在该任务所属班级的墙上会不会出现」。
+- 学生 `status`（在读/毕业/退学）两侧都不过滤——行为一致；若产品要求「毕业生不上墙」，必须同时改两处，否则会新造一条漂移。
+- 公开墙不排除读者自己孩子的提交，D7 没有此要求（「本班家长可见」含自己在内）。
+- Casbin 用 `keyMatch2` + `/api/v1/{parent,teacher,admin}/*` 通配，5 条新路由都在既有 policy 覆盖内；管理端权限缺口已在 `admin_perm.go` 登记并通过 `router_perm_test`。
+- 路由无参数名冲突：`/public-wall`、`/checkins/:checkin_id/...` 与既有的 `/:id` 共存，`router_perm_test` 会构建真实路由树。
 - 「编辑时无条件调用 revoke」已不是可观测缺陷（收窄后的 WHERE 清空后再调匹配不到），`UpdateTask` 里的条件只为少写无用 UPDATE；不变量由 `TestEditingTaskDoesNotRefreshRevokedAt` 守护。
 
 ### 12.8 B2 验证状态
 
 - `go build ./...`、`go vet ./...`、`go test ./... -timeout 900s` 全绿（2026-10-22；跑全量前先停掉 `:8080` 的 `kg-server.exe`，否则识别队列测试会被抢任务）。
-- `server/internal/service/task_public_test.go`：44 个真实 MySQL 用例；`_verify/mutate_b2.py` 25 项变异全部 detected。
+- `server/internal/service/task_public_test.go`：47 个真实 MySQL 用例；`_verify/mutate_b2.py` 28 项变异全部 detected。
 - HTTP 冒烟（真实网关 + 中间件 + handler，2026-10-22）：公开墙 200、缺 `student_id` 422、不存在提交 404、管理端 `revoke=false` 422、跨班任务 404。
 - TEST_CATALOG 的 0119/0120/0121/0134/0143/0144/0145 已从 ⏸ 改为「后端已验证 ⚠️」，UI 仍待 9.3/10.x/11.4。
 - 未做：审核/申请/公开墙界面（9.3、10.x、11.4）；「含他人内容」只能靠老师勾选，无自动识别；`GET /parent/tasks` 与详情尚未返回 `public_*`（归 8.1）；`CheckinHistory` 仍按任务可见范围收窄（转班后家长查不到旧任务历史，但撤回接口可用）。

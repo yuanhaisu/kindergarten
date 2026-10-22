@@ -3552,12 +3552,13 @@ func (s *TeacherPortalService) ReviewPublicCheckin(ctx context.Context, tc *Teac
 		}
 		// 提交者现在必须还在本班：公开墙要求「提交者班级 = 任务班级」，
 		// 孩子转班后批准只会得到一个永远不上墙的「已公开」状态。
+		//
+		// 学生记录被删除时 ClassID 为 0，与任务班级必然不等——批准被拒；
+		// 但**撤回必须照常可用**（契约：撤回永远可用），所以只有查库出错才中断。
 		var submitter domain.Student
-		if err := tx.Select("class_id").Where("id = ?", c.StudentID).Take(&submitter).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrTeacherInvalidParams
-			}
-			return err
+		submitterErr := tx.Select("class_id").Where("id = ?", c.StudentID).Take(&submitter).Error
+		if submitterErr != nil && !errors.Is(submitterErr, gorm.ErrRecordNotFound) {
+			return submitterErr
 		}
 		if approve && submitter.ClassID != locked.ClassID {
 			return ErrTaskPublicNotAllowed

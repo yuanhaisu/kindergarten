@@ -715,8 +715,9 @@ func TestPublicContentFollowsStudentClassMove(t *testing.T) {
 	assert.Equal(t, TaskPublicRevoked, out["public_status"])
 
 	// 但也不能再对原班级任务申请公开：那会把内容放到一个他已经不属于的班上。
+	// 契约把「任务仍属于孩子当前班级」列为允许条件——不满足是 422，不是 404。
 	_, err = f.svcP.RequestPublicCheckin(context.Background(), f.pc, c.ID)
-	assert.ErrorIs(t, err, ErrParentNotFound)
+	assert.ErrorIs(t, err, ErrTaskPublicNotAllowed)
 }
 
 // 管理端把任务改派到别的班（7.1 结构字段锁定落地前仍可达）：
@@ -1029,4 +1030,58 @@ func TestAdminRevokeNoopDoesNotWriteLog(t *testing.T) {
 		Where("target_id = ? AND action = ?", c.ID, "revoke_public").Count(&n).Error)
 	assert.Zero(t, n, "空操作不得记成一次撤回")
 	assert.Nil(t, f.reload(t, c.ID).PublicRevokedAt)
+}
+
+// ---------- 提交者学生记录消失后的边界 ----------
+
+// 学生记录被（软）删除后，公开墙的 `st.class_id = t.class_id` 必然不成立，
+// 内容已经不可能出现在墙上；老师端不能仍报 public_visible=true。
+func TestTeacherCheckinsPublicVisibleHidesDeletedStudent(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	f.requestAndApprove(t, &f.taskPub, c.ID)
+	require.Contains(t, f.wallIDs(t, f.pcPeer), c.ID)
+
+	require.NoError(t, f.db.Delete(&domain.Student{}, testB2Student).Error)
+	assert.NotContains(t, f.wallIDs(t, f.pcPeer), c.ID, "学生记录删除后墙上不再有这条")
+
+	out, err := f.svcT.TaskCheckins(context.Background(), f.tc, f.taskPub.ID, "")
+	require.NoError(t, err)
+	rows := out["list"].([]map[string]any)
+	require.Len(t, rows, 1)
+	assert.Equal(t, false, rows[0]["public_visible"],
+		"拿不到提交者班级时，public_visible 必须与公开墙一致（false）")
+}
+
+// 提交者学生记录已删除时批准，只会造出一个永远不上墙的「已公开」。
+func TestTeacherApproveRejectedWhenStudentDeleted(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	_, err := f.svcP.RequestPublicCheckin(context.Background(), f.pc, c.ID)
+	require.NoError(t, err)
+
+	require.NoError(t, f.db.Delete(&domain.Student{}, testB2Student).Error)
+
+	_, err = f.svcT.ReviewPublicCheckin(context.Background(), f.tc, f.taskPub.ID, c.ID, true, true)
+	assert.ErrorIs(t, err, ErrTaskPublicNotAllowed)
+	assert.Nil(t, f.reload(t, c.ID).PublicApprovedAt)
+}
+
+// 契约要求「撤回永远可用」：学生记录已删除不是拒绝撤回的理由。
+func TestTeacherRevokeWorksAfterStudentDeleted(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	f.requestAndApprove(t, &f.taskPub, c.ID)
+
+	require.NoError(t, f.db.Delete(&domain.Student{}, testB2Student).Error)
+
+	out, err := f.svcT.ReviewPublicCheckin(context.Background(), f.tc, f.taskPub.ID, c.ID, false, false)
+	require.NoError(t, err, "撤回必须永远可用，不能因为学生记录被删除而 422")
+	assert.Equal(t, TaskPublicRevoked, out["public_status"])
+	assert.Equal(t, false, out["public_visible"])
+
+	row := f.reload(t, c.ID)
+	assert.False(t, row.IsPublicRequested)
+	assert.Nil(t, row.PublicApprovedAt)
+	require.NotNil(t, row.PublicRevokedAt)
 }
