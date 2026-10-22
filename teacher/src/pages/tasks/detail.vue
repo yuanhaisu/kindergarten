@@ -244,9 +244,14 @@ onPullDownRefresh(() => {
       <input v-model="edit.title" class="input" placeholder="任务标题" />
       <textarea v-model="edit.description" class="textarea" placeholder="任务说明" />
       <input v-model="edit.learning_link" class="input" placeholder="和幼儿园学习的关系" />
-      <view class="switch-row">
+      <!-- 公开只对班级任务开放；个体任务即使点了开关，后端也会静默强制关掉，
+           老师会看到「保存成功 → 再进来还是关的」。这里直接不给开关并说明原因。 -->
+      <view v-if="!task.target_student_id" class="switch-row">
         <text>允许申请公开</text>
         <switch :checked="edit.allow_public" @change="edit.allow_public = $event.detail.value" />
+      </view>
+      <view v-else class="switch-row">
+        <text>指派给个别学生的任务不可公开</text>
       </view>
       <view class="batch" @click="saveEdit">保存</view>
     </view>
