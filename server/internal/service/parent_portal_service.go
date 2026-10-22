@@ -16,6 +16,7 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/pkg/log"
 )
 
 var (
@@ -1499,7 +1500,7 @@ func taskIsActive(t *domain.ParentTask, now time.Time) bool {
 	return t.Status == 1 && !day.Before(start) && !day.After(end)
 }
 
-func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTask, studentID uint64, now time.Time) bool {
+func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTask, studentID uint64, now time.Time) (bool, error) {
 	q := db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND student_id = ?", t.ID, studentID)
 	today := now.Format("2006-01-02")
 	switch t.Frequency {
@@ -1509,8 +1510,12 @@ func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTas
 		q = q.Where("date >= ?", now.AddDate(0, 0, -6).Format("2006-01-02"))
 	}
 	var n int64
-	_ = q.Count(&n).Error
-	return n > 0
+	// 计数失败必须上报：静默当成「本周期未提交」会让家长看到可点的提交入口，
+	// 点下去拿到 422，而实际只是查询失败——把故障伪装成了业务规则。
+	if err := q.Count(&n).Error; err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
@@ -1535,10 +1540,17 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 		if !taskIsActive(&r, now) {
 			continue
 		}
-		submitted := taskSubmittedInPeriod(ctx, s.db, &r, pc.CurrentStudent.ID, now)
+		submitted, err := taskSubmittedInPeriod(ctx, s.db, &r, pc.CurrentStudent.ID, now)
+		if err != nil {
+			log.L(ctx).Error("parent list tasks count failed", "scope", "submitted", "task", r.ID, "err", err)
+			return nil, err
+		}
 		var childCount int64
-		s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
-			Where("task_id = ? AND student_id = ?", r.ID, pc.CurrentStudent.ID).Count(&childCount)
+		if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+			Where("task_id = ? AND student_id = ?", r.ID, pc.CurrentStudent.ID).Count(&childCount).Error; err != nil {
+			log.L(ctx).Error("parent list tasks count failed", "scope", "checkin_count", "task", r.ID, "err", err)
+			return nil, err
+		}
 		list = append(list, map[string]any{
 			"id": r.ID, "title": r.Title, "description": r.Description, "intro": r.Intro,
 			"learning_link": r.LearningLink, "frequency": r.Frequency, "target_student_id": r.TargetStudentID,
@@ -1568,13 +1580,20 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 	if !taskIsActive(&t, now) {
 		return nil, ErrParentNotFound
 	}
-	submitted := taskSubmittedInPeriod(ctx, s.db, &t, pc.CurrentStudent.ID, now)
+	submitted, err := taskSubmittedInPeriod(ctx, s.db, &t, pc.CurrentStudent.ID, now)
+	if err != nil {
+		log.L(ctx).Error("parent get task count failed", "scope", "submitted", "task", id, "err", err)
+		return nil, err
+	}
 
 	var responses []domain.TaskResponse
-	_ = s.db.WithContext(ctx).Table("task_responses AS r").
+	if err := s.db.WithContext(ctx).Table("task_responses AS r").
 		Joins("INNER JOIN task_check_ins AS c ON c.response_id = r.id AND c.deleted_at IS NULL").
 		Where("r.deleted_at IS NULL AND c.task_id = ? AND c.student_id = ?", id, pc.CurrentStudent.ID).
-		Order("r.created_at ASC").Find(&responses).Error
+		Order("r.created_at ASC").Find(&responses).Error; err != nil {
+		log.L(ctx).Error("parent get task responses failed", "task", id, "err", err)
+		return nil, err
+	}
 	respOut := make([]map[string]any, 0, len(responses))
 	for _, r := range responses {
 		respOut = append(respOut, map[string]any{

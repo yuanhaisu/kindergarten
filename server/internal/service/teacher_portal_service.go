@@ -3121,15 +3121,32 @@ func (s *TeacherPortalService) TaskStats(ctx context.Context, tc *TeacherPortalC
 		return nil, ErrTeacherNotFound
 	}
 	var total, responded, pending int64
-	_ = s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ?", id).Count(&total).Error
-	_ = s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND response_id <> 0", id).Count(&responded).Error
+	// 三个计数失败必须上报：静默归零会让统计显示「0 条提交」，而实际只是查询失败；
+	// pending 是算出来的差值，responded 失败时还会把待回应数算大。
+	if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ?", id).Count(&total).Error; err != nil {
+		log.L(ctx).Error("task stats count failed", "scope", "total", "task", id, "err", err)
+		return nil, err
+	}
+	if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND response_id <> 0", id).Count(&responded).Error; err != nil {
+		log.L(ctx).Error("task stats count failed", "scope", "responded", "task", id, "err", err)
+		return nil, err
+	}
 	pending = total - responded
 	return map[string]any{"task_id": id, "total_students": s.classStudentCount(ctx, tc),
 		"submission_count": total, "responded_count": responded, "pending_count": pending}, nil
 }
 
 func (s *TeacherPortalService) TaskCheckins(ctx context.Context, tc *TeacherPortalContext, id uint64, status string) (map[string]any, error) {
-	if _, err := s.TaskStats(ctx, tc, id); err != nil {
+	// 只为校验任务存在，不借用 TaskStats：那会顺带算两个统计 COUNT，
+	// 计数一失败就把整张提交列表拖成 500，而那两个数在这个接口里根本用不到。
+	var task domain.ParentTask
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).
+		First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTeacherNotFound
+		}
+		log.L(ctx).Error("task checkins load task failed", "task", id, "err", err)
 		return nil, err
 	}
 	q := s.db.WithContext(ctx).Preload("Student").Where("task_id = ?", id)
