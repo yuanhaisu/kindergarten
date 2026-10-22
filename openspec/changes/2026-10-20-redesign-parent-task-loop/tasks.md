@@ -7,7 +7,7 @@
 | 切片 | 范围 | 任务组 |
 | --- | --- | --- |
 | A · 核心闭环 | 任务范围、提交、主回应、多孩/频率、移除积分、家长/老师核心页面、基础契约 | 1.1-1.6, 2.1-2.11, 3.1-3.4, 6, 8.1-8.7, 9.1-9.4, 9.6, 10.1-10.4, 12.1-12.2 |
-| B · 隐私与感知 | 公开审核、媒体归属、补充回应、给孩子看、未读读标记、分享码/家长端小程序码、消息深链 | 3.5-3.6, 4.1-4.8, 5.1-5.7, 9.5, 9.7, 10.5-10.8, 12.3-12.4, 12.6 |
+| B · 隐私与感知 | 公开审核、媒体归属、补充回应、给孩子看、反馈汇总、未读读标记、分享码/家长端小程序码、消息深链 | 3.5-3.6, 3.11, 4.1-4.8, 5.1-5.7, 9.5, 9.7, 10.5-10.8, 12.3-12.4, 12.6 |
 | C · 集体与管理 | 班级星星罐、管理端活动分组、管理端统计/反馈指标、班级罐设置 | 3.7-3.10, 7.0-7.6, 11.1-11.4, 12.5, 12.7-12.8 |
 
 > 标记 `[P2]` 的任务是收尾项，不阻塞 A/B/C 门禁；可在对应切片内顺手处理，未列入切片范围的也不影响交付。
@@ -43,8 +43,9 @@
 - [ ] 3.2 老师端 `GET /teacher/tasks/:id/checkins` 支持 `status=pending|responded`，`pending` 由后端按 `created_at ASC` 排序，返回提交、家长、时间、回应、公开状态；验证：单测覆盖筛选与排序
 - [ ] 3.3 新增 `POST /teacher/tasks/:id/checkins/:checkin_id/response`：创建 `TaskResponse`（`single`），把 `TaskCheckIn.ResponseID` 指向该回应；验证：单测覆盖三种仪式
 - [ ] 3.4 新增 `POST /teacher/tasks/:id/checkins/batch-response`：创建一条 `TaskResponse`（`period`），把周期内待回应提交的 `ResponseID` 指向它；部分失败返回失败 ID；验证：单测覆盖全部成功、部分失败、空列表、跨任务 ID
-- [ ] 3.5 汇总后个别补充：新增 `POST /teacher/tasks/:id/checkins/:checkin_id/supplement`，创建 `TaskResponse`（`response_type=single`）并写 `task_response_supplements`；必须已有主回应，不改变 `ResponseID`；只允许贴纸/语音，`class_star` 返回明确错误；未指定仪式时默认贴纸，不继承任务默认仪式；验证：单测断言汇总后仍可追加贴纸/语音，家长端返回主回应 + 补充回应，pending 提交不能补，class_star 被拒，默认贴纸
-- [ ] 3.6 家长反馈：新增 `POST /parent/tasks/responses/:response_id/reaction`，写入 `task_response_reactions`；唯一 `(response_id, user_id)`；取值 `child_happy` / `received` / `thanks`；只允许对“自己至少有一条提交挂在该回应上”的回应反馈；验证：单测覆盖三种反馈、同一家长更新、跨家庭拒绝、多个家长分别反馈不互相覆盖；补充回应的反馈不进入主回应指标
+- [x] 3.5 汇总后个别补充：新增 `POST /teacher/tasks/:id/checkins/:checkin_id/supplement`，创建 `TaskResponse`（`response_type=single`）并写 `task_response_supplements`；必须已有主回应，不改变 `ResponseID`；只允许贴纸/语音，`class_star` 返回明确错误；未指定仪式时默认贴纸，不继承任务默认仪式；验证：单测断言汇总后仍可追加贴纸/语音，家长端返回主回应 + 补充回应，pending 提交不能补，class_star 被拒，默认贴纸
+- [x] 3.6 家长反馈：新增 `POST /parent/tasks/responses/:response_id/reaction`，写入 `task_response_reactions`；唯一 `(response_id, user_id)`；取值 `child_happy` / `received` / `thanks`；只允许对“与自己孩子提交相关”的回应反馈——提交人本人**或**与该孩子有绑定关系的另一位家长，跨家庭拒绝；验证：单测覆盖三种反馈、同一家长更新、co-parent 可反馈、跨家庭拒绝、多个家长分别反馈不互相覆盖；补充回应的反馈不进入主回应指标（指标属 7.2，落地时补断言）
+- [ ] [P1] 3.11 老师端反馈汇总：`GET /teacher/tasks/:id/feedback-summary`（或并入任务详情）返回 `feedback_coverage` / `child_happy_rate` / `ack_rate` 与按孩子的反馈计数；口径与 7.2 一致（按 `(response_id, parent_user_id)` 对计算，分母为回应覆盖的去重家长数，含通知失败；补充回应的反馈不计入）。规格「老师端与管理端 SHALL 能看到反馈汇总」的老师端一半目前无人承接；验证：单测覆盖无反馈、部分反馈、co-parent 两条反馈、补充反馈不计入
 
 - [ ] 3.7 星星罐：`StarScope=task` 统计该任务中**主回应为 `class_star` 的提交数** / `StarGoal`；`StarScope=class` 按班级当前学期统计同类提交数 / `class_star_jars.goal`；period 回应覆盖 N 条提交就加 N 星；join 时过滤 `TaskCheckIn.DeletedAt` 与 `TaskResponse.DeletedAt`；进度展示封顶 100%，目标下调时显示“已超额”；补充回应不计入；验证：单测覆盖 task/class、period 加 N 星、软删除不计入、贴纸/语音不计入、补充回应不计入、满罐/超额
 - [ ] 3.8 班级星星罐目标独立配置：新增 `GET/PUT /teacher/class/star-jar`（按学期），目标必须 >0；**复用 `task_rules.go` 的 `validateClassStarJar` helper**，本任务只做配置端点/UI，不重复写校验；teacher/admin/activity 三个创建入口共用该 helper；任务 `StarScope=class` 时忽略任务 `StarGoal`，UI 隐藏任务目标；验证：单测覆盖三个入口未配置均拒绝、目标 0 被拒、设置、修改、跨班拒绝

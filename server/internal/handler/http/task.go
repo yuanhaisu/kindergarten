@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -89,6 +90,10 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 		}
 		if service.IsTaskNotFound(err) {
 			response.ErrNotFound(c, "任务不存在")
+			return
+		}
+		if errors.Is(err, service.ErrTaskBusy) {
+			response.ErrUnavailable(c, "操作冲突，请稍后重试")
 			return
 		}
 		response.ErrInternal(c, "删除任务失败")

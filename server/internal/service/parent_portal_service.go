@@ -1587,19 +1587,63 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 	}
 
 	var responses []domain.TaskResponse
+	// 一条 period 回应会覆盖同一孩子的多条提交，裸 join 会让同一条主回应重复出现 N 次
+	// （N = 该孩子落在周期内的提交数）。按 r.id 去重，responses[] 才是「主回应」列表。
 	if err := s.db.WithContext(ctx).Table("task_responses AS r").
 		Joins("INNER JOIN task_check_ins AS c ON c.response_id = r.id AND c.deleted_at IS NULL").
 		Where("r.deleted_at IS NULL AND c.task_id = ? AND c.student_id = ?", id, pc.CurrentStudent.ID).
+		Group("r.id").
 		Order("r.created_at ASC").Find(&responses).Error; err != nil {
 		log.L(ctx).Error("parent get task responses failed", "task", id, "err", err)
 		return nil, err
 	}
+	mainIDs := make([]uint64, 0, len(responses))
+	for _, r := range responses {
+		mainIDs = append(mainIDs, r.ID)
+	}
+	supplements, err := s.taskSupplementsForStudent(ctx, id, pc.CurrentStudent.ID)
+	if err != nil {
+		log.L(ctx).Error("parent get task supplements failed", "task", id, "err", err)
+		return nil, err
+	}
+	// 反馈按家长账号一条一条存：先把主回应与补充回应用到的 id 合并，一次查出 my_reaction，
+	// 避免每条回应单独查一次。
+	allIDs := append([]uint64{}, mainIDs...)
+	for _, items := range supplements {
+		for _, sp := range items {
+			allIDs = append(allIDs, sp.ResponseID)
+		}
+	}
+	reactions := map[uint64]string{}
+	if len(allIDs) > 0 {
+		var rows []domain.TaskResponseReaction
+		if err := s.db.WithContext(ctx).
+			Where("response_id IN ? AND user_id = ?", allIDs, pc.UserID).
+			Find(&rows).Error; err != nil {
+			log.L(ctx).Error("parent get task reactions failed", "task", id, "err", err)
+			return nil, err
+		}
+		for _, r := range rows {
+			reactions[r.ResponseID] = r.Reaction
+		}
+	}
 	respOut := make([]map[string]any, 0, len(responses))
 	for _, r := range responses {
+		spOut := make([]map[string]any, 0, len(supplements[r.ID]))
+		for _, sp := range supplements[r.ID] {
+			spOut = append(spOut, map[string]any{
+				"id": sp.ResponseID, "checkin_id": sp.CheckInID, "ritual": sp.Ritual,
+				"sticker_key": sp.StickerKey, "content": sp.Content, "media_url": sp.MediaURL,
+				"created_at":  sp.CreatedAt.UTC().Format(time.RFC3339),
+				"my_reaction": reactions[sp.ResponseID],
+			})
+		}
 		respOut = append(respOut, map[string]any{
 			"id": r.ID, "ritual": r.Ritual, "sticker_key": r.StickerKey, "content": r.Content,
 			"media_url": r.MediaURL, "response_type": r.ResponseType,
-			"created_at": r.CreatedAt.UTC().Format(time.RFC3339), "my_reaction": "",
+			"created_at":  r.CreatedAt.UTC().Format(time.RFC3339),
+			"my_reaction": reactions[r.ID],
+			"supplements": spOut,
 		})
 	}
 	var reqs []string
@@ -1618,6 +1662,41 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 	}, nil
 }
 
+// taskSupplementRow 某条主回应下的补充回应（含补充回应自身的展示字段）。
+// MainID 是这条补充所附着的**主**回应 id：补充关系里存的 response_id 是补充自己的，
+// 主回应要经 checkin.response_id 反查。
+type taskSupplementRow struct {
+	ResponseID uint64    `gorm:"column:response_id"`
+	CheckInID  uint64    `gorm:"column:check_in_id"`
+	MainID     uint64    `gorm:"column:main_id"`
+	Ritual     string    `gorm:"column:ritual"`
+	StickerKey string    `gorm:"column:sticker_key"`
+	Content    string    `gorm:"column:content"`
+	MediaURL   string    `gorm:"column:media_url"`
+	CreatedAt  time.Time `gorm:"column:created_at"`
+}
+
+// taskSupplementsForStudent 取当前孩子在该任务下收到的补充回应，按主回应 id 分组。
+// 只按当前孩子的 checkin 反查：一条 period 回应可能给多个孩子各补一条，
+// 家长不能看到别人孩子的那条。
+func (s *ParentPortalService) taskSupplementsForStudent(ctx context.Context, taskID, studentID uint64) (map[uint64][]taskSupplementRow, error) {
+	var rows []taskSupplementRow
+	if err := s.db.WithContext(ctx).Table("task_response_supplements AS s").
+		Select("s.response_id, s.check_in_id, c.response_id AS main_id, r.ritual, r.sticker_key, r.content, r.media_url, r.created_at").
+		Joins("INNER JOIN task_check_ins AS c ON c.id = s.check_in_id AND c.deleted_at IS NULL").
+		Joins("INNER JOIN task_responses AS r ON r.id = s.response_id AND r.deleted_at IS NULL").
+		Where("c.task_id = ? AND c.student_id = ? AND c.response_id <> 0", taskID, studentID).
+		Where("s.deleted_at IS NULL").
+		Order("s.created_at ASC, s.id ASC").Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make(map[uint64][]taskSupplementRow, len(rows))
+	for _, r := range rows {
+		out[r.MainID] = append(out[r.MainID], r)
+	}
+	return out, nil
+}
+
 func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalContext, taskID uint64, content string, mediaFileID uint64) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
@@ -1627,7 +1706,10 @@ func (s *ParentPortalService) CheckinTask(ctx context.Context, pc *ParentPortalC
 	var out map[string]any
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var t domain.ParentTask
-		if err := taskScopeQuery(tx, pc).Where("id = ? AND status = 1", taskID).First(&t).Error; err != nil {
+		// 先锁任务行：家长提交会写 task_check_in_states 与 task_check_ins，
+		// 与 DeleteTask 的级联（先锁回应、再删 checkin/state）反序时会死锁。
+		if err := taskScopeQuery(tx, pc).Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND status = 1", taskID).First(&t).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrParentNotFound
 			}
@@ -1735,6 +1817,115 @@ func (s *ParentPortalService) CheckinHistory(ctx context.Context, pc *ParentPort
 		}
 	}
 	return map[string]any{"list": list, "total": total}, nil
+}
+
+// ReactToResponse 家长对老师回应做一键反馈（child_happy / received / thanks）。
+//
+// 反馈按 (response_id, user_id) 唯一，所以同一条汇总回应可以被多个家庭分别反馈、
+// 同一家长可以改自己的那一行，互不覆盖。
+//
+// 权限：该回应下必须挂着**这个家长自己孩子**的提交——提交人本人算，
+// 与该孩子有绑定关系的另一位家长也算（规格：家长只能对「与自己孩子提交相关」的回应反馈）。
+// 不按 CurrentStudent 收窄，是因为一条 period 回应可能同时覆盖同一家长两个孩子的提交，
+// 限定到某个孩子会逼家长对同一条回应反馈两次。
+func (s *ParentPortalService) ReactToResponse(ctx context.Context, pc *ParentPortalContext, responseID uint64, reaction string) (map[string]any, error) {
+	if !validTaskReaction(reaction) {
+		return nil, ErrParentInvalidParams
+	}
+	// 权限校验与写入必须在同一个事务里、并锁住任务行：否则并发的 DeleteTask 可以在
+	// 校验通过之后把回应软删、再让本请求写下一行指向已删回应的反馈。
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var resp domain.TaskResponse
+		if err := tx.Where("id = ? AND kindergarten_id = ?", responseID, pc.KindergartenID).First(&resp).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrParentNotFound
+			}
+			return err
+		}
+		// 锁任务行：与 DeleteTask 的级联删除串行。
+		var task domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND deleted_at IS NULL", resp.TaskID).First(&task).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrParentNotFound
+			}
+			return err
+		}
+		// 拿到任务锁后**当前读**确认回应仍然活着（上面那次 First 可能是快照读）。
+		var live domain.TaskResponse
+		if err := tx.Clauses(clause.Locking{Strength: "SHARE"}).
+			Where("id = ? AND deleted_at IS NULL", responseID).First(&live).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrParentNotFound
+			}
+			return err
+		}
+		mine, err := s.reactionAllowed(ctx, tx, responseID, pc.UserID)
+		if err != nil {
+			return err
+		}
+		if !mine {
+			return ErrParentForbidden
+		}
+		// upsert：并发/重复点击不应 500，也不该产生第二行。
+		//
+		// 唯一键是 (response_id, user_id)，**不含 deleted_at**：一旦将来加了「取消反馈」把行软删除，
+		// 这条 upsert 会命中那行已软删的记录、只改 reaction 而 deleted_at 仍非空，家长端就再也
+		// 看不到自己的反馈（与 growth_likes 的历史回归同型）。所以这里顺手把 deleted_at 清空。
+		row := domain.TaskResponseReaction{
+			KindergartenID: pc.KindergartenID, ResponseID: responseID, UserID: pc.UserID, Reaction: reaction,
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "response_id"}, {Name: "user_id"}},
+			DoUpdates: clause.Assignments(map[string]any{
+				"reaction": reaction, "deleted_at": nil, "updated_at": time.Now(),
+			}),
+		}).Create(&row).Error; err != nil {
+			log.L(ctx).Error("parent reaction upsert failed", "response", responseID, "err", err)
+			return err
+		}
+		return nil
+	})
+	if isTaskLockConflict(err) {
+		return nil, ErrTaskBusy
+	}
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"response_id": responseID, "reaction": reaction}, nil
+}
+
+// reactionAllowed 判断该家长能否对这条回应反馈：
+// 主回应看提交的 response_id，补充回应看 task_response_supplements 关系；
+// 两条路径都接受「提交人本人」或「与该孩子有绑定关系的家长」。
+func (s *ParentPortalService) reactionAllowed(ctx context.Context, tx *gorm.DB, responseID, userID uint64) (bool, error) {
+	var mine int64
+	if err := tx.Model(&domain.TaskCheckIn{}).
+		Where("response_id = ? AND user_id = ?", responseID, userID).Count(&mine).Error; err != nil {
+		log.L(ctx).Error("parent reaction permission check failed", "scope", "main", "response", responseID, "err", err)
+		return false, err
+	}
+	binding := "EXISTS (SELECT 1 FROM student_parents sp WHERE sp.student_id = c.student_id AND sp.user_id = ? AND sp.deleted_at IS NULL)"
+	if mine == 0 {
+		if err := tx.Table("task_check_ins AS c").
+			Where("c.response_id = ? AND c.deleted_at IS NULL", responseID).
+			Where("c.user_id = ? OR "+binding, userID, userID).
+			Count(&mine).Error; err != nil {
+			log.L(ctx).Error("parent reaction permission check failed", "scope", "main_co_parent", "response", responseID, "err", err)
+			return false, err
+		}
+	}
+	if mine == 0 {
+		if err := tx.Table("task_response_supplements AS s").
+			Joins("INNER JOIN task_check_ins AS c ON c.id = s.check_in_id AND c.deleted_at IS NULL").
+			Where("s.response_id = ? AND s.deleted_at IS NULL", responseID).
+			Where("c.user_id = ? OR "+binding, userID, userID).
+			Count(&mine).Error; err != nil {
+			log.L(ctx).Error("parent reaction permission check failed", "scope", "supplement", "response", responseID, "err", err)
+			return false, err
+		}
+	}
+	return mine > 0, nil
 }
 
 // ==================== Points & Achievements ====================

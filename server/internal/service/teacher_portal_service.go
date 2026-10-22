@@ -72,9 +72,11 @@ var (
 	ErrTeacherForbidden     = errors.New("TEACHER_FORBIDDEN")
 	ErrTeacherNotFound      = errors.New("TEACHER_RESOURCE_NOT_FOUND")
 	ErrTeacherInvalidParams = errors.New("TEACHER_INVALID_PARAMS")
-	ErrTeacherDuplicate     = errors.New("PICKUP_DUPLICATE")
-	ErrTeacherPickupOrder   = errors.New("PICKUP_ORDER_INVALID")
-	ErrTeacherInvalidQRCode = errors.New("INVALID_QR_CODE")
+	// ErrTeacherRitualMediaType 语音回应必须挂音频文件，图片不能当语音发。
+	ErrTeacherRitualMediaType = errors.New("TEACHER_RITUAL_MEDIA_TYPE")
+	ErrTeacherDuplicate       = errors.New("PICKUP_DUPLICATE")
+	ErrTeacherPickupOrder     = errors.New("PICKUP_ORDER_INVALID")
+	ErrTeacherInvalidQRCode   = errors.New("INVALID_QR_CODE")
 	// ErrTeacherConsecutiveDirection 连续同向登记：托管序列必须「送入—接走」交替
 	ErrTeacherConsecutiveDirection = errors.New("PICKUP_CONSECUTIVE_DIRECTION")
 	// ErrTeacherRemarkRequired 重复接走 / 提前接走时理由必填
@@ -3091,15 +3093,31 @@ func (s *TeacherPortalService) DeleteTask(ctx context.Context, tc *TeacherPortal
 	var title string
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var task domain.ParentTask
-		if err := tx.Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).First(&task).Error; err != nil {
-			return ErrTeacherNotFound
+		// 先锁任务行再做级联：与 SupplementResponse / ReactToResponse 的「锁任务行」对齐，
+		// 让删除与并发追加补充/反馈串行，级联才不会漏掉对方刚写入的关系行。
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).
+			First(&task).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherNotFound
+			}
+			log.L(ctx).Error("task delete load task failed", "task", id, "err", err)
+			return err
 		}
 		title = task.Title
 		if err := deleteTaskCascade(ctx, tx, id); err != nil {
-			return ErrTeacherNotFound
+			if errors.Is(err, errTaskNotFound) {
+				return ErrTeacherNotFound
+			}
+			// 级联失败不是「任务不存在」：吞成 404 会让客户端以为已经删掉了。
+			log.L(ctx).Error("task delete cascade failed", "task", id, "err", err)
+			return err
 		}
 		return nil
 	})
+	if isTaskLockConflict(err) {
+		return ErrTaskBusy
+	}
 	if err != nil {
 		return err
 	}
@@ -3200,6 +3218,9 @@ func (s *TeacherPortalService) RespondTask(ctx context.Context, tc *TeacherPorta
 	if ritual != domain.TaskRitualSticker && ritual != domain.TaskRitualVoice && ritual != domain.TaskRitualClassStar {
 		return nil, ErrTeacherInvalidParams
 	}
+	if err := validateRitualPayload(ritual, stickerKey, mediaFileID); err != nil {
+		return nil, err
+	}
 	var mediaURL string
 	if mediaFileID > 0 {
 		var f domain.File
@@ -3209,10 +3230,24 @@ func (s *TeacherPortalService) RespondTask(ctx context.Context, tc *TeacherPorta
 		if f.FileType != "image" && f.FileType != "audio" {
 			return nil, ErrTeacherInvalidParams
 		}
+		// 语音只能挂音频：挂图片能上传成功，但家长端播放不出来（规格：语音 MUST 能被播放）。
+		if ritual == domain.TaskRitualVoice && f.FileType != "audio" {
+			return nil, ErrTeacherRitualMediaType
+		}
 		mediaURL = f.FileURL
 	}
 	var response domain.TaskResponse
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先锁任务行，与 DeleteTask 的级联同序：否则「锁 checkin → 插 response」会与
+		// 「锁 response → 软删 checkin」形成反序死锁（实测 1213）。
+		var lockedTask domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND deleted_at IS NULL", taskID).First(&lockedTask).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherNotFound
+			}
+			return err
+		}
 		var checkin domain.TaskCheckIn
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("id = ? AND task_id = ? AND response_id = 0", checkinID, taskID).
@@ -3266,6 +3301,9 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 	if ritual != domain.TaskRitualSticker && ritual != domain.TaskRitualVoice && ritual != domain.TaskRitualClassStar {
 		return nil, ErrTeacherInvalidParams
 	}
+	if err := validateRitualPayload(ritual, stickerKey, mediaFileID); err != nil {
+		return nil, err
+	}
 	// 规格：个体任务与一次性活动 MUST 逐条回应，只有每日/每周班级任务可汇总。
 	if !batchRespondAllowed(&task) {
 		return nil, ErrTaskBatchNotAllowed
@@ -3279,6 +3317,10 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 		if f.FileType != "image" && f.FileType != "audio" {
 			return nil, ErrTeacherInvalidParams
 		}
+		// 语音只能挂音频：挂图片能上传成功，但家长端播放不出来（规格：语音 MUST 能被播放）。
+		if ritual == domain.TaskRitualVoice && f.FileType != "audio" {
+			return nil, ErrTeacherRitualMediaType
+		}
 		mediaURL = f.FileURL
 	}
 	// 汇总回应只关闭当前周期内的待回应提交；区间在事务内锁定读取，
@@ -3288,6 +3330,15 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 	failed := []uint64{}
 	responded := 0
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 同 RespondTask：先锁任务行，保证与 DeleteTask 的级联加锁顺序一致。
+		var lockedTask domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND deleted_at IS NULL", taskID).First(&lockedTask).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherNotFound
+			}
+			return err
+		}
 		var rows []domain.TaskCheckIn
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("task_id = ? AND response_id = 0 AND date >= ? AND date <= ?",
@@ -3333,6 +3384,98 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 		return nil, err
 	}
 	return map[string]any{"id": response.ID, "responded_count": responded, "failed_ids": failed}, nil
+}
+
+// SupplementResponse 在汇总/单条回应之后，给某一条已回应的提交追加个别补充回应。
+//
+// 补充回应是一条独立的 TaskResponse(response_type=single) + 一行
+// task_response_supplements 关系；**不改** TaskCheckIn.ResponseID，因此提交的
+// 「已回应」状态与主回应保持不变，家长端按「主回应 + 补充回应」展示。
+// 待回应的提交不能补：它还没有主回应，追加会让家长看到一条孤立的补充。
+func (s *TeacherPortalService) SupplementResponse(ctx context.Context, tc *TeacherPortalContext, taskID, checkinID uint64, ritual, stickerKey, content string, mediaFileID uint64) (map[string]any, error) {
+	var task domain.ParentTask
+	if err := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ? AND class_id = ?", taskID, tc.KindergartenID, tc.ClassID).First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTeacherNotFound
+		}
+		// DB 故障不能伪装成 404：那会让老师以为任务没了，重试也没意义。
+		log.L(ctx).Error("task supplement load task failed", "task", taskID, "err", err)
+		return nil, err
+	}
+	ritual, err := supplementRitual(ritual)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateRitualPayload(ritual, stickerKey, mediaFileID); err != nil {
+		return nil, err
+	}
+	var mediaURL string
+	if mediaFileID > 0 {
+		var f domain.File
+		if err := s.db.WithContext(ctx).Where("id = ? AND user_id = ? AND biz_type = ? AND deleted_at IS NULL", mediaFileID, tc.UserID, "task").First(&f).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, ErrTeacherInvalidParams
+			}
+			// 文件表查询失败不是「参数无效」，不能吞成 422。
+			log.L(ctx).Error("task supplement load media failed", "file", mediaFileID, "err", err)
+			return nil, err
+		}
+		if f.FileType != "image" && f.FileType != "audio" {
+			return nil, ErrTeacherInvalidParams
+		}
+		if ritual == domain.TaskRitualVoice && f.FileType != "audio" {
+			return nil, ErrTeacherRitualMediaType
+		}
+		mediaURL = f.FileURL
+	}
+	var response domain.TaskResponse
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先锁任务行：与 DeleteTask 的级联删除串行，避免「任务正在删」与「追加补充」
+		// 交错，留下指向已软删回应的孤儿关系行（SQL 审查 F1）。
+		var lockedTask domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND deleted_at IS NULL", taskID).First(&lockedTask).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherNotFound
+			}
+			return err
+		}
+		// 锁住提交行：校验「已有主回应」与写补充关系必须在同一把锁内完成，
+		// 否则并发的撤回/重复点击会让状态在校验与写入之间变化。
+		var checkin domain.TaskCheckIn
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND task_id = ?", checkinID, taskID).
+			First(&checkin).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherInvalidParams
+			}
+			return err
+		}
+		if checkin.ResponseID == 0 {
+			return ErrTaskSupplementForbidden
+		}
+		response = domain.TaskResponse{
+			KindergartenID: tc.KindergartenID, TaskID: taskID, TeacherID: tc.UserID,
+			Ritual: ritual, StickerKey: stickerKey, Content: content,
+			MediaFileID: mediaFileID, MediaURL: mediaURL, ResponseType: domain.TaskResponseSingle,
+		}
+		if err := tx.Create(&response).Error; err != nil {
+			return err
+		}
+		return tx.Create(&domain.TaskResponseSupplement{
+			KindergartenID: tc.KindergartenID, ResponseID: response.ID, CheckInID: checkinID,
+		}).Error
+	})
+	if isTaskLockConflict(err) {
+		return nil, ErrTaskBusy
+	}
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"id":         response.ID,
+		"created_at": response.CreatedAt.UTC().Format(time.RFC3339),
+	}, nil
 }
 
 // ListTeacherMessages 聚合老师端消息列表（通知发布记录 + 请假审批 + 系统消息）。

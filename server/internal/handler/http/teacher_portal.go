@@ -68,11 +68,51 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrInternal(c, "批量回应失败，提交仍待回应，请重试")
 	case errors.Is(err, service.ErrTaskRespondConflict):
 		response.ErrConflict(c, "该提交已被其他回应关闭，请刷新后重试")
+	case errors.Is(err, service.ErrTaskSupplementForbidden):
+		response.ErrValidation(c, "该提交尚未回应，请先完成主回应")
+	case errors.Is(err, service.ErrTaskSupplementRitual):
+		response.ErrValidation(c, "补充回应仅支持贴纸或语音")
+	case errors.Is(err, service.ErrTaskRitualPayload):
+		response.ErrValidation(c, "贴纸需要选择具体贴纸，语音需要先录制并上传")
+	case errors.Is(err, service.ErrTeacherRitualMediaType):
+		response.ErrValidation(c, "语音回应必须使用音频文件")
 	case errors.Is(err, service.ErrTaskBusy):
 		response.ErrUnavailable(c, "操作冲突，请稍后重试")
 	default:
 		response.ErrInternal(c, fallback)
 	}
+}
+
+func (h *Handler) TeacherSupplementResponse(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	taskID, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	checkinID, err := strconv.ParseUint(c.Param("checkin_id"), 10, 64)
+	if err != nil || checkinID == 0 {
+		response.ErrValidation(c, "无效的提交 ID")
+		return
+	}
+	var req struct {
+		Ritual      string `json:"ritual"`
+		StickerKey  string `json:"sticker_key"`
+		Content     string `json:"content"`
+		MediaFileID uint64 `json:"media_file_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.teacherPortalSvc.SupplementResponse(c.Request.Context(), tc, taskID, checkinID, req.Ritual, req.StickerKey, req.Content, req.MediaFileID)
+	if err != nil {
+		teacherPortalErr(c, err, "补充回应失败")
+		return
+	}
+	response.Created(c, data)
 }
 
 func (h *Handler) TeacherHomeOverview(c *gin.Context) {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
@@ -214,10 +215,26 @@ func (s *TaskService) DeleteTask(ctx context.Context, kindergartenID, adminUserI
 		return errTaskNotFound
 	}
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 与老师端 DeleteTask / SupplementResponse / ReactToResponse 同一把序：
+		// 先锁 parent_tasks 行，再动 task_responses。否则管理端与老师端并发删除时
+		// 会形成「任务锁 ↔ 回应锁」的 A→B / B→A 死锁。
+		var locked domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND kindergarten_id = ? AND deleted_at IS NULL", taskID, kindergartenID).
+			First(&locked).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errTaskNotFound
+			}
+			return err
+		}
 		return deleteTaskCascade(ctx, tx, taskID)
 	}); err != nil {
 		if errors.Is(err, errTaskNotFound) {
 			return errTaskNotFound
+		}
+		// 死锁/锁等待超时是可重试冲突，不能报成 500。
+		if isTaskLockConflict(err) {
+			return ErrTaskBusy
 		}
 		return err
 	}

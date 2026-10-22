@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/domain"
 )
@@ -26,6 +27,12 @@ var (
 	ErrTaskRespondConflict = errors.New("TASK_RESPOND_CONFLICT")
 	// 行锁等待超时 / 死锁：可重试，映射为 503。
 	ErrTaskBusy = errors.New("TASK_BUSY")
+	// 补充回应只能追加到已有主回应的提交上；待回应提交必须先走主回应。
+	ErrTaskSupplementForbidden = errors.New("TASK_SUPPLEMENT_FORBIDDEN")
+	// 补充回应只支持贴纸/语音，班级星星不适用：一条提交只有一个主回应能计入星星罐。
+	ErrTaskSupplementRitual = errors.New("TASK_SUPPLEMENT_RITUAL")
+	// 仪式缺少载体：贴纸没选具体贴纸，或语音没有媒体。
+	ErrTaskRitualPayload = errors.New("TASK_RITUAL_PAYLOAD")
 )
 
 // isTaskLockConflict 判定 MySQL 锁等待超时（1205）与死锁（1213）。
@@ -52,6 +59,51 @@ func validateTargetStudent(ctx context.Context, db *gorm.DB, kindergartenID, cla
 		return errTaskTargetInvalid
 	}
 	return nil
+}
+
+// supplementRitual 归一化补充回应的仪式。
+//
+// 空值默认贴纸，**不继承**任务默认仪式：任务默认仪式表达的是「主回应的口径」，
+// 若继承下来，一个默认 class_star 的任务会让所有补充回应都变成非法请求。
+// class_star 与未知取值都拒绝——前者由规格显式要求，后者不能悄悄落到贴纸。
+func supplementRitual(ritual string) (string, error) {
+	switch ritual {
+	case "":
+		return domain.TaskRitualSticker, nil
+	case domain.TaskRitualSticker, domain.TaskRitualVoice:
+		return ritual, nil
+	case domain.TaskRitualClassStar:
+		return "", ErrTaskSupplementRitual
+	default:
+		return "", ErrTaskSupplementRitual
+	}
+}
+
+// validateRitualPayload 校验仪式所需的载体：贴纸必须带 sticker_key（否则家长端渲染不出来），
+// 语音必须带媒体（否则家长端播放不了）。class_star 不需要载体。
+// 规格原文：贴纸 MUST 能被家长端渲染；语音 MUST 能被家长端播放。
+func validateRitualPayload(ritual, stickerKey string, mediaFileID uint64) error {
+	switch ritual {
+	case domain.TaskRitualSticker:
+		if stickerKey == "" {
+			return ErrTaskRitualPayload
+		}
+	case domain.TaskRitualVoice:
+		if mediaFileID == 0 {
+			return ErrTaskRitualPayload
+		}
+	}
+	return nil
+}
+
+// validTaskReaction 家长反馈只接受三种取值。
+func validTaskReaction(reaction string) bool {
+	switch reaction {
+	case domain.TaskReactionChildHappy, domain.TaskReactionReceived, domain.TaskReactionThanks:
+		return true
+	default:
+		return false
+	}
 }
 
 // validateClassStarJar 校验班级当前是否有可用的星星罐目标。
@@ -150,9 +202,15 @@ func assertTaskEditable(ctx context.Context, db *gorm.DB, taskID uint64, updates
 }
 
 // deleteTaskCascade 删除任务及其提交/回应/读标记/频率状态/补充/反馈。
+//
+// 回应 id 必须用**当前读**取（FOR UPDATE）。用普通 SELECT 拿到的是事务快照，
+// 与并发的 SupplementResponse 交叉时会漏掉它刚提交的补充回应，结果只软删了回应、
+// 没删补充关系，留下一条 deleted_at IS NULL 的孤儿关系行。
 func deleteTaskCascade(ctx context.Context, tx *gorm.DB, taskID uint64) error {
 	var responseIDs []uint64
-	if err := tx.WithContext(ctx).Unscoped().Model(&domain.TaskResponse{}).Where("task_id = ?", taskID).Pluck("id", &responseIDs).Error; err != nil {
+	if err := tx.WithContext(ctx).Unscoped().Clauses(clause.Locking{Strength: "UPDATE"}).
+		Model(&domain.TaskResponse{}).Where("task_id = ?", taskID).
+		Pluck("id", &responseIDs).Error; err != nil {
 		return err
 	}
 	if len(responseIDs) > 0 {

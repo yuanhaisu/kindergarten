@@ -29,6 +29,14 @@ const (
 	TaskResponsePeriod = "period"
 )
 
+// TaskReaction 家长对回应的反馈取值。
+// child_happy 是孩子感知质量信号；received / thanks 是家长确认，统计时必须分开。
+const (
+	TaskReactionChildHappy = "child_happy"
+	TaskReactionReceived   = "received"
+	TaskReactionThanks     = "thanks"
+)
+
 // ParentTask 亲子任务（老师/园所布置）
 type ParentTask struct {
 	BaseModel

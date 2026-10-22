@@ -25,6 +25,9 @@
 - `DELETE /teacher/tasks/:id`
 - `GET /teacher/tasks/:id/stats`
 - `GET /teacher/tasks/:id/checkins`
+- `POST /teacher/tasks/:id/checkins/:checkin_id/response`
+- `POST /teacher/tasks/:id/checkins/:checkin_id/supplement`
+- `POST /teacher/tasks/:id/batch-response`
 
 ---
 
@@ -157,7 +160,7 @@
 
 ## 8. 亲子任务
 
-> A 切片：班级/个体任务、提交、老师单条/周期回应、无积分。公开审核、补充回应、分享码属于 B 切片。
+> A 切片：班级/个体任务、提交、老师单条/周期回应、无积分。B 切片已补：汇总后个别补充回应。公开审核、分享码仍待补。
 >
 > 老师端任务操作限定当前班级。
 
@@ -351,6 +354,7 @@
 
 - `ritual`：`sticker` / `voice` / `class_star`。
 - 回应后提交 `response_id` 指向该回应。
+- 仪式载体必填：`sticker` 必须带 `sticker_key`；`voice` 必须带 `media_file_id` **且文件类型为音频**（否则 422「贴纸需要选择具体贴纸，语音需要先录制并上传」/「语音回应必须使用音频文件」）；`class_star` 不需要载体。批量回应与补充回应同口径。
 - 提交不存在 → 422；提交已被其他回应关闭（并发/重复点击）→ **409**「该提交已被其他回应关闭，请刷新后重试」；行锁等待超时/死锁 → **503**「操作冲突，请稍后重试」。
 
 ### POST `/teacher/tasks/:id/batch-response`
@@ -376,9 +380,37 @@
 - 只有**每日/每周的班级任务**（`target_student_id=0` 且 `frequency` 为 `daily|weekly`）支持汇总回应；个体任务、一次性任务及其它频率返回 422 `一次性任务与个体任务需逐条回应`。
 - 当前周期没有待回应提交时返回 **200** 与 `{"id": 0, "responded_count": 0, "failed_ids": []}`（空操作，不创建回应）；创建成功返回 201。
 - 有候选提交但一条都没写成功时返回 500，提交保持待回应；部分失败返回 `failed_ids` 且 `responded_count` 只计成功条数。
+- 仪式载体校验与单条回应一致（`sticker` 需 `sticker_key`、`voice` 需音频媒体）。
+
+### POST `/teacher/tasks/:id/checkins/:checkin_id/supplement`
+
+> 汇总回应之后，给某一条已回应的提交追加个别补充回应
+
+```json
+// Request
+{
+  "ritual": "sticker",
+  "sticker_key": "flower",
+  "content": "单独夸一句",
+  "media_file_id": 0
+}
+
+// Response（HTTP 201）
+{
+  "id": 12,
+  "created_at": "2026-03-19T20:40:00Z"
+}
+```
+
+- 只能追加到**已有主回应**的提交上；待回应的提交调用本接口 → 422「该提交尚未回应，请先完成主回应」。
+- 补充回应是一条独立的 `TaskResponse`（`response_type=single`）+ 一行 `task_response_supplements` 关系；**不改变**提交的 `response_id`，提交仍保持「已回应」，家长端按「主回应 + 补充回应」展示。
+- `ritual` 只接受 `sticker` / `voice`；`class_star` → 422「补充回应仅支持贴纸或语音」（一条提交只有一个主回应能计入星星罐）。未传时默认 `sticker`，**不继承**任务默认仪式。
+- 同一条提交可以追加多条补充；`media_file_id` 校验与主回应一致（上传者本人、`biz_type=task`、image/audio）。
+- 仪式载体必填：`sticker` 必须带 `sticker_key`、`voice` 必须带 `media_file_id` 且文件类型为音频，否则 422「贴纸需要选择具体贴纸，语音需要先录制并上传」/「语音回应必须使用音频文件」。主回应与批量回应同口径。
+- 提交不属于该任务 → 422；任务不属于当前老师班级 → 404；行锁等待超时/死锁 → 503。
 
 ## 说明
 
-- 公开墙审核、补充回应、分享码、未读属于 B 切片。
+- 公开墙审核、分享码、未读属于 B 切片，详见对应端点。
 - 班级罐配置端点属于 C 切片；A 只做创建时只读校验。
 - 任务不发放积分。

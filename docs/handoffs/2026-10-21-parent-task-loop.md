@@ -392,7 +392,75 @@ GET  /api/v1/parent/tasks/:id/checkin-history?student_id=...
 ## 11. 新会话开场建议
 
 ```text
-读 docs/handoffs/2026-10-21-parent-task-loop.md，按里面的“下一步”继续：
-先执行 nullable SQL，再跑核心链路，最后执行 TC-NEW-TSK-0101～0146。
-不要动 B/C 切片，不要新增积分，不要改通知实现。
+读 docs/handoffs/2026-10-21-parent-task-loop.md，按里面的“下一步”继续。
+A 切片与 B1（3.5 补充回应 + 3.6 家长反馈）已落地；B 剩下的按 §12 的窗口表逐组推进，
+一次只做一组，做完一组要先做限制性对抗性审查再验证，通过后才进下一组。
+不要新增积分，不要改通知实现。
 ```
+
+---
+
+## 12. B 切片进展（2026-10-22）
+
+B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走完「改 → 限制性对抗性审查 → 验证」再进下一组：
+
+| 窗口 | 任务组 | 状态 |
+| --- | --- | --- |
+| **B1** | 3.5 补充回应 + 3.6 家长反馈 | ✅ 2026-10-22 完成（后端） |
+| B2 | 4.1–4.4 公开审核 + 公开墙 | 未开始 |
+| B3 | 5.1–5.5 通知聚合 + 读标记 + 小程序码 | 未开始 |
+| B4 | 9.5/9.7 + 10.5–10.8 前端 + 12.3/12.4/12.6 | 未开始 |
+
+### 12.1 B1 落地内容
+
+- `POST /teacher/tasks/:id/checkins/:checkin_id/supplement` → `TeacherPortalService.SupplementResponse`
+- `POST /parent/tasks/responses/:response_id/reaction` → `ParentPortalService.ReactToResponse`
+- `ParentPortalService.GetTask` 的 `responses[]` 新增 `supplements[]`（只含当前孩子），`my_reaction` 按家长账号回填
+- 契约：`backend/api/api-teacher/09-class-and-tasks.md`、`backend/api/api-parent/06-task.md`
+- 测试：`server/internal/service/task_response_supplement_test.go`（17 条，真实 MySQL）；每条关键断言都做过变异验证（删掉被守护的条件后该测试确实失败）
+
+### 12.2 B1 的语义决定（后续不要改错）
+
+- **补充回应不改 `ResponseID`**：它是一条独立 `TaskResponse(single)` + 一行关系表，提交的「已回应」状态与主回应都不动。
+- **补充的 `ritual` 不继承任务默认仪式**：空值一律贴纸。否则一个默认 `class_star` 的任务会让所有补充请求 422。
+- **补充禁止 `class_star`**：一条提交只有一个主回应能计入星星罐（3.7 的口径依赖这一点）。
+- **反馈权限按「自己孩子」而不是「自己提交」**：提交人本人算，与该孩子有绑定关系的另一位家长也算（规格原文「家长只能对与自己孩子提交相关的回应反馈」）。判定时主回应走 `checkin.response_id`、补充回应走 `task_response_supplements` 关系，两条路径都要有；`student_parents` 绑定作为 co-parent 的放行条件。反馈仍记在**家长账号**维度，一条 period 回应可能覆盖两个孩子的提交，不按当前孩子收窄。
+- **所有任务写入方都先锁任务行（`SELECT ... FOR UPDATE` on `parent_tasks`）**：老师端 `DeleteTask` / `RespondTask` / `BatchRespondTask` / `SupplementResponse`、家长端 `CheckinTask` / `ReactToResponse`、管理端 `TaskService.DeleteTask`。这是唯一能同时防止「孤儿关系行」和「1213 死锁」的锁序：
+  - 孤儿：级联用当前读（`FOR UPDATE` Pluck）取回应 id，能看见并发补充刚提交的回应；
+  - 死锁：级联的顺序是「锁回应 → 删 checkin」，而回应路径是「锁 checkin → 插回应」，不先拿任务锁就是 A→B/B→A。
+  - 任何**新增**的任务写路径都必须先锁任务行，否则死锁会以 500 形式出现（删除类已映射 503）。
+- **语音只能挂音频**：三个回应入口共用同一判断（`ErrTeacherRitualMediaType`），否则会写入家长端播不出来的语音回应。
+- **仪式载体必填**：贴纸必须有 `sticker_key`，语音必须有音频媒体。主回应/批量回应/补充回应三个入口共用 `validateRitualPayload`。
+- **`BaseModel` 自带 `DeletedAt`**，所有表默认软删除。凡是手写 `.Table(...)` 的查询都要自己补 `deleted_at IS NULL`；upsert 命中软删行时要清 `deleted_at`（同 `growth_likes` 的历史回归）。
+
+### 12.3 B1 的路由结论（推翻 §9 的一条旧结论）
+
+§9 写的「避免 Gin 的 `:id` 与静态段冲突」在 gin 1.11 上**不成立**：`/parent/tasks/responses/:response_id/reaction` 与 `/parent/tasks/:id` 可以共存，静态段优先匹配。`go test ./internal/app` 会构造整张路由表，冲突会直接 panic。
+
+### 12.4 B1 未做的部分
+
+- 老师端界面看不到某条提交已经追加过哪些补充（`TeacherTaskCheckins` 未返回 supplements）——归 9.3。
+- 家长端反馈按钮、补充回应渲染、「给孩子看」：归 10.3 / 10.5。
+- 指标（`feedback_coverage` / `child_happy_rate` / `ack_rate`）：管理端归 7.2；**老师端反馈汇总此前无人承接**，已登记为 3.11（P1）。落地时补一条「补充回应的反馈不进入主回应指标」的断言。
+
+### 12.5 B1 UI 回归证据（2026-10-22）
+
+实测路径（微信开发者工具 + CDP 直连）：
+
+| # | 端 | 操作 | 结果 |
+| --- | --- | --- | --- |
+| 1 | 家长 | 打开任务详情 | 正常渲染任务标题/学习关联/提交区/打卡历史 |
+| 2 | 家长 | 一键提交（真实鼠标事件） | 页面转为「打卡历史 2026-10-22 已提交」 |
+| 3 | 老师 | 微信授权登录（含协议勾选，真实点击） | 进入工作台，`teacher_token` 落盘 |
+| 4 | 老师 | 打开任务详情 | 待回应列表出现提交；贴纸选项 star/heart/thumb/录音 齐全 |
+| 5 | 老师 | 点击 star 贴纸回应 | 待回应清空；「已回应」标签页出现该提交 |
+| 6 | 家长 | 重新打开该任务 | 渲染「老师回应 / 贴纸 / 老师回应了你」，console 0 error |
+
+工具层坑（复现记录，下次别再踩）：
+
+- MCP 的 `wechat_navigate` / `wechat_automator(page_data)` / `wechat_screenshot` 在本机均 **120s 超时**；全程改用 `_verify/wx_cdp.mjs`（CDP 直连 `127.0.0.1:9222`）做导航、读文本、真实点击。
+- `wx_cdp.mjs click <sel>` 默认 `touch` 模式 **点不动 uni 的 @click**（没有任何请求发出）；必须传第二个参数 `mouse`。
+- DOM 标签是 `wx-view` / `wx-text` / `wx-button`（不是 `uni-*`），选择器要按前者写。
+- 老师端与家长端共用同一个 IDE 实例：用 `wechat_ide(open)` 切项目后，**另一端的 automator 会失效**，需要重新 `start`；切换后 storage 仍在，但页面可能停在 login，重新走一次授权登录即可。
+
+未覆盖（前端尚未实现，不是回归遗漏）：老师端补充回应入口（9.3）、家长端反馈按钮与补充回应渲染（10.3/10.5）。

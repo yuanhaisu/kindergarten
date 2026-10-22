@@ -705,6 +705,42 @@ func (h *Handler) ParentCheckinHistory(c *gin.Context) {
 	response.OK(c, data)
 }
 
+func (h *Handler) ParentReactResponse(c *gin.Context) {
+	pc, ok := h.parentTaskCtx(c)
+	if !ok {
+		return
+	}
+	responseID, err := strconv.ParseUint(c.Param("response_id"), 10, 64)
+	if err != nil || responseID == 0 {
+		response.ErrValidation(c, "无效的回应 ID")
+		return
+	}
+	var req struct {
+		Reaction string `json:"reaction"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, svcErr := h.parentPortalSvc.ReactToResponse(c.Request.Context(), pc, responseID, req.Reaction)
+	if svcErr != nil {
+		switch {
+		case errors.Is(svcErr, service.ErrParentNotFound):
+			response.ErrNotFound(c, "回应不存在")
+		case errors.Is(svcErr, service.ErrParentForbidden):
+			response.ErrForbidden(c, "只能对自己的孩子的回应反馈")
+		case errors.Is(svcErr, service.ErrParentInvalidParams):
+			response.ErrValidation(c, "无效的反馈取值")
+		case errors.Is(svcErr, service.ErrTaskBusy):
+			response.ErrUnavailable(c, "操作冲突，请稍后重试")
+		default:
+			response.ErrInternal(c, "反馈失败")
+		}
+		return
+	}
+	response.OK(c, data)
+}
+
 // ========== Points ==========
 
 func (h *Handler) ParentPointsOverview(c *gin.Context) {

@@ -677,7 +677,7 @@
 ## 亲子任务闭环（TSK-LOOP）
 
 > 对应 OpenSpec 变更 `2026-10-20-redesign-parent-task-loop`。行为规格见 `openspec/changes/2026-10-20-redesign-parent-task-loop/specs/parent-task-loop/spec.md`。
-> A 切片状态：2026-10-21 已按 A 切片执行 API 级核心链路；✅ = 实测通过，⚠️ = 仅覆盖主路径，⏸ = B/C 切片未实现或不在 A 范围。
+> A 切片状态：2026-10-21 已按 A 切片执行 API 级核心链路；B1（2026-10-22）：3.5 补充回应 + 3.6 家长反馈后端落地。✅ = 实测通过，⚠️ = 仅覆盖主路径，⏸ = B/C 切片未实现或不在 A 范围。
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |-------|------|--------|------|------|
@@ -692,8 +692,8 @@
 | TC-NEW-TSK-0109 | 单条回应闭环 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0110 | 周期汇总回应 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0111 | 批量回应部分失败可见 | P1 | FUNC | ⚠️ 并发路径已验证，写入失败路径未构造 |
-| TC-NEW-TSK-0112 | 家长一键反馈 | P1 | FUNC | ⏸ |
-| TC-NEW-TSK-0113 | 反馈覆盖率与正向率 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0112 | 家长一键反馈 | P1 | FUNC | ⚠️ 后端已验证（`task_response_supplement_test.go`：三种取值、同家长 upsert、co-parent 可反馈、无绑定 403、多家庭各占一行、软删行可复活、反馈按家长隔离）；家长端 UI 待 10.5 |
+| TC-NEW-TSK-0113 | 反馈覆盖率与正向率 | P1 | FUNC | ⏸ 指标聚合属 7.2；聚合落地时需补断言「补充回应的反馈不进入主回应指标」 |
 | TC-NEW-TSK-0114 | 贴纸回应 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0115 | 语音回应 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0116 | 班级星星回应 | P0 | FUNC | ✅ |
@@ -715,7 +715,7 @@
 | TC-NEW-TSK-0132 | 要求列表逐条展示 | P1 | FUNC | ✅ |
 | TC-NEW-TSK-0133 | 首页待办按孩子与周期统计 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0134 | 取消后再次申请必须重新审核 | P0 | FUNC | ⏸ |
-| TC-NEW-TSK-0135 | 汇总后个别补充回应 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0135 | 汇总后个别补充回应 | P1 | FUNC | ⚠️ 后端已验证（汇总后贴纸/语音可追加、`response_id` 不变、pending 拒绝、`class_star` 拒绝、默认贴纸不继承任务仪式、跨班/跨园所拒绝、媒体归属校验、仪式载体必填、家长端只看到本孩子的补充、period 回应不重复、删任务不留孤儿）；老师端 UI 待 9.3 |
 | TC-NEW-TSK-0136 | 给孩子看展示态 | P1 | FUNC | ⏸ |
 | TC-NEW-TSK-0137 | 班级星星罐目标独立于任务 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0138 | 按活动批量编辑与统计 | P0 | FUNC | ⏸ |
