@@ -179,7 +179,7 @@ OpenSpec：
 openspec/changes/2026-10-20-redesign-parent-task-loop/
 ```
 
-> 该目录目前**未跟踪**，清理工作区前先确认不要丢。
+> 该目录已入库（文件全部跟踪，2026-10-22 核对）。早前「未跟踪、清理工作区前先备份」的提示已过期。
 
 ## 6. 当前验证状态
 
@@ -380,14 +380,14 @@ GET  /api/v1/parent/tasks/:id/checkin-history?student_id=...
 - **媒体**：`media_file_id` 必须属于当前用户且 `biz_type=task`；不要接受任意外链。
 - **路由**：批量回应用 `POST /teacher/tasks/:id/batch-response`，避免 Gin 的 `:id` 与 `checkins` 冲突。
 - **编辑**：老师编辑页 `status` 用 `?? 1`，不要用 `|| 1`，否则已结束任务会被重新打开。
-- **OpenSpec 目录未跟踪**：`openspec/changes/2026-10-20-redesign-parent-task-loop/` 不要在工作区清理时删掉。
+- **OpenSpec 目录已入库**：`openspec/changes/2026-10-20-redesign-parent-task-loop/` 下的文件都在版本控制里，按普通代码对待即可（此前「未跟踪、别误删」的提醒已过期）。
 
 ## 10. 回滚
 
 - 任务代码已提交；按提交回滚：`git revert <commit>`。
 - 或只回滚文件：`git checkout <commit> -- <path>`。
 - nullable SQL 是向后兼容的，不需要回滚。
-- OpenSpec change 目录未跟踪，回滚代码前先备份。
+- OpenSpec change 目录已入库，随代码一起 `git revert` 即可。
 
 ## 11. 新会话开场建议
 
