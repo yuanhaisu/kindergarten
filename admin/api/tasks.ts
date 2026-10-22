@@ -15,7 +15,6 @@ export function createTask(body: {
   frequency: 'daily' | 'weekly' | 'once'
   start_date: string
   end_date: string
-  points?: number
 }) {
   return useHttp().post<{ id: number; created_at: string }>('/admin/tasks', body)
 }
@@ -29,7 +28,6 @@ export function updateTask(
     frequency: 'daily' | 'weekly' | 'once'
     start_date: string
     end_date: string
-    points?: number
     status: number
   },
 ) {

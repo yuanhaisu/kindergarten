@@ -508,7 +508,6 @@ export interface TaskItem {
   frequency_label: string
   start_date: string
   end_date: string
-  points: number
   status: number
   completion_rate: string
   creator: { nickname: string }

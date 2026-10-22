@@ -27,7 +27,6 @@ type TaskListRow struct {
 	Frequency   string    `gorm:"column:frequency"`
 	StartDate   time.Time `gorm:"column:start_date"`
 	EndDate     time.Time `gorm:"column:end_date"`
-	Points      int       `gorm:"column:points"`
 	Status      int8      `gorm:"column:status"`
 	CreatorID   uint64    `gorm:"column:creator_id"`
 	CreatorNick string    `gorm:"column:creator_nick"`
@@ -62,7 +61,7 @@ func (r *TaskRepo) ListTasks(
 	}
 	sel := base.Session(&gorm.Session{}).
 		Select(`pt.id, pt.class_id, c.name AS class_name, pt.title, pt.frequency,
-			pt.start_date, pt.end_date, pt.points, pt.status,
+			pt.start_date, pt.end_date, pt.status,
 			pt.creator_id, u.nickname AS creator_nick, pt.created_at`).
 		Order("pt.created_at DESC, pt.id DESC").
 		Offset(offset).Limit(limit)
@@ -189,15 +188,4 @@ func (r *TaskRepo) CountCheckinsInDateRange(ctx context.Context, kindergartenID 
 		Where("ci.date >= ? AND ci.date <= ?", rangeStart, rangeEnd).
 		Count(&n).Error
 	return n, err
-}
-
-func (r *TaskRepo) SumCheckinPointsInDateRange(ctx context.Context, kindergartenID uint64, rangeStart, rangeEnd time.Time) (int64, error) {
-	var sum int64
-	err := r.db.WithContext(ctx).Table("task_check_ins AS ci").
-		Select("COALESCE(SUM(ci.points), 0)").
-		Joins("INNER JOIN parent_tasks AS t ON t.id = ci.task_id AND t.deleted_at IS NULL").
-		Where("t.kindergarten_id = ? AND ci.deleted_at IS NULL", kindergartenID).
-		Where("ci.date >= ? AND ci.date <= ?", rangeStart, rangeEnd).
-		Scan(&sum).Error
-	return sum, err
 }

@@ -13,7 +13,6 @@
       <el-table-column prop="title" label="任务" min-width="160" />
       <el-table-column prop="class_name" label="班级" />
       <el-table-column prop="frequency_label" label="频率" width="100" />
-      <el-table-column prop="points" label="积分" width="70" />
       <el-table-column prop="completion_rate" label="完成率" width="100" />
       <el-table-column label="操作" width="100">
         <template #default="{ row }">
