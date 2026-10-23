@@ -189,6 +189,7 @@
       "recognition_ritual": "sticker",
       "star_scope": "task",
       "star_goal": 20,
+      "star_count": 12,
       "pending_responses": 3,
       "pending_period": 3,
       "period_start": "2026-03-25",
@@ -210,6 +211,13 @@
   所以该字段不能当作「可以一键关闭」的承诺）。
 - `period_start` / `period_end` 与 `GET /teacher/tasks/:id` 同义（`taskPeriodRange`）。
   列表页只在两者不等时额外提示「本周期 N」，避免与详情页的关闭条数对不上。
+- `star_count`：**本任务**已集星数 = 主回应 `ritual=class_star` 且未删除的提交数。
+  `period` 回应覆盖 N 条提交就计 N 星；补充回应不改变 `checkin.response_id`，不计入。
+  `StarScope=class` 时这个字段仍只表示本任务的贡献，班级罐总进度（含学期目标）由 C 切片端点提供，
+  不要拿它冒充班级罐进度。
+  **星数查询失败时列表与详情都返回 `null`**（不是 0）：星数是装饰性聚合，不能让任务列表/详情整体不可用；
+  客户端应隐藏进度而不是显示 0。`StarScope=class` 的统计**不做学期过滤**，只是本任务全生命周期的贡献，
+  C 切片计算班级罐时不得直接累加 `star_count`（需按学期重新统计）。
 - `points` 已移除。
 
 ### GET `/teacher/tasks/:id`
@@ -231,6 +239,7 @@
   "recognition_ritual": "sticker",
   "star_scope": "task",
   "star_goal": 20,
+  "star_count": 12,
   "status": 1,
   "period_start": "2026-03-21",
   "period_end": "2026-03-21",
@@ -239,6 +248,7 @@
 ```
 
 - `period_start` / `period_end`：当前汇总回应周期（每日=当天；每周=滚动 7 天；任务结束后取最后一天/最后一周）。前端用它区分「本周期待回应」与旧周期遗留。
+- `star_count`：口径同列表；星数查询失败时返回 `null`（不阻塞详情），客户端应隐藏「已集 N 星」。
 
 ### POST `/teacher/tasks`
 
@@ -331,7 +341,8 @@
       "public_status": "none",
       "public_visible": false,
       "response_id": 0,
-      "created_at": "2026-03-19T20:30:00Z"
+      "created_at": "2026-03-19T20:30:00Z",
+      "supplements": []
     }
   ],
   "total": 1
@@ -341,6 +352,10 @@
 - `status=pending` 由后端按 `created_at ASC` 排序。
 - `public_status`：`none` / `pending` / `approved` / `revoked`，供审核徽标与筛选使用。
 - `response_id > 0` 时额外返回 `response` 对象（`id` / `ritual` / `sticker_key` / `content` / `media_url` / `response_type` / `created_at`）。
+- `supplements`：该提交上追加的补充回应，**始终是数组**（空数组而非 `null`），按 `created_at ASC, id ASC`。
+  每项形状 `{ id, checkin_id, ritual, sticker_key, content, media_url, created_at }`；`ritual` 只会是 `sticker` / `voice`。
+  只返回未删除的关系行/提交/回应。老师端用它显示「已补充 N 条」，避免下次进入以为没补过而重复追加。
+  **读取补充回应失败时整个 checkins 请求失败**（不返回空数组）：`[]` 只能表示「确实没补过」。
 - 不返回 `points`。
 
 ### POST `/teacher/tasks/:id/checkins/:checkin_id/response`

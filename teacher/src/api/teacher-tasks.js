@@ -44,6 +44,26 @@ export function batchRespondTeacherTask(taskId, data) {
   })
 }
 
+// 汇总/单条回应之后追加个别补充。只能发给已有主回应的提交（待回应提交后端 422），
+// 仪式仅支持 sticker / voice，class_star 会被拒绝（一条提交只有一个主回应能计星）。
+export function supplementTeacherResponse(taskId, checkinId, data) {
+  return requestWithAuth({
+    url: `/teacher/tasks/${taskId}/checkins/${checkinId}/supplement`,
+    method: "POST",
+    data
+  })
+}
+
+// 老师审核家长公开申请：批准必须带 scope_confirmed=true（确认内容里只有提交者孩子）；
+// 拒绝/撤回传 approve=false，任务关掉公开开关后仍可用（契约要求撤回永远可用）。
+export function reviewTeacherTaskPublic(taskId, checkinId, data) {
+  return requestWithAuth({
+    url: `/teacher/tasks/${taskId}/checkins/${checkinId}/public`,
+    method: "PUT",
+    data
+  })
+}
+
 // 家长端任务详情的小程序码（PNG base64）。码由后端用家长端凭据生成，
 // 客户端只负责落盘到相册；返回 { task_id, page, scene, env_version, image_base64 }。
 export function fetchTaskShareCard(taskId) {

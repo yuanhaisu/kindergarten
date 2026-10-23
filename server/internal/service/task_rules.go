@@ -13,7 +13,9 @@ import (
 )
 
 var (
-	errTaskStructuralLocked = errors.New("TASK_STRUCTURAL_LOCKED")
+	// ErrTaskStructuralLocked 有提交后修改结构字段。导出给 handler 映射成明确文案，
+	// 不能落进笼统的「参数错误」——老师根本看不出是结构锁。
+	ErrTaskStructuralLocked = errors.New("TASK_STRUCTURAL_LOCKED")
 	errTaskTargetInvalid    = errors.New("TASK_TARGET_INVALID")
 	errTaskStarJarMissing   = errors.New("TASK_STAR_JAR_MISSING")
 	// 批量回应没有抢到任何待回应提交（并发/重复点击的落败方）：回滚，不留孤儿回应。
@@ -201,7 +203,7 @@ func assertTaskEditable(ctx context.Context, db *gorm.DB, taskID uint64, updates
 	allowed := map[string]bool{"title": true, "description": true, "learning_link": true, "allow_public": true}
 	for k := range updates {
 		if !allowed[k] {
-			return errTaskStructuralLocked
+			return ErrTaskStructuralLocked
 		}
 	}
 	return nil

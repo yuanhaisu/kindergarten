@@ -963,3 +963,212 @@ design.md 的 D7/D12、backend/api/api-teacher/09-class-and-tasks.md。
 ```
 
 现成夹具（园所 4）：任务 4322（已提交 + 主回应 + 补充回应，用于老师端「补充回应」入口）、4323（家长端公开申请/撤销）、4324（class 1，分享码）、4325/4326/4327（家长端待完成/连点）；消息 1171（带 `action_path`）；`task_read_marks` 131。
+
+---
+
+## 18. B4-b 落地内容（2026-10-23）
+
+范围：9.1 余下（supplement / public 审核封装）、9.2（创建/编辑表单新字段）、9.3（补充回应与公开审核 UI）、9.7。
+起点 `e517184`，未提交任何 9.x 勾选（真机验证未做）。
+
+### 18.1 改了什么（逐个文件）
+
+| 文件 | 变更 |
+| --- | --- |
+| `teacher/src/api/teacher-tasks.js` | 新增 `supplementTeacherResponse(taskId, checkinId, data)`（POST supplement）与 `reviewTeacherTaskPublic(taskId, checkinId, {approve, scope_confirmed})`（PUT public）；`share-card` 沿用 B4-a |
+| `teacher/src/pages/tasks/index.vue` | 创建表单：星星罐范围改成「按任务/按班级」两态，班级态不可选并说明去管理端配置；星星目标始终可填（选班级星星仪式时必填）；公开开关旁说明审核责任；列表频率/仪式中文化、补「星星目标 N / 个体任务」、学生名单失败显式提示 |
+| `teacher/src/pages/tasks/detail.vue` | 任务结构区：无提交时可选频率/日期/范围（班级/个体）/仪式/星星目标，有提交或提交数加载失败时改为只读摘要；关公开、改个体各有页面内两步确认；单条回应补「加星」（任务默认班级星星时）；已回应行渲染贴纸图形/语音播放/班级星星；周期汇总按默认仪式发 `class_star` 或 ⭐ 贴纸并如实标注；已回应行可追加补充（贴纸/语音，班级星星不可选）；公开审核块（pending/approved/revoked 分开表达，批准前必须勾「内容中只有提交者孩子」，撤回两步确认，撤回永远可用）；录音失败收闩并提示 |
+
+### 18.2 语义决定（后续不要改错）
+
+1. **汇总回应的载体跟随任务默认仪式**。A 切片无论任务仪式都发 `{ritual:sticker, sticker_key:star}`——对 `class_star` 任务来说这颗⭐根本不进星星罐。现在 `recognition_ritual=class_star` 时批量发 `{ritual:class_star}`，其余发 ⭐ 贴纸；按钮文案分别为「一键送星 / 一键送贴纸（本周期）」。
+2. **结构锁定以 `GET /teacher/tasks/:id/stats` 的 `submission_count` 为准**。加载失败按锁定处理（只读 + 可重试），否则老师会在「不知道有没有提交」时改结构，保存才吃 422。
+3. **改个体与关公开都是破坏性操作**，各用页面内两步确认；pending 期间禁止保存，避免「点了取消却已经提交」。
+4. **`revoked` 只说「未公开」**，不判断是老师拒绝还是家长取消（两者写同一个 `public_revoked_at`，与 B4-a 16.6-#3 同口径）。
+5. **「内容中只有提交者孩子」的勾选每轮作废**：审核成功后清掉；`load()` 只保留当前仍为 pending 的行的勾选，家长重新申请必须重新勾（D7）。
+6. **公开 `approve` 与 `public_visible` 分开表达**：approved 但 `public_visible=false` 时额外说明「任务已结束/停用、未开启公开、已改个体或孩子已不在本班」（与后端 `publicCheckinVisible` 全部条件对齐）。
+7. **老师端没有读取补充回应的字段**（`GET /teacher/tasks/:id/checkins` 只返回主回应）：UI 只在本次会话标记「✓ 已追加补充回应」，不假装能列出历史补充；要补历史需改契约 + service（见 18.4）。
+8. **班级星星罐配置仍不可用**：`GET/PUT /teacher/class/star-jar` 属 C 切片、路由不存在，老师端无法判断是否已配置，因此「按班级」选项置灰并说明，不猜。
+9. **两步确认不跨刷新沿用**：`load()` 会清空 `revokeConfirmId`，并且只保留当前仍为 pending 行的「只有提交者孩子」勾选。否则上一轮没确认的撤回会停在「确认撤下？」上，刷新后一次点击就撤掉。
+10. **不能批准时不给批准入口**：`task.allow_public=false` 或个体任务时，pending 行只显示说明 + 撤回，不显示勾选/批准（否则老师点了才吃 422）。任务详情未加载时也不给批准。
+11. **录音期间禁止其它回应**：录音在飞时点贴纸/加星/汇总/补充会先关掉提交，录音结束后的语音回应必然 409；现在这些入口先提示「请先停止当前录音」。
+12. **保存结构后同时重取提交列表**：关公开/改个体会在服务端批量撤销公开状态，不重取 checkins 的话当前页还会显示「已公开 · 本班家长可见」，与实际相反。
+13. **切 tab 时重取 stats**：家长可能在老师停留期间提交；不重取会让结构编辑器继续开着，保存时才 422。
+14. **「加星」入口看星星罐是否存在，不看任务默认仪式**：`star_scope=class`（班级罐）或 `star_goal>0`（任务罐）才显示。D5 明确默认仪式可逐条调整，若只看 `recognition_ritual=class_star`，默认贴纸但已设任务罐的任务永远加不了星；目标为 0 的任务仍不显示（发了也不计数）。
+
+### 18.3 验证证据（真实点击 + 库核对）
+
+后端 `go run cmd/api/main.go`（8080），IDE 单实例，视图层读取 `_verify/wxc.py --host <port>`；逻辑层 `wx.navigateBack` 在热重载后会让 `getCurrentPages()` 与 pageframe 漂移，必要时用 `_verify/pf.py --route` 直连 pageframe，或 close+open 重开项目（见 18.5）。
+
+| # | 动作 | 结果 |
+| --- | --- | --- |
+| 1 | 工作台点「亲子任务」 | 进 `pages/tasks/index`；列表显示中文频率/仪式、星星目标、待回应数 |
+| 2 | 填标题/说明/学习关联 → 点「创建任务」 | 任务 4332 落库，字段与输入一致 |
+| 3 | 打开 4332（0 提交） | 结构区为可编辑 picker；改星星目标 0→4、开公开 → 保存 | 库 `star_goal=4, allow_public=1` |
+| 4 | 关公开 → 「确认关闭」前点保存 | 库 `allow_public` 仍为 1（pending 期间被拦）；取消后开关恢复 |
+| 5 | 再关公开 → 确认关闭 → 保存 | 库 `allow_public=0` |
+| 6 | 家长 API 给 4332 提交一条 | 重进详情：显示「已有 1 条提交，结构已锁定」+ 只读摘要，picker 消失 |
+| 7 | 打开 4333（`target_student_id=21`，创建时请求 allow_public=true） | 显示「指派给个别学生的任务不可公开」、范围「周嘉嘉」；库 `allow_public=0`（后端强制） |
+| 8 | 4335（班级、allow_public=1）把范围改成周嘉嘉（走 exparser change 绑定，原生 picker 无法 CDP 点击） | 出现「改为…个体任务会关闭公开并撤下已公开内容」确认；确认后保存 | 库 `target_student_id=21, allow_public=0` |
+| 9 | 4335 改频率 一次性→每日、开始日期→10-24 → 保存 | 库 `frequency=daily, start_date=2026-10-24` |
+| 10 | 4328 待审核：不勾确认点「批准公开」 | 库 `public_scope_confirmed` 仍 0、`approved_at` 仍 NULL（被前端拦） |
+| 11 | 勾确认 → 批准 | 库 `scope_confirmed=1, approved_at=13:26:38, approved_by=11`；UI「已公开 · 本班家长可见」+ 撤回 |
+| 12 | 点「撤回公开」一次 | 出现「确认撤下？/取消」，库未变 |
+| 13 | 点「确认撤下？」 | 库 `is_public_requested=0, scope=0, approved_at=NULL, approved_by=0, revoked_at` 有值；UI「未公开」 |
+| 14 | 家长重新申请公开 1957 后重进 | 勾选框回到 ☐（不沿用上一轮确认） |
+| 15 | 4329 待回应行点 ⭐ | 生成主回应 701，`checkin.response_id=701`；待回应清空 |
+| 16 | 已回应 tab 点「补充回应」→ 🌸 | 生成 702（`single`）+ `task_response_supplements` 指向 1958；UI「✓ 已追加补充回应」；补充面板只有贴纸/语音，无班级星星 |
+| 17 | 4330（daily/class_star）点「加星」 | 生成 703 `ritual=class_star, response_type=single` |
+| 18 | 同一任务点「一键送星（本周期）」 | 生成 704 `response_type=period, period_start=period_end=当天`，覆盖 1960 |
+| 19 | 4334（daily/sticker）详情 | 按钮文案「一键送贴纸（本周期）」；点击生成 707 `sticker/star/period` |
+| 20 | 4332 已回应 tab（语音主回应） | 渲染「🔊 点击播放语音」（语音文件由 `/common/upload` 上传，id 992000120） |
+| 21 | 4324 点「生成小程序码」 | 落盘 `USER_DATA_PATH/task-share-4324.png`（82497 字节）；按钮 15s 封顶后恢复可点 |
+| 22 | 四个页面 CDP 采集 console | 0 error（仅 IDE 自身 3 条 warning） |
+| 23 | 对抗性审查后：把 4328 改成 `allow_public=0` + 1957 待审核 → 重进详情 | 不显示勾选/批准，显示「任务已关闭公开或已改成个体任务，不能批准；可撤回这条申请」 |
+| 24 | 在该状态下点「拒绝」→「确认撤下？」 | 库 `is_public_requested=0, revoked_at` 有值；UI「未公开」（撤回不受公开开关限制） |
+| 25 | 审查后重跑 build + console | build 通过；0 error；tokens 对 tasks 文件 0 违规 |
+| 26 | 4328（默认贴纸、`star_goal=5`）待回应行 | 显示「加星」（默认仪式不阻挡任务罐加星，D5） |
+| 27 | 4336（默认贴纸、`star_goal=0`）待回应行 | 不显示「加星」（没有可计数的星星罐） |
+
+两端 build：`teacher npm run build:mp-weixin` 通过；`node scripts/check-tokens.mjs teacher` 对两个改动文件 **0 违规**（顺手把 index.vue 原有的两处 `#fff` 改为 token，基线 217→215）。
+
+### 18.4 未验证 / 缺口（不要当成已验证）
+
+- **9.1/9.2/9.3/9.7 都没勾**：按 §15.5 / §17，勾选要等真机（12.6 扫码 + 真机录音）。
+- **原生 picker 无法用 CDP 真实点击**：频率/日期/范围/仪式的「用户点选」是用 exparser 的 `bindchange` 处理器模拟（`$vm.$scope.e3_c0` 等），handler 路径是真、手势不是。真机上需人工点一遍四类 picker。
+- **录音交互未跑**：IDE 内麦克风/系统授权不可控；主回应与补充回应的语音只验证了上传 + API 落库 + 已回应行渲染/播放按钮，`getRecorderManager` 的录制→上传→回应链路未真实点。
+- ~~补充回应的历史不可见~~ → **已补齐**：`checkins` 增加 `supplements`，见 §19。
+- ~~星星进度不可见~~ → **已补齐任务罐进度**：列表/详情增加 `star_count`，见 §19。班级罐总进度仍缺（C 切片）。
+- **班级星星罐配置不可用**：`GET/PUT /teacher/class/star-jar` 仍属 C 切片；「按班级」选项与「班级罐目标设置」未交付。
+- **真机扫码、真机多孩、真机公开墙**未做（沿用 B4-a 缺口）。
+- **IDE 路由漂移是环境问题**：热重载/`wx.navigateBack` 后 `getCurrentPages()` 可能仍指向已关闭的 detail，同时 pageframe 已是别的页；`wxc.py` 会报 `no live stack`/`no pageframe`。处理：`_verify/pf.py --route` 直连，或 close+open 重开项目；**不是应用代码问题**，但排查时容易误判成「页面没跳」。
+
+### 18.5 对抗性审查与处置（2026-10-23，对 B4-b diff）
+
+按「怎样让它坏」逐条过，另起一个全新上下文的只读审查者复核（其结论未能在本窗口返回，以下处置均经我逐条对源码/库复核）。
+
+| # | 缺陷 | 性质 | 处置 |
+| --- | --- | --- | --- |
+| 1 | **默认贴纸但 `star_goal>0` 的任务没有「加星」入口**：`starTracking` 只看 `recognition_ritual=class_star`。D5 明确「默认仪式可逐条调整」，任务罐有目标就该能加星；否则列表显示「星星目标 5」却永远加不了 | 违反 D5 / 语义误导 | 已修：`star_scope=class` 或 `star_goal>0` 才显示加星；`star_goal=0` 仍不显示。复验：4328（贴纸+目标5）有「加星」、4336（目标0）没有 |
+| 2 | **录音期间点贴纸/加星/汇总**：会先关掉提交，录音结束后的语音回应必然 409「已被其他回应关闭」 | 交互竞争 | 已修：这些入口先提示「请先停止当前录音」 |
+| 3 | **保存结构后不重取 checkins**：关公开/改个体会在服务端批量撤销公开，当前页仍显示「已公开 · 本班家长可见」 | 状态说反 | 已修：保存后 `load()`，三个请求一起刷新 |
+| 4 | **切 tab 不重取 stats**：家长在老师停留期间提交，结构编辑器仍开着，保存才 422 | 陈旧数据 | 已修：`switchStatus` 同时 `loadStats()` |
+| 5 | **不能批准时仍给批准入口**：`allow_public=false` 或个体任务的 pending 行显示勾选/批准，点了才吃 422 | 无效操作 | 已修：`canApprovePublic` 控制；关闭公开时只留说明+撤回。复验：4328 临时置 `allow_public=0` → 无批准，拒绝仍成功写 `revoked_at` |
+| 6 | **stats 并发无序号**：切 tab/保存的旧响应可能把「有提交」洗回 0，结构编辑器重新打开 | 竞态 | 已修：`statsSeq`，旧响应丢弃 |
+| 7 | **撤回的两步确认跨刷新沿用**：点过一次「撤回公开」没确认，刷新后同一行直接停在「确认撤下？」 | 一次点击误撤 | 已修：`load()` 清空 `revokeConfirmId` |
+| 8 | **改个体与关公开两个确认可同时挂着**：保存被两次拦，UI 两块确认 | 交互混乱 | 已修：互相清空 |
+| 9 | **`approved` 但不可见的文案漏了「任务已结束/停用」** | 说明不完整 | 已修：与 `publicCheckinVisible` 全部条件对齐 |
+| 10 | **个体任务没有星星目标时列表不显示「个体任务」** | 信息缺失 | 已修：`extraMeta` 独立拼接 |
+| 11 | **上传回调在离开页面后仍 toast/发回应** | 跨页副作用 | 已修：`pageGone` 守卫 success/fail |
+| 12 | **录音 onError 未收闩**：无麦克风权限时按钮永远停在「停止」 | 卡死 | 已修：onError 复位 + toast |
+| 13 | **任务详情加载失败时 pending 审核块说成「任务已关闭公开」** | 误报原因 | 已修：分「未加载 / 不能批准」两种提示 |
+
+**Deferred minors（未改）**：
+- 新增动作的 catch 会再 toast 一次，而 http 层已经 toast 过后端文案（既有模式，两个 toast 同步覆盖，实际看到一条）。
+- `statsError` 时结构摘要仍写「有提交后只能改…」，但头部已说明「未能确认提交数，已按锁定处理」。
+- `saveEdit` 没有防连点闩；两次 PUT 幂等（第二次 `updates` 为空），未加。
+- 未知 `frequency/ritual` 会回退显示第一项，但保存时原值相等不会改库（后端只允许三个值，正常数据不出现）。
+
+---
+
+现成夹具（园所 4、老师 11 / 班级 1）见 `_verify/b4b_tasks.json`：4328–4336，含 1957–1963 提交、701–707 回应、补充关系 250。4328 已恢复 `allow_public=1`、1957 为待审核（可测批准/撤回）；4329/4330/4334 已完成回应；4331/4333/4335 无提交（可测可编辑态）。清理时从回应/提交往任务删。
+
+---
+
+## 19. B4-b 只读字段补齐（2026-10-23）
+
+补 §18.4 的两个缺口：老师端看不到「补充过几条」、看不到「星星进度」。只加只读字段，不动状态机、不改回应/提交/公开语义。
+
+### 19.1 改了什么
+
+| 文件 | 变更 |
+| --- | --- |
+| `server/internal/service/teacher_portal_service.go` | `TaskCheckins` 批量取补充回应并给每条提交附 `supplements`（始终空数组而非 null）；`ListTasks`/`GetTask` 增加 `star_count`；新增 `taskStarCounts` / `taskSupplementsForCheckins` |
+| `server/internal/service/teacher_task_read_fields_test.go`（新） | 3 条回归：补充按提交分组且不串孩子；period 计 N 星/补充不计星/软删不计星；非 class_star 主回应 0 星 |
+| `backend/api/api-teacher/09-class-and-tasks.md` | 列表/详情补 `star_count`，checkins 补 `supplements` 形状与口径 |
+| `teacher/src/pages/tasks/index.vue` | 列表显示「星星 N/goal」+ 进度条（封顶 100%，超额显示「已超额」；班级罐只显示本任务贡献，不显示分母） |
+| `teacher/src/pages/tasks/detail.vue` | 结构摘要显示「已集 N 星」；已回应行渲染 `supplements`（贴纸/语音/文字），移除会话内「已追加」标记——刷新后直接来自服务端 |
+
+### 19.2 口径（后续不要改错）
+
+1. `star_count` = **本任务**主回应 `ritual=class_star` 且未删除的提交数。period 回应覆盖 N 条提交计 N 星；补充回应不改 `checkin.response_id`，不计入；提交/回应任一软删都不计。
+2. `StarScope=class` 时 `star_count` 仍只表示**本任务贡献**，不是班级罐总进度。班级罐要 join `class_star_jars` 的学期目标（C 切片），不要用这个字段冒充。
+3. `supplements` 永远返回数组，按 `created_at ASC, id ASC`；只含未删除的关系/提交/回应。**读取失败让整个 checkins 请求失败**（不返回空数组）：`[]` 只能表示「确实没补过」，否则会诱发重复补充。
+4. 星数读取失败时，列表与详情都返回 `star_count=null`（不是 0）；前端隐藏进度。星数是装饰性聚合，不能因为它让任务列表/详情整体不可用，也不能给假 0。
+
+### 19.3 验证
+
+- API：4330 `goal=5, star_count=2`；4328/4324 `goal=5, count=0`；4332 `goal=4, count=0`；4336 `goal=0, count=0`；4329 checkin 1958 `supplements=[flower]`。
+- UI 列表：4330「星星 2/5」+ 40% 进度条；4332「星星 0/4」+ 0%；目标 0 的任务无星数字/进度条；个体任务标记仍在。
+- UI 详情：4330 摘要「星星：按任务 · 目标 5 · 已集 2 星」。
+- 星数即时刷新（审查后补）：4419（目标 5、待回应 1）点「加星」→ 同页摘要立即从「目标 5」变为「目标 5 · 已集 1 星」，不退出页面。
+- UI 补充：4329 已回应 tab 显示「补充回应 1 条 🌸」；点「补充回应」→ 🌸 后刷新为「补充回应 2 条 🌸🌸」（库：702、733），不再依赖会话标记。
+- 测试：`go test ./internal/service -run 'Task|ParentTask' -timeout 600s` → ok（74.3s）；新增 3 条随该命令通过。
+- 构建：`teacher npm run build:mp-weixin` 通过；`check-tokens teacher` 对 tasks 文件 0 违规。
+- 运行时：tab 切换期间 appservice + view pageframe 采集，无 exception；仅框架 SharedArrayBuffer warning。（IDE 控制台里偶尔出现的 `/teacher/home/overview` 401 + `navigateTo:fail timeout` 来自登录切换/IDE 恢复期的缓冲日志；用当前存储 token 直接复测 overview 返回 200。）
+
+### 19.4 仍未做
+
+- 班级罐总进度（需要 `class_star_jars` 学期目标 + C 切片端点）；当前班级任务只显示本任务贡献。
+- 真机验收不变（picker/录音/扫码）；9.x 仍未勾。
+
+### 19.5 对抗性审查与处置（2026-10-23，对 §19 的 diff）
+
+| # | 缺陷 | 性质 | 处置 |
+| --- | --- | --- | --- |
+| 1 | **详情星数失败返回 0**：注释说「0 会伪装成没有星星」，代码却给了 0；老师会看到「已集 0 星」而实际是查询失败 | 状态说反 | 已修：`GetTask` 失败时 `star_count=null`，前端 `!= null` 才显示「已集」；契约注明 |
+| 2 | **列表在 `star_count` 缺失时画 0%**：旧后端/字段缺失会被读成「一颗星都没有」 | 状态说反 | 已修：`star_count == null` 时 `starProgress` 返回 null、`starSummary` 返回空 |
+| 3 | **goal=0 的任务详情仍显示「已集 N 星」**：没有星星罐却报星数 | 信息矛盾 | 已修：只有 `class` 罐或 `goal>0` 才显示「已集」 |
+| 4 | 列表星数失败直接 500，详情失败降级 null：两者口径不同 | 有意不对称 | 保留并写进契约：列表不能返回「假 0 星」；详情不能因为只读统计阻塞编辑/回应 |
+| 5 | 补充回应读取失败只落日志、返回空数组，老师无法区分「没补过」与「没读到」 | 可观测性 | **未改**（minor）：让整页提交列表失败代价更大；若以后要加，给 `supplements_loaded=false` 而不是 500 |
+| 6 | DB 故障路径（星数/补充查询失败）没有单测 | 测试缺口 | **未改**（minor）：需要可控失败注入；正常/软删/跨孩子路径已覆盖 |
+| 7 | **加星/汇总后详情星数不刷新**：`refreshWithCap` 只重取 checkins，`task.star_count` 停在打开页面时的值；老师刚加的星要退出重进才看得到 | 数据陈旧 | 已修：`refreshPeriod` 一并回填 `star_count`（null 不覆盖）。复验：4419 点「加星」后同页「星星：按任务 · 目标 5 · 已集 1 星」立即出现，无需刷新 |
+
+复查（静态 + 运行）：
+- 索引核对：`task_check_ins(task_id, response_id)`、`task_response_supplements(check_in_id, response_id)` 均存在；两条新查询都走索引。
+- 口径核对：period 覆盖 N 条提交计 N 星；补充不计；提交或回应软删不计；跨孩子补充不串（测试断言）。
+- `go build ./...` 通过；新增 3 条测试与任务套件 `go test -run 'Task|ParentTask'` 通过；teacher `build:mp-weixin` 通过；tokens 0 违规。
+
+### 19.6 干净上下文复审（2026-10-23，针对 §19）
+
+另起一个全新上下文的只读审查者（未参与实现），结论写入 `_verify/p1_review.md`（gitignore）。它报 **0 Critical / 1 Important / 5 Minor**；逐条复核后处置如下。
+
+| # | 审查结论 | 复核 | 处置 |
+| --- | --- | --- | --- |
+| I-1 | **补充回应读失败被降级成 `[]`**：老师看到「没补过」的假象，会重复追加；客户端无法区分「没补」与「没读到」；家长端同一故障是整请求失败 | 成立 | 已修：`TaskCheckins` 直接返回错误（整请求 500，可重试），契约改为「失败不返回空数组」 |
+| M-1 | 列表星数失败 500、详情 null，同一故障表现差异大；星数是装饰性聚合 | 成立 | 已修：列表也降级为 `star_count=null`（前端已能隐藏），不再拖垮任务列表 |
+| M-2 | 详情刷新时若服务端给 null，旧 star_count 被保留，可能把「刚加的星」显示成没加上 | 成立 | 已修：`refreshPeriod` 改为 `!== undefined` 就落值（null 也落）；另加 `loadSeq` 守卫，旧响应不能覆盖新星数 |
+| M-3 | class scope 的 star_count 是全生命周期，不是当前学期；C 切片直接累加会算错 | 成立 | 契约补「不做学期过滤、不得直接累加」；C 切片必须按学期重算 |
+| M-4 | 测试无法区分「按 response 关联」与「按 task 关联」；也没钉住空数组而非 null | 成立 | 已补：同一任务 class_star + sticker 两条主回应只计 1 星；无补充时序列化为 `[]` 的断言 |
+| M-5 | `TaskCheckins` 逐行查主回应的 N+1（非本次引入） | 成立 | 未改（既有实现）；本次只把补充回应改成批量查 |
+| — | 其他核对点（period 计 N、补充不计、软删过滤、跨孩子、null/0/超额/class scope UI） | 未发现问题 | 保持 |
+
+复审后：`go test ./internal/service -run 'Task|ParentTask' -timeout 600s` → ok（77.2s）；`go build ./...`、teacher `build:mp-weixin` 通过；tokens 0 违规。
+
+### 19.7 第二次干净上下文复审（2026-10-23，B4-b 快照）
+
+用户要求的另一个全新上下文审查者（`b4b-adversarial-reviewer`）最终返回了结论；它审的是 **14:01/14:02 的 B4-b 快照**，不是 §19。其中 3 条在返回前已修（保存后列表不刷新、缺 `canApprovePublic`、两个破坏性确认不互斥），其余逐条复核后处置：
+
+| # | 审查结论 | 复核 | 处置 |
+| --- | --- | --- | --- |
+| 1 | 默认仪式非 `class_star` 时，有任务罐目标也无法加星 | 成立（快照早于修复） | 已在 §19.5 修：`starTracking` 按罐是否存在判断。复验 4328 有「加星」、4336 无 |
+| 2 | 结构锁发现太晚：只读摘要用未保存的 edit 显示现状；保存仍发结构值 → 整单 422，标题改动也丢 | 成立 | 已修：`loadStats` 锁定/失败时 `syncStructureFromTask`；保存前 `refreshStatsBeforeSave` 再确认一次，若期间家长提交且有结构改动则回填并提示、不发请求；`saveEdit` 锁定态只发任务当前结构值 |
+| 2b | 结构锁错误落进笼统「参数无效」 | 成立 | 已修：`ErrTaskStructuralLocked` 导出，`UpdateTask` 单独返回，handler 文案「任务已有提交，只能修改标题、说明、学习关联与公开开关」 |
+| 3 | `recognition_ritual=''` 的历史/管理端任务：任何保存都 422（客户端归一化成 sticker） | 成立 | 已修客户端：`fillEdit` 不再归一化空枚举，picker 显示「未设置」，保存原样发 `""`（后端当「不修改」）。管理端 `TaskService.CreateTask` 不持久化这些字段属 C 切片，另记 |
+| 4 | 语音上传/录音窗口无门闩：上传中点贴纸/汇总会 409；切 tab 后录音 15s 自动发出；批量在飞时可开始录音 | 成立 | 已修：上传开始即 `addResponding(row)`，成功由回应 finally 释放、失败路径也释放；`startRecord` 检查 `batchBusy`/`isResponding`；切 tab/下拉先取消录音（`discardRecording` 丢弃上传） |
+| 5 | class-star 任务上 ⭐ 贴纸与「加星」同屏，⭐ 不计星但无提示 | 成立 | 已修：`starTracking` 时隐藏 ⭐ 贴纸，并在列表上方提示「「加星」才计入星星罐；贴纸回应不计星」 |
+| 6 | 「只有提交者孩子」勾选可跨「家长撤回→重新申请」沿用 | 成立 | 已修：每轮 `load()` 都清空勾选（服务端没有本轮申请时间，无法区分；安全优先） |
+| 7 | statsError 时只读说明仍写「有提交后…」，把加载失败说成已有提交 | 成立 | 已修：三态文案（正在确认/未能确认已锁定/有提交后） |
+| 8 | 批量回应忽略 `notified_count/notify_failed_count` | 成立 | 已修：单条/加星/批量/语音在 toast 后追加「N 个家长未收到通知」 |
+| 9 | 未知 frequency/ritual 被夹成首项，保存可能静默改值/422 | 成立 | 已修：同 #3，未设置值原样保留 |
+
+**复验（真实点击 + 库核对）**
+- 锁发现：4583 先改频率为「每周」（未保存）→ 家长 API 提交 → 切 tab 两次 → 只读摘要回到「一次性」、picker 消失（`locked=true`）；改标题保存成功，库 `frequency=once` 未被未保存值覆盖。
+- 空仪式：4584（DB 直插 `recognition_ritual=''` + 一条提交）→ 摘要「仪式：未设置」；改标题保存成功，库仍 `recognition_ritual=''`。
+- 结构锁文案：`PUT /teacher/tasks/4330` 改 frequency → 422「任务已有提交，只能修改标题、说明、学习关联与公开开关」。
+- 星星提示：4328 有「加星」、无 ⭐ 贴纸，页面出现「「加星」才计入星星罐；贴纸回应不计星」。
+- 勾选作废：4328 勾选 ☑ → 切「已回应」→ 切回「待回应」→ 回到 ☐。
+- 构建/测试：`go test -run 'Task|ParentTask'` → ok（78.7s）；`go build ./...`、teacher `build:mp-weixin` 通过；tokens 0 违规；清空 CDP Log 缓冲后点 tab，view 层 0 error。
+- **未验证**：语音三条门闩路径（无麦克风/授权，静态审查 + 编译）；`notify_failed_count>0` 的真实提示（需制造通知失败）。
+
+现成夹具新增：4583（锁发现，checkin 2107，已被标题修改但结构仍 once）、4584（空仪式，checkin 2106）。清理时按 task 级联删。

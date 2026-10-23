@@ -84,6 +84,8 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrConflict(c, "该提交当前不在待审核状态，请让家长重新申请")
 	case errors.Is(err, service.ErrTeacherRitualMediaType):
 		response.ErrValidation(c, "语音回应必须使用音频文件")
+	case errors.Is(err, service.ErrTaskStructuralLocked):
+		response.ErrValidation(c, "任务已有提交，只能修改标题、说明、学习关联与公开开关")
 	case errors.Is(err, service.ErrTaskBusy):
 		response.ErrUnavailable(c, "操作冲突，请稍后重试")
 	default:

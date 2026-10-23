@@ -2877,6 +2877,19 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 		return nil, err
 	}
 	now := time.Now()
+	// 星星进度按列表一次批量算，避免每任务一条 COUNT。
+	// 失败必须上报：静默归零会让老师看到「0 星」，而实际只是查询失败。
+	taskIDs := make([]uint64, 0, len(rows))
+	for _, r := range rows {
+		taskIDs = append(taskIDs, r.ID)
+	}
+	starCounts, err := taskStarCounts(ctx, s.db, taskIDs)
+	if err != nil {
+		// 星数是装饰性聚合：读失败不应让整个任务列表 500（老师还需要看任务/待回应），
+		// 但也不能给 0（假的「没有星星」）。整页字段置 null，客户端隐藏进度。
+		log.L(ctx).Error("list tasks star count failed", "err", err)
+		starCounts = nil
+	}
 	list := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
 		var pending int64
@@ -2900,13 +2913,17 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 				return nil, err
 			}
 		}
+		var starCount any
+		if starCounts != nil {
+			starCount = starCounts[r.ID]
+		}
 		list = append(list, map[string]any{
 			"id": r.ID, "title": r.Title, "description": r.Description, "intro": r.Intro,
 			"learning_link": r.LearningLink, "target_student_id": r.TargetStudentID,
 			"frequency": r.Frequency, "start_date": r.StartDate.Format("2006-01-02"),
 			"end_date": r.EndDate.Format("2006-01-02"), "status": r.Status,
 			"allow_public": r.AllowPublic, "recognition_ritual": r.RecognitionRitual,
-			"star_scope": r.StarScope, "star_goal": r.StarGoal,
+			"star_scope": r.StarScope, "star_goal": r.StarGoal, "star_count": starCount,
 			"pending_responses": pending, "pending_period": periodPending,
 			"period_start": periodStart.Format("2006-01-02"),
 			"period_end":   periodEnd.Format("2006-01-02"),
@@ -2923,13 +2940,21 @@ func (s *TeacherPortalService) GetTask(ctx context.Context, tc *TeacherPortalCon
 	}
 	// 汇总回应只关当前周期：把区间一起返回，前端才能区分「本周期待回应」与旧周期遗留。
 	periodStart, periodEnd := taskPeriodRange(&t, time.Now())
+	// 详情页的星数读失败不阻塞编辑/回应，但也不能给 0 —— 0 会伪装成「没有星星」。
+	// 失败时字段为 null，客户端据此隐藏「已集 N 星」，而不是显示错误的 0。
+	var starCount any
+	if counts, err := taskStarCounts(ctx, s.db, []uint64{t.ID}); err != nil {
+		log.L(ctx).Error("get task star count failed", "task", t.ID, "err", err)
+	} else {
+		starCount = counts[t.ID]
+	}
 	return map[string]any{
 		"id": t.ID, "title": t.Title, "description": t.Description, "intro": t.Intro,
 		"learning_link": t.LearningLink, "target_student_id": t.TargetStudentID,
 		"frequency": t.Frequency, "start_date": t.StartDate.Format("2006-01-02"),
 		"end_date": t.EndDate.Format("2006-01-02"), "allow_public": t.AllowPublic,
 		"recognition_ritual": t.RecognitionRitual, "star_scope": t.StarScope,
-		"star_goal": t.StarGoal, "status": t.Status,
+		"star_goal": t.StarGoal, "star_count": starCount, "status": t.Status,
 		"period_start": periodStart.Format("2006-01-02"),
 		"period_end":   periodEnd.Format("2006-01-02"),
 		"created_at":   t.CreatedAt.UTC().Format(time.RFC3339),
@@ -3078,6 +3103,10 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 		return nil
 	}
 	if err := assertTaskEditable(ctx, s.db, id, updates); err != nil {
+		// 结构锁要单独上报，handler 才能给出「有提交后只能改…」的明确文案。
+		if errors.Is(err, ErrTaskStructuralLocked) {
+			return ErrTaskStructuralLocked
+		}
 		return ErrTeacherInvalidParams
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -3164,6 +3193,61 @@ func (s *TeacherPortalService) TaskStats(ctx context.Context, tc *TeacherPortalC
 		"submission_count": total, "responded_count": responded, "pending_count": pending}, nil
 }
 
+// taskStarCounts 统计每个任务已集星数（D6）：
+// 主回应为 class_star 且未删除的提交数。period 回应覆盖 N 条提交就计 N 星；
+// 补充回应不改变 checkin.response_id，天然不计入。
+//
+// 这里只统计**本任务**的贡献。StarScope=class 的班级罐总进度需要 class_star_jars
+// 的学期目标（C 切片），不在这个只读字段里冒充。
+func taskStarCounts(ctx context.Context, db *gorm.DB, taskIDs []uint64) (map[uint64]int64, error) {
+	out := make(map[uint64]int64, len(taskIDs))
+	if len(taskIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		TaskID uint64 `gorm:"column:task_id"`
+		Stars  int64  `gorm:"column:stars"`
+	}
+	// 手写 Table 不走软删：提交与回应两侧都自己补 deleted_at。
+	if err := db.WithContext(ctx).
+		Table("task_check_ins AS c").
+		Select("c.task_id AS task_id, COUNT(*) AS stars").
+		Joins("INNER JOIN task_responses AS r ON r.id = c.response_id AND r.deleted_at IS NULL").
+		Where("c.task_id IN ? AND c.deleted_at IS NULL AND r.ritual = ?", taskIDs, domain.TaskRitualClassStar).
+		Group("c.task_id").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		out[r.TaskID] = r.Stars
+	}
+	return out, nil
+}
+
+// taskSupplementsForCheckins 批量取一组提交上的补充回应，按提交 id 分组。
+// 老师端要看到「某条提交已补过几条」，否则重新进入页面会以为没补过而重复追加。
+func (s *TeacherPortalService) taskSupplementsForCheckins(ctx context.Context, checkinIDs []uint64) (map[uint64][]taskSupplementRow, error) {
+	out := make(map[uint64][]taskSupplementRow)
+	if len(checkinIDs) == 0 {
+		return out, nil
+	}
+	var rows []taskSupplementRow
+	// 与家长端同口径：关系、提交、回应三层都过滤软删。
+	if err := s.db.WithContext(ctx).Table("task_response_supplements AS s").
+		Select("s.response_id, s.check_in_id, c.response_id AS main_id, r.ritual, r.sticker_key, r.content, r.media_url, r.created_at").
+		Joins("INNER JOIN task_check_ins AS c ON c.id = s.check_in_id AND c.deleted_at IS NULL").
+		Joins("INNER JOIN task_responses AS r ON r.id = s.response_id AND r.deleted_at IS NULL").
+		Where("s.check_in_id IN ? AND s.deleted_at IS NULL", checkinIDs).
+		Order("s.created_at ASC, s.id ASC").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		out[r.CheckInID] = append(out[r.CheckInID], r)
+	}
+	return out, nil
+}
+
 func (s *TeacherPortalService) TaskCheckins(ctx context.Context, tc *TeacherPortalContext, id uint64, status string) (map[string]any, error) {
 	// 只为校验任务存在，不借用 TaskStats：那会顺带算两个统计 COUNT，
 	// 计数一失败就把整张提交列表拖成 500，而那两个数在这个接口里根本用不到。
@@ -3188,6 +3272,19 @@ func (s *TeacherPortalService) TaskCheckins(ctx context.Context, tc *TeacherPort
 	}
 	var rows []domain.TaskCheckIn
 	if err := q.Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	checkinIDs := make([]uint64, 0, len(rows))
+	for _, r := range rows {
+		checkinIDs = append(checkinIDs, r.ID)
+	}
+	// 一次取全页的补充回应，避免每行一条查询。
+	supMap, err := s.taskSupplementsForCheckins(ctx, checkinIDs)
+	if err != nil {
+		// 不能降级成空数组：那对老师是「这条提交没补过」的假事实，
+		// 会诱发重复补充，而客户端无法区分「没补」与「没读到」。
+		// 与家长端同一故障的处理一致：整请求失败，客户端可重试。
+		log.L(ctx).Error("task checkins load supplements failed", "task", id, "err", err)
 		return nil, err
 	}
 	list := make([]map[string]any, 0, len(rows))
@@ -3215,6 +3312,17 @@ func (s *TeacherPortalService) TaskCheckins(ctx context.Context, tc *TeacherPort
 			"response_id": r.ResponseID, "created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 			"date": r.Date.Format("2006-01-02"),
 		}
+		// 补充回应：始终给数组（空数组而不是 null），客户端少一层判空。
+		spOut := make([]map[string]any, 0, len(supMap[r.ID]))
+		for _, sp := range supMap[r.ID] {
+			spOut = append(spOut, map[string]any{
+				"id": sp.ResponseID, "checkin_id": sp.CheckInID,
+				"ritual": sp.Ritual, "sticker_key": sp.StickerKey,
+				"content": sp.Content, "media_url": sp.MediaURL,
+				"created_at": sp.CreatedAt.UTC().Format(time.RFC3339),
+			})
+		}
+		item["supplements"] = spOut
 		if r.Student != nil {
 			item["student"] = map[string]any{"id": r.Student.ID, "name": r.Student.Name, "avatar": r.Student.Avatar}
 		}
