@@ -1407,3 +1407,111 @@ design.md 的 D6/D12、backend/api/api-admin/10-tasks.md、server/internal/servi
 - `./internal/app ./internal/middleware ./internal/config ./internal/auth` → 全部 ok。
 - 新增变异 7 项全部**真实断言失败**：fall 用 endYear / 允许同学年 / 学年不规范化 / 先判目标再解析班级 / 老师端 goal 缺省归零 / 老师端无条件校验罐 / 管理端无条件校验 goal>0。其中 M20 首版因 `goalTouched` 未使用变成编译失败，已换 `(goalTouched || true)` 重跑确认为断言失败。
 - C-1 用例从 21 条增至 38 条（`grep -c "^func Test"` 核对）。
+
+### 20.10 C-2 开工决策（2026-10-23，写码前定）
+
+§20.3 第 1–5 条已在 §20.7 定完（C-1）。这里补 C-2 必须先定的两条，编号接续。取证（2026-10-23 实查）：MySQL **8.4.0**（有窗口函数）；`parent_tasks` / `task_responses` **没有任何通知计数列**，`notified_count` 只活在响应体里；`messages` 表在**判重命中时不写新行**（`exists → sent++` 后直接 continue），失败也不写行；当前库仅 12 条 `single` 主回应。
+
+| # | 决策 | 结论 | 依据 / 理由 |
+| --- | --- | --- | --- |
+| 6 | 反馈率（`feedback_coverage` / `child_happy_rate` / `ack_rate`）的**分母**从哪来 | 在 `parent_tasks` 与 `task_responses` 各加 **`notify_target_count INT NULL`**；**先写义务再投递**（算出 targets 后先落数，再逐条发）；`NULL` 表示「未能确定义务」，统计时**排除而不是当 0**；分母聚合**必须从 `task_check_ins.response_id` 出发**。**不建** `task_notify_targets` 明细表。 | 见下方分析。一句话：分母的语义是「义务集」，不是「成功集」。 |
+| 7 | `avg_response_hours` 的中位数怎么算 | **应用层排序取中位**；SQL 只负责筛出 `single` 主回应的时长；偶数取两个中间值的平均（四舍五入 1 位小数）、负时长剔除并计数、空集返回 `null`；新契约字段名用 **`median_response_hours`**（design 第 182 行写的 `avg_response_hours` 就是指它）。 | 7.2 要 `by_class` / `by_activity` **每个桶各算一次中位数**；SQL 方案要为每个维度写一遍窗口函数，Go 方案一次取数按桶分组，口径只有一处且中位数可单测。 |
+
+#### 决策 6 的推理链（为什么不是另外三个）
+
+指标问的是「我们告知过的家长里，有多少人回来给了反馈」，衡量的是**回路**，不是**投递可靠性**。因此分母必须是发布/回应那一刻确定的**义务集**：
+
+- **不能用 `messages` 行数**：① 失败无行 → 分母漏掉失败方；② 判重命中不写新行 → 即使全部成功，行数也小于义务集。两者都会让分母偏小、比率虚高。
+- **不能实时 join `student_parents` 算「应通知」**：解绑、转班、后来新增绑定都会改变「上个月那次通知该发给谁」，历史报表每次查询结果不同——那就不是指标。
+- **不建明细表**：精确到人才能「查谁没收到 / 补发 / 追责」，但 D12 没有这个需求；且通知路径是**故意非事务**的（失败不回滚任务），多写 N 行会放大故障面。等真出现补发需求再升级为明细表，计数列是它的子集。
+
+**关键约束：先写义务再投递。** 若「发完再记数量」，一旦进程崩在发送中途，计数永远写不上，任务会被静默排除在指标外且无人察觉。义务必须在承诺的那一刻落库。
+
+**`NULL` 与 `0` 必须分开**：收件人查询整体失败时写 `NULL`（未知），统计把它从比率里排除并单独返回缺失计数；写 `0` 会让「未知」和「确实没有家长」不可区分，正是 §19.2-4 已定的「读失败不给假 0」同一条原则。
+
+**聚合起点必须是 `task_check_ins.response_id`**：补充回应也是一条 `TaskResponse(single)`，只是不写 `checkin.response_id`；若从 `task_responses` 出发聚合，补充回应会被算进主回应指标，违反 B1 已定的「补充不计入」。
+
+#### 决策 7 的边界（不写死一定会吵）
+
+- **偶数个**：两个中间值取平均，四舍五入到 1 位小数。
+- **负时长**（时钟漂移、手工改库）：剔除并计数，不参与计算，且要能被观察到剔除了几条。
+- **空集**：返回 `null`（不是 0），前端显示「—」。
+- **命名**：design 把这个指标写成 `avg_response_hours = 中位数`，名字与语义相反。7.2 的契约尚未编写，此时改成 `median_response_hours` 代价为零；等 11.2 接上 UI 再改就要改两端。契约里要注明与 design 旧名的对应关系。
+- **数据量**：stats 按园所 + 时间段过滤，不是全表扫描；万级行以内应用层排序无压力。若将来出现跨园年度聚合（十万级），再考虑下沉 SQL —— 那时也只改 `median()` 的取数方式，不改语义。
+
+#### 对 7.2 的直接影响（实现清单）
+
+1. 迁移：`parent_tasks.notify_target_count`、`task_responses.notify_target_count`（均可空，`docs/migrations/` 新建 SQL；`AutoMigrate` 只增不改）。
+2. 写入点：`notifyTaskPublishedFor`（发布）与 `notifyTaskResponse`（主回应），在发送循环**之前**更新计数；查询失败写 `NULL` 并记日志。
+3. 统计：`response_rate` / `participation_rate` / `pending_over_48h` 不依赖本决策；反馈类三个指标与 `median_response_hours` 依赖。
+4. 契约：`GET /admin/tasks/stats` 增加 `median_response_hours`、`notify_baseline_missing`（分母未知的任务/回应数），写明 `NULL` 语义。
+5. 测试：分母取「义务集」而非 messages 行数（用「判重命中」场景钉住：重复发布后分母不变）；补充回应不进分母；`NULL` 被排除而不是当 0；偶数/奇数/负值/空集四种中位数。
+
+#### 仍未定（C-2 之外，不阻塞）
+
+- **7.3 的查看端点**已定（§20.7-3）。
+- **学期切换写路径**（P1）：`academic_year` 建班后不可改、`current_semester` 恒为 spring；需单独 change，建议排在 C-4 之前。
+
+### 20.11 C-2 新窗口开工提示词（2026-10-23 准备，直接复制）
+
+```text
+读 docs/handoffs/2026-10-21-parent-task-loop.md 的 §20.10（C-2 两个决策）、§20.8（C-1 已落地）、
+§20.9（C-1 两轮审查与修复），按 §20.2 的 C-2 范围开工：
+7.1 活动端点、7.2 stats 新口径（含 7.4 下线旧字段）、7.3 管理端查看公开内容、8.3 契约剩余。
+
+开工前先读：
+- openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md 的 7.1–7.4、8.3
+- design.md 的 D12（活动与统计）、D9（通知口径）、D7（公开）
+- backend/api/api-admin/10-tasks.md（SoT，C-1 已更新）
+- server/internal/service/task_rules.go（共享规则）、task_notify.go（通知/判重/收件人）、task_service.go
+- server/internal/repository/task_repo.go（管理端列表/统计现有口径）
+
+起点：feat/parent-growth-scope @ 8e93cb2（已 push）。
+C-1 已交付：管理端建/改任务新字段与共享规则、班级罐 GET/PUT（teacher + admin）、学期 term、
+validateClassStarJar 学期化、8.3 部分契约；对应测试 38 条在 task_admin_c1_test.go。
+
+开工前 10 分钟检查：
+1. git log -3 --oneline 确认没有别的窗口在改同一批文件
+2. netstat -ano | findstr :8080 —— 跑队列相关测试前必须无 LISTEN
+3. server/configs/app.ini 存在（service 测试没有它会整体 skip，会变成「绿但零覆盖」）
+
+开工顺序（一次只做一组，组间先做限制性对抗性审查再验证）：
+1. 7.1 活动端点 —— 不依赖 §20.10 的两个决策，先做
+2. §20.10 决策 6 的迁移与写入点（notify_target_count 两列）
+3. 7.2 stats 新口径 + 7.4 下线 completion_rate / total_possible / checkin_count / not_checkin_count
+4. 7.3 查看公开内容端点 + 8.3 契约收尾
+
+已定规则（不要重新发明）：
+- activity_id：服务端生成 act_<unixnano>_<rand>；POST /admin/tasks 收到非空 activity_id 直接 422（§20.7-4）
+- 7.3：GET /admin/tasks/:id/checkins?status=public，复用 publicCheckinView / publicCheckinVisible（§20.7-3）
+- 反馈率分母：notify_target_count 可空列；先写义务再投递；NULL=未知、统计排除而不是当 0；
+  聚合从 task_check_ins.response_id 出发（补充回应不进分母）（§20.10-6）
+- median_response_hours：应用层排序取中位；偶数取两中值平均、负时长剔除并计数、空集 null；
+  契约字段用 median_response_hours 并注明与 design avg_response_hours 的对应（§20.10-7）
+- 活动创建/编辑/删除全部复用 task_rules.go：validateTargetStudent / validateClassStarJar /
+  assertTaskEditable / revokePublicForTask
+- class_ids 必填、去重、≤50、全部属于当前园所；事务内逐班建，任一失败整组回滚
+- 活动任务禁止单条 DELETE /admin/tasks/:id；单条 PUT 只允许安全字段或直接拒绝
+
+约束：
+- backend/api/api-admin/10-tasks.md 是 SoT：先改契约再写码
+- 新依赖改 provider 后 make wire（GOTOOLCHAIN=go1.25.0）；service 测试 -timeout 600s
+- 不要动 A/B1/B2/B3/B4 与 C-1 已落地语义（任务锁序、公开状态机、通知按家长聚合、
+  读标记口径、term 只认当前学期、指针缺省=保留原值）
+- 关键断言做变异验证，并人工确认是断言失败而不是编译失败（B3 §14.3-#10 踩过）
+- 不要提交 docs/competitive/*、skills-lock.json、.impeccable/
+
+现成夹具（园所 4）：任务 4328–4336（_verify/b4b_tasks.json）、4322/4323/4324；
+C-1 测试夹具 992731–992736 / 992974。
+C-2 需要新增夹具：一条已公开的提交（7.3）、一个带通知的任务 + 主回应（反馈率分母）、
+两个班级（活动批量建/整组回滚）。
+注意：AutoMigrate 能给开发库补新列，production 走 docs/migrations/ 的 SQL。
+
+完成后：更新 handoff（新增 §21 C-2 落地），只在测试通过后勾 7.1/7.2/7.3/7.4/8.3；
+3.8 与 11.x 仍要等 UI（C-3/C-4）。
+```
+
+**新窗口不要碰的三件事**：
+1. 学期切换写路径（`academic_year` / `current_semester` 无写入口）——独立 change，排在 C-4 前。
+2. 管理端前端 `admin/api/tasks.ts` / `types/api.d.ts`——属 C-3。
+3. 老师端 `UpdateTask` 的 TOCTOU（结构锁在事务外）——既有实现，改动要重跑 A/B 已测路径。
