@@ -240,10 +240,10 @@ async function shareTaskCard() {
     stage = "save"
     // 相册授权是系统弹窗：用户不理它会永远不回调，按钮就一直「生成中…」。
     // 这里必须封顶，超时后把按钮放回可点状态。
+    // （loading 已在写完后收起，免得遮罩盖住系统授权弹窗。）
     await withTimeout(saveImageToAlbum(filePath), 15000, "保存到相册超时")
     uni.showToast({ title: "已保存，可转发班级群", icon: "none" })
   } catch (e) {
-    uni.hideLoading()
     if (stage === "generate") {
       // 请求失败时 http 层已经弹过后端文案（含「请检查家长端微信配置」），这里不再重复。
       return
@@ -257,6 +257,9 @@ async function shareTaskCard() {
       uni.showToast({ title: "保存到相册失败", icon: "none" })
     }
   } finally {
+    // 统一在这里收 loading：早退分支（空图）不会走 catch，
+    // 只靠 catch 收会让遮罩一直挂着。
+    uni.hideLoading()
     shareBusy.value = false
   }
 }

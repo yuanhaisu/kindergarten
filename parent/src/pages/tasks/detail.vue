@@ -31,10 +31,15 @@ const history = ref([])
 // 后端分页上限 50。超出时页面要说明「只显示最近的」，
 // 否则每日任务跑满一个月后，更早的提交会悄无声息地不见。
 const historyTotal = ref(0)
+// 草稿归属的孩子：换孩子时清空草稿（见 loadData）
+const draftSid = ref(0)
 const checkinContent = ref("")
 const mediaFileID = ref(0)
 const mediaName = ref("")
 const loading = ref(false)
+// 提交闩：提交是网络请求，期间按钮仍可点。第二次必然撞 422「当前周期已提交」，
+// 用户会看到「已提交」紧跟一条失败提示，像是提交失败了。
+const submitting = ref(false)
 const loadError = ref("")
 const taskId = ref(0)
 // 深链（消息 action_path / 小程序码 scene）里携带的目标孩子。
@@ -116,7 +121,9 @@ function publicLabel(row) {
     case "pending":
       return "已申请，等待老师审核"
     case "approved":
-      return row.public_visible ? "老师已通过，已在班级墙展示" : "老师已通过，暂未展示在班级墙"
+      // 家长端还没有「班级墙」页面（fetchPublicWall 无调用方）：这里只说可见性，
+      // 不承诺一个点得进去的地方，免得家长去找一个不存在的页面。
+      return row.public_visible ? "老师已通过，本班家长可见" : "老师已通过，暂不对本班展示"
     case "revoked":
       // 老师驳回与家长撤下在后端是同一个状态（都写 public_revoked_at），
       // 文案说成「已撤下」会让家长以为自己撤过——用中性的「未公开」。
@@ -129,7 +136,7 @@ function publicLabel(row) {
 // 撤回永远可用（任务关掉公开、已结束、孩子转班都能撤）；只有「申请」受内容与任务条件约束。
 function publicActionLabel(row) {
   const state = publicState(row)
-  if (state === "none") return "申请上班级墙"
+  if (state === "none") return "申请公开"
   if (state === "revoked") return "重新申请"
   return pendingCancelId.value === row.id ? "确认撤下？" : "取消公开"
 }
@@ -145,7 +152,13 @@ function showPublicAction(row) {
   return !!(row.content || row.media_url)
 }
 
+// 请求序号：切换孩子时，旧孩子的请求可能比新孩子的晚返回。
+// 没有它的话，后到的旧结果会把已经渲染好的新孩子数据覆盖掉，
+// 严重时还会用旧请求的 404 把页面刷成「任务已结束或不存在」。
+let loadSeq = 0
+
 async function loadData(id) {
+  const seq = ++loadSeq
   taskId.value = Number(id) || 0
   loading.value = true
   loadError.value = ""
@@ -158,6 +171,7 @@ async function loadData(id) {
       // 超出一页时在页面上说明「只显示最近 N 条」，而不是静默少显示。
       fetchCheckinHistory(id, { student_id: sid, page: 1, page_size: 50 })
     ]))
+    if (seq !== loadSeq) return
     if (!scoped) {
       detail.value = {}
       history.value = []
@@ -165,6 +179,10 @@ async function loadData(id) {
       return
     }
     const [d, h] = scoped.result
+    // 换孩子时把上一条没提交的草稿清掉：否则给 A 写的文字/传的照片会留在 B 的输入框里，
+    // 一点「打卡」就记到 B 名下。
+    if (draftSid.value && draftSid.value !== scoped.sid) resetDraft()
+    draftSid.value = scoped.sid
     detail.value = d.data || {}
     history.value = h.data?.list || []
     // 重新取数后确认态失效：否则重进页面时按钮还停在「确认撤下？」
@@ -181,6 +199,7 @@ async function loadData(id) {
       console.warn("[tasks/detail] 清除未读标记失败", err?.message || err)
     })
   } catch (err) {
+    if (seq !== loadSeq) return
     detail.value = {}
     history.value = []
     // 404 在任务删除/结束后是常态入口（消息深链、扫码），要给一句人话而不是白屏。
@@ -188,7 +207,7 @@ async function loadData(id) {
     // 加载失败时提示条仍在：这条路径（任务对当前孩子不可见）同样要能说清「你看的是谁」。
     if (childMismatch.value && currentSid.value) resolveChildNameFallback(currentSid.value)
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
 
@@ -214,13 +233,20 @@ async function switchToMessageChild() {
   }
 }
 
+function resetDraft() {
+  checkinContent.value = ""
+  mediaFileID.value = 0
+  mediaName.value = ""
+}
+
 async function handleCheckin() {
-  if (!detail.value.id) return
+  if (submitting.value || !detail.value.id) return
   const content = checkinContent.value.trim()
   if (!content && !mediaFileID.value) {
     uni.showToast({ title: "请填写内容或上传照片", icon: "none" })
     return
   }
+  submitting.value = true
   try {
     // student_id 走 query（第三参）：body 里的会被后端丢弃
     const res = await checkinTask(detail.value.id, {
@@ -235,11 +261,14 @@ async function handleCheckin() {
     loadData(detail.value.id)
   } catch (err) {
     uni.showToast({ title: err?.message || "打卡失败", icon: "none" })
+  } finally {
+    submitting.value = false
   }
 }
 
 async function quickCheckin() {
-  if (!detail.value.id) return
+  if (submitting.value || !detail.value.id) return
+  submitting.value = true
   try {
     const res = await checkinTask(detail.value.id, { content: "" }, currentSid.value || getCurrentStudentId())
     mediaFileID.value = 0
@@ -249,6 +278,8 @@ async function quickCheckin() {
     loadData(detail.value.id)
   } catch (e) {
     uni.showToast({ title: e?.message || "提交失败", icon: "none" })
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -498,11 +529,11 @@ onUnload(stopVoice)
         <view class="media-btn" @click="chooseMedia">
           <text>{{ mediaName || "＋ 添加照片（可选）" }}</text>
         </view>
-        <view class="media-btn" @click="quickCheckin">
+        <view class="media-btn" :class="{ busy: submitting }" @click="quickCheckin">
           <text>今天完成了（一键提交）</text>
         </view>
         <textarea v-model="checkinContent" class="textarea" placeholder="记录今天的内容..." :maxlength="500" />
-        <button class="checkin-btn" @click="handleCheckin">打卡</button>
+        <button class="checkin-btn" :class="{ busy: submitting }" :disabled="submitting" @click="handleCheckin">打卡</button>
       </view>
 
       <view class="section">
@@ -588,6 +619,7 @@ onUnload(stopVoice)
 .checkin-card { margin-top: $spacing-lg; padding: $component-card-padding; border-radius: $component-card-radius; background: $color-bg-card; box-shadow: $shadow-sm; }
 .media-btn { display: flex; align-items: center; justify-content: center; height: 96rpx; margin-bottom: $spacing-md; border: 2rpx dashed $color-border-hairline; border-radius: $border-radius-lg; color: $color-text-muted; font-size: $typography-font-size-sm; }
 .textarea { width: 100%; height: 160rpx; padding: 20rpx; border: 2rpx solid $color-border-hairline; border-radius: $border-radius-lg; font-size: $typography-font-size-base; box-sizing: border-box; }
+.media-btn.busy, .checkin-btn.busy { opacity: 0.6; }
 .checkin-btn { width: 100%; height: 80rpx; margin-top: 20rpx; border-radius: $border-radius-full; background: $color-brand-primary; color: $color-text-on-brand; font-size: $typography-font-size-md; font-weight: $typography-font-weight-bold; line-height: 80rpx; }
 .history-item { padding: 20rpx; margin-bottom: $spacing-sm; border-radius: $border-radius-lg; background: $color-bg-card; }
 .hi-head { display: flex; align-items: center; justify-content: space-between; }
