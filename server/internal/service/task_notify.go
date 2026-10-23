@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/log"
 )
 
@@ -128,7 +129,15 @@ func taskResponseNotifyTargets(
 // notifyTaskPublished 任务发布后给目标家庭写站内消息，返回按家长去重的投递计数。
 // 失败只记日志并计数：通知是附带信息，不能把已创建的任务拖回事务。
 func (s *TeacherPortalService) notifyTaskPublished(ctx context.Context, task *domain.ParentTask) (sent, failed int) {
-	targets, err := taskNotifyTargets(ctx, s.db, task)
+	return notifyTaskPublishedFor(ctx, s.db, s.msg, task)
+}
+
+// notifyTaskPublishedFor 老师端与管理端创建任务共用的发布通知（handoff §20.7-2）。
+//
+// 抽成自由函数而不是各写一份：两个入口的收件人口径、文案、深链、判重必须完全一致。
+// 消息判重带完整标题，标题前缀一变就会重复打扰家长，所以文案只能有一个出处。
+func notifyTaskPublishedFor(ctx context.Context, db *gorm.DB, msg *repository.MessageRepo, task *domain.ParentTask) (sent, failed int) {
+	targets, err := taskNotifyTargets(ctx, db, task)
 	if err != nil {
 		log.L(ctx).Error("task publish notify: load targets failed", "task", task.ID, "err", err)
 		return 0, 0
@@ -140,7 +149,7 @@ func (s *TeacherPortalService) notifyTaskPublished(ctx context.Context, task *do
 			ActionPath: taskActionPath(task.ID, t.StudentID),
 		})
 	}
-	sent, failed = sendMessageToRecipients(ctx, s.msg, recipients, domain.MessageTypeTask,
+	sent, failed = sendMessageToRecipients(ctx, msg, recipients, domain.MessageTypeTask,
 		"新亲子任务："+task.Title,
 		fmt.Sprintf("老师发布了亲子任务「%s」，点击查看并陪孩子一起完成。", task.Title),
 		task.ID, true)

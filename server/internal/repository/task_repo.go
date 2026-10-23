@@ -20,17 +20,24 @@ func NewTaskRepo(db *gorm.DB) *TaskRepo {
 
 // TaskListRow 管理端任务列表 JOIN 行。
 type TaskListRow struct {
-	ID          uint64    `gorm:"column:id"`
-	ClassID     uint64    `gorm:"column:class_id"`
-	ClassName   string    `gorm:"column:class_name"`
-	Title       string    `gorm:"column:title"`
-	Frequency   string    `gorm:"column:frequency"`
-	StartDate   time.Time `gorm:"column:start_date"`
-	EndDate     time.Time `gorm:"column:end_date"`
-	Status      int8      `gorm:"column:status"`
-	CreatorID   uint64    `gorm:"column:creator_id"`
-	CreatorNick string    `gorm:"column:creator_nick"`
-	CreatedAt   time.Time `gorm:"column:created_at"`
+	ID                uint64    `gorm:"column:id"`
+	ClassID           uint64    `gorm:"column:class_id"`
+	ClassName         string    `gorm:"column:class_name"`
+	Title             string    `gorm:"column:title"`
+	LearningLink      string    `gorm:"column:learning_link"`
+	TargetStudentID   uint64    `gorm:"column:target_student_id"`
+	Frequency         string    `gorm:"column:frequency"`
+	StartDate         time.Time `gorm:"column:start_date"`
+	EndDate           time.Time `gorm:"column:end_date"`
+	Status            int8      `gorm:"column:status"`
+	AllowPublic       bool      `gorm:"column:allow_public"`
+	RecognitionRitual string    `gorm:"column:recognition_ritual"`
+	StarScope         string    `gorm:"column:star_scope"`
+	StarGoal          int       `gorm:"column:star_goal"`
+	ActivityID        string    `gorm:"column:activity_id"`
+	CreatorID         uint64    `gorm:"column:creator_id"`
+	CreatorNick       string    `gorm:"column:creator_nick"`
+	CreatedAt         time.Time `gorm:"column:created_at"`
 }
 
 func (r *TaskRepo) baseListQuery(kindergartenID uint64, classID *uint64, status *int8) *gorm.DB {
@@ -60,8 +67,10 @@ func (r *TaskRepo) ListTasks(
 		return nil, 0, err
 	}
 	sel := base.Session(&gorm.Session{}).
-		Select(`pt.id, pt.class_id, c.name AS class_name, pt.title, pt.frequency,
-			pt.start_date, pt.end_date, pt.status,
+		Select(`pt.id, pt.class_id, c.name AS class_name, pt.title, pt.learning_link,
+			pt.target_student_id, pt.frequency,
+			pt.start_date, pt.end_date, pt.status, pt.allow_public,
+			pt.recognition_ritual, pt.star_scope, pt.star_goal, pt.activity_id,
 			pt.creator_id, u.nickname AS creator_nick, pt.created_at`).
 		Order("pt.created_at DESC, pt.id DESC").
 		Offset(offset).Limit(limit)

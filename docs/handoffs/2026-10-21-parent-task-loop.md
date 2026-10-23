@@ -1172,3 +1172,238 @@ design.md 的 D7/D12、backend/api/api-teacher/09-class-and-tasks.md。
 - **未验证**：语音三条门闩路径（无麦克风/授权，静态审查 + 编译）；`notify_failed_count>0` 的真实提示（需制造通知失败）。
 
 现成夹具新增：4583（锁发现，checkin 2107，已被标题修改但结构仍 once）、4584（空仪式，checkin 2106）。清理时按 task 级联删。
+
+---
+
+## 20. C 阶段开工准备（2026-10-23）
+
+起点：`feat/parent-growth-scope` @ `982a817`（已 push）。B4-b 已闭合（9.x 仅差真机），§19 的两个只读字段已交付。**C 阶段不要从零假设现状**——下面每一项都在本窗口逐文件核过。
+
+### 20.1 现状核实（截至 982a817）
+
+| 项 | 现状 | 缺口 |
+| --- | --- | --- |
+| `TaskService.CreateTask`（`POST /admin/tasks`） | 只写 title/description/class/frequency/dates/status；**不写** `learning_link` / `target_student_id` / `allow_public` / `recognition_ritual` / `star_scope` / `star_goal`；不通知家长 | 7.0；字段持久化 + `validateTargetStudent` + `validateClassStarJar` + 发布通知（见 20.3-2） |
+| `TaskService.UpdateTask` | 全量覆盖 title/description/class/frequency/dates/status；**没有** `assertTaskEditable`、没有 `allow_public` 撤销、没有 `validateTargetStudent` | 7.0 + D12；有提交后只能改安全字段；改个体/关公开要 revoke |
+| `ParentTask.ActivityID` | 字段/索引已在 domain 与表里；**没有任何端点写它**，现有任务全为空 | 7.1 活动端点与 `activity_id` 生成 |
+| `ClassStarJar` | domain + 表 + `validateClassStarJar` 已存在；**无 GET/PUT 端点**；`validateClassStarJar` 只按 `goal>0`，**没有学期过滤** | 3.8（teacher）、7.5（admin）、学期口径 |
+| 管理端路由 | `/admin/tasks` CRUD/stats + `PUT /admin/tasks/checkins/:id/public`；**无** `task-activities`、**无** `star-jar` | 7.1/7.5 |
+| 管理端统计 | `completion_rate` / `avg_completion_rate` / `by_class` 旧口径 | 7.2 新指标（design D12） |
+| 管理端 UI | `admin/pages/tasks/index.vue` 只有列表 + 删除；`api/tasks.ts` 只有旧字段；`types/api.d.ts` TaskItem 旧；`admin/pages/classes` 存在但无星星罐 | 11.1–11.4 |
+| 权限 | Casbin 对 `admin`/`teacher` 是 `/api/v1/admin/*`、`/api/v1/teacher/*` 通配；新端点不需要改 `rbac_policy.csv` | 无需改策略，但 UI 菜单权限码仍是 `task:view` |
+| 契约 | `backend/api/api-admin/10-tasks.md` 明确标注 `[C]` 未实现字段/端点 | 8.3/8.4 + 新端点契约 |
+| 老师端 | 「按班级」选项置灰；班级罐目标不可设置；列表/详情只有本任务 `star_count` | 3.8 后端就绪后开 C-4 |
+
+### 20.2 范围与顺序
+
+C 阶段 = `tasks.md` 的 **3.7 / 3.8 / 7.0–7.5 / 11.1–11.4 / 12.5**，外加两处老师端收尾（把 9.2 的「班级罐」补上，把 3.8 接到 UI）。
+
+推荐拆窗（不要一个窗口从后端做到 UI）：
+
+| 窗口 | 范围 | 目的 |
+| --- | --- | --- |
+| **C-1 后端基础** | 7.0（admin create/update 字段与规则）、3.8 + 7.5（班级罐 GET/PUT）、学期 term helper、`validateClassStarJar` 学期化、8.3 契约 | 让「班级罐」与「admin 建任务」语义正确 |
+| **C-2 后端活动/统计** | 7.1（`task-activities`）、7.2（stats 新指标）、7.3（管理端查看公开内容并撤回）、8.3 契约 | 让 11.x 有可接的接口 |
+| **C-3 管理端 UI** | 11.1–11.4：任务表单/多班活动/统计/公开撤回；班级页星星罐设置 | 管理端可用 |
+| **C-4 老师端收尾** | 按班级选项启用、班级罐目标设置、class 罐进度；9.2 闭环 | 3.8/7.5 有 UI 入口 |
+| **C-5 验证/收尾** | 12.5；补 12.3/12.4；9.x/7.x 勾选；12.7/12.8 | 回归与归档 |
+
+### 20.3 开工前必须先定的决策
+
+1. **学期 term 的格式与范围**（阻塞 3.8/7.5/班级罐进度）。
+   建议 `term = Class.AcademicYear + "-" + KindergartenAppSetting.CurrentSemester`（如 `2025-2026-spring`）；范围取 `AcademicYear.SemesterSpringStart/End` 或 `SemesterFallStart/End`。为空时按 design 的自然年/自然学期兜底（建议 spring=2/1–7/31、fall=9/1–次年1/31；都没有则自然年）。**`validateClassStarJar` 必须改成只认当前 term**，否则上学期目标会让本学期班级罐任务通过创建校验。
+2. **管理端建任务是否发通知**。D9 写「任务发布给目标家庭写站内消息」，但没有限定老师端；`notifyTaskPublished` 目前是 `TeacherPortalService` 方法，依赖 `s.msg`。建议抽成共享 notifier（db + message repo），admin/activity 创建后也发，响应可只返回计数或写日志；若决定不发，必须在契约里写明例外。默认选「发」。
+3. **管理端如何查看公开内容（7.3）**。现在只有 `PUT /admin/tasks/checkins/:id/public`，没有列表能拿到 checkin id。至少补一个只读端点（建议 `GET /admin/tasks/:id/checkins?status=public`，返回公开字段与 `public_status/public_visible`），否则 7.3 只有撤回没有「查看」。
+4. **活动 `activity_id` 生成与分组边界**。建议服务端生成不可猜字符串（如 `act_<unixnano>_<rand>`）；`POST /admin/tasks` 强制忽略/拒绝客户端传的 `activity_id`；空 `activity_id` 的 stats 按任务 id 分组，不能塞进一个「空活动」。
+5. **班级罐进度的计数口径**：当前 term 内、`StarScope=class`、主回应 `class_star` 的提交数；封顶 100%，超额显示「已超额」。任务罐 `star_count`（§19）是**本任务**，不能直接累加当班级罐。
+
+### 20.4 关键实现约束（沿用，别重写一套）
+
+- `server/internal/service/task_rules.go` 是共享规则：`validateTargetStudent` / `validateClassStarJar` / `assertTaskEditable` / `revokePublicForTask`。**admin 的 Create/Update 必须复用**，不要复制条件（D12）。
+- `TaskService.UpdateTask` 有提交后只允许 `title/description/learning_link/allow_public`；`target_student_id` 改个体、`allow_public` 关都必须 revoke 公开状态。
+- `TaskService.CreateTask` 的 `allow_public` 对个体任务强制 false；`star_scope=class` 必须有当前 term 班级罐目标；`recognition_ritual=class_star && star_scope=task` 要求 `star_goal>0`。
+- 活动创建：`class_ids` 必填、去重、≤50、全部属于当前园所；事务内逐班建任务，任一失败整组回滚；活动任务禁止单条 `DELETE /admin/tasks/:id`，单条 `PUT` 只允许安全字段或直接拒绝（D12）。
+- Stats 公式（D12）：`response_rate` = 有主回应的提交/总提交；`participation_rate` 分母是目标学生数（个体=1），不是家长数；`avg_response_hours` 只算 `single` 主回应的中位数；`period` 与补充回应不计；`feedback_coverage/child_happy_rate/ack_rate` 的分母是 `notified_count + notify_failed_count` 的去重家长对；`pending_over_48h` 用 `TaskCheckIn.CreatedAt < now-48h`。
+- 下线旧 `completion_rate/total_possible/checkin_count/not_checkin_count/total_points_awarded`，任务列表/详情/老师统计/管理端统计统一新口径。
+- 新依赖（message repo / 班级罐 repo / 新 service）要过 Wire：改 provider + `make wire`；wire 必须用 go1.25 构建（见 CLAUDE.md）。
+- 通知失败不回滚任务/回应；计数按家长去重，不按提交条数。
+
+### 20.5 验证与已知坑
+
+- 后端：`go test ./internal/service -run 'Task|ParentTask|ClassStar' -timeout 600s`；新增测试覆盖字段持久化、结构锁、活动事务/class_ids、班级罐 term、stats 公式、公开查看/撤回。
+- 管理端：`npm run build`；用 `admin-run` skill（Playwright）或 `_verify` 的无头 CDP（见 memory `admin-ui-headless-cdp`）做真实点击；不要用截图代替 DOM 断言。
+- 小程序：老师端「按班级」选项、班级罐目标设置、进度展示要真实点击；仍不能替代真机。
+- 跑识别队列相关的 DB 测试前停 8080（memory `running-backend-steals-queue-jobs`）；service 全量测试用 `-timeout 600s`。
+- 不要提交 `docs/competitive/*`、`skills-lock.json`、`.impeccable/`；样式只引用 token；两端组件只改 `shared-ui/`。
+- 现有夹具：老师/班级 1 的任务 4328–4336（见 `_verify/b4b_tasks.json`）；班级 4 的 4322/4323/4324。C 阶段新增班级罐后，先给班级 1 配一个目标再用 UI 验证。
+
+### 20.6 新窗口开工提示词（直接复制）
+
+```text
+读 docs/handoffs/2026-10-21-parent-task-loop.md 的 §20（C 阶段开工准备）与 §15.3/§19，
+按 §20.2 的 C-1 范围开工：7.0（管理端建/改任务新字段与共享规则）、3.8 + 7.5（班级星星罐 GET/PUT）、
+学期 term helper、validateClassStarJar 学期化、8.3 契约。
+
+开工前先读：openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md 的 3.7/3.8/7.0–7.5、
+design.md 的 D6/D12、backend/api/api-admin/10-tasks.md、server/internal/service/task_rules.go。
+
+起点：feat/parent-growth-scope @ 982a817（已 push）；B4-b 已完成，C 阶段后端/管理端仍是旧实现（见 §20.1）。
+
+约束：
+- 复用 task_rules.go，不许在 TaskService 里复制结构锁/个体/班级罐规则。
+- 先定 §20.3 的五个决策（term 格式、admin 是否通知、公开内容查看端点、activity_id 生成、班级罐计数口径），
+  在 handoff 记录 ruling 再写码。
+- 管理端契约 backend/api/api-admin/10-tasks.md 是 SoT；新端点/字段先改契约。
+- 新依赖改 provider 后 make wire（go1.25）；跑 service 测试用 -timeout 600s；停 8080 再跑队列相关测试。
+- 不要动 A/B1/B2/B3/B4 已落地语义；不要提交 docs/competitive/*、skills-lock.json、.impeccable/。
+- 完成后更新 handoff，并只在测试/真实点击通过后勾 7.x/3.x/11.x。
+```
+
+---
+
+### 20.7 C-1 开工决策（2026-10-23，写码前定）
+
+按 §20.3 的五条逐条定，先落 ruling 再写代码。
+
+| # | 决策 | 结论 | 依据 / 理由 |
+| --- | --- | --- | --- |
+| 1 | 学期 `term` 格式与范围 | `term = <Class.AcademicYear>-<semester>`（如 `2031-2032-spring`）。`AcademicYear` 为空或不是 `YYYY-YYYY` → `<自然年>-<semester>`（如 `2026-spring`）。**范围**：优先取 `academic_years` 中 `(kg, AcademicYear)` 行对应学期的起止；该行缺失/起止为空/不可解析时按自然学期兜底（`spring` = 次年 2/1–7/31，`fall` = 当年 9/1–次年 1/31）；`AcademicYear` 为空时用自然年 1/1–12/31。`semester` 取 `KindergartenAppSetting.CurrentSemester`，非 `fall` 一律按 `spring`（与 `settings_service.go` 同口径）。**`validateClassStarJar` 只认当前 term**。 | design D6 第 99–101 行 + §20.3-1。上学期目标不得让本学期 `StarScope=class` 任务通过创建校验。helper 只读，不在读取路径建配置行。 |
+| 2 | 管理端建任务是否发通知 | **发**。把 `notifyTaskPublished` 从 `TeacherPortalService` 方法抽成公共函数 `notifyTaskPublishedFor(ctx, db, msg, task)`，teacher 创建与 admin `POST /admin/tasks` 共用；admin 响应追加 `notified_count` / `notify_failed_count`。通知在落库之后执行，失败只记日志 + 计数，不回滚任务。 | design D9 只写「任务发布给目标家庭写站内消息」，没有限定端；§20.3-2 默认选「发」。两个入口各写一套会漂移。 |
+| 3 | 管理端如何查看公开内容（7.3） | **C-2 补只读端点** `GET /admin/tasks/:id/checkins?status=public`，返回 `public_*` 与 `public_status` / `public_visible`（复用 `publicCheckinView` 与 `publicCheckinVisible`），只读、不改状态机；C-1 不动。 | 现有只有 `PUT /admin/tasks/checkins/:id/public`，拿不到 checkin id，7.3 只剩「撤回」没有「查看」。属 C-2 范围（§20.2）。 |
+| 4 | 活动 `activity_id` 生成与分组 | 服务端生成 `act_<unixnano>_<rand>`（不可猜、不连续）；`POST /admin/tasks` 收到非空 `activity_id` **直接 422 拒绝**（不是静默丢弃）；空 `activity_id` 是独立任务，`by_activity` 按任务 id 分组，不塞进「空活动」。属 C-2。 | design D12 第 173、179 行。静默丢弃客户端字段正是 7.0 要消灭的失败模式；拒绝能让调用方立刻发现用错端点。 |
+| 5 | 班级罐进度计数口径 | **当前 term** 内、`StarScope=class` 的任务中，主回应 `ritual=class_star` 且提交/回应均未软删的提交数 / 班级罐 `goal`；封顶 100%，`count > goal` 时返回「已超额」标记而不是 >100% 的进度。任务罐 `star_count`（§19）只表示**本任务**贡献，**不得**直接累加当班级罐。属 C-4 的展示；C-1 只交付目标配置与校验。 | design D6 第 96–98 行；§19.2-2 已明确 `star_count` 不能冒充班级罐总进度。 |
+
+---
+
+### 20.8 C-1 落地内容（2026-10-23）
+
+起点 `982a817`。范围：7.0（管理端建/改任务新字段与共享规则）、3.8 + 7.5（班级罐 GET/PUT）、学期 term helper、`validateClassStarJar` 学期化、8.3 契约。**没有 UI**，全部后端 + 契约。
+
+#### 改了什么（逐个文件）
+
+| 文件 | 变更 |
+| --- | --- |
+| `server/internal/service/task_rules.go` | 新增 `classStarJarTerm` / `classStarJarTermOf`（term + 学期范围解析）、`findClassStarJar` / `upsertClassStarJar`、`validTaskRitual`；`validateClassStarJar` 改为**只认当前 term**；新增哨兵 `ErrClassNotFound` / `ErrStarJarGoalInvalid` / `ErrTaskRitualInvalid` / `ErrTaskStarScopeInvalid` / `ErrTaskStarGoalInvalid` / `ErrTaskActivityIDForbidden`，并导出 `ErrTaskTargetInvalid` / `ErrTaskStarJarMissing` 供 handler 用 `errors.Is` 判定 |
+| `server/internal/service/task_notify.go` | `notifyTaskPublished` 抽成公共 `notifyTaskPublishedFor(ctx, db, msg, task)`，老师端与管理端共用同一收件人口径/文案/深链/判重 |
+| `server/internal/service/task_service.go` | `TaskService` 增加 `msg` 依赖；`CreateTask` 持久化 `learning_link` / `target_student_id` / `allow_public` / `recognition_ritual` / `star_scope` / `star_goal`，复用共享校验，发布后发通知并返回计数；`UpdateTask` 改为「只改变化字段 + 结构锁 + 关闭公开/改个体撤销」，新增字段用**指针**表示缺省；`Status` 改 `*int8`（原先 `required` 让 `status=0` 不可达）；列表/详情补返回新字段 |
+| `server/internal/service/task_star_jar.go`（新） | `GetClassStarJar` / `SetClassStarJar`（老师端与管理端共用），返回 `term` / `term_start` / `term_end` / `goal` / `configured` / `updated_at`，写 `operation_logs` |
+| `server/internal/repository/task_repo.go` | `TaskListRow` 与列表 SELECT 补 `learning_link` / `target_student_id` / `allow_public` / `recognition_ritual` / `star_scope` / `star_goal` / `activity_id` |
+| `server/internal/handler/http/task.go` | 新增 `writeTaskError`（哨兵 → 稳定 4xx/503 文案）；新增 `GetClassStarJar` / `SetClassStarJar`（admin）；`CreateTask` / `UpdateTask` 改用统一映射 |
+| `server/internal/handler/http/teacher_portal.go` | 新增 `TeacherGetClassStarJar` / `TeacherSetClassStarJar`，班级取自登录态 |
+| `server/internal/app/router.go` | `GET/PUT /teacher/class/star-jar`、`GET/PUT /admin/classes/:id/star-jar` |
+| `server/internal/middleware/admin_perm.go` | 新路由登记：GET → `task:view`，PUT → `task:manage` |
+| `server/internal/app/wire_gen.go` | `make wire` 重新生成（TaskService 新增 MessageRepo） |
+| `backend/api/api-admin/10-tasks.md` | 8.3：建/改任务新字段、默认值、422 码、指针语义、结构锁、撤销规则、列表/详情字段、班级罐端点；活动/统计仍标 `[C]` |
+| `backend/api/api-teacher/09-class-and-tasks.md` | 3.8：`GET/PUT /teacher/class/star-jar` 形状与校验；班级罐说明改为「已实现」 |
+| `server/internal/service/task_admin_c1_test.go`（新） | 21 条真实 MySQL 用例 |
+| `openspec/.../tasks.md` | 勾 7.0、7.5（3.8 / 8.3 未勾，见下） |
+
+#### 语义决定（后续不要改错）
+
+1. **term 只认当前学期**：`<班级 academic_year>-<spring|fall>`；班级无学年时 `<自然年>-<学期>`。范围优先 `academic_years` 配置，缺失按自然学期兜底（spring 次年 2/1–7/31，fall 当年 9/1–次年 1/31）。上学期目标**不会**放行本学期 `StarScope=class` 任务（`TestValidateClassStarJarOnlyAcceptsCurrentTerm` 守护）。
+2. **班级罐 upsert 必须复活软删行**：唯一索引不含 `deleted_at`，`ON DUPLICATE KEY UPDATE` 不带 `deleted_at=NULL` 会「写成功但读不到」。
+3. **目标 0 是非法写入**：`0` 表示「未配置」，写成 0 会让配置看起来成功、而建任务继续 422。
+4. **`learning_link` 在管理端建任务改为必填**（D15）。建/改任务在落库前校验；更新时缺省 = 保留原值，原值也为空才 422。理由：管理端此前没有任何创建界面，此刻改必填不会破坏存量调用方；放着不填会让家长端看到没有学习关联的任务。
+5. **更新请求的新字段一律指针语义**：`target_student_id` / `allow_public` / `star_goal` 缺省 = 不改。老客户端不传 `allow_public` 不会把公开悄悄关掉并批量撤回（`TestAdminUpdateTaskOmittedPointersKeepValues` 守护）。
+6. **`status` 不是结构字段**：有提交后仍允许结束任务。`assertTaskEditable` 的允许清单没动（老师端语义不变），管理端把 status 从结构检查里单独摘出来。
+7. **改个体 → 强制关闭公开 + 撤销**；但**有提交后改个体本身被结构锁拒绝**（D12）。所以撤销分支在管理端只覆盖并发窗口，属防御；测试断言的是落库值与「被拒的更新不留半个改动」，没有伪造不可达链路。
+8. **管理端创建任务也发通知**：与老师端同一函数。文案沿用「老师发布了亲子任务…」——判重键是完整标题，改文案会让历史任务的幂等失效，因此不在本窗口改。
+9. **`activity_id` 非空直接 422**（decision §20.7-4）：静默丢弃正是 7.0 要消灭的失败模式。
+
+#### 验证证据（2026-10-23）
+
+- `go build ./...`、`go vet ./internal/service ./internal/handler/http ./internal/app ./internal/repository` 通过。
+- `go test ./internal/service -run 'TestClassStarJar|TestValidateClassStarJar|TestAdminCreateTask|TestAdminUpdateTask' -timeout 600s` → ok（47.8s，21 条）。
+- `go test ./internal/service -run 'Task|ParentTask|ClassStar' -timeout 600s` → ok（125.4s，含全部既有任务用例）。
+- `go test ./internal/app ./internal/middleware` → ok（路由表冲突检查 + 管理端权限登记表覆盖检查，新路由会自动纳入）。
+- 变异验证 6 项全部**真实断言失败**（非编译错误）：
+  `validateClassStarJar` 去掉 term 过滤 / `CreateTask` 丢弃 `learning_link` / 不强制个体任务关闭公开 / `UpdateTask` 不撤销公开（首次变体因 `effectiveAllowPublic` 未使用变成编译失败，已改成 `if false && (...)` 重跑）/ upsert 不复活软删行 / 结构锁把 status 一起算进去。
+  未做变异的：`classStarJarTermOf` 的自然学期兜底分支（由 3 条 term 用例分别钉住，但没逐条变异）。
+
+#### 未做 / 缺口（不要当成已验证）
+
+- **3.8 未勾**：老师端 UI（按班级隐藏任务目标、班级罐目标设置入口）属 C-4；`/admin/task-activities` 第三个创建入口属 C-2，所以「三个入口共用校验」当前只落地两个。
+- **8.3 未勾**：活动端点、统计新口径仍标 `[C]`（C-2）。
+- **HTTP 冒烟未跑**：本轮没有管理端 token，未起 8080 走真实网关。handler 层只做了编译 + 路由/权限登记检查。
+- **`TaskService.CreateTask` 未写 `intro` / `requirements` / `rewards`**：不在 7.0 清单内，家长端任务详情这几块对管理端创建的任务仍是空。
+- **老师端 `CreateTask` 未校验仪式取值**：`validTaskRitual` 只在管理端用。改老师端会动 A 切片已测路径，本窗口不动，登记在此。
+- **`TaskService.GetTaskStats` / 列表 `completion_rate`** 仍是旧口径（7.4 属 C-2）。
+
+### 20.9 C-1 对抗性审查与处置（2026-10-23）
+
+另起一个全新上下文的只读审查者看 C-1 的未提交 diff（不参与实现），报 6 CONFIRMED / 5 POSSIBLE / 6 NOTE。**我逐条对源码复核后才动手**，其中 1 条复核后不成立。
+
+| # | 审查结论 | 复核 | 处置 |
+| --- | --- | --- | --- |
+| 1 | **term 永远不前进**：`current_semester` 没有任何写路径（只在建行时写 `"spring"`），`UpdateClassReq` 也没有 `academic_year` → term 恒等于建班学年 + spring，fall 分支是死代码，「按学期」实际不生效 | **成立**（grep 确认：`CurrentSemester` 只在 `point_service.go:323` / `settings_service.go:177` 初始化时写；`UpdateSettingsReq` 与 `UpdateClassReq` 都不含这两个字段） | **不在 C-1 修**：补写路径要动班级 + 设置两个模块（handler/service/契约/管理端 UI），属跨 3 层的新切片。记为 **P1 阻塞项**，见下 |
+| 2 | 无学年班级返回自然年区间，与契约「未配置时按自然学期兜底」矛盾 | 成立（实现按 design「为空时用自然年」，是**契约写错**） | ✅ 已修契约：明确三种口径（有配置 / 有学年无配置 / 无学年→自然年） |
+| 3 | 契约宣称的 `TASK_*` 机器错误码在响应体里不存在（只有 `code=42200` + 中文 message） | 成立（`pkg/response` 只有数字业务码） | ✅ 已修契约：删掉错误码清单，改为「以 message 为准」 |
+| 4 | 收件人查询整体失败返回 `(0,0)`，与契约「通知失败体现在 `notify_failed_count`」不符 | 成立，但这就是 B3 §14.3-#5 的既有决定（不伪造失败数） | ✅ 已修契约措辞，与 B3 口径对齐；实现不动 |
+| 5 | 我的「被拒更新不留半个改动」断言的是 `AllowPublic`（请求根本没改它），改成「先写 target 再撞锁」也照样过 | **成立**（真实测试缺陷） | ✅ 已修：改断言 `TargetStudentID == 0` |
+| 6 | `CreateTask` 接受纯空白标题并落库空串，`UpdateTask` 却用 `BAD_TITLE` 拒绝 | 成立 | ✅ 已修：创建路径同样拒 `BAD_TITLE`，并补用例 |
+| 7 | 倒序/同年学年（`2032-2031`）让 fall 兜底产出 `term_start > term_end` | 成立 | ✅ 已修：`parseAcademicYearSpan` 要求 `end >= start`，否则整段退化成自然年；补 `TestClassStarJarTermRejectsReversedAcademicYear` |
+| 8 | `SetClassStarJar` 用两次 `time.Now()`，跨 term 边界会「写旧 term、读新 term」，返回 200 却 `goal=0` | 成立（窗口极窄但真实） | ✅ 已修：写入与回读共用一个 `now` |
+| 9 | 任务本来就是 `star_scope=class` 时，改标题也会重新校验班级罐；罐被删后连标题都改不了 | 成立 | ✅ 已修：只在 `star_scope` 或 `class_id` 真的变化时校验；补 `TestAdminUpdateTaskClassScopeTitleEditNotBlockedByMissingJar` |
+| 10 | 库里 `goal=0` 的行让 GET 返回 `configured=false` 但 `updated_at` 非空，契约说 null | 成立 | ✅ 已修：`updated_at` 只在 `goal>0` 时给值 |
+| 11 | 列表新读的三个可空列遇 NULL 会让整页 500 | **不成立**：实测 `learning_link`/`recognition_ritual`/`activity_id` 虽可空、库里也确实有 NULL（任务 4584 的 `activity_id`），但 GORM 对 string 字段容忍 NULL，`ListTasks` 与 `GetTaskDetail` 都正常返回 `""`（已实跑验证） | ❌ 不改，不引入 COALESCE |
+| 12 | 老师端 `UpdateTask` 仍是事务外结构锁 + 事务内不锁任务行（TOCTOU） | 成立，D12 要求两条路径一致 | **未改**：属老师端既有实现，动它要重跑 A/B 已测路径；记为后续 |
+| 13 | 管理端前端类型未同步（`createTask` 无 `learning_link`、`TaskItem` 无新字段） | 成立 | **未改**：属 C-3（11.1） |
+| 14 | `description` 非指针，PUT 省略会清空说明 | 成立（真实静默丢数据） | ✅ 已修：改 `*string`，缺省保留原值；补断言 |
+| 15 | 测试缺口：无 fall 分支、无倒序学年、无「省略 learning_link 保留原值」、无通知失败；夹具注释 ID 写错 | 成立 | ✅ 已补 5 条用例（fall / 倒序 / 空白标题 / 省略 learning_link / class 范围标题编辑）；注释已更正。**`writeTaskError` 仍无 handler 级测试**，保留 |
+| 16 | 班级后来补设学年后，旧 term 的罐行读不到也不清理 | 成立 | **未改**（无迁移工具）；记录：旧行按新 term 重新配置即可，不影响正确性 |
+| 17 | upsert 复活软删行时保留旧 `created_by/created_at` | 成立 | **不改**：创建者是原始配置人，审计上是对的 |
+
+**P1 阻塞项（从 #1 拆出，必须在 C-4 之前定）**：学期切换没有写路径——`classes.academic_year` 建班后不可改、`current_semester` 永远 `spring`。要让「按班级罐按学期重置」真实生效，需要新增：管理端班级编辑接受 `academic_year`、设置页接受 `semester`（或提供「学期切换」动作）。这是跨 `class` + `settings` 两模块的独立切片，**不属于 C-1**。
+
+#### 修复后的验证（2026-10-23）
+
+- `go build ./...` 通过。
+- `go test ./internal/service -run 'TestClassStarJar|TestValidateClassStarJar|TestAdminCreateTask|TestAdminUpdateTask' -timeout 600s` → ok（57.5s，26 条）。
+- `go test ./internal/service -run 'Task|ParentTask|ClassStar' -timeout 600s` → ok（133.8s）。
+- `go test ./internal/app ./internal/middleware` → ok。
+- 新增变异 4 项，全部**真实断言失败**（非编译错误）：更新时无条件校验班级罐 / 学年允许倒序 / 创建不拒空白标题 / 省略 description 时清空。
+- 结论：本轮审查修复未引入回归；#1 作为 P1 阻塞项待 C-4 前处理，#12/#13/#16 为已知缺口。
+
+#### 20.9.1 补修：`star_goal` 负值（2026-10-23，用户指定先修）
+
+我自己的复查把它列为 POSSIBLE，独立审查者没报；用户要求先修。
+
+- **共享下界**：`task_rules.go` 新增 `validTaskStarGoal(goal int) bool`（`goal >= 0`）与哨兵 `ErrTaskStarGoalNegative`。
+- **四条写路径全部拦截**：管理端 `CreateTask` / `UpdateTask`、老师端 `CreateTask` / `UpdateTask`。老师端 `UpdateTask` 只在请求带了新值时校验（`req.StarGoal < 0`），历史负值不会把「改标题」一起挡住——与管理端「只校验本次请求值」同口径。
+- **handler 文案**：`writeTaskError` 增加 `星星目标不能为负数`（422）。
+- **契约**：`api-admin/10-tasks.md` 的字段表与 PUT 说明、`api-teacher/09-class-and-tasks.md` 的编辑说明各补一行「必须 ≥0」。
+- **测试**：新增 3 条（admin 创建 / admin 更新 / 老师端创建），更新断言「被拒的目标不得落库」（`StarGoal` 仍为 0）。
+- **变异**：3 个入口各删掉校验，3 条用例全部**真实断言失败**（非编译错误）。
+- **回归**：`go test ./internal/service -run 'Task|ParentTask|ClassStar' -timeout 600s` → ok（140.7s）；`./internal/app ./internal/middleware` → ok。
+
+口径说明：`0` 仍然合法（表示「按任务罐不启用」）；只有 `class_star + task` 范围额外要求 `> 0`，那条规则没动。
+
+#### 20.9.2 第二轮对抗性审查（2026-10-23，针对「修复本身」）
+
+第二个全新上下文的只读审查者，切入点是「上一轮的修复有没有引入新问题」。报 4 CONFIRMED / 4 POSSIBLE / 5 NOTE，全部复核成立（除重复项），处置如下。
+
+| # | 结论 | 复核 | 处置 |
+| --- | --- | --- | --- |
+| 1 | 同学年 `2031-2031` 在 fall 兜底仍倒置（`2031-09-01 > 2031-01-31`） | 成立：上一轮只拒了 `end < start`，相等放行 | ✅ 改为严格递增 `end <= start` 即拒；兜底区间改用 `startYear` 推（spring = 次年 2/1–7/31，fall = 当年 9/1–次年 1/31） |
+| 2 | **老师端 `UpdateTask` 的 `star_goal` 缺省被当成 0**：静默清零目标；有提交时 `updates` 含 `star_goal` → 结构锁 422；合同示例（只发 title/description/learning_link/allow_public）实际失败 | 成立（原实现 `req.StarGoal != cur.StarGoal`） | ✅ `TeacherTaskInput` 的 `StarGoal`/`AllowPublic`/`Description` 改为指针：缺省 = 保留原值；创建按默认值展开。合同示例现在真的能用 |
+| 3 | 老师端不校验 `star_scope` / `recognition_ritual` 枚举、不 trim，能落 `"CLASS"` / `"class "`；落库后管理端编辑直接 422 | 成立 | ✅ 老师端创建/更新都 trim + `validTaskRitual` / 枚举校验，与管理端同一套 helper |
+| 4 | 同一「罐被删 + 只改标题」状态，老师端 422、管理端放行 | 成立（D12 要求两端一致） | ✅ 老师端改成只在 `star_scope` 真的变化时才校验 |
+| 5 | 老师端省略 `description`/`allow_public` 会清空说明、关公开并批量撤回 | 成立（同 #2 根因） | ✅ 指针化一并解决；补 `TestTeacherUpdateTaskOmittedAllowPublicKeepsValue` |
+| 6 | 管理端 `class_star + task + goal=0` 的历史任务，改标题也 422 | 成立 | ✅ 目标规则改为「只在本次动到目标/仪式/范围时校验」（`goalTouched`），与负值那条同口径 |
+| 7 | `academic_years` 查询用未归一化学年，`"2031 - 2032"` 永远命不中，term 也带空格 | 成立 | ✅ 查询与 term 一律用解析后的 `normAY` |
+| 8 | 非相邻学年 `2031-2035` 的 fall 兜底跨到 2035，违反契约「次年 1/31」 | 成立 | ✅ 同 #1，兜底只用 `startYear` |
+| 9 | C-1 测试在无 `configs/app.ini` 时会整体 skip（绿但零覆盖） | 成立，但这是全仓 service 测试的既有模式 | **不改**，记录 |
+| 10 | 测试缺口：同年 fall 无覆盖、老师端 update 的 goal 无覆盖、负值用例初始值就是 0（弱断言） | 成立 | ✅ 补 9 条用例；负值用例先建 `goal=3` 再断言仍为 3 |
+| 11 | `SetClassStarJar` 外班 + `goal=0` 先 422 而不是契约的 404 | 成立 | ✅ 先解析班级再判目标 |
+| 12 | term 永不前进（P1，已记 §20.9） | 已知 | 不变 |
+| 13 | 管理端前端 `createTask` 不带 `learning_link` | 已知（C-3） | 不变 |
+
+另：审查者独立复核了上一轮被否掉的「NULL 列打挂列表」，从 GORM `schema/field.go` 的 `**string` 扫描池给出独立依据，**结论一致**（不成立）。这条不必再争。
+
+#### 本轮验证（2026-10-23）
+
+- `go build ./...` 通过。
+- `go test ./internal/service -run 'Task|ParentTask|ClassStar|Supplement|Public|React|Ritual' -timeout 600s` → ok（260.3s，含 B1/B2/B3 全部既有用例）。
+- `./internal/app ./internal/middleware ./internal/config ./internal/auth` → 全部 ok。
+- 新增变异 7 项全部**真实断言失败**：fall 用 endYear / 允许同学年 / 学年不规范化 / 先判目标再解析班级 / 老师端 goal 缺省归零 / 老师端无条件校验罐 / 管理端无条件校验 goal>0。其中 M20 首版因 `goalTouched` 未使用变成编译失败，已换 `(goalTouched || true)` 重跑确认为断言失败。
+- C-1 用例从 21 条增至 38 条（`grep -c "^func Test"` 核对）。

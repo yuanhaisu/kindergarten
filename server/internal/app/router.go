@@ -173,6 +173,9 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 		class.GET("/students", h.TeacherClassStudents)
 		class.GET("/present-students", h.TeacherPresentStudents) // 当日到场（D11）
 		class.GET("/students/:id", h.TeacherClassStudent)
+		// 班级星星罐目标（C 切片 3.8）：按学期独立配置，任务 StarScope=class 时使用。
+		class.GET("/star-jar", h.TeacherGetClassStarJar)
+		class.PUT("/star-jar", h.TeacherSetClassStarJar)
 	}
 
 	messages := teacherG.Group("/messages")
@@ -220,6 +223,9 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		cg.PUT("/:id", h.UpdateClass)
 		cg.DELETE("/:id", h.DeleteClass)
 		cg.POST("/:id/adjust", h.AdjustClassStudents)
+		// 班级星星罐目标（C 切片 7.5）：与老师端同一 service，权限走 task:*。
+		cg.GET("/:id/star-jar", h.GetClassStarJar)
+		cg.PUT("/:id/star-jar", h.SetClassStarJar)
 	}
 
 	sg := adminG.Group("/students")

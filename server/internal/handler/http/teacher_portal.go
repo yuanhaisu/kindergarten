@@ -1108,6 +1108,43 @@ func (h *Handler) TeacherUpdateTask(c *gin.Context) {
 	response.OK(c, map[string]any{"id": id})
 }
 
+// TeacherGetClassStarJar GET /teacher/class/star-jar
+// 班级来自登录态（tc.ClassID），不接受 query 里的班级，避免老师读别的班配置。
+func (h *Handler) TeacherGetClassStarJar(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	data, err := h.taskSvc.GetClassStarJar(c.Request.Context(), tc.KindergartenID, tc.ClassID)
+	if err != nil {
+		writeTaskError(c, err, "获取班级星星罐失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherSetClassStarJar PUT /teacher/class/star-jar
+func (h *Handler) TeacherSetClassStarJar(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Goal int `json:"goal"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.taskSvc.SetClassStarJar(c.Request.Context(), tc.KindergartenID, tc.ClassID, tc.UserID,
+		req.Goal, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		writeTaskError(c, err, "设置班级星星罐失败")
+		return
+	}
+	response.OK(c, data)
+}
+
 func (h *Handler) TeacherDeleteTask(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {

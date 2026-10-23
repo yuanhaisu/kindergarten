@@ -19,11 +19,12 @@ import (
 type TaskService struct {
 	tasks *repository.TaskRepo
 	oplog *repository.OperationLogRepo
+	msg   *repository.MessageRepo
 	db    *gorm.DB
 }
 
-func NewTaskService(tasks *repository.TaskRepo, oplog *repository.OperationLogRepo, db *gorm.DB) *TaskService {
-	return &TaskService{tasks: tasks, oplog: oplog, db: db}
+func NewTaskService(tasks *repository.TaskRepo, oplog *repository.OperationLogRepo, msg *repository.MessageRepo, db *gorm.DB) *TaskService {
+	return &TaskService{tasks: tasks, oplog: oplog, msg: msg, db: db}
 }
 
 var errTaskNotFound = errors.New("TASK_NOT_FOUND")
@@ -133,15 +134,23 @@ func (s *TaskService) ListTasks(
 		rate, _, _ := s.completionForRow(ctx, kindergartenID, row, ci)
 		f := domain.TaskFrequency(row.Frequency)
 		out = append(out, map[string]interface{}{
-			"id":              row.ID,
-			"title":           row.Title,
-			"class_name":      row.ClassName,
-			"class_id":        row.ClassID,
-			"frequency":       string(f),
-			"frequency_label": taskFrequencyLabel(f),
-			"start_date":      row.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
-			"end_date":        row.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
-			"status":          int(row.Status),
+			"id":                 row.ID,
+			"title":              row.Title,
+			"class_name":         row.ClassName,
+			"class_id":           row.ClassID,
+			"learning_link":      row.LearningLink,
+			"target_student_id":  row.TargetStudentID,
+			"frequency":          string(f),
+			"frequency_label":    taskFrequencyLabel(f),
+			"start_date":         row.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
+			"end_date":           row.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
+			"status":             int(row.Status),
+			"allow_public":       row.AllowPublic,
+			"recognition_ritual": row.RecognitionRitual,
+			"star_scope":         row.StarScope,
+			"star_goal":          row.StarGoal,
+			"activity_id":        row.ActivityID,
+			// 旧口径，7.4 统一改新指标后下线。
 			"completion_rate": rate,
 			"creator":         map[string]interface{}{"nickname": row.CreatorNick},
 			"created_at":      row.CreatedAt.UTC().Format(time.RFC3339),
@@ -181,16 +190,24 @@ func (s *TaskService) GetTaskDetail(ctx context.Context, kindergartenID, taskID 
 		creatorID = t.Creator.ID
 	}
 	return map[string]interface{}{
-		"id":              t.ID,
-		"title":           t.Title,
-		"description":     t.Description,
-		"class_id":        t.ClassID,
-		"class_name":      className,
-		"frequency":       string(t.Frequency),
-		"frequency_label": taskFrequencyLabel(t.Frequency),
-		"start_date":      t.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
-		"end_date":        t.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
-		"status":          int(t.Status),
+		"id":                 t.ID,
+		"title":              t.Title,
+		"description":        t.Description,
+		"class_id":           t.ClassID,
+		"class_name":         className,
+		"learning_link":      t.LearningLink,
+		"target_student_id":  t.TargetStudentID,
+		"frequency":          string(t.Frequency),
+		"frequency_label":    taskFrequencyLabel(t.Frequency),
+		"start_date":         t.StartDate.In(shanghaiLoc()).Format("2006-01-02"),
+		"end_date":           t.EndDate.In(shanghaiLoc()).Format("2006-01-02"),
+		"status":             int(t.Status),
+		"allow_public":       t.AllowPublic,
+		"recognition_ritual": t.RecognitionRitual,
+		"star_scope":         t.StarScope,
+		"star_goal":          t.StarGoal,
+		"activity_id":        t.ActivityID,
+		// 旧口径，7.4 统一改新指标后下线。
 		"completion_rate": rate,
 		"checkin_count":   ci,
 		"total_possible":  tp,
@@ -330,13 +347,48 @@ func (s *TaskService) RevokePublicCheckin(ctx context.Context, kindergartenID, a
 }
 
 // CreateTaskReq POST /admin/tasks
+//
+// 管理端创建的是**独立任务**：activity_id 只能由 /admin/task-activities 生成，
+// 这里收到非空值直接拒绝（decision §20.7-4）——静默忽略会让调用方以为分组成功。
 type CreateTaskReq struct {
-	Title       string `json:"title" binding:"required,max=200"`
-	Description string `json:"description"`
-	ClassID     uint64 `json:"class_id" binding:"required"`
-	Frequency   string `json:"frequency" binding:"required"`
-	StartDate   string `json:"start_date" binding:"required"`
-	EndDate     string `json:"end_date" binding:"required"`
+	Title             string `json:"title" binding:"required,max=200"`
+	Description       string `json:"description"`
+	LearningLink      string `json:"learning_link"`
+	ClassID           uint64 `json:"class_id" binding:"required"`
+	TargetStudentID   uint64 `json:"target_student_id"`
+	Frequency         string `json:"frequency" binding:"required"`
+	StartDate         string `json:"start_date" binding:"required"`
+	EndDate           string `json:"end_date" binding:"required"`
+	AllowPublic       bool   `json:"allow_public"`
+	RecognitionRitual string `json:"recognition_ritual"`
+	StarScope         string `json:"star_scope"`
+	StarGoal          int    `json:"star_goal"`
+	ActivityID        string `json:"activity_id"`
+}
+
+// resolveTaskRitual 空值取任务默认仪式；创建默认贴纸，更新保留原值（空仍为空）。
+// 空字符串在历史数据里表示「未设置」，不能强行归一化——9.7-#3 已踩过一次。
+func resolveTaskRitual(reqRitual, fallback, whenEmpty string) string {
+	r := strings.TrimSpace(reqRitual)
+	if r != "" {
+		return r
+	}
+	if fallback != "" {
+		return fallback
+	}
+	return whenEmpty
+}
+
+// resolveTaskStarScope 空值取 fallback；仍为空时按设计默认 task。
+func resolveTaskStarScope(reqScope, fallback string) string {
+	s := strings.TrimSpace(reqScope)
+	if s != "" {
+		return s
+	}
+	if fallback != "" {
+		return fallback
+	}
+	return domain.TaskStarScopeTask
 }
 
 func parseTaskFrequency(s string) (domain.TaskFrequency, error) {
@@ -361,12 +413,23 @@ func (s *TaskService) CreateTask(
 	if kindergartenID == 0 {
 		return nil, errors.New("NO_KINDERGARTEN")
 	}
+	if strings.TrimSpace(req.ActivityID) != "" {
+		return nil, ErrTaskActivityIDForbidden
+	}
+	if strings.TrimSpace(req.Title) == "" {
+		// gin 的 required 只判非空字符串，纯空白标题会以空串落库（更新路径已拒，创建也必须拒）。
+		return nil, errors.New("BAD_TITLE")
+	}
+	if strings.TrimSpace(req.LearningLink) == "" {
+		// D15：学习关联必填。管理端与老师端同一口径，否则家长看到的任务没有学习关联。
+		return nil, errors.New("BAD_LEARNING_LINK")
+	}
 	ok, err := s.tasks.ClassBelongsToKindergarten(ctx, kindergartenID, req.ClassID)
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
-		return nil, errors.New("CLASS_NOT_FOUND")
+		return nil, ErrClassNotFound
 	}
 	freq, err := parseTaskFrequency(req.Frequency)
 	if err != nil {
@@ -384,16 +447,47 @@ func (s *TaskService) CreateTask(
 	if ed.Before(sd) {
 		return nil, errors.New("BAD_DATE_RANGE")
 	}
+	// 结构规则全部走 task_rules.go，不在 service 里重写一遍（D12）。
+	if err := validateTargetStudent(ctx, s.db, kindergartenID, req.ClassID, req.TargetStudentID); err != nil {
+		return nil, err
+	}
+	ritual := resolveTaskRitual(req.RecognitionRitual, "", domain.TaskRitualSticker)
+	if !validTaskRitual(ritual) {
+		return nil, ErrTaskRitualInvalid
+	}
+	starScope := resolveTaskStarScope(req.StarScope, "")
+	if starScope != domain.TaskStarScopeTask && starScope != domain.TaskStarScopeClass {
+		return nil, ErrTaskStarScopeInvalid
+	}
+	if !validTaskStarGoal(req.StarGoal) {
+		return nil, ErrTaskStarGoalNegative
+	}
+	if starScope == domain.TaskStarScopeClass {
+		if err := validateClassStarJar(ctx, s.db, kindergartenID, req.ClassID); err != nil {
+			return nil, err
+		}
+	}
+	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && req.StarGoal <= 0 {
+		return nil, ErrTaskStarGoalInvalid
+	}
+	// 个体任务强制不可公开：公开墙只服务班级活动（D7）。
+	allowPublic := req.AllowPublic && req.TargetStudentID == 0
 	t := &domain.ParentTask{
-		KindergartenID: kindergartenID,
-		ClassID:        req.ClassID,
-		CreatorID:      adminUserID,
-		Title:          strings.TrimSpace(req.Title),
-		Description:    strings.TrimSpace(req.Description),
-		Frequency:      freq,
-		StartDate:      sd,
-		EndDate:        ed,
-		Status:         1,
+		KindergartenID:    kindergartenID,
+		ClassID:           req.ClassID,
+		CreatorID:         adminUserID,
+		TargetStudentID:   req.TargetStudentID,
+		Title:             strings.TrimSpace(req.Title),
+		Description:       strings.TrimSpace(req.Description),
+		LearningLink:      strings.TrimSpace(req.LearningLink),
+		Frequency:         freq,
+		StartDate:         sd,
+		EndDate:           ed,
+		Status:            1,
+		AllowPublic:       allowPublic,
+		RecognitionRitual: ritual,
+		StarScope:         starScope,
+		StarGoal:          req.StarGoal,
 	}
 	if err := s.tasks.CreateTask(ctx, t); err != nil {
 		return nil, err
@@ -409,23 +503,41 @@ func (s *TaskService) CreateTask(
 		IP:             ip,
 		UserAgent:      truncateUA(ua),
 	})
+	// 通知在落库之后：失败只记日志与计数，不回滚任务（D9）。
+	notified, notifyFailed := notifyTaskPublishedFor(ctx, s.db, s.msg, t)
 	return map[string]interface{}{
-		"id":         t.ID,
-		"created_at": t.CreatedAt.UTC().Format(time.RFC3339),
+		"id":                  t.ID,
+		"created_at":          t.CreatedAt.UTC().Format(time.RFC3339),
+		"notified_count":      notified,
+		"notify_failed_count": notifyFailed,
 	}, nil
 }
 
-// UpdateTaskReq PUT /admin/tasks/:id（全量字段）
+// UpdateTaskReq PUT /admin/tasks/:id
+//
+// 新增字段一律用指针表示「未提供」，否则老客户端不发某个字段会被读成零值：
+// `allow_public` 缺省=false 会把公开悄悄关掉并批量撤回，`star_goal` 缺省=0 会把目标清零，
+// `description` 缺省="" 会静默清空已有说明。
 type UpdateTaskReq struct {
-	Title       string `json:"title" binding:"required,max=200"`
-	Description string `json:"description"`
-	ClassID     uint64 `json:"class_id" binding:"required"`
-	Frequency   string `json:"frequency" binding:"required"`
-	StartDate   string `json:"start_date" binding:"required"`
-	EndDate     string `json:"end_date" binding:"required"`
-	Status      int8   `json:"status" binding:"required"` // 0 已结束 1 进行中
+	Title             string  `json:"title" binding:"required,max=200"`
+	Description       *string `json:"description"`
+	LearningLink      string  `json:"learning_link"`
+	ClassID           uint64  `json:"class_id" binding:"required"`
+	TargetStudentID   *uint64 `json:"target_student_id"`
+	Frequency         string  `json:"frequency" binding:"required"`
+	StartDate         string  `json:"start_date" binding:"required"`
+	EndDate           string  `json:"end_date" binding:"required"`
+	Status            *int8   `json:"status"` // 0 已结束 1 进行中；缺省表示不改
+	AllowPublic       *bool   `json:"allow_public"`
+	RecognitionRitual string  `json:"recognition_ritual"`
+	StarScope         string  `json:"star_scope"`
+	StarGoal          *int    `json:"star_goal"`
 }
 
+// UpdateTask 管理端编辑任务。
+//
+// 规则与老师端 UpdateTask 共用 task_rules.go（D12）：有提交后只允许
+// title/description/learning_link/allow_public；改个体或关公开必须在同一事务里撤销公开。
 func (s *TaskService) UpdateTask(
 	ctx context.Context,
 	kindergartenID, adminUserID, taskID uint64,
@@ -435,19 +547,9 @@ func (s *TaskService) UpdateTask(
 	if kindergartenID == 0 {
 		return errors.New("NO_KINDERGARTEN")
 	}
-	cur, err := s.tasks.FindTaskByID(ctx, kindergartenID, taskID)
-	if err != nil {
-		return err
-	}
-	if cur == nil {
-		return errTaskNotFound
-	}
-	ok, err := s.tasks.ClassBelongsToKindergarten(ctx, kindergartenID, req.ClassID)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return errors.New("CLASS_NOT_FOUND")
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		return errors.New("BAD_TITLE")
 	}
 	freq, err := parseTaskFrequency(req.Frequency)
 	if err != nil {
@@ -465,24 +567,164 @@ func (s *TaskService) UpdateTask(
 	if ed.Before(sd) {
 		return errors.New("BAD_DATE_RANGE")
 	}
-	if req.Status != 0 && req.Status != 1 {
+	if req.Status != nil && *req.Status != 0 && *req.Status != 1 {
 		return errors.New("BAD_STATUS")
 	}
-	updates := map[string]interface{}{
-		"title":       strings.TrimSpace(req.Title),
-		"description": strings.TrimSpace(req.Description),
-		"class_id":    req.ClassID,
-		"frequency":   string(freq),
-		"start_date":  sd,
-		"end_date":    ed,
-		"status":      req.Status,
+	// 只校验本次请求给的值：库里已有的历史负值不该把「改标题」也一起挡住。
+	if req.StarGoal != nil && !validTaskStarGoal(*req.StarGoal) {
+		return ErrTaskStarGoalNegative
 	}
-	n, err := s.tasks.UpdateTask(ctx, kindergartenID, taskID, updates)
+	// 与创建路径同口径：只有真正给了非空值才校验，纯空白视为「未提供」。
+	if r := strings.TrimSpace(req.RecognitionRitual); r != "" && !validTaskRitual(r) {
+		return ErrTaskRitualInvalid
+	}
+	if sc := strings.TrimSpace(req.StarScope); sc != "" && sc != domain.TaskStarScopeTask && sc != domain.TaskStarScopeClass {
+		return ErrTaskStarScopeInvalid
+	}
+	ok, err := s.tasks.ClassBelongsToKindergarten(ctx, kindergartenID, req.ClassID)
 	if err != nil {
 		return err
 	}
-	if n == 0 {
-		return errTaskNotFound
+	if !ok {
+		return ErrClassNotFound
+	}
+
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先锁任务行：后续的撤销公开会改 task_check_ins，锁序必须与删除/回应一致。
+		var cur domain.ParentTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND kindergarten_id = ? AND deleted_at IS NULL", taskID, kindergartenID).
+			First(&cur).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errTaskNotFound
+			}
+			return err
+		}
+
+		learningLink := strings.TrimSpace(req.LearningLink)
+		if learningLink == "" {
+			// 未提供（或空）时保留原值：D15 要求必填，但老客户端不会带这个字段。
+			learningLink = cur.LearningLink
+		}
+		if learningLink == "" {
+			return errors.New("BAD_LEARNING_LINK")
+		}
+		targetStudentID := cur.TargetStudentID
+		if req.TargetStudentID != nil {
+			targetStudentID = *req.TargetStudentID
+		}
+		allowPublic := cur.AllowPublic
+		if req.AllowPublic != nil {
+			allowPublic = *req.AllowPublic
+		}
+		starGoal := cur.StarGoal
+		if req.StarGoal != nil {
+			starGoal = *req.StarGoal
+		}
+		ritual := resolveTaskRitual(req.RecognitionRitual, cur.RecognitionRitual, "")
+		if !validTaskRitual(ritual) {
+			return ErrTaskRitualInvalid
+		}
+		starScope := resolveTaskStarScope(req.StarScope, cur.StarScope)
+
+		if err := validateTargetStudent(ctx, tx, kindergartenID, req.ClassID, targetStudentID); err != nil {
+			return err
+		}
+		// 只在**星星范围或班级真的变了**时校验：任务本来就是 class、而当前学期的罐后来被删时，
+		// 不该连改标题都 422（契约只承诺「更新为 class 时」校验）。
+		if starScope == domain.TaskStarScopeClass &&
+			(starScope != cur.StarScope || req.ClassID != cur.ClassID) {
+			if err := validateClassStarJar(ctx, tx, kindergartenID, req.ClassID); err != nil {
+				return err
+			}
+		}
+		// 个体任务强制不可公开：落库值与 D7 一致，也避免 revoke 判定看原始请求值。
+		effectiveAllowPublic := allowPublic && targetStudentID == 0
+		// 只在本次动到目标/仪式/范围时校验：历史脏数据（class_star + goal=0）
+		// 不该把「只改标题」一起挡住，与 star_goal 负值那条同口径。
+		goalTouched := req.StarGoal != nil || ritual != cur.RecognitionRitual || starScope != cur.StarScope
+		if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && starGoal <= 0 && goalTouched {
+			return ErrTaskStarGoalInvalid
+		}
+
+		updates := map[string]any{}
+		if title != cur.Title {
+			updates["title"] = title
+		}
+		desc := cur.Description
+		if req.Description != nil {
+			desc = strings.TrimSpace(*req.Description)
+		}
+		if desc != cur.Description {
+			updates["description"] = desc
+		}
+		if learningLink != cur.LearningLink {
+			updates["learning_link"] = learningLink
+		}
+		if req.ClassID != cur.ClassID {
+			updates["class_id"] = req.ClassID
+		}
+		if targetStudentID != cur.TargetStudentID {
+			updates["target_student_id"] = targetStudentID
+		}
+		if freq != cur.Frequency {
+			updates["frequency"] = string(freq)
+		}
+		if !sameTaskDay(sd, cur.StartDate) {
+			updates["start_date"] = sd
+		}
+		if !sameTaskDay(ed, cur.EndDate) {
+			updates["end_date"] = ed
+		}
+		if effectiveAllowPublic != cur.AllowPublic {
+			updates["allow_public"] = effectiveAllowPublic
+		}
+		if ritual != cur.RecognitionRitual {
+			updates["recognition_ritual"] = ritual
+		}
+		if starScope != cur.StarScope {
+			updates["star_scope"] = starScope
+		}
+		if starGoal != cur.StarGoal {
+			updates["star_goal"] = starGoal
+		}
+		if req.Status != nil && *req.Status != cur.Status {
+			updates["status"] = *req.Status
+		}
+		if len(updates) == 0 {
+			return nil
+		}
+		// status 不是结构字段（D12 的禁止清单里没有它）：单独排除，
+		// 否则有提交后连「结束任务」都会被结构锁挡掉。
+		structural := make(map[string]any, len(updates))
+		for k, v := range updates {
+			if k != "status" {
+				structural[k] = v
+			}
+		}
+		if err := assertTaskEditable(ctx, tx, taskID, structural); err != nil {
+			return err
+		}
+		if err := tx.Model(&domain.ParentTask{}).
+			Where("id = ? AND kindergarten_id = ?", taskID, kindergartenID).
+			Updates(updates).Error; err != nil {
+			return err
+		}
+		becameIndividual := targetStudentID > 0 && cur.TargetStudentID == 0
+		if becameIndividual || (cur.AllowPublic && !effectiveAllowPublic) {
+			return revokePublicForTask(ctx, tx, taskID)
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, errTaskNotFound) || errors.Is(err, ErrClassNotFound) {
+			return err
+		}
+		// 死锁/锁等待超时是可重试冲突，不能报成 500。
+		if isTaskLockConflict(err) {
+			return ErrTaskBusy
+		}
+		return err
 	}
 	_ = s.oplog.Create(ctx, &domain.OperationLog{
 		KindergartenID: kindergartenID,

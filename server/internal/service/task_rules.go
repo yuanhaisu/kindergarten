@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -18,6 +21,23 @@ var (
 	ErrTaskStructuralLocked = errors.New("TASK_STRUCTURAL_LOCKED")
 	errTaskTargetInvalid    = errors.New("TASK_TARGET_INVALID")
 	errTaskStarJarMissing   = errors.New("TASK_STAR_JAR_MISSING")
+	// ErrClassNotFound 班级不存在或不属于当前园所（星星罐端点按 404 返回）。
+	ErrClassNotFound = errors.New("CLASS_NOT_FOUND")
+	// ErrStarJarGoalInvalid 班级星星罐目标必须 > 0：0 表示「未配置」，
+	// 允许写 0 会让配置看起来成功、但 validateClassStarJar 继续拒绝建任务。
+	ErrStarJarGoalInvalid = errors.New("STAR_JAR_GOAL_INVALID")
+	// ErrTaskRitualInvalid 仪式取值不在 sticker / voice / class_star 内。
+	ErrTaskRitualInvalid = errors.New("TASK_RITUAL_INVALID")
+	// ErrTaskStarScopeInvalid 星星范围不在 task / class 内。
+	ErrTaskStarScopeInvalid = errors.New("TASK_STAR_SCOPE_INVALID")
+	// ErrTaskStarGoalInvalid 默认仪式是班级星星且按任务统计时，目标必须 > 0，
+	// 否则星星永远无处累加（design D6）。
+	ErrTaskStarGoalInvalid = errors.New("TASK_STAR_GOAL_INVALID")
+	// ErrTaskStarGoalNegative 星星目标不能为负：0 表示「不启用」，负数只会让
+	// 进度条算出 `已集 N/-5` 这种荒唐值，且封顶逻辑全部失效。
+	ErrTaskStarGoalNegative = errors.New("TASK_STAR_GOAL_NEGATIVE")
+	// ErrTaskActivityIDForbidden 独立任务入口收到 activity_id：只有 /admin/task-activities 能生成分组。
+	ErrTaskActivityIDForbidden = errors.New("TASK_ACTIVITY_ID_FORBIDDEN")
 	// 批量回应没有抢到任何待回应提交（并发/重复点击的落败方）：回滚，不留孤儿回应。
 	errTaskBatchNothingPending = errors.New("TASK_BATCH_NOTHING_PENDING")
 	// 规格要求个体任务与一次性活动逐条回应，不允许走汇总回应。
@@ -41,6 +61,12 @@ var (
 	ErrTaskPublicStateConflict = errors.New("TASK_PUBLIC_STATE_CONFLICT")
 	// 老师批准前没有勾选「内容中只有提交者孩子」。
 	ErrTaskPublicScopeUnconfirmed = errors.New("TASK_PUBLIC_SCOPE_UNCONFIRMED")
+)
+
+// 给 handler 用的只读别名：错误判定走 errors.Is，不靠 err.Error() 拼字符串。
+var (
+	ErrTaskTargetInvalid  = errTaskTargetInvalid
+	ErrTaskStarJarMissing = errTaskStarJarMissing
 )
 
 // isTaskLockConflict 判定 MySQL 锁等待超时（1205）与死锁（1213）。
@@ -114,11 +140,173 @@ func validTaskReaction(reaction string) bool {
 	}
 }
 
-// validateClassStarJar 校验班级当前是否有可用的星星罐目标。
+// ==================== 班级星星罐学期口径（design D6 / tasks 3.8、7.5） ====================
+
+// classStarJarTerm 是班级星星罐的学期口径。
+// Term 是唯一键的一部分（class_star_jars 的 idx_class_star_jar），Start/End 用于按学期统计进度。
+type classStarJarTerm struct {
+	Term  string
+	Start time.Time
+	End   time.Time
+}
+
+// classStarJarSemester 统一学期取值：与 settings_service.go 同口径，非 fall 一律 spring。
+// 直接 TrimSpace+EqualFold 再判定，避免 "FALL" / " fall " 退化成 spring 之外的第三种行为。
+func classStarJarSemester(raw string) string {
+	if strings.EqualFold(strings.TrimSpace(raw), "fall") {
+		return "fall"
+	}
+	return "spring"
+}
+
+// parseTaskDateInLoc 解析 YYYY-MM-DD；空串或格式不符返回 false（调用方走兜底）。
+func parseTaskDateInLoc(s string, loc *time.Location) (time.Time, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return time.Time{}, false
+	}
+	t, err := time.ParseInLocation("2006-01-02", s, loc)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+// parseAcademicYearSpan 解析 "2031-2032" 这类学年；返回起止年。
+// 不强制两年相邻：历史数据里出现过跨两年的写法，强行校验只会把班级打成「无学年」。
+func parseAcademicYearSpan(ay string) (int, int, bool) {
+	parts := strings.Split(strings.TrimSpace(ay), "-")
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	start, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	end, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	// 只接受正数且严格递增：`2032-2031` / `2031-2031` 这类脏值会让 fall 兜底
+	// 产出 term_start > term_end，宁可整段退化成自然年，也不要给出倒置区间。
+	if err1 != nil || err2 != nil || start <= 0 || end <= 0 || end <= start {
+		return 0, 0, false
+	}
+	return start, end, true
+}
+
+// classStarJarTermOf 解析班级「当前学期」的 term 与日期范围。
+//
+// 口径（design D6 第 99 行）：Class.AcademicYear + KindergartenAppSetting.CurrentSemester；
+// AcademicYear 为空时用自然年。范围优先取 academic_years 的学期起止，缺失时按自然学期兜底：
+// spring = 次年 2/1–7/31，fall = 当年 9/1–次年 1/31。
+//
+// **只读**：配置行缺失时按默认值计算，不在读取路径写库（§20.4 的 seed 教训）。
+func classStarJarTermOf(ctx context.Context, db *gorm.DB, kindergartenID, classID uint64, now time.Time) (classStarJarTerm, error) {
+	loc := shanghaiLoc()
+	now = now.In(loc)
+
+	var cls struct {
+		AcademicYear string `gorm:"column:academic_year"`
+	}
+	err := db.WithContext(ctx).Table("classes").
+		Select("academic_year").
+		Where("id = ? AND kindergarten_id = ? AND deleted_at IS NULL", classID, kindergartenID).
+		Take(&cls).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return classStarJarTerm{}, ErrClassNotFound
+	}
+	if err != nil {
+		return classStarJarTerm{}, err
+	}
+
+	semester := "spring"
+	var setting struct {
+		CurrentSemester string `gorm:"column:current_semester"`
+	}
+	err = db.WithContext(ctx).Table("kindergarten_app_settings").
+		Select("current_semester").
+		Where("kindergarten_id = ? AND deleted_at IS NULL", kindergartenID).
+		Take(&setting).Error
+	switch {
+	case err == nil:
+		semester = classStarJarSemester(setting.CurrentSemester)
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		// 未配置园所设置：按 spring，与 kindergarten_app_settings 的列默认值一致。
+	default:
+		return classStarJarTerm{}, err
+	}
+
+	ay := strings.TrimSpace(cls.AcademicYear)
+	startYear, endYear, ok := parseAcademicYearSpan(ay)
+	if !ok {
+		// 没有学年：用自然年（1/1–12/31），term 用当年年份，避免和真实学年键撞车。
+		y := now.Year()
+		return classStarJarTerm{
+			Term:  fmt.Sprintf("%d-%s", y, semester),
+			Start: time.Date(y, 1, 1, 0, 0, 0, 0, loc),
+			End:   time.Date(y, 12, 31, 0, 0, 0, 0, loc),
+		}, nil
+	}
+
+	// 查询与 term 都用解析后的规范形式：库里可能存成 `2031 - 2032`，
+	// 直接拿原串去查 academic_years 会永远不命中，term 也会带上空格变成另一个键。
+	normAY := fmt.Sprintf("%d-%d", startYear, endYear)
+	term := struct {
+		SpringStart string `gorm:"column:semester_spring_start"`
+		SpringEnd   string `gorm:"column:semester_spring_end"`
+		FallStart   string `gorm:"column:semester_fall_start"`
+		FallEnd     string `gorm:"column:semester_fall_end"`
+	}{}
+	err = db.WithContext(ctx).Table("academic_years").
+		Select("semester_spring_start, semester_spring_end, semester_fall_start, semester_fall_end").
+		Where("kindergarten_id = ? AND year = ? AND deleted_at IS NULL", kindergartenID, normAY).
+		Take(&term).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return classStarJarTerm{}, err
+	}
+	if err == nil {
+		var cs, ce string
+		if semester == "fall" {
+			cs, ce = term.FallStart, term.FallEnd
+		} else {
+			cs, ce = term.SpringStart, term.SpringEnd
+		}
+		start, ok1 := parseTaskDateInLoc(cs, loc)
+		end, ok2 := parseTaskDateInLoc(ce, loc)
+		if ok1 && ok2 && !end.Before(start) {
+			return classStarJarTerm{
+				Term:  fmt.Sprintf("%s-%s", normAY, semester),
+				Start: start,
+				End:   end,
+			}, nil
+		}
+	}
+
+	// 兜底自然学期：区间一律从**起始年**推，保证 fall 一定跨到次年 1 月。
+	// 用 endYear 推会让非相邻学年（`2031-2035`）算出 4 年多，同年/倒序学年
+	// 更会直接倒置——这两类脏值已在 parseAcademicYearSpan 里被拒，这里再兜一层。
+	if semester == "fall" {
+		return classStarJarTerm{
+			Term:  fmt.Sprintf("%s-fall", normAY),
+			Start: time.Date(startYear, 9, 1, 0, 0, 0, 0, loc),
+			End:   time.Date(startYear+1, 1, 31, 0, 0, 0, 0, loc),
+		}, nil
+	}
+	return classStarJarTerm{
+		Term:  fmt.Sprintf("%s-spring", normAY),
+		Start: time.Date(startYear+1, 2, 1, 0, 0, 0, 0, loc),
+		End:   time.Date(startYear+1, 7, 31, 0, 0, 0, 0, loc),
+	}, nil
+}
+
+// validateClassStarJar 校验班级**当前学期**是否有可用的星星罐目标。
+//
+// 必须带 term：只按 goal>0 匹配会让上学期的目标继续放行本学期的
+// StarScope=class 任务，而学期进度又是按当前学期统计的——任务能建、星星永远从 0 开始。
 func validateClassStarJar(ctx context.Context, db *gorm.DB, kindergartenID, classID uint64) error {
+	term, err := classStarJarTermOf(ctx, db, kindergartenID, classID, time.Now())
+	if err != nil {
+		return err
+	}
 	var n int64
 	if err := db.WithContext(ctx).Model(&domain.ClassStarJar{}).
-		Where("kindergarten_id = ? AND class_id = ? AND goal > 0", kindergartenID, classID).
+		Where("kindergarten_id = ? AND class_id = ? AND term = ? AND goal > 0",
+			kindergartenID, classID, term.Term).
 		Count(&n).Error; err != nil {
 		return err
 	}
@@ -126,6 +314,77 @@ func validateClassStarJar(ctx context.Context, db *gorm.DB, kindergartenID, clas
 		return errTaskStarJarMissing
 	}
 	return nil
+}
+
+// findClassStarJar 读取班级当前学期的星星罐；未配置时返回 nil（不是错误）。
+func findClassStarJar(ctx context.Context, db *gorm.DB, kindergartenID, classID uint64, now time.Time) (*domain.ClassStarJar, classStarJarTerm, error) {
+	term, err := classStarJarTermOf(ctx, db, kindergartenID, classID, now)
+	if err != nil {
+		return nil, classStarJarTerm{}, err
+	}
+	var row domain.ClassStarJar
+	err = db.WithContext(ctx).
+		Where("kindergarten_id = ? AND class_id = ? AND term = ?", kindergartenID, classID, term.Term).
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, term, nil
+	}
+	if err != nil {
+		return nil, term, err
+	}
+	return &row, term, nil
+}
+
+// upsertClassStarJar 设置班级当前学期目标。
+//
+// 唯一索引包含软删行：命中 ON DUPLICATE 时必须同时清 deleted_at，
+// 否则「删过再配」会写成功但读不到（同 growth_likes / task_read_marks 的历史回归）。
+func upsertClassStarJar(ctx context.Context, db *gorm.DB, kindergartenID, classID, userID uint64, goal int, now time.Time) (classStarJarTerm, error) {
+	// 先解析班级再判目标：跨园所的班级必须拿到 404，而不是被「目标 0」的 422 盖掉。
+	term, err := classStarJarTermOf(ctx, db, kindergartenID, classID, now)
+	if err != nil {
+		return classStarJarTerm{}, err
+	}
+	if goal <= 0 {
+		return classStarJarTerm{}, ErrStarJarGoalInvalid
+	}
+	row := &domain.ClassStarJar{
+		KindergartenID: kindergartenID,
+		ClassID:        classID,
+		Term:           term.Term,
+		Goal:           goal,
+		CreatedBy:      userID,
+		UpdatedBy:      userID,
+	}
+	err = db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "kindergarten_id"}, {Name: "class_id"}, {Name: "term"}},
+		DoUpdates: clause.Assignments(map[string]any{
+			"goal":       goal,
+			"updated_by": userID,
+			"updated_at": now,
+			"deleted_at": nil,
+		}),
+	}).Create(row).Error
+	if err != nil {
+		return classStarJarTerm{}, err
+	}
+	return term, nil
+}
+
+// validTaskStarGoal 星星目标下界。0 = 不启用，正数 = 目标；负数没有语义，
+// 老师端与管理端必须是同一个下界，否则数据库里的不变量会随入口不同而破裂。
+func validTaskStarGoal(goal int) bool {
+	return goal >= 0
+}
+
+// validTaskRitual 任务默认仪式只接受三种取值；空串表示调用方未指定。
+func validTaskRitual(ritual string) bool {
+	switch ritual {
+	case "", domain.TaskRitualSticker, domain.TaskRitualVoice, domain.TaskRitualClassStar:
+		return true
+	default:
+		return false
+	}
 }
 
 func sameTaskDay(a, b time.Time) bool {

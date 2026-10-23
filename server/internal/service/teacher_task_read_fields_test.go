@@ -218,7 +218,7 @@ func TestTeacherUpdateTask_StructuralLockReturnsSpecificError(t *testing.T) {
 		EndDate:           f.task.EndDate.Format("2006-01-02"),
 		RecognitionRitual: f.task.RecognitionRitual,
 		StarScope:         f.task.StarScope,
-		StarGoal:          f.task.StarGoal,
+		StarGoal:          ptrTo(f.task.StarGoal),
 		Status:            f.task.Status,
 	}
 

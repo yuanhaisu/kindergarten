@@ -84,12 +84,12 @@
 
 ## 7. 后端 · 管理端活动与统计
 
-- [ ] 7.0 改造 `TaskService.CreateTask`（`POST /admin/tasks` 独立任务）：持久化 `allow_public` / `recognition_ritual` / `star_scope` / `star_goal`；`allow_public` 默认 false；调用 `task_rules.go` 的 `validateTargetStudent` / `validateClassStarJar`；验证：创建请求字段不被丢弃、默认值正确、目标孩子归属与 class scope 校验
+- [x] 7.0 改造 `TaskService.CreateTask`（`POST /admin/tasks` 独立任务）：持久化 `allow_public` / `recognition_ritual` / `star_scope` / `star_goal`；`allow_public` 默认 false；调用 `task_rules.go` 的 `validateTargetStudent` / `validateClassStarJar`；验证：创建请求字段不被丢弃、默认值正确、目标孩子归属与 class scope 校验
 - [ ] 7.1 新增管理端活动端点：`POST /admin/task-activities`（服务端生成 `activity_id`，共享字段 + `class_ids`；`class_ids` 必填、去重、最多 50、全部属于当前园所；事务创建）、`PUT /admin/task-activities/:activity_id`（只允许标题/说明/学习关联/公开开关）、`DELETE /admin/task-activities/:activity_id`（整组删除，事务级联）；`POST /admin/tasks` 强制忽略/拒绝客户端 `activity_id`；活动任务禁止走单条 `DELETE /admin/tasks/:id`，单条 `PUT /admin/tasks/:id` 只允许安全字段或直接拒绝；`allow_public=false` 时调用 `task_rules.go` 的 `revokePublicForTask`；`star_scope` 创建或更新为 `class` 时调用 `validateClassStarJar`；`target_student_id` 创建/更新调用 `validateTargetStudent`；更新后 `target_student_id>0` 时强制 `allow_public=false` 并调用 `revokePublicForTask`；空 `activity_id` 为独立任务；任务有第一条提交后，单条/批量编辑都调用 `assertTaskEditable`；验证：单测覆盖创建/批量编辑/整组删除/非法字段被拒/跨园所班级被拒/空列表与重复班级被拒/超过 50 被拒/一个班级失败整组回滚/活动任务单删被拒/活动任务 unsafe 单编辑被拒/独立任务自设 activity_id 被拒/有提交后结构字段被拒/关闭 allow_public 撤销并清空申请/审核人/更新为 class scope 未配置目标被拒/班级改个体后公开关闭/更新目标跨班被拒
 - [ ] 7.2 `GET /admin/tasks/stats` 增加参与率、回应率、待回应数、`pending_over_48h`、平均回应时长、`child_happy_rate`、`ack_rate`、`feedback_coverage`、按班级与按活动明细；`response_rate` = 有主回应提交数 / 总提交数；`participation_rate` = 至少一条提交的目标学生数 / 目标学生数（个体任务分母 1）；`avg_response_hours` = 仅 `single` 主回应的“提交到回应”中位数，`period` 不计入；`pending_over_48h` = 主回应待回应且 `CreatedAt < now-48h` 的提交数，与老师端 `pending` 队列同口径；主回应指标按 `(response_id, parent_user_id)` 对计算，分母为覆盖的去重家长数（`notified_count + notify_failed_count`，含通知失败）；补充回应不含在内；验证：单测覆盖无数据、部分参与、全部回应、多个家长反馈不互相覆盖、比率不超过 100%、通知失败仍计入分母、period 不计入 single 均值、超 48h 计数与排序一致
 - [ ] 7.3 管理端可查看公开内容并撤回；验证：接口与权限
 - [ ] 7.4 下线旧 `completion_rate` / `total_possible` / `checkin_count` / `not_checkin_count`：任务列表、任务详情、老师统计、管理端统计、看板统一新口径；验证：`grep` 确认无旧字段返回，前后端同步
-- [ ] 7.5 管理端班级星星罐设置：新增 `GET/PUT /admin/classes/:id/star-jar`，按班级/学期设置目标，校验园所归属，目标必须 >0；验证：接口与权限，目标 0 被拒，任务 `StarScope=class` 使用该目标
+- [x] 7.5 管理端班级星星罐设置：新增 `GET/PUT /admin/classes/:id/star-jar`，按班级/学期设置目标，校验园所归属，目标必须 >0；验证：接口与权限，目标 0 被拒，任务 `StarScope=class` 使用该目标
 - [ ] [P2] 7.6 `participation_rate` 分母是否排除没有绑定家长的学生；选定口径并加单测
 
 ## 8. 契约

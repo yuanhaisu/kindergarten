@@ -68,7 +68,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	growthRepo := repository.NewGrowthRepo(db)
 	growthService := service.NewGrowthService(growthRepo, operationLogRepo)
 	taskRepo := repository.NewTaskRepo(db)
-	taskService := service.NewTaskService(taskRepo, operationLogRepo, db)
+	taskService := service.NewTaskService(taskRepo, operationLogRepo, messageRepo, db)
 	pointRepo := repository.NewPointRepo(db)
 	pointService := service.NewPointService(pointRepo, kindergartenAppSettingRepo, operationLogRepo)
 	achievementRepo := repository.NewAchievementRepo(db)

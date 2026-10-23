@@ -191,7 +191,8 @@ func setupB2(t *testing.T) *b2Fixture {
 
 	f.svcT = NewTeacherPortalService(db, nil, nil, nil, nil, nil, config.FaceConfig{})
 	f.svcP = NewParentPortalService(db, nil, nil, nil, nil, nil, nil, nil)
-	f.svcA = NewTaskService(repository.NewTaskRepo(db), repository.NewOperationLogRepo(db), db)
+	f.svcA = NewTaskService(repository.NewTaskRepo(db), repository.NewOperationLogRepo(db),
+		repository.NewMessageRepo(db), db)
 
 	f.tc = &TeacherPortalContext{UserID: testB2Teacher, KindergartenID: testB2KG, ClassID: testB2Class}
 	f.pc = b2ParentCtx(testB2Parent, testB2Student, testB2Class)
@@ -756,14 +757,15 @@ func TestEditingNonPublicTaskDoesNotStampRevokedAt(t *testing.T) {
 
 // 与公开无关的编辑不得刷新已有撤回时间：否则审计时间每次改标题都会漂移。
 // （「从未申请不被盖章」已由 revokePublicForTask 的 WHERE 收窄兜住，
-//  这里守的是「已经撤回过的行」不被反复覆盖。）
+//
+//	这里守的是「已经撤回过的行」不被反复覆盖。）
 func TestEditingTaskDoesNotRefreshRevokedAt(t *testing.T) {
 	f := setupB2(t)
 	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
 	f.requestAndApprove(t, &f.taskPub, c.ID)
 
 	require.NoError(t, f.svcT.UpdateTask(context.Background(), f.tc, f.taskPub.ID, TeacherTaskInput{
-		Title: f.taskPub.Title, LearningLink: "B2学习关联", AllowPublic: false,
+		Title: f.taskPub.Title, LearningLink: "B2学习关联", AllowPublic: ptrTo(false),
 	}))
 	require.NotNil(t, f.reload(t, c.ID).PublicRevokedAt)
 
@@ -915,7 +917,7 @@ func TestTeacherUpdateTaskClosingPublicRevokes(t *testing.T) {
 	require.Contains(t, f.wallIDs(t, f.pcPeer), c.ID)
 
 	require.NoError(t, f.svcT.UpdateTask(context.Background(), f.tc, f.taskPub.ID, TeacherTaskInput{
-		Title: f.taskPub.Title, LearningLink: "B2学习关联", AllowPublic: false,
+		Title: f.taskPub.Title, LearningLink: "B2学习关联", AllowPublic: ptrTo(false),
 	}))
 
 	var updated domain.ParentTask

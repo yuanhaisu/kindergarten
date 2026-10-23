@@ -30,6 +30,8 @@
 - `POST /teacher/tasks/:id/batch-response`
 - `PUT /teacher/tasks/:id/checkins/:checkin_id/public`
 - `GET /teacher/tasks/:id/share-card`
+- `GET /teacher/class/star-jar`
+- `PUT /teacher/class/star-jar`
 
 ---
 
@@ -298,6 +300,9 @@
 ```
 
 - 有提交后修改 `frequency`、起止日期、`target_student_id`、`star_scope`、`star_goal` 返回参数错误。
+- `star_goal` 在创建与编辑两条路径都必须 ≥0（负数返回参数错误）；`recognition_ritual=class_star` 且 `star_scope=task` 时还必须 >0。
+- **编辑时可选字段缺省 = 保留原值**：`star_goal` / `allow_public` / `description` 不传不会清零目标、不会关闭公开、不会清空说明（与 `api-admin/10-tasks.md` 同口径）。因此上面的最小编辑示例可以直接用。
+- `star_scope` 只接受 `task` / `class`，`recognition_ritual` 只接受 `sticker` / `voice` / `class_star`（首尾空白会被 trim）；非法值返回参数错误，不会落库成非规范值。
 - `allow_public=false` 时批量撤销公开（B 切片字段，A 先保留）。
 
 ### DELETE `/teacher/tasks/:id`
@@ -498,10 +503,48 @@
 - 任务不属于当前老师班级或已删除 → **404**。
 - 家长端 `onLoad` 解析 `scene` 得到 `t`（缺省回退 query `id`），并带上当前孩子的 `student_id`。
 
+### GET `/teacher/class/star-jar`
+
+> 读取**当前班级当前学期**的班级星星罐目标。班级取自登录态，不接受 query 指定班级。
+
+```json
+// Response（HTTP 200）
+{
+  "class_id": 1,
+  "term": "2031-2032-spring",
+  "term_start": "2031-02-20",
+  "term_end": "2031-07-10",
+  "goal": 30,
+  "configured": true,
+  "updated_at": "2026-10-23T09:00:00Z"
+}
+```
+
+- `term` = `<班级 academic_year>-<当前学期>`；班级没有学年时用 `<自然年>-<学期>`。
+- 当前学期取 `kindergarten_app_settings.current_semester`（`spring` / `fall`，非 `fall` 一律按 `spring`）。
+- `term_start` / `term_end` 口径：`academic_years` 有配置就用配置；有学年但没配置起止 → 自然学期兜底（`spring` = 次年 2/1–7/31，`fall` = 当年 9/1–次年 1/31）；**班级没有学年**（或学年不是 `YYYY-YYYY`、起止年倒序）→ 自然年 1/1–12/31。
+- 未配置时返回 `goal=0`、`configured=false`、`updated_at=null`（仍带 `term`，客户端可据此展示「请先配置」）。
+- 学期之间的目标互相独立：上学期配置过不会让本学期任务通过校验。
+
+### PUT `/teacher/class/star-jar`
+
+```json
+// Request
+{ "goal": 30 }
+
+// Response（HTTP 200）
+{ "class_id": 1, "term": "2031-2032-spring", "term_start": "2031-02-20", "term_end": "2031-07-10", "goal": 30, "configured": true, "updated_at": "2026-10-23T09:01:00Z" }
+```
+
+- 目标 **必须 > 0**：`0` / 负数 → **422**「班级星星罐目标必须大于 0」。`0` 是「未配置」，不是「关闭」。
+- 按 `(kindergarten_id, class_id, term)` upsert；重复设置同一学期为覆盖，不新增行。
+- 任务 `star_scope=class` 的创建/更新只认**当前学期**这里有 `goal>0`；未配置 → **422**「请先配置班级星星罐」。
+- 写入 `operation_logs`（`module=tasks`、`action=set_star_jar`、`target_type=class_star_jar`）。
+
 ## 说明
 
 - 公开审核见上方 `PUT /teacher/tasks/:id/checkins/:checkin_id/public`；公开墙本身只在家长端。
 - 分享码见上方 `GET /teacher/tasks/:id/share-card`；补充回应未读由家长端 `POST /parent/tasks/:id/read` 清除（家长端契约）。
-- 班级罐配置端点属于 C 切片；A 只做创建时只读校验。
+- 班级罐配置见上方 `GET|PUT /teacher/class/star-jar`；管理端同能力见 `api-admin/10-tasks.md`。任务 `star_scope=class` 时忽略任务 `star_goal`。
 - 任务不发放积分。
 

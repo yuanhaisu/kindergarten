@@ -177,6 +177,53 @@ func (h *Handler) GetTaskStats(c *gin.Context) {
 	response.OK(c, data)
 }
 
+// writeTaskError 把 TaskService 的哨兵/字符串错误映射成稳定的 HTTP 语义。
+//
+// 结构锁、班级罐缺失、目标孩子越权都必须给出「能照着修」的文案：
+// 全部折成 500 或笼统的「参数错误」时，调用方只能猜是哪个字段。
+func writeTaskError(c *gin.Context, err error, fallback string) {
+	switch {
+	case err.Error() == "NO_KINDERGARTEN":
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+	case errors.Is(err, service.ErrClassNotFound):
+		response.ErrNotFound(c, "班级不存在")
+	case service.IsTaskNotFound(err):
+		response.ErrNotFound(c, "任务不存在")
+	case errors.Is(err, service.ErrTaskStructuralLocked):
+		response.ErrValidation(c, "任务已有提交，只能修改标题、说明、学习关联与公开开关")
+	case errors.Is(err, service.ErrTaskTargetInvalid):
+		response.ErrValidation(c, "目标孩子不属于该班级")
+	case errors.Is(err, service.ErrTaskStarJarMissing):
+		response.ErrValidation(c, "请先配置班级星星罐")
+	case errors.Is(err, service.ErrTaskStarGoalNegative):
+		response.ErrValidation(c, "星星目标不能为负数")
+	case errors.Is(err, service.ErrTaskStarGoalInvalid):
+		response.ErrValidation(c, "选择班级星星仪式且按任务统计时，星星目标必须大于 0")
+	case errors.Is(err, service.ErrTaskRitualInvalid):
+		response.ErrValidation(c, "recognition_ritual 须为 sticker / voice / class_star")
+	case errors.Is(err, service.ErrTaskStarScopeInvalid):
+		response.ErrValidation(c, "star_scope 须为 task / class")
+	case errors.Is(err, service.ErrTaskActivityIDForbidden):
+		response.ErrValidation(c, "独立任务不接受 activity_id，请使用 /admin/task-activities 创建多班活动")
+	case errors.Is(err, service.ErrStarJarGoalInvalid):
+		response.ErrValidation(c, "班级星星罐目标必须大于 0")
+	case errors.Is(err, service.ErrTaskBusy):
+		response.ErrUnavailable(c, "操作冲突，请稍后重试")
+	case err.Error() == "BAD_FREQUENCY":
+		response.ErrValidation(c, "frequency 须为 daily / weekly / once")
+	case err.Error() == "BAD_DATE", err.Error() == "BAD_DATE_RANGE":
+		response.ErrValidation(c, "日期参数无效")
+	case err.Error() == "BAD_STATUS":
+		response.ErrValidation(c, "status 须为 0（已结束）或 1（进行中）")
+	case err.Error() == "BAD_TITLE":
+		response.ErrValidation(c, "标题不能为空")
+	case err.Error() == "BAD_LEARNING_LINK":
+		response.ErrValidation(c, "学习关联必填")
+	default:
+		response.ErrInternal(c, fallback)
+	}
+}
+
 func (h *Handler) CreateTask(c *gin.Context) {
 	kgID := middleware.GetKindergartenID(c)
 	if kgID == 0 {
@@ -191,23 +238,8 @@ func (h *Handler) CreateTask(c *gin.Context) {
 	uid := middleware.GetUserID(c)
 	data, err := h.taskSvc.CreateTask(c.Request.Context(), kgID, uid, req, c.ClientIP(), c.GetHeader("User-Agent"))
 	if err != nil {
-		switch err.Error() {
-		case "NO_KINDERGARTEN":
-			response.ErrForbidden(c, "未绑定园所，请重新登录")
-			return
-		case "CLASS_NOT_FOUND":
-			response.ErrNotFound(c, "班级不存在")
-			return
-		case "BAD_FREQUENCY":
-			response.ErrValidation(c, "frequency 须为 daily / weekly / once")
-			return
-		case "BAD_DATE", "BAD_DATE_RANGE":
-			response.ErrValidation(c, "日期参数无效")
-			return
-		default:
-			response.ErrInternal(c, "创建任务失败")
-			return
-		}
+		writeTaskError(c, err, "创建任务失败")
+		return
 	}
 	response.Created(c, data)
 }
@@ -230,30 +262,57 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 	}
 	uid := middleware.GetUserID(c)
 	if err := h.taskSvc.UpdateTask(c.Request.Context(), kgID, uid, id, req, c.ClientIP(), c.GetHeader("User-Agent")); err != nil {
-		switch err.Error() {
-		case "NO_KINDERGARTEN":
-			response.ErrForbidden(c, "未绑定园所，请重新登录")
-			return
-		case "CLASS_NOT_FOUND":
-			response.ErrNotFound(c, "班级不存在")
-			return
-		case "BAD_FREQUENCY":
-			response.ErrValidation(c, "frequency 须为 daily / weekly / once")
-			return
-		case "BAD_DATE", "BAD_DATE_RANGE":
-			response.ErrValidation(c, "日期参数无效")
-			return
-		case "BAD_STATUS":
-			response.ErrValidation(c, "status 须为 0（已结束）或 1（进行中）")
-			return
-		default:
-			if service.IsTaskNotFound(err) {
-				response.ErrNotFound(c, "任务不存在")
-				return
-			}
-			response.ErrInternal(c, "更新任务失败")
-			return
-		}
+		writeTaskError(c, err, "更新任务失败")
+		return
 	}
 	response.OK(c, gin.H{"id": id})
+}
+
+// GetClassStarJar GET /admin/classes/:id/star-jar
+func (h *Handler) GetClassStarJar(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	classID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || classID == 0 {
+		response.ErrValidation(c, "无效的班级 ID")
+		return
+	}
+	data, err := h.taskSvc.GetClassStarJar(c.Request.Context(), kgID, classID)
+	if err != nil {
+		writeTaskError(c, err, "获取班级星星罐失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// SetClassStarJar PUT /admin/classes/:id/star-jar
+func (h *Handler) SetClassStarJar(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	classID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || classID == 0 {
+		response.ErrValidation(c, "无效的班级 ID")
+		return
+	}
+	var req struct {
+		Goal int `json:"goal"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	uid := middleware.GetUserID(c)
+	data, err := h.taskSvc.SetClassStarJar(c.Request.Context(), kgID, classID, uid, req.Goal,
+		c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		writeTaskError(c, err, "设置班级星星罐失败")
+		return
+	}
+	response.OK(c, data)
 }

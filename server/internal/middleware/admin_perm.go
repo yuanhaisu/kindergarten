@@ -38,6 +38,9 @@ var adminRoutePermission = map[string]string{
 	"PUT /api/v1/admin/classes/:id":    "student:manage",
 	"DELETE /api/v1/admin/classes/:id": "student:manage",
 	"POST /api/v1/admin/classes/:id/adjust": "student:manage",
+	// 班级星星罐属于亲子任务配置，不复用 student:*。
+	"GET /api/v1/admin/classes/:id/star-jar": "task:view",
+	"PUT /api/v1/admin/classes/:id/star-jar": "task:manage",
 
 	// students
 	"GET /api/v1/admin/students":             "student:view",

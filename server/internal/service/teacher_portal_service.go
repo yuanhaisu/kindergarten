@@ -2843,9 +2843,14 @@ func (s *TeacherPortalService) ListTeacherClasses(ctx context.Context, tc *Teach
 	return out, nil
 }
 
+// TeacherTaskInput 老师端创建/编辑任务入参。
+//
+// 可选项用指针表示「未提供」：省略 `star_goal`/`allow_public`/`description` 时
+// 编辑必须保留原值。用零值会让一次「只改标题」的请求静默把星星目标清零、
+// 关掉公开并批量撤回已公开内容（管理端 C-1 已改，这里必须同口径）。
 type TeacherTaskInput struct {
 	Title             string           `json:"title"`
-	Description       string           `json:"description"`
+	Description       *string          `json:"description"`
 	Intro             string           `json:"intro"`
 	Requirements      []string         `json:"requirements"`
 	Rewards           []map[string]any `json:"rewards"`
@@ -2854,10 +2859,10 @@ type TeacherTaskInput struct {
 	Frequency         string           `json:"frequency"`
 	StartDate         string           `json:"start_date"`
 	EndDate           string           `json:"end_date"`
-	AllowPublic       bool             `json:"allow_public"`
+	AllowPublic       *bool            `json:"allow_public"`
 	RecognitionRitual string           `json:"recognition_ritual"`
 	StarScope         string           `json:"star_scope"`
-	StarGoal          int              `json:"star_goal"`
+	StarGoal          *int             `json:"star_goal"`
 	Status            int8             `json:"status"`
 }
 
@@ -2991,30 +2996,53 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 	}
 	reqsJSON, _ := json.Marshal(req.Requirements)
 	rewardsJSON, _ := json.Marshal(req.Rewards)
-	starScope := req.StarScope
+	// 未提供的字段按创建默认值展开；枚举与下界走 task_rules.go 的共享判定，
+	// 与管理端同一套，避免老师端能落库「CLASS」「class 」这类非规范值。
+	starGoal := 0
+	if req.StarGoal != nil {
+		starGoal = *req.StarGoal
+	}
+	description := ""
+	if req.Description != nil {
+		description = strings.TrimSpace(*req.Description)
+	}
+	allowPublicReq := false
+	if req.AllowPublic != nil {
+		allowPublicReq = *req.AllowPublic
+	}
+	starScope := strings.TrimSpace(req.StarScope)
 	if starScope == "" {
 		starScope = domain.TaskStarScopeTask
+	}
+	if starScope != domain.TaskStarScopeTask && starScope != domain.TaskStarScopeClass {
+		return nil, ErrTeacherInvalidParams
+	}
+	if !validTaskStarGoal(starGoal) {
+		return nil, ErrTeacherInvalidParams
+	}
+	ritual := strings.TrimSpace(req.RecognitionRitual)
+	if ritual == "" {
+		ritual = domain.TaskRitualSticker
+	}
+	if !validTaskRitual(ritual) {
+		return nil, ErrTeacherInvalidParams
 	}
 	if starScope == domain.TaskStarScopeClass {
 		if err := validateClassStarJar(ctx, s.db, tc.KindergartenID, tc.ClassID); err != nil {
 			return nil, ErrTeacherInvalidParams
 		}
 	}
-	allowPublic := req.AllowPublic && req.TargetStudentID == 0
-	ritual := req.RecognitionRitual
-	if ritual == "" {
-		ritual = domain.TaskRitualSticker
-	}
-	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && req.StarGoal <= 0 {
+	allowPublic := allowPublicReq && req.TargetStudentID == 0
+	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && starGoal <= 0 {
 		return nil, ErrTeacherInvalidParams
 	}
 	row := &domain.ParentTask{
 		KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, CreatorID: tc.UserID,
-		TargetStudentID: req.TargetStudentID, Title: req.Title, Description: req.Description,
+		TargetStudentID: req.TargetStudentID, Title: req.Title, Description: description,
 		Intro: req.Intro, Requirements: string(reqsJSON), Rewards: string(rewardsJSON),
 		LearningLink: req.LearningLink, Frequency: freq, StartDate: start, EndDate: end,
 		AllowPublic: allowPublic, RecognitionRitual: ritual, StarScope: starScope,
-		StarGoal: req.StarGoal, Status: 1,
+		StarGoal: starGoal, Status: 1,
 	}
 	if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
 		return nil, err
@@ -3036,24 +3064,51 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 	if req.Frequency != "" && !validTaskFrequency(domain.TaskFrequency(req.Frequency)) {
 		return ErrTeacherInvalidParams
 	}
+	// 未提供的可选字段一律沿用原值：用零值会让「只改标题」静默清零星星目标、
+	// 关掉公开并批量撤回已公开内容（与管理端同一口径，D12）。
+	starGoal := cur.StarGoal
+	if req.StarGoal != nil {
+		starGoal = *req.StarGoal
+	}
+	description := cur.Description
+	if req.Description != nil {
+		description = strings.TrimSpace(*req.Description)
+	}
+	allowPublic := cur.AllowPublic
+	if req.AllowPublic != nil {
+		allowPublic = *req.AllowPublic
+	}
+	if !validTaskStarGoal(starGoal) {
+		return ErrTeacherInvalidParams
+	}
 	if err := validateTargetStudent(ctx, s.db, tc.KindergartenID, tc.ClassID, req.TargetStudentID); err != nil {
 		return ErrTeacherInvalidParams
 	}
-	starScope := req.StarScope
+	starScope := strings.TrimSpace(req.StarScope)
 	if starScope == "" {
 		starScope = cur.StarScope
 	}
-	if starScope == domain.TaskStarScopeClass {
+	if starScope != domain.TaskStarScopeTask && starScope != domain.TaskStarScopeClass {
+		return ErrTeacherInvalidParams
+	}
+	ritual := strings.TrimSpace(req.RecognitionRitual)
+	if ritual == "" {
+		ritual = cur.RecognitionRitual
+	}
+	if !validTaskRitual(ritual) {
+		return ErrTeacherInvalidParams
+	}
+	// 只在范围**真的变化**时校验班级罐：罐被删后，改标题不该连带 422（与管理端同口径）。
+	scopeChanged := starScope != cur.StarScope
+	if starScope == domain.TaskStarScopeClass && scopeChanged {
 		if err := validateClassStarJar(ctx, s.db, tc.KindergartenID, tc.ClassID); err != nil {
 			return ErrTeacherInvalidParams
 		}
 	}
-	allowPublic := req.AllowPublic
-	ritual := req.RecognitionRitual
-	if ritual == "" {
-		ritual = cur.RecognitionRitual
-	}
-	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && req.StarGoal <= 0 {
+	// 目标规则只在本次动到目标/仪式/范围时生效：历史脏数据（goal=0 的 class_star 任务）
+	// 不该把无关编辑一起挡住。判定用**有效值**，否则省略 star_goal 的请求永远看到 0。
+	goalTouched := req.StarGoal != nil || ritual != cur.RecognitionRitual || scopeChanged
+	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && starGoal <= 0 && goalTouched {
 		return ErrTeacherInvalidParams
 	}
 	loc := shanghaiLoc()
@@ -3063,8 +3118,8 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 	if req.Title != cur.Title {
 		updates["title"] = req.Title
 	}
-	if req.Description != cur.Description {
-		updates["description"] = req.Description
+	if description != cur.Description {
+		updates["description"] = description
 	}
 	if req.LearningLink != cur.LearningLink {
 		updates["learning_link"] = req.LearningLink
@@ -3090,8 +3145,8 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 	if starScope != cur.StarScope {
 		updates["star_scope"] = starScope
 	}
-	if req.StarGoal != cur.StarGoal {
-		updates["star_goal"] = req.StarGoal
+	if starGoal != cur.StarGoal {
+		updates["star_goal"] = starGoal
 	}
 	if req.Status != 0 && req.Status != cur.Status {
 		updates["status"] = req.Status
