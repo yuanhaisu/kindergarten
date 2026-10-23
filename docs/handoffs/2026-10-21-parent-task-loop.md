@@ -911,3 +911,55 @@ B4-b：`9.1` 余下（supplement / public 审核封装）+ `9.2`（创建/编辑
 - #2：`detail?id=4324&student_id=32`（class 1 任务，当前孩子 class 4）→ 页面同时显示「这条消息是另一个孩子的任务…切换查看」和「任务已结束或不存在」。
 - #3 / #4：随 #1、分享码链路一并观察，编译产物已含新分支。
 - 回归：`detail?id=4322` 回应/补充回应/反馈回显（6 个反馈按钮，1 个 active）未受模板结构改动影响；两端 `npm run build:mp-weixin` 再次通过。
+
+### 16.9 班级公开墙页面（2026-10-23，补 §16.8 的缺口 3）
+
+`fetchPublicWall` 之前只有封装没有调用方，详情页却在说「已在班级墙展示」。现在补齐：
+
+| 文件 | 变更 |
+| --- | --- |
+| `parent/src/pages/tasks/wall.vue`（新） | 班级墙列表：按**提交日期**分组（今天 / 昨天 / M月D日），有图的渲染照片、没图的用品牌浅底区分成「一句话」；头像缺失时用姓名首字兜底；点图 `uni.previewImage` |
+| `parent/src/pages.json` | 注册 `pages/tasks/wall`（`enablePullDownRefresh`） |
+| `parent/src/pages/tasks/index.vue` | 列表顶部加「班级墙 / 看看本班孩子的分享」入口（`navigateTo`，非 tabBar 页） |
+
+状态覆盖：首屏加载 / 空态（「本班还没有分享」+ 一句说明）/ 整页错误（列表为空时给重试）/ 内联错误（已有数据时只提示，不吞列表）/ 分页加载中 / 没有更多。
+数据用 `withStudentScope` 带当前孩子 `student_id`，`page_size=20`，`onReachBottom` 翻页、`onPullDownRefresh` 刷新。
+
+验证（真实点击 + 截图）：
+- 从任务列表点入口进入 `pages/tasks/wall`，渲染出「今天 / 今天陪小俊彦读了《小熊很忙》… / 小俊彦 / 10:00 / 【B4验证】公开申请 10-23 / 没有更多了」。
+- 把该提交改成已撤销后重进 → 「本班还没有分享 / 家长提交、老师确认之后，会出现在这里」。
+- 停后端重进 → 「网络异常」+ 重试。
+- 改回已批准（夹具恢复），两端 build 通过、tokens 0 违规。
+
+未验证：**加载更多**（本班目前只有 1 条已批准内容，翻不到第二页；`onReachBottom` 分支没有真实数据走过）。
+
+另：新增页面后旧的 parent dev watcher 只写出了 `wall.json`、没编译 `wall.js/wxml`（页面注册变更后 watcher 会卡住）。杀掉 `kindergarten\parent\node_modules` 那个 node 进程重启 `npm run dev:mp-weixin` 即恢复。
+
+---
+
+## 17. 新窗口开工提示词（B4-b，2026-10-23 准备）
+
+```text
+读 docs/handoffs/2026-10-21-parent-task-loop.md 的 §15.3、§16（含 16.6/16.7/16.8/16.9 四轮审查与收尾），
+按 §15.3 的 B4-b 范围开工：老师端 9.1 余下（supplement / public 审核封装）、9.2（创建/编辑表单新字段）、
+9.3（补充回应与公开审核 UI）、9.7。
+
+开工前先读：openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md 的 9.x、
+design.md 的 D7/D12、backend/api/api-teacher/09-class-and-tasks.md。
+
+起点：HEAD 含 B4-a 的四个提交（8b5a00f / 09062eb / 70f2d67 / 班级墙），家长端 B4-a 已闭合；
+老师端仍是 A 切片的老表单，创建任务填不了新字段，详情页没有补充回应与公开审核入口。
+
+约束：
+- 不要动 A/B1/B2/B3 与 B4-a 已落地的语义（任务锁序、公开状态机、通知按家长聚合、读标记口径）。
+- 前端组件只改 shared-ui/（两端 components/ 会被 sync-ui.js 覆盖）；样式只引用 token。
+- 老师端没有 tabBar，跳转一律 navigateTo。
+- make run 起后端（8080，MySQL 3316 / Redis 6379）；改完先 npm run dev:mp-weixin。
+- 交互验证必须真实点击；**视图层读取用 `_verify/wxc.py --host <port>`**（`cdp.py` 会读到僵尸 pageframe，
+  本轮踩过两次），host 从 `/json/list` 里 `127.0.0.1:<port>/__pageframe__/...` 取。
+- 原生 `uni.showModal` 在 IDE 里点不到（不进视图层 DOM），需要二次确认的交互用页面内两步点击。
+- 别提交 docs/competitive/*、skills-lock.json、.impeccable/。
+- 9.x 勾选仍要等真机验证；没跑通前不要勾。
+```
+
+现成夹具（园所 4）：任务 4322（已提交 + 主回应 + 补充回应，用于老师端「补充回应」入口）、4323（家长端公开申请/撤销）、4324（class 1，分享码）、4325/4326/4327（家长端待完成/连点）；消息 1171（带 `action_path`）；`task_read_marks` 131。

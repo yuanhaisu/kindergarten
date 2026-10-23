@@ -53,6 +53,8 @@ function taskUrl(id) {
 // 任务页不是 tabBar 页（家长端 tabBar 只有 index/growth/pickup/profile），用 navigateTo。
 function goDetail(id) { uni.navigateTo({ url: taskUrl(id) }) }
 function goCheckIn(id) { uni.navigateTo({ url: taskUrl(id) }) }
+// 班级墙不是 tabBar 页，走 navigateTo（家长端 tabBar 只有 index/growth/pickup/profile）。
+function goWall() { uni.navigateTo({ url: "/pages/tasks/wall" }) }
 
 async function loadData() {
   // 已有数据时静默刷新：从详情页返回会走 onShow，整块列表闪成「加载中...」体验很差。
@@ -89,6 +91,15 @@ onPullDownRefresh(loadData)
 <template>
   <view class="page">
     <scroll-view scroll-y class="content-scroll" :refresher-enabled="true" @refresherrefresh="loadData">
+      <!-- 班级墙入口：只有老师审核通过的内容会出现在那里 -->
+      <view class="wall-entry" @click="goWall">
+        <view class="wall-entry-text">
+          <text class="wall-entry-title">班级墙</text>
+          <text class="wall-entry-hint">看看本班孩子的分享</text>
+        </view>
+        <text class="wall-entry-go">›</text>
+      </view>
+
       <!-- 任务分类栏 -->
       <view class="tab-bar">
         <view
@@ -189,6 +200,32 @@ onPullDownRefresh(loadData)
   height: 0;
   box-sizing: border-box;
   width: 100%;
+}
+
+// ===== 班级墙入口 =====
+.wall-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-lg;
+  border-radius: $border-radius-xl;
+  background: $color-brand-primary-bg;
+}
+.wall-entry-text { display: flex; flex-direction: column; }
+.wall-entry-title {
+  color: $color-brand-primary;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
+}
+.wall-entry-hint {
+  margin-top: $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-xs;
+}
+.wall-entry-go {
+  color: $color-brand-primary;
+  font-size: $typography-font-size-2xl;
 }
 
 // ===== 分类标签 =====

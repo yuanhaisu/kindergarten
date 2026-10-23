@@ -115,6 +115,13 @@
       }
     },
     {
+      "path": "pages/tasks/wall",
+      "style": {
+        "navigationBarTitleText": "班级墙",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
       "path": "pages/points/index",
       "style": {
         "navigationBarTitleText": "积分与成就"
