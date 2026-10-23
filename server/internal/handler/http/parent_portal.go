@@ -9,6 +9,7 @@ import (
 
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
 )
 
@@ -654,6 +655,34 @@ func (h *Handler) ParentGetTask(c *gin.Context) {
 	}
 	response.OK(c, data)
 }
+
+// ParentMarkTaskRead 清除当前孩子在该任务下的补充回应未读标记（5.5）。
+func (h *Handler) ParentMarkTaskRead(c *gin.Context) {
+	pc, ok := h.parentTaskCtx(c)
+	if !ok {
+		return
+	}
+	id, ok2 := ppID(c)
+	if !ok2 {
+		return
+	}
+	data, err := h.parentPortalSvc.MarkTaskRead(c.Request.Context(), pc, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrParentNotFound):
+			response.ErrNotFound(c, "任务不存在")
+		case errors.Is(err, service.ErrParentInvalidParams):
+			response.ErrValidation(c, "参数不合法")
+		default:
+			// 不能静默：读标记写入失败（DB/锁）必须留痕，否则红点清不掉也无从排查。
+			log.L(c.Request.Context()).Error("parent mark task read failed", "task", id, "err", err)
+			response.ErrInternal(c, "更新读标记失败")
+		}
+		return
+	}
+	response.OK(c, data)
+}
+
 func (h *Handler) ParentCheckinTask(c *gin.Context) {
 	pc, ok := h.parentTaskCtx(c)
 	if !ok {

@@ -187,6 +187,7 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 		tasks.GET("/:id", h.TeacherGetTask)
 		tasks.PUT("/:id", h.TeacherUpdateTask)
 		tasks.DELETE("/:id", h.TeacherDeleteTask)
+		tasks.GET("/:id/share-card", h.TeacherGetTaskShareCard)
 		tasks.GET("/:id/stats", h.TeacherTaskStats)
 		tasks.GET("/:id/checkins", h.TeacherTaskCheckins)
 		tasks.POST("/:id/checkins/:checkin_id/response", h.TeacherRespondTask)
@@ -484,6 +485,7 @@ func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 	{
 		tasks.GET("", h.ParentListTasks)
 		tasks.GET("/:id", h.ParentGetTask)
+		tasks.POST("/:id/read", h.ParentMarkTaskRead)
 		tasks.POST("/:id/checkin", h.ParentCheckinTask)
 		tasks.GET("/:id/checkin-history", h.ParentCheckinHistory)
 		tasks.POST("/responses/:response_id/reaction", h.ParentReactResponse)

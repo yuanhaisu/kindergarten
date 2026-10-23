@@ -6,9 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
 )
 
@@ -1132,6 +1134,35 @@ func (h *Handler) TeacherGetTask(c *gin.Context) {
 	data, err := h.teacherPortalSvc.GetTask(c.Request.Context(), tc, id)
 	if err != nil {
 		teacherPortalErr(c, err, "获取任务详情失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherGetTaskShareCard 生成家长端任务小程序码（5.4）。
+// 必须用家长端凭据生成，否则家长扫码会进老师端。
+func (h *Handler) TeacherGetTaskShareCard(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherSvc.GenerateTaskShareCard(c.Request.Context(), tc.KindergartenID, tc.ClassID, id)
+	if err != nil {
+		if service.IsNotFound(err) {
+			response.ErrNotFound(c, "任务不存在")
+			return
+		}
+		// 不能静默：凭据缺失、版本配置非法、微信接口失败都要在服务端留痕，否则线上只能看到 500。
+		log.L(c.Request.Context()).Error("teacher task share-card failed", "task", id, "err", err)
+		if errors.Is(err, auth.ErrInvalidCodeEnvVersion) {
+			response.ErrInternal(c, "小程序码版本配置非法：wechat.code_env_version 只能是 release/trial/develop")
+			return
+		}
+		response.ErrInternal(c, "生成家长端小程序码失败，请检查家长端微信配置")
 		return
 	}
 	response.OK(c, data)

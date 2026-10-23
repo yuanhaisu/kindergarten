@@ -96,3 +96,18 @@ func TestWeChatConfigNormalizeLegacyDoesNotOverride(t *testing.T) {
 		t.Errorf("parent must stay empty (no fallback to legacy when teacher already set), got (%q, %q)", c.ParentAppID, c.ParentSecret)
 	}
 }
+
+// 小程序码版本缺省是正式版：少配一个键不能静默生成体验版/开发版的码。
+func TestWeChatConfigCodeEnvVersionDefault(t *testing.T) {
+	c := WeChatConfig{}
+	c.normalize()
+	if c.CodeEnvVersion != "release" {
+		t.Errorf("default code_env_version = %q, want release", c.CodeEnvVersion)
+	}
+
+	c = WeChatConfig{CodeEnvVersion: "trial"}
+	c.normalize()
+	if c.CodeEnvVersion != "trial" {
+		t.Errorf("explicit code_env_version must be preserved, got %q", c.CodeEnvVersion)
+	}
+}

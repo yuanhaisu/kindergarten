@@ -65,13 +65,13 @@
 
 ## 5. 后端 · 通知、分享码与微信能力
 
-- [ ] 5.1 任务发布通知：给目标家庭写站内消息（`type=task`，`reference_id=task_id`，`action_path=/pages/tasks/detail?id=<task_id>&student_id=<student_id>`），同一任务对同一家长至多一条；个体任务用目标孩子，班级任务用该家长在该班的一个确定孩子；只允许内部 `/pages/` 路径；`notified_count` / `notify_failed_count` 按家长去重，并由创建任务响应返回；验证：单测覆盖班级/个体范围、多孩 action_path、内部路径校验、发布通知计数
-- [ ] 5.2 主回应通知聚合：按 `TaskResponse` 与家长聚合，一个家长一次主回应只收一条消息（`reference_id=response_id`，`action_path=/pages/tasks/detail?id=<task_id>&student_id=<student_id>`）；覆盖多条提交不重复发送；`notified_count` / `notify_failed_count` 按家长用户去重；补充回应不单独发通知；验证：单测覆盖单条/周期汇总/多孩/同一家长多条提交/补充不通知/action_path 带 student_id
-- [ ] 5.3 通知失败不回滚任务/回应；老师回应响应返回按家长去重的 `notified_count` / `notify_failed_count`，只统计主回应；验证：单测覆盖部分失败
+- [x] 5.1 任务发布通知：给目标家庭写站内消息（`type=task`，`reference_id=task_id`，`action_path=/pages/tasks/detail?id=<task_id>&student_id=<student_id>`），同一任务对同一家长至多一条；个体任务用目标孩子，班级任务用该家长在该班的一个确定孩子；只允许内部 `/pages/` 路径；`notified_count` / `notify_failed_count` 按家长去重，并由创建任务响应返回；验证：单测覆盖班级/个体范围、多孩 action_path、内部路径校验、发布通知计数
+- [x] 5.2 主回应通知聚合：按 `TaskResponse` 与家长聚合，一个家长一次主回应只收一条消息（`reference_id=response_id`，`action_path=/pages/tasks/detail?id=<task_id>&student_id=<student_id>`）；覆盖多条提交不重复发送；`notified_count` / `notify_failed_count` 按家长用户去重；补充回应不单独发通知；验证：单测覆盖单条/周期汇总/多孩/同一家长多条提交/补充不通知/action_path 带 student_id
+- [x] 5.3 通知失败不回滚任务/回应；老师回应响应返回按家长去重的 `notified_count` / `notify_failed_count`，只统计主回应；验证：单测覆盖部分失败
 - [ ] 5.4 新增 `WeChatClient.GetParentWXACodeUnlimit(ctx, scene, page, envVersion)`（走家长端凭据）；新增 `wechat.code_env_version` 配置（默认 `release`，开发/测试 `trial`/`develop`）；老师端 `GET /teacher/tasks/:id/share-card` 生成 `pages/tasks/detail` 的小程序码/海报 URL，`scene=t=<task_id>`；验证：单测断言使用家长端凭据与 envVersion；真实扫码进入对应版本家长端
 - [ ] 5.5 补充回应未读提示：新增 `task_read_marks(task_id, user_id, student_id, last_read_at)` 唯一 `(task_id, user_id, student_id)` 与 `POST /parent/tasks/:id/read`；读接口带 `student_id`，校验家长绑定、任务可见且未删除，upsert（唯一冲突重试/ON DUPLICATE）并返回 `{ last_read_at }`；未读 = `last_read_at IS NULL OR 补充回应.created_at >= last_read_at`；任务列表/详情显示红点，打开后更新读标记；验证：单测与真实点击，首次未读、同秒、并发读不 500、多家长、多孩互不影响
 - [ ] [P2] 5.6 `task_read_marks.last_read_at` 与 supplement `created_at` 使用同一存储时区/精度；验证：单测同秒/跨时区
-- [ ] 5.7 验证：消息文案包含任务标题与入口提示；不接微信订阅消息；不新增 `MessageType`
+- [x] 5.7 验证：消息文案包含任务标题与入口提示；不接微信订阅消息；不新增 `MessageType`
 
 ## 6. 后端 · 移除任务积分
 

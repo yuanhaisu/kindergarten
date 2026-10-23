@@ -56,6 +56,10 @@ type WeChatConfig struct {
 	ParentAppID   string `ini:"parent_app_id"`
 	ParentSecret  string `ini:"parent_secret"`
 
+	// CodeEnvVersion 小程序码指向的版本：release（正式）/ trial（体验）/ develop（开发）。
+	// 家长端小程序码必须与老师当前可扫码的版本一致，否则扫码进不去（默认 release）。
+	CodeEnvVersion string `ini:"code_env_version"`
+
 	// 旧的单对键，仅作回滚兼容：两端都未配置时回填到两端，用于退回共用 AppID。
 	// 不要再往这里写新配置。
 	AppID  string `ini:"app_id"`
@@ -87,6 +91,10 @@ func (c *WeChatConfig) normalize() {
 	}
 	if c.TeacherSecret == "" && c.ParentSecret == "" && c.Secret != "" {
 		c.TeacherSecret, c.ParentSecret = c.Secret, c.Secret
+	}
+	// 缺省正式版：生成小程序码时不因少配一个键就产出体验版/开发版的码。
+	if c.CodeEnvVersion == "" {
+		c.CodeEnvVersion = "release"
 	}
 }
 

@@ -392,10 +392,13 @@ GET  /api/v1/parent/tasks/:id/checkin-history?student_id=...
 ## 11. 新会话开场建议
 
 ```text
-读 docs/handoffs/2026-10-21-parent-task-loop.md，按里面的“下一步”继续。
-A 切片与 B1（3.5 补充回应 + 3.6 家长反馈）已落地；B 剩下的按 §12 的窗口表逐组推进，
-一次只做一组，做完一组要先做限制性对抗性审查再验证，通过后才进下一组。
-不要新增积分，不要改通知实现。
+读 docs/handoffs/2026-10-21-parent-task-loop.md 的 §12（B1/B2 已完成）与 §13，然后开工 B3：
+OpenSpec change 2026-10-20-redesign-parent-task-loop 的任务 5.1–5.5（通知聚合 + 读标记 + 小程序码）。
+
+注意：B3 会改通知实现，旧提示「不要改通知实现」只适用于 A/B1 阶段，已作废。
+先读 design.md D9 与 backend/api/ 的相关契约，再动代码；任务写路径先锁 parent_tasks 行。
+按 §12 的窗口纪律：一次只做一组，做完一组先做限制性对抗性审查再验证，通过后才进下一组。
+不要动 A/B1/B2 已落地的语义；不要提交 docs/competitive/*、.impeccable/、skills-lock.json。
 ```
 
 ---
@@ -408,7 +411,7 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 | --- | --- | --- |
 | **B1** | 3.5 补充回应 + 3.6 家长反馈 | ✅ 2026-10-22 完成（后端） |
 | **B2** | 4.1–4.4 公开审核 + 公开墙 | ✅ 2026-10-22 完成（后端，无界面） |
-| B3 | 5.1–5.5 通知聚合 + 读标记 + 小程序码 | 未开始 |
+| **B3** | 5.1–5.5 通知聚合 + 读标记 + 小程序码 | ⚠️ 2026-10-23 后端完成（5.1–5.3 勾选；5.4/5.5 的界面与真机扫码待 10.x/12.6） |
 | B4 | 9.5/9.7 + 10.5–10.8 前端 + 12.3/12.4/12.6 | 未开始 |
 
 ### 12.1 B1 落地内容
@@ -602,3 +605,78 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 - 后端：真实 MySQL 集成测试（照 `task_response_supplement_test.go` 的结构：固定 ID 夹具 + `Unscoped` 清理 + `clean()` 先跑一次）。**每条关键断言都要做变异验证**。
 - 场景清单见 spec.md「活动公开需老师审核」的 7 个 Scenario（默认私密、申请后审核可见、跨班不可见、撤回与个体任务不可公开、关闭开关、更新为个体强制关闭、取消后重审）。
 - UI：家长申请/老师审核的界面属 9.3、10.x，B2 仍然**没有界面可点**；只能走 HTTP + 必要时造数。造数用一次性 `cmd/tmp*` 程序，**用完立即删除**。
+
+---
+
+## 14. B3 落地内容（2026-10-23）
+
+起点 `b3f2028`。按 §13.2 先改契约再写代码；只有后端，**没有界面**。
+
+### 14.1 新增 / 变更
+
+- 通知（5.1–5.3）：`server/internal/service/task_notify.go`
+  - `POST /teacher/tasks` 发布后给目标家庭写 `type=task` 消息，`reference_id=task_id`；
+  - `POST /teacher/tasks/:id/checkins/:checkin_id/response` 与 `POST /teacher/tasks/:id/batch-response` 按家长聚合写 `reference_id=response_id` 的消息；
+  - 响应新增 `notified_count` / `notify_failed_count`（创建任务原本已有字段，现在返回真实值）。
+  - 公共写入路径：`pickup_notify.go` 的 `sendMessageToRecipients`（支持每个收件人各自的 `action_path`）；`messages.action_path` 现在会通过 `/common/messages` 下发（`MessageItem.ActionPath`）。
+- 小程序码（5.4）：`wechat.code_env_version`（默认 `release`；`server/configs/app.ini` 被 .gitignore 忽略，开发/测试要扫体验版/开发版时需在各环境本地配置）；`WeChatClient.GetParentWXACodeUnlimit(ctx, scene, page, envVersion)` 走家长端凭据；`GET /teacher/tasks/:id/share-card` → `{task_id, page, scene, env_version, image_base64}`（PNG base64，不落 OSS）。
+- 补充回应未读（5.5）：`POST /parent/tasks/:id/read?student_id=`（upsert，返回 `{last_read_at}`）；任务列表/详情的 `has_unread_supplement` 现在按 `(任务, 家长, 孩子)` 实时计算。
+- 契约：`backend/api/api-teacher/09-class-and-tasks.md`（回应计数 + share-card）、`backend/api/api-parent/06-task.md`（read 端点 + 未读口径）。
+- 测试：`server/internal/service/task_notify_test.go`（18 条真实 MySQL）；`server/internal/auth/wechat_test.go` 新增 2 条（家长端凭据 / envVersion / 非法值）；`config_test.go` 新增默认版本断言；`_verify/mutate_b3.py` 15 项变异全部 detected（每条都人工确认是断言失败，不是编译失败）。
+
+### 14.2 B3 的语义决定（后续不要改错）
+
+- **消息判重带 title**：`type=task` 同时承载发布（`reference_id=task_id`）与回应（`reference_id=response_id`），两张表自增 id 会撞数；只按 `(user,type,reference_id)` 判重会吞掉正常通知。`MessageRepo.Exists` 现在额外匹配完整标题，两类前缀不同（`新亲子任务：` / `老师回应了：`）。
+- **通知对象是「家庭」不是「提交人」**：主回应通知发给被覆盖孩子的全部家长（co-parent 也收）；计数按家长去重。
+- **深链的孩子选择**：发布时班级任务取该家长在本班 `student_id` 最小的孩子（确定、稳定）；回应时取**第一个被覆盖的提交**所属的孩子（按 checkin id 升序），与 D9 逐字一致。
+- **批量回应只通知写成功的提交**（`RowsAffected=1` 的那些）；失败提交继续保持待回应、不通知。
+- **action_path 只允许 `/pages/` 开头且不含 `://`**；写路径会拒绝并计入失败，不会落库。
+- **通知失败不回滚**：所有通知在事务提交之后调用，失败只记日志 + `notify_failed_count`。
+- **读标记时间截断到毫秒**：列是 `datetime(3)`，MySQL 对不足毫秒的部分四舍五入；不截断时 `.0007s` 的读会存成下一秒，误清同毫秒的补充未读。
+- **读标记 upsert 要复活软删行**：唯一索引包含软删行，`ON DUPLICATE KEY UPDATE` 必须同时清 `deleted_at`，否则红点清了又回来。
+- **未读用 `>=`**：补充回应 `created_at >= last_read_at` 即未读（同毫秒不漏判）。
+- **读接口的家长绑定由 handler 的 `parentTaskCtx` 保证**：它走 `ResolveContext`（只加载当前家长绑定的孩子）并校验 `CurrentStudent.ID == student_id`；service 与 `GetTask` 一样信任已解析的 `ParentPortalContext`。
+- **share-card 必须走家长端凭据**；`envVersion` 空值取配置，非法值在发 HTTP 前报错（静默回退会生成另一个版本的码）。
+
+### 14.3 限制性对抗性审查（2026-10-23）
+
+| # | 级别 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| 1 | CONFIRMED | 家长端 `pages/tasks/detail.vue` 的 `onLoad` 不解析 `scene`，扫码进来只有 `scene` 没有 `id` | 未修：属 10.1（前端），记入 14.5 |
+| 2 | CONFIRMED | 家长端全仓不消费 `has_unread_supplement`，也不调用 `POST /parent/tasks/:id/read` | 未修：属 10.2/10.3（前端），记入 14.5 |
+| 3 | CONFIRMED | `pages/messages/index.vue` 不消费 `action_path`，消息卡片没有点击跳转 | 未修：属 10.6（B4），记入 14.5 |
+| 4 | POSSIBLE | `last_read_at` 亚毫秒精度被 MySQL 四舍五入，可能误判同毫秒补充为已读 | ✅ 已修：写库前 `Truncate(time.Millisecond)` |
+| 5 | POSSIBLE | 目标家长查询失败时返回 `0/0`，与「班里没有家长」不可区分 | 保留：错误已 `log.Error`（含任务/回应 id），且不得把通知故障升级成业务失败；API 计数不伪造 |
+| 6 | NOTE | 用标题当判重命名空间较脆弱，长期应改成 `reference_type + reference_id` | 记录；当前两类前缀稳定，改动需同步 domain/表结构 |
+| 7 | NOTE | 5.3 的「部分失败」原先只覆盖全失败（关掉消息库） | ✅ 已补 `TestSendMessagePartialFailureCountsPerRecipient`：用超长 `action_path` 让一个收件人失败、另一个成功，断言 sent/failed 分别计数且失败方不留半条消息 |
+| 8 | NOTE | 管理端 `POST /admin/tasks` 发布不发通知 | 属 C 切片（`task_service.go` 无消息依赖）；口径待 7.x 确认 |
+| 9 | NOTE | 班级任务通知不按学生 `status` 过滤 | 与家长端任务可见性一致（也只按班级），若产品要求「毕业生不通知」，两处必须同时改 |
+
+#### 第二轮（干净 subagent，2026-10-23）
+
+| # | 级别 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| 10 | CONFIRMED | 变异脚本有两条「假检出」：把 `isInternalActionPath` 改成 `return true` 会让 `strings` 变成未使用，把详情红点改成 `false` 会让 `unread` 未使用——两者都是编译失败，却被当成测试检出 | ✅ 已修：变体改成仍使用 `strings` / `unread`（`false && unread[...]`）；新增「列表红点」变体；重跑 15/15，并人工确认两条变体输出是 `Error Trace`（断言失败）而非 build error |
+| 11 | POSSIBLE | `share-card` handler 把所有错误折叠成固定 500 且不打日志；契约写明「配置非法时错误信息要说明」，但具体原因被丢弃 | ✅ 已修：`auth.ErrInvalidCodeEnvVersion` 哨兵 + handler 分别返回「版本配置非法」；所有非 404 错误先 `log.Error` 再回 500 |
+| 12 | NOTE | `POST /parent/tasks/:id/read` 的 default 分支静默回 500 | ✅ 已修：handler 记录 `parent mark task read failed`（含 task id 与 err）后再回 500 |
+| 13 | NOTE | 周期汇总回应之后再追加补充的未读路径此前没有用例 | ✅ 已补 `TestUnreadSupplementUnderPeriodResponse`（A1 未读、A2 不受影响） |
+| 14 | NOTE | `GenerateTaskShareCard` 没有服务层用例（只有 auth 包的凭据/env 用例） | ✅ 已补 `TestTaskShareCardRejectsForeignOrDeletedTask`（跨班 404、软删 404；正向生成依赖真实微信接口，仍不在单测内） |
+| 15 | NOTE | `Truncate(time.Millisecond)` 的精度修复没有测试；目标查询失败仍返回 `0/0`；任务创建允许 `end_date` 已过但仍立即发通知，家长点进去 404 直到窗口开始 | 记录：精度修复靠 `datetime(3)` 事实 + 代码审查；`0/0` 已由日志兜底；过期日期属创建校验（2.x/C 切片），本次不改 |
+| 16 | NOTE | 判重加入 title 也改变了晨检通知的幂等口径（同一 check 若结论变化会重发） | 现有 `SubmitCheck` 是一次性的（重复提交直接拒绝），无实际回归；记录在案 |
+| 17 | NOTE | 每个夹具 `setupB1/2/3` 都新开一个 `gorm.Open` 连接池且不关闭，全量 suite 会累积连接 | 既有模式，非本次引入；记录 |
+
+### 14.4 验证状态
+
+- `go build ./...`、`go vet ./...` 通过（2026-10-23）。
+- `go test ./internal/service -run 'TestTaskPublish|TestBatchResponse|TestSingleResponse|TestTaskAndResponseSurvive|TestSupplementUnread|TestReadMark|TestTaskActionPath|TestSendMessage|TestMessageDedupe'` 全绿。
+- `go test ./internal/auth ./internal/config ./internal/app` 全绿（含新路由表的冲突检查）。
+- `_verify/mutate_b3.py`：15 项变异全部 detected；其中「放宽 `/pages/` 校验」「列表红点恒 false」两条已人工回读输出，确认是断言失败而不是包编译失败。
+- 全量 `go test ./... -timeout 900s`：**全绿**（2026-10-23 第二轮修复后重跑，exit 0；`internal/service` 492s，`internal/ai/face` 1.9s、`internal/app` 3.9s、`internal/auth` 3.8s、`internal/config` 0.5s、`internal/middleware` 3.0s、`internal/rbac` 1.3s、`internal/repository` 10.0s 均 ok；跑前已确认本机 :8080 无 LISTEN）。
+- TEST_CATALOG 0124/0125/0126/0140 已从 ⏸ 改为「后端已验证 ⚠️」。
+
+### 14.5 B3 未做的部分（不要当成已验证）
+
+- **家长端**：`scene` 解析（10.1）、任务列表/详情红点与打开清除（10.2/10.3）、消息点击按 `action_path` 跳转（10.6，B4）。
+- **老师端**：保存分享码到相册 / 转发提示（9.5，B4）、真机扫码进入对应版本（12.6）。
+- **管理端**：管理端创建任务的发布通知（C 切片）。
+- 目标家长查询失败的 API 级可观测（见 14.3 #5）；任务级「一个家长成功、一个失败」未做（共享写路径已由 #7 覆盖）。

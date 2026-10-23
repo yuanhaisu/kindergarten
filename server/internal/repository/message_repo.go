@@ -26,12 +26,18 @@ func (r *MessageRepo) Create(ctx context.Context, msg *domain.Message) error {
 	return r.db.WithContext(ctx).Create(msg).Error
 }
 
-// Exists 判断某用户是否已收到同一业务对象的某类消息。
-// 用于幂等投递：晨检结论保存后若被重试，不重复打扰家长。
-func (r *MessageRepo) Exists(ctx context.Context, userID uint64, msgType string, referenceID uint64) (bool, error) {
+// Exists 判断某用户是否已收到同一业务对象、同一文案、未被删除的某类消息。
+// 用于幂等投递：晨检结论保存后若被重试、任务通知重放，不重复打扰家长。
+//
+// title 必须参与判定：reference_id 只在同一业务实体类型内唯一，而 `type=task`
+// 同时承载「任务发布（reference_id=task_id）」与「老师回应（reference_id=response_id）」，
+// 两张表的自增 id 会撞数。只按 (user_id, type, reference_id) 判重会把一条正常的
+// 发布/回应通知误判成「已送达」。两类消息的标题前缀不同，加上 title 即可区分。
+func (r *MessageRepo) Exists(ctx context.Context, userID uint64, msgType string, referenceID uint64, title string) (bool, error) {
 	var n int64
+	// Model(&Message{}) 自带软删过滤（BaseModel 有 DeletedAt），无需手写 deleted_at。
 	err := r.db.WithContext(ctx).Model(&domain.Message{}).
-		Where("user_id = ? AND type = ? AND reference_id = ?", userID, msgType, referenceID).
+		Where("user_id = ? AND type = ? AND reference_id = ? AND title = ?", userID, msgType, referenceID, title).
 		Count(&n).Error
 	return n > 0, err
 }

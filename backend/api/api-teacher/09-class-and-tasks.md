@@ -28,6 +28,8 @@
 - `POST /teacher/tasks/:id/checkins/:checkin_id/response`
 - `POST /teacher/tasks/:id/checkins/:checkin_id/supplement`
 - `POST /teacher/tasks/:id/batch-response`
+- `PUT /teacher/tasks/:id/checkins/:checkin_id/public`
+- `GET /teacher/tasks/:id/share-card`
 
 ---
 
@@ -271,6 +273,7 @@
 - `target_student_id > 0` 时必须是当前班级在读学生；个体任务 `allow_public` 强制 false。
 - `star_scope=class` 时必须已有班级罐目标，否则拒绝。
 - 不接收 `points`。
+- `notified_count` / `notify_failed_count`：发布站内消息的投递结果，**按家长用户去重**。班级任务覆盖该班全部家庭（同一家长有两个孩子只计一次，消息 `action_path` 固定取该家长在该班 id 最小的孩子）；个体任务只通知目标孩子的家庭。文案含任务标题；通知失败不回滚任务，只计数并写日志。
 
 ### PUT `/teacher/tasks/:id`
 
@@ -354,12 +357,15 @@
 // Response（HTTP 201）
 {
   "id": 10,
-  "created_at": "2026-03-19T20:35:00Z"
+  "created_at": "2026-03-19T20:35:00Z",
+  "notified_count": 1,
+  "notify_failed_count": 0
 }
 ```
 
 - `ritual`：`sticker` / `voice` / `class_star`。
 - 回应后提交 `response_id` 指向该回应。
+- `notified_count` / `notify_failed_count`：按**家长用户**去重（提交人及其同孩子的另一位绑定家长都会收到），同一家长只计一次；只统计主回应，补充回应不发通知。通知失败不回滚回应。
 - 仪式载体必填：`sticker` 必须带 `sticker_key`；`voice` 必须带 `media_file_id` **且文件类型为音频**（否则 422「贴纸需要选择具体贴纸，语音需要先录制并上传」/「语音回应必须使用音频文件」）；`class_star` 不需要载体。批量回应与补充回应同口径。
 - 提交不存在 → 422；提交已被其他回应关闭（并发/重复点击）→ **409**「该提交已被其他回应关闭，请刷新后重试」；行锁等待超时/死锁 → **503**「操作冲突，请稍后重试」。
 
@@ -378,11 +384,14 @@
 {
   "id": 11,
   "responded_count": 20,
-  "failed_ids": []
+  "failed_ids": [],
+  "notified_count": 18,
+  "notify_failed_count": 0
 }
 ```
 
 - 只对**当前周期**内（每日=当天；每周=滚动 7 天；任务已结束时取最后一天/最后一周）仍为 `response_id=0` 的提交创建一条 `period` 回应，并写入 `period_start` / `period_end`；旧周期的待回应提交需逐条回应。
+- `notified_count` / `notify_failed_count` 按家长用户去重：一次汇总回应覆盖同一家长多条提交只计一次；失败的提交（`failed_ids`）不通知。空操作（`id=0`）时两个计数都是 0。
 - 只有**每日/每周的班级任务**（`target_student_id=0` 且 `frequency` 为 `daily|weekly`）支持汇总回应；个体任务、一次性任务及其它频率返回 422 `一次性任务与个体任务需逐条回应`。
 - 当前周期没有待回应提交时返回 **200** 与 `{"id": 0, "responded_count": 0, "failed_ids": []}`（空操作，不创建回应）；创建成功返回 201。
 - 有候选提交但一条都没写成功时返回 500，提交保持待回应；部分失败返回 `failed_ids` 且 `responded_count` 只计成功条数。
@@ -453,9 +462,31 @@
 - 任务不属于当前老师班级 → **404**；提交不属于该任务 → **422**；行锁等待超时/死锁 → **503**。
 - 再次申请必须重新批准、重新勾确认：取消/撤回会把 `public_scope_confirmed` 清成 `false`，不会沿用。
 
+### GET `/teacher/tasks/:id/share-card`
+
+> 生成**家长端**任务详情的小程序码（PNG），供老师保存到相册后转发班级群
+
+```json
+// Response（HTTP 200）
+{
+  "task_id": 1,
+  "page": "pages/tasks/detail",
+  "scene": "t=1",
+  "env_version": "release",
+  "image_base64": "iVBORw0KGgoAAAANSUhEUg..."
+}
+```
+
+- 小程序码**必须用家长端凭据**生成：用老师端凭据会生成老师端小程序码，家长扫码进错端、任务触达不到。
+- `env_version` 取 `wechat.code_env_version`（默认 `release`；开发/测试用 `trial` / `develop`）。配置非法（不是这三个值）→ **500**，错误信息里明确说明。
+- `scene=t=<task_id>`（≤32 字符，只含任务 id）；`page=pages/tasks/detail`；`check_path=false`（页面尚未发布到线上版本时也能生成）。
+- 任务不属于当前老师班级或已删除 → **404**。
+- 家长端 `onLoad` 解析 `scene` 得到 `t`（缺省回退 query `id`），并带上当前孩子的 `student_id`。
+
 ## 说明
 
 - 公开审核见上方 `PUT /teacher/tasks/:id/checkins/:checkin_id/public`；公开墙本身只在家长端。
-- 分享码、未读属于 B 切片剩余部分。
+- 分享码见上方 `GET /teacher/tasks/:id/share-card`；补充回应未读由家长端 `POST /parent/tasks/:id/read` 清除（家长端契约）。
 - 班级罐配置端点属于 C 切片；A 只做创建时只读校验。
 - 任务不发放积分。
+

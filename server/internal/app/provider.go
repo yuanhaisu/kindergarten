@@ -180,6 +180,7 @@ func ProvideWeChatClient(cfg *config.Config, rdb *redis.Client) *auth.WeChatClie
 	return auth.NewWeChatClient(
 		cfg.WeChat.TeacherAppID, cfg.WeChat.TeacherSecret,
 		cfg.WeChat.ParentAppID, cfg.WeChat.ParentSecret,
+		cfg.WeChat.CodeEnvVersion,
 		rdb,
 	)
 }

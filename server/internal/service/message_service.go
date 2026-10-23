@@ -22,6 +22,7 @@ type MessageItem struct {
 	Title       string     `json:"title"`
 	Content     string     `json:"content"`
 	ReferenceID uint64     `json:"reference_id"`
+	ActionPath  string     `json:"action_path"`
 	IsRead      bool       `json:"is_read"`
 	CreatedAt   time.Time  `json:"created_at"`
 	ReadAt      *time.Time `json:"read_at"`
@@ -34,6 +35,7 @@ func toMessageItem(m *domain.Message) MessageItem {
 		Title:       m.Title,
 		Content:     m.Content,
 		ReferenceID: m.ReferenceID,
+		ActionPath:  m.ActionPath,
 		IsRead:      m.IsRead,
 		CreatedAt:   m.CreatedAt,
 		ReadAt:      m.ReadAt,
@@ -61,7 +63,7 @@ func (s *MessageService) List(ctx context.Context, userID uint64, msgType string
 }
 
 type UnreadCountResult struct {
-	Total  int64          `json:"total"`
+	Total  int64            `json:"total"`
 	ByType map[string]int64 `json:"by_type"`
 }
 

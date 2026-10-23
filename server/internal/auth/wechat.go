@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -52,19 +53,33 @@ type WeChatClient struct {
 	teacherSecret string
 	parentAppID   string
 	parentSecret  string
-	rdb           *redis.Client
-	client        *http.Client
+	// codeEnvVersion 小程序码指向的版本；空值按 release 处理。
+	codeEnvVersion string
+	rdb            *redis.Client
+	client         *http.Client
 }
 
-func NewWeChatClient(teacherAppID, teacherSecret, parentAppID, parentSecret string, rdb *redis.Client) *WeChatClient {
-	return &WeChatClient{
-		teacherAppID:  teacherAppID,
-		teacherSecret: teacherSecret,
-		parentAppID:   parentAppID,
-		parentSecret:  parentSecret,
-		rdb:           rdb,
-		client:        &http.Client{Timeout: 10 * time.Second},
+func NewWeChatClient(teacherAppID, teacherSecret, parentAppID, parentSecret, codeEnvVersion string, rdb *redis.Client) *WeChatClient {
+	if codeEnvVersion == "" {
+		codeEnvVersion = "release"
 	}
+	return &WeChatClient{
+		teacherAppID:   teacherAppID,
+		teacherSecret:  teacherSecret,
+		parentAppID:    parentAppID,
+		parentSecret:   parentSecret,
+		codeEnvVersion: codeEnvVersion,
+		rdb:            rdb,
+		client:         &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+// CodeEnvVersion 返回配置的小程序码版本（默认 release）。
+func (w *WeChatClient) CodeEnvVersion() string {
+	if w == nil || w.codeEnvVersion == "" {
+		return "release"
+	}
+	return w.codeEnvVersion
 }
 
 // credentials 按端取凭据。role 只接受 "teacher" / "parent"；
@@ -170,7 +185,32 @@ func (w *WeChatClient) GetAccessToken(ctx context.Context, appID, secret string)
 // 固定走老师端凭据：调用方是教师邀请码二维码（teacher_service），码必须指向老师端小程序，
 // 用家长端凭据会生成家长端小程序码，扫码进错端、重绑主路径断掉。
 func (w *WeChatClient) GetWXACodeUnlimit(ctx context.Context, scene, page string) ([]byte, error) {
-	appID, secret, err := w.credentials("teacher")
+	return w.getWXACodeUnlimit(ctx, "teacher", scene, page, "release")
+}
+
+// ErrInvalidCodeEnvVersion 小程序码版本配置非法（wechat.code_env_version）。
+// 单独成哨兵错误：调用方要能把它和「微信接口失败」区分开，给出可操作的提示。
+var ErrInvalidCodeEnvVersion = errors.New("wxacode: invalid env_version")
+
+// GetParentWXACodeUnlimit 生成指向**家长端**的小程序码（任务分享码）。
+//
+// 必须走家长端凭据：用老师端凭据会生成老师端小程序码，家长扫码进错端，任务触达不到。
+// envVersion 取 release / trial / develop；空值回退配置值，非法值显式报错
+// （静默回退会把「配置写错」变成「生成了另一个版本的码」）。
+func (w *WeChatClient) GetParentWXACodeUnlimit(ctx context.Context, scene, page, envVersion string) ([]byte, error) {
+	if envVersion == "" {
+		envVersion = w.CodeEnvVersion()
+	}
+	switch envVersion {
+	case "release", "trial", "develop":
+	default:
+		return nil, fmt.Errorf("%w: %q (want release|trial|develop)", ErrInvalidCodeEnvVersion, envVersion)
+	}
+	return w.getWXACodeUnlimit(ctx, "parent", scene, page, envVersion)
+}
+
+func (w *WeChatClient) getWXACodeUnlimit(ctx context.Context, role, scene, page, envVersion string) ([]byte, error) {
+	appID, secret, err := w.credentials(role)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +225,7 @@ func (w *WeChatClient) GetWXACodeUnlimit(ctx context.Context, scene, page string
 		Scene:      scene,
 		Page:       page,
 		CheckPath:  false,
-		EnvVersion: "release",
+		EnvVersion: envVersion,
 	}
 	b, err := json.Marshal(body)
 	if err != nil {

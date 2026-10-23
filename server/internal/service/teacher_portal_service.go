@@ -2994,8 +2994,10 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 	if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
 		return nil, err
 	}
+	// 通知在任务落库之后做：失败不回滚任务（5.3），只把计数返回给老师。
+	notified, notifyFailed := s.notifyTaskPublished(ctx, row)
 	return map[string]any{"id": row.ID, "created_at": row.CreatedAt.UTC().Format(time.RFC3339),
-		"notified_count": 0, "notify_failed_count": 0}, nil
+		"notified_count": notified, "notify_failed_count": notifyFailed}, nil
 }
 
 func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortalContext, id uint64, req TeacherTaskInput) error {
@@ -3261,6 +3263,7 @@ func (s *TeacherPortalService) RespondTask(ctx context.Context, tc *TeacherPorta
 		mediaURL = f.FileURL
 	}
 	var response domain.TaskResponse
+	var checkin domain.TaskCheckIn
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 先锁任务行，与 DeleteTask 的级联同序：否则「锁 checkin → 插 response」会与
 		// 「锁 response → 软删 checkin」形成反序死锁（实测 1213）。
@@ -3272,7 +3275,6 @@ func (s *TeacherPortalService) RespondTask(ctx context.Context, tc *TeacherPorta
 			}
 			return err
 		}
-		var checkin domain.TaskCheckIn
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("id = ? AND task_id = ? AND response_id = 0", checkinID, taskID).
 			First(&checkin).Error; err != nil {
@@ -3311,7 +3313,14 @@ func (s *TeacherPortalService) RespondTask(ctx context.Context, tc *TeacherPorta
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": response.ID, "created_at": response.CreatedAt.UTC().Format(time.RFC3339)}, nil
+	// 只通知本次回应覆盖到的家庭；提交人与其同孩子的另一位家长都会收到（按家长去重）。
+	notified, notifyFailed := s.notifyTaskResponse(ctx, &task, response.ID, []domain.TaskCheckIn{checkin})
+	return map[string]any{
+		"id":                  response.ID,
+		"created_at":          response.CreatedAt.UTC().Format(time.RFC3339),
+		"notified_count":      notified,
+		"notify_failed_count": notifyFailed,
+	}, nil
 }
 
 func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *TeacherPortalContext, taskID uint64, ritual, stickerKey, content string, mediaFileID uint64) (map[string]any, error) {
@@ -3352,6 +3361,9 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 	periodStart, periodEnd := taskPeriodRange(&task, time.Now())
 	var response domain.TaskResponse
 	failed := []uint64{}
+	// 只收集真正写成功的提交：批量部分失败时，失败的家庭不能收到
+	// 「老师回应了」——他们的提交仍是待回应。
+	respondedCheckins := []domain.TaskCheckIn{}
 	responded := 0
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 同 RespondTask：先锁任务行，保证与 DeleteTask 的级联加锁顺序一致。
@@ -3389,6 +3401,7 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 				failed = append(failed, r.ID)
 				continue
 			}
+			respondedCheckins = append(respondedCheckins, r)
 			responded++
 		}
 		if responded == 0 {
@@ -3399,7 +3412,8 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 	})
 	if errors.Is(err, errTaskBatchNothingPending) {
 		// 读取阶段就没有待回应行：这是真正的空操作。
-		return map[string]any{"id": uint64(0), "responded_count": 0, "failed_ids": []uint64{}}, nil
+		return map[string]any{"id": uint64(0), "responded_count": 0, "failed_ids": []uint64{},
+			"notified_count": 0, "notify_failed_count": 0}, nil
 	}
 	if isTaskLockConflict(err) {
 		return nil, ErrTaskBusy
@@ -3407,7 +3421,10 @@ func (s *TeacherPortalService) BatchRespondTask(ctx context.Context, tc *Teacher
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": response.ID, "responded_count": responded, "failed_ids": failed}, nil
+	// 一次汇总回应覆盖同一家长多条提交时只发一条（5.2）。
+	notified, notifyFailed := s.notifyTaskResponse(ctx, &task, response.ID, respondedCheckins)
+	return map[string]any{"id": response.ID, "responded_count": responded, "failed_ids": failed,
+		"notified_count": notified, "notify_failed_count": notifyFailed}, nil
 }
 
 // SupplementResponse 在汇总/单条回应之后，给某一条已回应的提交追加个别补充回应。

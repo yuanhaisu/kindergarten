@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -517,6 +519,41 @@ func (s *TeacherService) GenerateInviteQRCode(ctx context.Context, kindergartenI
 	scene := "invite_code=" + inv.Token
 	page := "pages/index/index"
 	return s.wx.GetWXACodeUnlimit(ctx, scene, page)
+}
+
+// GenerateTaskShareCard 生成指向家长端任务详情的小程序码（PNG），供老师转发班级群。
+//
+// 必须走家长端凭据（GetParentWXACodeUnlimit）：用老师端凭据生成的码会把家长带进老师端小程序。
+// scene 只用任务 id（`t=<id>`，≤32 字符）；envVersion 取配置 wechat.code_env_version。
+func (s *TeacherService) GenerateTaskShareCard(
+	ctx context.Context,
+	kindergartenID, classID, taskID uint64,
+) (map[string]any, error) {
+	// 任务可见范围与老师端一致：本园 + 本班，已删除的任务不能继续转发。
+	var task domain.ParentTask
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND class_id = ?", taskID, kindergartenID, classID).
+		First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("NOT_FOUND")
+		}
+		return nil, err
+	}
+
+	const page = "pages/tasks/detail"
+	scene := fmt.Sprintf("t=%d", taskID)
+	envVersion := s.wx.CodeEnvVersion()
+	png, err := s.wx.GetParentWXACodeUnlimit(ctx, scene, page, envVersion)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"task_id":      taskID,
+		"page":         page,
+		"scene":        scene,
+		"env_version":  envVersion,
+		"image_base64": base64.StdEncoding.EncodeToString(png),
+	}, nil
 }
 
 func generateInviteCode() string {

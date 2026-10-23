@@ -1536,10 +1536,22 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 		return nil, err
 	}
 	list := make([]map[string]any, 0, len(rows))
+	activeRows := make([]domain.ParentTask, 0, len(rows))
+	taskIDs := make([]uint64, 0, len(rows))
 	for _, r := range rows {
 		if !taskIsActive(&r, now) {
 			continue
 		}
+		activeRows = append(activeRows, r)
+		taskIDs = append(taskIDs, r.ID)
+	}
+	// 一次查完本页的未读状态，避免每个任务各查一次。
+	unread, err := s.unreadSupplementTaskIDs(ctx, pc, taskIDs)
+	if err != nil {
+		log.L(ctx).Error("parent list tasks count failed", "scope", "unread", "err", err)
+		return nil, err
+	}
+	for _, r := range activeRows {
 		submitted, err := taskSubmittedInPeriod(ctx, s.db, &r, pc.CurrentStudent.ID, now)
 		if err != nil {
 			log.L(ctx).Error("parent list tasks count failed", "scope", "submitted", "task", r.ID, "err", err)
@@ -1558,7 +1570,7 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 			"star_scope": r.StarScope, "star_goal": r.StarGoal,
 			"start_date": r.StartDate.Format("2006-01-02"), "end_date": r.EndDate.Format("2006-01-02"),
 			"status": r.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
-			"checkin_count": childCount, "has_unread_supplement": false,
+			"checkin_count": childCount, "has_unread_supplement": unread[r.ID],
 			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
@@ -1651,6 +1663,11 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 	if reqs == nil {
 		reqs = []string{}
 	}
+	unread, err := s.unreadSupplementTaskIDs(ctx, pc, []uint64{t.ID})
+	if err != nil {
+		log.L(ctx).Error("parent get task unread failed", "task", id, "err", err)
+		return nil, err
+	}
 	return map[string]any{
 		"id": t.ID, "title": t.Title, "description": t.Description, "intro": t.Intro,
 		"requirements": reqs, "learning_link": t.LearningLink, "frequency": t.Frequency,
@@ -1658,8 +1675,83 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 		"recognition_ritual": t.RecognitionRitual, "star_scope": t.StarScope, "star_goal": t.StarGoal,
 		"start_date": t.StartDate.Format("2006-01-02"), "end_date": t.EndDate.Format("2006-01-02"),
 		"status": t.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
-		"has_unread_supplement": false, "responses": respOut, "created_at": t.CreatedAt.UTC().Format(time.RFC3339),
+		"has_unread_supplement": unread[t.ID], "responses": respOut, "created_at": t.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
+}
+
+// MarkTaskRead 清除当前孩子在该任务下的补充回应未读标记（upsert）。
+//
+// 用 ON DUPLICATE 而不是「先查再写」：并发打开详情（连点、多端）不应 500，
+// 查询与写入之间的窗口也不能产生第二行（唯一索引会直接拒绝）。
+func (s *ParentPortalService) MarkTaskRead(ctx context.Context, pc *ParentPortalContext, taskID uint64) (map[string]any, error) {
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
+	var t domain.ParentTask
+	if err := taskScopeQuery(s.db.WithContext(ctx), pc).Where("id = ?", taskID).First(&t).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrParentNotFound
+		}
+		return nil, err
+	}
+	// 截断到毫秒：列是 datetime(3)，MySQL 会把不足毫秒的部分四舍五入。
+	// 不截断时，读发生在 .0007s 会存成下一秒的 .001，把同毫秒的补充回应误判成已读。
+	now := time.Now().In(shanghaiLoc()).Truncate(time.Millisecond)
+	// 与任务详情同口径：未开始/已结束的任务对家长不可见，也不该写读标记。
+	if !taskIsActive(&t, now) {
+		return nil, ErrParentNotFound
+	}
+	mark := domain.TaskReadMark{
+		KindergartenID: pc.KindergartenID,
+		TaskID:         taskID,
+		UserID:         pc.UserID,
+		StudentID:      pc.CurrentStudent.ID,
+		LastReadAt:     &now,
+	}
+	if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "task_id"}, {Name: "user_id"}, {Name: "student_id"}},
+		DoUpdates: clause.Assignments(map[string]any{
+			"last_read_at": now,
+			// 唯一索引把软删行也算在内：命中旧行时必须复活，否则读标记永远写不进去。
+			"deleted_at": nil,
+		}),
+	}).Create(&mark).Error; err != nil {
+		return nil, err
+	}
+	return map[string]any{"last_read_at": now.UTC().Format(time.RFC3339)}, nil
+}
+
+// unreadSupplementTaskIDs 返回当前孩子有未读补充回应的任务 id 集合。
+//
+// 未读 = 该任务下存在补充回应，且该家长在该孩子上没有读标记，或补充回应
+// 在 last_read_at 之后（含同一秒）。用 >= 是为了「补充与打开详情同秒」不漏判（D9）。
+func (s *ParentPortalService) unreadSupplementTaskIDs(
+	ctx context.Context,
+	pc *ParentPortalContext,
+	taskIDs []uint64,
+) (map[uint64]bool, error) {
+	out := make(map[uint64]bool, len(taskIDs))
+	if len(taskIDs) == 0 || pc.CurrentStudent == nil {
+		return out, nil
+	}
+	var ids []uint64
+	// 手写 Table 不走软删：补充关系、提交、回应、读标记四处都要自己补 deleted_at。
+	err := s.db.WithContext(ctx).
+		Table("task_response_supplements AS s").
+		Joins("INNER JOIN task_check_ins AS c ON c.id = s.check_in_id AND c.deleted_at IS NULL").
+		Joins("INNER JOIN task_responses AS r ON r.id = s.response_id AND r.deleted_at IS NULL").
+		Joins("LEFT JOIN task_read_marks AS m ON m.task_id = c.task_id AND m.user_id = ? AND m.student_id = c.student_id AND m.deleted_at IS NULL", pc.UserID).
+		Where("s.deleted_at IS NULL AND c.task_id IN ? AND c.student_id = ?", taskIDs, pc.CurrentStudent.ID).
+		Where("(m.last_read_at IS NULL OR r.created_at >= m.last_read_at)").
+		Group("c.task_id").
+		Pluck("c.task_id", &ids).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		out[id] = true
+	}
+	return out, nil
 }
 
 // taskSupplementRow 某条主回应下的补充回应（含补充回应自身的展示字段）。

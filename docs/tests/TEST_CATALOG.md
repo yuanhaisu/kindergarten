@@ -704,9 +704,9 @@
 | TC-NEW-TSK-0121 | 撤回与个体任务不可公开 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：老师撤回与家长取消都清空确认/审核人/批准并写 revoked_at、立即不可见；个体任务申请与审核均 422）；UI 待 9.3/10.3 |
 | TC-NEW-TSK-0122 | 提交不产生积分 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0123 | 任务契约与规则无积分 | P0 | FUNC | ✅ |
-| TC-NEW-TSK-0124 | 发布通知与 action_path | P0 | FUNC | ⏸ |
-| TC-NEW-TSK-0125 | 回应按家长聚合 | P0 | FUNC | ⏸ |
-| TC-NEW-TSK-0126 | 家长端小程序码 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0124 | 发布通知与 action_path | P0 | FUNC | ⚠️ 后端已验证（`task_notify_test.go`：班级按家长去重、同一家长两个孩子只收一条且深链取 id 最小的孩子、个体任务只通知目标家庭、action_path 带 student_id 且只允许内部 `/pages/`）；家长端消息跳转 UI 待 10.6 |
+| TC-NEW-TSK-0125 | 回应按家长聚合 | P0 | FUNC | ⚠️ 后端已验证（`task_notify_test.go`：一次汇总回应覆盖同一家长多条提交只发一条、`reference_id=response_id`、深链取第一个被覆盖的提交、补充回应不通知、通知失败不回滚回应）；家长端回应 UI 待 10.3 |
+| TC-NEW-TSK-0126 | 家长端小程序码 | P1 | FUNC | ⚠️ 部分验证：`wechat_test.go` 断言走家长端凭据并带 `code_env_version`、非法版本报错；`GenerateTaskShareCard` 有服务层实现。真机扫码（含体验版/开发版）待 12.6，老师端保存/转发 UI 待 9.5 |
 | TC-NEW-TSK-0127 | 多班活动创建 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0128 | 参与与回应统计 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0129 | 非法媒体被拒 | P0 | FUNC | ✅ |
@@ -720,7 +720,7 @@
 | TC-NEW-TSK-0137 | 班级星星罐目标独立于任务 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0138 | 按活动批量编辑与统计 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0139 | 多班活动事务与跨园所校验 | P0 | FUNC | ⏸ |
-| TC-NEW-TSK-0140 | 补充回应未读与读标记 | P1 | FUNC | ⏸ |
+| TC-NEW-TSK-0140 | 补充回应未读与读标记 | P1 | FUNC | ⚠️ 后端已验证（`task_notify_test.go`：首次未读、同秒 `>=` 不漏判、软删读标记复活、并发 upsert 不 500、多家长/多孩隔离、不可见/已结束任务 404）；家长端红点与打开清除 UI 待 10.2/10.3 |
 | TC-NEW-TSK-0141 | 独立任务不能自设活动分组 | P0 | FUNC | ⏸ |
 | TC-NEW-TSK-0142 | 有提交后结构字段只读 | P0 | FUNC | ✅ |
 | TC-NEW-TSK-0143 | 关闭任务公开开关 | P0 | FUNC | ⚠️ 后端已验证（`TestTeacherUpdateTaskClosingPublicRevokes` 走真实编辑路径：开关落库 false、申请/确认/批准/审核人清空、写撤回时间、墙上消失；从未申请的提交不被盖章；重开不恢复旧批准）；管理端 UI 待 11.1 |

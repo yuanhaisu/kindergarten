@@ -2,7 +2,7 @@
 
 > 基础路径：`/api/v1/parent` | 鉴权：`Authorization: Bearer <token>`（角色 `parent`）
 >
-> A 切片：班级/个体任务、提交、老师回应、无积分。B 切片已补：补充回应（`responses[].supplements`）、家长反馈（`reaction`）、公开申请/取消与班级公开墙。未读读标记仍待补。
+> A 切片：班级/个体任务、提交、老师回应、无积分。B 切片已补：补充回应（`responses[].supplements`）、家长反馈（`reaction`）、公开申请/取消与班级公开墙、补充回应未读与读标记（`POST /parent/tasks/:id/read`）。
 >
 > 所有任务接口必须带 `student_id` query；缺失或不属于当前家长时拒绝。
 
@@ -49,6 +49,7 @@
 - `target_student_id=0` 表示班级任务；`>0` 表示个体任务。
 - `checkin_count` 是**当前孩子**的提交次数，不是全班累计。
 - `submitted_current_period`：每日=今天、每周=滚动 7 天、一次性=周期内是否已提交；前端用它显示「已提交/待完成」。
+- `has_unread_supplement`：当前孩子在该任务下存在**补充回应**，且该家长还没有读过（无读标记，或补充回应的 `created_at >= last_read_at`）。用它显示任务列表红点；打开详情后调 `POST /parent/tasks/:id/read` 清除。
 - `points` 已移除；任务不发放积分。
 
 ---
@@ -111,7 +112,26 @@
 - `responses` 返回当前孩子提交关联的**主回应**；`supplements` 是老师在主回应之后对**本孩子的这条提交**追加的个别补充，按创建时间升序，条数不限。
 - 补充回应只包含当前孩子提交上的那些：一条周期汇总回应可能给多个孩子各补一条，跨孩子的补充不会出现在这里。
 - `my_reaction`：当前家长账号对该条回应的反馈，未反馈时为空串；主回应与补充回应各自一个。
+- `has_unread_supplement`：与列表同口径，按**当前孩子 + 当前家长**计算；打开详情后由前端调用 `POST /parent/tasks/:id/read` 清除。
 - `points`、`streak_days`、`my_completion_rate` 已移除。
+
+---
+
+### POST `/parent/tasks/:id/read`
+
+> 清除当前孩子在该任务下的补充回应未读标记
+
+```json
+// Query: ?student_id=27
+
+// Response（HTTP 200）
+{ "last_read_at": "2026-03-19T21:00:00Z" }
+```
+
+- 未读判定：该孩子在该任务下存在补充回应，且 `last_read_at IS NULL OR 补充回应.created_at >= last_read_at`；用 `>=` 避免「同一秒内补充又打开」漏判。
+- 读标记按 `(task_id, user_id, student_id)` 唯一：同一孩子的父母各自一行，多孩各自一行，互不影响；用 upsert 写入，并发读不会 500。
+- `student_id` 必带且必须属于当前家长 → 缺失/非法 **422**，未绑定 **403**；任务不可见或已删除 **404**。
+- 打开任务详情时调用；不改变消息的已读状态（消息红点仍由 `/common/messages/*` 维护）。
 
 ---
 
@@ -295,6 +315,6 @@
 
 ## 说明
 
-- 公开申请/审核、班级墙见上方三个端点；未读读标记在 B 切片剩余部分补齐。
+- 公开申请/审核、班级墙见上方三个端点；补充回应未读与读标记见 `POST /parent/tasks/:id/read`。
 - 公开内容默认私密：家长申请、老师确认「内容中只有提交者孩子」后才可见；取消/撤回后立即消失。
 - 积分、排行榜、任务奖励在本功能中不实现。
