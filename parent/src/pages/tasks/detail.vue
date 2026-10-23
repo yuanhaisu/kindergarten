@@ -2,7 +2,7 @@
 import { computed, ref } from "vue"
 import { onLoad, onUnload } from "@dcloudio/uni-app"
 import { getCurrentStudentId, setCurrentStudentId } from "@/utils/currentStudent"
-import { switchStudent } from "@/api/parent-home"
+import { fetchParentHomeOverview, switchStudent } from "@/api/parent-home"
 import { ensureLogin } from "@/utils/login"
 import { getToken } from "@/utils/auth"
 import config from "@/config/env"
@@ -43,6 +43,11 @@ const taskId = ref(0)
 const linkedStudentId = ref(0)
 const currentSid = ref(0)
 const currentChildName = ref("")
+// 提交历史里带 student_name，但新任务的通知最常见的情况是「还没提交」——历史为空。
+// 提示条要说清「你正在看哪个孩子」，所以留一个从 overview 兜底的名字，
+// 不与历史里的名字互相覆盖。
+const childNameFallback = ref("")
+const currentChildLabel = computed(() => currentChildName.value || childNameFallback.value || "当前孩子")
 // 打开时是否还有未读补充：读标记清掉之后这个值仍为 true，用来解释「为什么刚才有红点」。
 const hadUnread = ref(false)
 const reactingIds = ref([])
@@ -168,6 +173,9 @@ async function loadData(id) {
     currentSid.value = scoped.sid
     currentChildName.value = history.value[0]?.student_name || ""
     hadUnread.value = !!detail.value.has_unread_supplement
+    // 多孩提示条只在「消息里的孩子 ≠ 当前孩子」时出现；这时若当前孩子还没有任何提交，
+    // 历史里拿不到姓名，提示条就会退化成「当前孩子」——那正是家长最需要看清是谁的时候。
+    if (childMismatch.value && !currentChildName.value) resolveChildNameFallback(scoped.sid)
     // 读标记：详情已经渲染出来，红点必须清掉。失败只留日志，不能把整页挡成错误态。
     markTaskRead(id, scoped.sid).catch((err) => {
       console.warn("[tasks/detail] 清除未读标记失败", err?.message || err)
@@ -177,8 +185,21 @@ async function loadData(id) {
     history.value = []
     // 404 在任务删除/结束后是常态入口（消息深链、扫码），要给一句人话而不是白屏。
     loadError.value = err?.code === 40400 ? "任务已结束或不存在" : (err?.message || "加载任务失败")
+    // 加载失败时提示条仍在：这条路径（任务对当前孩子不可见）同样要能说清「你看的是谁」。
+    if (childMismatch.value && currentSid.value) resolveChildNameFallback(currentSid.value)
   } finally {
     loading.value = false
+  }
+}
+
+async function resolveChildNameFallback(sid) {
+  try {
+    const res = await fetchParentHomeOverview(sid)
+    const hit = (res.data?.students || []).find((s) => s.id === sid)
+    if (hit?.name) childNameFallback.value = hit.name
+  } catch (err) {
+    // 只是提示条文案，失败不打扰用户；但别静默到查不出问题。
+    console.warn("[tasks/detail] 取孩子姓名失败", err?.message || err)
   }
 }
 
@@ -378,7 +399,7 @@ onUnload(stopVoice)
     <!-- 提示放在加载状态之外：任务对当前孩子不可见时详情会 404，
          这条「换孩子」的出口不能跟着消失。 -->
     <view v-if="childMismatch" class="notice">
-      <text class="notice-text">这条消息是另一个孩子的任务，当前看到的是「{{ currentChildName || "当前孩子" }}」</text>
+      <text class="notice-text">这条消息是另一个孩子的任务，当前看到的是「{{ currentChildLabel }}」</text>
       <view class="notice-btn" @click="switchToMessageChild">切换查看</view>
     </view>
     <view v-if="loading" class="state">加载中...</view>

@@ -842,6 +842,23 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 - **本地验证数据未清理**（都在开发库，园所 4）：`parent_tasks` 4322（class 4，回应+补充回应夹具）、4323（class 4，公开申请/撤下过）、4324（class 1，分享码）、4325（class 4，待完成）；补充回应 = `task_responses` 700（`response_type=single`）+ `task_response_supplements` 指向 checkin 1953；`messages` 1171 带 `action_path`；`task_read_marks` 131。要重跑验证可直接用这些 id，要清就从后往前删。
 - 后端是本窗口 `go run` 起的（8080），收工时已停；下次验证要重新 `make run`。
 
+### 16.7 第二轮对抗性审查（2026-10-23，针对已提交的 8b5a00f）
+
+换视角再查一遍：不看「我实现了什么」，只看「什么情况下用户会看到错的东西 / 点了没反应 / 说明不清」。
+
+| # | 缺陷 | 处置 |
+| --- | --- | --- |
+| 1 | **多孩提示条说不清「你看的是哪个孩子」**：`currentChildName` 只从打卡历史里取 `student_name`，而任务发布通知最常见的场景就是「还没提交」——历史为空，提示条退化成「当前孩子」。D9 最后一条要求提示的目的正是「避免多孩家庭误以为看错内容」，退化成这个样子等于没提示 | 已修：错配路径上用 `GET /parent/home/overview` 兜底一次姓名（仅这条罕见路径多一个请求，不污染正常加载）；历史里的名字与兜底名字分开存，互不覆盖 |
+| 2 | **同一个提示条在 404 路径上仍是「当前孩子」**：任务对当前孩子不可见（个体任务、跨班）时详情 404，走的是 catch 分支，不经过上面的兜底 | 已修：catch 里同样解析姓名 |
+
+补验了之前没点过的分支（真实点击）：
+- 「切换查看」真的点下去：`parent_current_student_id` 变成 32，提示条消失，页面按新孩子重新取数（提交卡出现、历史为空）；随后手动切回 27。
+- 补充回应的「给孩子看」：全屏态显示的是**补充回应**的 🌸 与文字，不是主回应的。
+- 补充回应的反馈：写库 `(700, 61, received)`，UI 主回应/补充回应各自 active，互不串。
+- `pages/index/index`、`pages/tasks/index`、`pages/tasks/detail`、`pages/messages/index` 四页 CDP 采集 console：无未捕获异常。
+
+另核对（未发现问题）：`checkin-history` 确实返回 `is_public_requested / public_approved_at / public_revoked_at / public_visible / student_name`，前端的审核状态推导与契约 `public_status` 映射一致；`new_notice_count` 是 int64（不是数组），首页红点不会因空数组恒亮。
+
 ### 16.5 下一步
 
 B4-b：`9.1` 余下（supplement / public 审核封装）+ `9.2`（创建/编辑表单新字段）+ `9.3`（补充回应与公开审核 UI）+ `9.7`。老师端目前只能用 A 切片的老表单，创建任务时新字段还填不了。
