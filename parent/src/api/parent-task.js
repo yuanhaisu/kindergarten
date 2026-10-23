@@ -68,3 +68,47 @@ export function fetchCheckinHistory(id, params = {}) {
     silent: true
   })
 }
+
+// 读标记：清除「当前孩子在该任务下的补充回应」未读。
+// 失败不阻塞详情渲染（错误由调用页只记日志），所以 silent。
+export function markTaskRead(id, studentId) {
+  return requestWithAuth({
+    url: `/parent/tasks/${id}/read?student_id=${Number(studentId) || 0}`,
+    method: "POST",
+    silent: true
+  })
+}
+
+// 反馈记在「家长账号」维度：同一条周期汇总回应可能覆盖同一家长两个孩子的提交，
+// 后端不接受按孩子收窄，student_id 只是与其它家长端任务接口保持一致的必填项。
+export function reactResponse(responseId, reaction, studentId) {
+  return requestWithAuth({
+    url: `/parent/tasks/responses/${responseId}/reaction?student_id=${Number(studentId) || 0}`,
+    method: "POST",
+    data: { reaction }
+  })
+}
+
+export function requestPublicCheckin(checkinId, studentId) {
+  return requestWithAuth({
+    url: `/parent/tasks/checkins/${checkinId}/public-request?student_id=${Number(studentId) || 0}`,
+    method: "POST"
+  })
+}
+
+// 取消申请／撤下已公开内容。后端「撤回永远可用」，所以这里不按任务状态拦。
+export function cancelPublicCheckin(checkinId, studentId) {
+  return requestWithAuth({
+    url: `/parent/tasks/checkins/${checkinId}/public-request?student_id=${Number(studentId) || 0}`,
+    method: "DELETE"
+  })
+}
+
+export function fetchPublicWall(params = {}) {
+  return requestWithAuth({
+    url: "/parent/tasks/public-wall",
+    method: "GET",
+    data: params,
+    silent: true
+  })
+}

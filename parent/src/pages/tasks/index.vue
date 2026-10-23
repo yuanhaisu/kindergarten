@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { fetchTasks, withStudentScope } from "@/api/parent-task"
+import { getCurrentStudentId } from "@/utils/currentStudent"
 
 const tasks = ref([])
 const loading = ref(false)
@@ -11,49 +12,51 @@ const activeTab = ref("进行中")
 
 const tabs = ["进行中", "已打卡", "全部"]
 
-// 图标颜色轮换
-const iconColors = [
-  { bg: "#DBEAFE", fg: "#3B82F6" },
-  { bg: "#D1FAE5", fg: "#10B981" },
-  { bg: "#FEF3C7", fg: "#F59E0B" },
-  { bg: "#F3E8FF", fg: "#A855F7" },
-  { bg: "#FCE7F3", fg: "#EC4899" },
-  { bg: "#FEE2E2", fg: "#EF4444" },
-]
-
 const freqLabels = { daily: "每日", weekly: "每周", monthly: "每月", once: "一次性" }
 
-const formattedTasks = computed(() => tasks.value.map((item, idx) => {
-  const color = iconColors[idx % iconColors.length]
-  const freqLabel = freqLabels[item.frequency] || ""
-  const totalDays = item.frequency === "daily" ? 7 : item.frequency === "weekly" ? 4 : 1
-  const progress = Math.min(item.checkin_count / Math.max(totalDays, 1), 1)
+// 当前孩子 id 一并带上：详情页要靠它把「这是哪个孩子的任务」传下去，
+// 否则多孩家庭在详情里只能靠本地缓存猜。
+const studentId = ref(getCurrentStudentId())
+
+// 进度按「当前孩子本周期是否已提交」算，不是全班累计，也不是缩水的 7 天/4 次折算。
+// checkin_count 是当前孩子在该任务下的累计提交次数，只作为副标题展示。
+const formattedTasks = computed(() => tasks.value.map((item) => {
+  const submitted = !!item.submitted_current_period
   return {
     ...item,
-    iconBg: color.bg,
-    iconColor: color.fg,
     desc: item.description || item.intro || "",
-    progress,
-    progressLabel: item.submitted_current_period
-      ? "今日已打卡"
-      : `${item.checkin_count}/${totalDays}次`,
-    infoLabel: freqLabel ? `${freqLabel}任务` : "亲子任务",
-    statusLabel: item.submitted_current_period ? "已提交" : "待完成",
+    progress: submitted ? 1 : 0,
+    progressLabel: submitted ? "本周期已提交" : "本周期待提交",
+    countLabel: `累计打卡 ${Number(item.checkin_count) || 0} 次`,
+    infoLabel: freqLabels[item.frequency] ? `${freqLabels[item.frequency]}任务` : "亲子任务",
+    // 列表接口没有「老师是否已回应」字段（契约 06-task.md 只给了提交口径），
+    // 所以这里只区分待完成/已提交；是否已回应在详情页按 responses 判断。
+    statusLabel: submitted ? "已提交" : "待完成",
+    // 补充回应未读与消息未读是两套红点，不合并。
+    hasUnread: !!item.has_unread_supplement
   }
 }))
 
+const pendingCount = computed(() => formattedTasks.value.filter(t => !t.submitted_current_period).length)
+const unreadCount = computed(() => formattedTasks.value.filter(t => t.hasUnread).length)
+
 const filteredTasks = computed(() => {
-  if (activeTab.value === "已打卡") return formattedTasks.value.filter(t => t.checked_in_today)
+  if (activeTab.value === "已打卡") return formattedTasks.value.filter(t => t.submitted_current_period)
   if (activeTab.value === "全部") return formattedTasks.value
-  return formattedTasks.value.filter(t => t.status === 1 && !t.checked_in_today)
+  return formattedTasks.value.filter(t => t.status === 1 && !t.submitted_current_period)
 })
 
-function goDetail(id) { uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` }) }
-function goCheckIn(id) { uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` }) }
-function goBadges() { uni.navigateTo({ url: "/pages/points/index" }) }
+function taskUrl(id) {
+  const sid = studentId.value
+  return `/pages/tasks/detail?id=${id}${sid ? `&student_id=${sid}` : ""}`
+}
+// 任务页不是 tabBar 页（家长端 tabBar 只有 index/growth/pickup/profile），用 navigateTo。
+function goDetail(id) { uni.navigateTo({ url: taskUrl(id) }) }
+function goCheckIn(id) { uni.navigateTo({ url: taskUrl(id) }) }
 
 async function loadData() {
   // 已有数据时静默刷新：从详情页返回会走 onShow，整块列表闪成「加载中...」体验很差。
+  // 这个刷新也负责清红点：详情页里 markTaskRead 之后，返回列表重新取数即消失。
   if (tasks.value.length === 0) loading.value = true
   loadError.value = ""
   try {
@@ -65,6 +68,7 @@ async function loadData() {
       loadError.value = "未绑定孩子信息"
       return
     }
+    studentId.value = scoped.sid
     tasks.value = scoped.result?.data?.list || []
   } catch (err) {
     // 不清空已有列表：清空会把「刷新失败」伪装成「没有任务」。
@@ -74,6 +78,8 @@ async function loadData() {
     uni.stopPullDownRefresh()
   }
 }
+
+function switchTab(tab) { activeTab.value = tab }
 
 // 详情页提交后返回列表不重跑 onLoad，卡片会停在「待完成」；用 onShow 保证返回即刷新。
 onShow(loadData)
@@ -90,9 +96,12 @@ onPullDownRefresh(loadData)
           :key="tab"
           class="tab-item"
           :class="{ active: activeTab === tab }"
-          @click="activeTab = tab"
+          @click="switchTab(tab)"
         >
           <text>{{ tab }}</text>
+          <view v-if="tab === '进行中' && pendingCount" class="tab-count">
+            <text class="tab-count-text">{{ pendingCount }}</text>
+          </view>
         </view>
       </view>
 
@@ -105,8 +114,8 @@ onPullDownRefresh(loadData)
         <text class="state-text">{{ loadError }}</text>
         <view class="state-action" @click="loadData">重试</view>
       </view>
-      <view v-else-if="formattedTasks.length === 0" class="state-wrap">
-        <text class="state-text">暂无任务</text>
+      <view v-else-if="filteredTasks.length === 0" class="state-wrap">
+        <text class="state-text">{{ activeTab === "进行中" ? "当前没有待完成的任务" : "暂无任务" }}</text>
       </view>
       <view v-else class="task-list">
         <!-- 已有数据但本次刷新失败：保留旧列表并提示，避免看起来像最新结果 -->
@@ -116,19 +125,25 @@ onPullDownRefresh(loadData)
         <view v-for="item in filteredTasks" :key="item.id" class="task-card">
           <!-- 任务头部 -->
           <view class="tc-head">
-            <view class="tc-icon-box" :style="{ backgroundColor: item.iconBg }">
-              <text class="tc-icon" :style="{ color: item.iconColor }">&#xf1e8;</text>
+            <view class="tc-icon-box">
+              <text class="tc-icon">📚</text>
+              <view v-if="item.hasUnread" class="tc-dot" />
             </view>
             <view class="tc-head-mid">
               <text class="tc-title">{{ item.title }}</text>
               <text class="tc-desc">{{ item.desc }}</text>
             </view>
-            <view class="tc-points-badge">
-              <text>{{ item.statusLabel }}</text>
+            <view class="tc-status-badge" :class="{ submitted: item.submitted_current_period }">
+              <text class="tc-status-text">{{ item.statusLabel }}</text>
             </view>
           </view>
 
-          <!-- 进度条 -->
+          <!-- 补充回应未读：与「已提交/待完成」并列说明原因，避免红点无声无息 -->
+          <view v-if="item.hasUnread" class="tc-unread">
+            <text>老师又给你留了一句悄悄话</text>
+          </view>
+
+          <!-- 本周期进度 -->
           <view class="tc-progress">
             <view class="tcp-bg">
               <view class="tcp-fill" :style="{ width: (item.progress * 100) + '%' }" />
@@ -136,10 +151,9 @@ onPullDownRefresh(loadData)
             <text class="tcp-label">{{ item.progressLabel }}</text>
           </view>
 
-          <!-- 积分说明 -->
+          <!-- 频次与累计次数 -->
           <view class="tc-info">
-            <text class="tci-icon">&#xea8a;</text>
-            <text class="tci-text">{{ item.infoLabel }}</text>
+            <text class="tci-text">{{ item.infoLabel }} · {{ item.countLabel }}</text>
           </view>
 
           <!-- 操作按钮 -->
@@ -156,18 +170,10 @@ onPullDownRefresh(loadData)
 
       <view class="bottom-safe" />
     </scroll-view>
-
   </view>
 </template>
 
 <style scoped lang="scss">
-$orange-100: #FFEDD5;
-$slate-200: #E2E8F0;
-$slate-600: #475569;
-$purple-500: #A855F7;
-$purple-50: #F3E8FF;
-$purple-100: #EDE9FE;
-
 .page {
   min-height: 100vh;
   background: $color-bg-page;
@@ -179,7 +185,7 @@ $purple-100: #EDE9FE;
 
 .content-scroll {
   flex: 1;
-  padding: $spacing-lg 28rpx 0;
+  padding: $component-page-padding-y $component-page-padding-x 0;
   height: 0;
   box-sizing: border-box;
   width: 100%;
@@ -189,49 +195,70 @@ $purple-100: #EDE9FE;
 .tab-bar {
   display: flex;
   gap: $spacing-lg;
-  margin-bottom: 24rpx;
+  margin-bottom: $spacing-lg;
 }
 
 .tab-item {
   flex: 1;
+  position: relative;
   padding: $spacing-lg 0;
-  border-radius: 20rpx;
-  background: #fff;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
   text-align: center;
   text {
     font-size: $typography-font-size-md;
-    font-weight: 500;
+    font-weight: $typography-font-weight-medium;
     color: $color-text-muted;
   }
 }
 
 .tab-item.active {
-  background: $purple-50;
+  background: $color-brand-primary-bg;
   text {
-    color: $purple-500;
-    font-weight: 600;
+    color: $color-brand-primary;
+    font-weight: $typography-font-weight-semibold;
   }
+}
+
+.tab-count {
+  position: absolute;
+  top: 8rpx;
+  right: 12rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 $spacing-xs;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-count-text {
+  color: $color-text-on-brand;
+  font-size: 20rpx;
+  line-height: 1;
 }
 
 // ===== 状态 =====
 .state-wrap {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: $spacing-lg;
   align-items: center;
   justify-content: center;
   padding: 200rpx 0;
 }
 .state-text { font-size: $typography-font-size-md; color: $color-text-hint; }
 .state-action {
-  padding: 12rpx 40rpx;
+  padding: $spacing-sm 40rpx;
   border-radius: $border-radius-full;
   background: $color-semantic-danger-bg;
   color: $color-semantic-danger;
   font-size: $typography-font-size-sm;
 }
 .list-error {
-  padding: 20rpx 24rpx;
+  padding: 20rpx $spacing-lg;
   border-radius: $border-radius-md;
   background: $color-semantic-danger-bg;
   color: $color-semantic-danger;
@@ -246,10 +273,10 @@ $purple-100: #EDE9FE;
 }
 
 .task-card {
-  background: #fff;
-  border-radius: $border-radius-xl;
-  padding: $spacing-xl;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+  background: $color-bg-card;
+  border-radius: $component-card-radius;
+  padding: $component-card-padding;
+  box-shadow: $shadow-sm;
 }
 
 .tc-head {
@@ -259,9 +286,11 @@ $purple-100: #EDE9FE;
 }
 
 .tc-icon-box {
+  position: relative;
   width: 96rpx;
   height: 96rpx;
   border-radius: $border-radius-xl;
+  background: $color-brand-primary-bg;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -269,7 +298,17 @@ $purple-100: #EDE9FE;
 }
 
 .tc-icon {
-  font-size: 52rpx;
+  font-size: 44rpx;
+}
+
+.tc-dot {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger;
 }
 
 .tc-head-mid {
@@ -280,7 +319,7 @@ $purple-100: #EDE9FE;
 .tc-title {
   display: block;
   font-size: $typography-font-size-xl;
-  font-weight: 700;
+  font-weight: $typography-font-weight-bold;
   color: $color-text-primary;
 }
 
@@ -288,22 +327,38 @@ $purple-100: #EDE9FE;
   display: block;
   font-size: $typography-font-size-base;
   color: $color-text-hint;
-  margin-top: 8rpx;
+  margin-top: $spacing-xs;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.tc-points-badge {
+.tc-status-badge {
   padding: 6rpx 20rpx;
   border-radius: $border-radius-md;
-  background: $purple-50;
+  background: $color-brand-primary-bg;
   flex-shrink: 0;
+  .tc-status-text {
+    font-size: $typography-font-size-xs;
+    font-weight: $typography-font-weight-semibold;
+    color: $color-brand-primary;
+  }
+}
+
+.tc-status-badge.submitted {
+  background: $color-semantic-success-bg;
+  .tc-status-text { color: $color-semantic-success; }
+}
+
+.tc-unread {
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-md;
+  background: $color-semantic-warning-bg;
   text {
-    font-size: $typography-font-size-2xl;
-    font-weight: 800;
-    color: $purple-500;
+    color: $color-semantic-warning;
+    font-size: $typography-font-size-xs;
   }
 }
 
@@ -312,21 +367,21 @@ $purple-100: #EDE9FE;
   display: flex;
   align-items: center;
   gap: $spacing-md;
-  margin-top: 24rpx;
+  margin-top: $spacing-lg;
 }
 
 .tcp-bg {
   flex: 1;
   height: 16rpx;
-  border-radius: 9999rpx;
-  background: $color-bg-card;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
   overflow: hidden;
 }
 
 .tcp-fill {
   height: 100%;
-  border-radius: 9999rpx;
-  background: $purple-500;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary;
 }
 
 .tcp-label {
@@ -335,17 +390,12 @@ $purple-100: #EDE9FE;
   flex-shrink: 0;
 }
 
-// ===== 积分说明 =====
+// ===== 频次说明 =====
 .tc-info {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-  margin-top: 16rpx;
-}
-
-.tci-icon {
-  font-size: $typography-font-size-md;
-  color: $color-text-hint;
+  margin-top: $spacing-md;
 }
 
 .tci-text {
@@ -357,32 +407,32 @@ $purple-100: #EDE9FE;
 .tc-actions {
   display: flex;
   gap: $spacing-lg;
-  margin-top: 24rpx;
+  margin-top: $spacing-lg;
 }
 
 .tca-checkin {
   flex: 1;
   padding: $spacing-lg 0;
-  border-radius: 20rpx;
-  background: $purple-500;
+  border-radius: $border-radius-xl;
+  background: $color-brand-primary;
   text-align: center;
   text {
     font-size: $typography-font-size-md;
-    font-weight: 600;
-    color: #fff;
+    font-weight: $typography-font-weight-semibold;
+    color: $color-text-on-brand;
   }
 }
 
 .tca-detail {
   flex: 1;
   padding: $spacing-lg 0;
-  border-radius: 20rpx;
-  background: $purple-50;
+  border-radius: $border-radius-xl;
+  background: $color-brand-primary-bg;
   text-align: center;
   text {
     font-size: $typography-font-size-md;
-    font-weight: 500;
-    color: $purple-500;
+    font-weight: $typography-font-weight-medium;
+    color: $color-brand-primary;
   }
 }
 

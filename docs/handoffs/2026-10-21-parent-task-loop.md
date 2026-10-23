@@ -680,3 +680,186 @@ B 按任务组拆成 4 个窗口推进，**窗口内只做一组**，每组走�
 - **老师端**：保存分享码到相册 / 转发提示（9.5，B4）、真机扫码进入对应版本（12.6）。
 - **管理端**：管理端创建任务的发布通知（C 切片）。
 - 目标家长查询失败的 API 级可观测（见 14.3 #5）；任务级「一个家长成功、一个失败」未做（共享写路径已由 #7 覆盖）。
+
+---
+
+## 15. 下一窗口开工（B4 前端收口，2026-10-23 准备）
+
+### 15.1 起点状态
+
+- 分支 `feat/parent-growth-scope`，HEAD `26a853c`（已 push；远端此前停在 `393a3e3`，本次连带 B1/B2 一起推了）。
+- 后端：5.1–5.3、5.7 已勾选；**5.4 / 5.5 的后端已完成但未勾选**——它们的验收包含家长端 `scene` 解析、红点/读标记、真机扫码，这些在本窗口闭合后再勾。
+- 全量 `go test ./... -timeout 900s` 全绿（service 492s）；B3 用例 18 条；`_verify/mutate_b3.py` 15/15 **真实**检出。
+- 前端是**旧 A 切片页面**：B1（补充回应/反馈）、B2（公开审核/公开墙）、B3（未读/分享码）的界面都还没接。
+- 本地后端当前未跑；改前端后必须先 `npm run dev:mp-weixin` 再验证（IDE 读 `dist/dev/mp-weixin`，不是源码目录）。
+
+### 15.2 前端现状（2026-10-23 逐文件核实，别凭任务描述假设）
+
+| 文件 | 已有 | 缺 |
+| --- | --- | --- |
+| `teacher/src/pages/tasks/detail.vue` | 单条/批量回应、贴纸/语音/星星、待回应/已回应筛选、编辑、下拉刷新 | 补充回应入口、公开审核、分享码、星星罐目标设置 |
+| `teacher/src/pages/tasks/index.vue` | 列表、进入详情 | 创建/编辑表单的新字段（学习关联、范围、频率、仪式、星星、公开）→ 9.2 |
+| `teacher/src/api/teacher-tasks.js` | 列表/详情/建改删/统计/checkins/回应/批量 | `supplement`、`public` 审核、`share-card` → 9.1 |
+| `parent/src/pages/tasks/index.vue` | 列表、按孩子取数（`withStudentScope`）、进度 | 未渲染 `has_unread_supplement` 红点；状态/进度口径待核对 → 10.2 |
+| `parent/src/pages/tasks/detail.vue` | 详情、提交、打卡历史、主回应简版 | `scene` 解析、补充回应渲染、`my_reaction`、公开申请/取消、打开调 `read`、「给孩子看」→ 10.1/10.3 |
+| `parent/src/pages/messages/index.vue` | 消息列表 | 卡片点击、`action_path` 跳转、任务不存在/结束提示 → 10.6 |
+| `parent/src/api/parent-task.js` | 列表/详情/提交/历史（已带 `student_id`） | `markTaskRead`、`reactResponse`、公开申请/取消/公开墙、`share-card` 相关无 |
+
+> ⚠️ 两端 `components/` 会被 `scripts/sync-ui.js` 覆盖；**改组件只改 `shared-ui/`**，再同步。
+
+### 15.3 建议窗口拆分（一次只做一组，组间先审查再验证）
+
+| 窗口 | 范围 | 目的 |
+| --- | --- | --- |
+| **B4-a（建议下一个开）** | 10.1、10.2、10.3、10.6 + 9.1 的 `share-card` 封装 + 9.5 分享按钮 | 闭合 5.4/5.5 验收，并把 B1/B2 的家长端界面补上 |
+| B4-b | 9.1 余下、9.2、9.3（补充回应 + 公开审核）、9.7 | 老师端完整闭环 |
+| B4-c | 10.4、10.5、10.7、11.x | 首页卡片、反馈按钮、管理端 C 切片 |
+| 收尾 | 8.x 勾选、12.3/12.4/12.6/12.7/12.8 | 真机/回归/归档前验证 |
+
+### 15.4 B4-a 实现要点
+
+1. **10.1 API 与 scene**
+   - 新增 `markTaskRead(taskId, studentId)` → `POST /parent/tasks/:id/read?student_id=`；
+     `reactResponse(responseId, reaction, studentId)` → `POST /parent/tasks/responses/:response_id/reaction?student_id=`；
+     `requestPublic(checkinId, studentId)` / `cancelPublic(checkinId, studentId)` / `fetchPublicWall`。
+   - `onLoad(opts)` 解析小程序码：`scene` 形如 `t=123`（可能 URL-encoded）→ `decodeURIComponent` → 取 `t`；
+     `id = Number(opts?.id || sceneTaskId || 0)`，两者都没有才报错。
+   - 首页入口若也带 `scene`，同样处理（10.1 原文包含首页入口）。
+2. **10.2 列表红点**
+   - 用 `item.has_unread_supplement` 显示任务级红点（与消息未读是两套，不要合并）。
+   - `onShow` 重新拉列表（详情返回后红点要消失）；切换孩子后所有请求带新 `student_id`。
+3. **10.3 详情**
+   - 渲染 `responses[].supplements`：贴纸 key → 图形/文案、语音 → 播放、文字 → 文本；`my_reaction` 回显。
+   - 反馈三选一（`child_happy` / `received` / `thanks`），同一按钮再点即更新；反馈按家长账号，不按孩子收窄。
+   - 公开开关只在 `allow_public && target_student_id === 0` 时显示；申请后用 `public_status`（审核状态）与
+     `public_visible`（此刻是否在墙）**分别**表达，不要用 status 冒充「已上墙」。
+   - **数据加载成功后**调 `POST read`，失败只 toast/日志、不阻塞渲染；多孩时用当前 `student_id`。
+   - 「给孩子看」全屏态：放大贴纸/播放语音/老师的话（10.3 原文）。
+4. **10.6 消息深链**
+   - 只接受 `/pages/` 开头且不含 `://` 的 `action_path`；跳转时传 `id` 与 `student_id`。
+   - 任务页不是 tabBar 页 → `uni.navigateTo`；家长端 tabBar 只有 index/growth/pickup/profile。
+   - 任务删除/结束（详情 404）显示「任务已结束/不存在」，不要白屏。
+5. **9.5 分享码**
+   - `fetchTaskShareCard(taskId)` → `{ task_id, page, scene, env_version, image_base64 }`。
+   - base64 先用 `uni.getFileSystemManager().writeFile({ encoding: "base64" })` 落临时文件，再 `uni.saveImageToPhotosAlbum`；
+     失败提示「请检查家长端微信配置」，不要把微信错误直接抛给老师。
+   - 码必须由后端家长端凭据生成（已保证）；真机扫码验证属 12.6，需要本地 `wechat.code_env_version` 配 `trial`/`develop`。
+
+### 15.5 验证与收工
+
+- `npm run build:mp-weixin`（teacher + parent）通过；`node scripts/check-tokens.mjs teacher|parent` 对改动文件零新增违规。
+- 交互必须真实点击（`wechat_automator` / CDP），不能用 `wechat_navigate` 代替；导航跳转的 `switchTab`/`navigateTo` 差异只在真实点击下暴露。
+- 至少走通：家长任务红点 → 打开 → read 清除 → 看到补充回应 → 反馈 → 申请公开；
+  老师生成分享码 → 保存相册 → 真机扫码进入**家长端**任务详情（12.6）。
+- 不提交 `docs/competitive/*`、`skills-lock.json`、`.impeccable/`。
+- 完成后：更新本文件 §16、勾选 5.4/5.5（只有在 UI 与扫码都验证后）及对应 9.x/10.x，再考虑 archive。
+
+### 15.6 已知坑（沿用，别重踩）
+
+- `wx_cdp.mjs click <sel> mouse` 必须带 `mouse`，否则点不动 uni 的 `@click`；DOM 标签是 `wx-view`/`wx-text`/`wx-button`。
+- 单 IDE 实例下双端不能并行；要跨端联调走 `scripts/dual-ide.ps1`（两个微信号、9222/9223、9420/9421）。
+- 老师端**没有 tabBar**；家长端 tabBar 是 index/growth/pickup/profile，跳这些页面必须 `switchTab`。
+- 改 AppID / `project.config.json` 后必须重新构建；占位 AppID 会让自动化端口静默不监听。
+- 前端组件改 `shared-ui/`，不要改两端 `components/`（会被同步脚本覆盖）。
+
+### 15.7 新窗口开工提示词（直接复制）
+
+```text
+读 docs/handoffs/2026-10-21-parent-task-loop.md 的 §15，按 §15.3 的 B4-a 范围开工：
+家长端 10.1 / 10.2 / 10.3 / 10.6（scene 解析、补充回应渲染与反馈、任务红点与读标记、消息 action_path 跳转），
+外加老师端 9.1 的 share-card 封装与 9.5 分享按钮。
+
+开工前先读：design.md 的 D9/D10、backend/api/api-parent/06-task.md、backend/api/api-teacher/09-class-and-tasks.md、
+以及 openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md 的 9.x/10.x。
+
+约束：
+- 不要动 A/B1/B2/B3 已落地的后端语义（尤其任务锁序、公开状态机、通知按家长聚合、读标记口径）。
+- 前端组件只改 shared-ui/，不要改两端 components/；样式只能引用 shared-design-tokens 的 token。
+- 家长端所有任务接口必须带 student_id；老师端没有 tabBar，家长端 tabBar 只有 index/growth/pickup/profile。
+- 交互验证必须真实点击（wechat_automator / CDP），不能用 wechat_navigate 代替；改完先 npm run dev:mp-weixin。
+- 别提交 docs/competitive/*、skills-lock.json、.impeccable/。
+- 完成后：两端 build + check-tokens，更新 handoff §16，并在 UI 与真机扫码都验证后再勾选 5.4/5.5 与对应 9.x/10.x。
+```
+
+---
+
+## 16. B4-a 落地内容（2026-10-23）
+
+### 16.1 改了什么（逐个文件）
+
+| 文件 | 变更 |
+| --- | --- |
+| `parent/src/api/parent-task.js` | 新增 `markTaskRead` / `reactResponse` / `requestPublicCheckin` / `cancelPublicCheckin` / `fetchPublicWall`；`student_id` 一律拼在 query（body 里的会被后端丢弃），读标记走 `silent`（失败不影响渲染） |
+| `parent/src/pages/tasks/detail.vue` | `onLoad` 解析小程序码 `scene`（`t=123`，支持 URL 编码）→ 缺省回退 `id`；渲染 `responses[].supplements`（贴纸图形/语音播放/文字）；主回应与补充回应各三个反馈按钮并回显 `my_reaction`；打卡历史的公开申请/撤下（含 `public_visible` 与审核状态分开表达）；「给孩子看」全屏态；加载成功后调 `POST read`；消息目标孩子与当前孩子不一致时给提示 + 可切换 |
+| `parent/src/pages/tasks/index.vue` | `has_unread_supplement` 任务级红点 + 文案；状态改「待完成/已提交」；进度按「本周期是否已提交」；`累计打卡 N 次`；进行中 tab 待办数；移除本地 `$purple-*`，全部改 token |
+| `parent/src/pages/messages/index.vue` | 卡片按 `action_path` 跳转；只接受 `/pages/` 且不含 `://`；tabBar 四页走 `switchTab`，其余 `navigateTo`（失败提示「该内容已不存在」）；`onLoad` → `onShow` |
+| `parent/src/pages/index/index.vue` | `quickActions` 改 `computed`，「亲子任务」红点取后端修正后的 `pending_tasks` |
+| `teacher/src/api/teacher-tasks.js` | 新增 `fetchTaskShareCard` |
+| `teacher/src/pages/tasks/detail.vue` | 分享卡：生成家长端小程序码 → base64 落临时文件 → 存相册；写入/相册各有超时封顶 |
+
+### 16.2 语义决定（后续不要改错）
+
+1. **列表不显示「已回应」**：契约 `06-task.md` 的任务列表只返回 `submitted_current_period` / `checkin_count`，没有回应字段。10.2 原文要三态，但补这个字段属于后端 + 契约改动，不在 B4-a 范围，且会动已经被 B1/B2 测过的读路径。现状＝列表两态（待完成/已提交），详情页按 `responses` 表达已回应。**要补就等有人愿意同时改 `06-task.md` + service + 单测**，不要在列表里猜。
+2. **撤下公开用页面内两步点击，不用 `uni.showModal`**：原生弹窗不进视图层 DOM，CDP 既看不到也点不到，「撤下已公开内容」这条流程因此无法用真实点击验证（实测第一次点确实卡住不回调）。两步点击（`取消公开` → `确认撤下？`）保持显式确认，且可自动化。
+3. **任务详情时间按本地时区渲染**：后端是 UTC RFC3339，直接截字符串会显示成「凌晨」。`shortTime` 用 `new Date(iso)` 转本地。
+4. **`quickActions` 必须是 computed**：原先静态数组在 setup 时 `summary` 还是空的，`badge` 表达式只求值一次，红点永远不出现。该修复同时让「通知公告」红点开始生效（同一表达式，本就是原意）。
+5. **分享码保存有超时封顶**（写入 8s / 相册 15s）：相册授权是系统弹窗，用户不理它时 `saveImageToPhotosAlbum` 永不回调，按钮会一直「生成中…」。没有封顶就是死锁。
+6. **公开按钮的显示口径**：只有 `allow_public && target_student_id === 0` 才给入口；一键完成（无文字无媒体）不给「申请」，但「撤下」永远可用（对齐后端「撤回永远可用」）。
+
+### 16.3 验证证据（真实点击，非导航替代）
+
+后端 `make run`（8080）+ IDE 单实例，CDP 走 `scripts/cdp.py` / `scripts/focus-ide.ps1`。
+
+| # | 动作 | 结果 |
+| --- | --- | --- |
+| 1 | 首页点「亲子任务」（`.action-item`） | 进入 `pages/tasks/index` |
+| 2 | 列表读渲染 | 新任务显示「待完成 / 本周期待提交 / 一次性任务 · 累计打卡 0 次」，进行中 tab 带待办数 1 |
+| 3 | 点「查看详情」 | 进入 `detail?id=4322&student_id=27`，`requirements` 渲染成 1./2. 两条，学习关联卡正常 |
+| 4 | 点「今天完成了（一键提交）」 | 提交成功，提交卡消失，历史出现当日记录 |
+| 5 | 库里补主回应 + 补充回应后返回列表 | 任务卡出现 `.tc-dot`（1 个）与「老师又给你留了一句悄悄话」 |
+| 6 | 打开详情 | 未读提示条 + `⭐` 贴纸 + 老师的话 + 补充回应 `🌸`；`task_read_marks.last_read_at` 被写成打开时刻 |
+| 7 | 返回列表 | 红点消失（`dots=0`），onShow 重取生效 |
+| 8 | 点「孩子很开心」 | `task_response_reactions` 落到 `(699, 61, child_happy)`；按钮 `active`；重进详情回显 |
+| 9 | 点「给孩子看」 | 全屏遮罩显示放大 `⭐` + 老师的话；点空白处关闭（`Input.dispatchMouseEvent` 打点） |
+| 10 | 待完成任务点「去提交」→ 有内容提交 → 历史点「申请上班级墙」 | 状态变「已申请，等待老师审核」，按钮变「取消公开」；库里 `is_public_requested=1` |
+| 11 | 点「取消公开」→「确认撤下？」 | 状态变「已撤下」；库 `is_public_requested=0`、`public_revoked_at` 有值 |
+| 12 | 点「重新申请」 | 回到待审核；库 `revoked_at` 被清空（不沿用旧批准） |
+| 13 | 消息页点任务消息卡片 | 跳到 `detail?id=4322&student_id=27`；消息里带 `查看 ›`，系统消息无入口 |
+| 14 | 只带 `scene=t%3D4322` 打开详情 | 正确加载任务 4322（小程序码编码串可解析） |
+| 15 | 打开不存在的任务 id | 显示「任务已结束或不存在」+ 重试，不白屏 |
+| 16 | 消息目标孩子 ≠ 当前孩子（`student_id=32`） | 顶部提示「这条消息是另一个孩子的任务…」+「切换查看」 |
+| 17 | 首页在存在待办任务时刷新 | 「亲子任务」入口出现 `.action-badge` |
+| 18 | 老师端任务详情点「生成小程序码」 | 接口 200 + `image_base64`；PNG 落到 `USER_DATA_PATH/task-share-4324.png`（82521 字节）；相册授权在 IDE 里不回调，靠 15s 封顶把按钮放回可点 |
+
+两端 `npm run build:mp-weixin` 通过；`node scripts/check-tokens.mjs parent|teacher` 对本次改动文件 **0 违规**。
+
+### 16.4 未验证 / 缺口（不要当成已验证）
+
+- **5.4 / 5.5 / 9.5 / 10.1–10.3 / 10.6 都没勾**：按 §15.5 的要求，勾选要等真机扫码（12.6）。IDE 里相册弹窗不回调，扫码那一段只能在真机上做。
+- **未登录保留 action_path、登录后回跳**：IDE 里重新打开项目会清 token，但没构造「带着深链被踢去登录」的用例。
+- **10.7（点消息顺带标记消息已读）** 仍属 B4-c，本次没动消息读状态。
+- **列表「已回应」**：见 16.2-1，需要后端补只读字段才能做。
+- **本地验证数据未清理**（都在开发库，园所 4）：`parent_tasks` 4322（class 4，回应+补充回应夹具）、4323（class 4，公开申请/撤下过）、4324（class 1，分享码）、4325（class 4，待完成）；补充回应 = `task_responses` 700（`response_type=single`）+ `task_response_supplements` 指向 checkin 1953；`messages` 1171 带 `action_path`；`task_read_marks` 131。要重跑验证可直接用这些 id，要清就从后往前删。
+- 后端是本窗口 `go run` 起的（8080），收工时已停；下次验证要重新 `make run`。
+
+### 16.5 下一步
+
+B4-b：`9.1` 余下（supplement / public 审核封装）+ `9.2`（创建/编辑表单新字段）+ `9.3`（补充回应与公开审核 UI）+ `9.7`。老师端目前只能用 A 切片的老表单，创建任务时新字段还填不了。
+
+### 16.6 对抗性审查（2026-10-23，针对 16.1 的 diff 本身）
+
+按「怎样让它坏」的方向逐条过自己写的代码，找到 4 条真缺陷，3 条已修并复验，1 条只报告不动手。
+
+| # | 缺陷 | 性质 | 处置 |
+| --- | --- | --- | --- |
+| 1 | **关掉 `allow_public` 后家长撤不下已公开内容**：`showPublicAction` 先判 `canPublic()`，老师一关公开开关，按钮整个消失。契约 D9 / 4.1 写的是「撤回永远可用，这些条件只约束申请」 | 违反契约 | 已修：`pending/approved` 直接给撤下入口，只有「申请」受 `canPublic()` 与「有内容」约束 |
+| 2 | **深链落在 404 时，「换孩子」出口跟着消失**：提示条原来写在 `<template v-else>` 里，任务对当前孩子不可见（个体任务、跨班）时详情 404，家长只看到「任务已结束或不存在」，没有任何切换入口 | 10.6 的多孩场景 | 已修：提示条移到加载/错误分支之外；`currentSid` 在 `onLoad` 先用本地当前孩子兜底 |
+| 3 | **`revoked` 文案把老师驳回说成家长撤下**：后端「老师拒绝/撤回」与「家长取消」写的是同一个 `PublicRevokedAt`，UI 却写死「已撤下」 | 语义误导 | 已修：改成中性的「未公开」 |
+| 4 | **分享码接口返回 200 但没图时静默返回**：`stage === "generate"` 分支默认「http 层会弹提示」，只有当接口非 2xx 才成立；`image_base64` 为空时什么都不显示 | 静默失败（违反 CLAUDE.md） | 已修：空图单独 toast「小程序码为空，请检查家长端微信配置」 |
+| 5 | ~~已结束任务无法撤下公开内容~~ **（查证后撤回）**：`GetTask` 对 `!taskIsActive` 返回 404，详情进不去 | 起初判为「契约与可达性冲突」，**证据不支持** | **不改**。spec 第 178 行「任务结束后公开内容也不再展示」→ 内容本来就不在墙上；第 209 行「任务删除/结束有提示」→ 详情 404 是有意行为。`DELETE public-request` 不限制任务状态是接口层兜底（防并发/直连），不是要求 UI 给已结束任务留入口。改 `GetTask` 的可见性会推翻 A 切片语义并牵动 2.5 的单测，收益为零 |
+
+复验（真实点击 + 库核对）：
+- #1：`task 4323 allow_public=0` + `checkin 1954 approved` → 详情显示「老师已通过，暂未展示在班级墙」且**有**「取消公开」按钮；两次点击后 `is_public_requested=0 / approved=null / revoked_at 有值`，文案变「未公开」，之后再申请入口按规则隐藏。改前该场景按钮数为 0。
+- #2：`detail?id=4324&student_id=32`（class 1 任务，当前孩子 class 4）→ 页面同时显示「这条消息是另一个孩子的任务…切换查看」和「任务已结束或不存在」。
+- #3 / #4：随 #1、分享码链路一并观察，编译产物已含新分支。
+- 回归：`detail?id=4322` 回应/补充回应/反馈回显（6 个反馈按钮，1 个 active）未受模板结构改动影响；两端 `npm run build:mp-weixin` 再次通过。

@@ -44,12 +44,15 @@ const todayStatuses = computed(() => [
 ])
 
 /** 4 功能入口 — 高频优先，不与Tab重复 */
-const quickActions = [
+// 必须是 computed：静态数组在 setup 时 summary 还是空的，
+// `badge: summary.value.xxx` 只会求值一次，红点永远不出现。
+// 亲子任务的红点用后端修正后的 pending_tasks（当前孩子当前周期未提交的有效任务数）。
+const quickActions = computed(() => [
   { title: "通知公告", icon: "", color: "blue", path: "/pages/notice/index", badge: summary.value.new_notice_count },
   { title: "接送管理", icon: "", color: "orange", path: "/pages/pickup/index" },
-  { title: "亲子任务", icon: "", color: "purple", path: "/pages/tasks/index" },
+  { title: "亲子任务", icon: "", color: "purple", path: "/pages/tasks/index", badge: summary.value.pending_tasks },
   { title: "我要请假", icon: "", color: "yellow", path: "/pages/leave/create" },
-]
+])
 
 async function loadHome() {
   loading.value = true

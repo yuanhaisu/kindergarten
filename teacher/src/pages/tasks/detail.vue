@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
-import { fetchTeacherTask, fetchTeacherTaskCheckins, respondTeacherTask, batchRespondTeacherTask, updateTeacherTask } from "@/api/teacher-tasks"
+import { fetchTeacherTask, fetchTeacherTaskCheckins, respondTeacherTask, batchRespondTeacherTask, updateTeacherTask, fetchTaskShareCard } from "@/api/teacher-tasks"
 import config from "@/config/env"
 import { getToken } from "@/utils/auth"
 
@@ -35,6 +35,8 @@ const stickers = ["star", "heart", "thumb"]
 const recorder = uni.getRecorderManager()
 let recordingRow = null
 const recording = ref(false)
+// 小程序码生成/落盘期间锁按钮：微信生成接口不是幂等的瞬时操作，连点会排出一串请求。
+const shareBusy = ref(false)
 
 recorder.onStop((res) => {
   recording.value = false
@@ -214,6 +216,80 @@ async function batchRespond() {
   }
 }
 
+// 生成家长端任务小程序码并保存到相册，老师随后转发班级群。
+// 码由后端用**家长端**凭据生成（老师端码家长扫了会进错端），客户端只做落盘。
+async function shareTaskCard() {
+  if (!taskId.value || shareBusy.value) return
+  shareBusy.value = true
+  let stage = "generate"
+  uni.showLoading({ title: "生成小程序码", mask: true })
+  try {
+    const res = await fetchTaskShareCard(taskId.value)
+    const base64 = res.data?.image_base64 || ""
+    if (!base64) {
+      // 接口 200 但没给图：http 层不会弹任何提示，这里必须自己说话，否则点了没反应。
+      uni.showToast({ title: "小程序码为空，请检查家长端微信配置", icon: "none" })
+      return
+    }
+    // USER_DATA_PATH 是小程序可写的持久目录；写临时文件是为了喂给 saveImageToPhotosAlbum，
+    // 它只认文件路径，不认 base64。
+    const filePath = `${wx.env.USER_DATA_PATH}/task-share-${taskId.value}.png`
+    stage = "write"
+    await withTimeout(writeBase64File(filePath, base64), 8000, "写入图片失败")
+    uni.hideLoading()
+    stage = "save"
+    // 相册授权是系统弹窗：用户不理它会永远不回调，按钮就一直「生成中…」。
+    // 这里必须封顶，超时后把按钮放回可点状态。
+    await withTimeout(saveImageToAlbum(filePath), 15000, "保存到相册超时")
+    uni.showToast({ title: "已保存，可转发班级群", icon: "none" })
+  } catch (e) {
+    uni.hideLoading()
+    if (stage === "generate") {
+      // 请求失败时 http 层已经弹过后端文案（含「请检查家长端微信配置」），这里不再重复。
+      return
+    }
+    const errMsg = e?.errMsg || e?.message || ""
+    if (/timeout|超时/i.test(errMsg)) {
+      uni.showToast({ title: "保存超时，请重试", icon: "none" })
+    } else if (/auth|deny/i.test(errMsg)) {
+      uni.showToast({ title: "请允许保存到相册后重试", icon: "none" })
+    } else {
+      uni.showToast({ title: "保存到相册失败", icon: "none" })
+    }
+  } finally {
+    shareBusy.value = false
+  }
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+  ])
+}
+
+function writeBase64File(filePath, base64) {
+  return new Promise((resolve, reject) => {
+    wx.getFileSystemManager().writeFile({
+      filePath,
+      data: base64,
+      encoding: "base64",
+      success: resolve,
+      fail: reject
+    })
+  })
+}
+
+function saveImageToAlbum(filePath) {
+  return new Promise((resolve, reject) => {
+    uni.saveImageToPhotosAlbum({
+      filePath,
+      success: resolve,
+      fail: reject
+    })
+  })
+}
+
 function switchStatus(s) {
   status.value = s
   load()
@@ -254,6 +330,15 @@ onPullDownRefresh(() => {
         <text>指派给个别学生的任务不可公开</text>
       </view>
       <view class="batch" @click="saveEdit">保存</view>
+    </view>
+    <view v-if="task.id" class="card share-card">
+      <view class="share-copy">
+        <text class="share-title">让家长扫码打开任务</text>
+        <text class="share-hint">生成家长端小程序码，保存到相册后转发班级群</text>
+      </view>
+      <view class="share-btn" :class="{ busy: shareBusy }" @click="shareTaskCard">
+        <text>{{ shareBusy ? "生成中…" : "生成小程序码" }}</text>
+      </view>
     </view>
     <view class="tabs">
       <view class="tab" :class="{ active: status === 'pending' }" @click="switchStatus('pending')">待回应</view>
@@ -306,4 +391,11 @@ onPullDownRefresh(() => {
 .sticker { padding: $spacing-xs $spacing-lg; border-radius: $border-radius-full; background: $color-bg-page; color: $color-brand-primary; font-size: $typography-font-size-sm; }
 .recording { background: $color-semantic-danger-bg; color: $color-semantic-danger; }
 .done { display: block; margin-top: $spacing-sm; color: $color-semantic-success; font-size: $typography-font-size-sm; }
+.share-card { display: flex; align-items: center; justify-content: space-between; gap: $spacing-md; }
+.share-copy { flex: 1; }
+.share-title { display: block; font-size: $typography-font-size-md; font-weight: $typography-font-weight-bold; color: $color-text-primary; }
+.share-hint { display: block; margin-top: $spacing-xs; font-size: $typography-font-size-xs; color: $color-text-muted; }
+.share-btn { flex-shrink: 0; padding: $spacing-sm $spacing-lg; border-radius: $border-radius-full; background: $color-brand-primary; }
+.share-btn text { color: $color-text-on-brand; font-size: $typography-font-size-sm; }
+.share-btn.busy { opacity: 0.6; }
 </style>
