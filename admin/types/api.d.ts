@@ -499,19 +499,145 @@ export interface GrowthLogItem {
   created_at: string
 }
 
+/** 任务频率：与 server/internal/domain 的 TaskFrequency 一致 */
+export type TaskFrequency = 'daily' | 'weekly' | 'once'
+/** 星星统计范围：task=按任务目标，class=按班级罐目标（忽略星任务目标） */
+export type TaskStarScope = 'task' | 'class'
+/** 认可仪式 */
+export type TaskRitual = 'sticker' | 'voice' | 'class_star'
+
+/**
+ * 公开状态的四种取值（服务端 task_rules.go 计算，前端不得自拼）。
+ * none=从未申请，pending=待老师审核，approved=已批准且未撤回，revoked=已撤回。
+ */
+export type TaskPublicStatus = 'none' | 'pending' | 'approved' | 'revoked'
+
 export interface TaskItem {
   id: number
   title: string
   class_name: string
   class_id: number
-  frequency: string
+  learning_link: string
+  target_student_id: number
+  frequency: TaskFrequency
   frequency_label: string
   start_date: string
   end_date: string
   status: number
-  completion_rate: string
+  allow_public: boolean
+  /** 历史行可能为空串（早于仪式/范围字段的版本），保留 '' 以免调用方误以为一定有值 */
+  recognition_ritual: TaskRitual | ''
+  star_scope: TaskStarScope | ''
+  star_goal: number
+  /** 空串 = 独立任务；非空 = 多班活动，同活动下每班一条任务 */
+  activity_id: string
   creator: { nickname: string }
   created_at: string
+}
+
+/**
+ * 任务详情：列表字段 + 说明 + 累计口径指标。
+ * 打开详情抽屉前必须取详情——列表接口不再返回每任务比率（7.4 下线）。
+ */
+export interface TaskDetail extends TaskItem {
+  description: string
+  /** 全部未删除提交数（不按时间窗过滤） */
+  submission_count: number
+  responded_count: number
+  /** 主回应待回应 = submission_count - responded_count */
+  pending_count: number
+  /** "NN%" 或 null（无提交时无法计算，显示「—」而不是 0%） */
+  response_rate: string | null
+  participation_rate: string | null
+  /** 发布时按家长去重的通知义务集；null = 未知（历史任务或收件人查询失败） */
+  notify_target_count: number | null
+  creator: { id: number; nickname: string; avatar: string }
+}
+
+/** 任务统计的一个聚合桶（全园 / 班级 / 活动 / 独立任务共用这套键名） */
+export interface TaskStatMetrics {
+  total_checkins: number
+  /** 比率一律是 "NN%" 字符串或 null（分母为 0 时不可计算），不要 Number(null) */
+  response_rate: string | null
+  participation_rate: string | null
+  pending_count: number
+  pending_over_48h: number
+  /** 仅 single 主回应的提交→回应时长中位数；无样本为 null */
+  median_response_hours: number | null
+  median_response_negative_excluded: number
+  feedback_coverage: string | null
+  child_happy_rate: string | null
+  ack_rate: string | null
+  notify_baseline_missing: number
+}
+
+export interface TaskStatsByClass extends TaskStatMetrics {
+  class_id: number
+  class_name: string
+  tasks: number
+}
+
+/**
+ * by_activity 的一行：activity_id 非空按活动聚合（task_id=0）；
+ * 独立任务各占一行（activity_id 为空串，task_id 为任务 id），不合并成「空活动」。
+ */
+export interface TaskStatsByActivity extends TaskStatMetrics {
+  activity_id: string
+  task_id: number
+  title: string
+  tasks: number
+}
+
+export interface TaskStats extends TaskStatMetrics {
+  period: { start: string; end: string }
+  total_tasks: number
+  active_tasks: number
+  completed_tasks: number
+  by_class: TaskStatsByClass[]
+  by_activity: TaskStatsByActivity[]
+}
+
+/** 列表里的多班活动分组视图：同 activity_id 的各班任务折叠成一条 */
+export interface ActivityTask {
+  activity_id: string
+  title: string
+  /** 组内各班任务（展开后逐条显示） */
+  tasks: TaskItem[]
+}
+
+/** 公开内容列表项（GET /admin/tasks/:id/checkins） */
+export interface PublicCheckin {
+  checkin_id: number
+  task_id: number
+  student_id: number
+  student_name: string
+  content: string
+  media_url: string
+  created_at: string
+  is_public_requested: boolean
+  public_scope_confirmed: boolean
+  public_approved_at: string | null
+  public_approved_by: number
+  public_revoked_at: string | null
+  public_status: TaskPublicStatus
+  /**
+   * 此刻是否真的在班级公开墙上可见。已批准也可能为 false
+   * （任务结束/关闭公开/孩子转班），所以行里要显式标注而不是隐藏。
+   */
+  public_visible: boolean
+}
+
+/** 班级星星罐（当前学期） */
+export interface ClassStarJar {
+  class_id: number
+  /** `<学年>-<学期>`，如 2031-2032-spring */
+  term: string
+  term_start: string
+  term_end: string
+  /** 未配置时为 0 */
+  goal: number
+  configured: boolean
+  updated_at: string | null
 }
 
 export interface PointsOverview {

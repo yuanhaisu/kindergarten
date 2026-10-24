@@ -37,9 +37,12 @@
           </span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row as { id: number })">编辑</el-button>
+          <el-button link type="primary" @click="openStarJar(row as { id: number; name: string })">
+            星星罐
+          </el-button>
           <el-button link type="danger" @click="onDelete(row as { id: number; name: string })">
             删除
           </el-button>
@@ -92,13 +95,53 @@
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="starJarVisible" title="班级星星罐" width="480px" destroy-on-close>
+      <div v-if="starJar" class="space-y-3">
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="班级">{{ starJarClassName }}</el-descriptions-item>
+          <el-descriptions-item label="学期">{{ starJar.term }}</el-descriptions-item>
+          <el-descriptions-item label="学期起止">
+            {{ starJar.term_start }} ~ {{ starJar.term_end }}
+          </el-descriptions-item>
+          <el-descriptions-item label="当前状态">
+            <el-tag :type="starJar.configured ? 'success' : 'info'" size="small">
+              {{ starJar.configured ? `已配置 ${starJar.goal} 颗` : '未配置' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="starJar.updated_at" label="更新时间">
+            {{ formatDateTime(starJar.updated_at) }}
+          </el-descriptions-item>
+        </el-descriptions>
+        <el-form label-width="96px">
+          <el-form-item label="星星目标" required>
+            <el-input-number v-model="starJarGoal" :min="1" :step="5" />
+            <span class="ml-2 text-xs text-text-hint">必须大于 0；按班级罐统计的任务会使用该目标</span>
+          </el-form-item>
+        </el-form>
+      </div>
+      <div v-else-if="starJarLoading" class="text-sm text-text-muted">加载中…</div>
+      <template #footer>
+        <el-button @click="starJarVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="starJarSaving"
+          :disabled="!starJar || starJarGoal <= 0"
+          @click="saveStarJar"
+        >
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
 <script setup lang="ts">
-import type { ClassItem, TeacherItem } from '~/types/api'
+import type { ClassItem, ClassStarJar, TeacherItem } from '~/types/api'
 import { createClass, deleteClass, getClasses, getClassDetail, updateClass } from '~/api/classes'
 import { getTeachers } from '~/api/teachers'
+import { getClassStarJar, setClassStarJar } from '~/api/tasks'
+import { formatDateTime } from '~/utils/format'
 
 const { page, pageSize, total } = usePagination()
 const loading = ref(false)
@@ -239,6 +282,56 @@ async function onDelete(row: { id: number; name: string }) {
     await load()
   } catch {
     /* cancel */
+  }
+}
+
+// ── 星星罐（当前学期目标，tasks 7.5）──
+const starJarVisible = ref(false)
+const starJarLoading = ref(false)
+const starJarSaving = ref(false)
+const starJar = ref<ClassStarJar | null>(null)
+const starJarGoal = ref(1)
+const starJarClassId = ref(0)
+const starJarClassName = ref('')
+
+/** 连点不同班级的「星星罐」时，慢的那个后返回会盖掉新选中的班级 */
+let starJarSeq = 0
+
+async function openStarJar(row: { id: number; name: string }) {
+  const seq = ++starJarSeq
+  starJarVisible.value = true
+  starJarLoading.value = true
+  starJar.value = null
+  starJarClassId.value = row.id
+  starJarClassName.value = row.name
+  try {
+    const jar = await getClassStarJar(row.id)
+    if (seq !== starJarSeq) return
+    starJar.value = jar
+    // 未配置时给一个可用的起点：0 会被 PUT 拒绝（目标必须 > 0）。
+    starJarGoal.value = jar.configured && jar.goal > 0 ? jar.goal : 10
+  } catch (e: unknown) {
+    if (seq !== starJarSeq) return
+    ElMessage.error(e instanceof Error ? e.message : '加载班级星星罐失败')
+  } finally {
+    if (seq === starJarSeq) starJarLoading.value = false
+  }
+}
+
+async function saveStarJar() {
+  if (starJarGoal.value <= 0) {
+    ElMessage.warning('星星目标必须大于 0')
+    return
+  }
+  starJarSaving.value = true
+  try {
+    starJar.value = await setClassStarJar(starJarClassId.value, starJarGoal.value)
+    ElMessage.success('已保存班级星星罐目标')
+    starJarVisible.value = false
+  } catch (e: unknown) {
+    ElMessage.error(e instanceof Error ? e.message : '保存失败')
+  } finally {
+    starJarSaving.value = false
   }
 }
 

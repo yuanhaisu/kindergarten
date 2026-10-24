@@ -3,6 +3,8 @@
     <el-table
       v-loading="loading"
       :data="data"
+      :row-key="rowKey"
+      :tree-props="treeProps"
       stripe
       border
       class="w-full"
@@ -34,6 +36,9 @@ withDefaults(
     total?: number
     emptyText?: string
     showPagination?: boolean
+    /** 传 row-key 时启用 el-table 的树形数据（如任务列表按活动折叠） */
+    rowKey?: string
+    treeProps?: { children?: string; hasChildren?: string }
   }>(),
   {
     loading: false,

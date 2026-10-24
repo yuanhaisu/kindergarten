@@ -35,7 +35,7 @@ Every dropdown, chip selector, tab bar, and option list in this project is curre
 | 12 | 年级 | ❌ Hardcoded | — |
 | 13 | 学期 | ❌ Hardcoded | — |
 | 14 | 家庭关系 | ❌ Hardcoded | — |
-| 15 | 任务频率 | ❌ Hardcoded | — |
+| 15 | 任务频率/仪式/星星范围/公开状态 | ❌ Hardcoded | `admin/utils/tasks.ts` |
 | 16 | 审核类型/状态 | ❌ Hardcoded | — |
 | 17 | 积分类型 | ❌ Hardcoded | — |
 | 18 | 操作日志模块 | ❌ Hardcoded | — |
@@ -158,11 +158,20 @@ Every dropdown, chip selector, tab bar, and option list in this project is curre
 - **File**: `admin/pages/parents/index.vue` lines 54-58
 - **Values**: `father`(爸爸), `mother`(妈妈), `grandfather`(爷爷), `grandmother`(奶奶), `other`(其他)
 
-### 15. 任务频率 (Task Frequency)
+### 15. 任务频率 / 仪式 / 星星范围 / 公开状态 (Task enums)
 
-- **File**: `teacher/src/pages/tasks/index.vue` line 7
-- **Values**: `once`(一次), `daily`(每天), `weekly`(每周)
-- **Backend** (`server/internal/domain/task.go` lines 8-10): `TaskFrequency` type with constants
+- **File**: `admin/utils/tasks.ts`（管理端：`TASK_FREQUENCY_OPTIONS` / `TASK_RITUAL_OPTIONS` /
+  `TASK_STAR_SCOPE_OPTIONS` / `publicStatusLabel` + `taskStatusLabel`）；
+  老师端另有自己的硬编码 `teacher/src/pages/tasks/index.vue`
+- **Values**:
+  - 频率 `once`(一次性任务) / `daily`(每日任务) / `weekly`(每周任务)
+  - 仪式 `sticker`(贴纸) / `voice`(语音回应) / `class_star`(班级星星)
+  - 星星范围 `task`(按任务目标) / `class`(按班级星星罐)
+  - 公开状态 `none` / `pending` / `approved` / `revoked`（**服务端计算**，客户端不得自拼）
+  - 任务状态 `0` 已结束 / `1` 进行中
+- **Backend** (`server/internal/domain/task.go`): `TaskFrequency*` / `TaskRitual*` / `TaskStarScope*`；
+  公开状态常量在 `server/internal/service/task_rules.go`（`TaskPublicNone/Pending/Approved/Revoked`）
+- **规则**：管理端新增任务相关枚举一律放 `admin/utils/tasks.ts`，不要在页面里另建映射表
 
 ### 16. 审核类型与状态 (Audit Types & Statuses)
 
@@ -310,5 +319,5 @@ Example dict item with extra:
 These have Go type constants — frontend labels must stay in sync:
 - #3 Meal/Sleep/Mood — `server/internal/domain/growth.go` (MealRating, SleepQuality, MoodRating)
 - #8 Notice categories — `server/internal/domain/notice.go` (NoticeCategory*)
-- #15 Task frequency — `server/internal/domain/task.go` (TaskFrequency*)
+- #15 Task frequency / ritual / star scope — `server/internal/domain/task.go` (TaskFrequency*, TaskRitual*, TaskStarScope*)
 - #19 Growth dimensions — `server/internal/domain/growth.go` (DimName comment)
