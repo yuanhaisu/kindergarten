@@ -1720,3 +1720,97 @@ C-2 用例 41 条（当时）+ handler 映射用例通过；全量任务回归 *
 验证：`go build ./...`、`go vet ./...`、`golangci-lint`（改动包）0 issues；
 C-2 用例 **43 条**（活动 16，新增「整组结束」「单条仍拒绝 status」两条）通过；
 全量任务回归 **356.2s** 通过；变异 20（批量结束不退让结构锁）**真实断言失败**。
+
+---
+
+## 22. C-3 开工准备（2026-10-24，逐文件核实）
+
+起点：`feat/parent-growth-scope` @ `d51f000`（已 push）。C-2 已闭合（7.1–7.4、8.3），C-1 的班级罐与建/改任务字段也已就绪。**不要从零假设现状**——下表是 2026-10-24 逐文件看过的结果。
+
+### 22.1 现状（管理端）
+
+| 文件 | 现状 | 缺口 |
+| --- | --- | --- |
+| `admin/pages/tasks/index.vue` | 只有列表 + 删除按钮；表格列含 `completion_rate`（后端已下线 → **该列为空**） | 11.1 全部 |
+| `admin/api/tasks.ts` | `createTask` / `updateTask` 只有 title/description/class/frequency/dates；无活动端点、无公开列表、`getTaskStats` 返回 `Record<string,unknown>` | 11.1–11.3 |
+| `admin/types/api.d.ts` `TaskItem` | 仍含 `completion_rate`，缺 learning_link/target/allow_public/ritual/star_*/activity_id 与新统计字段 | 11.1 |
+| `admin/pages/statistics/index.vue` | 读 `avg_completion_rate`（后端已下线 → **显示空白**） | 11.2 |
+| `admin/pages/classes/index.vue` | 有学年列与操作列，**没有**星星罐入口 | 11.4 的班级罐设置 |
+| `admin/constants/menus.ts` | 菜单权限码已是 `task:view` | 无需改 |
+| 活动/公开/星星罐相关代码 | `grep` 无任何引用 | 11.1/11.3 |
+
+### 22.2 现状（老师端，C-4 用，本窗口别动）
+
+- `teacher/src/pages/tasks/index.vue:200`：「按班级」仍是置灰的 `view`，提示「当前暂未开放」。
+- `teacher/src/pages/tasks/detail.vue`：已能展示 `star_scope=class` 的**本任务**贡献，但拿不到班级罐总进度。
+- `teacher/src/api/teacher-tasks.js`：**没有** star-jar 的封装（C-1 已交付 `/teacher/class/star-jar` 端点）。
+
+### 22.3 后端已就绪的接口（C-3 直接用，不要改后端语义）
+
+| 用途 | 接口 |
+| --- | --- |
+| 任务列表 | `GET /admin/tasks?class_id=&status=&page=&page_size=`（**无** completion_rate） |
+| 任务详情 | `GET /admin/tasks/:id`（含 `submission_count`/`responded_count`/`pending_count`/`response_rate`/`participation_rate`/`notify_target_count`） |
+| 独立任务建/改 | `POST /admin/tasks`、`PUT /admin/tasks/:id`（新字段、指针缺省=保留、结构锁、`learning_link` 必填） |
+| 多班活动 | `POST/PUT/DELETE /admin/task-activities[/:activity_id]`（服务端返回 `activity_id`/`task_ids`；批量只收安全字段 + `status`） |
+| 统计 | `GET /admin/tasks/stats?start_date=&end_date=`（新字段见 `api-admin/10-tasks.md`；无分母时为 `null`） |
+| 公开内容 | `GET /admin/tasks/:id/checkins?status=public|revoked|all&page=&page_size=` |
+| 撤回公开 | `PUT /admin/tasks/checkins/:checkin_id/public`（只能 `{"revoke":true}`） |
+| 班级罐 | `GET/PUT /admin/classes/:id/star-jar`（`goal>0`） |
+
+契约：`backend/api/api-admin/10-tasks.md`（SoT）、`api-teacher/09-class-and-tasks.md`。
+
+### 22.4 C-3 拆分（一次只做一组，组间先验证）
+
+| 步骤 | 范围 | 验收 |
+| --- | --- | --- |
+| **C-3-a** | `types/api.d.ts` + `api/tasks.ts`：补齐 TaskItem/详情/统计/活动/公开列表的类型与函数 | `npm run build` 通过；无 `any` 泛滥 |
+| **C-3-b** | `pages/tasks/index.vue`：列表去掉 `completion_rate`，加回应率/参与率列（或「待回应」列）、按 `activity_id` 分组展示、行操作（编辑/删除/公开内容） | 真实点击：列表不再空白列 |
+| **C-3-c** | 建/改表单：独立任务与多班活动共用字段组件；`star_scope=class` 时隐藏任务目标并先查班级罐；`allow_public=false` 时提示「已公开内容将全部撤下」；有提交后禁用结构字段 | 真实点击：建独立任务、建 2 班活动、改一次标题两条都变、结束活动两条都变 |
+| **C-3-d** | 统计接新字段 + 班级页星星罐设置 + 公开内容查看/撤回 | 真实点击：统计与列表一致；撤回后列表 `public_visible=false` |
+
+### 22.5 约束与已知坑（C-3 必看）
+
+1. **`completion_rate` 已下线**：表格里那一列现在是 `undefined`，必须换掉；`statistics` 页的 `avg_completion_rate` 同理（换 `response_rate`）。别为了「先跑起来」把后端字段加回去。
+2. **比率可能是 `null`**：前端显示「—」，不要 `Number(null)` 成 0%，也不要把 `"100%"` 再乘 100。
+3. **活动任务单删会被 422**：列表删除按钮对 `activity_id != ""` 的任务要隐藏或改成「删除整个活动」；单条编辑只允许四个安全字段 + `status`（`status` 单条也禁，只有活动批量能改）。
+4. **`class_ids` 重复会被 422**（不是静默去重）；活动创建返回 `activity_id` + `task_ids`，前端不要自己拼 id。
+5. **公开内容必须带分页**（缺省 20、上限 100）；`public_visible=false` 的行要标出「已不可见」而不是直接隐藏——管理员需要看到「批准了但墙上没有」。
+6. **样式只引用 token**（Tailwind 类名，如 `bg-bg-card`/`text-text-primary`），禁止 `bg-[#fff]` 这类任意值；改完跑 `node scripts/check-tokens.mjs admin`。
+7. **不要提交** `admin/.nuxt/`、`admin/.output/`（已被忽略，别 `git add -f`）、`docs/competitive/*`、`skills-lock.json`、`.impeccable/`。
+8. 验证优先用 `admin-run` skill（起 Go 后端 + Nuxt + Playwright）；没有 Playwright 时按 memory `admin-ui-headless-cdp` 用构建产物 + 无头 Chrome CDP。**DOM 断言，不要用截图代替**。
+
+### 22.6 新窗口开工提示词（直接复制）
+
+```text
+读 docs/handoffs/2026-10-21-parent-task-loop.md 的 §22（C-3 开工准备）、§21（C-2 落地与三轮审查），
+按 §22.4 的 C-3 范围开工：11.1 任务表单与多班活动、11.2 统计新口径、11.3 活动批量/整组删除、
+11.4 班级星星罐设置与公开内容撤回。
+
+开工前先读：
+- backend/api/api-admin/10-tasks.md（SoT：任务/活动/统计/公开列表/班级罐的全部形状与错误码）
+- admin/pages/tasks/index.vue、admin/api/tasks.ts、admin/types/api.d.ts、admin/pages/statistics/index.vue、
+  admin/pages/classes/index.vue、admin/constants/menus.ts
+- server/internal/service/task_activity.go 与 task_stats.go（后端语义，只读，不改）
+
+起点：feat/parent-growth-scope @ d51f000（已 push）。后端接口全部就绪，C-3 只做管理端前端。
+
+约束：
+- completion_rate / avg_completion_rate 已被后端下线：列表列与统计卡片必须换新字段，不要加回后端字段。
+- 比率可能为 null（无分母）：显示「—」，不要当 0%。
+- 活动任务：单删 422、单条只允许安全字段（status 也只能批量改）；列表要按 activity_id 分组，
+  删除动作对活动任务要变成「删除整个活动」。
+- 公开内容列表必须带 page/page_size；public_visible=false 的行要显式标注不可见。
+- 样式只引用 design token 类名；改完跑 node scripts/check-tokens.mjs admin。
+- 不要提交 admin/.nuxt、admin/.output、docs/competitive/*、skills-lock.json、.impeccable/。
+- 验证用 admin-run skill 或 memory `admin-ui-headless-cdp` 的无头 CDP，做 DOM 断言与真实点击，
+  不要用 MCP 导航/截图代替交互验证。
+
+完成后：更新 handoff（新增 §23 C-3 落地），只在 npm run build + 真实点击都通过后勾 11.1–11.4；
+3.8 的老师端入口与 12.x 验证仍属 C-4/C-5；归档前必须先在 C-5 补正 tasks.md 的 A/B 勾选。
+```
+
+**下一窗口不要碰的三件事**：
+1. 老师端页面与 `teacher/src/api/*`（C-4）。
+2. `tasks.md` 里 A/B 的勾选状态（C-5 逐条核对后再改，现在改了也没有证据支撑）。
+3. 归档（C-3/C-4/C-5 完成后才做）。
