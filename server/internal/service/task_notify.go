@@ -57,7 +57,7 @@ func taskNotifyTargets(ctx context.Context, db *gorm.DB, task *domain.ParentTask
 	out := make([]taskNotifyTarget, 0, len(rows))
 	for _, r := range rows {
 		if r.UserID != 0 {
-			out = append(out, taskNotifyTarget{UserID: r.UserID, StudentID: r.StudentID})
+			out = append(out, taskNotifyTarget(r))
 		}
 	}
 	return out, nil
@@ -132,6 +132,42 @@ func (s *TeacherPortalService) notifyTaskPublished(ctx context.Context, task *do
 	return notifyTaskPublishedFor(ctx, s.db, s.msg, task)
 }
 
+// recordTaskNotifyTargetCount 把发布通知的「义务集」大小落库。
+//
+// 调用点必须在投递**之前**（decision §20.10-6）：若发完再记数量，进程崩在发送中途
+// 计数就永远写不上，任务会被静默排除在指标外且无人察觉。义务在承诺那一刻落库。
+// n == nil 表示未知（收件人查询失败），写 NULL 而不是 0。
+func recordTaskNotifyTargetCount(ctx context.Context, db *gorm.DB, taskID uint64, n *int) {
+	if db == nil || taskID == 0 {
+		return
+	}
+	updates := map[string]any{"notify_target_count": nil}
+	if n != nil {
+		updates["notify_target_count"] = *n
+	}
+	if err := db.WithContext(ctx).Model(&domain.ParentTask{}).
+		Where("id = ?", taskID).Updates(updates).Error; err != nil {
+		// 计数写失败不阻断投递：指标缺一格，比把通知丢掉好。
+		log.L(ctx).Error("task notify: record target count failed", "task", taskID, "err", err)
+	}
+}
+
+// recordResponseNotifyTargetCount 同 recordTaskNotifyTargetCount，作用于单次主回应。
+func recordResponseNotifyTargetCount(ctx context.Context, db *gorm.DB, responseID uint64, n *int) {
+	if db == nil || responseID == 0 {
+		return
+	}
+	updates := map[string]any{"notify_target_count": nil}
+	if n != nil {
+		updates["notify_target_count"] = *n
+	}
+	if err := db.WithContext(ctx).Model(&domain.TaskResponse{}).
+		Where("id = ?", responseID).Updates(updates).Error; err != nil {
+		log.L(ctx).Error("task notify: record response target count failed",
+			"response", responseID, "err", err)
+	}
+}
+
 // notifyTaskPublishedFor 老师端与管理端创建任务共用的发布通知（handoff §20.7-2）。
 //
 // 抽成自由函数而不是各写一份：两个入口的收件人口径、文案、深链、判重必须完全一致。
@@ -140,8 +176,14 @@ func notifyTaskPublishedFor(ctx context.Context, db *gorm.DB, msg *repository.Me
 	targets, err := taskNotifyTargets(ctx, db, task)
 	if err != nil {
 		log.L(ctx).Error("task publish notify: load targets failed", "task", task.ID, "err", err)
+		// 义务未知：写 NULL（不是 0），统计把它排除并单独计数。
+		recordTaskNotifyTargetCount(ctx, db, task.ID, nil)
 		return 0, 0
 	}
+	// 先写义务再投递（decision §20.10-6）。
+	count := len(targets)
+	recordTaskNotifyTargetCount(ctx, db, task.ID, &count)
+
 	recipients := make([]messageRecipient, 0, len(targets))
 	for _, t := range targets {
 		recipients = append(recipients, messageRecipient{
@@ -172,8 +214,13 @@ func (s *TeacherPortalService) notifyTaskResponse(
 	if err != nil {
 		log.L(ctx).Error("task response notify: load targets failed",
 			"task", task.ID, "response", responseID, "err", err)
+		recordResponseNotifyTargetCount(ctx, s.db, responseID, nil)
 		return 0, 0
 	}
+	// 先写义务再投递；补充回应不投递，这条路不会被调用，其计数保持 NULL。
+	count := len(targets)
+	recordResponseNotifyTargetCount(ctx, s.db, responseID, &count)
+
 	recipients := make([]messageRecipient, 0, len(targets))
 	for _, t := range targets {
 		recipients = append(recipients, messageRecipient{

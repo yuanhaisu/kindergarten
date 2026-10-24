@@ -304,12 +304,19 @@
 - **编辑时可选字段缺省 = 保留原值**：`star_goal` / `allow_public` / `description` 不传不会清零目标、不会关闭公开、不会清空说明（与 `api-admin/10-tasks.md` 同口径）。因此上面的最小编辑示例可以直接用。
 - `star_scope` 只接受 `task` / `class`，`recognition_ritual` 只接受 `sticker` / `voice` / `class_star`（首尾空白会被 trim）；非法值返回参数错误，不会落库成非规范值。
 - `allow_public=false` 时批量撤销公开（B 切片字段，A 先保留）。
+- **活动任务（`activity_id` 非空）只允许 `title` / `description` / `learning_link` / `allow_public`**：
+  频率、起止日期、`target_student_id`、`recognition_ritual`、`star_scope`、`star_goal`、`status`
+  任一变化 → **422**「活动任务只能修改标题、说明、学习关联与公开开关，请让管理员整组编辑」。
+  活动任务的「一个班级一条、共享 `activity_id`」只能由管理端整组维护（design D12）。
 
 ### DELETE `/teacher/tasks/:id`
 
 ```json
 {}
 ```
+
+- **活动任务不能单条删除** → **422**「活动任务不能单独删除，请让管理员删除整个活动」
+  （单删会让活动分组与统计聚合悬空）。独立任务照常级联删除。
 
 ### GET `/teacher/tasks/:id/stats`
 

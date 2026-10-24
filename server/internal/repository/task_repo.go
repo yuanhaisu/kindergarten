@@ -119,6 +119,31 @@ func (r *TaskRepo) CountActiveStudentsInClass(ctx context.Context, kindergartenI
 	return n, err
 }
 
+// CountParticipatingStudents 该任务下至少有一条提交、且仍在任务目标范围内的学生数。
+//
+// 与统计的 participation_rate 同口径：个体任务只看目标孩子是否提交，
+// 班级任务只算「当前仍在读且仍在该班」的孩子——已转班/已删除的提交不能
+// 让参与率超过 100%。
+func (r *TaskRepo) CountParticipatingStudents(ctx context.Context, kindergartenID uint64, task *domain.ParentTask) (int64, error) {
+	var n int64
+	if task.TargetStudentID > 0 {
+		// 个体任务的分母恒为 1，分子必须按学生去重：每日任务同一孩子提交多次时
+		// 数行会给 2/1（目前只靠比率封顶掩盖，原始计数就已经错了）。
+		err := r.db.WithContext(ctx).Table("task_check_ins AS c").
+			Where("c.task_id = ? AND c.deleted_at IS NULL AND c.student_id = ?", task.ID, task.TargetStudentID).
+			Distinct("c.student_id").
+			Count(&n).Error
+		return n, err
+	}
+	err := r.db.WithContext(ctx).Table("task_check_ins AS c").
+		Joins("INNER JOIN students AS s ON s.id = c.student_id AND s.deleted_at IS NULL AND s.status = 1").
+		Where("c.task_id = ? AND c.deleted_at IS NULL AND s.kindergarten_id = ? AND s.class_id = ?",
+			task.ID, kindergartenID, task.ClassID).
+		Distinct("c.student_id").
+		Count(&n).Error
+	return n, err
+}
+
 func (r *TaskRepo) ClassBelongsToKindergarten(ctx context.Context, kindergartenID, classID uint64) (bool, error) {
 	var n int64
 	err := r.db.WithContext(ctx).Model(&domain.Class{}).
@@ -140,13 +165,13 @@ func (r *TaskRepo) UpdateTask(ctx context.Context, kindergartenID, taskID uint64
 
 // TaskOverlapRow 与日期区间有交集的任务（统计用）。
 type TaskOverlapRow struct {
-	ID        uint64    `gorm:"column:id"`
-	ClassID   uint64    `gorm:"column:class_id"`
-	ClassName string    `gorm:"column:class_name"`
-	Frequency string    `gorm:"column:frequency"`
-	StartDate time.Time `gorm:"column:start_date"`
-	EndDate   time.Time `gorm:"column:end_date"`
-	Status    int8      `gorm:"column:status"`
+	ID              uint64 `gorm:"column:id"`
+	ClassID         uint64 `gorm:"column:class_id"`
+	ClassName       string `gorm:"column:class_name"`
+	Title           string `gorm:"column:title"`
+	ActivityID      string `gorm:"column:activity_id"`
+	TargetStudentID uint64 `gorm:"column:target_student_id"`
+	Status          int8   `gorm:"column:status"`
 }
 
 func (r *TaskRepo) ListTasksOverlappingRange(
@@ -156,45 +181,12 @@ func (r *TaskRepo) ListTasksOverlappingRange(
 ) ([]TaskOverlapRow, error) {
 	var rows []TaskOverlapRow
 	err := r.db.WithContext(ctx).Table("parent_tasks AS pt").
-		Select("pt.id, pt.class_id, c.name AS class_name, pt.frequency, pt.start_date, pt.end_date, pt.status").
+		Select(`pt.id, pt.class_id, c.name AS class_name, pt.title, pt.activity_id,
+			pt.target_student_id, pt.status`).
 		Joins("INNER JOIN classes AS c ON c.id = pt.class_id AND c.deleted_at IS NULL").
 		Where("pt.kindergarten_id = ? AND pt.deleted_at IS NULL", kindergartenID).
 		Where("pt.start_date <= ? AND pt.end_date >= ?", rangeEnd, rangeStart).
 		Order("pt.id ASC").
 		Scan(&rows).Error
 	return rows, err
-}
-
-func (r *TaskRepo) CountCheckinsByTaskIDs(ctx context.Context, taskIDs []uint64) (map[uint64]int64, error) {
-	out := make(map[uint64]int64)
-	if len(taskIDs) == 0 {
-		return out, nil
-	}
-	type row struct {
-		TaskID uint64 `gorm:"column:task_id"`
-		Cnt    int64  `gorm:"column:cnt"`
-	}
-	var list []row
-	err := r.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
-		Select("task_id, COUNT(*) AS cnt").
-		Where("task_id IN ? AND deleted_at IS NULL", taskIDs).
-		Group("task_id").
-		Scan(&list).Error
-	if err != nil {
-		return nil, err
-	}
-	for _, x := range list {
-		out[x.TaskID] = x.Cnt
-	}
-	return out, nil
-}
-
-func (r *TaskRepo) CountCheckinsInDateRange(ctx context.Context, kindergartenID uint64, rangeStart, rangeEnd time.Time) (int64, error) {
-	var n int64
-	err := r.db.WithContext(ctx).Table("task_check_ins AS ci").
-		Joins("INNER JOIN parent_tasks AS t ON t.id = ci.task_id AND t.deleted_at IS NULL").
-		Where("t.kindergarten_id = ? AND ci.deleted_at IS NULL", kindergartenID).
-		Where("ci.date >= ? AND ci.date <= ?", rangeStart, rangeEnd).
-		Count(&n).Error
-	return n, err
 }

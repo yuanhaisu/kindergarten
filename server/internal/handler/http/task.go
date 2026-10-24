@@ -71,6 +71,36 @@ func (h *Handler) GetTask(c *gin.Context) {
 	response.OK(c, data)
 }
 
+// ListTaskPublicCheckins GET /admin/tasks/:id/checkins?status=public
+// 7.3 的「查看」入口：只读，撤回仍走 PUT /admin/tasks/checkins/:checkin_id/public。
+func (h *Handler) ListTaskPublicCheckins(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	taskID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || taskID == 0 {
+		response.ErrValidation(c, "无效的任务 ID")
+		return
+	}
+	// 单独的分页结构：`listTasksQuery.Status` 是 *int8，而这里的 `status` 是
+	// public|revoked|all 字符串——复用会让绑定在 status 上先失败，分页参数
+	// 能不能解析出来取决于结构体字段顺序，纯属埋雷。
+	var q struct {
+		Page     int `form:"page"`
+		PageSize int `form:"page_size"`
+	}
+	_ = c.ShouldBindQuery(&q)
+	data, err := h.taskSvc.ListPublicCheckins(c.Request.Context(), kgID, taskID, c.Query("status"),
+		pagination.Query{Page: q.Page, PageSize: q.PageSize})
+	if err != nil {
+		writeTaskError(c, err, "获取公开内容失败")
+		return
+	}
+	response.OK(c, data)
+}
+
 func (h *Handler) DeleteTask(c *gin.Context) {
 	kgID := middleware.GetKindergartenID(c)
 	if kgID == 0 {
@@ -84,19 +114,9 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 	}
 	uid := middleware.GetUserID(c)
 	if err := h.taskSvc.DeleteTask(c.Request.Context(), kgID, uid, id, c.ClientIP(), c.GetHeader("User-Agent")); err != nil {
-		if err.Error() == "NO_KINDERGARTEN" {
-			response.ErrForbidden(c, "未绑定园所，请重新登录")
-			return
-		}
-		if service.IsTaskNotFound(err) {
-			response.ErrNotFound(c, "任务不存在")
-			return
-		}
-		if errors.Is(err, service.ErrTaskBusy) {
-			response.ErrUnavailable(c, "操作冲突，请稍后重试")
-			return
-		}
-		response.ErrInternal(c, "删除任务失败")
+		// 与 Create/Update/活动端点一个出口：这里再抄一份映射，新哨兵（活动任务禁删）
+		// 就会漏成 500 而不是契约里的 422。
+		writeTaskError(c, err, "删除任务失败")
 		return
 	}
 	response.OK(c, gin.H{})
@@ -203,8 +223,26 @@ func writeTaskError(c *gin.Context, err error, fallback string) {
 		response.ErrValidation(c, "recognition_ritual 须为 sticker / voice / class_star")
 	case errors.Is(err, service.ErrTaskStarScopeInvalid):
 		response.ErrValidation(c, "star_scope 须为 task / class")
+	case errors.Is(err, service.ErrTaskTitleTooLong):
+		response.ErrValidation(c, "标题不能超过 200 个字符")
 	case errors.Is(err, service.ErrTaskActivityIDForbidden):
 		response.ErrValidation(c, "独立任务不接受 activity_id，请使用 /admin/task-activities 创建多班活动")
+	case errors.Is(err, service.ErrTaskActivityNotFound):
+		response.ErrNotFound(c, "活动不存在")
+	case errors.Is(err, service.ErrTaskActivityClassesInvalid):
+		response.ErrValidation(c, "class_ids 必须非空，且全部属于当前园所")
+	case errors.Is(err, service.ErrTaskActivityDuplicateClass):
+		response.ErrValidation(c, "class_ids 不能包含重复班级")
+	case errors.Is(err, service.ErrTaskActivityTooManyClasses):
+		response.ErrValidation(c, "一个活动最多包含 50 个班级")
+	case errors.Is(err, service.ErrTaskActivityFieldForbidden):
+		response.ErrValidation(c, "活动只能批量修改标题、说明、学习关联、公开开关与结束状态")
+	case errors.Is(err, service.ErrTaskActivityDeleteForbidden):
+		response.ErrValidation(c, "活动任务不能单独删除，请删除整个活动")
+	case err.Error() == "BAD_PUBLIC_STATUS":
+		response.ErrValidation(c, "status 须为 public / revoked / all")
+	case errors.Is(err, service.ErrTaskActivityEditForbidden):
+		response.ErrValidation(c, "活动任务只能修改标题、说明、学习关联与公开开关，请使用活动端点整组编辑")
 	case errors.Is(err, service.ErrStarJarGoalInvalid):
 		response.ErrValidation(c, "班级星星罐目标必须大于 0")
 	case errors.Is(err, service.ErrTaskBusy):

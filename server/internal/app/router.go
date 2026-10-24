@@ -339,9 +339,19 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		tk.GET("", h.ListTasks)
 		tk.POST("", h.CreateTask)
 		tk.GET("/:id", h.GetTask)
+		// 7.3 查看公开内容（只读；撤回走 PUT /tasks/checkins/:checkin_id/public）
+		tk.GET("/:id/checkins", h.ListTaskPublicCheckins)
 		tk.PUT("/:id", h.UpdateTask)
 		tk.DELETE("/:id", h.DeleteTask)
 		tk.PUT("/checkins/:checkin_id/public", h.RevokeTaskPublicCheckin)
+	}
+
+	// 多班活动：activity_id 由服务端生成，只有本组能管理分组（design D12）。
+	ta := adminG.Group("/task-activities")
+	{
+		ta.POST("", h.CreateTaskActivity)
+		ta.PUT("/:activity_id", h.UpdateTaskActivity)
+		ta.DELETE("/:activity_id", h.DeleteTaskActivity)
 	}
 
 	po := adminG.Group("/points")

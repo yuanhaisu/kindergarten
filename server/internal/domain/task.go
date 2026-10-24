@@ -60,6 +60,11 @@ type ParentTask struct {
 	StarGoal          int           `json:"star_goal" gorm:"not null;default:0"`
 	Status            int8          `json:"status" gorm:"default:1;comment:1进行中 0已结束"`
 
+	// NotifyTargetCount 发布通知的「义务集」大小（按家长去重）。
+	// NULL = 未能确定（收件人查询失败，或历史任务未写）；统计把它排除而不是当 0——
+	// 「未知」与「确实没有家长」必须可区分（handoff §20.10-6）。
+	NotifyTargetCount *int `json:"notify_target_count" gorm:"comment:发布通知义务家长数；NULL=未知"`
+
 	Creator *User  `json:"creator,omitempty" gorm:"foreignKey:CreatorID"`
 	Class   *Class `json:"class,omitempty" gorm:"foreignKey:ClassID"`
 }
@@ -106,6 +111,11 @@ type TaskResponse struct {
 	ResponseType   string     `json:"response_type" gorm:"size:20;not null"`
 	PeriodStart    *time.Time `json:"period_start"`
 	PeriodEnd      *time.Time `json:"period_end"`
+
+	// NotifyTargetCount 本次主回应通知的「义务集」大小（按家长去重）。
+	// NULL = 未知（收件人查询失败 / 补充回应不投递）；反馈率分母从这里来，
+	// 不回看 messages 行数（判重命中不写行、失败无行，都会让分母偏小）。
+	NotifyTargetCount *int `json:"notify_target_count" gorm:"comment:回应通知义务家长数；NULL=未知"`
 
 	Task *ParentTask `json:"task,omitempty" gorm:"foreignKey:TaskID"`
 }

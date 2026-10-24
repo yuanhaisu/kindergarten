@@ -80,6 +80,12 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrValidation(c, "该任务未开启公开、是个体任务，或提交者已不在本班，不能批准公开")
 	case errors.Is(err, service.ErrTaskPublicScopeUnconfirmed):
 		response.ErrValidation(c, "批准公开前必须确认内容中只有提交者孩子")
+	case errors.Is(err, service.ErrTaskTitleTooLong):
+		response.ErrValidation(c, "标题不能超过 200 个字符")
+	case errors.Is(err, service.ErrTaskActivityDeleteForbidden):
+		response.ErrValidation(c, "活动任务不能单独删除，请让管理员删除整个活动")
+	case errors.Is(err, service.ErrTaskActivityEditForbidden):
+		response.ErrValidation(c, "活动任务只能修改标题、说明、学习关联与公开开关，请让管理员整组编辑")
 	case errors.Is(err, service.ErrTaskPublicStateConflict):
 		response.ErrConflict(c, "该提交当前不在待审核状态，请让家长重新申请")
 	case errors.Is(err, service.ErrTeacherRitualMediaType):

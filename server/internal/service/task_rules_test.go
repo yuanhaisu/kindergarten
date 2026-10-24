@@ -45,8 +45,8 @@ func TestTaskPeriodRange(t *testing.T) {
 	assert.Equal(t, "2026-10-18", ymd(start), "已结束的每日任务必须落在最后一天")
 	assert.Equal(t, "2026-10-18", ymd(end))
 
-	// 任务尚未开始：锚点取开始日
-	start, end = taskPeriodRange(&domain.ParentTask{
+	// 任务尚未开始：锚点取开始日（本用例不关心结束边界）
+	start, _ = taskPeriodRange(&domain.ParentTask{
 		Frequency: domain.TaskFrequencyDaily, StartDate: at(2026, 10, 25), EndDate: at(2026, 10, 30),
 	}, now)
 	assert.Equal(t, "2026-10-25", ymd(start))

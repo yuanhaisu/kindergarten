@@ -1515,3 +1515,208 @@ C-2 需要新增夹具：一条已公开的提交（7.3）、一个带通知的�
 1. 学期切换写路径（`academic_year` / `current_semester` 无写入口）——独立 change，排在 C-4 前。
 2. 管理端前端 `admin/api/tasks.ts` / `types/api.d.ts`——属 C-3。
 3. 老师端 `UpdateTask` 的 TOCTOU（结构锁在事务外）——既有实现，改动要重跑 A/B 已测路径。
+
+---
+
+## 21. C-2 落地内容（2026-10-24）
+
+起点 `8e93cb2`（含 §20.8 的 C-1 与 `3ff64fe` 的决策记录）。范围：7.1 多班活动、7.2 统计新口径、
+7.3 查看公开内容、7.4 下线旧字段、8.3 契约收尾。**没有 UI**，全部后端 + 契约。
+
+### 21.1 改了什么（逐个文件）
+
+| 文件 | 变更 |
+| --- | --- |
+| `server/internal/service/task_activity.go`（新） | `CreateActivity` / `UpdateActivity` / `DeleteActivity`；`newTaskActivityID`（`act_<unixnano>_<24位hex>`，crypto/rand）；`normalizeActivityClassIDs`（非空/无 0/不重复/≤50/全属本园所，按 id 升序）；描述符 `ErrTaskActivity*` 六个 |
+| `server/internal/service/task_stats.go`（新） | 统计全部口径：`loadTaskStatsInput`（一次读任务/区间提交/被引用回应/反馈/班级在读学生）、`buildBuckets`（全园/班级/活动或独立任务）、`metrics`（回应率/参与率/待回应/48h/中位数/反馈三率）、`taskStatRate`（封顶 100，分母 0 → nil）、`taskStatMedianHours`、`taskDetailMetrics`（单任务详情） |
+| `server/internal/service/task_rules.go` | 新增 `taskStructure` + `validateTaskStructureForCreate`（三个创建入口共用，老师端也接上了）、`taskSafeEditableFields` / `taskSafeEditableField`、`validateTaskTitleLength` + `ErrTaskTitleTooLong` |
+| `server/internal/service/task_service.go` | `CreateTask` 改用共享结构校验；`ListTasks` 去掉逐行比率（少两倍 N+1）；`GetTaskDetail` 换新口径 + `notify_target_count`；`UpdateTask` 加活动任务单条结构禁令；`DeleteTask` 加活动任务单删禁令；新增 `ListPublicCheckins`；`GetTaskStats` 整体重写（调 task_stats.go）；删除 `totalPossibleCheckins` / `completionForTask` / `completionForRow`（`formatPercent` 保留，通知模块仍在用）；新增 `parseTaskDateRange` / `taskStatsRange` |
+| `server/internal/service/task_notify.go` | `recordTaskNotifyTargetCount` / `recordResponseNotifyTargetCount`；发布与主回应都在**投递前**写义务集，收件人查询失败写 NULL |
+| `server/internal/repository/task_repo.go` | `TaskOverlapRow` 补 `title/activity_id/target_student_id`；新增 `CountParticipatingStudents`；删除只为旧口径存在的 `CountCheckinsByTaskIDs` / `CountCheckinsInDateRange` |
+| `server/internal/domain/task.go` | `ParentTask.NotifyTargetCount` / `TaskResponse.NotifyTargetCount`（`*int`，可空） |
+| `server/internal/handler/http/task.go` | `ListTaskPublicCheckins`；`writeTaskError` 增加活动/公开列表 8 条映射 |
+| `server/internal/handler/http/task_activity.go`（新） | 三个活动端点 handler |
+| `server/internal/service/teacher_portal_service.go` | 老师端 `DeleteTask` / `UpdateTask` 加活动任务禁令；`CreateTask` 的结构校验改调共享 helper（错误码仍是 `ErrTeacherInvalidParams`） |
+| `server/internal/handler/http/teacher_portal.go` | `teacherPortalErr` 两条活动哨兵文案 |
+| `server/internal/handler/http/task_error_test.go`（新） | `writeTaskError` 唯一出口的表驱动用例（10 个哨兵 → 状态码/业务码） |
+| `backend/api/api-teacher/09-class-and-tasks.md` | 老师端两条活动任务禁令的契约（8.2 未全完成，只补这两行，别当成 8.2 已勾） |
+| `server/internal/app/router.go` | `GET /admin/tasks/:id/checkins`、`POST/PUT/DELETE /admin/task-activities` |
+| `server/internal/middleware/admin_perm.go` | 四条登记：GET 查看码 `task:view`，活动写操作 `task:manage`。⚠️ 该文件 diff 有大量空白行变化，是 gofmt 因新增最长键重排对齐，`git diff -w` 只有 7 行 |
+| `docs/migrations/2026-10-23-task-notify-target-count.sql`（新） | 两列 `notify_target_count INT NULL` |
+| `backend/api/api-admin/10-tasks.md` | 8.3 收尾：活动三端点、`GET /admin/tasks/:id/checkins`、stats 全字段与新口径、详情新字段、列表/详情移除旧字段、活动任务单删/单编辑规则 |
+| `server/internal/service/task_admin_c2_*.go`（5 个新文件） | 43 条真实 MySQL 用例（活动 16 / 通知 5 / 统计 16 / 公开 6），夹具 992741–992751 |
+
+### 21.2 语义决定（后续不要改错）
+
+1. **活动没有个体目标**：`POST /admin/task-activities` 不接收 `target_student_id`（design D12 第 171 行的请求形状里没有它）。所以「三个创建入口共用 `validateTargetStudent`」体现为共享函数传 `targetStudentID=0`（该函数对 0 是空操作），而不是给活动加一个个体目标字段。
+2. **`class_ids` 重复有独立哨兵**：重复会同时被「归属计数差」挡住，但那条文案会让调用方去查「哪个班不属于本园所」。`ErrTaskActivityDuplicateClass` 单独一条，文案直接说「选重了」。
+3. **活动批量编辑真拒绝而不是忽略**：请求 DTO 里保留结构字段，`hasStructuralField()` 一旦为真直接 422（即使取值与当前相同）。静默忽略正是 §20.7-4 要消灭的失败模式。
+4. **活动任务单条 PUT 连 `status` 也不许改**：D12 只允许标题/说明/学习关联/公开开关。`status` 在单任务路径是「非结构字段」，在活动任务这里是禁改——活动整组同进同退。
+5. **先写义务再投递**：`notify_target_count` 在发送循环之前写；收件人查询失败写 NULL 并记日志。投递失败不影响计数（失败也算「我们承诺告知过」）。
+6. **统计的提交集按 `date` 落区间**：与 `total_checkins` 同口径。任务集按区间重叠取。
+7. **参与率是集合口径**：分子 = 区间内有提交、且仍在目标范围（个体 = 目标孩子；班级 = 当前在读且仍在该班）的去重孩子；分母 = 任务覆盖的目标孩子去重数。转班/离园的历史提交不进分子（`TestStatsParticipationIgnoresTransferredStudents`）。
+8. **反馈类分母只来自「被提交引用的回应」**：`task_check_ins.response_id` 出发 → `task_responses.notify_target_count`。补充回应不被引用，天然不进分母；NULL 排除并计入 `notify_baseline_missing`。
+9. **中位数只算 `single`**：`period` 覆盖的提交计入回应率/待回应，但不进中位数。负时长剔除并计数。
+10. **比率封顶 100%**：分母小于分子时（历史数据/手工改库）截断，不允许 200%。
+11. **`by_activity` 里独立任务按任务 id 各自成条**，`activity_id` 为空串、`task_id` 为该任务 id；不合并成「空活动」。
+12. **班级归属校验在事务内并用 `FOR SHARE` 锁班级行**：普通一致性读看不到并发软删，校验通过后仍可能给一个正在删除的班级建任务——这种任务在列表/统计的 `INNER JOIN classes` 里永远不出现。共享锁让并发软删等待本事务提交。
+13. **标题长度按字符算（≤200）且校验在 service**：只有挂 `binding` 的入口会挡超长标题，活动批量编辑没有 binding，放过去就是 MySQL 1406 → 500。
+14. **活动批量编辑的空值口径按类型分**：字符串/数组的空串、空数组 = 未提供；`star_goal`/`target_student_id`/`status` 只要键出现就拒绝（0 是合法业务值，无法区分回传与修改）。
+
+### 21.3 验证证据（2026-10-24）
+
+- `go build ./...`、`go vet ./...` 通过。
+- `go test ./internal/service -run 'TestActivity|TestStats|TestTaskStat|TestTaskListAndDetail|TestTaskDetailMetrics|TestPublishNotify|TestResponseNotify|TestRecordNotify|TestSupplementResponseLeaves|TestAdminListPublicCheckins|TestIndividualTaskParticipation'` → ok（43 条）。
+- `go test ./internal/handler/http`（`writeTaskError` 映射表）→ ok。
+- 全量任务回归 `-run 'Task|ParentTask|ClassStar|Supplement|Public|React|Ritual|Stats|Activity'` → ok（344.4s，含老师端 A/B 全部既有用例）。
+- `./internal/app`（路由冲突 + 权限登记覆盖）与 `./internal/middleware` → ok。
+- 开发库补列：启动一次 `go run ./cmd/api/main.go` 让 AutoMigrate 加 `notify_target_count`（随后已杀进程，:8080 现无 LISTEN）。
+- `golangci-lint run` 对改动包 → **0 issues**。顺带修了 3 条**既有**问题（不是本窗口引入）：
+  `inclusiveCalendarDays` 在我删掉旧口径调用后变成死代码（已删）；`task_rules_test.go` 的一处
+  ineffectual assignment（改成 `start, _`）；`task_notify.go` 的一处 S1016（改类型转换）。
+- 变异验证 20 项，全部**真实断言失败**（人工确认非编译错误）：
+  1. 活动创建改在事务外写 → 回滚用例残留 1 条任务；
+  2. 去掉重复班级判定 → 错误从 `DUPLICATE_CLASS` 变 `CLASSES_INVALID`；
+  3. 去掉活动任务单删禁令 → 未报错（删成功了）；
+  4. 去掉活动任务单条结构禁令 → 未报错；
+  5. 批量编辑不检查结构字段 → 频率改动未被拒；
+  6. 发布不写义务集 → `notify_target_count` 为 NULL；
+  7. 义务集写成 0（不取 len(targets)）→ 发布与回应两条都读到 0；
+  8. 中位数不过滤 `period` → 6 而不是 4；
+  9. NULL 义务当 0 → 覆盖率 100% 而不是 50%；
+  10. 参与率不与目标范围取交集 → 100% 而不是 50%；
+  11. 去掉比率封顶 → 200%；
+  12. 去掉公开列表的 `is_public_requested` 过滤 → 3 条而不是 1 条；
+  13. `public_visible` 硬编码 true → 关闭公开的任务仍显示可见；
+  14. 去掉老师端活动任务单删禁令 → 删成功、未报错；
+  15. 去掉老师端活动任务结构禁令 → 未报错；
+  16. 个体任务参与率按提交行计数（去掉 `Distinct`）→ 2 而不是 1；
+  17. 去掉活动标题列宽校验 → 直接撞 MySQL `Error 1406: Data too long for column 'title'`；
+  18. 去掉老师端标题列宽校验 → 同样撞 1406；
+  19. 去掉公开列表的 `Limit/Offset` → 一页返回 3 条（分页用例失败）；
+  20. 批量结束不把 `status` 从结构锁里摘出 → 有提交的活动任务无法结束。
+
+### 21.4 对抗性审查与处置（2026-10-24，fresh context 只读复审）
+
+一个全新上下文的审查者只读复审 C-2 的未提交 diff，报 2 CONFIRMED / 1 POSSIBLE / 6 NOTE。
+**逐条对源码复核后才动手**，全部成立（无一条需要驳回）。
+
+| # | 结论 | 复核 | 处置 |
+| --- | --- | --- | --- |
+| 1 | `DELETE /admin/tasks/:id` 对活动任务返回 **500**：该 handler 自带一份错误映射，没有 `ErrTaskActivityDeleteForbidden` 分支，虽然 `writeTaskError` 里补了也没人用 | 成立（契约写 422，实际 500） | ✅ 删掉第二份映射，`DeleteTask` 改走 `writeTaskError`；新增 `handler/http/task_error_test.go` 把「唯一出口」钉成回归（10 个哨兵 → 状态码/业务码） |
+| 2 | 活动不变量只守在管理端：老师端 `PUT/DELETE /teacher/tasks/:id` 没有任何 activity 判定，老师可单删活动里的一条任务，或把它改成个体任务（此时 `activity_id` 还留着） | 成立；spec 第 228 行的 MUST NOT **未限定端点**（D12 只写了 admin 路由是它的简写） | ✅ 老师端 `DeleteTask` 加单删禁令、`UpdateTask` 加「只允许安全字段（含 status）」；`teacherPortalErr` 补两条文案；新增 2 条用例 |
+| 3 | 活动批量编辑把「显式传空串」当未提供，契约却写「显式传入任何结构字段都拒绝」 | 成立，但**结论是改契约不是改代码**：客户端整表单回传时结构位是空串，因此 422 会把合法调用打成不可用 | ✅ 契约改为「显式传入**非空**结构字段」并写明空串/空数组按未提供处理（`class_ids: []` 不会删班） |
+| 4 | `activity_id` 契约写 12 位 hex，实现是 24 位 | 成立（实现用 12 字节 crypto/rand，更好） | ✅ 契约与示例改为 24 位 |
+| 5 | 个体任务 `CountParticipatingStudents` 数的是提交行，两次提交会得 2/1 | 成立；当前只被比率封顶掩盖，原始计数已错 | ✅ 加 `Distinct(student_id)`；补用例直接断言该方法返回 1（封顶会掩盖，所以断言落在方法而不是比率上） |
+| 6 | `response_id` 指向已删/缺失回应的提交仍算「已回应」 | 成立但当前不可达：级联删除会同时软删提交 | ❌ 不改，记在 §21.5 |
+| 7 | 死代码：`inclusiveCalendarDays`、`TaskOverlapRow` 的 `frequency/start_date/end_date` | 成立 | ✅ `inclusiveCalendarDays` 已在 lint 时删；`TaskOverlapRow` 去掉三个统计不再读的字段 |
+| 8 | 测试弱点：无 handler 用例（正是 #1 逃逸的原因）、「先写义务再投递」的**顺序**无法被现有用例钉住、无 `configs/app.ini` 时整体 skip | 成立 | ✅ 补 handler 映射用例；顺序不可测（要 fault injection）与 skip 属全仓既有模式，记在 §21.5 |
+| 9 | 工作区卫生：`skills-lock.json`、`.impeccable/`、`docs/competitive/*` | 成立 | ❌ 不提交（§20.5 已明确） |
+
+**修复后的验证（2026-10-24）**：`go build ./...` / `go vet ./...` / `golangci-lint`（改动包 0 issues）通过；
+C-2 用例 38 条 + handler 映射用例通过；全量任务回归 344.4s 通过（含老师端 A/B 既有用例）；
+新增变异 3 项（老师端删/改禁令、个体参与率去重）全部**真实断言失败**。
+
+### 21.5 未做 / 缺口（不要当成已验证）
+
+- **管理端前端仍是旧字段**：`admin/pages/tasks/index.vue` 还在渲染 `completion_rate`（现在为 undefined，列会空），
+  `statistics/index.vue` 读 `avg_completion_rate`（已无此字段）。属 C-3 的 11.1/11.2/11.4，本窗口按约束未碰。
+- **HTTP 冒烟未跑**：本轮没有管理端 token，未起 8080 走真实网关。handler 层的状态码由
+  `writeTaskError` 的表驱动用例（10 个哨兵）保证，但**没有真实请求证据**；老师端两条新禁令
+  也只有 service 层用例 + `teacherPortalErr` 映射，未走网关。
+- **通知「收件人查询失败」这条分支没有自动化用例**：伪造查询失败需要坏连接/坏 schema，
+  与 B3 的既有缺口一致。但它的**写入语义**已被钉住：`TestRecordNotifyTargetCountWritesNullForUnknown`
+  验证传 `nil` 会把旧值清成 NULL（`Updates` 的 map-nil 行为），不会被写成 0。
+- **`parent_tasks.notify_target_count` 目前只在任务详情暴露**，不参与任何比率（反馈率的分母来自回应）。
+  它的用途是「发布触达义务集」，供 C-3 展示。
+- **「先写义务再投递」的顺序没有用例钉住**：把 `recordTaskNotifyTargetCount` 移到发送循环之后，
+  现有用例仍会通过（要测顺序需能注入「发送中途崩溃」）。写入值本身（正常 = len(targets)、未知 = NULL）
+  已被两条用例钉住。
+- **C-2 用例在缺 `configs/app.ini` 时会整体 skip**（`openTaskB1DB` 的既有模式，同 §20.8-#9）：
+  CI 上若没有该文件，这些用例是「绿但零覆盖」。
+- **`response_id` 指向已删回应时仍算已回应**：当前级联删除会同时软删提交，不可达；
+  若将来出现「只删回应不删提交」的路径，`response_rate` 会偏高。
+- **老师端 `UpdateTask` 的 TOCTOU**、**学期切换写路径（P1）**：仍未动，见 §20.9 / §20.11。
+- **`CountParticipatingStudents` 只按当前班级判断**：孩子转班后旧提交不计入参与率，这是有意的；
+  但若产品希望「历史参与也要算」，要改的是统计口径而不是这条 SQL。
+
+### 21.6 第二轮对抗性复审（2026-10-24，针对「第一轮修复本身」）
+
+第二个全新上下文的只读审查者。结论：**第一轮 6 项修复全部被确认有效、无绕过、无回归**
+（逐条核对了 delete 映射的四种可达错误、老师端 guard 的位置与可达性、`COUNT(DISTINCT)` 的
+GORM 生成语义、`TaskOverlapRow` 无残留读取、文档与代码一致、handler 用例非重言）。
+同时提出 7 条新问题，全部复核成立，处置如下。
+
+| # | 结论 | 复核 | 处置 |
+| --- | --- | --- | --- |
+| 1 | `PUT /admin/task-activities/:id` 的 `title` 没有长度校验：201 个字符 → MySQL 1406 → **500**（同一请求走 POST 是 422） | 成立 | ✅ `task_rules.go` 加 `taskTitleMaxLen` / `validateTaskTitleLength`（按**字符**算，不是字节）+ `ErrTaskTitleTooLong`；活动创建/批量编辑都校验；补 200/201 边界用例 |
+| 2 | 契约说「所有班级的校验与写入在同一事务内」，但归属校验在事务**外**（TOCTOU）：并发软删班级会建出一条永远不出现在列表/统计里的任务 | 成立 | ✅ 拆成纯输入校验（事务外）+ `lockOwnedClasses`（事务内、`FOR SHARE` 锁班级行）；契约同步 |
+| 3 | `10-tasks.md` 的 `participation_rate` 行和 `pending_count` 行被挤成一行，表格渲染乱码 | 成立（是我上一轮编辑时手滑删掉的换行） | ✅ 拆回两行 |
+| 4 | 文档说「空串/空数组按未提供」，但 `star_goal`/`target_student_id`/`status` 出现即拒绝（含 0），与给出的理由相反 | 成立 | ✅ 契约改成按类型分述：字符串/数组空值=未提供；数值/指针**出现即拒绝（0 也算）**，并说明客户端整表单回传时应省略这三个键 |
+| 5 | 迁移脚本用 `INT`，模型 `*int` 经 GORM 实际建成 `bigint`（已实查 information_schema） | 成立 | ✅ 迁移改 `BIGINT` 并注明原因 |
+| 6 | `validateTaskStructureForCreate` 注释声称「三个创建入口共用」，但老师端 `CreateTask` 仍手抄一份 | 成立 | ✅ 老师端 `CreateTask` 改调共享 helper（错误码仍 `ErrTeacherInvalidParams`，对外行为不变）；注释现在为真 |
+| 7 | `task_error_test.go` 钉不住「有人在 handler 里再内联一份映射」这个根因 | 成立，但无 DB 的 handler 用例覆盖不到 | ❌ 不改，记在下方 |
+
+**本轮验证**：`go build ./...` / `go vet ./...` / `golangci-lint`（改动包 0 issues）通过；
+C-2 用例 39 条（当时）+ handler 映射用例通过；全量任务回归 **348.8s** 通过（含老师端 A/B 全部既有用例，
+覆盖了 `CreateTask` 的共享 helper 改造）；新增变异 1 项（去掉标题列宽校验）**真实断言失败**——
+失败信息正是审查者预测的 `Error 1406: Data too long for column 'title'`。
+
+**仍保留的缺口**：
+- 老师端 `UpdateTask` 的**更新侧**校验仍是手写（创建侧已共享）。更新语义与创建不同
+  （只在字段真的变化时校验），强行抽一个 helper 会把它变成两套参数，暂时不动。
+- `lockOwnedClasses` 的并发行为没有自动化用例（要稳定复现需要两个连接交错软删，成本高于收益）；
+  它由「归属计数不匹配 → 整组失败」的既有用例覆盖非并发路径。
+- `task_error_test.go` 只能保证「哨兵有映射」，不能阻止别人再写第二份映射表。
+  这类回归只能靠真实网关冒烟或 handler 集成测试发现（§21.5 已记）。
+
+### 21.7 第三轮对抗性复审（2026-10-24，全新上下文）
+
+第三个全新上下文的只读审查者。第二轮修复被确认有效（A1 边界、`FOR SHARE` 真实发射与锁序、
+老师端 helper 替换后落库字节一致、文档与代码、统计口径、软删过滤、时区、确定性输出全部核过）。
+新提 2 CONFIRMED / 1 POSSIBLE / 4 NOTE，处置如下。
+
+| # | 结论 | 复核 | 处置 |
+| --- | --- | --- | --- |
+| 1 | 老师端 `CreateTask` / `UpdateTask` 仍无标题列宽校验：201 字符 → MySQL 1406 → **500**；而我这轮加的注释声称「校验放 service，入口漏了也不会变成 500」 | 成立（既有漏洞，但注释已变成不实陈述） | ✅ 老师端创建/更新补 `validateTaskTitleLength`（哨兵直传，`teacherPortalErr` 补文案）；管理端两个入口也在 service 层补同一校验（binding 只是第一道）；补老师端 200/201 用例 |
+| 2 | `task_error_test.go` 的表格漏了 `ErrTaskTitleTooLong`：删掉该映射分支用例仍全绿 | 成立（我自己加哨兵时没同步表格） | ✅ 补一行；顺带确认表格的 10→11 项全部命中 |
+| 3 | 活动任务永远无法结束：`status` 在批量编辑、管理端单编辑、老师端单编辑三处都被拒，也没有活动级动作；过期的活动在 `active_tasks` 里永远是 active，`?status=0` 永远查不到 | 成立，但这是 **D12/tasks 7.1 的取舍**（批量编辑只允许四个安全字段），不是实现走样 | ⏸ **不擅自加端点**，记为待定决策（见下） |
+| 4 | 所有 C-2 手写 `Table(...)` 查询都显式过滤软删 | 成立（无缺陷） | — |
+| 5 | 迁移从 INT 改 BIGINT 后，没有「已执行 INT 草案的库」的升级语句 | 成立（理论上；本文件的 INT 版从未离开工作区） | ✅ SQL 注释补 `MODIFY ... BIGINT NULL` 升级语句 |
+| 6 | 契约写「数值/指针只要键出现就拒绝」，但 JSON `null` 实际等价于缺省 | 成立 | ✅ 契约改为「出现非 `null` 的键就拒绝，显式 `null` 与缺省同义」 |
+| 7 | `GET /admin/tasks/:id/checkins` 无分页：`status=all` 对学期长的每日任务可能一次返回几千行 | 成立（新端点，尚无 UI 消费方，正是定契约的时机） | ✅ 加 `page` / `page_size`（缺省 1/20，上限 100），`total` 为过滤后总数；补分页用例。handler 用**独立的分页 query 结构**绑定，不复用 `listTasksQuery`（它的 `status` 是 `*int8`，会和这里的字符串 status 抢同一个 query 键） |
+
+**本轮验证**：`go build ./...` / `go vet ./...` / `golangci-lint`（改动包 0 issues）通过；
+C-2 用例 41 条（当时）+ handler 映射用例通过；全量任务回归 **350.6s** 通过（覆盖老师端创建/更新的标题校验）；
+新增变异 2 项（老师端列宽、公开列表分页）**真实断言失败**。
+
+**待定决策——活动如何结束（当日已由用户拍板，见 §21.8）**
+现状：活动任务的 `status` 在三处写路径都被拒（`PUT /admin/task-activities` 的 `hasStructuralField`、
+管理端与老师端的活动任务单编辑禁令），也没有任何活动级动作能改 `status`；创建恒为 `1`。
+后果：过期活动在 `GET /admin/tasks/stats` 的 `active_tasks` 里永远算 active，`?status=0` 永远查不到，
+唯一出路是 `DELETE /admin/task-activities/:id`（会连历史提交一起软删）。
+两个候选：
+1. **允许活动批量编辑 `status`**（0=整组结束）：C-1 已裁定「status 不是结构字段」，
+   与那条口径一致，改动最小（DTO + 白名单 + 契约 + 用例）。
+2. **新增 `POST /admin/task-activities/:id/end`**：语义更明确，但多一个端点与一套权限/文案。
+两个方案都**不改变**「过期后家长端不可见」——可见性由 `end_date` 决定，`status` 只影响管理端统计与列表筛选。
+
+### 21.8 决策落地：活动允许批量 `status`（2026-10-24，用户拍板）
+
+§21.7 的第 3 条（活动无法结束）由用户选择「允许批量编辑 `status`」。实现与口径：
+
+- `PUT /admin/task-activities/:activity_id` 的白名单从四个字段扩到五个：`title` / `description` /
+  `learning_link` / `allow_public` / **`status`**。`status` 只接受 `0`（整组结束）/ `1`（进行中），
+  其他值 `BAD_STATUS` → 422。
+- **`status` 不是结构字段**（C-1 裁定），所以在 `UpdateActivity` 里单独从 `assertTaskEditable`
+  的判定集中摘出：有提交的活动任务**仍可整组结束**（变异 20 守护）。
+- **单条路径仍然拒绝**：`PUT /admin/tasks/:id` 与老师端 `PUT /teacher/tasks/:id` 对活动任务
+  依旧不允许改 `status`——否则一个活动会出现「A 班已结束、B 班还在进行」，统计与 `by_activity`
+  聚合都会失真。结束只能整组做。
+- 可见性不受影响：家长端/老师端的任务有效性仍按 `status=1 AND start_date<=今天<=end_date`
+  判定，`status` 只影响管理端统计（`active_tasks` / `completed_tasks`）与列表筛选。
+- 合同与 `tasks.md` 7.1 已同步（`tasks.md` 里标注为 C-2 追加、引用本节）。
+
+验证：`go build ./...`、`go vet ./...`、`golangci-lint`（改动包）0 issues；
+C-2 用例 **43 条**（活动 16，新增「整组结束」「单条仍拒绝 status」两条）通过；
+全量任务回归 **356.2s** 通过；变异 20（批量结束不退让结构锁）**真实断言失败**。

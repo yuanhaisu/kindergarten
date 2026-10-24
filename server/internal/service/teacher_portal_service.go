@@ -2970,8 +2970,9 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.LearningLink) == "" {
 		return nil, ErrTeacherInvalidParams
 	}
-	if err := validateTargetStudent(ctx, s.db, tc.KindergartenID, tc.ClassID, req.TargetStudentID); err != nil {
-		return nil, ErrTeacherInvalidParams
+	// 列宽校验必须在 service：TeacherTaskInput 没有 binding，放过去就是 MySQL 1406 → 500。
+	if err := validateTaskTitleLength(req.Title); err != nil {
+		return nil, err
 	}
 	start := teacherPortalDay(time.Now())
 	end := start.AddDate(0, 0, 7)
@@ -3014,26 +3015,17 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 	if starScope == "" {
 		starScope = domain.TaskStarScopeTask
 	}
-	if starScope != domain.TaskStarScopeTask && starScope != domain.TaskStarScopeClass {
-		return nil, ErrTeacherInvalidParams
-	}
-	if !validTaskStarGoal(starGoal) {
-		return nil, ErrTeacherInvalidParams
-	}
 	ritual := strings.TrimSpace(req.RecognitionRitual)
 	if ritual == "" {
 		ritual = domain.TaskRitualSticker
 	}
-	if !validTaskRitual(ritual) {
-		return nil, ErrTeacherInvalidParams
-	}
-	if starScope == domain.TaskStarScopeClass {
-		if err := validateClassStarJar(ctx, s.db, tc.KindergartenID, tc.ClassID); err != nil {
-			return nil, ErrTeacherInvalidParams
-		}
-	}
 	allowPublic := allowPublicReq && req.TargetStudentID == 0
-	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && starGoal <= 0 {
+	// 结构规则（目标孩子归属 / 仪式 / 星星范围 / 目标 / 班级罐）与管理端独立任务、
+	// 多班活动共用同一个 helper（D12 / tasks 3.8）。老师端的错误码保持
+	// ErrTeacherInvalidParams 不变，只是规则不再手抄一份。
+	if err := validateTaskStructureForCreate(ctx, s.db, tc.KindergartenID, tc.ClassID,
+		req.TargetStudentID,
+		taskStructure{Ritual: ritual, StarScope: starScope, StarGoal: starGoal}); err != nil {
 		return nil, ErrTeacherInvalidParams
 	}
 	row := &domain.ParentTask{
@@ -3060,6 +3052,9 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 	}
 	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.LearningLink) == "" {
 		return ErrTeacherInvalidParams
+	}
+	if err := validateTaskTitleLength(req.Title); err != nil {
+		return err
 	}
 	if req.Frequency != "" && !validTaskFrequency(domain.TaskFrequency(req.Frequency)) {
 		return ErrTeacherInvalidParams
@@ -3157,6 +3152,15 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 	if len(updates) == 0 {
 		return nil
 	}
+	// 活动任务只能改安全字段：老师端同样不能单条改频率/日期/个体/星星/状态，
+	// 否则一个 2 班活动会被改成「1 班 + 1 个个体任务」，activity_id 还留着。
+	if cur.ActivityID != "" {
+		for k := range updates {
+			if !taskSafeEditableField(k) {
+				return ErrTaskActivityEditForbidden
+			}
+		}
+	}
 	if err := assertTaskEditable(ctx, s.db, id, updates); err != nil {
 		// 结构锁要单独上报，handler 才能给出「有提交后只能改…」的明确文案。
 		if errors.Is(err, ErrTaskStructuralLocked) {
@@ -3199,6 +3203,11 @@ func (s *TeacherPortalService) DeleteTask(ctx context.Context, tc *TeacherPortal
 			return err
 		}
 		title = task.Title
+		if task.ActivityID != "" {
+			// 活动任务必须整组删：老师单删一条会让活动分组与统计聚合悬空
+			// （与 TaskService.DeleteTask 同一道禁令，spec：活动任务 MUST NOT 走单条删除）。
+			return ErrTaskActivityDeleteForbidden
+		}
 		if err := deleteTaskCascade(ctx, tx, id); err != nil {
 			if errors.Is(err, errTaskNotFound) {
 				return ErrTeacherNotFound

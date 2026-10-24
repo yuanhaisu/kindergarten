@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
@@ -38,6 +39,10 @@ var (
 	ErrTaskStarGoalNegative = errors.New("TASK_STAR_GOAL_NEGATIVE")
 	// ErrTaskActivityIDForbidden 独立任务入口收到 activity_id：只有 /admin/task-activities 能生成分组。
 	ErrTaskActivityIDForbidden = errors.New("TASK_ACTIVITY_ID_FORBIDDEN")
+	// ErrTaskTitleTooLong 标题超过列宽 varchar(200)。
+	// 只有挂着 binding 的入口会挡住超长标题；活动批量编辑没有 binding，
+	// 放过去就是 MySQL 1406 → 500。校验放 service，入口漏了也不会变成 500。
+	ErrTaskTitleTooLong = errors.New("TASK_TITLE_TOO_LONG")
 	// 批量回应没有抢到任何待回应提交（并发/重复点击的落败方）：回滚，不留孤儿回应。
 	errTaskBatchNothingPending = errors.New("TASK_BATCH_NOTHING_PENDING")
 	// 规格要求个体任务与一次性活动逐条回应，不允许走汇总回应。
@@ -387,6 +392,70 @@ func validTaskRitual(ritual string) bool {
 	}
 }
 
+// taskStructure 已归一化的任务结构字段（仪式 / 星星范围 / 目标）。
+type taskStructure struct {
+	Ritual    string
+	StarScope string
+	StarGoal  int
+}
+
+// validateTaskStructureForCreate 校验新任务的结构字段。
+//
+// 三个创建入口（老师端、管理端独立任务、管理端多班活动）必须共用同一套判定：
+// 个体目标归属、班级罐是否按当前学期配置、class_star + task 范围是否给了目标。
+// 各写一份会让「同一份请求换个入口就通过」——D12 明确不允许。
+//
+// 活动任务没有个体目标，targetStudentID 传 0（validateTargetStudent 对 0 是空操作）。
+func validateTaskStructureForCreate(
+	ctx context.Context, db *gorm.DB,
+	kindergartenID, classID, targetStudentID uint64,
+	s taskStructure,
+) error {
+	if err := validateTargetStudent(ctx, db, kindergartenID, classID, targetStudentID); err != nil {
+		return err
+	}
+	if !validTaskRitual(s.Ritual) {
+		return ErrTaskRitualInvalid
+	}
+	if s.StarScope != domain.TaskStarScopeTask && s.StarScope != domain.TaskStarScopeClass {
+		return ErrTaskStarScopeInvalid
+	}
+	if !validTaskStarGoal(s.StarGoal) {
+		return ErrTaskStarGoalNegative
+	}
+	if s.StarScope == domain.TaskStarScopeClass {
+		if err := validateClassStarJar(ctx, db, kindergartenID, classID); err != nil {
+			return err
+		}
+	}
+	if s.Ritual == domain.TaskRitualClassStar && s.StarScope == domain.TaskStarScopeTask && s.StarGoal <= 0 {
+		return ErrTaskStarGoalInvalid
+	}
+	return nil
+}
+
+// taskTitleMaxLen parent_tasks.title 的列宽（varchar(200)，按字符计而不是字节）。
+const taskTitleMaxLen = 200
+
+// validateTaskTitleLength 标题不得超过列宽。
+func validateTaskTitleLength(title string) error {
+	if utf8.RuneCountInString(strings.TrimSpace(title)) > taskTitleMaxLen {
+		return ErrTaskTitleTooLong
+	}
+	return nil
+}
+
+// taskSafeEditableFields 有提交后 / 活动任务单条编辑都只允许这些字段（design D12）。
+// 一张表两处引用，避免「结构锁放行了、活动单条编辑没放行」这种漂移。
+var taskSafeEditableFields = map[string]bool{
+	"title":         true,
+	"description":   true,
+	"learning_link": true,
+	"allow_public":  true,
+}
+
+func taskSafeEditableField(key string) bool { return taskSafeEditableFields[key] }
+
 func sameTaskDay(a, b time.Time) bool {
 	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
 }
@@ -459,9 +528,8 @@ func assertTaskEditable(ctx context.Context, db *gorm.DB, taskID uint64, updates
 	if n == 0 {
 		return nil
 	}
-	allowed := map[string]bool{"title": true, "description": true, "learning_link": true, "allow_public": true}
 	for k := range updates {
-		if !allowed[k] {
+		if !taskSafeEditableField(k) {
 			return ErrTaskStructuralLocked
 		}
 	}

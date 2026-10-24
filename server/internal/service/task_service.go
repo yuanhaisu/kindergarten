@@ -46,40 +46,8 @@ func taskFrequencyLabel(f domain.TaskFrequency) string {
 	}
 }
 
-func inclusiveCalendarDays(a, b time.Time, loc *time.Location) int64 {
-	sa := time.Date(a.Year(), a.Month(), a.Day(), 0, 0, 0, 0, loc)
-	sb := time.Date(b.Year(), b.Month(), b.Day(), 0, 0, 0, 0, loc)
-	if sb.Before(sa) {
-		return 0
-	}
-	return int64(sb.Sub(sa).Hours()/24) + 1
-}
-
-func totalPossibleCheckins(freq domain.TaskFrequency, students int64, startDate, endDate time.Time) int64 {
-	if students <= 0 {
-		return 0
-	}
-	loc := shanghaiLoc()
-	days := inclusiveCalendarDays(startDate, endDate, loc)
-	if days < 1 {
-		days = 1
-	}
-	switch freq {
-	case domain.TaskFrequencyDaily:
-		return students * days
-	case domain.TaskFrequencyWeekly:
-		weeks := (days + 6) / 7
-		if weeks < 1 {
-			weeks = 1
-		}
-		return students * weeks
-	case domain.TaskFrequencyOnce:
-		return students
-	default:
-		return students * days
-	}
-}
-
+// formatPercent 通用的「已完成/总量 → NN%」格式化（任务与通知模块共用）。
+// 任务的新口径走 task_stats.go 的 taskStatRate；这里保留给通知等旧调用方。
 func formatPercent(done, total int64) string {
 	if total <= 0 {
 		return "0%"
@@ -89,26 +57,6 @@ func formatPercent(done, total int64) string {
 		p = 100
 	}
 	return fmt.Sprintf("%d%%", p)
-}
-
-func (s *TaskService) completionForTask(ctx context.Context, kgID uint64, t *domain.ParentTask, checkins int64) (rate string, totalPossible int64, err error) {
-	students, err := s.tasks.CountActiveStudentsInClass(ctx, kgID, t.ClassID)
-	if err != nil {
-		return "", 0, err
-	}
-	tp := totalPossibleCheckins(t.Frequency, students, t.StartDate, t.EndDate)
-	return formatPercent(checkins, tp), tp, nil
-}
-
-func (s *TaskService) completionForRow(ctx context.Context, kgID uint64, row repository.TaskListRow, checkins int64) (string, int64, error) {
-	f := domain.TaskFrequency(row.Frequency)
-	pt := &domain.ParentTask{
-		ClassID:   row.ClassID,
-		Frequency: f,
-		StartDate: row.StartDate,
-		EndDate:   row.EndDate,
-	}
-	return s.completionForTask(ctx, kgID, pt, checkins)
 }
 
 func (s *TaskService) ListTasks(
@@ -130,8 +78,6 @@ func (s *TaskService) ListTasks(
 	}
 	out := make([]map[string]interface{}, 0, len(rows))
 	for _, row := range rows {
-		ci, _ := s.tasks.CountCheckinsByTaskID(ctx, row.ID)
-		rate, _, _ := s.completionForRow(ctx, kindergartenID, row, ci)
 		f := domain.TaskFrequency(row.Frequency)
 		out = append(out, map[string]interface{}{
 			"id":                 row.ID,
@@ -150,10 +96,10 @@ func (s *TaskService) ListTasks(
 			"star_scope":         row.StarScope,
 			"star_goal":          row.StarGoal,
 			"activity_id":        row.ActivityID,
-			// 旧口径，7.4 统一改新指标后下线。
-			"completion_rate": rate,
-			"creator":         map[string]interface{}{"nickname": row.CreatorNick},
-			"created_at":      row.CreatedAt.UTC().Format(time.RFC3339),
+			// 旧 completion_rate 已下线（7.4）；每任务口径见 GET /admin/tasks/:id
+			// 与 GET /admin/tasks/stats，列表不再逐行算比率（省掉两倍 N+1 查询）。
+			"creator":    map[string]interface{}{"nickname": row.CreatorNick},
+			"created_at": row.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return out, total, pn.Page, pn.PageSize, nil
@@ -170,11 +116,8 @@ func (s *TaskService) GetTaskDetail(ctx context.Context, kindergartenID, taskID 
 	if t == nil {
 		return nil, errTaskNotFound
 	}
-	ci, err := s.tasks.CountCheckinsByTaskID(ctx, taskID)
-	if err != nil {
-		return nil, err
-	}
-	rate, tp, err := s.completionForTask(ctx, kindergartenID, t, ci)
+	// 新口径（7.4）：提交/回应/参与率，替代旧 completion_rate / checkin_count / total_possible。
+	metrics, err := s.taskDetailMetrics(ctx, kindergartenID, t)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +132,7 @@ func (s *TaskService) GetTaskDetail(ctx context.Context, kindergartenID, taskID 
 		creatorAvatar = t.Creator.Avatar
 		creatorID = t.Creator.ID
 	}
-	return map[string]interface{}{
+	out := map[string]interface{}{
 		"id":                 t.ID,
 		"title":              t.Title,
 		"description":        t.Description,
@@ -207,17 +150,19 @@ func (s *TaskService) GetTaskDetail(ctx context.Context, kindergartenID, taskID 
 		"star_scope":         t.StarScope,
 		"star_goal":          t.StarGoal,
 		"activity_id":        t.ActivityID,
-		// 旧口径，7.4 统一改新指标后下线。
-		"completion_rate": rate,
-		"checkin_count":   ci,
-		"total_possible":  tp,
+		// 发布通知的义务集大小；nil = 未知（历史任务或收件人查询失败）。
+		"notify_target_count": t.NotifyTargetCount,
 		"creator": map[string]interface{}{
 			"id":       creatorID,
 			"nickname": creatorNick,
 			"avatar":   creatorAvatar,
 		},
 		"created_at": t.CreatedAt.UTC().Format(time.RFC3339),
-	}, nil
+	}
+	for k, v := range metrics {
+		out[k] = v
+	}
+	return out, nil
 }
 
 func (s *TaskService) DeleteTask(ctx context.Context, kindergartenID, adminUserID, taskID uint64, ip, ua string) error {
@@ -230,6 +175,10 @@ func (s *TaskService) DeleteTask(ctx context.Context, kindergartenID, adminUserI
 	}
 	if t == nil {
 		return errTaskNotFound
+	}
+	if t.ActivityID != "" {
+		// 活动任务只能整组删除：单删会让活动的其它班级任务与统计聚合悬空。
+		return ErrTaskActivityDeleteForbidden
 	}
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 与老师端 DeleteTask / SupplementResponse / ReactToResponse 同一把序：
@@ -346,6 +295,112 @@ func (s *TaskService) RevokePublicCheckin(ctx context.Context, kindergartenID, a
 	return out, nil
 }
 
+// ListPublicCheckins 管理端查看某任务的公开内容（7.3 的「查看」入口）。
+//
+// 只读：不改任何公开状态。撤回仍走 RevokePublicCheckin——
+// 这条端点存在的意义是让管理端拿到 checkin_id 与 public_status/public_visible，
+// 而不是让管理员复制一套状态机判定。
+//
+// status: public（默认，is_public_requested=true）/ revoked（已撤回）/ all。
+func (s *TaskService) ListPublicCheckins(
+	ctx context.Context,
+	kindergartenID, taskID uint64,
+	status string,
+	pq pagination.Query,
+) (map[string]any, error) {
+	if kindergartenID == 0 {
+		return nil, errors.New("NO_KINDERGARTEN")
+	}
+	status = strings.ToLower(strings.TrimSpace(status))
+	if status == "" {
+		status = "public"
+	}
+	switch status {
+	case "public", "revoked", "all":
+	default:
+		return nil, errors.New("BAD_PUBLIC_STATUS")
+	}
+	t, err := s.tasks.FindTaskByID(ctx, kindergartenID, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return nil, errTaskNotFound
+	}
+
+	var rows []struct {
+		ID                   uint64     `gorm:"column:id"`
+		StudentID            uint64     `gorm:"column:student_id"`
+		Content              string     `gorm:"column:content"`
+		MediaURL             string     `gorm:"column:media_url"`
+		CreatedAt            time.Time  `gorm:"column:created_at"`
+		IsPublicRequested    bool       `gorm:"column:is_public_requested"`
+		PublicScopeConfirmed bool       `gorm:"column:public_scope_confirmed"`
+		PublicApprovedAt     *time.Time `gorm:"column:public_approved_at"`
+		PublicApprovedBy     uint64     `gorm:"column:public_approved_by"`
+		PublicRevokedAt      *time.Time `gorm:"column:public_revoked_at"`
+		StudentName          string     `gorm:"column:student_name"`
+		StudentClassID       uint64     `gorm:"column:student_class_id"`
+	}
+	q := s.db.WithContext(ctx).Table("task_check_ins AS c").
+		Select(`c.id, c.student_id, c.content, c.media_url, c.created_at,
+			c.is_public_requested, c.public_scope_confirmed, c.public_approved_at,
+			c.public_approved_by, c.public_revoked_at,
+			COALESCE(s.name, '') AS student_name, COALESCE(s.class_id, 0) AS student_class_id`).
+		Joins("LEFT JOIN students AS s ON s.id = c.student_id AND s.deleted_at IS NULL").
+		Where("c.task_id = ? AND c.deleted_at IS NULL", taskID)
+	switch status {
+	case "public":
+		// pending + approved：这两类才是「能撤回」的公开内容。
+		q = q.Where("c.is_public_requested = ?", true)
+	case "revoked":
+		q = q.Where("c.is_public_requested = ? AND c.public_revoked_at IS NOT NULL", false)
+	}
+	// 分页是必须的：status=all 对学期长的每日任务可能一次返回几千行带正文与媒体。
+	pn := pq
+	pn.Normalize()
+	var total int64
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	if err := q.Order("c.created_at DESC, c.id DESC").
+		Offset(pn.Offset()).Limit(pn.PageSize).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	now := time.Now().In(shanghaiLoc())
+	list := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		c := domain.TaskCheckIn{
+			BaseModel:            domain.BaseModel{ID: r.ID, CreatedAt: r.CreatedAt},
+			TaskID:               t.ID,
+			StudentID:            r.StudentID,
+			Content:              r.Content,
+			MediaURL:             r.MediaURL,
+			IsPublicRequested:    r.IsPublicRequested,
+			PublicScopeConfirmed: r.PublicScopeConfirmed,
+			PublicApprovedAt:     r.PublicApprovedAt,
+			PublicApprovedBy:     r.PublicApprovedBy,
+			PublicRevokedAt:      r.PublicRevokedAt,
+		}
+		// public_status / public_visible 与公开墙、撤回端点共用同一套判定：
+		// 客户端自己拼条件会导致「界面显示已公开、墙上却没有」。
+		item := publicCheckinView(t, &c, r.StudentClassID, now)
+		item["student_id"] = r.StudentID
+		item["student_name"] = r.StudentName
+		item["content"] = r.Content
+		item["media_url"] = r.MediaURL
+		item["created_at"] = r.CreatedAt.UTC().Format(time.RFC3339)
+		list = append(list, item)
+	}
+	return map[string]any{
+		"list":      list,
+		"total":     total,
+		"page":      pn.Page,
+		"page_size": pn.PageSize,
+	}, nil
+}
+
 // CreateTaskReq POST /admin/tasks
 //
 // 管理端创建的是**独立任务**：activity_id 只能由 /admin/task-activities 生成，
@@ -404,6 +459,24 @@ func parseTaskFrequency(s string) (domain.TaskFrequency, error) {
 	}
 }
 
+// parseTaskDateRange 解析任务起止日期（上海时区，YYYY-MM-DD）。
+// 单任务与多班活动共用：两份实现迟早会在「结束日早于开始日」上给出不同错误码。
+func parseTaskDateRange(start, end string) (time.Time, time.Time, error) {
+	loc := shanghaiLoc()
+	sd, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(start), loc)
+	if err != nil {
+		return time.Time{}, time.Time{}, errors.New("BAD_DATE")
+	}
+	ed, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(end), loc)
+	if err != nil {
+		return time.Time{}, time.Time{}, errors.New("BAD_DATE")
+	}
+	if ed.Before(sd) {
+		return time.Time{}, time.Time{}, errors.New("BAD_DATE_RANGE")
+	}
+	return sd, ed, nil
+}
+
 func (s *TaskService) CreateTask(
 	ctx context.Context,
 	kindergartenID, adminUserID uint64,
@@ -420,6 +493,9 @@ func (s *TaskService) CreateTask(
 		// gin 的 required 只判非空字符串，纯空白标题会以空串落库（更新路径已拒，创建也必须拒）。
 		return nil, errors.New("BAD_TITLE")
 	}
+	if err := validateTaskTitleLength(req.Title); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(req.LearningLink) == "" {
 		// D15：学习关联必填。管理端与老师端同一口径，否则家长看到的任务没有学习关联。
 		return nil, errors.New("BAD_LEARNING_LINK")
@@ -435,40 +511,19 @@ func (s *TaskService) CreateTask(
 	if err != nil {
 		return nil, err
 	}
-	loc := shanghaiLoc()
-	sd, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(req.StartDate), loc)
+	sd, ed, err := parseTaskDateRange(req.StartDate, req.EndDate)
 	if err != nil {
-		return nil, errors.New("BAD_DATE")
-	}
-	ed, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(req.EndDate), loc)
-	if err != nil {
-		return nil, errors.New("BAD_DATE")
-	}
-	if ed.Before(sd) {
-		return nil, errors.New("BAD_DATE_RANGE")
-	}
-	// 结构规则全部走 task_rules.go，不在 service 里重写一遍（D12）。
-	if err := validateTargetStudent(ctx, s.db, kindergartenID, req.ClassID, req.TargetStudentID); err != nil {
 		return nil, err
 	}
-	ritual := resolveTaskRitual(req.RecognitionRitual, "", domain.TaskRitualSticker)
-	if !validTaskRitual(ritual) {
-		return nil, ErrTaskRitualInvalid
+	// 结构规则全部走 task_rules.go，不在 service 里重写一遍（D12）。
+	// 老师端 / 管理端独立任务 / 多班活动三个入口共用同一个校验函数。
+	structure := taskStructure{
+		Ritual:    resolveTaskRitual(req.RecognitionRitual, "", domain.TaskRitualSticker),
+		StarScope: resolveTaskStarScope(req.StarScope, ""),
+		StarGoal:  req.StarGoal,
 	}
-	starScope := resolveTaskStarScope(req.StarScope, "")
-	if starScope != domain.TaskStarScopeTask && starScope != domain.TaskStarScopeClass {
-		return nil, ErrTaskStarScopeInvalid
-	}
-	if !validTaskStarGoal(req.StarGoal) {
-		return nil, ErrTaskStarGoalNegative
-	}
-	if starScope == domain.TaskStarScopeClass {
-		if err := validateClassStarJar(ctx, s.db, kindergartenID, req.ClassID); err != nil {
-			return nil, err
-		}
-	}
-	if ritual == domain.TaskRitualClassStar && starScope == domain.TaskStarScopeTask && req.StarGoal <= 0 {
-		return nil, ErrTaskStarGoalInvalid
+	if err := validateTaskStructureForCreate(ctx, s.db, kindergartenID, req.ClassID, req.TargetStudentID, structure); err != nil {
+		return nil, err
 	}
 	// 个体任务强制不可公开：公开墙只服务班级活动（D7）。
 	allowPublic := req.AllowPublic && req.TargetStudentID == 0
@@ -485,9 +540,9 @@ func (s *TaskService) CreateTask(
 		EndDate:           ed,
 		Status:            1,
 		AllowPublic:       allowPublic,
-		RecognitionRitual: ritual,
-		StarScope:         starScope,
-		StarGoal:          req.StarGoal,
+		RecognitionRitual: structure.Ritual,
+		StarScope:         structure.StarScope,
+		StarGoal:          structure.StarGoal,
 	}
 	if err := s.tasks.CreateTask(ctx, t); err != nil {
 		return nil, err
@@ -551,21 +606,16 @@ func (s *TaskService) UpdateTask(
 	if title == "" {
 		return errors.New("BAD_TITLE")
 	}
+	if err := validateTaskTitleLength(title); err != nil {
+		return err
+	}
 	freq, err := parseTaskFrequency(req.Frequency)
 	if err != nil {
 		return err
 	}
-	loc := shanghaiLoc()
-	sd, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(req.StartDate), loc)
+	sd, ed, err := parseTaskDateRange(req.StartDate, req.EndDate)
 	if err != nil {
-		return errors.New("BAD_DATE")
-	}
-	ed, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(req.EndDate), loc)
-	if err != nil {
-		return errors.New("BAD_DATE")
-	}
-	if ed.Before(sd) {
-		return errors.New("BAD_DATE_RANGE")
+		return err
 	}
 	if req.Status != nil && *req.Status != 0 && *req.Status != 1 {
 		return errors.New("BAD_STATUS")
@@ -694,6 +744,16 @@ func (s *TaskService) UpdateTask(
 		if len(updates) == 0 {
 			return nil
 		}
+		// 活动任务不能单条改结构（design D12）：标题/说明/学习关联/公开开关可以，
+		// 其余（含 status）一律指向活动端点整组改。与「有提交后的结构锁」独立——
+		// 活动任务即使还没有提交，也不允许单条改频率/日期/班级/星星。
+		if cur.ActivityID != "" {
+			for k := range updates {
+				if !taskSafeEditableField(k) {
+					return ErrTaskActivityEditForbidden
+				}
+			}
+		}
 		// status 不是结构字段（D12 的禁止清单里没有它）：单独排除，
 		// 否则有提交后连「结束任务」都会被结构锁挡掉。
 		structural := make(map[string]any, len(updates))
@@ -740,14 +800,131 @@ func (s *TaskService) UpdateTask(
 	return nil
 }
 
+// GetTaskStats 管理端任务统计（新口径，7.2）。
+//
+// 全部指标都从 task_stats.go 取：一次读原始数据、按「全园 / 班级 / 活动或独立任务」
+// 三个维度各自算一遍，避免同一套公式在多个入口各写一份。
 func (s *TaskService) GetTaskStats(ctx context.Context, kindergartenID uint64, startDateStr, endDateStr string) (map[string]interface{}, error) {
 	if kindergartenID == 0 {
 		return nil, errors.New("NO_KINDERGARTEN")
 	}
+	rangeStart, rangeEndDay, err := taskStatsRange(startDateStr, endDateStr)
+	if err != nil {
+		return nil, err
+	}
+
+	in, err := s.loadTaskStatsInput(ctx, kindergartenID, rangeStart, rangeEndDay)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+
+	var active, completed int64
+	for _, t := range in.tasks {
+		if t.Status == 1 {
+			active++
+		} else {
+			completed++
+		}
+	}
+
+	buckets := in.buildBuckets()
+	all := buckets[taskStatsBucketAll]
+	if all == nil {
+		all = &taskStatsBucket{targetStudents: map[uint64]struct{}{}}
+	}
+	out := in.metrics(all, now).toMap()
+	out["period"] = map[string]interface{}{
+		"start": rangeStart.Format("2006-01-02"),
+		"end":   rangeEndDay.Format("2006-01-02"),
+	}
+	out["total_tasks"] = len(in.tasks)
+	out["active_tasks"] = active
+	out["completed_tasks"] = completed
+
+	// 按班级：同一任务只属于一个班级，直接一个桶一个条目。
+	classNameByID := map[uint64]string{}
+	for _, t := range in.tasks {
+		classNameByID[t.ClassID] = t.ClassName
+	}
+	classIDs := make([]uint64, 0, len(classNameByID))
+	for id := range classNameByID {
+		classIDs = append(classIDs, id)
+	}
+	sort.Slice(classIDs, func(i, j int) bool { return classIDs[i] < classIDs[j] })
+	byClass := make([]map[string]interface{}, 0, len(classIDs))
+	for _, cid := range classIDs {
+		b := buckets[fmt.Sprintf("%s%d", taskStatsBucketClassPrefix, cid)]
+		if b == nil {
+			continue
+		}
+		m := in.metrics(b, now)
+		row := m.toMap()
+		row["class_id"] = cid
+		row["class_name"] = classNameByID[cid]
+		row["tasks"] = m.Tasks
+		byClass = append(byClass, row)
+	}
+	out["by_class"] = byClass
+
+	// 按活动：活动共享一个桶；独立任务各占一条（design D12：不能塞进「空活动」）。
+	activityIDs := make([]string, 0)
+	standaloneIDs := make([]uint64, 0)
+	titleByActivity := map[string]string{}
+	titleByTask := map[uint64]string{}
+	for _, t := range in.tasks {
+		if t.ActivityID != "" {
+			if _, ok := titleByActivity[t.ActivityID]; !ok {
+				titleByActivity[t.ActivityID] = t.Title
+				activityIDs = append(activityIDs, t.ActivityID)
+			}
+			continue
+		}
+		titleByTask[t.ID] = t.Title
+		standaloneIDs = append(standaloneIDs, t.ID)
+	}
+	sort.Strings(activityIDs)
+	sort.Slice(standaloneIDs, func(i, j int) bool { return standaloneIDs[i] < standaloneIDs[j] })
+
+	byActivity := make([]map[string]interface{}, 0, len(activityIDs)+len(standaloneIDs))
+	for _, aid := range activityIDs {
+		b := buckets[taskStatsBucketActPrefix+aid]
+		if b == nil {
+			continue
+		}
+		m := in.metrics(b, now)
+		row := m.toMap()
+		row["activity_id"] = aid
+		row["task_id"] = uint64(0)
+		row["title"] = titleByActivity[aid]
+		row["tasks"] = m.Tasks
+		byActivity = append(byActivity, row)
+	}
+	for _, tid := range standaloneIDs {
+		b := buckets[fmt.Sprintf("%s%d", taskStatsBucketStandalonePre, tid)]
+		if b == nil {
+			continue
+		}
+		m := in.metrics(b, now)
+		row := m.toMap()
+		// 独立任务用任务 id 分组，activity_id 保持空串。
+		row["activity_id"] = ""
+		row["task_id"] = tid
+		row["title"] = titleByTask[tid]
+		row["tasks"] = m.Tasks
+		byActivity = append(byActivity, row)
+	}
+	out["by_activity"] = byActivity
+
+	return out, nil
+}
+
+// taskStatsRange 解析统计区间：缺省为当月；起止必须成对出现且 end >= start。
+func taskStatsRange(startDateStr, endDateStr string) (time.Time, time.Time, error) {
 	sTrim := strings.TrimSpace(startDateStr)
 	eTrim := strings.TrimSpace(endDateStr)
 	if (sTrim == "") != (eTrim == "") {
-		return nil, errors.New("BAD_DATE")
+		return time.Time{}, time.Time{}, errors.New("BAD_DATE")
 	}
 	loc := shanghaiLoc()
 	var rs, re time.Time
@@ -760,123 +937,16 @@ func (s *TaskService) GetTaskStats(ctx context.Context, kindergartenID uint64, s
 	} else {
 		rs, err = time.ParseInLocation("2006-01-02", sTrim, loc)
 		if err != nil {
-			return nil, errors.New("BAD_DATE")
+			return time.Time{}, time.Time{}, errors.New("BAD_DATE")
 		}
 		re, err = time.ParseInLocation("2006-01-02", eTrim, loc)
 		if err != nil {
-			return nil, errors.New("BAD_DATE")
+			return time.Time{}, time.Time{}, errors.New("BAD_DATE")
 		}
 		if re.Before(rs) {
-			return nil, errors.New("BAD_DATE_RANGE")
-		}
-		re = time.Date(re.Year(), re.Month(), re.Day(), 23, 59, 59, 999999999, loc)
-	}
-	rangeStart := time.Date(rs.Year(), rs.Month(), rs.Day(), 0, 0, 0, 0, loc)
-	rangeEndDay := time.Date(re.Year(), re.Month(), re.Day(), 0, 0, 0, 0, loc)
-
-	tasks, err := s.tasks.ListTasksOverlappingRange(ctx, kindergartenID, rangeStart, rangeEndDay)
-	if err != nil {
-		return nil, err
-	}
-	var active, completed int64
-	ids := make([]uint64, 0, len(tasks))
-	for _, t := range tasks {
-		ids = append(ids, t.ID)
-		if t.Status == 1 {
-			active++
-		} else {
-			completed++
+			return time.Time{}, time.Time{}, errors.New("BAD_DATE_RANGE")
 		}
 	}
-	checkinMap, err := s.tasks.CountCheckinsByTaskIDs(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	totalCheckins, err := s.tasks.CountCheckinsInDateRange(ctx, kindergartenID, rangeStart, rangeEndDay)
-	if err != nil {
-		return nil, err
-	}
-
-	var sumPct int64
-	var nPct int64
-	type classAgg struct {
-		className string
-		tasks     int64
-		sumRate   int64
-		n         int64
-	}
-	byClassMap := make(map[uint64]*classAgg)
-	for _, row := range tasks {
-		pt := &domain.ParentTask{
-			ClassID:   row.ClassID,
-			Frequency: domain.TaskFrequency(row.Frequency),
-			StartDate: row.StartDate,
-			EndDate:   row.EndDate,
-		}
-		ci := checkinMap[row.ID]
-		_, tp, err := s.completionForTask(ctx, kindergartenID, pt, ci)
-		if err != nil {
-			return nil, err
-		}
-		var pct int64
-		if tp > 0 {
-			pct = ci * 100 / tp
-			if pct > 100 {
-				pct = 100
-			}
-		}
-		sumPct += pct
-		nPct++
-		a := byClassMap[row.ClassID]
-		if a == nil {
-			a = &classAgg{className: row.ClassName}
-			byClassMap[row.ClassID] = a
-		}
-		a.tasks++
-		a.sumRate += pct
-		a.n++
-	}
-	avgRate := "0%"
-	if nPct > 0 {
-		avgRate = fmt.Sprintf("%d%%", sumPct/nPct)
-	}
-
-	type classRow struct {
-		name string
-		avg  string
-		t    int64
-	}
-	classRows := make([]classRow, 0, len(byClassMap))
-	for _, a := range byClassMap {
-		if a == nil || a.n == 0 {
-			continue
-		}
-		classRows = append(classRows, classRow{
-			name: a.className,
-			avg:  fmt.Sprintf("%d%%", a.sumRate/a.n),
-			t:    a.tasks,
-		})
-	}
-	sort.Slice(classRows, func(i, j int) bool { return classRows[i].name < classRows[j].name })
-	byClassOut := make([]map[string]interface{}, 0, len(classRows))
-	for _, r := range classRows {
-		byClassOut = append(byClassOut, map[string]interface{}{
-			"class_name": r.name,
-			"tasks":      r.t,
-			"avg_rate":   r.avg,
-		})
-	}
-
-	return map[string]interface{}{
-		"period": map[string]interface{}{
-			"start": rangeStart.Format("2006-01-02"),
-			"end":   rangeEndDay.Format("2006-01-02"),
-		},
-		"total_tasks":         len(tasks),
-		"active_tasks":        active,
-		"completed_tasks":     completed,
-		"total_checkins":      totalCheckins,
-		"avg_completion_rate": avgRate,
-		"by_class":            byClassOut,
-	}, nil
+	return time.Date(rs.Year(), rs.Month(), rs.Day(), 0, 0, 0, 0, loc),
+		time.Date(re.Year(), re.Month(), re.Day(), 0, 0, 0, 0, loc), nil
 }

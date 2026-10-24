@@ -32,63 +32,63 @@ var adminRoutePermission = map[string]string{
 	"GET /api/v1/admin/dashboard/growth-stats":     "dashboard:view",
 
 	// classes —— 班级与学籍共码
-	"GET /api/v1/admin/classes":        "student:view",
-	"POST /api/v1/admin/classes":       "student:manage",
-	"GET /api/v1/admin/classes/:id":    "student:view",
-	"PUT /api/v1/admin/classes/:id":    "student:manage",
-	"DELETE /api/v1/admin/classes/:id": "student:manage",
+	"GET /api/v1/admin/classes":             "student:view",
+	"POST /api/v1/admin/classes":            "student:manage",
+	"GET /api/v1/admin/classes/:id":         "student:view",
+	"PUT /api/v1/admin/classes/:id":         "student:manage",
+	"DELETE /api/v1/admin/classes/:id":      "student:manage",
 	"POST /api/v1/admin/classes/:id/adjust": "student:manage",
 	// 班级星星罐属于亲子任务配置，不复用 student:*。
 	"GET /api/v1/admin/classes/:id/star-jar": "task:view",
 	"PUT /api/v1/admin/classes/:id/star-jar": "task:manage",
 
 	// students
-	"GET /api/v1/admin/students":             "student:view",
-	"POST /api/v1/admin/students":            "student:manage",
-	"POST /api/v1/admin/students/import":     "student:import",
-	"GET /api/v1/admin/students/export":      "student:export",
-	"GET /api/v1/admin/students/:id":         "student:view",
-	"PUT /api/v1/admin/students/:id":         "student:manage",
-	"DELETE /api/v1/admin/students/:id":      "student:manage",
-	"PUT /api/v1/admin/students/:id/status":  "student:manage",
+	"GET /api/v1/admin/students":            "student:view",
+	"POST /api/v1/admin/students":           "student:manage",
+	"POST /api/v1/admin/students/import":    "student:import",
+	"GET /api/v1/admin/students/export":     "student:export",
+	"GET /api/v1/admin/students/:id":        "student:view",
+	"PUT /api/v1/admin/students/:id":        "student:manage",
+	"DELETE /api/v1/admin/students/:id":     "student:manage",
+	"PUT /api/v1/admin/students/:id/status": "student:manage",
 	// 人脸底库（照片点名）：查看用学生查看码，录入/重试/移除用学生管理码
-	"GET /api/v1/admin/students/:id/faces":             "student:view",
-	"POST /api/v1/admin/students/:id/faces":            "student:manage",
-	"POST /api/v1/admin/students/:id/faces/retry":      "student:manage",
-	"DELETE /api/v1/admin/students/:id/faces/:faceId":  "student:manage",
+	"GET /api/v1/admin/students/:id/faces":            "student:view",
+	"POST /api/v1/admin/students/:id/faces":           "student:manage",
+	"POST /api/v1/admin/students/:id/faces/retry":     "student:manage",
+	"DELETE /api/v1/admin/students/:id/faces/:faceId": "student:manage",
 
 	// teachers
-	"GET /api/v1/admin/teachers":                        "teacher:view",
-	"POST /api/v1/admin/teachers":                       "teacher:manage",
-	"GET /api/v1/admin/teachers/:id":                    "teacher:view",
-	"PUT /api/v1/admin/teachers/:id":                    "teacher:manage",
-	"DELETE /api/v1/admin/teachers/:id":                 "teacher:manage",
-	"PUT /api/v1/admin/teachers/:id/status":             "teacher:manage",
-	"GET /api/v1/admin/teachers/:id/invitation":         "teacher:view",
-	"POST /api/v1/admin/teachers/:id/invitation":        "teacher:manage",
-	"GET /api/v1/admin/teachers/:id/invitation/qrcode":  "teacher:view",
+	"GET /api/v1/admin/teachers":                       "teacher:view",
+	"POST /api/v1/admin/teachers":                      "teacher:manage",
+	"GET /api/v1/admin/teachers/:id":                   "teacher:view",
+	"PUT /api/v1/admin/teachers/:id":                   "teacher:manage",
+	"DELETE /api/v1/admin/teachers/:id":                "teacher:manage",
+	"PUT /api/v1/admin/teachers/:id/status":            "teacher:manage",
+	"GET /api/v1/admin/teachers/:id/invitation":        "teacher:view",
+	"POST /api/v1/admin/teachers/:id/invitation":       "teacher:manage",
+	"GET /api/v1/admin/teachers/:id/invitation/qrcode": "teacher:view",
 
 	// parents
-	"GET /api/v1/admin/parents":             "parent:view",
-	"POST /api/v1/admin/parents":            "parent:manage",
-	"GET /api/v1/admin/parents/:id":         "parent:view",
-	"PUT /api/v1/admin/parents/:id":         "parent:manage",
-	"PUT /api/v1/admin/parents/:id/status":  "parent:manage",
+	"GET /api/v1/admin/parents":            "parent:view",
+	"POST /api/v1/admin/parents":           "parent:manage",
+	"GET /api/v1/admin/parents/:id":        "parent:view",
+	"PUT /api/v1/admin/parents/:id":        "parent:manage",
+	"PUT /api/v1/admin/parents/:id/status": "parent:manage",
 
 	// settings / kindergarten —— 园所配置
-	"GET /api/v1/admin/settings":                   "system:kindergarten",
-	"PUT /api/v1/admin/settings":                   "system:kindergarten",
-	"GET /api/v1/admin/settings/academic-years":    "system:kindergarten",
-	"POST /api/v1/admin/settings/academic-years":   "system:kindergarten",
-	"GET /api/v1/admin/kindergarten/info":          "system:kindergarten",
-	"PUT /api/v1/admin/kindergarten/info":          "system:kindergarten",
+	"GET /api/v1/admin/settings":                 "system:kindergarten",
+	"PUT /api/v1/admin/settings":                 "system:kindergarten",
+	"GET /api/v1/admin/settings/academic-years":  "system:kindergarten",
+	"POST /api/v1/admin/settings/academic-years": "system:kindergarten",
+	"GET /api/v1/admin/kindergarten/info":        "system:kindergarten",
+	"PUT /api/v1/admin/kindergarten/info":        "system:kindergarten",
 
 	// admins
-	"GET /api/v1/admin/admins":                     "admin:view",
-	"POST /api/v1/admin/admins":                    "admin:manage",
-	"PUT /api/v1/admin/admins/:id":                 "admin:manage",
-	"PUT /api/v1/admin/admins/:id/reset-password":  "admin:manage",
-	"DELETE /api/v1/admin/admins/:id":              "admin:manage",
+	"GET /api/v1/admin/admins":                    "admin:view",
+	"POST /api/v1/admin/admins":                   "admin:manage",
+	"PUT /api/v1/admin/admins/:id":                "admin:manage",
+	"PUT /api/v1/admin/admins/:id/reset-password": "admin:manage",
+	"DELETE /api/v1/admin/admins/:id":             "admin:manage",
 
 	// roles / permissions
 	"GET /api/v1/admin/roles":        "admin:role",
@@ -108,21 +108,21 @@ var adminRoutePermission = map[string]string{
 	"PUT /api/v1/admin/leaves/:id/audit": "attendance:view",
 
 	// pickup
-	"GET /api/v1/admin/pickup/overview":                      "pickup:view",
-	"GET /api/v1/admin/pickup/records":                       "pickup:view",
-	"GET /api/v1/admin/pickup/abnormal":                      "pickup:view",
-	"GET /api/v1/admin/pickup/authorized-persons":            "pickup:view",
-	"PUT /api/v1/admin/pickup/authorized-persons/:id/audit":  "pickup:manage",
-	"GET /api/v1/admin/pickup/overdue":                       "pickup:view",
-	"GET /api/v1/admin/pickup/overdue/count":                 "pickup:view",
-	"POST /api/v1/admin/pickup/overdue/notify":               "pickup:manage",
+	"GET /api/v1/admin/pickup/overview":                     "pickup:view",
+	"GET /api/v1/admin/pickup/records":                      "pickup:view",
+	"GET /api/v1/admin/pickup/abnormal":                     "pickup:view",
+	"GET /api/v1/admin/pickup/authorized-persons":           "pickup:view",
+	"PUT /api/v1/admin/pickup/authorized-persons/:id/audit": "pickup:manage",
+	"GET /api/v1/admin/pickup/overdue":                      "pickup:view",
+	"GET /api/v1/admin/pickup/overdue/count":                "pickup:view",
+	"POST /api/v1/admin/pickup/overdue/notify":              "pickup:manage",
 
 	// growth
-	"GET /api/v1/admin/growth/stats":              "growth:view",
-	"GET /api/v1/admin/growth/logs":               "growth:view",
-	"GET /api/v1/admin/growth/logs/:id":           "growth:view",
-	"DELETE /api/v1/admin/growth/logs/:id":        "growth:manage",
-	"PUT /api/v1/admin/growth/logs/:id/audit":     "growth:audit",
+	"GET /api/v1/admin/growth/stats":          "growth:view",
+	"GET /api/v1/admin/growth/logs":           "growth:view",
+	"GET /api/v1/admin/growth/logs/:id":       "growth:view",
+	"DELETE /api/v1/admin/growth/logs/:id":    "growth:manage",
+	"PUT /api/v1/admin/growth/logs/:id/audit": "growth:audit",
 
 	// tasks
 	"GET /api/v1/admin/tasks":        "task:view",
@@ -133,6 +133,13 @@ var adminRoutePermission = map[string]string{
 	"DELETE /api/v1/admin/tasks/:id": "task:manage",
 	// 管理端撤回公开内容：静态段 checkins 优先于 :id 匹配，不会与上面的任务详情路由冲突。
 	"PUT /api/v1/admin/tasks/checkins/:checkin_id/public": "task:manage",
+	// 7.3 查看公开内容：只读，复用任务查看码；撤回仍需 task:manage。
+	"GET /api/v1/admin/tasks/:id/checkins": "task:view",
+
+	// 多班活动（design D12）：创建/批量编辑/整组删除都是写操作。
+	"POST /api/v1/admin/task-activities":                "task:manage",
+	"PUT /api/v1/admin/task-activities/:activity_id":    "task:manage",
+	"DELETE /api/v1/admin/task-activities/:activity_id": "task:manage",
 
 	// points
 	"GET /api/v1/admin/points/overview": "points:view",
@@ -156,12 +163,12 @@ var adminRoutePermission = map[string]string{
 	"DELETE /api/v1/admin/notices/:id":    "notice:manage",
 
 	// announcements
-	"GET /api/v1/admin/announcements":          "announcement:view",
-	"POST /api/v1/admin/announcements":         "announcement:manage",
-	"PUT /api/v1/admin/announcements/:id/top":  "announcement:manage",
-	"GET /api/v1/admin/announcements/:id":      "announcement:view",
-	"PUT /api/v1/admin/announcements/:id":      "announcement:manage",
-	"DELETE /api/v1/admin/announcements/:id":   "announcement:manage",
+	"GET /api/v1/admin/announcements":         "announcement:view",
+	"POST /api/v1/admin/announcements":        "announcement:manage",
+	"PUT /api/v1/admin/announcements/:id/top": "announcement:manage",
+	"GET /api/v1/admin/announcements/:id":     "announcement:view",
+	"PUT /api/v1/admin/announcements/:id":     "announcement:manage",
+	"DELETE /api/v1/admin/announcements/:id":  "announcement:manage",
 
 	// audit
 	"GET /api/v1/admin/audit/list":  "audit:view",
@@ -169,26 +176,26 @@ var adminRoutePermission = map[string]string{
 	"PUT /api/v1/admin/audit/:id":   "audit:manage",
 
 	// export —— 共享端点按导出功能总码；growth 无专用导出码（design D7 备注）
-	"POST /api/v1/admin/export/attendance":         "attendance:export",
-	"POST /api/v1/admin/export/students":           "student:export",
-	"POST /api/v1/admin/export/growth":             "growth:view",
-	"GET /api/v1/admin/export/download/:taskId":    "attendance:export",
-	"GET /api/v1/admin/export/:taskId":             "attendance:export",
+	"POST /api/v1/admin/export/attendance":      "attendance:export",
+	"POST /api/v1/admin/export/students":        "student:export",
+	"POST /api/v1/admin/export/growth":          "growth:view",
+	"GET /api/v1/admin/export/download/:taskId": "attendance:export",
+	"GET /api/v1/admin/export/:taskId":          "attendance:export",
 
 	// logs / health
-	"GET /api/v1/admin/logs":        "system:log",
+	"GET /api/v1/admin/logs":         "system:log",
 	"GET /api/v1/admin/health/stats": "dashboard:view",
 
 	// dicts
-	"GET /api/v1/admin/dicts/types":             "system:kindergarten",
-	"POST /api/v1/admin/dicts/types":            "system:kindergarten",
-	"PUT /api/v1/admin/dicts/types/:id":         "system:kindergarten",
-	"DELETE /api/v1/admin/dicts/types/:id":      "system:kindergarten",
-	"GET /api/v1/admin/dicts/types/:id/items":   "system:kindergarten",
-	"POST /api/v1/admin/dicts/types/:id/items":  "system:kindergarten",
-	"PUT /api/v1/admin/dicts/items/sort":        "system:kindergarten",
-	"PUT /api/v1/admin/dicts/items/:id":         "system:kindergarten",
-	"DELETE /api/v1/admin/dicts/items/:id":      "system:kindergarten",
+	"GET /api/v1/admin/dicts/types":            "system:kindergarten",
+	"POST /api/v1/admin/dicts/types":           "system:kindergarten",
+	"PUT /api/v1/admin/dicts/types/:id":        "system:kindergarten",
+	"DELETE /api/v1/admin/dicts/types/:id":     "system:kindergarten",
+	"GET /api/v1/admin/dicts/types/:id/items":  "system:kindergarten",
+	"POST /api/v1/admin/dicts/types/:id/items": "system:kindergarten",
+	"PUT /api/v1/admin/dicts/items/sort":       "system:kindergarten",
+	"PUT /api/v1/admin/dicts/items/:id":        "system:kindergarten",
+	"DELETE /api/v1/admin/dicts/items/:id":     "system:kindergarten",
 
 	// calendar —— 园级日历（园级事件；发布者=园长角色；医生走 /doctor 路由不经本表）
 	"GET /api/v1/admin/calendar/events":        "calendar:view",
