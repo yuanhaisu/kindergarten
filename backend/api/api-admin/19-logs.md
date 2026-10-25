@@ -15,6 +15,8 @@
 ```json
 // Query: ?module=student&operator_id=&start_date=2026-03-19&end_date=2026-03-19&page=1&page_size=20
 // module: student / teacher / parent / notice / growth / attendance / pickup / task / points / achievement / announcement / admin / system
+// task 模块的公开审核 action：approve_public（老师批准）/ revoke_public（老师撤回或拒绝）/
+// cancel_public（家长取消）/ revoke_public_task（关闭任务公开，批量撤销）。
 
 // Response
 {

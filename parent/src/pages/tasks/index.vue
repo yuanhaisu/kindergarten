@@ -22,16 +22,16 @@ const studentId = ref(getCurrentStudentId())
 // checkin_count 是当前孩子在该任务下的累计提交次数，只作为副标题展示。
 const formattedTasks = computed(() => tasks.value.map((item) => {
   const submitted = !!item.submitted_current_period
+  const responded = !!item.responded
   return {
     ...item,
     desc: item.description || item.intro || "",
     progress: submitted ? 1 : 0,
-    progressLabel: submitted ? "本周期已提交" : "本周期待提交",
+    progressLabel: responded ? "老师已回应" : submitted ? "本周期已提交" : "本周期待提交",
     countLabel: `累计打卡 ${Number(item.checkin_count) || 0} 次`,
     infoLabel: freqLabels[item.frequency] ? `${freqLabels[item.frequency]}任务` : "亲子任务",
-    // 列表接口没有「老师是否已回应」字段（契约 06-task.md 只给了提交口径），
-    // 所以这里只区分待完成/已提交；是否已回应在详情页按 responses 判断。
-    statusLabel: submitted ? "已提交" : "待完成",
+    // 三态由服务端判定：responded 看本周期提交的 response_id，前端不自己拼。
+    statusLabel: responded ? "已回应" : submitted ? "已提交" : "待完成",
     // 补充回应未读与消息未读是两套红点，不合并。
     hasUnread: !!item.has_unread_supplement
   }
@@ -144,7 +144,7 @@ onPullDownRefresh(loadData)
               <text class="tc-title">{{ item.title }}</text>
               <text class="tc-desc">{{ item.desc }}</text>
             </view>
-            <view class="tc-status-badge" :class="{ submitted: item.submitted_current_period }">
+            <view class="tc-status-badge" :class="{ submitted: item.submitted_current_period, responded: item.responded }">
               <text class="tc-status-text">{{ item.statusLabel }}</text>
             </view>
           </view>
@@ -386,6 +386,12 @@ onPullDownRefresh(loadData)
 .tc-status-badge.submitted {
   background: $color-semantic-success-bg;
   .tc-status-text { color: $color-semantic-success; }
+}
+
+/* 已回应也是「已提交」的一种，写在后面覆盖成信息色，突出老师已看过 */
+.tc-status-badge.responded {
+  background: $color-semantic-info-bg;
+  .tc-status-text { color: $color-semantic-info; }
 }
 
 .tc-unread {

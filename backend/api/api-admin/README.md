@@ -46,7 +46,7 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 07 | [`07-leaves.md`](./07-leaves.md) | 请假管理 | `admin/pages/leaves/index.vue` | 3 | ✅ |
 | 08 | [`08-pickup.md`](./08-pickup.md) | 接送管理 | `admin/pages/pickup/index.vue` | 4 | ✅ |
 | 09 | [`09-growth.md`](./09-growth.md) | 成长记录 | `admin/pages/growth/index.vue` | 5 | ✅ |
-| 10 | [`10-tasks.md`](./10-tasks.md) | 亲子任务 | `admin/pages/tasks/index.vue` | 6 | ✅ |
+| 10 | [`10-tasks.md`](./10-tasks.md) | 亲子任务 | `admin/pages/tasks/index.vue` | 13 | ✅ |
 | 11 | [`11-points.md`](./11-points.md) | 积分管理 | `admin/pages/points/index.vue` | 5 | ✅ 已实现 |
 | 12 | [`12-achievements.md`](./12-achievements.md) | 成就管理 | `admin/pages/achievements/index.vue` | 4 | ✅ 已实现 |
 | 13 | [`13-notices.md`](./13-notices.md) | 通知管理 | `admin/pages/notices/index.vue` | 6 | ✅ 已实现 |
@@ -117,5 +117,3 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 模块 | 缺失的前端函数 | 预期后端 |
 |---|---|---|
 | 07 请假管理 | 审批请假 | `PUT /admin/leaves/:id/audit` |
-| 10 亲子任务 | 新建任务 | `POST /admin/tasks` |
-| 10 亲子任务 | 编辑任务 | `PUT /admin/tasks/:id` |

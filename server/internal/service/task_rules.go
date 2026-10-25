@@ -62,6 +62,8 @@ var (
 	ErrTaskRitualPayload = errors.New("TASK_RITUAL_PAYLOAD")
 	// 任务不允许公开：未开启 allow_public、是个体任务，或任务已不在有效期内。
 	ErrTaskPublicNotAllowed = errors.New("TASK_PUBLIC_NOT_ALLOWED")
+	// 一键完成（无文字、无媒体）没有可公开的内容：不能进审核队列，更不能上墙。
+	ErrTaskPublicEmptyContent = errors.New("TASK_PUBLIC_EMPTY_CONTENT")
 	// 提交当前不在待审核/已公开状态：并发取消、或从未申请就批准。
 	ErrTaskPublicStateConflict = errors.New("TASK_PUBLIC_STATE_CONFLICT")
 	// 老师批准前没有勾选「内容中只有提交者孩子」。
@@ -478,6 +480,14 @@ var taskSafeEditableFields = map[string]bool{
 
 func taskSafeEditableField(key string) bool { return taskSafeEditableFields[key] }
 
+// checkinHasPublicContent 判断一条提交是否有可公开的内容。
+//
+// 三个字段都要看：照片/语音走 media_file_id，URL 可能是读取时生成的，不代表数据库里一定有；
+// 只有文字、只有媒体都算有内容，纯空白文字不算。
+func checkinHasPublicContent(c *domain.TaskCheckIn) bool {
+	return strings.TrimSpace(c.Content) != "" || c.MediaFileID > 0 || strings.TrimSpace(c.MediaURL) != ""
+}
+
 func sameTaskDay(a, b time.Time) bool {
 	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
 }
@@ -600,15 +610,46 @@ func deleteTaskCascade(ctx context.Context, tx *gorm.DB, taskID uint64) error {
 	return nil
 }
 
+// 公开审核留痕的动作名。管理端撤回沿用既有 revoke_public，便于审计页按动作筛选。
+const (
+	PublicAuditApprove    = "approve_public"
+	PublicAuditRevoke     = "revoke_public"
+	PublicAuditCancel     = "cancel_public"
+	PublicAuditRevokeTask = "revoke_public_task"
+)
+
+// publicAuditEntry 构造一条公开审核日志（只读、追加写）。
+//
+// 公开状态会把 PublicApprovedBy 清空，日志是事后唯一能回答「谁批准过、谁撤下」的地方。
+// 调用方必须在**同一事务内**写入：状态改了日志没写，就永远查不到；日志写了状态回滚，就是假证据。
+func publicAuditEntry(
+	kindergartenID, actorID uint64, action, targetType string, targetID uint64, detail string,
+) *domain.OperationLog {
+	return &domain.OperationLog{
+		KindergartenID: kindergartenID,
+		UserID:         actorID,
+		Module:         "tasks",
+		Action:         action,
+		TargetType:     targetType,
+		TargetID:       targetID,
+		Detail:         detail,
+	}
+}
+
 // revokePublicForTask 关闭任务公开：清空申请/批准/确认/审核人。
 //
 // 只处理**曾经有过公开状态**的提交（申请过 / 确认过 / 批准过）。
 // 从未申请过的提交本来就没有要清的东西，给它们盖 public_revoked_at 会把
 // 「从未申请」洗成「已撤回」，让 public_status 与撤回时间对家长和老师都失真。
 // 这些行上 D7 要求的「清空」本来就是空操作，收窄不改变任何可见性。
-func revokePublicForTask(ctx context.Context, tx *gorm.DB, taskID uint64) error {
+//
+// 真正撤销了内容（RowsAffected > 0）才写审计日志：空操作不该留下「撤回了一次」的假记录。
+func revokePublicForTask(
+	ctx context.Context, tx *gorm.DB,
+	kindergartenID, actorID, taskID uint64, reason string,
+) error {
 	now := time.Now()
-	return tx.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+	res := tx.WithContext(ctx).Model(&domain.TaskCheckIn{}).
 		Where("task_id = ? AND (is_public_requested = ? OR public_scope_confirmed = ? OR public_approved_at IS NOT NULL)",
 			taskID, true, true).
 		Updates(map[string]any{
@@ -617,7 +658,17 @@ func revokePublicForTask(ctx context.Context, tx *gorm.DB, taskID uint64) error 
 			"public_approved_at":     nil,
 			"public_approved_by":     0,
 			"public_revoked_at":      &now,
-		}).Error
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil
+	}
+	return tx.Create(publicAuditEntry(
+		kindergartenID, actorID, PublicAuditRevokeTask, "parent_task", taskID,
+		fmt.Sprintf("reason=%s rows=%d", reason, res.RowsAffected),
+	)).Error
 }
 
 // ==================== 公开墙状态机（design D7 / tasks 4.1-4.4） ====================

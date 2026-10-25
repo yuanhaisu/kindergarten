@@ -106,6 +106,27 @@ func (s *ParentPortalService) ResolveContext(ctx context.Context, userID, kinder
 	return pc, nil
 }
 
+// ResolveTaskContext 是任务链路的家长上下文解析：student_id 必填且必须属于该家长。
+//
+// 与 ResolveContext 的唯一差别：**不回退到第一个孩子**。任务数据按孩子隔离，
+// 回退会把 A 孩子的任务/提交显示成 B 孩子的（tasks 2.2）。把这条规则放在 service，
+// 而不是靠每个 handler 自己比对 `CurrentStudent.ID`，避免新增任务端点时漏掉。
+func (s *ParentPortalService) ResolveTaskContext(
+	ctx context.Context, userID, kindergartenID, studentID uint64,
+) (*ParentPortalContext, error) {
+	if studentID == 0 {
+		return nil, ErrParentInvalidParams
+	}
+	pc, err := s.ResolveContext(ctx, userID, kindergartenID, &studentID)
+	if err != nil {
+		return nil, err
+	}
+	if pc.CurrentStudent == nil || pc.CurrentStudent.ID != studentID {
+		return nil, ErrParentForbidden
+	}
+	return pc, nil
+}
+
 // ListGrowthFeed 家长端统一成长记录流:
 // - target_type=1 (全班记录): 孩子所在班级的所有班级记录都可见
 // - target_type=2 (指定学生): 仅目标学生家长可见
@@ -1500,7 +1521,13 @@ func taskIsActive(t *domain.ParentTask, now time.Time) bool {
 	return t.Status == 1 && !day.Before(start) && !day.After(end)
 }
 
-func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTask, studentID uint64, now time.Time) (bool, error) {
+// taskPeriodCheckin 返回该孩子在当前周期内的提交（不存在时 found=false）。
+//
+// 周期口径与提交校验一致：daily 当天、weekly 滚动 7 天、once 整条任务。
+// 列表用同一次查询同时得出「已提交」与「已回应」，避免两次读之间的状态漂移。
+func taskPeriodCheckin(
+	ctx context.Context, db *gorm.DB, t *domain.ParentTask, studentID uint64, now time.Time,
+) (domain.TaskCheckIn, bool, error) {
 	q := db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND student_id = ?", t.ID, studentID)
 	today := now.Format("2006-01-02")
 	switch t.Frequency {
@@ -1509,13 +1536,22 @@ func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTas
 	case domain.TaskFrequencyWeekly:
 		q = q.Where("date >= ?", now.AddDate(0, 0, -6).Format("2006-01-02"))
 	}
-	var n int64
-	// 计数失败必须上报：静默当成「本周期未提交」会让家长看到可点的提交入口，
+	var c domain.TaskCheckIn
+	// 查询失败必须上报：静默当成「本周期未提交」会让家长看到可点的提交入口，
 	// 点下去拿到 422，而实际只是查询失败——把故障伪装成了业务规则。
-	if err := q.Count(&n).Error; err != nil {
-		return false, err
+	err := q.Order("date DESC, id DESC").First(&c).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return c, false, nil
 	}
-	return n > 0, nil
+	if err != nil {
+		return c, false, err
+	}
+	return c, true, nil
+}
+
+func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTask, studentID uint64, now time.Time) (bool, error) {
+	_, found, err := taskPeriodCheckin(ctx, db, t, studentID, now)
+	return found, err
 }
 
 func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
@@ -1552,11 +1588,13 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 		return nil, err
 	}
 	for _, r := range activeRows {
-		submitted, err := taskSubmittedInPeriod(ctx, s.db, &r, pc.CurrentStudent.ID, now)
+		periodCheckin, submitted, err := taskPeriodCheckin(ctx, s.db, &r, pc.CurrentStudent.ID, now)
 		if err != nil {
 			log.L(ctx).Error("parent list tasks count failed", "scope", "submitted", "task", r.ID, "err", err)
 			return nil, err
 		}
+		// 「已回应」= 本周期提交已被主回应关闭；补充回应不改变 response_id，不影响这一态。
+		responded := submitted && periodCheckin.ResponseID > 0
 		var childCount int64
 		if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
 			Where("task_id = ? AND student_id = ?", r.ID, pc.CurrentStudent.ID).Count(&childCount).Error; err != nil {
@@ -1570,6 +1608,7 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 			"star_scope": r.StarScope, "star_goal": r.StarGoal,
 			"start_date": r.StartDate.Format("2006-01-02"), "end_date": r.EndDate.Format("2006-01-02"),
 			"status": r.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
+			"responded": responded,
 			"checkin_count": childCount, "has_unread_supplement": unread[r.ID],
 			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 		})
@@ -2003,6 +2042,11 @@ func (s *ParentPortalService) RequestPublicCheckin(ctx context.Context, pc *Pare
 		if !taskIsActive(t, now) {
 			return ErrTaskPublicNotAllowed
 		}
+		// 一键完成（无文字、无媒体）没有可公开的内容：直接拒绝，不要让它进审核队列。
+		// 已批准的重复申请是幂等空操作，维持原行为（历史数据也能照常撤回）。
+		if publicCheckinStatus(c) != TaskPublicApproved && !checkinHasPublicContent(c) {
+			return ErrTaskPublicEmptyContent
+		}
 		// 已批准且未撤回时重复点击是幂等空操作：不能把已经公开的内容打回待审核，
 		// 否则家长手滑点两下，墙上的记录就消失了。
 		if publicCheckinStatus(c) != TaskPublicApproved {
@@ -2044,6 +2088,9 @@ func (s *ParentPortalService) CancelPublicCheckin(ctx context.Context, pc *Paren
 		// （否则每点一次取消都会产生一条「新撤回」记录）。
 		switch publicCheckinStatus(c) {
 		case TaskPublicPending, TaskPublicApproved:
+			// 审计留痕：公开状态会把审核人清空，日志保留「谁批准过、谁撤下」。
+			priorStatus := publicCheckinStatus(c)
+			priorApprover := c.PublicApprovedBy
 			if err := tx.Model(&domain.TaskCheckIn{}).Where("id = ?", c.ID).
 				Updates(publicRevokeUpdates(now)).Error; err != nil {
 				return err
@@ -2053,6 +2100,15 @@ func (s *ParentPortalService) CancelPublicCheckin(ctx context.Context, pc *Paren
 				return err
 			}
 			c = &fresh
+			detail := fmt.Sprintf("task_id=%d prior_status=%s", t.ID, priorStatus)
+			if priorApprover > 0 {
+				detail += fmt.Sprintf(" approved_by=%d", priorApprover)
+			}
+			if err := tx.Create(publicAuditEntry(
+				pc.KindergartenID, pc.UserID, PublicAuditCancel, "task_check_in", c.ID, detail,
+			)).Error; err != nil {
+				return err
+			}
 		}
 		out = publicCheckinView(t, c, loc.StudentClassID, now)
 		return nil
@@ -2458,6 +2514,34 @@ func (s *ParentPortalService) UpdateSettings(ctx context.Context, pc *ParentPort
 
 // ==================== Home Overview ====================
 
+// pendingTaskCount 只统计当前孩子当前周期内尚未提交的有效任务（tasks 2.7）。
+// 已结束/未开始的任务由 taskIsActive 排除；周期口径复用 taskSubmittedInPeriod，
+// 不在这里再写一份 daily/weekly/once 判断。
+func pendingTaskCount(ctx context.Context, db *gorm.DB, pc *ParentPortalContext, now time.Time) (int64, error) {
+	if pc.CurrentStudent == nil {
+		return 0, nil
+	}
+	var tasks []domain.ParentTask
+	if err := taskScopeQuery(db.WithContext(ctx).Model(&domain.ParentTask{}), pc).
+		Where("status = 1").Find(&tasks).Error; err != nil {
+		return 0, err
+	}
+	var pending int64
+	for _, t := range tasks {
+		if !taskIsActive(&t, now) {
+			continue
+		}
+		submitted, err := taskSubmittedInPeriod(ctx, db, &t, pc.CurrentStudent.ID, now)
+		if err != nil {
+			return 0, err
+		}
+		if !submitted {
+			pending++
+		}
+	}
+	return pending, nil
+}
+
 func (s *ParentPortalService) HomeOverview(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
@@ -2514,27 +2598,12 @@ func (s *ParentPortalService) HomeOverview(ctx context.Context, pc *ParentPortal
 			Where("kindergarten_id = ? AND status = ? AND published_at >= ?", pc.KindergartenID, domain.NoticeStatusPublished, today),
 			homeClassIDs).Count(&newNoticeCount)
 	}
-	var pendingTasks int64
-	if pc.CurrentStudent != nil {
-		var tasks []domain.ParentTask
-		_ = taskScopeQuery(s.db.WithContext(ctx).Model(&domain.ParentTask{}), pc).Where("status = 1").Find(&tasks).Error
-		for _, t := range tasks {
-			if !taskIsActive(&t, now) {
-				continue
-			}
-			var n int64
-			q := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).Where("task_id = ? AND student_id = ?", t.ID, pc.CurrentStudent.ID)
-			switch t.Frequency {
-			case domain.TaskFrequencyDaily:
-				q = q.Where("date = ?", today)
-			case domain.TaskFrequencyWeekly:
-				q = q.Where("date >= ?", now.AddDate(0, 0, -6).Format("2006-01-02"))
-			}
-			_ = q.Count(&n).Error
-			if n == 0 {
-				pendingTasks++
-			}
-		}
+	pendingTasks, err := pendingTaskCount(ctx, s.db, pc, now)
+	if err != nil {
+		// 不把整个首页打成 500：待办角标降级为 0，但必须留下日志，
+		// 否则「今天没有待办」和「查询失败」在页面上长得一模一样。
+		log.L(ctx).Error("home pending tasks failed", "student", pc.CurrentStudent.ID, "err", err)
+		pendingTasks = 0
 	}
 
 	var leave domain.LeaveRequest

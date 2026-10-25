@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
 )
 
@@ -89,6 +90,9 @@ func (h *Handler) WeChatLogin(c *gin.Context) {
 		case "INVITE_USER_NOT_FOUND":
 			response.ErrBadRequest(c, 40021, "邀请码关联的教师账号不存在")
 		default:
+			// 微信侧/凭据/网络的原因绝不能只回一句「登录失败」：排障时必须能看到
+			// code2session 的 errcode；对外文案仍保持模糊，避免泄漏配置细节。
+			log.L(c.Request.Context()).Error("wechat login failed", "role", req.Role, "err", err)
 			response.ErrBadRequest(c, 40002, "微信登录失败")
 		}
 		return

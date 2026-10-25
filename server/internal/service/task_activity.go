@@ -364,7 +364,7 @@ func (s *TaskService) UpdateActivity(
 				}
 			}
 			if req.AllowPublic != nil && !*req.AllowPublic && t.AllowPublic {
-				if err := revokePublicForTask(ctx, tx, t.ID); err != nil {
+				if err := revokePublicForTask(ctx, tx, kindergartenID, adminUserID, t.ID, "activity_allow_public_off"); err != nil {
 					return err
 				}
 			}

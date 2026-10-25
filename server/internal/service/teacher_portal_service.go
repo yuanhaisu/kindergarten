@@ -2853,7 +2853,6 @@ type TeacherTaskInput struct {
 	Description       *string          `json:"description"`
 	Intro             string           `json:"intro"`
 	Requirements      []string         `json:"requirements"`
-	Rewards           []map[string]any `json:"rewards"`
 	TargetStudentID   uint64           `json:"target_student_id"`
 	LearningLink      string           `json:"learning_link"`
 	Frequency         string           `json:"frequency"`
@@ -2996,7 +2995,6 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 		return nil, ErrTeacherInvalidParams
 	}
 	reqsJSON, _ := json.Marshal(req.Requirements)
-	rewardsJSON, _ := json.Marshal(req.Rewards)
 	// 未提供的字段按创建默认值展开；枚举与下界走 task_rules.go 的共享判定，
 	// 与管理端同一套，避免老师端能落库「CLASS」「class 」这类非规范值。
 	starGoal := 0
@@ -3036,7 +3034,7 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 	row := &domain.ParentTask{
 		KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, CreatorID: tc.UserID,
 		TargetStudentID: req.TargetStudentID, Title: req.Title, Description: description,
-		Intro: req.Intro, Requirements: string(reqsJSON), Rewards: string(rewardsJSON),
+		Intro: req.Intro, Requirements: string(reqsJSON),
 		LearningLink: req.LearningLink, Frequency: freq, StartDate: start, EndDate: end,
 		AllowPublic: allowPublic, RecognitionRitual: ritual, StarScope: starScope,
 		StarGoal: starGoal, Status: 1,
@@ -3194,7 +3192,11 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 		effectiveAllowPublic := allowPublic && req.TargetStudentID == 0
 		becameIndividual := req.TargetStudentID > 0 && cur.TargetStudentID == 0
 		if becameIndividual || (cur.AllowPublic && !effectiveAllowPublic) {
-			return revokePublicForTask(ctx, tx, id)
+			reason := "allow_public_off"
+			if becameIndividual {
+				reason = "became_individual"
+			}
+			return revokePublicForTask(ctx, tx, tc.KindergartenID, tc.UserID, id, reason)
 		}
 		return nil
 	})
@@ -3268,6 +3270,215 @@ func (s *TeacherPortalService) TaskStats(ctx context.Context, tc *TeacherPortalC
 	pending = total - responded
 	return map[string]any{"task_id": id, "total_students": s.classStudentCount(ctx, tc),
 		"submission_count": total, "responded_count": responded, "pending_count": pending}, nil
+}
+
+// TaskFeedbackSummary 老师端任务反馈汇总（tasks 3.11）。
+//
+// 口径与管理端 7.2 完全一致：分母是主回应承诺的义务家长数（notify_target_count），
+// 分子是去重后的 (回应, 家长) 反馈对；补充回应不被任何提交引用，天然不计入。
+// 公式直接复用 taskFeedbackTotalsOf，老师端不另写一套统计。
+//
+// 「按孩子」归属规则：
+//   - 反馈归属到**同一条回应覆盖的孩子**，满足其一即可：该孩子那条提交的提交人就是反馈人，
+//     或反馈人与该孩子有 student_parents 绑定（co-parent）；
+//   - 一条反馈可能同时命中同一家长的多个孩子（同班兄弟姐妹），按孩子各计一次；
+//     总量仍按 (回应, 家长) 对只计一次，不受影响；
+//   - 两者都不命中的反馈计入 unattributed_feedback，不静默丢弃。
+func (s *TeacherPortalService) TaskFeedbackSummary(
+	ctx context.Context, tc *TeacherPortalContext, id uint64,
+) (map[string]any, error) {
+	var task domain.ParentTask
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).
+		First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTeacherNotFound
+		}
+		return nil, err
+	}
+
+	var checkinRows []struct {
+		StudentID  uint64 `gorm:"column:student_id"`
+		UserID     uint64 `gorm:"column:user_id"`
+		ResponseID uint64 `gorm:"column:response_id"`
+	}
+	if err := s.db.WithContext(ctx).Table("task_check_ins").
+		Select("student_id, user_id, response_id").
+		Where("task_id = ? AND deleted_at IS NULL", id).
+		Scan(&checkinRows).Error; err != nil {
+		return nil, err
+	}
+
+	responses := map[uint64]taskStatsResponse{}
+	reactions := map[uint64][]taskStatsReaction{}
+	remaining := map[uint64]struct{}{}
+	covered := map[uint64]map[uint64]struct{}{}  // response_id -> 覆盖的学生（去重）
+	checkinUser := map[[2]uint64]uint64{}        // (response_id, student_id) -> 提交人
+	studentSet := map[uint64]struct{}{}
+	for _, c := range checkinRows {
+		studentSet[c.StudentID] = struct{}{}
+		if c.ResponseID == 0 {
+			continue
+		}
+		remaining[c.ResponseID] = struct{}{}
+		if covered[c.ResponseID] == nil {
+			covered[c.ResponseID] = map[uint64]struct{}{}
+		}
+		covered[c.ResponseID][c.StudentID] = struct{}{}
+		checkinUser[[2]uint64{c.ResponseID, c.StudentID}] = c.UserID
+	}
+	studentIDs := make([]uint64, 0, len(studentSet))
+	for sid := range studentSet {
+		studentIDs = append(studentIDs, sid)
+	}
+	sort.Slice(studentIDs, func(i, j int) bool { return studentIDs[i] < studentIDs[j] })
+
+	referenced := make([]uint64, 0, len(remaining))
+	for rid := range remaining {
+		referenced = append(referenced, rid)
+	}
+	sort.Slice(referenced, func(i, j int) bool { return referenced[i] < referenced[j] })
+
+	if len(referenced) > 0 {
+		var respRows []struct {
+			ID                uint64    `gorm:"column:id"`
+			ResponseType      string    `gorm:"column:response_type"`
+			CreatedAt         time.Time `gorm:"column:created_at"`
+			NotifyTargetCount *int      `gorm:"column:notify_target_count"`
+		}
+		if err := s.db.WithContext(ctx).Table("task_responses").
+			Select("id, response_type, created_at, notify_target_count").
+			Where("id IN ? AND deleted_at IS NULL", referenced).
+			Scan(&respRows).Error; err != nil {
+			return nil, err
+		}
+		for _, r := range respRows {
+			responses[r.ID] = taskStatsResponse{
+				ResponseType: r.ResponseType, CreatedAt: r.CreatedAt, NotifyTargetCount: r.NotifyTargetCount,
+			}
+		}
+
+		var reactRows []struct {
+			ResponseID uint64 `gorm:"column:response_id"`
+			UserID     uint64 `gorm:"column:user_id"`
+			Reaction   string `gorm:"column:reaction"`
+		}
+		if err := s.db.WithContext(ctx).Table("task_response_reactions").
+			Select("response_id, user_id, reaction").
+			Where("response_id IN ? AND deleted_at IS NULL", referenced).
+			Scan(&reactRows).Error; err != nil {
+			return nil, err
+		}
+		// 与 7.2 同样的按对去重：唯一索引之外再防一层软删复活产生的两行。
+		seen := make(map[[2]uint64]struct{}, len(reactRows))
+		for _, r := range reactRows {
+			key := [2]uint64{r.ResponseID, r.UserID}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			reactions[r.ResponseID] = append(reactions[r.ResponseID],
+				taskStatsReaction{UserID: r.UserID, Reaction: r.Reaction})
+		}
+	}
+
+	totals := taskFeedbackTotalsOf(referenced, responses, reactions)
+
+	names := map[uint64]string{}
+	if len(studentIDs) > 0 {
+		var rows []struct {
+			ID   uint64 `gorm:"column:id"`
+			Name string `gorm:"column:name"`
+		}
+		if err := s.db.WithContext(ctx).Table("students").Select("id, name").
+			Where("id IN ? AND kindergarten_id = ? AND deleted_at IS NULL",
+				studentIDs, tc.KindergartenID).Scan(&rows).Error; err != nil {
+			return nil, err
+		}
+		for _, r := range rows {
+			names[r.ID] = r.Name
+		}
+	}
+
+	// 反馈归属：先看提交人本人，再看同一条回应覆盖范围内的绑定家长。
+	bound := map[uint64]map[uint64]struct{}{}
+	if len(studentIDs) > 0 {
+		var rows []struct {
+			StudentID uint64 `gorm:"column:student_id"`
+			UserID    uint64 `gorm:"column:user_id"`
+		}
+		if err := s.db.WithContext(ctx).Table("student_parents").
+			Select("student_id, user_id").
+			Where("student_id IN ? AND deleted_at IS NULL", studentIDs).
+			Scan(&rows).Error; err != nil {
+			return nil, err
+		}
+		for _, r := range rows {
+			if bound[r.StudentID] == nil {
+				bound[r.StudentID] = map[uint64]struct{}{}
+			}
+			bound[r.StudentID][r.UserID] = struct{}{}
+		}
+	}
+
+	type childFeedback struct{ happy, received, thanks int }
+	perChild := make(map[uint64]*childFeedback, len(studentIDs))
+	for _, sid := range studentIDs {
+		perChild[sid] = &childFeedback{}
+	}
+	unattributed := 0
+	for _, rid := range referenced {
+		for _, rc := range reactions[rid] {
+			targets := make([]uint64, 0, 1)
+			for sid := range covered[rid] {
+				if checkinUser[[2]uint64{rid, sid}] == rc.UserID {
+					targets = append(targets, sid)
+					continue
+				}
+				if _, ok := bound[sid][rc.UserID]; ok {
+					targets = append(targets, sid)
+				}
+			}
+			if len(targets) == 0 {
+				unattributed++
+				continue
+			}
+			sort.Slice(targets, func(i, j int) bool { return targets[i] < targets[j] })
+			for _, sid := range targets {
+				switch rc.Reaction {
+				case domain.TaskReactionChildHappy:
+					perChild[sid].happy++
+				case domain.TaskReactionReceived:
+					perChild[sid].received++
+				case domain.TaskReactionThanks:
+					perChild[sid].thanks++
+				}
+			}
+		}
+	}
+
+	children := make([]map[string]any, 0, len(studentIDs))
+	for _, sid := range studentIDs {
+		c := perChild[sid]
+		children = append(children, map[string]any{
+			"student_id": sid, "student_name": names[sid],
+			"child_happy": c.happy, "received": c.received, "thanks": c.thanks,
+		})
+	}
+
+	return map[string]any{
+		"task_id":           id,
+		"feedback_coverage": taskStatRate(totals.Pairs, totals.Denominator),
+		"child_happy_rate":  taskStatRate(totals.Happy, totals.Denominator),
+		"ack_rate":          taskStatRate(totals.Ack(), totals.Denominator),
+		"feedback_counts": map[string]any{
+			"pairs": totals.Pairs, "child_happy": totals.Happy,
+			"received": totals.Received, "thanks": totals.Thanks,
+		},
+		"notify_baseline_missing": totals.BaselineMissing,
+		"unattributed_feedback":   unattributed,
+		"children":                children,
+	}, nil
 }
 
 // taskStarCounts 统计每个任务已集星数（D6）：
@@ -3762,6 +3973,9 @@ func (s *TeacherPortalService) ReviewPublicCheckin(ctx context.Context, tc *Teac
 		if approve && submitter.ClassID != locked.ClassID {
 			return ErrTaskPublicNotAllowed
 		}
+		// 审计要记下变更**前**的状态与审核人：更新后 PublicApprovedBy 会被清空。
+		priorStatus := publicCheckinStatus(&c)
+		priorApprover := c.PublicApprovedBy
 		var updates map[string]any
 		if approve {
 			switch publicCheckinStatus(&c) {
@@ -3790,6 +4004,20 @@ func (s *TeacherPortalService) ReviewPublicCheckin(ctx context.Context, tc *Teac
 				return err
 			}
 			c = fresh
+
+			action := PublicAuditRevoke
+			if approve {
+				action = PublicAuditApprove
+			}
+			detail := fmt.Sprintf("task_id=%d prior_status=%s", taskID, priorStatus)
+			if priorApprover > 0 {
+				detail += fmt.Sprintf(" approved_by=%d", priorApprover)
+			}
+			if err := tx.Create(publicAuditEntry(
+				tc.KindergartenID, tc.UserID, action, "task_check_in", c.ID, detail,
+			)).Error; err != nil {
+				return err
+			}
 		}
 		out = publicCheckinView(&locked, &c, submitter.ClassID, now)
 		return nil

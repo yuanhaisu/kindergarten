@@ -1,11 +1,12 @@
 <script setup>
 import { computed, ref } from "vue"
-import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onLoad, onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { fetchParentHomeOverview, fetchHomeFeeds, fetchAnnouncements, switchStudent } from "@/api/parent-home"
 import { fetchTasks } from "@/api/parent-task"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, setCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { bindParentPhone } from "@/api/auth"
+import { parseSceneTaskId } from "@/utils/taskScene"
 import BottomNav from "@/components/BottomNav.vue"
 
 const needBindPhone = ref(false)
@@ -168,6 +169,14 @@ function feedTypeLabel(type) {
 // 必须是 onShow：这是 tabBar 页，switchTab 切回来不会重跑 onLoad，
 // 用 onLoad 的话切完孩子再切回首页看到的还是旧数据。
 onShow(loadHome)
+
+// 扫任务分享码落到首页时（码的 page 可能是首页），scene 里带 t=<task_id>。
+// 只做转场，不依赖登录态：详情页自己会 ensureLogin。
+// 与任务详情共用 utils/taskScene，避免两处解码规则漂移。
+onLoad((options) => {
+  const taskId = parseSceneTaskId(options?.scene)
+  if (taskId) uni.navigateTo({ url: `/pages/tasks/detail?id=${taskId}` })
+})
 onPullDownRefresh(loadHome)
 </script>
 

@@ -192,6 +192,7 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 		tasks.DELETE("/:id", h.TeacherDeleteTask)
 		tasks.GET("/:id/share-card", h.TeacherGetTaskShareCard)
 		tasks.GET("/:id/stats", h.TeacherTaskStats)
+		tasks.GET("/:id/feedback-summary", h.TeacherTaskFeedbackSummary)
 		tasks.GET("/:id/checkins", h.TeacherTaskCheckins)
 		tasks.POST("/:id/checkins/:checkin_id/response", h.TeacherRespondTask)
 		tasks.POST("/:id/checkins/:checkin_id/supplement", h.TeacherSupplementResponse)

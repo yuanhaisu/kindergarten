@@ -1236,6 +1236,23 @@ func (h *Handler) TeacherTaskStats(c *gin.Context) {
 	response.OK(c, data)
 }
 
+func (h *Handler) TeacherTaskFeedbackSummary(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.TaskFeedbackSummary(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "获取反馈汇总失败")
+		return
+	}
+	response.OK(c, data)
+}
+
 func (h *Handler) TeacherTaskCheckins(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {

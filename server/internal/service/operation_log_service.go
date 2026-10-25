@@ -216,6 +216,16 @@ func actionLabelFor(action string) string {
 		return "重置密码"
 	case "create_academic_year":
 		return "创建学年"
+	// 任务公开审核留痕（module=tasks）。批准会清空 PublicApprovedBy 之后，
+	// 这四条日志是唯一能回答「谁批准过、谁撤下」的记录。
+	case "approve_public":
+		return "批准公开"
+	case "revoke_public":
+		return "撤回公开"
+	case "cancel_public":
+		return "家长取消公开"
+	case "revoke_public_task":
+		return "关闭任务公开"
 	default:
 		return action
 	}

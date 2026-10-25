@@ -35,6 +35,7 @@
       "status": 1,
       "checked_in_today": false,
       "submitted_current_period": false,
+      "responded": false,
       "checkin_count": 2,
       "has_unread_supplement": false,
       "created_at": "2026-03-18T10:00:00Z"
@@ -49,6 +50,8 @@
 - `target_student_id=0` 表示班级任务；`>0` 表示个体任务。
 - `checkin_count` 是**当前孩子**的提交次数，不是全班累计。
 - `submitted_current_period`：每日=今天、每周=滚动 7 天、一次性=周期内是否已提交；前端用它显示「已提交/待完成」。
+- `responded`：本周期那条提交已被主回应关闭（`response_id > 0`）。补充回应不改变 `response_id`，不影响该值；
+  列表状态因此是「待完成 / 已提交 / 已回应」三态。
 - `has_unread_supplement`：当前孩子在该任务下存在**补充回应**，且该家长还没有读过（无读标记，或补充回应的 `created_at >= last_read_at`）。用它显示任务列表红点；打开详情后调 `POST /parent/tasks/:id/read` 清除。
 - `points` 已移除；任务不发放积分。
 
@@ -111,6 +114,8 @@
 - `requirements` 是数组，不再返回 JSON 字符串。
 - `responses` 返回当前孩子提交关联的**主回应**；`supplements` 是老师在主回应之后对**本孩子的这条提交**追加的个别补充，按创建时间升序，条数不限。
 - 补充回应只包含当前孩子提交上的那些：一条周期汇总回应可能给多个孩子各补一条，跨孩子的补充不会出现在这里。
+- `response_type`：`single`（逐条回应，只覆盖一条提交）/ `period`（周期汇总回应，一次覆盖一个周期内多条提交）。
+  两者都算「主回应」；**补充回应固定为 `single` 且只出现在 `supplements` 里**，不是主回应，也不计入主回应指标。
 - `my_reaction`：当前家长账号对该条回应的反馈，未反馈时为空串；主回应与补充回应各自一个。
 - `has_unread_supplement`：与列表同口径，按**当前孩子 + 当前家长**计算；打开详情后由前端调用 `POST /parent/tasks/:id/read` 清除。
 - `points`、`streak_days`、`my_completion_rate` 已移除。
@@ -241,6 +246,9 @@
 ```
 
 - 允许条件：任务 `allow_public=true`、**不是**个体任务（`target_student_id=0`）、任务已开始未结束且 `status=1`、提交属于 `student_id` 这个孩子且未被删除，且该任务仍属于该孩子当前班级（转班后就不能再申请原班级任务的公开）。
+- **一键完成（无文字、无媒体）不能申请公开** → **422**「这条记录没有文字、照片或语音，不能申请公开；请先补充内容」。
+  判据：`content` 去空白后为空 **且** `media_file_id=0` **且** `media_url` 为空。三者任一有值即可申请；
+  `media_url` 可能由服务端读取时生成，不能只看它。
 - 不满足 → **422**；提交不属于当前孩子（跨家庭）→ **403**；提交或任务不存在 → **404**；行锁等待超时/死锁 → **503**（可重试）。
 - 申请时**清空**旧批准与旧确认：`public_scope_confirmed=false`、`public_approved_at=null`、`public_approved_by=0`、`public_revoked_at=null`。所以「撤回/取消后再次申请」必然回到待审核，不能沿用旧批准。
 - 已处于「已批准且未撤回」状态时重复调用是**幂等空操作**：不会把已公开的内容打回待审核（`public_status=approved`）。

@@ -420,6 +420,14 @@ Content-Type: multipart/form-data
 }
 ```
 
+**字段说明（消息列表）**：
+
+- `action_path`：站内跳转路径，**只允许内部 `/pages/` 开头的路径**；空串表示该消息不可跳转。
+  任务发布与主回应消息形如 `/pages/tasks/detail?id=<task_id>&student_id=<student_id>`：
+  `id` 定位任务，`student_id` 指定进入时应选中的孩子（多孩家庭必须带上，否则会落到默认孩子）。
+  客户端必须先按下当前孩子与绑定关系校验再跳转；非 `/pages/` 开头的路径一律忽略，不得当外链打开。
+- `reference_id`：关联业务对象 id。任务发布消息为 `task_id`，主回应消息为 `response_id`。
+
 ---
 
 ### GET `/common/messages/unread-count`

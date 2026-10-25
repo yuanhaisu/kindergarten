@@ -189,6 +189,7 @@
   - `pending_count` = `submission_count - responded_count`（主回应待回应）；
   - `response_rate` = `responded_count / submission_count`，无提交 → `null`；
   - `participation_rate` = 至少有一条提交的目标孩子数 / 目标孩子数（个体任务分母 1，班级任务为班级在读学生数），无目标孩子 → `null`；
+    班级任务的分母**包含未绑定家长的学生**：参与率衡量的是班级触达面，排除未绑定会把「家长没绑小程序」藏起来；
   - 比率一律是 `"<整数>%"` 字符串且封顶 `"100%"`，无法计算时为 `null`（不是 `"0%"`）。
 - `notify_target_count`：发布时按家长去重的**通知义务集**大小；`null` = 未知（收件人查询失败或历史任务）。
   它衡量「该告诉多少家长」，不是「成功送出多少条」。
@@ -346,7 +347,7 @@
 | --- | --- | --- |
 | `total_checkins` | 区间内未删除提交数 | `0` |
 | `response_rate` | 有主回应的提交数 / 总提交数（`response_id <> 0`） | `null` |
-| `participation_rate` | 区间内**至少有一条提交的目标孩子去重数** / 范围内任务覆盖的目标孩子去重数（个体任务计 1，班级任务计班级在读学生） | `null` |
+| `participation_rate` | 区间内**至少有一条提交的目标孩子去重数** / 范围内任务覆盖的目标孩子去重数（个体任务计 1，班级任务计班级在读学生，**含未绑定家长的学生**） | `null` |
 | `pending_count` | 主回应待回应（`response_id = 0`）的提交数 | `0` |
 | `pending_over_48h` | 上述提交中 `created_at < now - 48h` 的数量 | `0` |
 | `median_response_hours` | 仅 `response_type=single` 主回应的「提交→回应」时长中位数；偶数取两中值平均，四舍五入 1 位小数 | `null` |

@@ -47,7 +47,9 @@ type taskStatsResponse struct {
 }
 
 // taskStatsReaction 家长反馈（已按 (response_id, user_id) 去重）。
+// UserID 只用于老师端「按孩子」归属，管理端汇总不需要它。
 type taskStatsReaction struct {
+	UserID   uint64
 	Reaction string
 }
 
@@ -193,7 +195,7 @@ func (s *TaskService) loadTaskStatsInput(
 				continue
 			}
 			seen[key] = struct{}{}
-			in.reactions[r.ResponseID] = append(in.reactions[r.ResponseID], taskStatsReaction{Reaction: r.Reaction})
+			in.reactions[r.ResponseID] = append(in.reactions[r.ResponseID], taskStatsReaction{UserID: r.UserID, Reaction: r.Reaction})
 		}
 	}
 
@@ -317,33 +319,61 @@ func (in *taskStatsInput) metrics(b *taskStatsBucket, now time.Time) taskStatsMe
 		responseIDs = append(responseIDs, id)
 	}
 	sort.Slice(responseIDs, func(i, j int) bool { return responseIDs[i] < responseIDs[j] })
-	den, pairs, happy, ack := 0, 0, 0, 0
-	for _, id := range responseIDs {
-		r, ok := in.responses[id]
+	totals := taskFeedbackTotalsOf(responseIDs, in.responses, in.reactions)
+	m.NotifyBaselineMissing = totals.BaselineMissing
+	m.FeedbackCoverage = taskStatRate(totals.Pairs, totals.Denominator)
+	m.ChildHappyRate = taskStatRate(totals.Happy, totals.Denominator)
+	m.AckRate = taskStatRate(totals.Ack(), totals.Denominator)
+	return m
+}
+
+// taskFeedbackTotals 是按 (回应, 家长) 对聚合出来的反馈总量。
+//
+// 这是反馈口径的**唯一实现**：管理端 7.2 统计与老师端 3.11 任务汇总共用，
+// 避免「管理端算义务集、老师端算反馈行」这类漂移。
+type taskFeedbackTotals struct {
+	Denominator     int // 被引用的主回应所承诺的义务家长数（notify_target_count 之和）
+	Pairs           int // 去重后的 (回应, 家长) 反馈对数
+	Happy           int // child_happy
+	Received        int // received
+	Thanks          int // thanks
+	BaselineMissing int // notify_target_count 为 NULL 的回应数（未知义务，排除并计数）
+}
+
+// Ack 是家长确认（received + thanks），与孩子感知信号分开。
+func (t taskFeedbackTotals) Ack() int { return t.Received + t.Thanks }
+
+func taskFeedbackTotalsOf(
+	referenced []uint64,
+	responses map[uint64]taskStatsResponse,
+	reactions map[uint64][]taskStatsReaction,
+) taskFeedbackTotals {
+	var out taskFeedbackTotals
+	for _, id := range referenced {
+		r, ok := responses[id]
 		if !ok {
 			// 回应已删：既没有分母也没有「已反馈」，整条跳过。
 			continue
 		}
 		if r.NotifyTargetCount == nil {
 			// 未知义务：排除并计数，不能当 0（否则这个回应会拖低整体覆盖率）。
-			m.NotifyBaselineMissing++
+			out.BaselineMissing++
 			continue
 		}
-		den += *r.NotifyTargetCount
-		for _, rc := range in.reactions[id] {
-			pairs++
+		out.Denominator += *r.NotifyTargetCount
+		for _, rc := range reactions[id] {
+			out.Pairs++
 			switch rc.Reaction {
 			case domain.TaskReactionChildHappy:
-				happy++
-			case domain.TaskReactionReceived, domain.TaskReactionThanks:
-				ack++
+				out.Happy++
+			case domain.TaskReactionReceived:
+				out.Received++
+			case domain.TaskReactionThanks:
+				out.Thanks++
 			}
 		}
 	}
-	m.FeedbackCoverage = taskStatRate(pairs, den)
-	m.ChildHappyRate = taskStatRate(happy, den)
-	m.AckRate = taskStatRate(ack, den)
-	return m
+	return out
 }
 
 // taskStatRate 整数分子/分母 → "NN%"，封顶 100%；分母 <= 0 返回 nil。

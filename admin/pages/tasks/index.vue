@@ -893,6 +893,18 @@ async function submitForm() {
     if (!ok) return
   }
 
+  // tasks 2.10：结束任务是破坏性状态变更（家长端立即不再展示），必须二次确认。
+  // 只在「进行中 → 已结束」时询问，重复保存已结束任务不打扰管理员。
+  if (
+    mode.value === 'edit-task' &&
+    formBaseline.value &&
+    taskStatus.value === 0 &&
+    formBaseline.value.status !== 0
+  ) {
+    const ok = await confirmEndTask('该任务')
+    if (!ok) return
+  }
+
   const [startDate, endDate] = form.date_range
   // 基础字段里除 description / allow_public 外都是后端 required，必须回传（值未参与编辑）
   const base = {
@@ -959,6 +971,11 @@ async function submitActivityEdit() {
     const ok = await confirmRevokePublic()
     if (!ok) return
   }
+  // 活动整组结束同样是破坏性变更，需要一次显式确认（tasks 2.10）。
+  if (activityStatus.value === 0 && originalActivityStatus.value !== 0) {
+    const ok = await confirmEndTask('该活动下所有班级')
+    if (!ok) return
+  }
   saving.value = true
   try {
     // 活动端点只接受安全字段 + status；结构位一律不发（后端对非空结构字段 422）。
@@ -995,6 +1012,20 @@ async function confirmRevokePublic(): Promise<boolean> {  try {
       '关闭公开后，该任务已公开的内容将全部撤下，公开墙上不再可见。确定继续？',
       '关闭公开',
       { type: 'warning', confirmButtonText: '关闭并撤下', cancelButtonText: '取消' },
+    )
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** 结束任务（status=0）的二次确认：取消时整个保存中止，不写任何字段。 */
+async function confirmEndTask(scope: string): Promise<boolean> {
+  try {
+    await ElMessageBox.confirm(
+      `${scope}结束后家长端不再展示，已公开内容也会随任务下线。确定结束？`,
+      '结束任务',
+      { type: 'warning', confirmButtonText: '结束任务', cancelButtonText: '取消' },
     )
     return true
   } catch {

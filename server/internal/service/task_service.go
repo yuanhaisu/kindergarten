@@ -772,7 +772,11 @@ func (s *TaskService) UpdateTask(
 		}
 		becameIndividual := targetStudentID > 0 && cur.TargetStudentID == 0
 		if becameIndividual || (cur.AllowPublic && !effectiveAllowPublic) {
-			return revokePublicForTask(ctx, tx, taskID)
+			reason := "allow_public_off"
+			if becameIndividual {
+				reason = "became_individual"
+			}
+			return revokePublicForTask(ctx, tx, kindergartenID, adminUserID, taskID, reason)
 		}
 		return nil
 	})

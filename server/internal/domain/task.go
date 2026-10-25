@@ -49,7 +49,6 @@ type ParentTask struct {
 	Description       string        `json:"description" gorm:"type:text"`
 	Intro             string        `json:"intro" gorm:"type:text;comment:任务详细介绍"`
 	Requirements      string        `json:"requirements" gorm:"type:text;comment:JSON数组-任务要求"`
-	Rewards           string        `json:"rewards" gorm:"type:text;comment:JSON数组-奖励"`
 	LearningLink      string        `json:"learning_link" gorm:"type:text;comment:和幼儿园学习的关系"`
 	Frequency         TaskFrequency `json:"frequency" gorm:"size:20;not null"`
 	StartDate         time.Time     `json:"start_date" gorm:"type:date;not null"`

@@ -3,6 +3,7 @@ import { ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin, toLoginError } from "@/utils/login"
 import { getToken } from "@/utils/auth"
+import { resumePendingRoute } from "@/utils/pendingRoute"
 import AppCard from "@/components/AppCard.vue"
 import AppButton from "@/components/AppButton.vue"
 import BrandBlock from "@/components/BrandBlock.vue"
@@ -29,7 +30,8 @@ async function handleLogin() {
     await ensureLogin()
     uni.showToast({ title: "登录成功", icon: "success" })
     setTimeout(() => {
-      uni.reLaunch({ url: "/pages/index/index" })
+      // 从深链/401 过来时优先回到原页面；没有保留路径才回首页。
+      if (!resumePendingRoute()) uni.reLaunch({ url: "/pages/index/index" })
     }, 800)
   } catch (err) {
     // 不再用 toast —— 1.5 秒就消失，失败原因读不到，也没有第二次机会。
@@ -41,9 +43,9 @@ async function handleLogin() {
 }
 
 onLoad(() => {
-  // 已登录则直接进入首页，不在登录页停留
+  // 已登录则直接离开登录页，不在登录页停留；有保留路径先回跳。
   if (getToken()) {
-    uni.reLaunch({ url: "/pages/index/index" })
+    if (!resumePendingRoute()) uni.reLaunch({ url: "/pages/index/index" })
   }
 })
 </script>

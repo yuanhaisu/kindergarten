@@ -1,7 +1,23 @@
 import config from "@/config/env"
 import { clearAuth, getToken } from "@/utils/auth"
+import { rememberPendingRoute } from "@/utils/pendingRoute"
 
 const SUCCESS_CODE = 0
+
+// 401 发生在哪个页面，就把那个页面（含 query）记下来，登录后回跳。
+// 深链尤其重要：从消息点进任务详情时 token 过期，不能把用户丢回首页。
+function currentRoutePath() {
+  try {
+    const pages = getCurrentPages()
+    const page = pages[pages.length - 1]
+    if (!page || !page.route) return ""
+    const opts = page.options || {}
+    const qs = Object.keys(opts).map((k) => `${k}=${opts[k]}`).join("&")
+    return `/${page.route}${qs ? `?${qs}` : ""}`
+  } catch (e) {
+    return ""
+  }
+}
 
 function normalizeResponse(body) {
   if (typeof body?.code === "number") return body
@@ -42,6 +58,7 @@ function request({ url, method = "GET", data, header = {}, auth = false, silent 
 
         if (res.statusCode === 401) {
           clearAuth()
+          rememberPendingRoute(currentRoutePath())
           uni.reLaunch({ url: "/pages/auth/login" })
           reject(body)
           return

@@ -43,13 +43,14 @@ func (h *Handler) parentTaskCtx(c *gin.Context) (*service.ParentPortalContext, b
 		response.ErrValidation(c, "无效的 student_id")
 		return nil, false
 	}
-	pc, err := h.parentPortalSvc.ResolveContext(c.Request.Context(), middleware.GetUserID(c), middleware.GetKindergartenID(c), &sid)
+	pc, err := h.parentPortalSvc.ResolveTaskContext(
+		c.Request.Context(), middleware.GetUserID(c), middleware.GetKindergartenID(c), sid)
 	if err != nil {
-		response.ErrForbidden(c, "未绑定孩子信息,请联系管理员")
-		return nil, false
-	}
-	if pc.CurrentStudent == nil || pc.CurrentStudent.ID != sid {
-		response.ErrForbidden(c, "无权查看该孩子的任务")
+		if errors.Is(err, service.ErrParentForbidden) {
+			response.ErrForbidden(c, "无权查看该孩子的任务")
+		} else {
+			response.ErrForbidden(c, "未绑定孩子信息,请联系管理员")
+		}
 		return nil, false
 	}
 	return pc, true
@@ -783,6 +784,8 @@ func parentPublicErr(c *gin.Context, err error, fallback string) {
 		response.ErrValidation(c, "请求参数无效")
 	case errors.Is(err, service.ErrTaskPublicNotAllowed):
 		response.ErrValidation(c, "该任务不支持公开：请确认任务已开启公开、不是个体任务、仍在进行中，且仍属于孩子当前班级")
+	case errors.Is(err, service.ErrTaskPublicEmptyContent):
+		response.ErrValidation(c, "这条记录没有文字、照片或语音，不能申请公开；请先补充内容")
 	case errors.Is(err, service.ErrTaskBusy):
 		response.ErrUnavailable(c, "操作冲突，请稍后重试")
 	default:

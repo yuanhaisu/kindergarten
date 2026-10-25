@@ -7,6 +7,7 @@
           <el-option label="学生" value="student" />
           <el-option label="老师" value="teacher" />
           <el-option label="家长" value="parent" />
+          <el-option label="任务" value="task" />
           <el-option label="系统" value="system" />
         </el-select>
       </div>

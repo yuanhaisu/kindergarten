@@ -24,6 +24,7 @@
 - `PUT /teacher/tasks/:id`
 - `DELETE /teacher/tasks/:id`
 - `GET /teacher/tasks/:id/stats`
+- `GET /teacher/tasks/:id/feedback-summary`
 - `GET /teacher/tasks/:id/checkins`
 - `POST /teacher/tasks/:id/checkins/:checkin_id/response`
 - `POST /teacher/tasks/:id/checkins/:checkin_id/supplement`
@@ -332,6 +333,40 @@
 
 - 不再返回 `checkin_count` / `not_checkin_count` / `total_points_awarded`。
 
+### GET `/teacher/tasks/:id/feedback-summary`
+
+老师端反馈汇总。口径与管理端 `GET /admin/tasks/stats` 的
+`feedback_coverage` / `child_happy_rate` / `ack_rate` **完全一致**，不是另一套公式：
+
+- 分母 = 被本任务提交引用的**主回应**所承诺的义务家长数之和
+  （`task_responses.notify_target_count`：先写义务再投递，含通知失败）；
+- 分子 = 去重后的 `(回应, 家长)` 反馈对；补充回应不被任何提交引用，其反馈不计入；
+- `notify_target_count` 为 NULL（未知义务）的回应整条排除，并在
+  `notify_baseline_missing` 计数；不能当 0，否则会把整体覆盖率拖低；
+- 比率是 `"NN%"` 且封顶 100%；分母为 0 时是 `null`，不是 `"0%"`。
+
+```json
+{
+  "task_id": 1,
+  "feedback_coverage": "50%",
+  "child_happy_rate": "50%",
+  "ack_rate": "0%",
+  "feedback_counts": { "pairs": 1, "child_happy": 1, "received": 0, "thanks": 0 },
+  "notify_baseline_missing": 0,
+  "unattributed_feedback": 0,
+  "children": [
+    { "student_id": 11, "student_name": "王小明", "child_happy": 1, "received": 0, "thanks": 0 }
+  ]
+}
+```
+
+- `children` 覆盖本任务**有提交**的每个孩子（无反馈时计数为 0），按 `student_id` 升序。
+- 归属规则：反馈计入同一条回应覆盖的孩子，满足其一即可 —— 该孩子那条提交的提交人
+  就是反馈人，或反馈人与该孩子有 `student_parents` 绑定（co-parent）。一条反馈命中
+  同一家长的多个孩子时按孩子各计一次；**总量仍按 `(回应, 家长)` 对只计一次**。
+- 两者都不命中的反馈计入 `unattributed_feedback`（可观测，不静默丢弃）。
+- 任务不属于当前老师班级/园所 → **404**。不返回家长身份信息，不提供评分或排名。
+
 ### GET `/teacher/tasks/:id/checkins`
 
 ```json
@@ -364,11 +399,14 @@
 - `status=pending` 由后端按 `created_at ASC` 排序。
 - `public_status`：`none` / `pending` / `approved` / `revoked`，供审核徽标与筛选使用。
 - `response_id > 0` 时额外返回 `response` 对象（`id` / `ritual` / `sticker_key` / `content` / `media_url` / `response_type` / `created_at`）。
+  `response_type`：`single` = 逐条回应（只覆盖一条提交）；`period` = 周期汇总回应（一次覆盖一个周期内的多条提交）。
+  两者都是主回应；**补充回应固定 `single` 且只出现在 `supplements`**，不改变 `response_id`，也不计入主回应指标。
 - `supplements`：该提交上追加的补充回应，**始终是数组**（空数组而非 `null`），按 `created_at ASC, id ASC`。
   每项形状 `{ id, checkin_id, ritual, sticker_key, content, media_url, created_at }`；`ritual` 只会是 `sticker` / `voice`。
   只返回未删除的关系行/提交/回应。老师端用它显示「已补充 N 条」，避免下次进入以为没补过而重复追加。
   **读取补充回应失败时整个 checkins 请求失败**（不返回空数组）：`[]` 只能表示「确实没补过」。
 - 不返回 `points`。
+- **任务结束后仍可回看**：本端点不按任务有效期过滤，任务 `status=0` 或已过 `end_date` 时老师仍能读取提交与回应，用于事后复盘；**不提供导出**（产品决定 2026-10-25，见 `tasks.md` 4.6 注记）。
 
 ### POST `/teacher/tasks/:id/checkins/:checkin_id/response`
 

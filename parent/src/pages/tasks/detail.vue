@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 import { onLoad, onUnload } from "@dcloudio/uni-app"
 import { getCurrentStudentId, setCurrentStudentId } from "@/utils/currentStudent"
+import { parseSceneTaskId } from "@/utils/taskScene"
 import { fetchParentHomeOverview, switchStudent } from "@/api/parent-home"
 import { ensureLogin } from "@/utils/login"
 import { getToken } from "@/utils/auth"
@@ -70,19 +71,6 @@ let audio = null
 const childMismatch = computed(() =>
   !!linkedStudentId.value && !!currentSid.value && linkedStudentId.value !== currentSid.value
 )
-
-// 小程序码 scene 形如 `t=123`，可能被 URL 编码成 `t%3D123`（或整串被编码一次）。
-function parseSceneTaskId(scene) {
-  if (!scene) return 0
-  let raw = String(scene)
-  try {
-    raw = decodeURIComponent(raw)
-  } catch (e) {
-    // 非法编码就按原样解析，不要因此吞掉整个入口
-  }
-  const m = raw.match(/(?:^|&)t=(\d+)/)
-  return m ? Number(m[1]) : 0
-}
 
 function ritualLabel(ritual) {
   return RITUAL_LABELS[ritual] || "回应"

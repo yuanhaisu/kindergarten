@@ -2,6 +2,8 @@
 import { ref } from "vue"
 import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { getToken } from "@/utils/auth"
+import { rememberPendingRoute } from "@/utils/pendingRoute"
 import { fetchMessages, fetchUnreadCount, markMessageRead } from "@/api/parent-messages"
 
 const messages = ref([])
@@ -39,8 +41,15 @@ function markRead(item) {
 
 function openMessage(item) {
   if (!item) return
-  markRead(item)
   const path = item.action_path
+  // 没有 token 时先把目标路径存下来：http.js 的 401 会把当前页（消息页）记成回跳目标，
+  // 那是「从哪掉线回哪恢复」，不是用户想去的任务详情。
+  if (!getToken()) {
+    if (isInternalPath(path)) rememberPendingRoute(path)
+    uni.reLaunch({ url: "/pages/auth/login" })
+    return
+  }
+  markRead(item)
   if (!isInternalPath(path)) return
   const pathname = path.split("?")[0]
   if (TAB_PAGES.indexOf(pathname) !== -1) {

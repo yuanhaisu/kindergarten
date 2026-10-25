@@ -13,7 +13,7 @@
 | 3 | [03-leave.md](03-leave.md) | 请假 | 5 |
 | 4 | [04-growth.md](04-growth.md) | 成长时光 | 8 |
 | 5 | [05-pickup.md](05-pickup.md) | 接送管理 | 6 |
-| 6 | [06-task.md](06-task.md) | 亲子任务 | 4 |
+| 6 | [06-task.md](06-task.md) | 亲子任务 | 9 |
 | 7 | [07-points.md](07-points.md) | 积分与成就 | 4 |
 | 8 | [08-class.md](08-class.md) | 班级 | 2 |
 | 9 | [09-student.md](09-student.md) | 学生管理 | 5 |
@@ -33,7 +33,7 @@
 | 评论详情页 / 写评论弹窗 | 04-growth（comments） |
 | 接送授权页 | 05-pickup（records / authorized-persons） |
 | 添加授权页 | 05-pickup（POST authorized-persons） |
-| 亲子任务页 | 06-task + 07-points |
+| 亲子任务页 | 06-task（任务流程不发积分，页面不再关联 07-points） |
 | 亲子任务详情页 | 06-task（detail / checkin） |
 | 班级日历页 | 08-class（calendar） |
 | 联系老师页 | 08-class（info） |
