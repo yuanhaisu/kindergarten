@@ -58,47 +58,59 @@ function isTokenRpxValue(rpxVal, propName) {
   return TOKEN_RPX_BY_PROP.spacing.has(rpxVal);
 }
 
-// Token color → suggested replacement (used for helpful messages)
-const COLOR_TO_TOKEN = new Map([
-  // Shared text colors
-  ['#1E293B', '$color-text-primary'],
-  ['#334155', '$color-text-body'],
-  ['#64748B', '$color-text-muted'],
-  ['#94A3B8', '$color-text-hint'],
-  // Shared semantic colors
-  ['#16A34A', '$color-semantic-success'],
-  ['#DCFCE7', '$color-semantic-success-bg'],
-  ['#CA8A04', '$color-semantic-warning'],
-  ['#FEF9C3', '$color-semantic-warning-bg'],
-  ['#EF4444', '$color-semantic-danger'],
-  ['#FEE2E2', '$color-semantic-danger-bg'],
-  ['#2563EB', '$color-semantic-info'],
-  ['#DBEAFE', '$color-semantic-info-bg'],
-  // Brand colors — teacher
-  ['#ff8a3d', '$color-brand-primary (teacher)'],
-  ['#ffa866', '$color-brand-primary-light (teacher)'],
-  ['#e6762a', '$color-brand-primary-dark (teacher)'],
-  ['#fff7f0', '$color-brand-primary-bg (teacher)'],
-  ['#f7f3ea', '$color-bg-page (teacher)'],
-  ['#fffaf0', '$color-bg-card (teacher)'],
-  // Brand colors — parent
-  ['#F97316', '$color-brand-primary (parent)'],
-  ['#FB923C', '$color-brand-primary-light (parent)'],
-  ['#EA580C', '$color-brand-primary-dark (parent)'],
-  ['#FFF7ED', '$color-brand-primary-bg (parent)'],
-  ['#F8FAFC', '$color-bg-page (parent)'],
-  ['#FFFFFF', '$color-bg-card (parent)'],
-  // Brand colors — admin
-  ['#3B82F6', '$color-brand-primary (admin)'],
-  ['#60A5FA', '$color-brand-primary-light (admin)'],
-  ['#1D4ED8', '$color-brand-primary-dark (admin)'],
-  ['#EFF6FF', '$color-brand-primary-bg (admin)'],
-  ['#F1F5F9', '$color-bg-page (admin)'],
-  // Close matches (common tailwind aliases that appear in code)
+// Values that are only *close* to a token. They stay hand-listed because no
+// single token owns them; everything else is derived from tokens.json below.
+const CLOSE_MATCH_ALIASES = new Map([
   ['#10B981', '$color-semantic-success (close match)'],
   ['#22C55E', '$color-semantic-success (close match)'],
   ['#F59E0B', '$color-semantic-warning (close match)'],
 ]);
+
+// Token color → suggested replacement (used for helpful messages).
+//
+// Derived from tokens.json at startup — do NOT hand-maintain this again. The
+// previous literal map silently drifted from the token source: it was missing
+// `border.hairline` (#CBD5E1), so every correct use of the border token was
+// reported as "No matching token". Adding a token now teaches the checker
+// about it automatically.
+const COLOR_TO_TOKEN = buildColorTokenMap();
+
+function buildColorTokenMap() {
+  const map = new Map();
+  let tokens;
+  try {
+    tokens = JSON.parse(readFileSafe(join(ROOT, 'shared-design-tokens', 'tokens.json')));
+  } catch {
+    // Unreadable tokens.json — hints degrade to "No matching token" rather
+    // than crashing the scan.
+    return map;
+  }
+
+  const ENDS = new Set(['teacher', 'parent', 'admin']);
+
+  // style-dictionary emits kebab-case: `successBg` -> `$color-semantic-success-bg`.
+  // Hints must match the generated variable exactly, or copy-paste fails.
+  const kebab = (s) => s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+
+  // Path arrives as e.g. ['shared', 'color', 'border', 'hairline'].
+  const walk = (node, path) => {
+    if (!node || typeof node !== 'object') return;
+    const raw = node.value;
+    if (typeof raw === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(raw.trim())) {
+      const key = normalizeHex(raw.trim());
+      if (map.has(key)) return; // first occurrence wins; shared scope comes first
+      const [scope, ...rest] = path;
+      const varName = `$${rest.map(kebab).join('-')}`;
+      map.set(key, ENDS.has(scope) ? `${varName} (${scope})` : varName);
+      return;
+    }
+    for (const [k, v] of Object.entries(node)) walk(v, [...path, k]);
+  };
+
+  for (const [scope, body] of Object.entries(tokens)) walk(body, [scope]);
+  for (const [k, v] of CLOSE_MATCH_ALIASES) if (!map.has(k)) map.set(k, v);
+  return map;
+}
 
 // Track statistics
 let violations = 0;

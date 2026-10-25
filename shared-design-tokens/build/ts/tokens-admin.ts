@@ -10,16 +10,29 @@ export default {
     },
     "semantic": {
       "success": "#16A34A",
+      "successStrong": "#166534",
       "successBg": "#DCFCE7",
+      "successBgSubtle": "#F0FDF4",
+      "successBorder": "#BBF7D0",
       "warning": "#CA8A04",
+      "warningStrong": "#92400E",
       "warningBg": "#FEF9C3",
       "danger": "#EF4444",
+      "dangerStrong": "#991B1B",
       "dangerBg": "#FEE2E2",
+      "dangerBgSubtle": "#FEF2F2",
+      "dangerBorder": "#FECACA",
       "info": "#2563EB",
-      "infoBg": "#DBEAFE"
+      "infoBg": "#DBEAFE",
+      "infoBorder": "#BFDBFE"
     },
     "border": {
-      "hairline": "#CBD5E1"
+      "hairline": "#CBD5E1",
+      "subtle": "#E2E8F0"
+    },
+    "accent": {
+      "purple": "#9333EA",
+      "purpleBg": "#F3E8FF"
     },
     "brand": {
       "primary": "#3B82F6",
