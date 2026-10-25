@@ -24,15 +24,17 @@ const todayDate = computed(() => {
   return `${y}年${m}月${d}日 ${weekdays[now.getDay()]}`
 })
 
+// 图标改为品牌插画位图（统一暖橙渐变，消除原先 8 个入口 8 种颜色的「彩虹」）。
+// 位图不随主题换色，故所有入口共用同一套图标；语义区分交给图形本身。
 const quickActions = [
-  { title: "发布通知", icon: "通", bg: "#DBEAFE", fg: "#3B82F6", path: "/pages/notice/create" },
-  { title: "成长记录", icon: "录", bg: "#DCFCE7", fg: "#22C55E", path: "/pages/growth/index" },
-  { title: "接送管理", icon: "接", bg: "#FFEDD5", fg: "#F97316", path: "/pages/pickup/index" },
-  { title: "亲子任务", icon: "任", bg: "#F3E8FF", fg: "#A855F7", path: "/pages/tasks/index" },
-  { title: "班级日历", icon: "历", bg: "#CFFAFE", fg: "#06B6D4", path: "/pages/calendar/index" },
-  { title: "请假审批", icon: "审", bg: "#FEF9C3", fg: "#CA8A04", path: "/pages/leave/index" },
-  { title: "班级相册", icon: "册", bg: "#FCE7F3", fg: "#EC4899", path: "/pages/album/index" },
-  { title: "更多", icon: "更", bg: "#F1F5F9", fg: "#64748B", path: "/pages/more/index" }
+  { title: "发布通知", img: "/static/icons/notice.png", path: "/pages/notice/create" },
+  { title: "成长记录", img: "/static/icons/growth.png", path: "/pages/growth/index" },
+  { title: "接送管理", img: "/static/icons/pickup.png", path: "/pages/pickup/index" },
+  { title: "亲子任务", img: "/static/icons/task.png", path: "/pages/tasks/index" },
+  { title: "班级日历", img: "/static/icons/calendar.png", path: "/pages/calendar/index" },
+  { title: "请假审批", img: "/static/icons/leave.png", path: "/pages/leave/index" },
+  { title: "班级相册", img: "/static/icons/album.png", path: "/pages/album/index" },
+  { title: "更多", img: "/static/icons/more.png", path: "/pages/more/index" }
 ]
 
 const todoIconMap = {
@@ -203,8 +205,8 @@ onShareAppMessage((res) => {
           class="feature-item"
           @click="handleAction(action)"
         >
-          <view class="feature-icon-box" :style="{ backgroundColor: action.bg }">
-            <text class="feature-icon" :style="{ color: action.fg }">{{ action.icon }}</text>
+          <view class="feature-icon-box">
+            <image class="feature-icon-img" :src="action.img" mode="aspectFit" />
           </view>
           <text class="feature-label">{{ action.title }}</text>
         </view>
@@ -467,11 +469,13 @@ onShareAppMessage((res) => {
   width: 112rpx;
   height: 112rpx;
   border-radius: $border-radius-xl;
+  // 入口底色统一为品牌浅底，不再每个入口一种颜色
+  background: $color-brand-primary-bg;
 }
 
-.feature-icon {
-  font-size: 46rpx;
-  font-weight: 700;
+.feature-icon-img {
+  width: 100rpx;
+  height: 100rpx;
 }
 
 .feature-label {
