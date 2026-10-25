@@ -211,7 +211,9 @@ onPullDownRefresh(loadClass)
 
 .page { min-height: 100vh; background: $color-bg-page; display: flex; flex-direction: column; box-sizing: border-box; overflow-x: hidden; }
 
-.header { background: linear-gradient(135deg, $color-semantic-info 0%, $color-semantic-info 100%); padding: 96rpx 48rpx 48rpx; box-sizing: border-box; width: 100%; }
+// 头部用品牌渐变。此前误用 semantic-info（纯蓝），让本页与首页的暖橙头部
+// 判若两个应用，且违反 Front-Back Rule。
+.header { background: $gradient-brand; padding: 96rpx 48rpx 48rpx; box-sizing: border-box; width: 100%; }
 .header-top { display: flex; align-items: center; justify-content: space-between; }
 .class-title-row { display: flex; align-items: center; gap: $spacing-lg; }
 .class-icon-box { width: 96rpx; height: 96rpx; border-radius: $border-radius-full; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }

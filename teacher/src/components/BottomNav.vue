@@ -75,8 +75,10 @@ function onTab(tab, index) {
   color: $color-text-hint;
 }
 
+// 选中态用品牌色。此前误用 semantic-info，导致老师端（暖橙）的底部导航
+// 出现蓝色选中，违反 DESIGN.md 的 Front-Back Rule；家长端同位置是橙色。
 .active-icon {
-  color: $color-semantic-info;
+  color: $color-brand-primary;
 }
 
 .nav-label {
@@ -85,7 +87,7 @@ function onTab(tab, index) {
 }
 
 .active-label {
-  color: $color-semantic-info;
+  color: $color-brand-primary;
   font-weight: 600;
 }
 
