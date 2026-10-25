@@ -214,7 +214,7 @@ onPullDownRefresh(loadLeaves)
   padding: 40rpx 32rpx;
   border-radius: $border-radius-xl;
   background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4rpx 16rpx rgba(120, 53, 15, 0.05);
   margin-bottom: 32rpx;
 }
 
@@ -278,7 +278,7 @@ onPullDownRefresh(loadLeaves)
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
   background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4rpx 16rpx rgba(120, 53, 15, 0.05);
 }
 
 .leave-header {

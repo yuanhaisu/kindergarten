@@ -620,7 +620,7 @@ onShareAppMessage((res) => {
   margin: 0 auto;
   padding: $spacing-lg 46rpx calc(24rpx + env(safe-area-inset-bottom));
   background: #fff;
-  box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2rpx 20rpx rgba(120, 53, 15, 0.06);
 }
 
 .nav-item {

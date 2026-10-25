@@ -192,7 +192,7 @@ onPullDownRefresh(loadAlbums)
   padding: $spacing-xl;
   border-radius: $border-radius-xl;
   background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4rpx 16rpx rgba(120, 53, 15, 0.05);
   margin-bottom: $spacing-lg;
 }
 
@@ -273,7 +273,7 @@ onPullDownRefresh(loadAlbums)
   padding: $spacing-md 36rpx;
   border-radius: $border-radius-full;
   background: #fff;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2rpx 8rpx rgba(120, 53, 15, 0.04);
 
   text {
     font-size: $typography-font-size-base;
@@ -311,7 +311,7 @@ onPullDownRefresh(loadAlbums)
 .album-card {
   border-radius: $border-radius-xl;
   background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4rpx 16rpx rgba(120, 53, 15, 0.05);
   overflow: hidden;
 }
 

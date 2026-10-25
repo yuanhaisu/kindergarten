@@ -283,7 +283,7 @@ onReachBottom(loadMore)
   padding: 28rpx 32rpx;
   display: flex;
   gap: $spacing-lg;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2rpx 8rpx rgba(120, 53, 15, 0.04);
   margin-bottom: 20rpx;
   box-sizing: border-box;
   width: 100%;

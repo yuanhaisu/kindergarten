@@ -376,7 +376,7 @@ onLoad(() => { loadQueue() })
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: $spacing-lg 28rpx 120rpx; background: #f5f5f5; }
+.page { min-height: 100vh; padding: $spacing-lg 28rpx 120rpx; background: $color-bg-page; }
 .stats-bar { display: flex; justify-content: space-around; padding: 28rpx 0; background: #fff; border-radius: 20rpx; margin-bottom: 20rpx; }
 .stat { text-align: center; }
 .stat-num { display: block; font-size: 44rpx; font-weight: 800; color: #333; }

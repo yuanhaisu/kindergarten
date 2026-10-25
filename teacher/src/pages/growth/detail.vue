@@ -1128,7 +1128,7 @@ $slate-600: #475569;
   gap: $spacing-lg;
   padding: $spacing-md 48rpx calc(16rpx + env(safe-area-inset-bottom));
   background: #fff;
-  box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -2rpx 20rpx rgba(120, 53, 15, 0.04);
 }
 
 .input-box {

@@ -282,7 +282,7 @@ async function submit() {
   padding: $spacing-xl;
   background: #ffffff;
   border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
+  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
 }
 .card-title {
   display: block;

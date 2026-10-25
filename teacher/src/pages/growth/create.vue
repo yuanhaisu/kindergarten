@@ -933,7 +933,7 @@ async function loadPerformanceTags() {
   background: $color-bg-card;
   border: 1rpx solid $color-bg-page;
   border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
+  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
 }
 .card-header {
   display: flex;
@@ -990,7 +990,7 @@ async function loadPerformanceTags() {
   background: $color-bg-card;
   border: 1rpx solid $color-bg-page;
   border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
+  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
 }
 .media-grid {
   display: flex;
@@ -1250,7 +1250,7 @@ async function loadPerformanceTags() {
   background: $color-bg-card;
   border: 1rpx solid $color-bg-page;
   border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.05);
+  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
 }
 .content-area {
   width: 100%;

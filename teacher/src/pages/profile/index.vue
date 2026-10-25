@@ -303,7 +303,7 @@ onLoad(() => {
   padding: 38rpx;
   border-radius: 31rpx;
   background: #fff;
-  box-shadow: 0 4rpx 23rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4rpx 23rpx rgba(120, 53, 15, 0.06);
 }
 
 .stat-item {
@@ -340,7 +340,7 @@ onLoad(() => {
   margin: 0 46rpx;
   border-radius: 31rpx;
   background: #fff;
-  box-shadow: 0 4rpx 23rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4rpx 23rpx rgba(120, 53, 15, 0.06);
   overflow: hidden;
 }
 
@@ -405,7 +405,7 @@ onLoad(() => {
   padding: 27rpx 0;
   border-radius: 31rpx;
   background: #fff;
-  box-shadow: 0 4rpx 23rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4rpx 23rpx rgba(120, 53, 15, 0.06);
 }
 
 .logout-icon {
@@ -438,7 +438,7 @@ onLoad(() => {
   margin: 0 auto;
   padding: 23rpx 46rpx calc(23rpx + env(safe-area-inset-bottom));
   background: #fff;
-  box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2rpx 20rpx rgba(120, 53, 15, 0.06);
 }
 
 .nav-item {

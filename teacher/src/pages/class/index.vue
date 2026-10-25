@@ -228,7 +228,7 @@ onPullDownRefresh(loadClass)
 
 .content-scroll { flex: 1; padding: $spacing-lg 28rpx; height: 0; box-sizing: border-box; width: 100%; }
 
-.info-card { background: #fff; border-radius: $border-radius-xl; padding: $spacing-xl; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.05); margin-bottom: $spacing-lg; box-sizing: border-box; width: 100%; }
+.info-card { background: #fff; border-radius: $border-radius-xl; padding: $spacing-xl; box-shadow: 0 4rpx 16rpx rgba(120, 53, 15, 0.05); margin-bottom: $spacing-lg; box-sizing: border-box; width: 100%; }
 .info-head { display: flex; align-items: center; gap: $spacing-lg; }
 .info-school-icon { width: 88rpx; height: 88rpx; border-radius: $border-radius-xl; background: #F1F5F9; display: flex; align-items: center; justify-content: center; }
 .info-school-icon-text { font-size: 48rpx; color: $color-text-muted; }
@@ -253,7 +253,7 @@ onPullDownRefresh(loadClass)
 .section-date { font-size: $typography-font-size-sm; color: $color-text-hint; }
 
 .snapshot-row { display: flex; gap: 20rpx; }
-.snap-item { flex: 1; background: #fff; border-radius: $border-radius-xl; padding: $spacing-lg 0; display: flex; flex-direction: column; align-items: center; gap: 4rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.snap-item { flex: 1; background: #fff; border-radius: $border-radius-xl; padding: $spacing-lg 0; display: flex; flex-direction: column; align-items: center; gap: 4rpx; box-shadow: 0 2rpx 8rpx rgba(120, 53, 15, 0.04); }
 .snap-num { font-size: 52rpx; font-weight: 800; }
 .snap-num.green  { color: $color-semantic-success; }
 .snap-num.yellow { color: #EAB308; }
@@ -263,14 +263,14 @@ onPullDownRefresh(loadClass)
 .snap-label { font-size: $typography-font-size-sm; color: $color-text-muted; font-weight: 500; }
 
 .quick-row { display: flex; gap: 20rpx; margin-bottom: $spacing-lg; }
-.quick-btn { flex: 1; background: #fff; border-radius: $border-radius-xl; padding: 28rpx 0; display: flex; flex-direction: column; align-items: center; gap: $spacing-xs; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.quick-btn { flex: 1; background: #fff; border-radius: $border-radius-xl; padding: 28rpx 0; display: flex; flex-direction: column; align-items: center; gap: $spacing-xs; box-shadow: 0 2rpx 8rpx rgba(120, 53, 15, 0.04); }
 .quick-icon { font-size: 44rpx; color: $color-semantic-info; }
 .quick-label { font-size: $typography-font-size-base; color: $color-text-primary; font-weight: 500; }
 
 .sub-title-row { margin-bottom: $spacing-md; }
 .sub-title { font-size: $typography-font-size-md; font-weight: 600; color: $color-text-primary; }
 
-.notice-card { background: #fff; border-radius: $border-radius-xl; padding: $spacing-lg 28rpx; display: flex; align-items: center; gap: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); margin-bottom: $spacing-md; }
+.notice-card { background: #fff; border-radius: $border-radius-xl; padding: $spacing-lg 28rpx; display: flex; align-items: center; gap: 20rpx; box-shadow: 0 2rpx 8rpx rgba(120, 53, 15, 0.04); margin-bottom: $spacing-md; }
 .notice-icon-box { width: 80rpx; height: 80rpx; border-radius: 20rpx; background: #DBEAFE; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .notice-icon { font-size: 44rpx; color: $color-semantic-info; }
 .notice-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: $spacing-xs; }
@@ -295,7 +295,7 @@ onPullDownRefresh(loadClass)
 .retry-btn { padding: $spacing-sm $spacing-xl; border-radius: $border-radius-full; background: $color-semantic-info; font-size: $typography-font-size-base; color: #fff; }
 
 .student-list { display: flex; flex-direction: column; gap: $spacing-md; }
-.student-card { background: #fff; border-radius: $border-radius-xl; padding: $spacing-lg 28rpx; display: flex; align-items: center; gap: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.student-card { background: #fff; border-radius: $border-radius-xl; padding: $spacing-lg 28rpx; display: flex; align-items: center; gap: 20rpx; box-shadow: 0 2rpx 8rpx rgba(120, 53, 15, 0.04); }
 .stu-avatar { width: 80rpx; height: 80rpx; border-radius: $border-radius-full; flex-shrink: 0; }
 .stu-avatar.fallback { background: #F1F5F9; display: flex; align-items: center; justify-content: center; text { font-size: $typography-font-size-2xl; font-weight: 700; color: $color-text-muted; } }
 .stu-info { flex: 1; overflow: hidden; }

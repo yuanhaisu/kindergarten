@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="shrink-0 bg-white border-r border-slate-200 flex flex-col transition-[width] duration-200"
+    class="shrink-0 bg-sidebar border-r border-sidebar-hover flex flex-col transition-[width] duration-200"
     :class="collapsed ? 'w-[64px]' : 'w-[250px]'"
   >
     <!-- Logo 区域 -->
@@ -14,7 +14,7 @@
       </div>
       <span
         v-if="!collapsed"
-        class="ml-3 text-lg font-bold text-slate-800 whitespace-nowrap"
+        class="ml-3 text-lg font-bold text-text-onBrand whitespace-nowrap"
       >养成星球</span>
     </div>
 
@@ -25,7 +25,7 @@
           <!-- 分组标签 -->
           <div
             v-if="!collapsed"
-            class="text-xs font-semibold text-slate-500 px-3 pt-4 pb-2 first:pt-0"
+            class="text-xs font-semibold text-white/45 px-3 pt-4 pb-2 first:pt-0"
           >
             {{ group.label }}
           </div>
@@ -40,12 +40,17 @@
             :class="[
               collapsed ? 'justify-center' : '',
               isActive(item.path)
-                ? 'bg-blue-50 text-blue-500 font-semibold'
-                : 'text-slate-700 font-medium hover:bg-slate-100',
+                ? 'bg-sidebar-hover text-text-onBrand font-semibold'
+                : 'text-white/75 font-medium hover:bg-sidebar-hover',
             ]"
             :title="collapsed ? item.title : ''"
           >
-            <el-icon :size="18" :color="isActive(item.path) ? '#3B82F6' : '#64748B'">
+            <!-- 选中项左侧品牌色竖条（DESIGN.md Navigation 段要求） -->
+            <span
+              v-if="isActive(item.path)"
+              class="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-brand-primary"
+            />
+            <el-icon :size="18" :color="isActive(item.path) ? '#3B82F6' : '#94A3B8'">
               <component :is="item.icon" />
             </el-icon>
             <span v-if="!collapsed" class="ml-3">{{ item.title }}</span>
@@ -63,26 +68,26 @@
     </el-scrollbar>
 
     <!-- 底部用户信息 -->
-    <div class="border-t border-slate-200 px-3 py-4" :class="collapsed ? 'flex justify-center' : ''">
+    <div class="border-t border-sidebar-hover px-3 py-4" :class="collapsed ? 'flex justify-center' : ''">
       <div class="flex items-center gap-3" :class="collapsed ? 'justify-center' : ''">
         <div
-          class="w-10 h-10 shrink-0 rounded-full bg-blue-100 flex items-center justify-center"
+          class="w-10 h-10 shrink-0 rounded-full bg-sidebar-hover flex items-center justify-center"
         >
-          <el-icon :size="16" color="#3B82F6">
+          <el-icon :size="16" color="#E2E8F0">
             <UserFilled />
           </el-icon>
         </div>
         <div v-if="!collapsed" class="flex-1 min-w-0">
-          <div class="text-sm font-semibold text-slate-800 truncate">
+          <div class="text-sm font-semibold text-text-onBrand truncate">
             {{ auth.user?.nickname || '管理员' }}
           </div>
-          <div class="text-xs text-slate-500 truncate">
+          <div class="text-xs text-white/55 truncate">
             {{ auth.user?.role || '系统管理员' }}
           </div>
         </div>
         <button
           v-if="!collapsed"
-          class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-white/55 hover:bg-sidebar-hover hover:text-text-onBrand"
           @click="goSettings"
         >
           <el-icon :size="18"><Setting /></el-icon>
