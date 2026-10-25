@@ -31,7 +31,7 @@ export default defineNuxtConfig({
   components: [
     { path: '~/components', pathPrefix: false },
   ],
-  css: ['~/assets/css/main.scss'],
+  css: ['kindergarten-design-tokens/tokens-admin.css', '~/assets/css/main.scss'],
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api/v1',

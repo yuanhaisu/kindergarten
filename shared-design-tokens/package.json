@@ -13,6 +13,7 @@
     "./tokens-parent.scss": "./tokens-parent.scss",
     "./tokens-teacher.css": "./tokens-teacher.css",
     "./tokens-parent.css": "./tokens-parent.css",
+    "./tokens-admin.css": "./build/css/tokens-admin.css",
     "./theme": "./theme.js"
   },
   "files": [

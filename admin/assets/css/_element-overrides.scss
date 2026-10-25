@@ -1,0 +1,101 @@
+// 让 Element Plus 服从 DESIGN.md 的形体与深度规则。
+//
+// 只改「外观」，不动交互与布局逻辑 —— 管理端 27 个页面靠这一层收敛，
+// 而不是逐页改。所有色值 / 圆角 / 阴影都引用 token CSS 变量
+// （由 kindergarten-design-tokens/tokens-admin.css 提供），不硬编码。
+//
+// ⚠️ 特异性：Element Plus 的样式由 @element-plus/nuxt 在运行时注入，
+// 加载顺序晚于本文件。规则写成 `.el-button`（0,1,0）会和 EP 打平、被后者覆盖，
+// 实测按钮圆角当时就没生效。因此：
+//   - CSS 变量用 :root:root（0,2,0）
+//   - 元素规则统一包在 html { } 里 → `html .el-button`（0,1,1）
+
+:root:root {
+  --el-color-primary: var(--color-brand-primary);
+  --el-color-primary-light-3: var(--color-brand-primary-light);
+  --el-color-primary-light-5: var(--color-brand-primary-light);
+  --el-color-primary-dark-2: var(--color-brand-primary-dark);
+
+  --el-border-radius-base: var(--border-radius-xl);
+  --el-border-radius-small: var(--border-radius-md);
+  --el-border-radius-round: var(--border-radius-full);
+
+  --el-border-color: var(--color-border-subtle);
+  --el-border-color-light: var(--color-border-subtle);
+  --el-border-color-lighter: var(--color-border-subtle);
+
+  --el-text-color-primary: var(--color-text-primary);
+  --el-text-color-regular: var(--color-text-body);
+  --el-text-color-secondary: var(--color-text-muted);
+  --el-text-color-placeholder: var(--color-text-hint);
+
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-box-shadow: var(--shadow-md);
+  --el-box-shadow-dark: var(--shadow-lg);
+
+  --el-bg-color: var(--color-bg-card);
+  --el-fill-color-blank: var(--color-bg-card);
+  --el-fill-color-light: var(--color-bg-page);
+}
+
+html {
+  // ---- 按钮：全胶囊。这是 DESIGN.md 的签名形状，圆角一旦变方就丢了体系感 ----
+  .el-button {
+    border-radius: var(--border-radius-full);
+    font-weight: 600;
+  }
+
+  .el-button--primary {
+    background: linear-gradient(135deg, var(--color-brand-primary-light) 0%, var(--color-brand-primary) 100%);
+    border-color: transparent;
+    box-shadow: var(--shadow-sm);
+
+    &:hover,
+    &:focus {
+      background: linear-gradient(135deg, var(--color-brand-primary) 0%, var(--color-brand-primary-dark) 100%);
+    }
+  }
+
+  // ---- 卡片：无边框，深度全靠暖琥珀阴影（Amber Shadow Rule） ----
+  .el-card {
+    border: none;
+    border-radius: var(--border-radius-2xl);
+    box-shadow: var(--shadow-md);
+  }
+
+  // ---- 输入类：大圆角 + 品牌色聚焦 ----
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner {
+    border-radius: var(--border-radius-xl);
+  }
+
+  .el-input__wrapper.is-focus,
+  .el-select__wrapper.is-focused {
+    box-shadow: 0 0 0 1px var(--color-brand-primary) inset;
+  }
+
+  // ---- 标签 / 分页：胶囊 ----
+  .el-tag {
+    border-radius: var(--border-radius-full);
+  }
+
+  .el-pagination.is-background .el-pager li {
+    border-radius: var(--border-radius-full);
+  }
+
+  // ---- 表格：柔和边界，与卡片同圆角 ----
+  .el-table {
+    --el-table-border-color: var(--color-border-subtle);
+    --el-table-header-bg-color: var(--color-bg-page);
+    border-radius: var(--border-radius-xl);
+    overflow: hidden;
+  }
+
+  // ---- 浮层：弹窗与消息框 ----
+  .el-dialog,
+  .el-message-box {
+    border-radius: var(--border-radius-2xl);
+    box-shadow: var(--shadow-lg);
+  }
+}

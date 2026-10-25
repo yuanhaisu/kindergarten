@@ -190,10 +190,21 @@ const platforms = {
       { destination: 'ts/tokens-admin.ts', format: 'tailwind/esm' },
     ],
   },
+  // 同一份 admin token 再产出一套 CSS 自定义属性（kebab 命名，与小程序端一致），
+  // 供管理端在 SCSS 里用 var(--color-*) 引用，避免覆盖 Element Plus 时硬编码色值。
+  adminCss: {
+    tokenSet: 'admin',
+    transforms: ['attribute/cti', 'name/cti/kebab', 'size/px', 'fontFamily/css'],
+    files: [
+      { destination: 'css/tokens-admin.css', format: 'css/custom-properties' },
+    ],
+  },
 };
 
 Object.entries(platforms).forEach(([platform, config]) => {
-  const mergedTokens = deepMerge(tokens.shared, tokens[platform] || {});
+  // adminCss 复用 admin 的 token 集，而不是按平台名去找
+  const tokenSet = config.tokenSet || platform;
+  const mergedTokens = deepMerge(tokens.shared, tokens[tokenSet] || {});
 
   const sd = StyleDictionary.extend({
     tokens: mergedTokens,

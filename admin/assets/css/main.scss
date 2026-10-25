@@ -1,8 +1,11 @@
 @use 'fonts';
+@use 'element-overrides';
 
 html,
 body {
   height: 100%;
   margin: 0;
   font-family: 'Noto Sans SC', system-ui, sans-serif;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
 }
