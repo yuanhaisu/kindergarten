@@ -49,7 +49,7 @@ const canBatch = computed(() =>
 // 「加星」的可用性看星星罐是否真的存在，而不是看任务默认仪式：
 // D5 允许老师逐条调整仪式，task 罐的目标 >0 就说明星星有意义；
 // 只有发⭐贴纸不进罐（D6：只有 ritual=class_star 的主回应计数）。
-// 班级罐由管理端配置，任务 StarGoal 被忽略，所以按 scope 放行。
+// 班级罐按学期独立配置（老师端与班级管理页都能设），任务 StarGoal 被忽略，所以按 scope 放行。
 const starTracking = computed(() =>
   task.value.star_scope === "class" ? true : Number(task.value.star_goal) > 0
 )
@@ -114,7 +114,8 @@ const freqText = computed(() => (freqIndex.value >= 0 ? FREQ_OPTIONS[freqIndex.v
 const ritualText = computed(() => (ritualIndex.value >= 0 ? RITUAL_OPTIONS[ritualIndex.value] : "未设置"))
 const targetLabel = computed(() => studentChoices.value[studentIndex.value]?.name || "全班（班级任务）")
 const starScopeLabel = computed(() => {
-  if (edit.value.star_scope === "class") return "按班级（管理端配置）"
+  // 按班级的目标来自 class_star_jars（老师/管理端都能设），不是管理端专属。
+  if (edit.value.star_scope === "class") return "按班级（使用班级罐目标）"
   if (edit.value.star_scope === "task") return "按任务"
   return "未设置"
 })
@@ -965,7 +966,7 @@ onPullDownRefresh(() => {
             type="number"
             placeholder="星星目标（0=不启用；选班级星星仪式时必填）"
           />
-          <text class="hint">班级星星罐暂未开放（需管理端先配置）；任务一旦有提交，频率/日期/范围/仪式/星星目标都不能再改</text>
+          <text class="hint">按班级时使用班级罐目标（可在「亲子任务」页设置或更新）；任务一旦有提交，频率/日期/范围/仪式/星星目标都不能再改</text>
         </template>
       </view>
       <view class="batch" @click="saveEdit">保存</view>

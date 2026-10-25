@@ -507,7 +507,7 @@
 {
   "class_id": 1,
   "term": "2031-2032-spring",
-  "term_start": "2031-02-20",
+  "term_start": "2031-01-21",
   "term_end": "2031-07-10",
   "goal": 30,
   "configured": true,
@@ -520,7 +520,8 @@
 - 起止口径分三种：
   1. `academic_years` 里有该学年、且对应学期起止可解析 → 用配置值；
   2. 有该学年但未配置起止 → 自然学期兜底（`spring` = 次年 2/1–7/31，`fall` = 当年 9/1–次年 1/31）；
-  3. **班级没有学年**（或学年不是 `YYYY-YYYY`、起止年倒序）→ 自然年 1/1–12/31。
+  3. **班级没有学年**（或学年不是 `YYYY-YYYY`、起止年倒序）→ 自然年按学期切分（`spring` = 1/1–7/31，`fall` = 8/1–12/31）。
+- **两学期无缝且不重叠**（与老师端同一口径，2026-10-24）：按起点排序后，后一个学期的起点 = 前一个结束的次日。配置里的暑假/寒假空档会被收口（暑假归 `fall`、寒假归 `spring`）；`term` 键不变。示例里 `term_start` 之所以是 `2031-01-21`，是因为该学年的 fall 结束于 `2031-01-20`。
 - 未配置 → `goal=0`、`configured=false`、`updated_at=null`（仍返回 `term`）。
 - 班级不属于当前园所 → **404**。权限码：`task:view`。
 
@@ -531,7 +532,7 @@
 { "goal": 30 }
 
 // Response（HTTP 200）
-{ "class_id": 1, "term": "2031-2032-spring", "term_start": "2031-02-20", "term_end": "2031-07-10", "goal": 30, "configured": true, "updated_at": "2026-10-23T09:01:00Z" }
+{ "class_id": 1, "term": "2031-2032-spring", "term_start": "2031-01-21", "term_end": "2031-07-10", "goal": 30, "configured": true, "updated_at": "2026-10-23T09:01:00Z" }
 ```
 
 - 目标必须 **> 0**；`0` / 负数 → **422**「班级星星罐目标必须大于 0」（`STAR_JAR_GOAL_INVALID`）。

@@ -197,8 +197,13 @@ func parseAcademicYearSpan(ay string) (int, int, bool) {
 // classStarJarTermOf 解析班级「当前学期」的 term 与日期范围。
 //
 // 口径（design D6 第 99 行）：Class.AcademicYear + KindergartenAppSetting.CurrentSemester；
-// AcademicYear 为空时用自然年。范围优先取 academic_years 的学期起止，缺失时按自然学期兜底：
+// AcademicYear 为空时用自然年按学期切分（spring = 1/1–7/31、fall = 8/1–12/31）。
+// 有学年时优先取 academic_years 的学期起止，缺失时按自然学期兜底：
 // spring = 次年 2/1–7/31，fall = 当年 9/1–次年 1/31。
+//
+// **两学期无缝且不重叠**（C-4 决策，2026-10-24）：按起点排序后，后一个学期的起点
+// 强制等于前一个结束的次日。否则学期之间（配置里的暑假 7/11–8/31、寒假 1/19–2/15）
+// 的提交不属于任何学期，切学期后那些星永远不计入，与「罐按学期重置」冲突。
 //
 // **只读**：配置行缺失时按默认值计算，不在读取路径写库（§20.4 的 seed 教训）。
 func classStarJarTermOf(ctx context.Context, db *gorm.DB, kindergartenID, classID uint64, now time.Time) (classStarJarTerm, error) {
@@ -239,13 +244,14 @@ func classStarJarTermOf(ctx context.Context, db *gorm.DB, kindergartenID, classI
 	ay := strings.TrimSpace(cls.AcademicYear)
 	startYear, endYear, ok := parseAcademicYearSpan(ay)
 	if !ok {
-		// 没有学年：用自然年（1/1–12/31），term 用当年年份，避免和真实学年键撞车。
+		// 没有学年：自然年按学期切成两段（1/1–7/31 / 8/1–12/31），term 用当年年份
+		// 避免和真实学年键撞车。两段在 7/31 与 8/1 处分界，天然不重叠、无空档。
 		y := now.Year()
-		return classStarJarTerm{
-			Term:  fmt.Sprintf("%d-%s", y, semester),
-			Start: time.Date(y, 1, 1, 0, 0, 0, 0, loc),
-			End:   time.Date(y, 12, 31, 0, 0, 0, 0, loc),
-		}, nil
+		return classStarJarTermWindow(
+			fmt.Sprintf("%d", y), semester,
+			time.Date(y, 1, 1, 0, 0, 0, 0, loc), time.Date(y, 7, 31, 0, 0, 0, 0, loc),
+			time.Date(y, 8, 1, 0, 0, 0, 0, loc), time.Date(y, 12, 31, 0, 0, 0, 0, loc),
+		), nil
 	}
 
 	// 查询与 term 都用解析后的规范形式：库里可能存成 `2031 - 2032`，
@@ -264,39 +270,55 @@ func classStarJarTermOf(ctx context.Context, db *gorm.DB, kindergartenID, classI
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return classStarJarTerm{}, err
 	}
-	if err == nil {
-		var cs, ce string
-		if semester == "fall" {
-			cs, ce = term.FallStart, term.FallEnd
-		} else {
-			cs, ce = term.SpringStart, term.SpringEnd
-		}
-		start, ok1 := parseTaskDateInLoc(cs, loc)
-		end, ok2 := parseTaskDateInLoc(ce, loc)
-		if ok1 && ok2 && !end.Before(start) {
-			return classStarJarTerm{
-				Term:  fmt.Sprintf("%s-%s", normAY, semester),
-				Start: start,
-				End:   end,
-			}, nil
-		}
-	}
-
 	// 兜底自然学期：区间一律从**起始年**推，保证 fall 一定跨到次年 1 月。
 	// 用 endYear 推会让非相邻学年（`2031-2035`）算出 4 年多，同年/倒序学年
 	// 更会直接倒置——这两类脏值已在 parseAcademicYearSpan 里被拒，这里再兜一层。
-	if semester == "fall" {
-		return classStarJarTerm{
-			Term:  fmt.Sprintf("%s-fall", normAY),
-			Start: time.Date(startYear, 9, 1, 0, 0, 0, 0, loc),
-			End:   time.Date(startYear+1, 1, 31, 0, 0, 0, 0, loc),
-		}, nil
+	ss := time.Date(startYear+1, 2, 1, 0, 0, 0, 0, loc)
+	se := time.Date(startYear+1, 7, 31, 0, 0, 0, 0, loc)
+	fs := time.Date(startYear, 9, 1, 0, 0, 0, 0, loc)
+	fe := time.Date(startYear+1, 1, 31, 0, 0, 0, 0, loc)
+	// 配置按**每一对**独立覆盖：只有起止都合法才替换，半个配置不会把整对拖下水。
+	if err == nil {
+		if s, ok1 := parseTaskDateInLoc(term.SpringStart, loc); ok1 {
+			if e, ok2 := parseTaskDateInLoc(term.SpringEnd, loc); ok2 && !e.Before(s) {
+				ss, se = s, e
+			}
+		}
+		if s, ok1 := parseTaskDateInLoc(term.FallStart, loc); ok1 {
+			if e, ok2 := parseTaskDateInLoc(term.FallEnd, loc); ok2 && !e.Before(s) {
+				fs, fe = s, e
+			}
+		}
 	}
-	return classStarJarTerm{
-		Term:  fmt.Sprintf("%s-spring", normAY),
-		Start: time.Date(startYear+1, 2, 1, 0, 0, 0, 0, loc),
-		End:   time.Date(startYear+1, 7, 31, 0, 0, 0, 0, loc),
-	}, nil
+	return classStarJarTermWindow(normAY, semester, ss, se, fs, fe), nil
+}
+
+// classStarJarTermWindow 把两学期的原始窗口收成「无缝且不重叠」，再挑出当前学期。
+//
+// 规则只有一条：按起点排序后，后一个学期的起点 = 前一个结束的次日。
+//   - spring 在前（如 2/16–7/10）：fall 从 7/11 开始，暑假的提交归 fall；
+//   - fall 在前（如 9/1–1/20）：spring 从 1/21 开始，寒假的提交归 spring。
+//
+// 配置里本来就有重叠时，同样由这条规则裁掉（后一个的起点被推后）。
+// term 键（`<学年|自然年>-<学期>`）不参与收口，保持不变。
+func classStarJarTermWindow(base, semester string, ss, se, fs, fe time.Time) classStarJarTerm {
+	if fs.After(ss) {
+		// spring 在前：fall 紧接 spring 结束。
+		fs = se.AddDate(0, 0, 1)
+		if fe.Before(fs) {
+			fe = fs
+		}
+	} else {
+		// fall 在前：spring 紧接 fall 结束。
+		ss = fe.AddDate(0, 0, 1)
+		if se.Before(ss) {
+			se = ss
+		}
+	}
+	if semester == "fall" {
+		return classStarJarTerm{Term: base + "-fall", Start: fs, End: fe}
+	}
+	return classStarJarTerm{Term: base + "-spring", Start: ss, End: se}
 }
 
 // validateClassStarJar 校验班级**当前学期**是否有可用的星星罐目标。

@@ -48,6 +48,10 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrNotFound(c, "数据不存在或无权访问")
 	case errors.Is(err, service.ErrTeacherInvalidParams):
 		response.ErrValidation(c, "请求参数无效")
+	// 与管理端 writeTaskError 同一句：三个创建入口（teacher/admin/activity）
+	// 未配置班级罐时必须给同一条引导，不能一端一句。
+	case errors.Is(err, service.ErrTaskStarJarMissing):
+		response.ErrValidation(c, "请先配置班级星星罐")
 	case errors.Is(err, service.ErrTeacherForbidden):
 		response.ErrForbidden(c, "无权限访问该数据")
 	case errors.Is(err, service.ErrTeacherDuplicate):
@@ -1116,12 +1120,14 @@ func (h *Handler) TeacherUpdateTask(c *gin.Context) {
 
 // TeacherGetClassStarJar GET /teacher/class/star-jar
 // 班级来自登录态（tc.ClassID），不接受 query 里的班级，避免老师读别的班配置。
+// 老师端响应比管理端多 stars / progress / over_goal（C-4）：目标与星数必须来自
+// 同一次 term 解析，否则学期边界会读到两套 term。
 func (h *Handler) TeacherGetClassStarJar(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {
 		return
 	}
-	data, err := h.taskSvc.GetClassStarJar(c.Request.Context(), tc.KindergartenID, tc.ClassID)
+	data, err := h.taskSvc.GetClassStarJarWithProgress(c.Request.Context(), tc.KindergartenID, tc.ClassID)
 	if err != nil {
 		writeTaskError(c, err, "获取班级星星罐失败")
 		return

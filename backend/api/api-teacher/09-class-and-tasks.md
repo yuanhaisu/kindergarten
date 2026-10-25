@@ -512,26 +512,44 @@
 
 ### GET `/teacher/class/star-jar`
 
-> 读取**当前班级当前学期**的班级星星罐目标。班级取自登录态，不接受 query 指定班级。
+> 读取**当前班级当前学期**的班级星星罐目标与进度。班级取自登录态，不接受 query 指定班级。
+> 管理端的同名能力是 `GET /admin/classes/:id/star-jar`，**响应不含 `stars` / `progress` / `over_goal`**（管理端不展示进度）。
 
 ```json
 // Response（HTTP 200）
 {
   "class_id": 1,
   "term": "2031-2032-spring",
-  "term_start": "2031-02-20",
+  "term_start": "2031-01-21",
   "term_end": "2031-07-10",
   "goal": 30,
   "configured": true,
-  "updated_at": "2026-10-23T09:00:00Z"
+  "updated_at": "2026-10-23T09:00:00Z",
+  "stars": 12,
+  "progress": 40,
+  "over_goal": false
 }
 ```
 
 - `term` = `<班级 academic_year>-<当前学期>`；班级没有学年时用 `<自然年>-<学期>`。
 - 当前学期取 `kindergarten_app_settings.current_semester`（`spring` / `fall`，非 `fall` 一律按 `spring`）。
-- `term_start` / `term_end` 口径：`academic_years` 有配置就用配置；有学年但没配置起止 → 自然学期兜底（`spring` = 次年 2/1–7/31，`fall` = 当年 9/1–次年 1/31）；**班级没有学年**（或学年不是 `YYYY-YYYY`、起止年倒序）→ 自然年 1/1–12/31。
+- `term_start` / `term_end` 口径：`academic_years` 有配置就用配置；有学年但没配置起止 → 自然学期兜底（`spring` = 次年 2/1–7/31，`fall` = 当年 9/1–次年 1/31）；**班级没有学年**（或学年不是 `YYYY-YYYY`、起止年倒序）→ 自然年按学期切分（`spring` = 1/1–7/31，`fall` = 8/1–12/31）。
+- **两学期无缝且不重叠**（2026-10-24 决策）：按起点排序后，后一个学期的起点强制等于前一个结束的次日。配置里 spring 与 fall 之间留了暑假空档时，`fall` 起点会被前移到 `spring_end + 1`；配置里 fall 在 spring 之前且留了寒假空档时，`spring` 起点会被前移到 `fall_end + 1`。**`term` 键不变**，只有区间收口。这样学期之间的提交不会掉进「两边都不算」。
 - 未配置时返回 `goal=0`、`configured=false`、`updated_at=null`（仍带 `term`，客户端可据此展示「请先配置」）。
+- 未配置时 `stars` **仍如实返回**（历史 class scope 任务可能已经集过星），只有 `progress` / `over_goal` 退化成 `null` / `false`；客户端应据 `configured` 决定是否展示进度，而不是据 `stars>0`。
 - 学期之间的目标互相独立：上学期配置过不会让本学期任务通过校验。
+
+**进度字段（`stars` / `progress` / `over_goal`）**
+
+- `stars`：当前学期已集星数。口径与任务列表的 `star_count` 同一套 SQL 语义，只是范围从「本任务」换成「本班」：
+  - 只算 **`star_scope=class`** 的任务（`star_scope=task` 的任务只进自己的任务罐）；
+  - 只算**主回应**：`task_check_ins.response_id` 指向的回应 `ritual=class_star` 才计入；一次 `period` 回应覆盖 N 条提交就计 N 星；
+  - 补充回应不写 `response_id`，**不计入**；贴纸 / 语音不计入；
+  - 提交、回应、任务三层都过滤软删除；
+  - 「当前学期」按**提交日期**（`task_check_ins.date`）落在 `term_start..term_end` 内判定：罐按学期重置，跨学期的长任务按提交日拆到两边。
+- `progress`：`floor(stars * 100 / goal)`，**封顶 100**；`goal<=0`（未配置）时为 `null`（不是 `0`，避免把「没有目标」画成 0%）。
+- `over_goal`：`stars > goal` 时为 `true`，客户端显示「已超额 N/G」而不是 >100% 的进度条；未配置时恒为 `false`。
+- 契约 MUST NOT 提供个人星星排名或个人完成率排名字段。
 
 ### PUT `/teacher/class/star-jar`
 
@@ -540,9 +558,10 @@
 { "goal": 30 }
 
 // Response（HTTP 200）
-{ "class_id": 1, "term": "2031-2032-spring", "term_start": "2031-02-20", "term_end": "2031-07-10", "goal": 30, "configured": true, "updated_at": "2026-10-23T09:01:00Z" }
+{ "class_id": 1, "term": "2031-2032-spring", "term_start": "2031-01-21", "term_end": "2031-07-10", "goal": 30, "configured": true, "updated_at": "2026-10-23T09:01:00Z" }
 ```
 
+- **响应与 GET 不同**：PUT 只回目标配置（上图字段），**不含** `stars` / `progress` / `over_goal`；写入后要展示进度，客户端必须再调一次 GET。
 - 目标 **必须 > 0**：`0` / 负数 → **422**「班级星星罐目标必须大于 0」。`0` 是「未配置」，不是「关闭」。
 - 按 `(kindergarten_id, class_id, term)` upsert；重复设置同一学期为覆盖，不新增行。
 - 任务 `star_scope=class` 的创建/更新只认**当前学期**这里有 `goal>0`；未配置 → **422**「请先配置班级星星罐」。

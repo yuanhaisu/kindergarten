@@ -141,13 +141,19 @@ func setupB1(t *testing.T) *b1Fixture {
 			name string
 			err  error
 		}{
+			// 顺序按外键方向：student_parents → students → classes → files → users → kindergarten。
+			// 库上确实建了这三条 RESTRICT 外键（fk_student_parents_student / fk_students_class /
+			// fk_classes_kindergarten）；先删父表会让本步骤 1451 失败、残留行再让下一轮
+			// setup 的 student_parents 插入撞 1452（C-4 审查时实测到过）。
+			{"student_parents", db.Unscoped().Where("student_id IN ?", []uint64{testB1Student, testB1StudentOth}).Delete(&domain.StudentParent{}).Error},
 			{"students", db.Unscoped().Where("id IN ?", []uint64{testB1Student, testB1StudentOth}).Delete(&domain.Student{}).Error},
 			{"classes", db.Unscoped().Where("id IN ?", []uint64{testB1Class, testB1ClassOther}).Delete(&domain.Class{}).Error},
-			// 顺序按外键方向：student_parents → files → users → students。
-			// 现在没建外键，但顺序错了将来加约束就会静默失败。
-			{"student_parents", db.Unscoped().Where("student_id IN ?", []uint64{testB1Student, testB1StudentOth}).Delete(&domain.StudentParent{}).Error},
 			{"files", db.Unscoped().Where("id IN ?", []uint64{testB1File, testB1Audio, testB1Image, testB1Video}).Delete(&domain.File{}).Error},
+			// 回应/发布通知会写 messages（fk_messages_user）。漏删这一张，users 的删除会被 1451 拦住，
+			// 残留用户让下一轮 setup 撞 1062——C-4 审查时实测到过（C1 夹具早就删了这一步）。
+			{"messages", db.Unscoped().Where("user_id IN ?", []uint64{testB1Teacher, testB1Parent, testB1ParentOther, testB1Parent2, testB1Stranger}).Delete(&domain.Message{}).Error},
 			{"users", db.Unscoped().Where("id IN ?", []uint64{testB1Teacher, testB1Parent, testB1ParentOther, testB1Parent2, testB1Stranger}).Delete(&domain.User{}).Error},
+			{"app_settings", db.Unscoped().Where("kindergarten_id = ?", testB1KG).Delete(&domain.KindergartenAppSetting{}).Error},
 			{"kindergarten", db.Unscoped().Where("id = ?", testB1KG).Delete(&domain.Kindergarten{}).Error},
 		} {
 			if step.err != nil {
@@ -160,6 +166,11 @@ func setupB1(t *testing.T) *b1Fixture {
 
 	require.NoError(t, db.Unscoped().Create(&domain.Kindergarten{
 		BaseModel: domain.BaseModel{ID: testB1KG}, Name: "测试园所-B1补充回应",
+	}).Error)
+	// 班级罐按「当前学期」圈定日期窗口（spring 1/1–7/31、fall 8/1–12/31）。
+	// 夹具的提交都落在今天，用 fall 才能落在窗口内；否则 8–12 月跑测试会算出 0 星。
+	require.NoError(t, db.Unscoped().Create(&domain.KindergartenAppSetting{
+		KindergartenID: testB1KG, CurrentSemester: "fall", ExtraConfig: "{}",
 	}).Error)
 	require.NoError(t, db.Unscoped().Create(&domain.User{
 		BaseModel: domain.BaseModel{ID: testB1Teacher}, Nickname: "B1老师", Phone: "13900009601", PasswordHash: "x",

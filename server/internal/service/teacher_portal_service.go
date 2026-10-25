@@ -3021,11 +3021,16 @@ func (s *TeacherPortalService) CreateTask(ctx context.Context, tc *TeacherPortal
 	}
 	allowPublic := allowPublicReq && req.TargetStudentID == 0
 	// 结构规则（目标孩子归属 / 仪式 / 星星范围 / 目标 / 班级罐）与管理端独立任务、
-	// 多班活动共用同一个 helper（D12 / tasks 3.8）。老师端的错误码保持
-	// ErrTeacherInvalidParams 不变，只是规则不再手抄一份。
+	// 多班活动共用同一个 helper（D12 / tasks 3.8）。
 	if err := validateTaskStructureForCreate(ctx, s.db, tc.KindergartenID, tc.ClassID,
 		req.TargetStudentID,
 		taskStructure{Ritual: ritual, StarScope: starScope, StarGoal: starGoal}); err != nil {
+		// 班级罐缺失必须原样上抛：spec 要求 teacher/admin/activity 三个入口
+		// 返回同一句「请先配置班级星星罐」，折叠成笼统的「参数无效」会让老师
+		// 不知道去哪配。其余结构错误仍是 ErrTeacherInvalidParams，不扩大改动面。
+		if errors.Is(err, ErrTaskStarJarMissing) {
+			return nil, err
+		}
 		return nil, ErrTeacherInvalidParams
 	}
 	row := &domain.ParentTask{
@@ -3094,12 +3099,9 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 		return ErrTeacherInvalidParams
 	}
 	// 只在范围**真的变化**时校验班级罐：罐被删后，改标题不该连带 422（与管理端同口径）。
+	// 校验本身放到结构锁之后（见下方）：已有提交的任务连结构都改不了，
+	// 先报「请先配置班级星星罐」会让老师配完再撞 422，属于误导。
 	scopeChanged := starScope != cur.StarScope
-	if starScope == domain.TaskStarScopeClass && scopeChanged {
-		if err := validateClassStarJar(ctx, s.db, tc.KindergartenID, tc.ClassID); err != nil {
-			return ErrTeacherInvalidParams
-		}
-	}
 	// 目标规则只在本次动到目标/仪式/范围时生效：历史脏数据（goal=0 的 class_star 任务）
 	// 不该把无关编辑一起挡住。判定用**有效值**，否则省略 star_goal 的请求永远看到 0。
 	goalTouched := req.StarGoal != nil || ritual != cur.RecognitionRitual || scopeChanged
@@ -3167,6 +3169,17 @@ func (s *TeacherPortalService) UpdateTask(ctx context.Context, tc *TeacherPortal
 			return ErrTaskStructuralLocked
 		}
 		return ErrTeacherInvalidParams
+	}
+	// 班级罐校验放在结构锁之后：已有提交的任务改了 scope 也落不了库，
+	// 先报「请先配置」会把老师引到一条配完仍然失败的路径。
+	if starScope == domain.TaskStarScopeClass && scopeChanged {
+		if err := validateClassStarJar(ctx, s.db, tc.KindergartenID, tc.ClassID); err != nil {
+			// 与创建路径同口径：班级罐缺失要给引导文案，不折叠成「参数无效」。
+			if errors.Is(err, ErrTaskStarJarMissing) {
+				return err
+			}
+			return ErrTeacherInvalidParams
+		}
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&domain.ParentTask{}).Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).Updates(updates).Error; err != nil {
@@ -3272,12 +3285,9 @@ func taskStarCounts(ctx context.Context, db *gorm.DB, taskIDs []uint64) (map[uin
 		TaskID uint64 `gorm:"column:task_id"`
 		Stars  int64  `gorm:"column:stars"`
 	}
-	// 手写 Table 不走软删：提交与回应两侧都自己补 deleted_at。
-	if err := db.WithContext(ctx).
-		Table("task_check_ins AS c").
+	// 谓词由 starCountBase 提供：班级罐的进度用的是同一份定义，不各写一套。
+	if err := starCountBase(ctx, db, taskIDs).
 		Select("c.task_id AS task_id, COUNT(*) AS stars").
-		Joins("INNER JOIN task_responses AS r ON r.id = c.response_id AND r.deleted_at IS NULL").
-		Where("c.task_id IN ? AND c.deleted_at IS NULL AND r.ritual = ?", taskIDs, domain.TaskRitualClassStar).
 		Group("c.task_id").
 		Scan(&rows).Error; err != nil {
 		return nil, err

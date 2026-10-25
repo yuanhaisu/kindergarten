@@ -64,6 +64,17 @@ export function reviewTeacherTaskPublic(taskId, checkinId, data) {
   })
 }
 
+// 班级星星罐：目标与当前学期进度一起返回（stars / progress / over_goal）。
+// 班级取自登录态，不能传 class_id；未配置时 configured=false、goal=0、progress=null。
+export function fetchClassStarJar() {
+  return requestWithAuth({ url: "/teacher/class/star-jar", method: "GET" })
+}
+
+// 设置班级星星罐目标：必须 > 0（0 表示未配置，后端 422）。
+export function setClassStarJar(goal) {
+  return requestWithAuth({ url: "/teacher/class/star-jar", method: "PUT", data: { goal } })
+}
+
 // 家长端任务详情的小程序码（PNG base64）。码由后端用家长端凭据生成，
 // 客户端只负责落盘到相册；返回 { task_id, page, scene, env_version, image_base64 }。
 export function fetchTaskShareCard(taskId) {

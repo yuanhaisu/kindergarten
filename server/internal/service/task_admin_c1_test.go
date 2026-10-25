@@ -208,8 +208,39 @@ func TestClassStarJarTermUsesAcademicYearConfig(t *testing.T) {
 	term, err := classStarJarTermOf(f.ctx, f.db, testC1KG, testC1Class, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, "2031-2032-spring", term.Term)
-	assert.Equal(t, "2031-02-20", term.Start.Format("2006-01-02"))
+	// 配置里 fall 在 spring 之前（2030-09-01..2031-01-20）：两学期必须无缝，
+	// spring 从 fall 结束次日开始（寒假 1/21–2/19 的提交归 spring）。
+	assert.Equal(t, "2031-01-21", term.Start.Format("2006-01-02"))
 	assert.Equal(t, "2031-07-10", term.End.Format("2006-01-02"))
+}
+
+// 两学期 MUST 无缝：配置里 spring 与 fall 之间留了暑假空档时，fall 起点前移到
+// spring 结束次日。否则暑假的提交不属于任何学期，切学期后永远不计入。
+func TestClassStarJarTermSealsGapBetweenSemesters(t *testing.T) {
+	f := setupC1(t)
+	require.NoError(t, f.db.Unscoped().Create(&domain.AcademicYear{
+		KindergartenID:      testC1KG,
+		Year:                "2020-2021",
+		SemesterSpringStart: "2021-02-16",
+		SemesterSpringEnd:   "2021-07-10",
+		SemesterFallStart:   "2021-09-01",
+		SemesterFallEnd:     "2022-01-18",
+	}).Error)
+
+	// spring 是前一个学期，窗口保持配置值。
+	spring, err := classStarJarTermOf(f.ctx, f.db, testC1KG, testC1ClassB, time.Now())
+	require.NoError(t, err)
+	assert.Equal(t, "2020-2021-spring", spring.Term)
+	assert.Equal(t, "2021-02-16", spring.Start.Format("2006-01-02"))
+	assert.Equal(t, "2021-07-10", spring.End.Format("2006-01-02"))
+
+	require.NoError(t, f.db.Model(&domain.KindergartenAppSetting{}).
+		Where("kindergarten_id = ?", testC1KG).Update("current_semester", "fall").Error)
+	fall, err := classStarJarTermOf(f.ctx, f.db, testC1KG, testC1ClassB, time.Now())
+	require.NoError(t, err)
+	assert.Equal(t, "2020-2021-fall", fall.Term)
+	assert.Equal(t, "2021-07-11", fall.Start.Format("2006-01-02"), "fall 必须紧接 spring 结束次日")
+	assert.Equal(t, "2022-01-18", fall.End.Format("2006-01-02"))
 }
 
 func TestClassStarJarTermFallsBackToNaturalSemester(t *testing.T) {
@@ -224,11 +255,20 @@ func TestClassStarJarTermFallsBackToNaturalSemester(t *testing.T) {
 func TestClassStarJarTermFallsBackToNaturalYear(t *testing.T) {
 	f := setupC1(t)
 	now := time.Now().In(shanghaiLoc())
+	// 无学年：自然年按学期切成两段（1/1–7/31 / 8/1–12/31），两段不重叠、无空档。
 	term, err := classStarJarTermOf(f.ctx, f.db, testC1KG, testC1ClassC, now)
 	require.NoError(t, err)
 	assert.Equal(t, fmt.Sprintf("%d-spring", now.Year()), term.Term)
 	assert.Equal(t, fmt.Sprintf("%d-01-01", now.Year()), term.Start.Format("2006-01-02"))
-	assert.Equal(t, fmt.Sprintf("%d-12-31", now.Year()), term.End.Format("2006-01-02"))
+	assert.Equal(t, fmt.Sprintf("%d-07-31", now.Year()), term.End.Format("2006-01-02"))
+
+	require.NoError(t, f.db.Model(&domain.KindergartenAppSetting{}).
+		Where("kindergarten_id = ?", testC1KG).Update("current_semester", "fall").Error)
+	fall, err := classStarJarTermOf(f.ctx, f.db, testC1KG, testC1ClassC, now)
+	require.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf("%d-fall", now.Year()), fall.Term)
+	assert.Equal(t, fmt.Sprintf("%d-08-01", now.Year()), fall.Start.Format("2006-01-02"), "fall 紧接 spring 结束次日")
+	assert.Equal(t, fmt.Sprintf("%d-12-31", now.Year()), fall.End.Format("2006-01-02"))
 }
 
 func TestClassStarJarTermRejectsForeignClass(t *testing.T) {
@@ -638,7 +678,8 @@ func TestClassStarJarTermNormalizesWhitespaceAcademicYear(t *testing.T) {
 	term, err := classStarJarTermOf(f.ctx, f.db, testC1KG, testC1Class, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, "2031-2032-spring", term.Term)
-	assert.Equal(t, "2031-02-20", term.Start.Format("2006-01-02"), "必须命中 academic_years 的配置")
+	// 命中 academic_years 的配置，并按「两学期无缝」把 spring 起点收到 fall 结束次日。
+	assert.Equal(t, "2031-01-21", term.Start.Format("2006-01-02"), "必须命中 academic_years 的配置")
 }
 
 // 跨园所班级 + goal=0：404 优先于 422（契约：班级不属于当前园所 → 404）。
@@ -719,12 +760,14 @@ func TestTeacherCreateTaskRejectsInvalidEnums(t *testing.T) {
 	require.ErrorIs(t, err, ErrTeacherInvalidParams)
 
 	// 带空格的范围会被 trim 成 class，从而触发班级罐校验（而不是静默落一个脏值）。
+	// 未配置班级罐时老师端返回 ErrTaskStarJarMissing（C-4 修正）：spec 要求
+	// teacher/admin/activity 三个入口给同一句引导，不能折叠成笼统的「参数无效」。
 	_, err = f.svcT.CreateTask(f.ctx, f.teacherCtx(), TeacherTaskInput{
 		Title: "老师任务", LearningLink: "学习关联",
 		Frequency: string(domain.TaskFrequencyOnce), StartDate: f.date(0), EndDate: f.date(6),
 		StarScope: " class ",
 	})
-	require.ErrorIs(t, err, ErrTeacherInvalidParams)
+	require.ErrorIs(t, err, ErrTaskStarJarMissing)
 }
 
 // 老师端与管理端同口径：罐被删后，改标题不该连带 422。
