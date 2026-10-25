@@ -45,7 +45,10 @@ html {
     font-weight: 600;
   }
 
-  .el-button--primary {
+  // is-text / is-link 是文字型按钮（如表格里的「详情」、卡片里的「查看全部」），
+  // 它们本身没有底色。若一并套渐变，会出现「蓝字压蓝底」而彻底看不见 ——
+  // 实测「查看全部」就变成了一个空白蓝色胶囊。
+  .el-button--primary:not(.is-text):not(.is-link) {
     background: linear-gradient(135deg, var(--color-brand-primary-light) 0%, var(--color-brand-primary) 100%);
     border-color: transparent;
     box-shadow: var(--shadow-sm);
