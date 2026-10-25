@@ -12,9 +12,9 @@
 | --- | --- |
 | 分支 | `feat/parent-growth-scope` |
 | C-3 起点 | `1813880`（已提交为 `c036a55`） |
-| C-4 起点 | `c036a55`（改动未提交，在工作区） |
-| 已完成切片 | A → B1 → B2 → B3 → B4-a → B4-b → C-1 → C-2 → C-3（管理端任务模块）→ **C-4（老师端班级罐入口 + 进度）** |
-| 下一步 | **C-5**（12.x 验证 + 归档）。`tasks.md` 勾选补正已于 2026-10-25 完成（§25）：**51 勾 / 39 未勾 / 共 90**；C-4 遗留的 1 条 UI 断言见 §24.5-1 |
+| C-4 | 已提交 `7ecd6c7`（代码）+ `25554b1`（文档） |
+| 已完成切片 | A → B1 → B2 → B3 → B4-a → B4-b → C-1 → C-2 → C-3 → C-4；**C-5 进行中** |
+| 下一步 | **C-5 收口**：P1/P2/决策/真实点击/全量回归已落地（§28）；`tasks.md` 现 **84 勾 / 6 未勾 / 共 90**。剩余 6 条只差真机（5.4/9.3/9.5/9.7/12.6）与双端同时在线的跨端集成（12.3） |
 | 新窗口开工 | **直接读 §26 的开工提示词**，它已按「先提交 C-4 → 补 3.11/4.5 → 验证」排好序 |
 
 **按角色选读**（不要从第 1 节顺序读到底）：
@@ -1969,3 +1969,82 @@ rg -n 'TC-NEW-TSK-01(01|46)' docs/tests/TEST_CATALOG.md
 rg -c '^- \[x\]' openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md
 rg -c '^- \[ \]' openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md
 ```
+
+---
+
+## 28. C-5 落地（2026-10-25）
+
+### 28.1 C-4 已提交
+
+| commit | 内容 |
+| --- | --- |
+| `7ecd6c7` | C-4 代码：老师端班级罐入口/进度、term 两学期无缝、错误映射修复、5 条 MySQL 用例、两份 api 契约 |
+| `25554b1` | C-4 文档：§24/§25 与 `tasks.md` 勾选补正（51 勾 / 39 未勾） |
+
+提交前：`go build ./...`、`go vet ./...` 通过；`check-tokens teacher` 对 `pages/tasks/*` **0 违规**（仓库既有 215 条在别的文件）。工作区只留 `docs/competitive/*`、`skills-lock.json`、`.impeccable/`、`interview-guide.md` 未提交（按要求不动）。
+
+### 28.2 产品决策（2026-10-25，已拍板）
+
+| 项 | 决定 |
+| --- | --- |
+| `spec.md:145` 家长端集体进度 | **本期不提供**：已把 Scenario THEN 改为「不展示个人排名；班级集体进度在老师端展示，家长端本期不提供」（原句与实现冲突，非静默放过） |
+| 4.6 结束后回看/导出 | **回看已有、导出不提供**：`TaskCheckins` 不过滤 `status`/有效期，契约已写明 |
+| 4.7 审核留痕 | **写只读操作日志**：批准/拒绝/家长取消/关闭任务公开都在事务内写 `operation_logs` |
+| 7.6 参与率分母 | **保持全部在读学生**（含未绑定家长），契约与单测已钉住 |
+| 2.10 recognition ritual | **按 spec 锁死**：不加入 `taskSafeEditableFields`，有提交后不可改 |
+| 2.1 范围谓词位置 | **保留现状 + 注记**：谓词在 `parent_portal_service.go` `taskScopeWhere`，四端共用 |
+
+### 28.3 本轮代码改动（未提交）
+
+| 文件 | 改动 |
+| --- | --- |
+| `server/internal/service/task_stats.go` | 抽出 `taskFeedbackTotalsOf`（反馈口径唯一实现），7.2 与新老师端汇总共用；`taskStatsReaction` 增 `UserID`（仅归属用） |
+| `server/internal/service/teacher_portal_service.go` | 新增 `TaskFeedbackSummary`（3.11）：三个率 + `feedback_counts` + 按孩子 `children` + `notify_baseline_missing`/`unattributed_feedback`；跨班/跨园 404 |
+| `server/internal/handler/http/teacher_portal.go`、`app/router.go` | `GET /teacher/tasks/:id/feedback-summary` |
+| `server/internal/service/task_rules.go` | `ErrTaskPublicEmptyContent` + `checkinHasPublicContent`（4.5）；四个审计动作常量 + `publicAuditEntry` + `revokePublicForTask` 增 `kindergartenID/actorID/reason` 并写日志（4.7） |
+| `server/internal/service/parent_portal_service.go` | 4.5 闸门；4.7 取消日志；`ResolveTaskContext`（2.2：任务链路不回退到第一个孩子）；抽出 `pendingTaskCount`（2.7，复用 `taskSubmittedInPeriod`，读失败不再静默）；列表新增 `responded`（10.2） |
+| `server/internal/handler/http/parent_portal.go` | 4.5 错误文案；`parentTaskCtx` 改用 `ResolveTaskContext` |
+| `server/internal/service/{task_service,task_activity}.go` | `revokePublicForTask` 传 actor/reason（管理端/活动） |
+| `server/internal/service/operation_log_service.go` | 四个公开审核 action 的中文标签 |
+| `server/internal/domain/task.go` | 删除 `Rewards`（1.5）；`TeacherTaskInput.Rewards` 与落库同步删除 |
+| `parent/src/pages/tasks/index.vue` | 三态「待完成/已提交/已回应」+ `responded` 徽标 |
+| `parent/src/utils/taskScene.js`（新） | 小程序码 `scene` 解析（详情与首页共用） |
+| `parent/src/pages/index/index.vue` | `onLoad` 解析 `scene` 转场任务详情（10.1） |
+| `parent/src/utils/pendingRoute.js`（新）、`api/http.js`、`pages/auth/login.vue`、`pages/messages/index.vue` | 401/未登录保留路径 + 登录后回跳（10.6） |
+| `admin/pages/tasks/index.vue` | 「进行中 → 已结束」二次确认（2.10，任务与活动） |
+| `admin/pages/logs/index.vue` | 日志页模块筛选补「任务」 |
+| `backend/api/*` | 3.11/4.5/4.6/7.6/8.4/8.6 契约与三份 README 索引；`api-admin/19-logs.md` 补 action 说明 |
+| `design.md` | 契约字段溯源表按实际契约修正/补齐（8.7） |
+
+### 28.4 新增单测（全部真实 MySQL）
+
+| 文件 | 用例 |
+| --- | --- |
+| `task_feedback_summary_test.go` | 6 条：无提交、部分+co-parent、补充不计入、周期按孩子归属、未知义务、跨班/跨园 |
+| `task_public_test.go`（追加） | 空内容申请拒绝、审计留痕（批准→取消、任务级撤销）、action 标签 |
+| `task_parent_flow_test.go` | `ResolveTaskContext`、跨班/个体提交拒绝、有效期窗口、三种频率、并发双击、pending 计数、媒体归属、积分不变 |
+| `task_teacher_flow_test.go` | 待回应筛选与排序、汇总空列表/部分已回应/跨任务隔离、读标记时区 |
+| `task_admin_c2_stats_test.go`（追加） | 参与率分母含未绑定学生 |
+
+### 28.5 验证状态（2026-10-25 收口）
+
+- `go build ./...`、`go vet ./...`、`golangci-lint`（改动三包）→ 通过。
+- `openspec validate --all` → **21 passed / 0 failed**。
+- `npm run build:mp-weixin`（parent、teacher）、`npm run build`（admin）→ 通过。
+- `check-tokens`：改动文件 0 违规；基线 teacher 215 / parent 149。
+- **新增单测全绿**（真实 MySQL）：`task_feedback_summary_test.go` 6 条、`task_parent_flow_test.go` 8 条、`task_teacher_flow_test.go` 3 条、`task_public_test.go` 新增 3 条、`task_admin_c2_stats_test.go` 新增 1 条。
+- **真实点击（家长端）**：10.4 首页「今晚一件事」→ 详情；10.6 消息深链 → 详情 + 已读落库 + 「无效 token → 401 → 登录 → 回跳」；10.1 `scene=t%3D4322` 模拟扫码入口 → 详情；12.7 成长/通知/接送/积分/首页导航。
+- **真实点击（老师端）**：9.4 工作台 → 列表 → 详情；9.3 贴纸单条回应（2158）、个别补充（2159）、周期汇总（2160），均落库且主回应不被改写。语音录制（`getRecorderManager`）无法在 IDE 自动化，未覆盖。
+- **真实点击（管理端，无头 Chrome，脚本 exit=0）**：2.10 结束任务/活动二次确认（取消不落库、确认后 `status=0`）；12.5 三班活动共享 id、整组改标题、单删被拒、**删除活动整组消失**、统计与公开撤回。
+- **全量 `go test ./internal/service`**：第一次 613s 后失败，日志被 `tail` 截断；第二次被系统内存中止；第三次完整落盘后定位到 **`Error 1040: Too many connections`**（每个用例新建连接池、从不关闭，MySQL `max_connections=151` 被打满），不是业务回归。已在 `openTaskB1DB` 限制 `MaxOpenConns=8` 并 `t.Cleanup` 关闭。第四次：**`ok 798.946s`，EXIT=0，0 条 FAIL/panic**。
+- `tasks.md` 当前 **84 勾 / 6 未勾 / 共 90**。
+
+### 28.6 仍未勾的 6 条（84 勾 / 6 未勾）
+
+| 条目 | 原因 |
+| --- | --- |
+| 5.4 / 9.5 / 12.6 | 真机扫码（含 `code_env_version` 体验版/开发版）。IDE 内只能验证到「生成二维码并落盘」「scene 解析」 |
+| 9.3 / 9.7 | 语音录制（`getRecorderManager`）与原生 picker 在 IDE 内无法真实触发（§18.4 同一缺口）；其余回应/补充/汇总/公开审核/分享均已点击验证 |
+| 12.3 | 需要「老师建个体任务 → 家长提交 → 回应 → 反馈 → 补充 → 给孩子看」同一轮跨端跑通；单实例 IDE 一次只能驱动一端，本轮未做（各段已分别在 §16.3/§18.3 与 9.3/10.6 验证） |
+
+> 归档判断：spec 的两条 P1（3.11/4.5）、12.2 全量回归、12.5/12.7/12.8 门禁均已通过；剩余 6 条全部依赖**真机**或**双端同时在线**。建议：真机跑一轮扫码/录音后勾 5.4/9.3/9.5/9.7/12.6，再用 `scripts/dual-ide.ps1` 做 12.3，然后 archive。

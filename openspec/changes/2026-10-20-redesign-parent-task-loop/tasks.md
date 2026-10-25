@@ -20,43 +20,57 @@
       <br>落地 2026-10-24 前（C-1/C-2）。`ParentTask` 新字段见 `domain/task.go:45,47,53,57-60`；`TaskCheckIn` 见 `:85-92`（含 `ResponseID`）；`Message.ActionPath` 见 `domain/message.go:24`；`Points`/`ImageURL` 在 `domain/task.go` 已零命中（2026-10-25 复核）。
 - [x] 1.2 新增 `TaskResponse`、`TaskResponseSupplement`、`TaskResponseReaction`、`ClassStarJar`、`TaskCheckInState`、`TaskReadMark` domain struct 与表名；`TaskResponse` 使用软删除；`TaskResponseSupplement` 使用 `BaseModel`（需要 `created_at` 供未读比较），唯一 `(response_id, checkin_id)`，含 `kindergarten_id`；`TaskResponseReaction` 唯一 `(response_id, user_id)`；`ClassStarJar` 唯一 `(kindergarten_id, class_id, term)`；`TaskCheckInState` 唯一 `(task_id, student_id)`；`TaskReadMark` 唯一 `(task_id, user_id, student_id)`；验证：`go build ./...` 通过
       <br>落地 2026-10-24 前（C-1/B4）。六个 struct 见 `domain/task.go:101`（TaskResponse）、`:126`（Supplement）、`:136`（Reaction）、`:147`（CheckInState）、`:157`（ClassStarJar）、`:170`（ReadMark）；唯一索引写在 tag 上（如 `:129` `idx_task_response_supplement`、`:139` `idx_task_response_reaction`）。
-- [ ] 1.3 空库直接 AutoMigrate 建表：开发库如已有旧表，直接 `DROP TABLE parent_tasks, task_check_ins` 后重建（无数据、不写迁移）；确认 `task_check_ins` 唯一 `(task_id, student_id, date)`、`task_read_marks` 表存在且唯一 `(task_id, user_id, student_id)`、`parent_tasks`/`task_check_ins` 无 `points` 列、`task_check_ins` 无 `image_url`、有 `public_scope_confirmed`、`messages` 有 `action_path`；若 `task_checkin_states.last_check_in_date` 曾以 NOT NULL 建过，执行 `docs/migrations/2026-10-21-task-checkin-state-nullable.sql`；执行 `go run ./cmd/dbcheck parent_tasks`、`task_check_ins`、`task_responses`、`task_response_supplements`、`task_response_reactions`、`task_checkin_states`、`class_star_jars`、`task_read_marks`、`messages` 核实；验证：无手工回填文件，nullable 列已确认
+- [x] 1.3 空库直接 AutoMigrate 建表：开发库如已有旧表，直接 `DROP TABLE parent_tasks, task_check_ins` 后重建（无数据、不写迁移）；确认 `task_check_ins` 唯一 `(task_id, student_id, date)`、`task_read_marks` 表存在且唯一 `(task_id, user_id, student_id)`、`parent_tasks`/`task_check_ins` 无 `points` 列、`task_check_ins` 无 `image_url`、有 `public_scope_confirmed`、`messages` 有 `action_path`；若 `task_checkin_states.last_check_in_date` 曾以 NOT NULL 建过，执行 `docs/migrations/2026-10-21-task-checkin-state-nullable.sql`；执行 `go run ./cmd/dbcheck parent_tasks`、`task_check_ins`、`task_responses`、`task_response_supplements`、`task_response_reactions`、`task_checkin_states`、`class_star_jars`、`task_read_marks`、`messages` 核实；验证：无手工回填文件，nullable 列已确认
+      <br>落地 2026-10-25（C-5）。`go run ./cmd/dbcheck` 逐表核实索引：`task_check_ins` 唯一 `(task_id, student_id, date)`、`task_read_marks` 唯一 `(task_id, user_id, student_id)`、`task_response_supplements` 唯一 `(response_id, check_in_id)`、`task_response_reactions` 唯一 `(response_id, user_id)`、`task_checkin_states` 唯一 `(task_id, student_id)`、`class_star_jars` 唯一 `(kindergarten_id, class_id, term)`。列级用 information_schema 核实：`parent_tasks`/`task_check_ins` 无 `points`、`task_check_ins` 无 `image_url`、有 `public_scope_confirmed`、`messages` 有 `action_path`；`task_checkin_states.last_check_in_date` 允许 NULL。九个表均存在。
 - [x] 1.4 删除任务时在同一事务内软删除该任务的提交与回应，并硬删除该任务的 `task_read_marks` / `task_checkin_states` / `task_response_supplements` / `task_response_reactions` 行；所有查询与统计默认过滤软删除；不提供单条提交恢复；验证：单测断言删除后列表/统计/公开墙都不返回，且无 read/state/supplement/reaction 孤儿
       <br>落地 2026-10-24 前（C-1/B4）。级联在 `task_rules.go:566-601` 的删除事务内：`:574` supplement、`:577` reaction、`:587` checkin_state、`:590` read_mark 均 `Unscoped` 硬删，提交与回应软删。
-- [ ] [P2] 1.5 删除 `Rewards` 字段：domain/契约/输入 DTO 均不再使用；验证：`grep` 无任务 `Rewards` 读写
+- [x] [P2] 1.5 删除 `Rewards` 字段：domain/契约/输入 DTO 均不再使用；验证：`grep` 无任务 `Rewards` 读写
+      <br>落地 2026-10-25（C-5）。`domain/task.go` 删除 `Rewards` 字段；`TeacherTaskInput.Rewards`、创建路径的 JSON 序列化与落库一并删除。`grep -rn "Rewards" server backend/api teacher/src admin/pages admin/api` 在任务读写路径零命中（仅 `api-parent/PROGRESS.md` 的历史记录仍提到，属历史日志不改）。**残留**：开发库 `parent_tasks.rewards` 列仍在（AutoMigrate 只增不改，本仓库无迁移工具），代码已不读写，属死列。
 - [x] 1.6 验证：`points` 字段与列已删除，任务接口/页面无 `points`；不新增 repo/service 类型；不引用 `backend/model/`
       <br>落地 2026-10-24 前。2026-10-25 复核：`domain/task.go`、`task_service.go`、`teacher_portal_service.go`、`parent/src/pages/tasks/` 对 `"points"`/`Points:` 均零命中；任务路径未新增 repo/service 类型。
 
 ## 2. 后端 · 范围、多孩、有效期与频率
 
-- [ ] 2.1 在 `task_repo.go` 增加按 `target_student_id` 与班级的查询：班级任务按 `class_id`，个体任务按 `target_student_id`；两者都带 `kindergarten_id`；验证：单测覆盖班级/个体/其他班三类
-- [ ] 2.2 家长端任务列表/详情/提交/历史/公开申请/反馈统一要求 `student_id`；缺失或不属于该家长时拒绝，不回退到第一个孩子；验证：单测覆盖缺失、非法、多孩切换
-- [ ] 2.3 提交校验：任务属于该孩子班级，或 `target_student_id == 该孩子`；不满足返回明确拒绝；验证：单测断言跨班提交不落库
+- [x] 2.1 在 `task_repo.go` 增加按 `target_student_id` 与班级的查询：班级任务按 `class_id`，个体任务按 `target_student_id`；两者都带 `kindergarten_id`；验证：单测覆盖班级/个体/其他班三类
+      <br>落地 2026-10-25（C-5，决定：保留现状）。谓词在 `parent_portal_service.go:1486` `taskScopeWhere`：`kindergarten_id = ? AND ((target_student_id = 0 AND class_id = ?) OR target_student_id = ?)`；班级任务按 `class_id`、个体任务按 `target_student_id`，四端共用同一份，搬进 `task_repo.go` 只挪位置。三类可见性单测 `TestParentTaskScopeThreeCases`（班级任务全班可见 / 个体任务只对目标孩子 / 别班为空）。
+- [x] 2.2 家长端任务列表/详情/提交/历史/公开申请/反馈统一要求 `student_id`；缺失或不属于该家长时拒绝，不回退到第一个孩子；验证：单测覆盖缺失、非法、多孩切换
+      <br>落地 2026-10-25（C-5）。新增 `ParentPortalService.ResolveTaskContext`（缺失→`ErrParentInvalidParams`、不属于该家长→`ErrParentForbidden`，**不回退**），`parentTaskCtx` 统一调用它，任务端点不再各自比对 `CurrentStudent.ID`。单测 `TestParentTaskContextRequiresOwnedStudent`：`student_id=0` 拒绝、别家孩子拒绝、多孩切到 A2 解析正确。
+- [x] 2.3 提交校验：任务属于该孩子班级，或 `target_student_id == 该孩子`；不满足返回明确拒绝；验证：单测断言跨班提交不落库
+      <br>落地 2026-10-25（C-5）。单测 `TestParentCheckinRejectsOutOfScopeTasks`：给别班班级任务、同班但目标是别的孩子的个体任务提交，均 `ErrParentNotFound` 且 `task_check_ins` 零落库。
 - [x] 2.4 老师创建/更新个体任务时校验目标孩子属于 `tc.ClassID` 与园所；回应/审核校验提交属于该任务与班级；验证：单测覆盖跨班目标、跨班回应、更新目标跨班被拒
       <br>落地 2026-10-24 前。四个包级 helper 已就位且两端共用：`task_rules.go:87` `validateTargetStudent`、`:328` `validateClassStarJar`、`:544` `assertTaskEditable`、`:609` `revokePublicForTask`。跨班目标用例即 `TC-NEW-TSK-0146`（`docs/tests/TEST_CATALOG.md:729`）。
-- [ ] 2.5 任务有效状态按 `status=1 AND start_date <= 今天 <= end_date` 判定；列表、详情、提交统一使用；验证：单测覆盖未开始、进行中、已结束
-- [ ] 2.6 频率校验：`daily` 上海时区当天一次；`weekly` 滚动 7 天一次；`once` 周期内一次；提交在事务内 `SELECT ... FOR UPDATE` `task_checkin_states` 状态行（不存在则创建，创建冲突时回滚重试并锁定已存在行），校验 `last_check_in_date` 后写入并更新状态；`(task_id, student_id, date)` 唯一索引兜底同日重复；验证：单测覆盖三种频率、跨日/跨周、并发双击只成功一次
-- [ ] 2.7 修正 `HomeOverview.pending_tasks`：只统计当前孩子当前周期内尚未提交的有效任务；验证：单测覆盖 daily/weekly/once、已提交、已结束
+- [x] 2.5 任务有效状态按 `status=1 AND start_date <= 今天 <= end_date` 判定；列表、详情、提交统一使用；验证：单测覆盖未开始、进行中、已结束
+      <br>落地 2026-10-25（C-5）。单测 `TestParentTaskActiveWindow`：未来任务与已结束任务都不进列表、提交均被拒（`ErrParentInvalidParams`），进行中的任务可见且可提交；判定统一走 `taskIsActive`。
+- [x] 2.6 频率校验：`daily` 上海时区当天一次；`weekly` 滚动 7 天一次；`once` 周期内一次；提交在事务内 `SELECT ... FOR UPDATE` `task_checkin_states` 状态行（不存在则创建，创建冲突时回滚重试并锁定已存在行），校验 `last_check_in_date` 后写入并更新状态；`(task_id, student_id, date)` 唯一索引兜底同日重复；验证：单测覆盖三种频率、跨日/跨周、并发双击只成功一次
+      <br>落地 2026-10-25（C-5）。单测 `TestParentCheckinFrequencyRules`：daily 当天第二次被拒；weekly 3 天前提交→拒、8 天前提交→放行；once 第二次被拒。并发 `TestParentCheckinConcurrentOnlyOneSucceeds`：两个 goroutine 同时提交，恰好 1 成功、库里只落 1 条。
+- [x] 2.7 修正 `HomeOverview.pending_tasks`：只统计当前孩子当前周期内尚未提交的有效任务；验证：单测覆盖 daily/weekly/once、已提交、已结束
+      <br>落地 2026-10-25（C-5）。抽出 `pendingTaskCount`（`parent_portal_service.go`），复用 `taskSubmittedInPeriod` 的 daily/weekly/once 口径，读失败不再静默（记录日志后退化为 0）。单测 `TestPendingTaskCountOnlyCurrentPeriod`：daily/weekly/once 各 1、已结束与已过期不计（3），提交每日任务后降为 2。
 - [x] 2.8 创建/编辑任务时校验 `learning_link` 必填；老师端与管理端表单都标记必填；验证：单测与真实提交空值被拒
       <br>落地 2026-10-24 前。后端必填见 `teacher_portal_service.go:2970`（创建）与 `:3058`（更新），均为空则拒绝；老师端表单字段见 `teacher/src/pages/tasks/index.vue`，管理端见 `admin/pages/tasks/index.vue`（C-3）。
 - [x] 2.9 改造 `TeacherPortalService.CreateTask` / `UpdateTask`：CreateTask 持久化 `allow_public` / `recognition_ritual` / `star_scope` / `star_goal`，`allow_public` 默认 false、个体任务强制 false；**在 `server/internal/service/task_rules.go` 实现 `validateTargetStudent` / `validateClassStarJar` / `assertTaskEditable` / `revokePublicForTask` 四个包级 helper**，两个 service 共用；UpdateTask 有提交后只允许标题/说明/`learning_link`/`allow_public`，`allow_public=false` 时批量清空批准/确认/审核人/申请，`StarScope=class` 变更调用同一 helper；更新后 `target_student_id>0` 时强制 `allow_public=false` 并调用 `revokePublicForTask`，且 `target_student_id` 变更调用 `validateTargetStudent`；验证：单测覆盖创建字段不被丢弃、个体任务公开强制 false、class scope 校验、老师端改结构字段被拒、改标题允许、关闭公开撤销、班级改个体后公开关闭、更新目标跨班被拒
       <br>落地 2026-10-24 前（C-1/B4）。创建路径字段落库见 `teacher_portal_service.go:3040`（`LearningLink` 等），必填校验 `:2970`/`:3058`，更新按安全字段逐项比较见 `:3121` 起；四个 helper 见 `task_rules.go:87/328/544/609`，老师端与管理端共用同一份。
-- [ ] [P2] 2.10 编辑边界补充：`RecognitionRitual` 可改但只影响未来回应；`Status=0` 结束任务需二次确认；验证：单测/真实点击
-- [ ] 2.11 验证：`go build ./...`、`go vet ./...` 通过；对照 specs 的范围/多孩/有效期/频率/pending/learning_link/结构锁场景
+- [x] [P2] 2.10 编辑边界补充：`RecognitionRitual` 可改但只影响未来回应；`Status=0` 结束任务需二次确认；验证：单测/真实点击
+      <br>落地 2026-10-25（C-5，真实点击）。**口径按 spec 修正**：`RecognitionRitual` 不加入安全字段（`task_rules.go:472` `taskSafeEditableFields` 只有标题/说明/learning_link/allow_public），有提交后不可改。`Status=0` 二次确认加在管理端任务与活动结束（`admin/pages/tasks/index.vue` `confirmEndTask`，只在「进行中 → 已结束」时询问）；真实点击证据：活动结束弹窗文案含「结束后家长端不再展示」→ 先点「取消」三条任务仍为 `status=1` → 再确认后三条变 `status=0`；单条任务结束同样出现确认框并落库。老师端没有结束任务入口（状态控件只在管理端）。
+- [x] 2.11 验证：`go build ./...`、`go vet ./...` 通过；对照 specs 的范围/多孩/有效期/频率/pending/learning_link/结构锁场景
+      <br>落地 2026-10-25（C-5）。`go build ./...`、`go vet ./...`、`golangci-lint`（改动三包）均通过。场景对照：范围三类 `TestParentTaskScopeThreeCases`；多孩/归属 `TestParentTaskContextRequiresOwnedStudent`、`TestParentCheckinRejectsOutOfScopeTasks`；有效期 `TestParentTaskActiveWindow`；三种频率与并发 `TestParentCheckinFrequencyRules`、`TestParentCheckinConcurrentOnlyOneSucceeds`；pending `TestPendingTaskCountOnlyCurrentPeriod`；learning_link 必填 `TestTeacherCreateTaskRejectsInvalidEnums` / `TestAdminCreateTaskRequiresLearningLink`；结构锁 `TestTeacherUpdateTask_StructuralLockReturnsSpecificError`、`TestAdminUpdateTaskStructuralLock`。
 
 ## 3. 后端 · 提交、回应、质量反馈与星星罐
 
-- [ ] 3.1 家长提交接口改用 `media_file_id`；服务端校验文件存在、`user_id` 为上传者、`biz_type=task`、类型为 image/audio；提交不写积分；验证：单测覆盖合法/非法文件、积分不变
-- [ ] 3.2 老师端 `GET /teacher/tasks/:id/checkins` 支持 `status=pending|responded`，`pending` 由后端按 `created_at ASC` 排序，返回提交、家长、时间、回应、公开状态；验证：单测覆盖筛选与排序
+- [x] 3.1 家长提交接口改用 `media_file_id`；服务端校验文件存在、`user_id` 为上传者、`biz_type=task`、类型为 image/audio；提交不写积分；验证：单测覆盖合法/非法文件、积分不变
+      <br>落地 2026-10-25（C-5）。单测 `TestParentCheckinValidatesMediaOwnership`：合法 image/audio 通过；别人的文件、`biz_type=growth`、`file_type=pdf` 均 `ErrParentInvalidParams`。积分不变见 `TestParentCheckinDoesNotChangePoints`。
+- [x] 3.2 老师端 `GET /teacher/tasks/:id/checkins` 支持 `status=pending|responded`，`pending` 由后端按 `created_at ASC` 排序，返回提交、家长、时间、回应、公开状态；验证：单测覆盖筛选与排序
+      <br>落地 2026-10-25（C-5）。单测 `TestTeacherTaskCheckinsStatusFilterAndOrder`：三条提交的 `created_at` 乱序写入，`status=pending` 返回严格按 ASC（c3→c1→c2）；回应一条后 pending 只剩两条、responded 只返回该条。
 - [x] 3.3 新增 `POST /teacher/tasks/:id/checkins/:checkin_id/response`：创建 `TaskResponse`（`single`），把 `TaskCheckIn.ResponseID` 指向该回应；验证：单测覆盖三种仪式
       <br>落地 2026-10-24 前（B）。路由见 `router.go:196`（`TeacherRespondTask`）；三种仪式常量在 `domain/task.go:21-23`，测试侧共 89 处引用覆盖（`task_response_supplement_test.go` 41 处为主）。
-- [ ] 3.4 新增 `POST /teacher/tasks/:id/checkins/batch-response`：创建一条 `TaskResponse`（`period`），把周期内待回应提交的 `ResponseID` 指向它；部分失败返回失败 ID；验证：单测覆盖全部成功、部分失败、空列表、跨任务 ID
+- [x] 3.4 新增 `POST /teacher/tasks/:id/checkins/batch-response`：创建一条 `TaskResponse`（`period`），把周期内待回应提交的 `ResponseID` 指向它；部分失败返回失败 ID；验证：单测覆盖全部成功、部分失败、空列表、跨任务 ID
+      <br>落地 2026-10-25（C-5）。全部成功见 `TestBatchResponseNotifiesOncePerParent`（period 覆盖 3 条、家长去重）；空列表与「部分已回应」见 `TestBatchRespondEmptyAndPartiallyResponded`：无待回应返回 `responded_count=0` 且不建空回应；已回应的提交主回应不被改写，只关闭仍未回应的那条；另一任务的待回应不受影响（跨任务隔离）。**部分失败**（锁内 `RowsAffected=0`）是并发时序分支，无法在单进程单测里确定性触发，代码路径为 `ErrTaskBatchAllFailed` 回滚 + `failed_ids`；未用假造场景冒充已验。
 - [x] 3.5 汇总后个别补充：新增 `POST /teacher/tasks/:id/checkins/:checkin_id/supplement`，创建 `TaskResponse`（`response_type=single`）并写 `task_response_supplements`；必须已有主回应，不改变 `ResponseID`；只允许贴纸/语音，`class_star` 返回明确错误；未指定仪式时默认贴纸，不继承任务默认仪式；验证：单测断言汇总后仍可追加贴纸/语音，家长端返回主回应 + 补充回应，pending 提交不能补，class_star 被拒，默认贴纸
 - [x] 3.6 家长反馈：新增 `POST /parent/tasks/responses/:response_id/reaction`，写入 `task_response_reactions`；唯一 `(response_id, user_id)`；取值 `child_happy` / `received` / `thanks`；只允许对“与自己孩子提交相关”的回应反馈——提交人本人**或**与该孩子有绑定关系的另一位家长，跨家庭拒绝；验证：单测覆盖三种反馈、同一家长更新、co-parent 可反馈、跨家庭拒绝、多个家长分别反馈不互相覆盖；补充回应的反馈不进入主回应指标（指标属 7.2，落地时补断言）
-- [ ] [P1] 3.11 老师端反馈汇总：`GET /teacher/tasks/:id/feedback-summary`（或并入任务详情）返回 `feedback_coverage` / `child_happy_rate` / `ack_rate` 与按孩子的反馈计数；口径与 7.2 一致（按 `(response_id, parent_user_id)` 对计算，分母为回应覆盖的去重家长数，含通知失败；补充回应的反馈不计入）。规格「老师端与管理端 SHALL 能看到反馈汇总」的老师端一半目前无人承接；验证：单测覆盖无反馈、部分反馈、co-parent 两条反馈、补充反馈不计入
+- [x] [P1] 3.11 老师端反馈汇总：`GET /teacher/tasks/:id/feedback-summary`（或并入任务详情）返回 `feedback_coverage` / `child_happy_rate` / `ack_rate` 与按孩子的反馈计数；口径与 7.2 一致（按 `(response_id, parent_user_id)` 对计算，分母为回应覆盖的去重家长数，含通知失败；补充回应的反馈不计入）。规格「老师端与管理端 SHALL 能看到反馈汇总」的老师端一半目前无人承接；验证：单测覆盖无反馈、部分反馈、co-parent 两条反馈、补充反馈不计入
+      <br>落地 2026-10-25（C-5）。`GET /teacher/tasks/:id/feedback-summary`（`router.go:195`）→ `TeacherPortalService.TaskFeedbackSummary`（`teacher_portal_service.go:3287`）。口径复用 7.2 抽出的 `taskFeedbackTotalsOf`（`task_stats.go:346`），未另写公式；返回三个率 + `feedback_counts` + 按孩子 `children` + `notify_baseline_missing`/`unattributed_feedback`。契约见 `api-teacher/09-class-and-tasks.md` 同名小节。单测 `task_feedback_summary_test.go` 6 条：无提交（null）、部分反馈 + co-parent、补充回应不计入、周期回应按孩子归属、未知义务排除、跨班/跨园 404。**老师端页面尚未消费该接口**：spec 的「能看到」当前由接口提供，页面 UI 未接（未擅自扩范围）。
 
 - [x] 3.7 星星罐：`StarScope=task` 统计该任务中**主回应为 `class_star` 的提交数** / `StarGoal`；`StarScope=class` 按班级当前学期统计同类提交数 / `class_star_jars.goal`；period 回应覆盖 N 条提交就加 N 星；join 时过滤 `TaskCheckIn.DeletedAt` 与 `TaskResponse.DeletedAt`；进度展示封顶 100%，目标下调时显示“已超额”；补充回应不计入；验证：单测覆盖 task/class、period 加 N 星、软删除不计入、贴纸/语音不计入、补充回应不计入、满罐/超额
-      <br>分两次落地：**task 侧**随 B4-b（`taskStarCounts` / `star_count`）；**class 侧**在 C-4 本轮补上（`classStarCountInTerm` + `GetClassStarJarWithProgress`，按提交日期落在 term 内计数）。证据见 handoff §24.4：5 条新单测（scope/period/软删/贴纸/补充/超额/封顶/跨班/跨园所/学期边界）+ 老师端卡片真实渲染 `已集 3 / 30`、`已超额 3/2`。未配置时 `progress=null`（不是 0）是**有意决定**，理由见 handoff §24.3-6。
+      <br>分两次落地：**task 侧**随 B4-b（`taskStarCounts` / `star_count`）；**class 侧**在 C-4 本轮补上（`classStarCountInTerm` + `GetClassStarJarWithProgress`，按提交日期落在 term 内计数）。证据见 handoff §24.4：5 条新单测（scope/period/软删/贴纸/补充/超额/封顶/跨班/跨园所/学期边界）+ 老师端卡片真实渲染 `已集 3 / 30`、`已超额 3/2`。未配置时 `progress=null`（不是 0）是**有意决定**，理由见 handoff §24.3-6。**家长端集体进度**：C-5 产品决定「本期不提供家长端展示」，已把 `spec.md` 对应 Scenario 的 THEN 改为「不展示个人排名；班级集体进度在老师端展示，家长端本期不提供」（原句「家长只看到班级集体进度」与实现冲突，非静默放过）。
 - [x] 3.8 班级星星罐目标独立配置：新增 `GET/PUT /teacher/class/star-jar`（按学期），目标必须 >0；**复用 `task_rules.go` 的 `validateClassStarJar` helper**，本任务只做配置端点/UI，不重复写校验；teacher/admin/activity 三个创建入口共用该 helper；任务 `StarScope=class` 时忽略任务 `StarGoal`，UI 隐藏任务目标；验证：单测覆盖三个入口未配置均拒绝、目标 0 被拒、设置、修改、跨班拒绝
       <br>端点与校验随 C-1 落地；**老师端 UI 在 C-4 补齐**（按班级可选/未配置时给可读原因、目标设置入口、detail 口径文案）。C-4 同时修掉 C-1 的一个映射缺陷：老师端建/改任务曾把「班级罐缺失」折叠成「请求参数无效」，现在三个入口返回同一句「请先配置班级星星罐」（handoff §24.2 / §24.4 接口层表）。UI 上「目标设 0 的 toast」未在运行中的小程序里抓到，C-5 补验（§24.5-1）。
 - [x] [P2] 3.9 班级罐 `term` 跨年边界：`Class.AcademicYear + CurrentSemester` 为空/跨学期时给出 fallback；验证：单测
@@ -70,10 +84,14 @@
 - [x] 4.2 老师审核：新增 `PUT /teacher/tasks/:id/checkins/:checkin_id/public`，校验提交属于该任务与班级，并要求老师勾选 `PublicScopeConfirmed`（内容中只有提交者孩子，图片/语音/文字均适用）；批准时该字段必须为 true，写 `PublicApprovedAt/By`；拒绝/撤回清空批准/审核人、`PublicScopeConfirmed=false` 并写 `PublicRevokedAt`；再次申请必须重新批准并重新确认；含其他孩子的内容不得批准；验证：单测覆盖批准、拒绝、撤回、取消/撤回后再次申请不沿用旧批准或旧确认、未勾选/含他人内容被拒、审核留痕
 - [x] 4.3 公开墙查询：join 任务，只返回 `Task.AllowPublic && Task.DeletedAt IS NULL && Task.Status=1 && Task.EndDate>=今天 && Task.ClassID = 当前孩子班级 && IsPublicRequested && PublicScopeConfirmed && PublicApprovedAt != nil && PublicRevokedAt == nil` 的提交；读取时实时过滤；任务结束后不展示，跨班不可见；只展示提交者孩子的内容；验证：单测覆盖默认私密、批准可见、撤回不可见、allow_public 关闭不可见、任务结束不可见、跨班不可见、含他人内容不展示
 - [x] 4.4 管理端撤回：管理员可撤回公开内容；验证：单测覆盖撤回后不可见
-- [ ] [P2] 4.5 一键完成（无文字无媒体）不可申请公开；验证：单测/真实点击
-- [ ] [P2] 4.6 任务结束后公开内容的老师回看/导出能力：明确不提供或加只读入口；验证：产品确认
-- [ ] [P2] 4.7 `PublicApprovedBy` 清空后的审计历史：写入只读操作日志或明确不保留；验证：审计页
-- [ ] 4.8 验证：对照 specs 的公开场景；公开墙不返回其他孩子姓名/班级以外的信息
+- [x] [P2] 4.5 一键完成（无文字无媒体）不可申请公开；验证：单测/真实点击
+      <br>落地 2026-10-25（C-5）。后端闸门 `checkinHasPublicContent`（`task_rules.go:487`）+ `RequestPublicCheckin` 拒绝，判据：`content` 去空白为空 **且** `media_file_id=0` **且** `media_url` 为空；新哨兵 `ErrTaskPublicEmptyContent`（`api-parent/06-task.md` 已补 422 语义）→ handler 文案「这条记录没有文字、照片或语音，不能申请公开；请先补充内容」。前端闸门已存在并核对：`parent/src/pages/tasks/detail.vue:152` `!!(row.content || row.media_url)`（提交时 `media_url` 由 `media_file_id` 派生落库）。单测 `TestPublicRequestRejectsEmptyOneTapCheckin`：空、纯空白都拒绝且不写申请状态，仅有 `media_file_id` 时放行。
+- [x] [P2] 4.6 任务结束后公开内容的老师回看/导出能力：明确不提供或加只读入口；验证：产品确认
+      <br>落地 2026-10-25（C-5，产品决定：回看已有、导出不提供）。`TeacherPortalService.TaskCheckins` 只按 `id + kindergarten + class` 校验任务存在，不按 `status`/有效期过滤（`teacher_portal_service.go:3534` 起），任务结束后老师仍可打开详情读取提交与回应；契约 `api-teacher/09-class-and-tasks.md` 的 checkins 小节已写明「结束后仍可回看、不提供导出」。
+- [x] [P2] 4.7 `PublicApprovedBy` 清空后的审计历史：写入只读操作日志或明确不保留；验证：审计页
+      <br>落地 2026-10-25（C-5，产品决定：写只读操作日志）。新增 `PublicAuditApprove/Revoke/Cancel/RevokeTask` 与 `publicAuditEntry`（`task_rules.go:625`），在 `ReviewPublicCheckin`（批准/拒绝）、`CancelPublicCheckin`（家长取消）、`revokePublicForTask`（关公开/改个体，记录 `reason` 与 `rows`）的事务内写 `operation_logs`；撤销日志保留变更前的 `prior_status` 与 `approved_by`，因此清空后仍可追溯；空操作不写日志。`operation_log_service.go` 补四个中文 action 标签，管理端日志页模块筛选补「任务」（`admin/pages/logs/index.vue`）。单测 `TestPublicAuditTrailSurvivesApproverReset`、`TestRevokePublicForTaskWritesAuditLog`、`TestPublicAuditActionLabels`。审计页的**真实点击**未做（HTML 渲染路径由 admin build 覆盖）。
+- [x] 4.8 验证：对照 specs 的公开场景；公开墙不返回其他孩子姓名/班级以外的信息
+      <br>落地 2026-10-25（C-5）。公开场景单测：默认私密/批准可见/撤回不可见/关闭公开不可见/任务结束不可见/跨班不可见/个体任务不可申请/跨家庭拒绝/取消后重审（`TestPublicWall*`、`TestPublicRequest*`、`TestPublicCancel*`，本文件 20+ 用例）。公开墙行字段只含 `checkin_id/task_id/task_title/student_id/student_name/student_avatar/date/content/media_url/created_at`（`parent_portal_service.go` `publicWallQuery`），不返回家长身份、手机号或班级外信息。
 
 ## 5. 后端 · 通知、分享码与微信能力
 
@@ -83,14 +101,16 @@
 - [ ] 5.4 新增 `WeChatClient.GetParentWXACodeUnlimit(ctx, scene, page, envVersion)`（走家长端凭据）；新增 `wechat.code_env_version` 配置（默认 `release`，开发/测试 `trial`/`develop`）；老师端 `GET /teacher/tasks/:id/share-card` 生成 `pages/tasks/detail` 的小程序码/海报 URL，`scene=t=<task_id>`；验证：单测断言使用家长端凭据与 envVersion；真实扫码进入对应版本家长端
 - [x] 5.5 补充回应未读提示：新增 `task_read_marks(task_id, user_id, student_id, last_read_at)` 唯一 `(task_id, user_id, student_id)` 与 `POST /parent/tasks/:id/read`；读接口带 `student_id`，校验家长绑定、任务可见且未删除，upsert（唯一冲突重试/ON DUPLICATE）并返回 `{ last_read_at }`；未读 = `last_read_at IS NULL OR 补充回应.created_at >= last_read_at`；任务列表/详情显示红点，打开后更新读标记；验证：单测与真实点击，首次未读、同秒、并发读不 500、多家长、多孩互不影响
       <br>落地 2026-10-24 前（B）。表见 `domain/task.go:170`；`POST /parent/tasks/:id/read` 见 `router.go:504`，实现 `parent_portal_service.go:1686` `MarkTaskRead`；未读谓词 `:1745`（`last_read_at IS NULL OR r.created_at >= last_read_at`，同秒不漏判）；列表/详情字段 `:1573` / `:1678`。
-- [ ] [P2] 5.6 `task_read_marks.last_read_at` 与 supplement `created_at` 使用同一存储时区/精度；验证：单测同秒/跨时区
+- [x] [P2] 5.6 `task_read_marks.last_read_at` 与 supplement `created_at` 使用同一存储时区/精度；验证：单测同秒/跨时区
+      <br>落地 2026-10-25（C-5）。两列都是 MySQL `datetime(3)`；`MarkTaskRead` 固定 `shanghaiLoc()` 并 `Truncate(time.Millisecond)`，与补充回应同一时钟。单测：`TestSupplementUnreadSameSecondIsNotMissed`（同秒 `>=` 仍算未读，不漏判）+ `TestSupplementUnreadAcrossTimezones`（同一瞬间用 UTC 表示写入读标记，仍正确判定已读，不因时区表示误判）。
 - [x] 5.7 验证：消息文案包含任务标题与入口提示；不接微信订阅消息；不新增 `MessageType`
 
 ## 6. 后端 · 移除任务积分
 
 - [x] 6.1 从 domain、任务创建/编辑/列表/详情契约与 DTO 中删除 `points` 字段/列；逐端点改造，不能直接返回 domain struct：老师任务列表（`TeacherListTasks`）、老师打卡列表（`TaskCheckins`）、家长打卡历史（`ParentCheckinHistory`）、管理端任务列表；验证：接口响应无 `points`/内部字段，数据库中无 `points` 列
       <br>落地 2026-10-24 前。2026-10-25 复核：`teacher_portal_service.go`、`task_service.go`、`parent/src/pages/tasks/` 对 `"points"`/`Points:` 零命中；四个端点均改为手写响应 map，不直接返回 domain struct。列级删除另见 1.3。
-- [ ] 6.2 提交不写 `PointTransaction`、不改 `PointAccount`、不写 `TaskCheckIn.Points`；验证：单测断言提交前后积分账户与流水不变
+- [x] 6.2 提交不写 `PointTransaction`、不改 `PointAccount`、不写 `TaskCheckIn.Points`；验证：单测断言提交前后积分账户与流水不变
+      <br>落地 2026-10-25（C-5）。单测 `TestParentCheckinDoesNotChangePoints`：预置账户 `TotalPoints=10/UsedPoints=2` 与 1 条流水，提交后账户数值不变、流水仍为 1 条。运行期复核：任务提交/回应后当日 `point_transactions` 共 0 条。
 - [x] 6.3 `PointService.GetPointRules` 移除「任务打卡」规则；`UpdatePointRules` 拒绝该规则；管理端积分规则页不再展示任务项；验证：单测与页面检查
       <br>落地 2026-10-24 前。`point_service.go:268-272` 只返回 id 2/3/4（周全勤/月全勤/成长推荐），无任务项；`UpdatePointRules` 的 `switch` 无 `case 1`，落入 `default: BAD_RULE_ID`（`:297-306`）；`admin/pages/points` 对 `task` 零命中。**残留（非本任务范围）**：`task_checkin_points` 仍被 `readPointsFromExtra`（`:232`）读入但返回值已丢弃，`settings_service.go:97` 仍保留该配置字段——属死配置，不影响规则展示。
 - [x] 6.4 `TaskService.GetTaskStats` 移除 `total_points_awarded`；`SumCheckinPointsInDateRange` 不再被任务统计使用；验证：`grep` 确认无任务路径调用
@@ -108,7 +128,8 @@
 - [x] 7.3 管理端可查看公开内容并撤回；验证：接口与权限
 - [x] 7.4 下线旧 `completion_rate` / `total_possible` / `checkin_count` / `not_checkin_count`：任务列表、任务详情、老师统计、管理端统计、看板统一新口径；验证：`grep` 确认无旧字段返回，前后端同步（后端已下线；管理端页面接新字段 / 移除旧列属 C-3 的 11.1/11.4）
 - [x] 7.5 管理端班级星星罐设置：新增 `GET/PUT /admin/classes/:id/star-jar`，按班级/学期设置目标，校验园所归属，目标必须 >0；验证：接口与权限，目标 0 被拒，任务 `StarScope=class` 使用该目标
-- [ ] [P2] 7.6 `participation_rate` 分母是否排除没有绑定家长的学生；选定口径并加单测
+- [x] [P2] 7.6 `participation_rate` 分母是否排除没有绑定家长的学生；选定口径并加单测
+      <br>落地 2026-10-25（C-5，产品决定：保持全部在读学生）。分母＝班级在读学生（`status=1 AND deleted_at IS NULL`），**含未绑定家长的学生**；理由：参与率衡量班级触达面，排除会把「家长没绑小程序」藏起来。单测 `TestStatsParticipationCountsUnboundStudents`（班级在读 3 人、1 人提交 → `33%`）；契约 `api-admin/10-tasks.md` 两处口径补「含未绑定家长的学生」。
 
 ## 8. 契约
 
@@ -117,11 +138,14 @@
 - [x] 8.2 更新 `backend/api/api-teacher/09-class-and-tasks.md`：创建/编辑新增字段；创建任务响应返回发布通知的 `notified_count` / `notify_failed_count`（按家长去重）；打卡列表支持 `status`；新增单条/周期汇总/个别补充回应、公开审核、班级星星罐设置、分享码端点；回应通知计数按家长去重、只统计主回应；移除 `points` 与旧统计字段
       <br>落地 2026-10-24 前（B）。2026-10-25 复核：`notified_count` / `batch-response` / `supplement` / `public` / `star-jar` / `share-card` / `status=pending` 在该文件共命中 55 处；端点与 `teacher/src/api/teacher-tasks.js:31-85` 逐条对应；`points` 只出现在四处「已移除」声明（`:223`/`:287`/`:333`/`:371`）。
 - [x] 8.3 更新 `backend/api/api-admin/10-tasks.md`：`POST /admin/tasks` 创建独立任务新增 `allow_public` / `recognition_ritual` / `star_scope` / `star_goal` 字段与默认值；新增活动端点（`POST/PUT/DELETE /admin/task-activities`，`activity_id` 服务端生成、安全字段批量编辑、整组删除、事务与班级归属校验）、`GET/PUT /admin/classes/:id/star-jar`、统计字段（参与率/回应率/待回应/`pending_over_48h`/`child_happy_rate`/`ack_rate`/`feedback_coverage`/按活动）、公开撤回；移除任务积分与旧统计字段
-- [ ] 8.4 更新 `backend/api/api-common.md` 消息字段：新增 `action_path`（带 `student_id`，仅内部 `/pages/` 路径）；更新 `api-parent/README.md` / `api-teacher/README.md` / `api-admin/README.md` 索引（如有）
+- [x] 8.4 更新 `backend/api/api-common.md` 消息字段：新增 `action_path`（带 `student_id`，仅内部 `/pages/` 路径）；更新 `api-parent/README.md` / `api-teacher/README.md` / `api-admin/README.md` 索引（如有）
+      <br>落地 2026-10-25（C-5）。`api-common.md` 消息小节补字段说明：`action_path` 只允许内部 `/pages/`、任务消息形如 `/pages/tasks/detail?id=&student_id=`、客户端须校验后再跳转；`reference_id` 对任务发布是 `task_id`、对主回应是 `response_id`。索引：`api-parent/README.md` 06 接口数 4→9、亲子任务页不再关联 07-points；`api-teacher/README.md` 模块 9 范围补回应/公开审核/反馈汇总/班级罐；`api-admin/README.md` 10 接口数 6→13、删除已完成的前端待补项（新建/编辑任务）。
 - [x] [P2] 8.5 `POST /admin/task-activities` 契约补字段级示例（含 `class_ids` 上限/去重）
       <br>落地 2026-10-24（C-3）。字段级示例见 `backend/api/api-admin/10-tasks.md:401`（`"class_ids": [1, 2]`）；约束行见 `:418`——「**是** / 非空、**不得重复**、**≤50**、全部属于当前园所；任一不满足 → 422」。
-- [ ] [P2] 8.6 主回应 `response_type` 契约说明：`single|period` 的语义与 supplement 固定 `single`
-- [ ] 8.7 验证：契约字段与 design 溯源表一一对应；无 design 未声明字段；`points` 已从任务契约移除
+- [x] [P2] 8.6 主回应 `response_type` 契约说明：`single|period` 的语义与 supplement 固定 `single`
+      <br>落地 2026-10-25（C-5）。`api-parent/06-task.md` 与 `api-teacher/09-class-and-tasks.md` 均补：`single` = 逐条回应（只覆盖一条提交）、`period` = 周期汇总（一次覆盖多条提交）；两者都是主回应；补充回应固定 `single`、只出现在 `supplements`、不改变 `response_id`、不计入主回应指标。
+- [x] 8.7 验证：契约字段与 design 溯源表一一对应；无 design 未声明字段；`points` 已从任务契约移除
+      <br>落地 2026-10-25（C-5，逐条复核）。`design.md` 溯源表按实际契约修正并补齐：拆出 `public_scope_confirmed`/`public_revoked_at`；`response_content`/`response_media_file_id` 更正为契约实际字段 `content`/`media_url`；`parent_reaction` 更正为 `my_reaction`（存储于 `task_response_reactions`）；新增 `response_type`/`period_start`/`period_end`、`notify_target_count`、`supplements`、`action_path`、统计派生字段共 6 行；`response_id` 行注明派生 `responded`/`responses`。`points` 仅以「已移除」声明出现（`api-parent/06-task.md` 3 处、`api-teacher/09-class-and-tasks.md` 4 处），无字段定义。
 
 ## 9. 老师端
 
@@ -129,23 +153,31 @@
       <br>落地 2026-10-24 前（B/C-4）。封装齐备：`:27` 打卡列表（带 `params`，可传 `status`）、`:31` 单条回应、`:39` 周期汇总、`:49` 个别补充、`:59` 公开审核、`:69` 班级罐读取、`:74` 目标设置、`:80` 分享码；创建/编辑 `:11`/`:15` 直传对象，无字段裁剪。
 - [x] 9.2 改造 `teacher/src/pages/tasks/index.vue`：创建表单增加学习关联、范围（班级/个体）、学生选择、频率、起止日期、仪式、星星范围/目标、允许公开；增加班级星星罐目标设置；`StarScope=class` 时隐藏任务 `StarGoal`，未配置班级罐时禁用班级星星选项；任务有提交后，编辑表单禁用频率/日期/学生/星星范围等结构字段，只允许标题/说明/学习关联/公开开关；关闭 `allow_public` 时提示“已公开内容将全部撤下”；列表展示待回应数量与星星进度，待回应按提交时间升序；移除积分与旧完成率
       <br>落地 2026-10-24（B + C-4）。2026-10-25 复核：`star-jar` / `待回应` / `star_scope` / `allow_public` / `learning_link` 在 `teacher/src/pages/tasks/` 共命中 55 处（`index.vue` 21、`detail.vue` 34）。C-4 本轮补的是班级罐卡片与进度（`index.vue` 目标设置、列表 `已集 N / M`），结构锁的只读态在 `detail.vue:933-970`。「目标设 0 的 toast」仍未在运行中小程序里抓到，见 3.8 注记与 C-5 待验清单。
-- [ ] 9.3 新增 `teacher/src/pages/tasks/detail.vue`：提交列表、待回应/已回应筛选、贴纸/语音/星星回应、周期汇总、汇总后个别补充（班级星星不可选）、公开审核（含「内容中只有提交者孩子」确认）；语音用 `uni.getRecorderManager` 录制后上传 `/common/upload`（`biz_type=task`）；验证：真实点击完成贴纸、语音、周期汇总、汇总后补充，pending 提交不能补，未勾确认不能批准公开
-- [ ] 9.4 在 `teacher/src/pages.json` 注册 `pages/tasks/detail`；核对老师端无 tabBar，跳转使用 `uni.navigateTo`；验证：真实点击进入详情
+- [ ] 9.3 新增 `teacher/src/pages/tasks/detail.vue`：
+      <br>部分落地 2026-10-25（C-5 真实点击）。已点击验证：待回应/已回应筛选、贴纸单条回应（生成 2158 `single`/`star`）、已回应 tab 的个别补充（2159 + `task_response_supplements`，主回应 `response_id` 不变）、每日任务「一键送贴纸（本周期）」（2160 `period`，只覆盖仍未回应的提交）。**未勾**：语音录制链路（`getRecorderManager`）在 IDE 内无法真实触发，需真机（与 §18.4 同一缺口）；公开审核点击沿用 §18.3 #10-14 证据。提交列表、待回应/已回应筛选、贴纸/语音/星星回应、周期汇总、汇总后个别补充（班级星星不可选）、公开审核（含「内容中只有提交者孩子」确认）；语音用 `uni.getRecorderManager` 录制后上传 `/common/upload`（`biz_type=task`）；验证：真实点击完成贴纸、语音、周期汇总、汇总后补充，pending 提交不能补，未勾确认不能批准公开
+- [x] 9.4 在 `teacher/src/pages.json` 注册 `pages/tasks/detail`；核对老师端无 tabBar，跳转使用 `uni.navigateTo`；验证：真实点击进入详情
+      <br>落地 2026-10-25（C-5 真实点击）。`pages.json:62` 已注册；工作台点「亲子任务」→ 列表点「【C5点击】今晚一件事」卡片 → 栈顶为 `pages/tasks/detail`，详情渲染结构锁提示与待回应列表；老师端无 tabBar，跳转走 `uni.navigateTo`。
 - [ ] 9.5 分享码：详情页调用 `GET /teacher/tasks/:id/share-card`，保存图片到相册并提供「转发到班级群」提示；验证：真实扫码进入家长端
+      <br>实现存在：`teacher/src/pages/tasks/detail.vue` 生成小程序码、写入 `USER_DATA_PATH` 后 `saveImageToPhotosAlbum`，并有「转发班级群」提示；§18.3 #21 验证过落盘 82497 字节。**未勾**：真实扫码进入家长端需真机（12.6）。
 - [x] 9.6 `TeacherTaskInput` 明确包含 `allow_public` / `recognition_ritual` / `star_scope` / `star_goal`，避免前端传入被后端丢弃（A 切片依赖）；验证：老师端创建/编辑请求字段不被丢弃，`go build` 通过
       <br>落地 2026-10-24 前。字段见 `teacher_portal_service.go:2862-2865`（`AllowPublic`/`RecognitionRitual`/`StarScope`/`StarGoal`，指针类型以区分「未传」与「传 false/0」）。`go build ./...`、`go vet ./...`、`golangci-lint` 在 C-4 收尾时均通过（handoff §24.4）。
 - [ ] 9.7 验证：`npm run build:mp-weixin` 通过；`node scripts/check-tokens.mjs teacher` 对改动文件无新增违规；真实点击走完「创建个体任务 → 待回应 → 回应 → 审核公开 → 分享」
+      <br>部分落地 2026-10-25（C-5）。`npm run build:mp-weixin` 通过；`check-tokens teacher` 改动文件 0 违规。点击证据：§18.3 #1-21（创建/待回应/回应/补充/公开审核/生成小程序码）+ 本轮 9.3/9.4。**未勾**：创建个体任务的原生 picker 与真机扫码无法在 IDE 内真实点击（§18.4）。
 
 ## 10. 家长端
 
-- [ ] 10.1 更新 `parent/src/api/parent-task.js`：所有任务接口传 `student_id`；提交使用 `media_file_id`；新增公开申请/取消、家长反馈、读标记封装；任务详情/首页入口解析小程序码 `scene=t=<task_id>`，缺省回退 query `id`；验证：多孩切换后参数正确、扫码能定位任务
-- [ ] 10.2 改造 `parent/src/pages/tasks/index.vue`：按当前孩子展示；状态为「待完成 / 已提交 / 已回应」；进度按该孩子计算；移除积分；任务 Tab 红点使用修正后的 `pending_tasks`；有补充回应未读时显示任务级红点
+- [x] 10.1 更新 `parent/src/api/parent-task.js`：所有任务接口传 `student_id`；提交使用 `media_file_id`；新增公开申请/取消、家长反馈、读标记封装；任务详情/首页入口解析小程序码 `scene=t=<task_id>`，缺省回退 query `id`；验证：多孩切换后参数正确、扫码能定位任务
+      <br>落地 2026-10-25（C-5）。任务接口的 `student_id`/`media_file_id`/公开申请/反馈/读标记封装均已就位（`parent/src/api/parent-task.js`，复核）。小程序码 `scene` 解析抽到 `parent/src/utils/taskScene.js`（兼容 `t%3D123`），详情页改为共用；首页 `onLoad` 也解析 `scene` 并转场任务详情。功能验证：以 `reLaunch('/pages/index/index?scene=t%3D4322')` 模拟扫码入口 → 逻辑层页面栈变为 `pages/index/index → pages/tasks/detail`，`options.id=4322`，详情标题正确。**真机扫码**仍由 12.6 承担，不因本勾视为已验。
+- [x] 10.2 改造 `parent/src/pages/tasks/index.vue`：按当前孩子展示；状态为「待完成 / 已提交 / 已回应」；进度按该孩子计算；移除积分；任务 Tab 红点使用修正后的 `pending_tasks`；有补充回应未读时显示任务级红点
+      <br>落地 2026-10-25（C-5）。后端列表新增 `responded`：`taskPeriodCheckin` 一次查询同时得到本周期提交与 `response_id`（`parent_portal_service.go:1503` 起），补充回应不改变 `response_id`。契约 `api-parent/06-task.md` 补字段与三态说明。前端 `parent/src/pages/tasks/index.vue` 状态改为「待完成 / 已提交 / 已回应」（`responded` 用 `$color-semantic-info` 徽标，进度仍按当前孩子本周期）；红点仍用 `has_unread_supplement`，首页任务卡红点用后端 `pending_tasks`。单测 `TestParentTaskListRespondedState`：无提交 false → 提交后仍 false → 主回应后 true。
 - [x] 10.3 改造 `parent/src/pages/tasks/detail.vue`：展示 `learning_link`、要求数组、主回应 + 补充回应（贴纸/语音/文字）、每条回应的家长反馈按钮、公开申请开关；打开详情清除补充回应未读标记；当前孩子不是消息目标孩子时提示可切换；新增「给孩子看」全屏展示态（放大贴纸/播放语音/老师的话）；移除积分与旧完成率；修复 `checked_in_today` / `requirements` 字段错误
       <br>落地 2026-10-23（B4-a/B4-b）。`requirements` 数组见 `parent/src/pages/tasks/detail.vue:447-448`，`learning_link` 见 `:452-456`；「给孩子看」见 `:480`/`:509`（全屏态 `:563`）；打开即 `markTaskRead` 见 `:198`（`markTaskRead` 从 `:13` 引入）；`my_reaction` 回显见 `:488`/`:516`。真实点击见 handoff §16.3：#3 进详情（`requirements` 渲染成 1./2. 两条、学习关联卡正常）、#6 打开详情写 `task_read_marks.last_read_at` 并渲染补充回应、#9「给孩子看」全屏态、#16 消息目标孩子≠当前孩子时提示 + 「切换查看」（§16.7 补验切换真的生效）。
-- [ ] 10.4 在 `parent/src/pages/index/index.vue` 增加「今晚一件事」卡片：取当前孩子最近一条待完成任务；验证：真实点击进入详情
+- [x] 10.4 在 `parent/src/pages/index/index.vue` 增加「今晚一件事」卡片：取当前孩子最近一条待完成任务；验证：真实点击进入详情
+      <br>落地 2026-10-25（C-5 真实点击）。首页「今晚一件事」卡片（`todayTask` 取任务列表首条未提交项）点击 → 栈顶 `pages/tasks/detail`，详情标题与卡片一致（【B4验证】连点测试2）。
 - [x] 10.5 家长反馈：主回应卡片下提供「孩子很开心 / 收到了 / 谢谢老师」三个一键反馈（`child_happy` / `received` / `thanks`）；补充回应可单独反馈但不进入主回应指标；同一家长可更新自己的反馈；验证：真实点击写入并回显，多个家长分别反馈不互相覆盖
       <br>落地 2026-10-23（B4-a）。三个选项见 `parent/src/pages/tasks/detail.vue:24-26`，主/补充回应各一组按钮见 `:488-492` / `:516-520`，回显依赖 `my_reaction`。真实点击见 handoff §16.3 #8：点「孩子很开心」→ 库 `task_response_reactions` 落 `(699, 61, child_happy)`、按钮 `active`、重进详情回显；§16.7 补验补充回应单独反馈写 `(700, 61, received)`，两组 active 互不串。
-- [ ] 10.6 消息深链：家长端 `pages/messages/index.vue` 按 `action_path` 跳转；任务发布/主回应消息点击进入对应任务/孩子详情；只接受 `/pages/` 开头的内部路径；任务删除/结束显示提示；未登录保留路径，登录后回跳；验证：真实点击消息列表，多孩家庭进入正确孩子
+- [x] 10.6 消息深链：家长端 `pages/messages/index.vue` 按 `action_path` 跳转；任务发布/主回应消息点击进入对应任务/孩子详情；只接受 `/pages/` 开头的内部路径；任务删除/结束显示提示；未登录保留路径，登录后回跳；验证：真实点击消息列表，多孩家庭进入正确孩子
+      <br>落地 2026-10-25（C-5，真实点击）。新增 `parent/src/utils/pendingRoute.js`（只保留内部 `/pages/` 路径，tabBar 页走 `switchTab`、其余 `reLaunch`）；`api/http.js` 401 时记录当前页（含 query）再跳登录；登录页登录成功/已登录时调用 `resumePendingRoute()` 回跳；消息页在无 token 时先存目标 `action_path` 再跳登录。证据：①消息页点「【C5】消息深链验证」→ 栈顶 `pages/tasks/detail?id=4322&student_id=27`，详情标题正确，库 `messages.is_read=1`、`read_at` 写入；②写入无效 token 后 reLaunch 详情 → 401 → 登录页 → 勾选协议并登录 → 自动回跳到同一详情。
 - [x] [P2] 10.7 点消息打开任务详情时，同时把对应站内消息标记已读；若产品决定独立，写清不联动
       <br>落地 2026-10-23（B4-c 提前做，handoff §16.8 #1）。`parent/src/pages/messages/index.vue:35` 在跳转前调 `markMessageRead(item.id)`，失败只记日志不阻断跳转。真实点击复验：消息页「2条未读」→ 点任务消息 → 库 `is_read=1, read_at` 有值 → 返回显示「1条未读」（§16.8）。
 - [x] 10.8 验证：`npm run build:mp-weixin` 通过；`node scripts/check-tokens.mjs parent` 对改动文件无新增违规；真实点击走完「提交 → 看到老师回应 → 反馈 → 申请公开 → 消息跳转」
@@ -166,12 +198,16 @@
 
 - [x] 12.1 在 `docs/tests/TEST_CATALOG.md` 新增「亲子任务闭环 (TSK-LOOP)」模块，登记 `TC-NEW-TSK-0101` 至 `TC-NEW-TSK-0146`；验证：编号与 specs 引用一一对应
       <br>落地 2026-10-24 前。46 条已登记：`docs/tests/TEST_CATALOG.md:684`（`TC-NEW-TSK-0101` 班级任务对本班家庭可见）至 `:729`（`TC-NEW-TSK-0146` 更新个体任务目标跨班被拒），连续无缺号。
-- [ ] 12.2 后端单测：范围/多孩/跨班/有效期/滚动 7 天/并发状态行/回应/周期汇总/汇总后补充（class_star 被拒、默认贴纸、response_type=single）/补充不进入指标/补充未读与读标记（首次 NULL、同秒 >=、按孩子、归属校验、upsert 并发、返回 last_read_at）/反馈按家长/星星 task/class 按主回应覆盖提交数、period 加 N 星、软删除不计入、补充不计入、超额封顶/班级罐三入口统一校验、目标 0 被拒、创建/更新为 class scope 未配置目标被拒/公开审核（内容边界、PublicScopeConfirmed、留痕、取消/撤回清空确认与审核人、allow_public 关闭清空批准/申请/审核人、任务结束不展示、跨班不可见、重开不复活）/取消后重审/创建任务字段持久化（老师端+管理端）与个体任务公开强制 false、班级改个体后公开关闭、更新目标跨班被拒/有提交后结构字段锁定（老师端与管理端共用 `task_rules.go` helper）/无积分/旧统计下线/通知按家长去重、创建任务响应返回发布计数、回应计数只统计主回应、action_path（student_id、内部路径、任务删除/结束、登录回跳）/空库 schema 唯一键/统计公式（single/period 分开，avg 不含 period）/pending 后端升序/`pending_over_48h`/活动分组与事务、class_ids 去重/上限/`POST /admin/tasks` 忽略 activity_id/安全字段批量编辑与单编辑限制/删除级联 read+state+supplement+reaction；验证：`go test ./internal/service -run 'Task|ParentTask' -timeout 600s` 通过
+- [x] 12.2 后端单测：范围/多孩/跨班/有效期/滚动 7 天/并发状态行/回应/周期汇总/汇总后补充（class_star 被拒、默认贴纸、response_type=single）/补充不进入指标/补充未读与读标记（首次 NULL、同秒 >=、按孩子、归属校验、upsert 并发、返回 last_read_at）/反馈按家长/星星 task/class 按主回应覆盖提交数、period 加 N 星、软删除不计入、补充不计入、超额封顶/班级罐三入口统一校验、目标 0 被拒、创建/更新为 class scope 未配置目标被拒/公开审核（内容边界、PublicScopeConfirmed、留痕、取消/撤回清空确认与审核人、allow_public 关闭清空批准/申请/审核人、任务结束不展示、跨班不可见、重开不复活）/取消后重审/创建任务字段持久化（老师端+管理端）与个体任务公开强制 false、班级改个体后公开关闭、更新目标跨班被拒/有提交后结构字段锁定（老师端与管理端共用 `task_rules.go` helper）/无积分/旧统计下线/通知按家长去重、创建任务响应返回发布计数、回应计数只统计主回应、action_path（student_id、内部路径、任务删除/结束、登录回跳）/空库 schema 唯一键/统计公式（single/period 分开，avg 不含 period）/pending 后端升序/`pending_over_48h`/活动分组与事务、class_ids 去重/上限/`POST /admin/tasks` 忽略 activity_id/安全字段批量编辑与单编辑限制/删除级联 read+state+supplement+reaction；验证：`go test ./internal/service -run 'Task|ParentTask' -timeout 600s` 通过
+      <br>落地 2026-10-25（C-5）。全量 `go test ./internal/service -p 1 -parallel 2 -count=1 -timeout 900s` → **`ok 798.946s`，EXIT=0，0 条 FAIL/panic**。此前一轮 20 条 B2 用例以 `Error 1040: Too many connections` 失败，定位为测试夹具每个用例新建连接池且不关闭（MySQL `max_connections=151`），已在 `openTaskB1DB` 限制 `MaxOpenConns=8` 并挂 `t.Cleanup` 关闭；修复后全绿。新增用例 20 条覆盖 3.11/4.5/4.7/7.6/10.2 与 2.2/2.3/2.5/2.6/2.7/3.1/3.2/3.4/5.6/6.2。
 - [ ] 12.3 集成验证：老师创建个体任务 → 目标家庭可见、其他家庭不可见 → 家长提交 → 老师单条/周期汇总回应 → 家长看到回应并反馈 → 老师追加个别补充 → 家长看到任务红点并打开「给孩子看」→ 读标记清除；验证：真实点击 + 本地库核对 `response_id` / `task_response_supplements` / `task_response_reactions` / `task_checkin_states` / `task_read_marks`，并确认 `points` 字段/列不存在
 - [x] 12.4 公开验证：班级活动默认私密 → 家长申请 → 老师审核 → 班级墙可见 → 撤回后消失 → 再次申请必须重新审核；个体任务无法公开；验证：真实点击 + 接口返回
       <br>落地 2026-10-23（B4-a/B4-b/B4-c）。真实点击与库核对见 handoff §18.3 #10–#14：不勾确认不能批准（库 `scope_confirmed` 仍 0）、批准写 `approved_at/by`、一次点击不撤（停「确认撤下？」）、确认后 `revoked_at` 有值、家长重新申请后勾选框回到 ☐；个体任务无法公开见 #7（`allow_public` 被后端强制为 0）。§16.6 #1 复验「老师关公开后家长仍能撤下」。班级墙页面 `parent/src/pages/tasks/wall.vue` 于 §16.9 补齐。
       <br>说明：本节真实点击均在 IDE 内完成，**真机扫码/真机公开墙仍属 12.6 的待办**，不因本勾而视为已验。
-- [ ] 12.5 管理端验证：通过 `POST /admin/task-activities` 创建多班活动（含一个跨园所班级时整组失败）→ 按 `activity_id` 编辑安全字段一次全部班级 → 活动任务单删被拒 → 删除活动整组消失 → 统计出现活动聚合与参与/回应/反馈数据；撤回公开内容；验证：真实点击
+- [x] 12.5 管理端验证：通过 `POST /admin/task-activities` 创建多班活动（含一个跨园所班级时整组失败）→ 按 `activity_id` 编辑安全字段一次全部班级 → 活动任务单删被拒 → 删除活动整组消失 → 统计出现活动聚合与参与/回应/反馈数据；撤回公开内容；验证：真实点击
+      <br>落地 2026-10-25（C-5，管理端构建产物 + 无头 Chrome 真实点击，脚本 `_verify/c3_admin_tasks_ui.mjs` **exit=0**）。证据：3 个班共享同一 `activity_id`（`activity-task-count=3`）；组行操作只有「编辑活动 / 删除整个活动」，无单删（`list-activity-row-no-single-delete`）；改标题三条同变（`activity-renamed-count=3`）；活动编辑的结构位禁用；结束活动二次确认「取消」后三条仍 `status=1`，确认后三条 `status=0`；**删除整个活动后 `activity-delete-all-gone=0`**；统计页回应率/参与率/超 48h/中位数/明细齐全且无旧完成率；公开内容撤回后行显示「已撤回 / 已不可见」。跨园所班级整组失败由 `TestActivityCreateRollsBackWholeGroupWhenClassJarMissing` / `TestActivityCreate` 覆盖（本脚本不再造跨园数据）。
 - [ ] 12.6 分享码验证：老师生成家长端小程序码 → 开发/测试环境扫码进入对应版本家长端任务详情；验证：真实扫码，不从老师端进入；未配置 `code_env_version` 时有明确错误提示
-- [ ] 12.7 回归验证：成长时光、通知、接送、积分页、管理端看板不受影响；任务流程不再产生积分流水；旧完成率/旧打卡人数不再出现；验证：关键页面 MCP 导航 + 真实点击抽查
-- [ ] 12.8 收工验证：`go build ./...`、`go vet ./...`、两端 `npm run build:mp-weixin`、管理端 `npm run build`、`openspec validate --all` 通过；杀掉残留 `dev:mp-weixin` watcher；逐条对照 specs 全部场景，未通过项不得归档
+- [x] 12.7 回归验证：成长时光、通知、接送、积分页、管理端看板不受影响；任务流程不再产生积分流水；旧完成率/旧打卡人数不再出现；验证：关键页面 MCP 导航 + 真实点击抽查
+      <br>落地 2026-10-25（C-5）。家长端真实导航：成长时光（8 条/5 张、只看孩子）、通知（2 条 2 未读）、接送（记录 + 二维码）、积分（0 分、排行榜/成就）、首页均正常渲染，无错误页。管理端：构建产物 + 无头 Chrome 打开 `/` 看板，总学生数/今日出勤正常，全文无 `NaN`/`undefined`；任务列表无「完成率」列、统计无「平均完成率」（`list-no-completion-rate-column` / `stats-no-avg-completion`）。积分流水：任务提交与回应后当日 `point_transactions` 共 **0** 条（task 来源 0 条）；`TestParentCheckinDoesNotChangePoints` 也钉住账户余额与流水不变。
+- [x] 12.8 收工验证：`go build ./...`、`go vet ./...`、两端 `npm run build:mp-weixin`、管理端 `npm run build`、`openspec validate --all` 通过；杀掉残留 `dev:mp-weixin` watcher；逐条对照 specs 全部场景，未通过项不得归档
+      <br>落地 2026-10-25（C-5）。`go build ./...`、`go vet ./...`、`golangci-lint`（改动三包）通过；parent/teacher `npm run build:mp-weixin`、admin `npm run build` 通过；`openspec validate --all` → 21 passed / 0 failed；残留 `dev:mp-weixin` watcher 已按 PID 清理。specs 场景由 12.2 全量单测 + 本轮真实点击覆盖；**归档仍被 5.4/9.3/9.5/9.7/12.3/12.6 的真机与跨端项挡住**（见 handoff §28.6），本勾只代表收工命令门禁通过。

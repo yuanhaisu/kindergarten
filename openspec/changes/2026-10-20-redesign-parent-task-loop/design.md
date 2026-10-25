@@ -285,12 +285,17 @@ A 未通过不得进入 B，B 未通过不得进入 C；C 完成后才 archive�
 | `recognition_ritual` | 贴纸/语音/班级星星 | 是老师配置 |
 | `star_scope` / `star_goal` | 按任务/按班级星星罐 | 是老师配置 |
 | `class_star_jar.goal` | 班级星星罐目标独立配置 | 任务 `StarGoal` 只适用于按任务范围，不能同时代表班级罐目标 |
-| `is_public_requested` / `public_approved_at` / `public_approved_by` | 家长申请、老师审核 | 是双方动作 |
-| `response_id` | 老师回应是闭环状态 | 是闭环状态本身 |
-| `response_content` / `response_media_file_id` / `sticker_key` | 老师回应的三种载体 | 老师输入 |
-| `parent_reaction` | 家长质量反馈，按家长维度 | 家长动作；同一回应可被多个家庭分别反馈 |
+| `is_public_requested` / `public_scope_confirmed` / `public_approved_at` / `public_approved_by` / `public_revoked_at` | 家长申请、老师审核（含「内容中只有提交者孩子」确认）与撤回 | 是双方动作；确认与撤回时间必须独立落库，不能由批准时间派生 |
+| `response_id`（契约派生 `responded` / `responses`） | 老师回应是闭环状态；家长列表的「已回应」由本任务当前周期提交的 `response_id` 派生 | 是闭环状态本身，不能由提交时间或通知推断 |
+| `content` / `media_url` / `sticker_key`（回应与提交同名字段） | 老师回应的三种载体；提交的照片/语音通过 `task_check_ins.media_file_id` + `media_url` 落库 | 老师/家长输入；媒体 URL 由文件表派生，`media_file_id` 才是归属校验依据 |
+| `response_type` / `period_start` / `period_end` | 主回应是逐条（`single`）还是周期汇总（`period`），以及汇总覆盖的周期 | 回应关闭的提交集合由写入时决定，无法从提交时间反推 |
+| `my_reaction`（存储于 `task_response_reactions`） | 家长质量反馈，按家长维度；契约只返回**当前登录家长**自己的反馈 | 家长动作；同一回应可被多个家庭分别反馈，故不能把反馈做成回应上的一个字段 |
+| `notify_target_count` | 主回应承诺投递的家长数（义务集，先写义务再投递，含失败） | 通知结果不回写；用它当反馈率分母，才能避免「失败的那位家长被当成没有反馈」 |
+| `supplements`（补充回应视图） | 汇总回应之后对单条提交的追加（贴纸/语音） | 补充回应是独立 `TaskResponse`，不被 `response_id` 引用，必须单独建模才能与主回应区分 |
+| `action_path` | 任务发布/主回应消息的站内跳转路径，只允许内部 `/pages/` | 由业务动作决定，客户端不得自拟；必须带 `student_id` 才能落到多孩家庭正确孩子 |
 | `points` | 既有字段；本变更从任务契约、页面与数据库移除 | 开发阶段无历史数据，直接删除字段与列 |
 | `has_unread_supplement` | 未读模型：补充回应 `created_at > task_read_marks.last_read_at` | 未读是家长读状态，不能由提交/回应时间独立派生 |
+| 统计字段（`response_rate` / `participation_rate` / `pending_over_48h` / `median_response_hours` / `feedback_coverage` / `child_happy_rate` / `ack_rate` / `notify_baseline_missing`） | 管理端统计与老师端反馈汇总的只读派生值 | 口径见 D12 与 §20.10-6/7；派生值不落库，避免与底层行漂移 |
 
 ## 数据与建表
 
