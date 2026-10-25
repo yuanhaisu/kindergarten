@@ -171,7 +171,10 @@ func setupB3(t *testing.T) *b3Fixture {
 
 	f := &b3Fixture{db: db, clean: clean}
 	f.svcT = NewTeacherPortalService(db, nil, nil, repository.NewMessageRepo(db), nil, nil, config.FaceConfig{})
-	f.svcP = NewParentPortalService(db, nil, nil, nil, nil, nil, nil, nil)
+	f.svcP = NewParentPortalService(db,
+		repository.NewParentRepo(db), repository.NewUserRoleRepo(db),
+		repository.NewStudentRepo(db), repository.NewClassRepo(db),
+		nil, nil, repository.NewNoticeRepo(db))
 	f.tc = &TeacherPortalContext{UserID: testB3Teacher, KindergartenID: testB3KG, ClassID: testB3Class}
 	f.pcA1 = b3ParentCtx(testB3ParentA, testB3StudentA1, testB3Class)
 	f.pcA2 = b3ParentCtx(testB3ParentA, testB3StudentA2, testB3Class)
@@ -286,6 +289,34 @@ func TestTaskPublishNotifiesTargetFamilyOnly(t *testing.T) {
 	assert.Len(t, f.messagesTo(t, testB3CoParentA), 1)
 	assert.Empty(t, f.messagesTo(t, testB3ParentB), "个体任务不通知其他家庭")
 	assert.Empty(t, f.messagesTo(t, testB3ParentOther))
+}
+
+// 2.1：范围谓词三类覆盖——班级任务全班可见、个体任务只对目标孩子、别班不可见。
+func TestParentTaskScopeThreeCases(t *testing.T) {
+	f := setupB3(t)
+	classID := f.createTask(t, 0, "B3 班级范围")["id"].(uint64)
+	individualID := f.createTask(t, testB3StudentA1, "B3 个体范围")["id"].(uint64)
+
+	ids := func(pc *ParentPortalContext) map[uint64]bool {
+		list, err := f.svcP.ListTasks(context.Background(), pc, 1, 20)
+		require.NoError(t, err)
+		out := map[uint64]bool{}
+		for _, item := range list["list"].([]map[string]any) {
+			out[item["id"].(uint64)] = true
+		}
+		return out
+	}
+
+	a1 := ids(f.pcA1)
+	assert.True(t, a1[classID], "班级任务对目标孩子可见")
+	assert.True(t, a1[individualID], "个体任务对目标孩子可见")
+
+	b := ids(f.pcB)
+	assert.True(t, b[classID], "班级任务对本班其他家庭可见")
+	assert.False(t, b[individualID], "个体任务不得对其他家庭可见")
+
+	other := b3ParentCtx(testB3ParentOther, testB3StudentC, testB3ClassOther)
+	assert.Empty(t, ids(other), "别班看不到本班任何任务")
 }
 
 func TestTaskActionPathOnlyAllowsInternalPages(t *testing.T) {
@@ -505,6 +536,35 @@ func TestSupplementUnreadFirstTimeThenClearedByRead(t *testing.T) {
 	list, err = f.svcP.ListTasks(context.Background(), f.pcA1, 1, 20)
 	require.NoError(t, err)
 	assert.Equal(t, false, list["list"].([]map[string]any)[0]["has_unread_supplement"])
+}
+
+// 10.2：列表要能区分「待完成 / 已提交 / 已回应」，否则前端只能显示两态。
+func TestParentTaskListRespondedState(t *testing.T) {
+	f := setupB3(t)
+	out := f.createTask(t, 0, "B3 列表已回应态")
+	taskID := out["id"].(uint64)
+
+	list, err := f.svcP.ListTasks(context.Background(), f.pcA1, 1, 20)
+	require.NoError(t, err)
+	items := list["list"].([]map[string]any)
+	require.Len(t, items, 1)
+	assert.Equal(t, false, items[0]["submitted_current_period"], "无提交 = 待完成")
+	assert.Equal(t, false, items[0]["responded"])
+
+	c := f.checkin(t, taskID, testB3StudentA1, testB3ParentA)
+	list, err = f.svcP.ListTasks(context.Background(), f.pcA1, 1, 20)
+	require.NoError(t, err)
+	items = list["list"].([]map[string]any)
+	assert.Equal(t, true, items[0]["submitted_current_period"], "有提交 = 已提交")
+	assert.Equal(t, false, items[0]["responded"], "老师还没回应")
+
+	_, err = f.svcT.RespondTask(context.Background(), f.tc, taskID, c.ID,
+		domain.TaskRitualSticker, "star", "回应", 0)
+	require.NoError(t, err)
+	list, err = f.svcP.ListTasks(context.Background(), f.pcA1, 1, 20)
+	require.NoError(t, err)
+	items = list["list"].([]map[string]any)
+	assert.Equal(t, true, items[0]["responded"], "主回应后 = 已回应")
 }
 
 func TestSupplementUnreadSameSecondIsNotMissed(t *testing.T) {

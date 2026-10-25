@@ -75,6 +75,17 @@ func openTaskB1DB(t *testing.T) *gorm.DB {
 		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
 	})
 	require.NoError(t, err)
+	// 每个用例一套夹具；gorm 默认不限制连接数、也不会在用例结束后回收。
+	// 整包 100+ 用例累积后会把 MySQL 的 max_connections(151) 打满，
+	// B2 之后的用例全部以 `Error 1040: Too many connections` 失败（2026-10-25 实测）。
+	// 这里给单测池设上限，并在用例结束时关闭；关闭挂在 Cleanup 里，
+	// LIFO 顺序保证先跑夹具的行清理、最后才关连接。
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(8)
+	sqlDB.SetMaxIdleConns(2)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
+	t.Cleanup(func() { _ = sqlDB.Close() })
 	return db
 }
 

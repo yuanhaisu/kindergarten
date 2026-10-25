@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -107,6 +108,8 @@ func setupB2(t *testing.T) *b2Fixture {
 			// 按外键方向：student_parents → students → classes → users → kindergartens。
 			// students 上有 fk_students_class、student_parents 上有 fk_student_parents_student
 			// （RESTRICT），顺序错了会静默留下整棵孤儿树，下次重跑全部撞键。
+			// 公开审核留痕也写 operation_logs：不清会让下一次测试读到上一轮的日志。
+			{"operation_logs", db.Unscoped().Where("kindergarten_id = ?", testB2KG).Delete(&domain.OperationLog{}).Error},
 			{"student_parents", db.Unscoped().Where("student_id IN ?", []uint64{testB2Student, testB2StudentPeer, testB2StudentOther}).Delete(&domain.StudentParent{}).Error},
 			{"students", db.Unscoped().Where("id IN ?", []uint64{testB2Student, testB2StudentPeer, testB2StudentOther}).Delete(&domain.Student{}).Error},
 			{"classes", db.Unscoped().Where("id IN ?", []uint64{testB2Class, testB2ClassOther}).Delete(&domain.Class{}).Error},
@@ -247,6 +250,15 @@ func (f *b2Fixture) wallIDs(t *testing.T, pc *ParentPortalContext) []uint64 {
 	return ids
 }
 
+// auditLogs 读该园所的公开审核日志（按 id 升序）。
+func (f *b2Fixture) auditLogs(t *testing.T, action string) []domain.OperationLog {
+	t.Helper()
+	var out []domain.OperationLog
+	require.NoError(t, f.db.Where("kindergarten_id = ? AND action = ?", testB2KG, action).
+		Order("id ASC").Find(&out).Error)
+	return out
+}
+
 // requestAndApprove 走完「家长申请 → 老师确认并批准」，返回提交的当前状态。
 func (f *b2Fixture) requestAndApprove(t *testing.T, task *domain.ParentTask, checkinID uint64) {
 	t.Helper()
@@ -281,6 +293,107 @@ func TestPublicRequestAllowed(t *testing.T) {
 	require.Len(t, rows, 1)
 	assert.Equal(t, true, rows[0]["is_public_requested"])
 	assert.Equal(t, false, rows[0]["public_visible"], "待审核不得显示为已公开")
+}
+
+// 4.5：一键完成（无文字、无媒体）没有可公开的内容，不能进审核队列。
+func TestPublicRequestRejectsEmptyOneTapCheckin(t *testing.T) {
+	f := setupB2(t)
+	loc := shanghaiLoc()
+	now := time.Now().In(loc)
+	c := domain.TaskCheckIn{
+		TaskID: f.taskPub.ID, StudentID: testB2Student, UserID: testB2Parent,
+		Date: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc),
+	}
+	require.NoError(t, f.db.Create(&c).Error)
+
+	_, err := f.svcP.RequestPublicCheckin(context.Background(), f.pc, c.ID)
+	assert.ErrorIs(t, err, ErrTaskPublicEmptyContent)
+	assert.False(t, f.reload(t, c.ID).IsPublicRequested, "被拒绝时不得写入申请状态")
+
+	// 纯空白文字同样算「没有内容」。
+	c.Content = "  \n "
+	require.NoError(t, f.db.Save(&c).Error)
+	_, err = f.svcP.RequestPublicCheckin(context.Background(), f.pc, c.ID)
+	assert.ErrorIs(t, err, ErrTaskPublicEmptyContent)
+
+	// 只有 media_file_id（URL 由读取时生成）也算有内容：不能误拦照片/语音提交。
+	c.Content = ""
+	c.MediaFileID = 9927999
+	require.NoError(t, f.db.Save(&c).Error)
+	_, err = f.svcP.RequestPublicCheckin(context.Background(), f.pc, c.ID)
+	require.NoError(t, err)
+	assert.True(t, f.reload(t, c.ID).IsPublicRequested)
+}
+
+// 4.7：PublicApprovedBy 被清空后，日志是唯一能回答「谁批准过」的地方。
+func TestPublicAuditTrailSurvivesApproverReset(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	f.requestAndApprove(t, &f.taskPub, c.ID)
+
+	assert.Equal(t, testB2Teacher, f.reload(t, c.ID).PublicApprovedBy)
+	approveLogs := f.auditLogs(t, PublicAuditApprove)
+	require.Len(t, approveLogs, 1)
+	assert.Equal(t, testB2Teacher, approveLogs[0].UserID)
+	assert.Equal(t, c.ID, approveLogs[0].TargetID)
+	assert.Contains(t, approveLogs[0].Detail, "prior_status=pending")
+
+	// 家长取消：审核人被清空，但批准记录不能被抹掉。
+	_, err := f.svcP.CancelPublicCheckin(context.Background(), f.pc, c.ID)
+	require.NoError(t, err)
+	assert.Zero(t, f.reload(t, c.ID).PublicApprovedBy, "取消后审核人必须清空")
+	assert.Len(t, f.auditLogs(t, PublicAuditApprove), 1, "批准日志必须保留")
+
+	cancelLogs := f.auditLogs(t, PublicAuditCancel)
+	require.Len(t, cancelLogs, 1)
+	assert.Equal(t, testB2Parent, cancelLogs[0].UserID)
+	assert.Contains(t, cancelLogs[0].Detail, fmt.Sprintf("approved_by=%d", testB2Teacher),
+		"撤销日志要记下变更前的审核人")
+
+	// 重新申请后老师拒绝：同样留痕，且 prior_status 是 pending。
+	_, err = f.svcP.RequestPublicCheckin(context.Background(), f.pc, c.ID)
+	require.NoError(t, err)
+	_, err = f.svcT.ReviewPublicCheckin(context.Background(), f.tc, f.taskPub.ID, c.ID, false, false)
+	require.NoError(t, err)
+	revokeLogs := f.auditLogs(t, PublicAuditRevoke)
+	require.Len(t, revokeLogs, 1)
+	assert.Equal(t, testB2Teacher, revokeLogs[0].UserID)
+	assert.Contains(t, revokeLogs[0].Detail, "prior_status=pending")
+}
+
+// 审计页按 action 渲染中文标签；新增动作不能掉进 default 显示成裸英文。
+func TestPublicAuditActionLabels(t *testing.T) {
+	for action, want := range map[string]string{
+		PublicAuditApprove:    "批准公开",
+		PublicAuditRevoke:     "撤回公开",
+		PublicAuditCancel:     "家长取消公开",
+		PublicAuditRevokeTask: "关闭任务公开",
+	} {
+		assert.Equal(t, want, actionLabelFor(action), "action=%s", action)
+	}
+}
+
+// 4.7：任务级撤销（关公开 / 改个体）也要留痕，且空操作不写假记录。
+func TestRevokePublicForTaskWritesAuditLog(t *testing.T) {
+	f := setupB2(t)
+	c := f.checkin(t, &f.taskPub, testB2Student, testB2Parent)
+	f.requestAndApprove(t, &f.taskPub, c.ID)
+
+	require.NoError(t, f.db.Transaction(func(tx *gorm.DB) error {
+		return revokePublicForTask(context.Background(), tx, testB2KG, testB2Teacher, f.taskPub.ID, "allow_public_off")
+	}))
+	logs := f.auditLogs(t, PublicAuditRevokeTask)
+	require.Len(t, logs, 1)
+	assert.Equal(t, f.taskPub.ID, logs[0].TargetID)
+	assert.Equal(t, testB2Teacher, logs[0].UserID)
+	assert.Contains(t, logs[0].Detail, "reason=allow_public_off")
+	assert.Contains(t, logs[0].Detail, "rows=1")
+
+	// 已经没有可撤销的公开状态：不得再写一条「撤回了一次」。
+	require.NoError(t, f.db.Transaction(func(tx *gorm.DB) error {
+		return revokePublicForTask(context.Background(), tx, testB2KG, testB2Teacher, f.taskPub.ID, "allow_public_off")
+	}))
+	assert.Len(t, f.auditLogs(t, PublicAuditRevokeTask), 1, "空操作不写日志")
 }
 
 func TestPublicRequestRejectedWhenTaskNotAllowPublic(t *testing.T) {
@@ -561,7 +674,7 @@ func TestPublicWallHidesWhenAllowPublicTurnedOff(t *testing.T) {
 	// 恢复开关也不能让旧批准复活——但这是 revoke 的职责；仅把开关改回来时
 	// 批准字段仍在，属于「未走撤销路径」的异常数据。这里断言 revoke 的真正效果。
 	require.NoError(t, f.db.Transaction(func(tx *gorm.DB) error {
-		return revokePublicForTask(context.Background(), tx, f.taskPub.ID)
+		return revokePublicForTask(context.Background(), tx, testB2KG, testB2Teacher, f.taskPub.ID, "test")
 	}))
 	require.NoError(t, f.db.Model(&domain.ParentTask{}).Where("id = ?", f.taskPub.ID).
 		Update("allow_public", true).Error)

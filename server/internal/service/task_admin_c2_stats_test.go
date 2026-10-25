@@ -100,6 +100,31 @@ func TestStatsNoDataReturnsNullRatios(t *testing.T) {
 	assert.Empty(t, out["by_activity"])
 }
 
+// 7.6：参与率分母是「在读学生」，不排除未绑定家长的学生。
+// 排除会把「家长没绑小程序」这类触达问题藏进分母之外，指标反而失真。
+func TestStatsParticipationCountsUnboundStudents(t *testing.T) {
+	f := setupC2(t)
+	const unbound uint64 = 992752
+	loc := shanghaiLoc()
+	require.NoError(t, f.db.Unscoped().Create(&domain.Student{
+		SoftDeleteModel: domain.SoftDeleteModel{BaseModel: domain.BaseModel{ID: unbound}},
+		KindergartenID:  testC2KG, ClassID: testC2Class, Name: "C2无家长", Status: 1,
+		Birthday:   time.Date(2021, 5, 1, 0, 0, 0, 0, loc),
+		EnrollDate: time.Date(2024, 9, 1, 0, 0, 0, 0, loc),
+	}).Error)
+	// LIFO：本清理先于 setupC2 的夹具清理执行，避免学生挡住班级删除。
+	t.Cleanup(func() { f.db.Unscoped().Delete(&domain.Student{}, unbound) })
+
+	taskID := f.createTaskIn(t, testC2Class, "参与率-未绑定家长")
+	now := time.Now()
+	respID := f.addResponse(t, taskID, domain.TaskResponseSingle, now, nil)
+	f.addCheckinOn(t, taskID, testC2Student, testC2Parent, f.today, now, respID)
+
+	out := f.stats(t)
+	// 班级 A 在读 3 人（孩子 A、孩子 C、无家长的孩子），只有 A 提交。
+	assert.Equal(t, "33%", out["participation_rate"], "分母含未绑定家长的在读学生")
+}
+
 func TestStatsResponseAndParticipationAndPending(t *testing.T) {
 	f := setupC2(t)
 	// 班级 A 有 2 个在读学生（A、C）；只有 A 提交 → 参与率 50%。
