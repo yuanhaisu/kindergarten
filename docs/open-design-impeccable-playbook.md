@@ -37,6 +37,15 @@
 
 3. 模型配置正确（详见 memory）：用 `deepseek-chat`，不要用 `deepseek-flash[1m]`；`CLAUDE_CONFIG_DIR` 指向干净配置；Claude runtime 传 `--effort low`。
 4. 确认设计系统在 OpenDesign 里可见：`user:nurture-planet` 若被 workspace 绑定而隐藏，用去掉 `workspaceId` 的本地副本跑试点，生产仍以原系统为准。
+5. 图像 MCP 已接入（可选；用于生成参考图 + 让 agent 看懂图）。配置在 `open-design/.od/mcp-config.json`，daemon 每次 spawn 会自动写进项目 cwd 的 `.mcp.json`：
+
+   | id | 命令 | 用途 |
+   | --- | --- | --- |
+   | `siliconflow` | `uvx yuppie-mcp-siliconflow` | 文生图 `generate_image` / 图生图 `edit_image` |
+   | `mcp-vision` | `uvx --with mcp<2 mcp-vision` | 看图 `analyze_image`，吃本地绝对路径 |
+
+   两个都要在 `env` 里带 `"NO_PROXY": "localhost,127.0.0.1"`（`no_proxy` 同值），否则见第 6 节对应坑。
+   **主模型不需要多模态**：`generate_image` 返回本地路径，直接喂给 `analyze_image` 即闭环；别靠 agent 自报「我看到了」来判断。
 
 ## 4. 五步流程
 
@@ -57,7 +66,11 @@ brief 写得越像验收标准，OpenDesign 越少自由发挥。
 - 一次只跑一个方向，方向之间再比较；不要一次要 A/B/C。
 - 明确要求使用设计系统，不要自造色板。
 - 明确要求**拆文件**输出：`index.html` / `styles.css` / `app.js`，每个 < 20KB。
-- 不要让 agent 去外网抓图；用 CSS/占位块表达即可。
+- 不抓外网图。**生成图允许进原型**（见第 3 节第 5 条「图像 MCP」），遵守四条：
+  - 本地相对路径引用、单独成文件，**不做 base64 内联**（守住「每个文件 < 20KB」）
+  - 单张 ≤ 1MB，单页 ≤ 3 张
+  - 在交接卡第 4 节登记：文件路径 / 生成模型 / 用途
+  - 原型里的图只表示方向，**不得拷进 `teacher/` `parent/` `admin/` 源码**；生产需重制或替换
 - 产出后先看截图，再决定是否进入交接卡。
 
 ### 第 2 步：写交接卡
@@ -115,7 +128,7 @@ brief 写得越像验收标准，OpenDesign 越少自由发挥。
 - 不新增营销文案，不虚构数据
 - 390px 手机优先；不做横向滚动
 - 输出拆成 index.html / styles.css / app.js，每个小于 20KB
-- 不抓取外网图片，用 CSS 或占位块
+- 不抓取外网图片。需要视觉素材时用本地生成图（相对路径引用，单张 ≤ 1MB、单页 ≤ 3 张），其余用 CSS 或占位块
 
 请先给出一句话方向说明，再直接写文件。
 ```
@@ -130,7 +143,9 @@ brief 写得越像验收标准，OpenDesign 越少自由发挥。
 | 原型过度拟合 | 直接抄 HTML/CSS，绕过 token | 交接卡写死 token 映射；实现只取意图 |
 | MCP 导航代替交互 | 页面能开，但按钮链路没验 | 必须真实 tap/点击；导航只验渲染 |
 | AMR 的 Opus 不可用 | 返回 `no longer available in AMR` 并回退 | 不要用 AMR 当 Opus 入口；配置独立 provider 或本地登录 |
-| 生成图片带水印 | Z-Image-Turbo `watermark:false` 仍有「AI生成」 | 只作设计期参考；不用于生产，不去水印，不用合成儿童正脸 |
+| 生成图片带水印 | Z-Image-Turbo `watermark:false` 仍有「AI生成」 | 原型里可以留（表示方向）；**带水印的图绝不进生产**；不去水印，不用合成儿童正脸 |
+| Python MCP 接进 OpenDesign 后每次请求都失败 | 报 `Invalid port: ':1]'`。daemon 在 sandbox 模式给 agent 注入的 `NO_PROXY` 里带 `[::1]`，httpx 解析不了；MCP 照常 connected、工具也在表里，但一调就错 | 在该 server 的 `env` 覆盖 `NO_PROXY=localhost,127.0.0.1`（`no_proxy` 同值） |
+| agent 自报「我看到图了」 | 纯文本模型照着摘要文本编；`unrecognized_model` 还会静默回退到别的模型，让偶发的「准确」不可复现 | 要么让它描述摘要里没有的细节，要么看图统一走 `mcp-vision` |
 
 ## 7. 验收门（全部通过才算完成）
 
@@ -139,6 +154,7 @@ brief 写得越像验收标准，OpenDesign 越少自由发挥。
 - [ ] 行为改动有测试或真实交互证据
 - [ ] 契约改动已走 OpenSpec 并 archive
 - [ ] 原型截图与运行时截图已归档
+- [ ] 原型里的生成图已登记（路径 / 模型 / 用途），且未带进 `teacher/` `parent/` `admin/` 源码
 - [ ] 交接卡第 7 节已回填
 
 ## 8. 资产索引
@@ -148,6 +164,7 @@ brief 写得越像验收标准，OpenDesign 越少自由发挥。
 | 交接卡模板 | `docs/open-design-handoff-template.md` | 每方向一张卡 |
 | 试点卡（完整示例） | `docs/handoffs/2026-10-19-parent-growth.md` | 含实现记录、测试环境证据、OpenDesign 坑 |
 | 品牌适配器生成 | `scripts/sync-open-design-adapter.mjs` | tokens → OpenDesign design-system |
+| 图像 MCP 配置 | `open-design/.od/mcp-config.json`（**不在本仓库**） | 生成 + 看图两个 stdio server |
 | 两模式原型 | `docs/design-previews/2026-10-20-parent-growth-two-modes/` | 原型、预览截图、运行时截图 |
 | Impeccable 审计 | `.impeccable/critique/` | 历史 critique 与验证截图 |
 | 本手册 | `docs/open-design-impeccable-playbook.md` | 端到端流程 |
@@ -170,3 +187,4 @@ brief 写得越像验收标准，OpenDesign 越少自由发挥。
 - adapter 同步目前是手动步骤，没有 CI 校验「tokens.json 改了但 OpenDesign 设计系统没更新」。
 - OpenDesign 原始对话/提示词没有逐次留档；本手册第 5 节是提炼后的模板。
 - Impeccable 各命令的完整输出未统一归档，仅保留 critique 与验证截图。
+- OpenDesign 的 MCP 配置（`open-design/.od/mcp-config.json`）与本仓库分离，换机或重装需手工重建；密钥也在那份文件里，不进 git。
