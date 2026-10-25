@@ -48,11 +48,12 @@ const todayStatuses = computed(() => [
 // 必须是 computed：静态数组在 setup 时 summary 还是空的，
 // `badge: summary.value.xxx` 只会求值一次，红点永远不出现。
 // 亲子任务的红点用后端修正后的 pending_tasks（当前孩子当前周期未提交的有效任务数）。
+// 入口图标改为品牌插画位图（与老师端同一套），底色统一为品牌浅底
 const quickActions = computed(() => [
-  { title: "通知公告", icon: "", color: "blue", path: "/pages/notice/index", badge: summary.value.new_notice_count },
-  { title: "接送管理", icon: "", color: "orange", path: "/pages/pickup/index" },
-  { title: "亲子任务", icon: "", color: "purple", path: "/pages/tasks/index", badge: summary.value.pending_tasks },
-  { title: "我要请假", icon: "", color: "yellow", path: "/pages/leave/create" },
+  { title: "通知公告", img: "/static/icons/notice.png", path: "/pages/notice/index", badge: summary.value.new_notice_count },
+  { title: "接送管理", img: "/static/icons/pickup.png", path: "/pages/pickup/index" },
+  { title: "亲子任务", img: "/static/icons/task.png", path: "/pages/tasks/index", badge: summary.value.pending_tasks },
+  { title: "我要请假", img: "/static/icons/leave.png", path: "/pages/leave/create" },
 ])
 
 async function loadHome() {
@@ -292,8 +293,8 @@ onPullDownRefresh(loadHome)
           class="action-item"
           @click="handleAction(action)"
         >
-          <view :class="['action-icon-box', 'bg-' + action.color]">
-            <text :class="['action-icon', 'ic-' + action.color]">{{ action.icon }}</text>
+          <view class="action-icon-box">
+            <image class="action-icon-img" :src="action.img" mode="aspectFit" />
             <view v-if="action.badge" class="action-badge" />
           </view>
           <view class="spacer-h8" />
@@ -639,11 +640,13 @@ onPullDownRefresh(loadHome)
   align-items: center;
   justify-content: center;
   position: relative;
+  // 入口底色统一为品牌浅底，与老师端一致；不再每个入口一种颜色
+  background: $color-brand-primary-bg;
 }
 
-.action-icon {
-  font-family: remixicon;
-  font-size: 52rpx;
+.action-icon-img {
+  width: 100rpx;
+  height: 100rpx;
 }
 
 .action-badge {
