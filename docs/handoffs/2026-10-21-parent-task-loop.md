@@ -2057,4 +2057,5 @@ rg -c '^- \[ \]' openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md
 
 **归档门禁状态：`openspec instructions apply` → `state: all_done`，90/90。** `openspec validate --all` 21 passed / 0 failed。其余门禁：12.2 全量回归 `ok 798.946s`、12.5 管理端脚本 exit=0、12.7 回归、12.8 收工命令。
 
-> 后续真机待办（不影响本次归档）：5.4 扫码进入体验/开发版、9.3 真机录音、9.5 转发扫码、9.7 原生 picker 点选、12.6 真机扫码、12.3 双端联跑。真机可用时按对应 `<br>` 注记补验并更新。
+> 后续真机待办（不影响本次归档）：5.4 扫码进入体验/开发版、9.3 真机录音、9.5 转发扫码、9.7 原生 picker 点选、12.6 真机扫码、12.3 双端联跑。
+> **操作手册：`docs/handoffs/2026-10-25-c5-device-verification.md`**（含真机网络前置、逐步点击、预期 UI、库核对 SQL、失败诊断与清理）。真机可用时照它补验，并在归档 change 的 `tasks.md` 对应条目更新证据。
