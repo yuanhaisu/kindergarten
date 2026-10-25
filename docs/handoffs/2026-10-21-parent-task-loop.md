@@ -11,9 +11,11 @@
 | 项 | 值 |
 | --- | --- |
 | 分支 | `feat/parent-growth-scope` |
-| C-3 起点 | `1813880`（C-3 改动**未提交**，在工作区） |
-| 已完成切片 | A → B1 → B2 → B3 → B4-a → B4-b → C-1 → C-2 → **C-3（管理端任务模块）** |
-| 下一步 | **C-4**（老师端 3.8 班级罐入口）→ **C-5**（12.x 验证 + tasks.md A/B 勾选补正 + 归档） |
+| C-3 起点 | `1813880`（已提交为 `c036a55`） |
+| C-4 起点 | `c036a55`（改动未提交，在工作区） |
+| 已完成切片 | A → B1 → B2 → B3 → B4-a → B4-b → C-1 → C-2 → C-3（管理端任务模块）→ **C-4（老师端班级罐入口 + 进度）** |
+| 下一步 | **C-5**（12.x 验证 + 归档）。`tasks.md` 勾选补正已于 2026-10-25 完成（§25）：**51 勾 / 39 未勾 / 共 90**；C-4 遗留的 1 条 UI 断言见 §24.5-1 |
+| 新窗口开工 | **直接读 §26 的开工提示词**，它已按「先提交 C-4 → 补 3.11/4.5 → 验证」排好序 |
 
 **按角色选读**（不要从第 1 节顺序读到底）：
 
@@ -1433,6 +1435,8 @@ C-2 用例 **43 条**（活动 16，新增「整组结束」「单条仍拒绝 s
 
 ### 22.2 现状（老师端，C-4 用，本窗口别动）
 
+> ⚠️ **本节是 C-4 开工前的快照**（2026-10-24 上午）。C-4 已落地，现行状态见 **§24**。
+
 - `teacher/src/pages/tasks/index.vue:200`：「按班级」仍是置灰的 `view`，提示「当前暂未开放」。
 - `teacher/src/pages/tasks/detail.vue`：已能展示 `star_scope=class` 的**本任务**贡献，但拿不到班级罐总进度。
 - `teacher/src/api/teacher-tasks.js`：**没有** star-jar 的封装（C-1 已交付 `/teacher/class/star-jar` 端点）。
@@ -1638,3 +1642,330 @@ C-3 共跑了 5 轮独立审查，**采纳 21 条、驳回 1 条**。逐轮叙�
 **审查暴露的两类通用坑（值得带进 C-4）**：
 1. **显示层归一 ≠ 数据改动**：任何「下拉给个默认值」的地方，差异判定必须拿归一后的快照当基线，否则会把默认值写回库（有提交时直接 422）。
 2. **只在改动时发字段**：后端对指针字段是「缺省=保留」、对 `star_goal` 是「出现即改动」，整表单回传两边都会错。
+
+---
+
+## 24. C-4 落地（2026-10-24）
+
+起点 `c036a55`。范围：3.7 的**班级侧**计数、3.8 的老师端 UI（`GET/PUT /teacher/class/star-jar` 的进度与设置入口）、9.2 的班级罐部分（「按班级」可选、隐藏任务目标、detail 口径文案）。
+
+### 24.1 第 0 步：口径决定（写码前定）
+
+**结论：方案 A —— 扩 `GET /teacher/class/star-jar`，追加 `stars` / `progress` / `over_goal`。**
+
+| 方案 | 结论 | 理由 |
+| --- | --- | --- |
+| **A** 扩现有 GET | **采用** | ① 目标与星数必须来自**同一次 term 解析**：`findClassStarJar` 的 term 在无学年班级按自然年、有学年按 `academic_years` 起止，拆成两个端点会在学期边界（1/1、学年切换）读到两套 term，出现「目标 30、进度按上一学期算」。② 老师端卡片是一个整体，多一次请求只多一个失败面。③ 管理端响应可以**逐字节保持不变**（老师端走新 service 方法 `GetClassStarJarWithProgress`，管理端继续 `GetClassStarJar`），C-3 已验证的管理端契约不受影响。 |
+| B 新建 `/star-jar/progress` | 驳回 | 同一资源的派生视图，没有独立生命周期；仍然解决不了两次调用之间的 term 漂移。 |
+
+**计数口径**（已核对 design D6 第 96 行与 decision §20.7-5，不是猜的）：
+
+- 只算 **`star_scope=class`** 的任务（`design.md`：「该班当前学期内所有 `StarScope=class` 任务中…」）；
+- 只算**主回应**：计数落 `task_check_ins` 行，其 `response_id` 指向的回应 `ritual=class_star` 才计入；一次 `period` 回应覆盖 N 条提交就计 N 星；补充回应不写 `response_id`，天然不计入；
+- 提交、回应、任务三层都过滤 `deleted_at IS NULL`；
+- **「当前学期」按提交日期 `task_check_ins.date` 落在 `term_start..term_end` 内判定**——本轮唯一新定的细节。理由：罐按学期重置，跨学期的长任务应按提交日拆到两边；用任务起始日会把整条任务算进某一边。已写进 `backend/api/api-teacher/09-class-and-tasks.md`。
+
+### 24.2 改了什么
+
+| 文件 | 改动 |
+| --- | --- |
+| `server/internal/service/task_star_jar.go` | 新增 `GetClassStarJarWithProgress`（同一次 `now` 里读目标 + 算星数）、`classStarCountInTerm`（先取本班 class scope 任务 id，再按 `task_id` 计数）与 `starCountBase`（「什么算一颗星」的唯一谓词，`taskStarCounts` 与班级罐共用）、`loadClassStarJar`（两个读路径共用入口守卫）；`progress = floor(stars*100/goal)` 封顶 100，`goal<=0` 时 `progress=null`、`over_goal=false`；`GetClassStarJar` 签名与响应不变 |
+| `server/internal/handler/http/teacher_portal.go` | `TeacherGetClassStarJar` 改调新方法；`teacherPortalErr` 增加 `ErrTaskStarJarMissing` → 422「请先配置班级星星罐」（与管理端 `writeTaskError` 同一句） |
+| `server/internal/service/teacher_portal_service.go` | **C-1 遗留修复**：`CreateTask` / `UpdateTask` 把班级罐缺失折叠成了 `ErrTeacherInvalidParams`（HTTP 422「请求参数无效」），导致 spec 要求的「三个入口返回同一句引导」在老师端落空。现在只把 `ErrTaskStarJarMissing` 原样上抛，其余结构错误维持原错误码。另外 `taskStarCounts` 改为复用 `starCountBase`（行为不变） |
+| `server/internal/service/task_rules.go` | **两学期无缝不重叠**（C-4 决策）：`classStarJarTermOf` 先算两学期的原始窗口（每对配置独立覆盖、缺失按自然学期兜底），再交给 `classStarJarTermWindow` 收口——后一个学期的起点 = 前一个结束次日；`term` 键不变。无学年班级改为自然年切分（spring 1/1–7/31、fall 8/1–12/31） |
+| `server/internal/service/task_admin_c1_test.go` | 三条 term 期望随新口径更新（寒假空档 → spring 2031-01-21；无学年 → spring 到 7/31），并新增 `TestClassStarJarTermSealsGapBetweenSemesters` 钉住暑假空档收口 |
+| `server/internal/service/task_response_supplement_test.go` | 测试夹具修复（对抗审查发现）：清理顺序按外键方向重排，补删 `messages`，并显式把 `current_semester` 设为 `fall`（提交都落在今天，学期窗口收窄后必须落在窗口内）。只动清理与夹具，不改业务断言 |
+| `server/internal/service/task_admin_c1_test.go` | 跟着上面改一条断言：`TestTeacherCreateTaskRejectsInvalidEnums` 里 `StarScope=" class "` 触发班级罐校验后，期望值由 `ErrTeacherInvalidParams` 改成 `ErrTaskStarJarMissing`（原断言锁定的是被 spec 否定的旧行为）。**不是为了让测试变绿而改语义**——`task_rules.go` 的行为没动，只是老师端不再吞掉哨兵 |
+| `backend/api/api-teacher/09-class-and-tasks.md` | 补 `stars` / `progress` / `over_goal` 的字段语义、计数口径、封顶与 `null` 规则；注明管理端响应不含进度 |
+| `teacher/src/api/teacher-tasks.js` | 新增 `fetchClassStarJar()` / `setClassStarJar(goal)`，沿用 `http.js` 拦截器 |
+| `teacher/src/pages/tasks/index.vue` | 删掉「班级星星罐暂未开放」占位；新增班级罐卡片（学期 / 目标 / 已集星 / 封顶进度条 / 设置或更新目标）；「按班级」在已配置时可选、未配置或读取失败时给**分开**的原因；`star_scope=class` 时隐藏并清零任务目标；创建前校验按任务场景的目标 > 0；`onShow` 与下拉刷新同时刷新罐进度 |
+| `teacher/src/pages/tasks/detail.vue` | `star_scope=class` 的标签由「按班级（管理端配置）」改成「按班级（使用班级罐目标）」 |
+| `server/internal/service/task_star_jar_progress_test.go`（新） | 5 条真实 MySQL 用例（见 24.4） |
+
+### 24.3 语义决定（后续别改错）
+
+1. **管理端响应不含进度**：`GET /admin/classes/:id/star-jar` 仍只有 `goal` / `configured` / `term*` / `updated_at`。老师端的新字段不能漏进管理端响应（有测试钉住）。
+2. **PUT 只回目标，不回进度**：`SetClassStarJar` 是老师端与管理端共用的写入路径，保持原有响应形状。**老师端保存后必须重新 GET**——本轮 UI 就在这里错过一次：直接把 PUT 响应 `applyJar` 覆盖状态，把「已集 3 / 30」显示成「已集 0 / 2」。
+3. **目标 0 不在前端拦**：请求照常发出，由后端 422 决定，再把文案换成「目标必须大于 0；0 表示未配置」。后端是唯一权威，前端只负责可读。
+4. **「按班级」的可用性取决于后端**：未配置（`configured=false`）与读取失败（`jarError`）给不同的提示，不能合并成「未配置」。
+5. **按班级时任务目标按 0 提交**：`star_goal` 在 class scope 下不生效，残留数字会被误当生效值。
+6. **未配置时 `progress=null` 而不是 0**：0 会被画成「0% 进度」，与「还没设目标」混淆；判据是 `configured`。
+7. **不展示任何个人星星/完成率排名**（spec MUST NOT）；卡片只显示集体进度。
+8. **两学期必须无缝且不重叠**（2026-10-24 产品决定）：后一个学期的起点 = 前一个结束次日；`term` 键不变。**不要**把 `classStarJarTermOf` 改回「两个学期共用一个整年窗口」或「按配置原样留空档」——前者会让春季的星算进秋季罐，后者会让假期里的提交永远不计入。
+
+### 24.4 验证证据
+
+**后端**
+
+- `go build ./...`、`go vet ./internal/service ./internal/handler/http` 通过。
+- `go test ./internal/service -run 'TestClassStarJarProgress|TestTeacherTaskClassScopeMissingJar'` → ok（新增 5 条）：
+  - `..._CountsOnlyClassScopeMainClassStar`：task scope 的 class_star 回应**不**进班级罐；改 class scope 后 period 覆盖 2 条 = 2 星；贴纸主回应不计；DB 直插的 class_star **补充回应**不计；软删提交/回应各减 1；
+  - `..._OverGoalIsFlaggedAndCapped`：2/3 → 66% 且不超额；目标下调到 1 → 100% + `over_goal=true`；恰好 2/2 → 100% 不超额；未配置 → `progress=null` 且星数照实返回；
+  - `..._TermClassAndKindergartenScoped`：跨班、跨园所、上一学期提交都不计入；无学年班级 term 为自然年；
+  - `..._AdminViewUnchanged`：管理端响应没有 `stars/progress/over_goal`，老师端三个字段齐全；
+  - `TestTeacherTaskClassScopeMissingJarIsActionable`：创建与更新为 class scope 时都返回 `ErrTaskStarJarMissing`（不再是笼统参数错误）。
+- `go test ./internal/service -run 'Task|ParentTask|ClassStar' -timeout 900s`：
+  - 改错误映射**前**的那一轮 → ok；
+  - 改完后第一轮暴露出 C-1 的一条旧断言（`TestTeacherCreateTaskRejectsInvalidEnums` 的 `StarScope=" class "` 期望 `ErrTeacherInvalidParams`）——那是被 spec 否定的旧行为，已按 spec 改成 `ErrTaskStarJarMissing`（见 24.2 表最后一行）；
+  - **全量复跑**（断言更新后）：`exit=0`、`ok kindergarten-server/internal/service 260.324s`；
+  - **对抗性审查修复后的最终复跑**：`exit=0`、`ok … 241.202s`（含两段式计数查询、B1 夹具清理修复）；`TestSupplement_|TestClassStarJarProgress` 合并连跑 4 次全绿。
+
+**接口层**（真实 8080 + 开发库，`_verify/c4_setup.py`，14 项断言全绿）
+
+| 判据 | 证据 |
+| --- | --- |
+| 未配置时三个入口都拒且提示一致 | teacher / admin `POST /tasks`、admin `POST /task-activities` 全部 `422` + `请先配置班级星星罐`（修正前老师端是「请求参数无效」，见 24.2） |
+| 管理端设 30 → 老师端显示 30 | admin `PUT /admin/classes/1/star-jar {goal:30}` → `configured=true`；老师端 GET `goal=30`、`stars=0`、`progress=0`、`over_goal=false`；管理端响应无进度字段 |
+| N 条提交发 class_star → 已集 N | 建 `star_scope=class` 任务 + 3 条提交（日期落在 term 内；当时窗口 `2031-02-20..07-10`，收口后为 `2031-01-21..07-10`，种子日期仍在窗口内，E2E 已按新窗口复跑），逐条 `POST .../response {ritual:"class_star"}` → `stars=3`、`progress=10`、`over_goal=false`；任务自身 `star_count=3` |
+| 目标设 0 被拒 | `PUT /teacher/class/star-jar {goal:0}` → `422` + `班级星星罐目标必须大于 0` |
+
+**真实点击（小程序，老师端 小一班）**
+
+| 判据 | 证据 |
+| --- | --- |
+| 卡片按后端数据渲染 | 页面文本：`班级星星罐 / 2031-2032-spring / 已集 3 / 30 / 更新目标`；进度条 `style.width = 10%` |
+| 按班级可选并切到班级口径 | 点击 `.scope-opt`（第 2 项，触摸事件）→ `按班级` 获得 `active`，提示变为「按班级时使用下方班级罐目标（30 颗），本任务不再单独设目标」，任务目标输入框不再渲染 |
+| 有目标时不能出现 >100% | 目标下调到 2 后卡片显示 `已超额 3/2`，进度条 `width=100%`（无 2% 之类溢出文案） |
+| 更新目标走真实写接口 | 在目标输入框输入 2 后点击「更新目标」→ 后端 `class_star_jars.goal` 变为 2、`updated_at` 更新；重新进入页面读到 `已超额 3/2` |
+| 未配置时的空态 | 清理验证数据后重新进入页面：卡片显示 `2031-2032-spring / 本学期还没设目标；设好之后才能创建「按班级」任务。`，按钮文案变为「设置目标」，`.scope-opt`「按班级」带 `disabled`，且没有进度条与 `已集` 行 |
+
+- `npm run build:mp-weixin` 通过；`node scripts/check-tokens.mjs teacher` 对两个改动文件 **0 违规**（仓库既有 215 条不在本次文件里）。
+
+### 24.5 未做 / 缺口（不要当成已验证）
+
+1. **「目标 0 的两步反馈」只验证到一半**：后端 422 与文案已用真实请求验证；前端把文案换成「目标必须大于 0；0 表示未配置」的映射也已实现，但**没在运行中的小程序里抓到那条 toast**。原因是 IDE 工具链在这一轮中途失效：热重载后 CDP 合成的鼠标/触摸事件不再落到页面（页面**能渲染**、能读 DOM、`elementFromPoint` 命中正确，但 handler 不触发——用「未配置时点按班级应弹提示」复核过，同样无反应），`wechat_automator` 守护进程两次 120s 超时（memory `mcp-view-layer-wedge-cdp-tools` 的已知形态），`cli auto` / 重开项目 / 重启 IDE 都只恢复到「能渲染、不能输入」。修复前最后一次成功的输入是「设目标 30→2」那一轮（见 24.4 表）。因此 24.4 的渲染类断言可信，**交互类断言只覆盖到上面 4 条**。
+   **C-5 补验方法**：IDE 干净重启 → 进 tasks → 输入 0 → 点「更新目标」→ 读 `wx-toast` 文案；或改用真机预览。
+2. **详情页只改了标签**：`detail.vue` 没有展示班级罐总进度（3.8 没要求；本任务贡献已由 `star_count` 显示）。班级范围任务的**行内**仍然显示「本任务已集 N 星」而不是学期累计——这是有意的：`star_count` 是任务贡献，塞进行内会被读成「这个任务完成了班级罐」。
+3. **管理端不展示班级罐进度**：C-3 的决定（§23.4-1），本轮不改。
+4. **`doc` 未归档、`tasks.md` 的 A/B 勾选未动**（属 C-5）。
+5. **家长端看不到班级集体进度**（spec 轴审查发现，非 C-4 范围）：spec「家长只看到班级集体进度，不看到个人排名」里，「不排名」已满足，但「看得到集体进度」在 `parent/` 没有任何入口，`tasks.md` §10 也没有对应任务。**目前无人承接**，需在 C-5 决定是补一条家长端只读展示还是显式写进规格的豁免。
+6. ~~学期窗口存在空档 / 无学年班级两个学期同一区间~~ —— **已按产品决定修复（2026-10-24，方案一：两学期无缝不重叠）**，见下条：
+   - `classStarJarTermOf` 现在先把两学期的原始窗口（配置优先、自然学期兜底）算出来，再统一收口：**按起点排序，后一个学期的起点 = 前一个结束的次日**。
+   - 无学年班级：自然年切成 `spring` 1/1–7/31、`fall` 8/1–12/31（之前两学期都是 1/1–12/31，切学期只换键）。
+   - 有学年且有配置：暑假空档（如 7/11–8/31）归 `fall`（fall 起点前移到 spring_end+1）；配置里 fall 在 spring 之前时（如 fall 2030-09-01..2031-01-20、spring 2031-02-20..2031-07-10），寒假空档归 `spring`（spring 起点前移到 fall_end+1 = 2031-01-21）。
+   - **`term` 键不变**，只有区间收口；因此 goal 的学期归属不受影响（`validateClassStarJar` 仍按同一个 `term` 查行）。
+   - 测试：`TestClassStarJarTermSealsGapBetweenSemesters`（暑假空档）、`TestClassStarJarTermUsesAcademicYearConfig` / `...NormalizesWhitespaceAcademicYear`（寒假空档 → 2031-01-21）、`TestClassStarJarTermFallsBackToNaturalYear`（无学年两段）。B1 夹具因此显式把 `current_semester` 设为 `fall`（提交都落在「今天」，否则 8–12 月跑测试会算出 0 星）。
+7. **多班老师只能看/设「当前生效班级」的班级罐**（自查）：C-1 的契约规定 `GET/PUT /teacher/class/star-jar` 的班级取自登录态、**不接受 `class_id`**（防越权）。代价是同时带两个班的老师（`class_teachers` 多行）无法在老师端给另一个班设目标，只能走管理端。若产品要求老师端支持多班，需在契约里显式加 `class_id` + 归属校验，属接口变更。
+8. **老师的主班级被软删后，班级罐卡片会永久停在校验错误**（干净复审发现，既有缺陷）：`ResolveContext` 选第一个 `class_teachers` 行时 join 了 `classes` 但**没有过滤 `classes.deleted_at IS NULL`**，随后 `classStarJarTermOf` 返回 `ErrClassNotFound`，卡片显示「班级不存在，点击重试」且重试必然失败。属老师身份解析路径（影响所有老师端接口，不只是本卡片），不在 C-4 修。
+
+### 24.6 对抗性审查与处置（2026-10-24）
+
+**方式**：三个并行独立审查（Standards 轴 / Spec 轴 / 对抗性正确性）+ 自查，之后又开了一轮**干净上下文的独立复审**（不喂前一轮结论，只给代码/规格/攻击面）。Spec 与对抗性两份先回传；Standards 轴的报告迟到（工具故障后重发），共 2 条硬违规 + 7 条判断项（16–23）；第二轮干净复审给出 1 条 P1 + 7 条 P2（24–31）。
+
+| # | 来源 | 发现 | 判定 | 处置 |
+| --- | --- | --- | --- | --- |
+| 1 | 对抗 | B1 夹具清理顺序是 `students → classes → student_parents`，与它自己的注释相反；`fk_student_parents_student` / `fk_students_class` 每次都拦下删除，残留园所/班级让下一轮 setup 撞 1062/1452。新测试是第一个反复压测该夹具的用例 | 属实（P1，测试基建） | 修：顺序改为 `student_parents → students → classes → files → users → kindergarten` |
+| 2 | 对抗 | 回应/发布通知写 `messages`（`fk_messages_user`），B1 清理漏删这一张 → `users` 删不掉 → 残留 → 下一轮 1062 | 属实（P1，同上） | 修：补 `messages` 清理（C1 夹具早有这一步） |
+| 3 | 自查 | `detail.vue:969` 仍写「班级星星罐暂未开放（需管理端先配置）」——本轮已开放，用户可见的失实文案 | 属实（P1） | 改文案；`detail.vue:52` 的注释同步改 |
+| 4 | 自查 | 单条三表 JOIN 让优化器从 `task_responses` 出发（EXPLAIN 实测首表 = `task_responses`，`ritual` 无索引），卡片每次 `onShow` 都可能扫全表回应 | 属实（P2 性能） | 改为先 `Pluck` 本班 class scope 任务 id、再按 `task_id` 计数；EXPLAIN 首表变为 `task_check_ins`（`idx_task_student_date`） |
+| 5 | 对抗 | 首帧 `jarConfigured=false` 把「加载中」显示成「未配置」，「按班级」看似被禁用且提示错误 | 属实 | 加 `jarLoading`，加载中/读取失败/未配置三态分开 |
+| 6 | 对抗 | 读失败后仍可用输入框里的过期值盲写；`onShow` 的慢 GET 可能晚于保存后的刷新落地，把新进度刷回旧值 | 属实 | 读失败禁用保存并要求先重试；`jarSeq` 请求序号守卫 |
+| 7 | 对抗 | 失败保存连弹两条 toast（`http.js` 一条 + 页面一条） | 属实 | 只在 `goal<=0` 时映射文案，其它失败交给 `http.js` |
+| 8 | Spec | `tasks.md` 3.7 注记把「未配置返回 `null`」写成缺口，并指向 §24.5 里并不存在的条目 | 属实（文档） | 改为「有意决定，理由见 §24.3-6」 |
+| 9 | Spec | `.goal-save` 用 84/22 而非组件 token `$component-input-height`(88) / `$component-input-radius`(24) | 属实（judgement） | 保留 84/22（同一行的 `.input` 就是 84/22，用 token 会高 4rpx 错位），补注释说明 |
+| 10 | Spec | 家长端看不到班级集体进度（spec：「家长只看到班级集体进度，不看到个人排名」） | 属实，但**不属 C-4** | 记 §24.5-5：`parent/` 无入口、`tasks.md` §10 无任务，需 C-5 决定补 UI 或写豁免 |
+| 11 | 对抗 | 学期窗口有空档（有学年配置时 7/11–8/31 不属于任何学期）；无学年班级 spring/fall 区间同为整自然年，切学期只换 goal 键、星数不清零 | 属实，属 **C-1 的 term 语义** | 记 §24.5-6；改 `classStarJarTermOf` 会动 goal 校验的学期归属，需产品确认 |
+| 12 | 对抗 | 任务行的 `star_count` 与班级罐不可比（可能「任务 5 星 / 班级罐 2 星」） | 口径不同，非缺陷 | 不改；行内就该显示本任务贡献（§24.5-2） |
+| 13 | 对抗 | 「EXPLAIN 我没跑；不认同优化器会从 `task_responses` 出发，`parent_tasks` 才是天然驱动表」 | **驳回** | 我跑了 EXPLAIN：改前首表确实是 `task_responses`（`ref idx_task_responses_deleted_at`），改后是 `task_check_ins`（`ref idx_task_student_date`）。优化器是否走 `parent_tasks` 取决于统计信息，不能靠推断 |
+| 14 | Spec | class scope 任务行没有显示学期累计 | **驳回**（判断） | 卡片已显示累计；行内再显示一次会让「本任务进度」和「班级进度」混淆，且违反 §19.2-2（`star_count` 不得冒充班级罐） |
+| 15 | Spec | 老师端错误映射属范围外改动 | **驳回** | spec 明文要求三入口同文案；且只做映射，`validateClassStarJar` 仍是唯一实现 |
+| 16 | Standards | `classStarCountInTerm` 与 `taskStarCounts` 各写一份「什么算一颗星」的谓词，注释还声称「不另写一套」 | 属实（CLAUDE.md 纲领 #2） | 修：抽出 `starCountBase`，按任务与按班级两条路径共用同一份 JOIN/条件 |
+| 17 | Standards | `view["goal"].(int)` 若将来变成 int64 会静默把进度降级成 null，与「未配置」无法区分 | 属实 | 修：进度直接读 `row.Goal`，不再对 view 做类型断言 |
+| 18 | Standards | `GetClassStarJar` 与 `GetClassStarJarWithProgress` 各写一遍园所/班级守卫 | 属实 | 修：抽出 `loadClassStarJar`（仍保证同一个 `now`） |
+| 19 | Standards | service 内用未导出 `errTaskStarJarMissing`，handler 用导出别名 | 属实（一致性） | 修：两处统一成 `ErrTaskStarJarMissing` |
+| 20 | Standards | `.goal-save` 硬编码 84/22 绕过组件 token | 部分属实 | 已补注释说明「同一行 `.input` 是 84/22，用 88/24 会高 4rpx 错位」；尺寸保留 |
+| 21 | Standards | `applyJar` 把「成功但空载荷」当成未配置，正是 `loadJar` 注释禁止的静默降级 | 属实 | 修：空载荷转成可重试的错误态 |
+| 22 | Standards | 任务行与班级罐两处进度条 markup 重复 | **驳回** | 两处数据来源不同（任务罐 / 班级罐），为一条 8rpx 的横条抽组件不划算 |
+| 23 | Standards | 3.7/3.8 勾选时没有登记 `TC-NEW-*` | 记账 | 用例登记是 12.1（C-5 范围），本轮按要求不动 A/B 与 12.x |
+| 24 | 干净复审（第二轮） | **P1**：无学年班级的两个学期共用同一日期窗口，春季的星在切到 fall 后仍被算进秋季罐；有学年时 7/11–8/31 又是空档 | 属实（C-1 term 语义） | **已按产品决定修复**（方案一：两学期无缝不重叠）：后一学期起点 = 前一学期结束次日；`term` 键不变。细节与测试见 §24.5-6 |
+| 25 | 干净复审 | 任务创建失败连弹两条 toast（`http.js` + `addTask` catch），新引入的 422 正好走这条路 | 属实（既有代码，新路径暴露） | 修：`addTask` catch 不再重复弹，只对既无 code 又无 message 的异常打日志 |
+| 26 | 干净复审 | `saveGoal` 把任意失败都归因成「目标必须大于 0」（断网时输入 0 也这么说） | 属实 | 修：只在 `e.code === 42200` 且 `goal<=0` 时映射，其它交给 `http.js` |
+| 27 | 干净复审 | 取任务 id 的 `Pluck` 没有日期下界，跨年累积会把该班历史上所有 class scope 任务全读出来 | 属实 | 修：加 `end_date >= term.Start AND start_date <= term.End`。前提是「提交日期必落在任务起止内」——生产端由家长提交校验保证；**验证脚本种数据时必须让任务区间罩住提交日期**，否则会算 0 星（本轮 E2E 实际踩到并修正了脚本） |
+| 28 | 干净复审 | `starCountBase` 未校验 `r.task_id = c.task_id` | 属实（防御） | 修：JOIN 条件补上；主键比较零成本，一次错误回填就会静默多计 |
+| 29 | 干净复审 | `UpdateTask` 先校验班级罐、后判结构锁：已有提交的任务先报「请先配置」，配完重试仍被结构锁拒绝 | 属实（误导） | 修：班级罐校验移到 `assertTaskEditable` 之后 |
+| 30 | 干净复审 | 老师主班级被软删时 `ResolveContext` 未过滤 `classes.deleted_at`，卡片永久停在校验错误态 | 属实（既有缺陷） | 记账 §24.5-8：属身份解析路径，不在 C-4 修 |
+| 31 | 干净复审 | 契约没写「未配置时 `stars` 仍如实返回」 | 属实 | 修：契约补一句，并说明客户端应据 `configured` 而非 `stars>0` 判断 |
+
+**未采纳但需记住**：对抗审查提到的「`response_id` 跨任务指向」结构上可能（计数不校验 `r.task_id = c.task_id`），但现有写入路径产生不了；`taskStarCounts` 同样是这个形状。真要防，应在两张表加一致性约束，不是在这里加条件。
+
+**修复后复验（2026-10-24）**
+
+- 计数 SQL 改成两段式后 EXPLAIN 首表：`task_check_ins`（`ref idx_task_student_date`）→ `task_responses`（`eq_ref PRIMARY`）。
+- `go test ./internal/service -run 'Task|ParentTask|ClassStar'` → `exit=0`、`ok 241.202s`（**在 Standards 轴那批重构之前**）。
+- Standards 轴采纳项（`starCountBase` 共享谓词 / `loadClassStarJar` / 进度读 `row.Goal` / 统一导出哨兵）落完后：`go build ./...`、`go vet ./...`、`golangci-lint`（改动两包）通过；定向用例 `TestClassStarJarProgress*|TestTeacherTaskRead_Star*|TestTeacherTaskClassScopeMissingJar|TestTeacherCreateTaskRejectsInvalidEnums` → ok（33.6s，覆盖 `taskStarCounts` 的 list/detail 断言）。
+- **重构后的全量复跑没有完成**：后台任务被系统以「内存不足」中止（不是用例失败），按要求未擅自重启。下次开窗口先补这一条：`go test ./internal/service -run 'Task|ParentTask|ClassStar' -timeout 900s`。
+- `TestSupplement_|TestClassStarJarProgress` 合并连跑 4 次全绿（修夹具前是交替红）——这一轮在 `starCountBase` 重构之前。
+- 起 8080 重跑 `_verify/c4_setup.py`：14 项断言全绿（含 `stars=3 / progress=10`、三入口同文案、goal=0 → 422），随后 `_verify/c4_cleanup.py` 还原：C4 任务 0 条、kg4 班级罐 0 行、B1 夹具行 0 条。
+- 老师端 `npm run build:mp-weixin` 通过；`check-tokens teacher` 对改动文件 0 违规。
+- 第二轮干净复审采纳项（共享谓词补 `r.task_id=c.task_id`、任务 id 加日期上下界、`UpdateTask` 校验顺序、toast 去重、422 精确映射）落完后：`go build ./...`、`go vet` 通过；定向用例 `TestClassStarJarProgress|TestTeacherTaskRead|TestTeacherTaskClassScopeMissingJar|TestTeacherCreateTaskRejectsInvalidEnums|TestTeacherUpdateTask|TestAdminUpdateTask` → ok（73.5s）。
+- 中等回归子集 `TestSupplement_|TestTeacherTaskRead|TestClassStarJar|TestTaskPublic` → `ok 64.2s`。
+- 两学期无缝收口（`task_rules.go`）落完后：`go build`/`go vet`/`golangci-lint` 通过；`TestClassStarJarProgress*|TestClassStarJarTerm*|TestValidateClassStarJar*|TestTeacherTaskRead*|TestSupplement_*` → `ok 64.3s`（含新增的 `TestClassStarJarTermSealsGapBetweenSemesters`）。
+- 收口后再跑一次真实接口 E2E（`_verify/c4_setup.py`）：**14 项全绿**，`term_start` 已是 `2031-01-21`、`stars=3 / progress=10`；随后清理干净、停后端。踩到并修正了一个脚本前提：种子提交的日期必须落在**任务起止区间**内（生产不变式），否则新的「任务区间与学期有交集」过滤会把任务排除、算出 0 星。
+
+---
+
+## 25. tasks.md 勾选补正（2026-10-25，C-5 第一步）
+
+**背景**：`tasks.md` 长期「做了没勾」。开工前是 **23 勾 / 67 未勾**，与实际交付严重不符（例：12.1 的 46 个 TC 编号早就登记齐了，1.x/2.x 大部分已落地）。本轮只盘勾选，**不动代码**。
+
+**方法**：5 路并行只读审计（按 §1–§12 分区），要求每条结论必须给 `file:line` 或真实 grep 输出；构建/点击类静态不可证的只能标 PARTIAL。回传后由主会话**逐条复核锚点**才落笔——「子代理说 DONE」不足以进 `tasks.md`。
+
+**结果：51 勾 / 39 未勾 / 共 90**（本轮新勾 28 条）：
+
+| 组 | 新勾条目 |
+| --- | --- |
+| 1 | 1.1、1.2、1.4、1.6 |
+| 2 | 2.4、2.8、2.9 |
+| 3 | 3.3、3.9、3.10 |
+| 5 | 5.5 |
+| 6 | 6.1、6.3、6.4、6.5、6.6 |
+| 8 | 8.1、8.2、8.5 |
+| 9 | 9.1、9.2、9.6 |
+| 10 | 10.3、10.5、10.7、10.8 |
+| 12 | 12.1、12.4 |
+
+每条都补了 `<br>` 注记（格式同 3.7/3.8：`落地 <日期>（切片，证据见 …）`）。**这些注记是后续归档与复核的唯一来源，不要删。**
+
+### 25.1 两处判断修正（与最初估计不同，值得记住）
+
+1. **10.4 没勾**。「今晚一件事」卡片代码在（`parent/src/pages/index/index.vue:296-307`），但验收写的是「真实点击进入详情」，而 §16.3、§18.3 两张真实点击表里**都没有点这张卡片的记录**。同批的 10.3/10.5/10.7/10.8 都找到了记录，唯独它没有 → 不勾，留作 5 分钟补验项。
+2. **10.5 / 10.8 一度被我误判为 PARTIAL**。原因是只翻到 §18.3（老师端点击表），没找到家长端记录；翻到 §16.3 后确认：#8 点「孩子很开心」落库 `task_response_reactions (699,61,child_happy)`、#4/#6/#10–#13 走完全链、末段记了 build 与 token 结果 → 勾。
+   **教训：本文件有两张真实点击表——§16.3 家长端、§18.3 老师端。查证据时两张都要看，只看一张会低估已完成度。**
+
+### 25.2 写进注记、但**不干净**的地方（不要当成已清理）
+
+| 条目 | 残留 | 影响 |
+| --- | --- | --- |
+| 6.3 | `task_checkin_points` 仍被 `readPointsFromExtra`（`point_service.go:232`）读入后丢弃，`settings_service.go:97` 仍有该字段 | 死配置；`GetPointRules` / `UpdatePointRules` / 管理端页面都已无任务项 |
+| 6.6 | `pointSourceLabel`（`point_service.go:33-48`）仍保留 `task_checkin → 任务打卡` | 仅用于回溯历史流水，不代表任务页还有积分 |
+| 8.1 / 8.2 | `points` 在契约里各出现 3 / 4 次 | 全是「已移除」声明（`06-task.md:53/116/161`；`09-class-and-tasks.md:223/287/333/371`），无字段定义 |
+| 9.2 | 「目标设 0 的 toast」仍未在运行中小程序里抓到 | 沿用 §24.5-1，属 C-5 补验项 |
+
+### 25.3 剩余 39 条（按性质分，这才是 C-5 真正要干的活）
+
+**真缺口 5 条**（功能/删除项本身没落地，不修不能归档）：
+
+| 条目 | 问题 | 严重度 |
+| --- | --- | --- |
+| 3.11 | 老师端反馈汇总**全仓不存在**（`feedback-summary` / `FeedbackSummary` 零命中）。spec 写「老师端与管理端 SHALL 能看到反馈汇总」，管理端在 7.2 做了，老师端无人承接 | P1 |
+| 4.5 | 公开申请缺「无文字无媒体」闸门（`Content == ""` / `MediaFileID == 0` / `MediaURL == ""` 零命中）→ 一键完成的空提交可申请并批准上墙 | P1（漏洞） |
+| 1.5 | `Rewards` 没删干净：`domain/task.go:52` 字段仍在，`teacher_portal_service.go:2856/2999/3039` 仍读写（契约与前端已删） | P2 |
+| 7.6 | `participation_rate` 分母是否排除「未绑定家长的学生」未决策；`task_stats.go:311` 直接用全部在读学生，无单测 | P2（需产品拍板） |
+| 12.7 | 回归验证零执行证据（成长时光/通知/接送/积分页/看板 + 积分流水不产生） | 归档门禁 |
+
+**实现缺一点 10 条**：`2.1`（谓词在 `parent_portal_service.go:1485-1492` 而非约定的 `task_repo.go`，行为等价）、`2.10`（`Status=0` 结束任务无二次确认）、`4.6`/`4.7`（产品未决策）、`8.4`（`action_path` 无 `/pages/` 与 `student_id` 语义；三份 README 索引陈旧）、`8.6`（契约里只有 `period_start`/`period_end`，`response_type` 的 `single|period` 枚举本身没有定义）、`8.7`（溯源表与契约字段一致性**审计结论，本轮未逐条复核**：3 个字段名不一致、8 个契约字段未在 design 声明）、`10.1`（首页不解析小程序码 `scene`）、`10.2`（缺「已回应」态——根因是列表契约没给字段，属设计性缺口）、`10.6`（未登录保留路径 + 登录后回跳未实现，`redirect|回跳|pendingPath` 零命中）。
+
+> 其中 `2.10`、`4.6`、`4.7`、`8.7` 四条来自审计回传，**本轮未逐条复核**；开工时先自查再改。其余（`2.1`、`8.4`、`8.6`、`10.1`、`10.2`、`10.6`）已由主会话复核。
+
+**只缺验证/单测 24 条**：`1.3`（列级需 `dbcheck` 直验）、`2.2/2.3/2.5/2.6/2.7/2.11`、`3.1/3.2/3.4`、`4.8`、`5.4`（真机扫码）、`5.6`（跨时区）、`6.2`（积分不变）、`9.3/9.4/9.5/9.7`、`10.4`、`12.2/12.3/12.5/12.6/12.8`。
+
+### 25.4 归档门禁现状（2026-10-25）
+
+**仍不可归档**，四条理由：
+
+1. **规格未兑现**：3.11（老师端反馈汇总）与 4.5（空内容公开）都是 spec 明文要求，代码里没有。
+2. **规格与实现冲突**：`specs/parent-task-loop/spec.md:145` 的 Scenario THEN 写「家长只看到班级集体进度」，但 `parent/` 没有任何入口，`tasks.md` §10 也没有对应任务 → 需决定「补只读展示」还是「改规格为豁免」。
+3. **12.x 未全绿**：12.2/12.3/12.5/12.6/12.7/12.8 全部未勾，其中 12.6 依赖真机扫码、12.7 零证据。
+4. **C-4 改动未提交**（见 §0 表格）。
+
+**已通过**：`openspec validate --all` → **21 passed, 0 failed**（2026-10-25 复跑，唯一 warning 在 `spec/pickup-custody`，与本 change 无关）。
+
+---
+
+## 26. 新窗口开工提示词（C-5，2026-10-25 准备）
+
+> 直接复制下面代码块给新会话。它假设新窗口**没有任何上一轮上下文**。
+
+```text
+项目：D:\yuanhaisu\personal_projects\kindergarten（养成星球，Go + uni-app + Nuxt）
+分支：feat/parent-growth-scope
+当前阶段：OpenSpec change「2026-10-20-redesign-parent-task-loop」的 C-5 收口（不新开 change）
+
+## 第 0 步：先读，不要先动手
+
+按顺序读，读完再回话：
+1. docs/handoffs/2026-10-21-parent-task-loop.md 的 **§0**（当前状态）、**§25**（勾选补正全表）、**§24.5**（C-4 未验项）
+2. openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md
+   —— 现状 **51 勾 / 39 未勾**，未勾的分布与分类见 handoff §25.3
+3. openspec/changes/2026-10-20-redesign-parent-task-loop/specs/parent-task-loop/spec.md
+   —— 特别看 **:145** 那条与 parent/ 实现冲突的 Scenario
+4. CLAUDE.md（硬约束，尤其「小程测试验证纪律」与「Known Issues」）
+
+读完先回一段：你理解的本轮目标、你打算的顺序、以及任何与 §25 结论不一致的地方。
+**在得到我确认前不要改任何代码，也不要勾任何 tasks.md 复选框。**
+
+## 已知事实（不要重新发现）
+
+- 工作区有 **C-4 的未提交改动**（老师端班级罐入口 + 进度）。git status 里还有 3 个与本次无关的路径：
+  `docs/competitive/*`、`skills-lock.json`、`.impeccable/`、`docs/competitive/interview-guide.md` —— **不要提交它们，也不要删除**。
+- 全量回归已跑过并通过：`go test ./internal/service -p 1 -parallel 2 -count=1` → ok 220.271s。
+- `openspec validate --all` → 21 passed / 0 failed。
+- 老师端**没有 tabBar**，任何跳转都用 `uni.navigateTo`，不存在 switchTab 场景。
+- 家长端**有** tabBar（index/growth/pickup/profile），跳这四个必须 switchTab。
+
+## 本轮要做的（严格按这个顺序）
+
+### 1. 先提交 C-4
+两个 commit：
+- 代码：server/internal/{service,handler}/...、teacher/src/...、两个 api 契约、新增的 task_star_jar_progress_test.go
+- 文档：docs/handoffs/...、openspec/.../tasks.md
+提交前跑：`go build ./...`、`go vet ./...`、`node scripts/check-tokens.mjs teacher`。
+commit message 末尾按仓库约定加 Co-Authored-By。
+
+### 2. 补两个真缺口（P1）
+- **3.11 老师端反馈汇总**：新增 `GET /teacher/tasks/:id/feedback-summary`（或并入任务详情），返回
+  `feedback_coverage` / `child_happy_rate` / `ack_rate` + 按孩子的反馈计数。
+  口径必须与 7.2 完全一致（按 `(response_id, parent_user_id)` 对计算，分母为回应覆盖的去重家长数，
+  含通知失败；补充回应的反馈不计入）——**优先复用 7.2 现有实现，不要另写一套统计**。
+  改契约 `backend/api/api-teacher/09-class-and-tasks.md` + 加单测。
+- **4.5 空内容不可申请公开**：在 `POST /parent/tasks/checkins/:checkin_id/public-request` 的校验里
+  拒绝「无文字且无媒体」的提交，返回明确错误；加单测；前端「一键完成」路径不给申请入口（已有条件，
+  核对一遍）。改契约 `backend/api/api-parent/06-task.md`。
+
+### 3. 产品决策（做之前必须问我，不要自己拍板）
+- **spec.md:145 家长端集体进度**：补 parent/ 只读展示，还是改规格为「本期不提供」？
+- **4.6 / 4.7**（任务结束后公开内容的老师回看/导出；PublicApprovedBy 清空后的审计留痕）：提供还是明确不提供？
+- **7.6** participation_rate 分母是否排除未绑定家长的学生？
+
+### 4. 补实现缺口（P2，可与 2 并行）
+2.10（Status=0 二次确认）、8.4（action_path 语义 + 三份 README 索引）、8.6、8.7、10.1（scene 解析）、
+10.2（列表契约补「已回应」所需字段）、10.6（未登录回跳）、1.5（删 Rewards）。
+
+### 5. 验证与勾选（最后做，逐条补 evidence）
+- 单测：2.2/2.3/2.5/2.6/2.7/2.11、3.1/3.2/3.4、6.2、12.2
+- 真实点击/真机：9.3/9.4/9.5/9.7、10.4、12.3/12.5/12.6（真机扫码）
+- 回归：12.7（成长时光/通知/接送/积分页/看板 + 不产生积分流水）
+- 收工：12.8（两端 build + admin build + openspec validate --all + 杀 watcher）
+- **每勾一条，必须在 `<br>` 里写清证据（file:line / 命令输出 / 点击记录）**。没有证据就不勾。
+
+### 6. 归档
+只有 39 条全部清零（或有明确豁免记录）后才执行 /opsx:archive，并把 delta 合并进 openspec/specs/。
+
+## 纪律（违反会被退回）
+
+- **Never Blind Guess**：不确定就停下来问，不要猜着改。
+- 子代理/审查者的结论**不直接进仓库**，必须我自己复核锚点后才落笔（§25 就是这么做的）。
+- 单测通过不是目的；不要为了让测试变绿而写浅层覆盖。
+- 设计值一律用 token（`shared-design-tokens`），改完跑 `node scripts/check-tokens.mjs <teacher|parent>`。
+- 收工按 PID 杀 `dev:mp-weixin` watcher，不要只 TaskStop。
+- **不要**把 `configs/app.local.ini` / `.env` / `app.ini` 里的凭据提交进仓库。
+- 破坏性命令（`refreshtasks`、`initcheck`）**不得**对生产库执行。
+```
+
+---
+
+## 27. 附：本轮勾选用到的复核命令（可复用）
+
+```bash
+# 领域字段
+rg -n 'ActivityID|TargetStudentID|LearningLink|AllowPublic|RecognitionRitual|StarScope|StarGoal|MediaFileID|ResponseID' server/internal/domain/task.go
+# 四个 helper 是否仍在
+rg -n '^func (validateTargetStudent|validateClassStarJar|assertTaskEditable|revokePublicForTask)' server/internal/service/task_rules.go
+# 契约字段命中
+rg -c 'target_student_id|has_unread_supplement|last_read_at|my_reaction' backend/api/api-parent/06-task.md
+# 用例登记是否连续
+rg -n 'TC-NEW-TSK-01(01|46)' docs/tests/TEST_CATALOG.md
+# 勾选计数（改完必须回数）
+rg -c '^- \[x\]' openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md
+rg -c '^- \[ \]' openspec/changes/2026-10-20-redesign-parent-task-loop/tasks.md
+```
