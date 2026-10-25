@@ -319,6 +319,8 @@ onReachBottom(loadMore)
 }
 
 .icon-text {
+  // Remix Icon 的 PUA 码位，缺字体时会渲染成方块
+  font-family: remixicon;
   font-size: 48rpx;
 }
 

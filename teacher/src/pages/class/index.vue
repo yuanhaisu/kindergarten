@@ -150,7 +150,7 @@ onPullDownRefresh(loadClass)
         <view class="quick-row">
           <view class="quick-btn" @click="quickAction('notice')"><text class="quick-icon">&#xef94;</text><text class="quick-label">发布通知</text></view>
           <view class="quick-btn" @click="quickAction('growth')"><text class="quick-icon">&#xec29;</text><text class="quick-label">记成长</text></view>
-          <view class="quick-btn" @click="quickAction('pickup')"><text class="quick-icon">&#xf1ae;</text><text class="quick-label">接送</text></view>
+          <view class="quick-btn" @click="quickAction('pickup')"><text class="quick-icon">&#xeb39;</text><text class="quick-label">接送</text></view>
         </view>
         <view class="sub-title-row"><text class="sub-title">最新通知</text></view>
         <view v-for="notice in recentNotices" :key="notice.id" class="notice-card">
@@ -200,6 +200,15 @@ onPullDownRefresh(loadClass)
 </template>
 
 <style scoped lang="scss">
+// 本页图标是 Remix Icon 的 PUA 码位（&#xef94; 等）。不指定 font-family 时
+// 小程序没有可渲染该码位的字体，整页图标会显示成方块。
+// 注：U+F1AE 经实测不是有效字形（落成横杠），仅「接送」已改用家长端验证过的
+// U+EB39；班级头像与学生总数两处仍待定，见视觉审计的图标体系决定。
+.class-icon, .edit-icon, .hdr-btn-icon, .info-school-icon-text,
+.info-item-icon-text, .quick-icon, .notice-icon, .search-icon {
+  font-family: remixicon;
+}
+
 .page { min-height: 100vh; background: $color-bg-page; display: flex; flex-direction: column; box-sizing: border-box; overflow-x: hidden; }
 
 .header { background: linear-gradient(135deg, $color-semantic-info 0%, $color-semantic-info 100%); padding: 96rpx 48rpx 48rpx; box-sizing: border-box; width: 100%; }

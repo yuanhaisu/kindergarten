@@ -17,6 +17,9 @@ onLaunch(() => {
 // CSS Custom Properties for runtime theme switching
 @import "kindergarten-design-tokens/tokens-teacher.css";
 
+// Remix Icon 字体（图标是 PUA 码位，缺此字体整页图标渲染成方块）
+@import "@/static/fonts/remixicon.css";
+
 page {
   min-height: 100%;
   background: $color-bg-page;
