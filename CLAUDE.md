@@ -611,3 +611,13 @@ node scripts/check-tokens.mjs teacher  # 只扫描老师端
 - Wire-generated file `internal/app/wire_gen.go` must be regenerated (`make wire`) after DI changes
 - API specs in `backend/api/` are the source of truth; handlers and services must conform to them
 - Design tokens source: `shared-design-tokens/tokens.json`. Generated `build/` files must be committed alongside source changes
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues on `yuanhaisu/kindergarten`, driven by the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agents/domain.md`.
