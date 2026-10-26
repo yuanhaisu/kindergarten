@@ -167,12 +167,12 @@ npm run build:mp-weixin:test  # Test env build
 
 ### ⚠️ 三个会让结论失真的陷阱
 
-**1. `success: true` 不代表"验证的是我想要的那个项目"。** 两个 MCP server（`wechat-devtools` 老师端 / `wechat-devtools-parent` 家长端）共用一个 IDE 会话时，会出现：
+**1. `success: true` 不代表"验证的是我想要的那个项目"。** MCP 只保留一个 `wechat-devtools` server，它**不绑定任何一端**——目标端完全由 `auto_port` / `cdp_port` / `project_path` 决定。同一个 server 会出现：
 
-- 两个 server 各自 `automator start` 都返回 `success: true`，随后 `page_data` 却返回**逐字节相同**的数据 —— 在驱动同一个会话
-- parent server 能"成功"导航到只在老师端存在的 `pages/more/index`
+- 用同一个 `auto_port` 连续调用，`page_data` 返回**逐字节相同**的数据 —— 说明在驱动同一个会话
+- 端口传错时，`wechat_navigate` 能"成功"导航到只在另一端存在的 `pages/more/index`
 
-**判别是否真的双端**：探该端**独有**页面 + 比对 `page_data` 业务字段是否不同。详见下方「🔀 双端同时验证」。
+**判别是否真的双端**：每次都显式传端口（家长端 9420/9222，老师端 9421/9223）+ 探该端**独有**页面 + 比对 `page_data` 业务字段是否不同。详见下方「🔀 双端同时验证」。
 
 > 🔴 **`success: true` 不代表"验证的是我想要的那个项目"。**
 
@@ -249,6 +249,8 @@ powershell -ExecutionPolicy Bypass -File scripts/dual-ide.ps1 -Status # 看端�
 老师端: wechat_automator(auto_port=9421)  wechat_navigate(cdp_port=9223)
 家长端: wechat_automator(auto_port=9420)  wechat_navigate(cdp_port=9222)
 ```
+
+> 只有**一个** `wechat-devtools` server，它不绑定端。单 server 的默认 `WECHAT_PROJECT_PATH` 是老师端：家长端调用 `wechat_file` / `wechat_build` / `wechat_automator(start)` / `wechat_navigate` 时必须显式传 `project_path=parent/dist/dev/mp-weixin`；`wechat_screenshot` 要落到家长端目录时传 `output_path`。
 
 ⚠️ **CLI 端口发现写死读** `%LOCALAPPDATA%\微信开发者工具\User Data\<hash>\Default\.ide`，**不认 `--user-data-dir`**。要用 `cli.bat` 驱动实例 B，先改写该文件内容为 `44500`（`dual-ide.ps1` 的 `Set-IdePort` 已封装）。`.ide` 切换只在 `cli auto`/`open` 等启动期调用时需要；automator 走 ws 直连，不受影响。
 

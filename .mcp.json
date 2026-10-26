@@ -17,20 +17,6 @@
         "WECHAT_PROJECT_PATH": "D:\\yuanhaisu\\personal_projects\\kindergarten\\teacher\\dist\\dev\\mp-weixin",
         "NODE_PATH": "E:\\software\\nodejs\\node.exe"
       }
-    },
-    "wechat-devtools-parent": {
-      "command": "uvx",
-      "args": [
-        "wechat-devtools-mcp"
-      ],
-      "env": {
-        "WECHAT_DEVTOOLS_CLI": "D:\\Program Files (x86)\\微信web开发者工具\\cli.bat",
-        "WECHAT_PROJECT_PATH": "D:\\yuanhaisu\\personal_projects\\kindergarten\\parent\\dist\\dev\\mp-weixin",
-        "NODE_PATH": "E:\\software\\nodejs\\node.exe"
-      }
-    },
-    "calicat": {
-      "url": "https://www.calicat.cn/mcp"
     }
   }
 }
