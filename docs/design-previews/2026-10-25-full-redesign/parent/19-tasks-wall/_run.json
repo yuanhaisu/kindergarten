@@ -1,0 +1,23 @@
+{
+  "slug": "parent-tasks-wall",
+  "surface": "parent",
+  "title": "班级墙",
+  "projectId": "149e464e-f4d0-4de9-83e7-8e60cece3c85",
+  "conversationId": "fcced40c-0263-4e45-a810-0bd3c8f8c35d",
+  "runId": "89a2a548-d433-46f0-9f34-68b0a1575af9",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 903,
+  "files": [
+    ".file-versions/0eb547304658805aad788d32/0001-cadbc3c1-b604-4c96-aed9-7b5b95284ec7.html",
+    ".file-versions/0eb547304658805aad788d32/manifest.json",
+    "app.js",
+    "index.html",
+    "index.html.artifact.json",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/149e464e-f4d0-4de9-83e7-8e60cece3c85",
+  "previewRendered": true
+}

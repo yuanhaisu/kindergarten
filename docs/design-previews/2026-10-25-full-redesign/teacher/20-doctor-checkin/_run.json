@@ -1,0 +1,20 @@
+{
+  "slug": "teacher-doctor-checkin",
+  "surface": "teacher",
+  "title": "入园晨检",
+  "projectId": "3e5a1b08-6b2e-487e-a2df-1989842c350a",
+  "conversationId": "8dab35ab-aab6-4559-9c58-16775cc1cb3a",
+  "runId": "d7c4a04c-f672-470d-953b-553710cb3af3",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 872,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/3e5a1b08-6b2e-487e-a2df-1989842c350a",
+  "previewRendered": true
+}

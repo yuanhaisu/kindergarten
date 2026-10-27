@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>养成星球 · 全量页面重设计（2026-10-25）</title>
+<style>
+  :root {
+    --bg: #f7f3ea; --surface: #fff; --fg: #1e293b; --fg-2: #475569; --muted: #64748b;
+    --accent: #f97316; --accent-wash: #fff1e6; --border: #e7e0d4;
+    --teacher: #ff8a3d; --parent: #f97316; --ok: #16a34a; --bad: #dc2626;
+    --radius: 16px; --shadow: 0 8px 24px rgba(178, 122, 52, .12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.6 "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; }
+  .hero {
+    background: var(--surface); border-radius: 24px; padding: 28px 28px 24px;
+    box-shadow: var(--shadow); display: flex; flex-wrap: wrap; gap: 20px;
+    align-items: flex-end; justify-content: space-between;
+  }
+  .hero h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: .2px; }
+  .hero p { margin: 0; color: var(--muted); }
+  .stats { display: flex; gap: 24px; }
+  .stat b { display: block; font-size: 26px; line-height: 1.2; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .toolbar { display: flex; gap: 8px; margin: 24px 0 4px; flex-wrap: wrap; }
+  .toolbar button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--fg-2);
+    border-radius: 999px; padding: 8px 16px; font: inherit; cursor: pointer;
+  }
+  .toolbar button[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent); color: #9a3412; }
+  .group { margin-top: 28px; }
+  .group__head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .group__head h2 { margin: 0; font-size: 18px; }
+  .group__head span { color: var(--muted); font-size: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--surface); border-radius: var(--radius); overflow: hidden;
+    box-shadow: var(--shadow); display: flex; flex-direction: column;
+  }
+  .shot {
+    display: block; aspect-ratio: 390 / 560; background: #f1ece2; overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+  .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .shot__missing { display: grid; place-items: center; height: 100%; color: var(--muted); font-size: 12px; }
+  .body { padding: 12px 14px 14px; }
+  .meta { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+  .badge--teacher { background: #fff2e6; color: #b45309; }
+  .badge--parent { background: #ffecd9; color: #c2410c; }
+  .badge--ok { background: #e8f7ee; color: var(--ok); }
+  .badge--bad { background: #fdeaea; color: var(--bad); }
+  .time { margin-left: auto; color: var(--muted); font-size: 11px; }
+  .card h3 { margin: 0; font-size: 15px; }
+  .slug { margin: 2px 0 10px; color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; }
+  .links { display: flex; gap: 12px; }
+  .links a { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 500; }
+  .links a:hover { text-decoration: underline; }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1>养成星球 · 全量页面重设计</h1>
+      <p>老师端 + 家长端全部页面 · 微信小程序风格 · 每页独立 HTML 原型</p>
+      <p style="margin-top:8px"><a href="_shared/themes.html" style="color:var(--accent-deep);font-weight:600;text-decoration:none">查看三套配色方案对比（亮橙 / 深橙 AA / 亮橙+深墨字）→</a></p>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>50</b><span>页面</span></div>
+      <div class="stat"><b>50</b><span>已出稿</span></div>
+      <div class="stat"><b>0</b><span>待补</span></div>
+    </div>
+  </header>
+
+  <div class="toolbar" role="group" aria-label="按端筛选">
+    <button type="button" data-filter="all" aria-pressed="true">全部</button>
+    <button type="button" data-filter="teacher" aria-pressed="false">老师端</button>
+    <button type="button" data-filter="parent" aria-pressed="false">家长端</button>
+  </div>
+
+  <section class="group" data-group="teacher">
+    <header class="group__head">
+      <h2>老师端</h2>
+      <span>22 页 · 无 tabBar · 暖奶白底</span>
+    </header>
+    <div class="grid">
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/01-workbench/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/01-workbench/preview.png" alt="老师工作台 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">5 分</span>
+        </div>
+        <h3>老师工作台</h3>
+        <p class="slug">01-workbench</p>
+        <div class="links">
+          <a href="teacher/01-workbench/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/01-workbench/notes.md">说明</a>
+          <a href="teacher/01-workbench/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/02-login/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/02-login/preview.png" alt="老师登录 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">3 分</span>
+        </div>
+        <h3>老师登录</h3>
+        <p class="slug">02-login</p>
+        <div class="links">
+          <a href="teacher/02-login/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/02-login/notes.md">说明</a>
+          <a href="teacher/02-login/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/03-notice-create/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/03-notice-create/preview.png" alt="notice-create 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          
+        </div>
+        <h3>notice-create</h3>
+        <p class="slug">03-notice-create</p>
+        <div class="links">
+          <a href="teacher/03-notice-create/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/03-notice-create/notes.md">说明</a>
+          <a href="teacher/03-notice-create/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/04-growth-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/04-growth-index/preview.png" alt="成长记录列表 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">5 分</span>
+        </div>
+        <h3>成长记录列表</h3>
+        <p class="slug">04-growth-index</p>
+        <div class="links">
+          <a href="teacher/04-growth-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/04-growth-index/notes.md">说明</a>
+          <a href="teacher/04-growth-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/05-growth-create/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/05-growth-create/preview.png" alt="添加成长记录 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>添加成长记录</h3>
+        <p class="slug">05-growth-create</p>
+        <div class="links">
+          <a href="teacher/05-growth-create/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/05-growth-create/notes.md">说明</a>
+          <a href="teacher/05-growth-create/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/06-growth-detail/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/06-growth-detail/preview.png" alt="成长记录详情 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">11 分</span>
+        </div>
+        <h3>成长记录详情</h3>
+        <p class="slug">06-growth-detail</p>
+        <div class="links">
+          <a href="teacher/06-growth-detail/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/06-growth-detail/notes.md">说明</a>
+          <a href="teacher/06-growth-detail/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/07-pickup-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/07-pickup-index/preview.png" alt="接送管理 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">4 分</span>
+        </div>
+        <h3>接送管理</h3>
+        <p class="slug">07-pickup-index</p>
+        <div class="links">
+          <a href="teacher/07-pickup-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/07-pickup-index/notes.md">说明</a>
+          <a href="teacher/07-pickup-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/08-pickup-records/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/08-pickup-records/preview.png" alt="接送记录 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">10 分</span>
+        </div>
+        <h3>接送记录</h3>
+        <p class="slug">08-pickup-records</p>
+        <div class="links">
+          <a href="teacher/08-pickup-records/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/08-pickup-records/notes.md">说明</a>
+          <a href="teacher/08-pickup-records/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/09-tasks-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/09-tasks-index/preview.png" alt="亲子任务 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">10 分</span>
+        </div>
+        <h3>亲子任务</h3>
+        <p class="slug">09-tasks-index</p>
+        <div class="links">
+          <a href="teacher/09-tasks-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/09-tasks-index/notes.md">说明</a>
+          <a href="teacher/09-tasks-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/10-tasks-detail/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/10-tasks-detail/preview.png" alt="任务回应 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">11 分</span>
+        </div>
+        <h3>任务回应</h3>
+        <p class="slug">10-tasks-detail</p>
+        <div class="links">
+          <a href="teacher/10-tasks-detail/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/10-tasks-detail/notes.md">说明</a>
+          <a href="teacher/10-tasks-detail/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/11-calendar-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/11-calendar-index/preview.png" alt="班级日历 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>班级日历</h3>
+        <p class="slug">11-calendar-index</p>
+        <div class="links">
+          <a href="teacher/11-calendar-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/11-calendar-index/notes.md">说明</a>
+          <a href="teacher/11-calendar-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/12-calendar-create/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/12-calendar-create/preview.png" alt="添加活动 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">19 分</span>
+        </div>
+        <h3>添加活动</h3>
+        <p class="slug">12-calendar-create</p>
+        <div class="links">
+          <a href="teacher/12-calendar-create/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/12-calendar-create/notes.md">说明</a>
+          <a href="teacher/12-calendar-create/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/13-calendar-detail/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/13-calendar-detail/preview.png" alt="活动详情 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>活动详情</h3>
+        <p class="slug">13-calendar-detail</p>
+        <div class="links">
+          <a href="teacher/13-calendar-detail/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/13-calendar-detail/notes.md">说明</a>
+          <a href="teacher/13-calendar-detail/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/14-leave-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/14-leave-index/preview.png" alt="请假审批 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">12 分</span>
+        </div>
+        <h3>请假审批</h3>
+        <p class="slug">14-leave-index</p>
+        <div class="links">
+          <a href="teacher/14-leave-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/14-leave-index/notes.md">说明</a>
+          <a href="teacher/14-leave-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/15-class-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/15-class-index/preview.png" alt="我的班级 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">1 分</span>
+        </div>
+        <h3>我的班级</h3>
+        <p class="slug">15-class-index</p>
+        <div class="links">
+          <a href="teacher/15-class-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/15-class-index/notes.md">说明</a>
+          <a href="teacher/15-class-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/16-album-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/16-album-index/preview.png" alt="班级相册 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>班级相册</h3>
+        <p class="slug">16-album-index</p>
+        <div class="links">
+          <a href="teacher/16-album-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/16-album-index/notes.md">说明</a>
+          <a href="teacher/16-album-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/17-more-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/17-more-index/preview.png" alt="更多功能 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">15 分</span>
+        </div>
+        <h3>更多功能</h3>
+        <p class="slug">17-more-index</p>
+        <div class="links">
+          <a href="teacher/17-more-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/17-more-index/notes.md">说明</a>
+          <a href="teacher/17-more-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/18-messages-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/18-messages-index/preview.png" alt="消息 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>消息</h3>
+        <p class="slug">18-messages-index</p>
+        <div class="links">
+          <a href="teacher/18-messages-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/18-messages-index/notes.md">说明</a>
+          <a href="teacher/18-messages-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/19-profile-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/19-profile-index/preview.png" alt="我的 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">12 分</span>
+        </div>
+        <h3>我的</h3>
+        <p class="slug">19-profile-index</p>
+        <div class="links">
+          <a href="teacher/19-profile-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/19-profile-index/notes.md">说明</a>
+          <a href="teacher/19-profile-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/20-doctor-checkin/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/20-doctor-checkin/preview.png" alt="入园晨检 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">15 分</span>
+        </div>
+        <h3>入园晨检</h3>
+        <p class="slug">20-doctor-checkin</p>
+        <div class="links">
+          <a href="teacher/20-doctor-checkin/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/20-doctor-checkin/notes.md">说明</a>
+          <a href="teacher/20-doctor-checkin/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/21-doctor-calendar/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/21-doctor-calendar/preview.png" alt="园级事件 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">7 分</span>
+        </div>
+        <h3>园级事件</h3>
+        <p class="slug">21-doctor-calendar</p>
+        <div class="links">
+          <a href="teacher/21-doctor-calendar/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/21-doctor-calendar/notes.md">说明</a>
+          <a href="teacher/21-doctor-calendar/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/22-webview/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/22-webview/preview.png" alt="内嵌网页 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">5 分</span>
+        </div>
+        <h3>内嵌网页</h3>
+        <p class="slug">22-webview</p>
+        <div class="links">
+          <a href="teacher/22-webview/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/22-webview/notes.md">说明</a>
+          <a href="teacher/22-webview/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    </div>
+  </section>
+
+  <section class="group" data-group="parent">
+    <header class="group__head">
+      <h2>家长端</h2>
+      <span>28 页 · 底部 tabBar · 冷雾白底</span>
+    </header>
+    <div class="grid">
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/01-home/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/01-home/preview.png" alt="家长首页 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">7 分</span>
+        </div>
+        <h3>家长首页</h3>
+        <p class="slug">01-home</p>
+        <div class="links">
+          <a href="parent/01-home/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/01-home/notes.md">说明</a>
+          <a href="parent/01-home/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/02-login/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/02-login/preview.png" alt="家长登录 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>家长登录</h3>
+        <p class="slug">02-login</p>
+        <div class="links">
+          <a href="parent/02-login/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/02-login/notes.md">说明</a>
+          <a href="parent/02-login/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/03-bind/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/03-bind/preview.png" alt="绑定孩子 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">7 分</span>
+        </div>
+        <h3>绑定孩子</h3>
+        <p class="slug">03-bind</p>
+        <div class="links">
+          <a href="parent/03-bind/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/03-bind/notes.md">说明</a>
+          <a href="parent/03-bind/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/04-notice-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/04-notice-index/preview.png" alt="通知公告 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">5 分</span>
+        </div>
+        <h3>通知公告</h3>
+        <p class="slug">04-notice-index</p>
+        <div class="links">
+          <a href="parent/04-notice-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/04-notice-index/notes.md">说明</a>
+          <a href="parent/04-notice-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/05-notice-detail/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/05-notice-detail/preview.png" alt="通知详情 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">5 分</span>
+        </div>
+        <h3>通知详情</h3>
+        <p class="slug">05-notice-detail</p>
+        <div class="links">
+          <a href="parent/05-notice-detail/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/05-notice-detail/notes.md">说明</a>
+          <a href="parent/05-notice-detail/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/06-leave-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/06-leave-index/preview.png" alt="请假记录 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">5 分</span>
+        </div>
+        <h3>请假记录</h3>
+        <p class="slug">06-leave-index</p>
+        <div class="links">
+          <a href="parent/06-leave-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/06-leave-index/notes.md">说明</a>
+          <a href="parent/06-leave-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/07-leave-create/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/07-leave-create/preview.png" alt="请假申请 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">7 分</span>
+        </div>
+        <h3>请假申请</h3>
+        <p class="slug">07-leave-create</p>
+        <div class="links">
+          <a href="parent/07-leave-create/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/07-leave-create/notes.md">说明</a>
+          <a href="parent/07-leave-create/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/08-leave-detail/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/08-leave-detail/preview.png" alt="请假详情 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">4 分</span>
+        </div>
+        <h3>请假详情</h3>
+        <p class="slug">08-leave-detail</p>
+        <div class="links">
+          <a href="parent/08-leave-detail/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/08-leave-detail/notes.md">说明</a>
+          <a href="parent/08-leave-detail/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/09-growth-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/09-growth-index/preview.png" alt="成长时光 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">13 分</span>
+        </div>
+        <h3>成长时光</h3>
+        <p class="slug">09-growth-index</p>
+        <div class="links">
+          <a href="parent/09-growth-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/09-growth-index/notes.md">说明</a>
+          <a href="parent/09-growth-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/10-growth-detail/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/10-growth-detail/preview.png" alt="成长详情 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">10 分</span>
+        </div>
+        <h3>成长详情</h3>
+        <p class="slug">10-growth-detail</p>
+        <div class="links">
+          <a href="parent/10-growth-detail/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/10-growth-detail/notes.md">说明</a>
+          <a href="parent/10-growth-detail/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/11-growth-album/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/11-growth-album/preview.png" alt="成长相册 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">19 分</span>
+        </div>
+        <h3>成长相册</h3>
+        <p class="slug">11-growth-album</p>
+        <div class="links">
+          <a href="parent/11-growth-album/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/11-growth-album/notes.md">说明</a>
+          <a href="parent/11-growth-album/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/12-growth-report/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/12-growth-report/preview.png" alt="成长报告 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">9 分</span>
+        </div>
+        <h3>成长报告</h3>
+        <p class="slug">12-growth-report</p>
+        <div class="links">
+          <a href="parent/12-growth-report/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/12-growth-report/notes.md">说明</a>
+          <a href="parent/12-growth-report/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/13-pickup-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/13-pickup-index/preview.png" alt="接送记录 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">13 分</span>
+        </div>
+        <h3>接送记录</h3>
+        <p class="slug">13-pickup-index</p>
+        <div class="links">
+          <a href="parent/13-pickup-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/13-pickup-index/notes.md">说明</a>
+          <a href="parent/13-pickup-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/14-pickup-qrcode/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/14-pickup-qrcode/preview.png" alt="接送二维码 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">7 分</span>
+        </div>
+        <h3>接送二维码</h3>
+        <p class="slug">14-pickup-qrcode</p>
+        <div class="links">
+          <a href="parent/14-pickup-qrcode/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/14-pickup-qrcode/notes.md">说明</a>
+          <a href="parent/14-pickup-qrcode/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/15-pickup-authorized/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/15-pickup-authorized/preview.png" alt="授权接送人 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">9 分</span>
+        </div>
+        <h3>授权接送人</h3>
+        <p class="slug">15-pickup-authorized</p>
+        <div class="links">
+          <a href="parent/15-pickup-authorized/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/15-pickup-authorized/notes.md">说明</a>
+          <a href="parent/15-pickup-authorized/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/16-pickup-authorized-create/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/16-pickup-authorized-create/preview.png" alt="添加授权接送人 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">5 分</span>
+        </div>
+        <h3>添加授权接送人</h3>
+        <p class="slug">16-pickup-authorized-create</p>
+        <div class="links">
+          <a href="parent/16-pickup-authorized-create/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/16-pickup-authorized-create/notes.md">说明</a>
+          <a href="parent/16-pickup-authorized-create/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/17-tasks-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/17-tasks-index/preview.png" alt="亲子任务 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">7 分</span>
+        </div>
+        <h3>亲子任务</h3>
+        <p class="slug">17-tasks-index</p>
+        <div class="links">
+          <a href="parent/17-tasks-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/17-tasks-index/notes.md">说明</a>
+          <a href="parent/17-tasks-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/18-tasks-detail/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/18-tasks-detail/preview.png" alt="任务详情 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          
+        </div>
+        <h3>任务详情</h3>
+        <p class="slug">18-tasks-detail</p>
+        <div class="links">
+          <a href="parent/18-tasks-detail/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/18-tasks-detail/notes.md">说明</a>
+          <a href="parent/18-tasks-detail/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/19-tasks-wall/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/19-tasks-wall/preview.png" alt="班级墙 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">15 分</span>
+        </div>
+        <h3>班级墙</h3>
+        <p class="slug">19-tasks-wall</p>
+        <div class="links">
+          <a href="parent/19-tasks-wall/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/19-tasks-wall/notes.md">说明</a>
+          <a href="parent/19-tasks-wall/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/20-points/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/20-points/preview.png" alt="积分与成就 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          
+        </div>
+        <h3>积分与成就</h3>
+        <p class="slug">20-points</p>
+        <div class="links">
+          <a href="parent/20-points/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/20-points/notes.md">说明</a>
+          <a href="parent/20-points/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/21-class-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/21-class-index/preview.png" alt="班级信息 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">7 分</span>
+        </div>
+        <h3>班级信息</h3>
+        <p class="slug">21-class-index</p>
+        <div class="links">
+          <a href="parent/21-class-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/21-class-index/notes.md">说明</a>
+          <a href="parent/21-class-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/22-calendar-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/22-calendar-index/preview.png" alt="班级日历 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">10 分</span>
+        </div>
+        <h3>班级日历</h3>
+        <p class="slug">22-calendar-index</p>
+        <div class="links">
+          <a href="parent/22-calendar-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/22-calendar-index/notes.md">说明</a>
+          <a href="parent/22-calendar-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/23-student-index/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/23-student-index/preview.png" alt="孩子信息 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">20 分</span>
+        </div>
+        <h3>孩子信息</h3>
+        <p class="slug">23-student-index</p>
+        <div class="links">
+          <a href="parent/23-student-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/23-student-index/notes.md">说明</a>
+          <a href="parent/23-student-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/24-feedback/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/24-feedback/preview.png" alt="意见反馈 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">16 分</span>
+        </div>
+        <h3>意见反馈</h3>
+        <p class="slug">24-feedback</p>
+        <div class="links">
+          <a href="parent/24-feedback/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/24-feedback/notes.md">说明</a>
+          <a href="parent/24-feedback/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/25-settings/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/25-settings/preview.png" alt="设置 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">9 分</span>
+        </div>
+        <h3>设置</h3>
+        <p class="slug">25-settings</p>
+        <div class="links">
+          <a href="parent/25-settings/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/25-settings/notes.md">说明</a>
+          <a href="parent/25-settings/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/26-messages/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/26-messages/preview.png" alt="消息 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>消息</h3>
+        <p class="slug">26-messages</p>
+        <div class="links">
+          <a href="parent/26-messages/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/26-messages/notes.md">说明</a>
+          <a href="parent/26-messages/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/27-profile/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/27-profile/preview.png" alt="我的 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">8 分</span>
+        </div>
+        <h3>我的</h3>
+        <p class="slug">27-profile</p>
+        <div class="links">
+          <a href="parent/27-profile/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/27-profile/notes.md">说明</a>
+          <a href="parent/27-profile/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-surface="parent" data-state="ok">
+      <a class="shot" href="parent/28-webview/index.html" target="_blank" rel="noreferrer">
+        <img src="parent/28-webview/preview.png" alt="内嵌网页 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--parent">家长</span>
+          <span class="badge badge--ok">已出稿</span>
+          <span class="time">4 分</span>
+        </div>
+        <h3>内嵌网页</h3>
+        <p class="slug">28-webview</p>
+        <div class="links">
+          <a href="parent/28-webview/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="parent/28-webview/notes.md">说明</a>
+          <a href="parent/28-webview/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
+    </div>
+  </section>
+
+  <p class="empty" id="empty" hidden>该端还没有页面产物。</p>
+</div>
+
+<script>
+  const buttons = [...document.querySelectorAll('[data-filter]')];
+  const groups = [...document.querySelectorAll('[data-group]')];
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const filter = button.dataset.filter;
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+      groups.forEach((g) => { g.hidden = filter !== 'all' && g.dataset.group !== filter; });
+    });
+  });
+</script>
+</body>
+</html>

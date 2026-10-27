@@ -1,0 +1,23 @@
+{
+  "slug": "parent-leave-index",
+  "surface": "parent",
+  "title": "请假记录",
+  "projectId": "346ab1f5-da3e-4110-8fef-c39e33ce4da9",
+  "conversationId": "3fcd2883-c039-4732-ad94-d4873cf50fa3",
+  "runId": "ef308d64-9890-4be2-b3f0-4455a60d7a85",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 301,
+  "files": [
+    ".file-versions/0eb547304658805aad788d32/0001-4de86aef-6919-4101-8bf9-654ba977068c.html",
+    ".file-versions/0eb547304658805aad788d32/manifest.json",
+    "app.js",
+    "index.html",
+    "index.html.artifact.json",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/346ab1f5-da3e-4110-8fef-c39e33ce4da9",
+  "previewRendered": true
+}

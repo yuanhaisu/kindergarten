@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>成长相册 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <header class="mp-navbar">
+    <button class="mp-back" id="backBtn" type="button" aria-label="返回">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">成长相册</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main">
+    <div class="album" data-od-id="growth-album">
+      <section class="monthbar" aria-labelledby="monthTitle" data-od-id="album-monthbar">
+        <div class="mb-row">
+          <button class="mb-arrow" id="prevMonth" type="button" aria-label="上个月" aria-controls="monthViews" aria-disabled="false" data-od-id="month-prev">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+          </button>
+          <h2 class="mb-title" id="monthTitle" data-od-id="month-title">2026年10月</h2>
+          <button class="mb-arrow" id="nextMonth" type="button" aria-label="下个月" aria-controls="monthViews" aria-disabled="false" data-od-id="month-next">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg>
+          </button>
+        </div>
+        <p class="mb-meta" id="monthMeta" data-od-id="month-meta">
+          <span class="mb-count" id="monthCount">18 张照片</span>
+          <span class="mb-dot" id="monthDot" aria-hidden="true">·</span>
+          <span class="mb-range" id="monthRange">10月9日 - 10月24日</span>
+          <span class="mb-skel" aria-hidden="true"><span class="sk-line"></span><span class="sk-line"></span></span>
+        </p>
+        <p class="sr-only" id="monthLive" aria-live="polite"></p>
+      </section>
+
+      <div class="album-stage">
+        <section class="state state-loading" data-od-id="album-loading" role="status" aria-live="polite">
+          <p class="sr-only">正在加载本月照片</p>
+          <div class="sk-day" aria-hidden="true">
+            <span class="sk sk-date"></span>
+            <div class="sk-grid">
+              <span class="sk sk-ph"></span><span class="sk sk-ph"></span><span class="sk sk-ph"></span>
+              <span class="sk sk-ph"></span><span class="sk sk-ph"></span><span class="sk sk-ph"></span>
+              <span class="sk sk-ph"></span><span class="sk sk-ph"></span><span class="sk sk-ph"></span>
+            </div>
+          </div>
+          <div class="sk-day" aria-hidden="true">
+            <span class="sk sk-date"></span>
+            <div class="sk-grid">
+              <span class="sk sk-ph"></span><span class="sk sk-ph"></span><span class="sk sk-ph"></span>
+              <span class="sk sk-ph"></span><span class="sk sk-ph"></span><span class="sk sk-ph"></span>
+              <span class="sk sk-ph"></span><span class="sk sk-ph"></span><span class="sk sk-ph"></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="state state-empty" data-od-id="album-empty">
+          <div class="empty-art" aria-hidden="true">
+            <span class="ea-ring"></span>
+            <span class="ea-planet"></span>
+            <span class="ea-moon"></span>
+            <span class="ea-spark"></span>
+          </div>
+          <h2 class="state-title">还没有照片</h2>
+          <p class="state-copy">老师上传成长记录后，照片会按日期整理在这里</p>
+          <button class="btn-primary" id="emptyRefresh" type="button" data-od-id="album-refresh">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 8.2A6.5 6.5 0 1 0 18 12"/><path d="M17.8 4.4v3.9h-3.9"/></svg>
+            <span>刷新看看</span>
+          </button>
+        </section>
+
+        <section class="state state-error" data-od-id="album-error" role="alert">
+          <div class="error-card">
+            <span class="error-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="8"/><path d="M10 5.8v4.6"/><path d="M10 13.7v.2"/></svg>
+            </span>
+            <h2 class="state-title">加载相册失败</h2>
+            <p class="state-copy error-copy">网络不太稳定，请稍后再试</p>
+            <button class="btn-primary" id="retryBtn" type="button" data-od-id="album-retry">
+              <span class="spinner" aria-hidden="true"></span>
+              <span id="retryLabel">重试</span>
+            </button>
+          </div>
+        </section>
+
+        <div class="months" id="monthViews">
+          <section class="month-panel" data-month-panel="2026-10" aria-label="2026年10月">
+            <section class="day" data-od-id="album-group-2026-10-24" aria-labelledby="date-2026-10-24">
+              <div class="day-head">
+                <h3 class="day-date" id="date-2026-10-24">10月24日</h3>
+                <span class="day-count">3 张</span>
+              </div>
+              <div class="day-grid">
+                <button class="ph art art--sky comp-1" type="button" data-tone="sky" aria-haspopup="dialog" aria-label="查看 10月24日 第 1 张照片，共 3 张"></button>
+                <button class="ph art art--leaf comp-2" type="button" data-tone="leaf" aria-haspopup="dialog" aria-label="查看 10月24日 第 2 张照片，共 3 张"></button>
+                <button class="ph art art--sand comp-3" type="button" data-tone="sand" aria-haspopup="dialog" aria-label="查看 10月24日 第 3 张照片，共 3 张"></button>
+              </div>
+            </section>
+
+            <section class="day" data-od-id="album-group-2026-10-22" aria-labelledby="date-2026-10-22">
+              <div class="day-head">
+                <h3 class="day-date" id="date-2026-10-22">10月22日</h3>
+                <span class="day-count">6 张</span>
+              </div>
+              <div class="day-grid">
+                <button class="ph art art--mint comp-1" type="button" data-tone="mint" aria-haspopup="dialog" aria-label="查看 10月22日 第 1 张照片，共 6 张"></button>
+                <button class="ph art art--warm comp-2" type="button" data-tone="warm" aria-haspopup="dialog" aria-label="查看 10月22日 第 2 张照片，共 6 张"></button>
+                <button class="ph art art--sky comp-3" type="button" data-tone="sky" aria-haspopup="dialog" aria-label="查看 10月22日 第 3 张照片，共 6 张"></button>
+                <button class="ph art art--leaf comp-1" type="button" data-tone="leaf" aria-haspopup="dialog" aria-label="查看 10月22日 第 4 张照片，共 6 张"></button>
+                <button class="ph art art--sand comp-2" type="button" data-tone="sand" aria-haspopup="dialog" aria-label="查看 10月22日 第 5 张照片，共 6 张"></button>
+                <button class="ph art art--mint comp-3" type="button" data-tone="mint" aria-haspopup="dialog" aria-label="查看 10月22日 第 6 张照片，共 6 张"></button>
+              </div>
+            </section>
+
+            <section class="day" data-od-id="album-group-2026-10-18" aria-labelledby="date-2026-10-18">
+              <div class="day-head">
+                <h3 class="day-date" id="date-2026-10-18">10月18日</h3>
+                <span class="day-count">4 张</span>
+              </div>
+              <div class="day-grid">
+                <button class="ph art art--sky comp-1" type="button" data-tone="sky" aria-haspopup="dialog" aria-label="查看 10月18日 第 1 张照片，共 4 张"></button>
+                <button class="ph art art--leaf comp-2" type="button" data-tone="leaf" aria-haspopup="dialog" aria-label="查看 10月18日 第 2 张照片，共 4 张"></button>
+                <button class="ph art art--sand comp-3" type="button" data-tone="sand" aria-haspopup="dialog" aria-label="查看 10月18日 第 3 张照片，共 4 张"></button>
+                <button class="ph art art--mint comp-1" type="button" data-tone="mint" aria-haspopup="dialog" aria-label="查看 10月18日 第 4 张照片，共 4 张"></button>
+              </div>
+            </section>
+
+            <section class="day" data-od-id="album-group-2026-10-15" aria-labelledby="date-2026-10-15">
+              <div class="day-head">
+                <h3 class="day-date" id="date-2026-10-15">10月15日</h3>
+                <span class="day-count">3 张</span>
+              </div>
+              <div class="day-grid">
+                <button class="ph art art--sky comp-2" type="button" data-tone="sky" aria-haspopup="dialog" aria-label="查看 10月15日 第 1 张照片，共 3 张"></button>
+                <button class="ph art art--leaf comp-3" type="button" data-tone="leaf" aria-haspopup="dialog" aria-label="查看 10月15日 第 2 张照片，共 3 张"></button>
+                <button class="ph art art--sand comp-1" type="button" data-tone="sand" aria-haspopup="dialog" aria-label="查看 10月15日 第 3 张照片，共 3 张"></button>
+              </div>
+            </section>
+
+            <section class="day" data-od-id="album-group-2026-10-09" aria-labelledby="date-2026-10-09">
+              <div class="day-head">
+                <h3 class="day-date" id="date-2026-10-09">10月9日</h3>
+                <span class="day-count">2 张</span>
+              </div>
+              <div class="day-grid">
+                <button class="ph art art--mint comp-2" type="button" data-tone="mint" aria-haspopup="dialog" aria-label="查看 10月9日 第 1 张照片，共 2 张"></button>
+                <button class="ph art art--warm comp-3" type="button" data-tone="warm" aria-haspopup="dialog" aria-label="查看 10月9日 第 2 张照片，共 2 张"></button>
+              </div>
+            </section>
+          </section>
+
+          <section class="month-panel" data-month-panel="2026-09" aria-label="2026年9月" hidden>
+            <section class="day" data-od-id="album-group-2026-09-26" aria-labelledby="date-2026-09-26">
+              <div class="day-head">
+                <h3 class="day-date" id="date-2026-09-26">9月26日</h3>
+                <span class="day-count">4 张</span>
+              </div>
+              <div class="day-grid">
+                <button class="ph art art--sky comp-2" type="button" data-tone="sky" aria-haspopup="dialog" aria-label="查看 9月26日 第 1 张照片，共 4 张"></button>
+                <button class="ph art art--leaf comp-3" type="button" data-tone="leaf" aria-haspopup="dialog" aria-label="查看 9月26日 第 2 张照片，共 4 张"></button>
+                <button class="ph art art--sand comp-1" type="button" data-tone="sand" aria-haspopup="dialog" aria-label="查看 9月26日 第 3 张照片，共 4 张"></button>
+                <button class="ph art art--mint comp-2" type="button" data-tone="mint" aria-haspopup="dialog" aria-label="查看 9月26日 第 4 张照片，共 4 张"></button>
+              </div>
+            </section>
+
+            <section class="day" data-od-id="album-group-2026-09-12" aria-labelledby="date-2026-09-12">
+              <div class="day-head">
+                <h3 class="day-date" id="date-2026-09-12">9月12日</h3>
+                <span class="day-count">1 张</span>
+              </div>
+              <div class="day-grid">
+                <button class="ph art art--warm comp-1" type="button" data-tone="warm" aria-haspopup="dialog" aria-label="查看 9月12日 第 1 张照片，共 1 张"></button>
+              </div>
+            </section>
+          </section>
+
+          <section class="month-empty" data-month-empty hidden data-od-id="month-empty">
+            <span class="me-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4.6" width="13.6" height="12" rx="3"/><path d="M3.2 8.4h13.6M7 3.5v2.4M13 3.5v2.4"/></svg>
+            </span>
+            <h2 class="me-title">本月暂无照片</h2>
+            <p class="me-copy">换个月份看看，或等老师上传新的照片</p>
+            <button class="link-btn" id="prevFromEmpty" type="button" data-od-id="album-prev-month">看上个月</button>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="pv" id="preview" aria-hidden="true">
+    <div class="pv-backdrop" data-close="preview" aria-hidden="true"></div>
+    <section class="pv-sheet" id="previewSheet" role="dialog" aria-modal="true" aria-labelledby="pvTitle" tabindex="-1" data-od-id="preview-sheet">
+      <span class="pv-grab" aria-hidden="true"></span>
+      <h2 class="pv-title" id="pvTitle" aria-live="polite">10月24日 · 第 1 / 3 张</h2>
+      <div class="pv-stage" id="pvStage">
+        <button class="pv-nav" id="pvPrev" type="button" aria-label="上一张" data-od-id="preview-prev">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+        </button>
+        <div class="pv-art art art--sky comp-1" id="pvArt" role="img" aria-label="10月24日第 1 张照片"></div>
+        <button class="pv-nav" id="pvNext" type="button" aria-label="下一张" data-od-id="preview-next">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg>
+        </button>
+      </div>
+      <div class="pv-foot">
+        <p class="pv-meta" id="pvMeta">共 3 张 · 左右切换查看</p>
+        <button class="pv-close" id="pvClose" type="button" data-close="preview" data-od-id="preview-close">关闭</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" data-od-id="album-toast"></div>
+
+  <div class="mp-demo" data-open="false">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+</div>
+
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

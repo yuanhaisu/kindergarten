@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>园级事件 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="../../_shared/shell.css" />
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" id="proto" data-state="normal" data-od-id="teacher-event-calendar">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回工作台">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">园级事件</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page">
+      <section class="scope-panel" data-od-id="scope-banner" aria-labelledby="scopePillLabel">
+        <span class="scope-pill" id="scopePillLabel">
+          <svg class="scope-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="7.25" stroke="currentColor" stroke-width="1.5" />
+            <path d="M2.75 10h14.5M10 2.75c2.05 2.1 3.1 4.52 3.1 7.25S12.05 15.15 10 17.25C7.95 15.15 6.9 12.73 6.9 10S7.95 4.85 10 2.75Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+          <span>全园家长可见</span>
+        </span>
+        <p class="scope-desc">发布后，全园老师与家长会在日历中同步看到。</p>
+      </section>
+
+      <section class="agenda" aria-labelledby="agendaTitle">
+        <header class="agenda-toolbar" data-od-id="agenda-toolbar">
+          <div class="agenda-heading">
+            <h2 class="agenda-title" id="agendaTitle">园级日程</h2>
+            <div class="count-slot" aria-live="polite">
+              <p class="count-line count-normal" data-od-id="event-count">共 <strong id="countValue">5</strong> 场<span class="count-unit">园级事件</span></p>
+              <span class="count-skeleton count-loading" aria-hidden="true"></span>
+              <p class="count-line count-empty">共 0 场</p>
+              <p class="count-line count-error">园级事件未载入</p>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-publish" id="openPublishBtn" type="button" data-od-id="publish-event">
+            <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 4.25v11.5M4.25 10h11.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            <span>发布</span>
+          </button>
+        </header>
+
+        <div class="state-panel state-normal" data-od-id="event-agenda">
+          <div class="agenda-groups" id="agendaGroups"></div>
+        </div>
+
+        <div class="state-panel state-loading" role="status" aria-live="polite" data-od-id="event-loading">
+          <span class="sr-only">加载中...</span>
+          <div class="skeleton-list" aria-hidden="true">
+            <span class="sk-month"></span>
+            <div class="sk-head">
+              <span class="sk-date"></span>
+              <span class="sk-copy">
+                <span class="sk-line sk-line-title"></span>
+                <span class="sk-line sk-line-meta"></span>
+              </span>
+            </div>
+            <div class="sk-card">
+              <span class="sk-line sk-line-tag"></span>
+              <span class="sk-line sk-line-title"></span>
+              <span class="sk-line sk-line-body"></span>
+              <span class="sk-line sk-line-body short"></span>
+            </div>
+            <div class="sk-card">
+              <span class="sk-line sk-line-tag"></span>
+              <span class="sk-line sk-line-title"></span>
+              <span class="sk-line sk-line-body"></span>
+              <span class="sk-line sk-line-body short"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-panel state-empty" data-od-id="event-empty">
+          <div class="empty-art" aria-hidden="true">
+            <span class="empty-orbit"></span>
+            <span class="empty-page">
+              <span class="empty-binding"></span>
+              <span class="empty-day">26</span>
+            </span>
+            <span class="empty-dot"></span>
+          </div>
+          <h3 class="empty-title">还没有园级事件</h3>
+          <p class="empty-desc">发布后全园家长都能在日历中看到。</p>
+          <button class="btn btn-primary empty-cta" id="emptyPublishBtn" type="button" data-od-id="publish-first-event">
+            <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 4.25v11.5M4.25 10h11.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            <span>发布第一条事件</span>
+          </button>
+        </div>
+
+        <div class="state-panel state-error" role="alert" data-od-id="event-error">
+          <div class="error-mark" aria-hidden="true">!</div>
+          <h3 class="empty-title">事件加载失败</h3>
+          <p class="empty-desc">网络异常，未获取到园级事件。</p>
+          <button class="btn btn-ghost" id="reloadEventsBtn" type="button" data-od-id="reload-events">重新加载</button>
+        </div>
+      </section>
+      </div>
+    </main>
+
+    <!-- 发布 / 编辑表单 -->
+    <div class="overlay" id="sheetOverlay" hidden></div>
+    <section class="sheet" id="eventSheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" tabindex="-1" data-od-id="event-form-sheet" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-head">
+        <h2 class="sheet-title" id="sheetTitle">发布园级事件</h2>
+        <button class="icon-button sheet-close" id="closeSheetBtn" type="button" aria-label="关闭" data-od-id="close-event-form">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="m5.5 5.5 9 9m0-9-9 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+        </button>
+      </header>
+
+      <div class="sheet-scroll">
+        <div class="edit-note" id="editNote" data-od-id="published-edit-note" hidden>
+          <span class="edit-note-mark" aria-hidden="true">i</span>
+          <p id="editNoteText"></p>
+        </div>
+
+        <form id="eventForm" novalidate>
+          <div class="field">
+            <label class="field-label" for="eventTitle">事件标题 <span class="required-note">必填</span></label>
+            <input class="input" id="eventTitle" name="title" type="text" autocomplete="off" placeholder="如：全园体检" />
+          </div>
+
+          <fieldset class="field field-type">
+            <legend class="field-label">事件类型</legend>
+            <div class="type-switch" id="typeSwitch" role="radiogroup" aria-label="事件类型">
+              <button class="type-option is-selected" type="button" role="radio" aria-checked="true" data-type="checkup" data-od-id="event-type-checkup">体检</button>
+              <button class="type-option" type="button" role="radio" aria-checked="false" data-type="notice" data-od-id="event-type-notice">通知</button>
+              <button class="type-option" type="button" role="radio" aria-checked="false" data-type="activity" data-od-id="event-type-activity">活动</button>
+              <button class="type-option" type="button" role="radio" aria-checked="false" data-type="holiday" data-od-id="event-type-holiday">假期</button>
+              <button class="type-option" type="button" role="radio" aria-checked="false" data-type="meeting" data-od-id="event-type-meeting">家长会</button>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label class="field-label" for="eventDescription">事件说明</label>
+            <textarea class="input textarea" id="eventDescription" name="description" rows="3" placeholder="如体检项目、注意事项、需家长配合的事项"></textarea>
+          </div>
+
+          <div class="field">
+            <span class="field-label" id="eventDateLabel">事件日期 <span class="required-note">必填</span></span>
+            <button class="input input-button" id="eventDateField" type="button" aria-labelledby="eventDateLabel eventDateValue" data-od-id="event-date-field">
+              <span class="control-value is-placeholder" id="eventDateValue">请选择日期</span>
+              <svg class="control-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M6 8.25 10 12.25l4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="field-pair">
+            <div class="field">
+              <span class="field-label" id="startTimeLabel">开始时间</span>
+              <button class="input input-button" id="startTimeField" type="button" aria-labelledby="startTimeLabel startTimeValue" data-od-id="start-time-field">
+                <span class="control-value" id="startTimeValue">09:00</span>
+                <svg class="control-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M6 8.25 10 12.25l4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div class="field">
+              <span class="field-label" id="endTimeLabel">结束时间</span>
+              <button class="input input-button" id="endTimeField" type="button" aria-labelledby="endTimeLabel endTimeValue" data-od-id="end-time-field">
+                <span class="control-value is-placeholder" id="endTimeValue">未设</span>
+                <svg class="control-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M6 8.25 10 12.25l4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="eventLocation">事件地点</label>
+            <input class="input" id="eventLocation" name="location" type="text" autocomplete="off" placeholder="如：医务室" />
+          </div>
+
+          <div class="switch-row" id="notifyRow" data-od-id="notify-parents-row">
+            <div class="switch-copy">
+              <span class="switch-title" id="notifyLabel">通知家长</span>
+              <span class="switch-help" id="notifyHelp">发布后向全园家长推送通知</span>
+            </div>
+            <button class="switch" id="notifySwitch" type="button" role="switch" aria-checked="true" aria-labelledby="notifyLabel" aria-describedby="notifyHelp" data-od-id="notify-parents-switch">
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <footer class="sheet-footer">
+        <button class="btn btn-quiet" id="cancelEditBtn" type="button" data-od-id="cancel-edit" hidden>取消编辑</button>
+        <button class="btn btn-ghost" id="saveDraftBtn" type="button" data-od-id="save-draft">存为草稿</button>
+        <button class="btn btn-primary" id="publishNowBtn" type="button" data-od-id="publish-now">立即发布</button>
+        <button class="btn btn-primary" id="saveEditBtn" type="button" data-od-id="save-edit" hidden>保存发布</button>
+      </footer>
+    </section>
+
+    <!-- 发布变更确认 -->
+    <div class="overlay overlay-confirm" id="confirmOverlay" hidden></div>
+    <section class="sheet sheet-confirm" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" tabindex="-1" data-od-id="notify-change-sheet" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="confirm-head">
+        <h2 class="sheet-title" id="confirmTitle">通知家长？</h2>
+        <p class="confirm-subtitle">将通知全园家长</p>
+      </header>
+      <div class="confirm-scroll">
+        <p class="change-caption">本次变更</p>
+        <div class="change-list" id="changeList"></div>
+        <div class="switch-row switch-row-confirm">
+          <div class="switch-copy">
+            <span class="switch-title" id="changeNotifyLabel">发布变更通知</span>
+            <span class="switch-help" id="changeNotifyHelp">家长端会在日历顶部看到此变更</span>
+          </div>
+          <button class="switch" id="changeNotifySwitch" type="button" role="switch" aria-checked="true" aria-labelledby="changeNotifyLabel" aria-describedby="changeNotifyHelp">
+            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          </button>
+        </div>
+      </div>
+      <footer class="sheet-footer">
+        <button class="btn btn-ghost" id="cancelConfirmBtn" type="button">取消</button>
+        <button class="btn btn-primary" id="saveConfirmBtn" type="button">保存</button>
+      </footer>
+    </section>
+
+    <!-- 微信风格输入对话框 -->
+    <div class="modal-overlay" id="textDialogOverlay" hidden></div>
+    <section class="wx-dialog" id="textDialog" role="dialog" aria-modal="true" aria-labelledby="textDialogTitle" tabindex="-1" data-od-id="text-input-dialog" hidden>
+      <h2 class="wx-dialog-title" id="textDialogTitle">事件日期</h2>
+      <p class="wx-dialog-hint" id="textDialogHint">按 YYYY-MM-DD 填写</p>
+      <input class="input wx-dialog-input" id="textDialogInput" type="text" autocomplete="off" spellcheck="false" />
+      <div class="wx-dialog-actions">
+        <button class="wx-dialog-button" id="textDialogCancel" type="button">取消</button>
+        <button class="wx-dialog-button strong" id="textDialogConfirm" type="button">确定</button>
+      </div>
+    </section>
+
+    <!-- 删除确认 -->
+    <div class="modal-overlay" id="deleteOverlay" hidden></div>
+    <section class="wx-alert" id="deleteDialog" role="alertdialog" aria-modal="true" aria-labelledby="deleteTitle" aria-describedby="deleteBody" tabindex="-1" data-od-id="delete-dialog" hidden>
+      <h2 class="wx-alert-title" id="deleteTitle">删除事件</h2>
+      <p class="wx-alert-body" id="deleteBody"></p>
+      <div class="wx-alert-actions">
+        <button class="wx-dialog-button" id="cancelDeleteBtn" type="button">取消</button>
+        <button class="wx-dialog-button strong" id="confirmDeleteBtn" type="button">删除</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

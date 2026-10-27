@@ -1,0 +1,20 @@
+{
+  "slug": "parent-leave-create",
+  "surface": "parent",
+  "title": "请假申请",
+  "projectId": "14636df1-50ea-446d-a944-0f0ca8ded82e",
+  "conversationId": "821007f4-b051-4e8a-9284-185995d3b19e",
+  "runId": "f2e13208-e2e4-4480-8230-51b3a2bb85d0",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 392,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/14636df1-50ea-446d-a944-0f0ca8ded82e",
+  "previewRendered": true,
+  "note": "od-design-page.mjs 在 index.html 稳定 30s 后提前推断完成并退出；styles.css / app.js 在该 run 真正结束后手工拷入。daemon 最终状态 succeeded（childExited=true），产物完整。"
+}

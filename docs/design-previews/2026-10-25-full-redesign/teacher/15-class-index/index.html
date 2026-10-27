@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>我的班级 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal" data-pickup-deadline="16:30">
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" aria-label="返回">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">我的班级</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main">
+    <div class="page">
+      <section class="hero" data-od-id="hero">
+        <div class="hero-main">
+          <div class="hero-badge" aria-hidden="true">小</div>
+          <div class="hero-copy">
+            <p class="hero-eyebrow">小班 · 2026-2027 学年</p>
+            <h2 class="hero-title">小一班</h2>
+            <p class="hero-school">阳光幼儿园</p>
+          </div>
+          <button class="hero-bell" id="bellBtn" type="button" aria-label="打开消息，有未读">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+            <span class="hero-dot"></span>
+          </button>
+        </div>
+        <div class="hero-foot">
+          <span class="teacher-avatar" aria-hidden="true">李</span>
+          <span class="teacher-name">李老师 · 主班老师</span>
+          <span class="hero-sep" aria-hidden="true"></span>
+          <span class="hero-count"><span class="only-normal">30 人</span><span class="only-empty">0 人</span></span>
+        </div>
+        <div class="hero-sk" aria-hidden="true">
+          <div class="hero-sk-top">
+            <span class="sk sk-badge sk--brand"></span>
+            <span class="hero-sk-copy"><span class="sk sk-line sk-line--a sk--brand"></span><span class="sk sk-line sk-line--b sk--brand"></span></span>
+            <span class="sk sk-bell sk--brand"></span>
+          </div>
+          <span class="sk sk-capsule sk--brand"></span>
+        </div>
+      </section>
+
+      <section class="overview" data-od-id="overview">
+        <div class="overview-head">
+          <h2 class="overview-title">今日接送</h2>
+          <p class="overview-date">10月26日 周一</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="stat-label"><i class="dot dot--success"></i>已入园</span><span class="stat-value"><span class="only-normal">28</span><span class="only-empty">0</span><span class="sk sk-num only-loading" aria-hidden="true"></span></span></div>
+          <div class="stat"><span class="stat-label"><i class="dot dot--danger"></i>未入园</span><span class="stat-value"><span class="only-normal">2</span><span class="only-empty">0</span><span class="sk sk-num only-loading" aria-hidden="true"></span></span></div>
+          <div class="stat"><span class="stat-label"><i class="dot dot--info"></i>已接走</span><span class="stat-value"><span class="only-normal">6</span><span class="only-empty">0</span><span class="sk sk-num only-loading" aria-hidden="true"></span></span></div>
+          <div class="stat"><span class="stat-label"><i class="dot dot--warning"></i>未接走</span><span class="stat-value"><span class="only-normal">22</span><span class="only-empty">0</span><span class="sk sk-num only-loading" aria-hidden="true"></span></span></div>
+        </div>
+      </section>
+
+      <section class="notices" id="notices" data-od-id="notices">
+        <div class="notices-head">
+          <h2 class="notices-title">最新通知</h2>
+        </div>
+        <div class="notice-list" id="noticeList">
+          <button class="notice" type="button" data-title="秋游亲子活动通知">
+            <span class="notice-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
+            <span class="notice-body">
+              <span class="notice-title">秋游亲子活动通知</span>
+              <span class="notice-time">10-26</span>
+            </span>
+            <span class="notice-rate">
+              <span class="rate-bar" aria-hidden="true"><span class="rate-fill" style="width: 32%"></span></span>
+              <span class="rate-text">已读 32%</span>
+            </span>
+          </button>
+          <button class="notice" type="button" data-title="本周亲子任务已发布">
+            <span class="notice-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
+            <span class="notice-body">
+              <span class="notice-title">本周亲子任务已发布</span>
+              <span class="notice-time">10-26</span>
+            </span>
+            <span class="notice-rate">
+              <span class="rate-bar" aria-hidden="true"><span class="rate-fill" style="width: 64%"></span></span>
+              <span class="rate-text">已读 64%</span>
+            </span>
+          </button>
+        </div>
+        <div class="notice-skeleton" aria-hidden="true">
+          <div class="notice notice--sk">
+            <span class="sk sk-notice-icon"></span>
+            <span class="notice-body"><span class="sk sk-notice-title"></span><span class="sk sk-notice-time"></span></span>
+            <span class="sk sk-notice-rate"></span>
+          </div>
+          <div class="notice notice--sk">
+            <span class="sk sk-notice-icon"></span>
+            <span class="notice-body"><span class="sk sk-notice-title"></span><span class="sk sk-notice-time"></span></span>
+            <span class="sk sk-notice-rate"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="roster" id="roster" data-filtered="all" data-od-id="roster">
+        <div class="roster-head">
+          <h2 class="roster-title">幼儿名单</h2>
+          <p class="roster-count"><span class="only-normal">30 人（含 2 名未入园）</span><span class="only-empty">0 人</span><span class="sk sk-count only-loading" aria-hidden="true"></span></p>
+        </div>
+        <div class="toolbar" id="toolbar" data-od-id="toolbar">
+          <div class="search">
+            <svg class="search-icon" width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>
+            <input class="search-input" id="studentSearch" type="search" placeholder="搜索学生姓名" aria-label="搜索学生姓名" autocomplete="off" enterkeyhint="search">
+          </div>
+          <div class="filters" role="group" aria-label="按接送状态筛选">
+            <button class="filter" type="button" data-filter="all" aria-pressed="true">全部<span class="filter-count">30</span></button>
+            <button class="filter" type="button" data-filter="not_arrived" aria-pressed="false">未入园<span class="filter-count">2</span></button>
+            <button class="filter" type="button" data-filter="not_picked_up" aria-pressed="false">未接走<span class="filter-count">22</span></button>
+            <button class="filter" type="button" data-filter="picked_up" aria-pressed="false">已接走<span class="filter-count">6</span></button>
+          </div>
+        </div>
+        <div class="grid" id="studentGrid" role="group" aria-label="班级幼儿名单">
+<button class="kid" data-status="picked_up" data-name="乐乐" data-time="08:02" data-persons="妈妈、爷爷"><span class="kid-av" aria-hidden="true">乐</span><span class="kid-name">乐乐</span><span class="kid-status"><i class="dot"></i>已接走</span><span class="kid-time">08:02 入园</span></button>
+<button class="kid" data-status="picked_up" data-name="小雨" data-time="08:05" data-persons="爸爸、外婆"><span class="kid-av" aria-hidden="true">小</span><span class="kid-name">小雨</span><span class="kid-status"><i class="dot"></i>已接走</span><span class="kid-time">08:05 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="朵朵" data-time="08:07" data-persons="妈妈"><span class="kid-av" aria-hidden="true">朵</span><span class="kid-name">朵朵</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:07 入园</span></button>
+<button class="kid" data-status="picked_up" data-name="安安" data-time="08:00" data-persons="爸爸、奶奶"><span class="kid-av" aria-hidden="true">安</span><span class="kid-name">安安</span><span class="kid-status"><i class="dot"></i>已接走</span><span class="kid-time">08:00 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="贝贝" data-time="08:11" data-persons="外公、妈妈"><span class="kid-av" aria-hidden="true">贝</span><span class="kid-name">贝贝</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:11 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="辰辰" data-time="08:09" data-persons="妈妈、爷爷"><span class="kid-av" aria-hidden="true">辰</span><span class="kid-name">辰辰</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:09 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="晨晨" data-time="08:14" data-persons="爸爸、外婆"><span class="kid-av" aria-hidden="true">晨</span><span class="kid-name">晨晨</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:14 入园</span></button>
+<button class="kid" data-status="not_arrived" data-name="豆豆" data-persons="妈妈"><span class="kid-av" aria-hidden="true">豆</span><span class="kid-name">豆豆</span><span class="kid-status"><i class="dot"></i>未入园</span><span class="kid-time">还没入园</span></button>
+<button class="kid" data-status="picked_up" data-name="果果" data-time="07:58" data-persons="爸爸、奶奶"><span class="kid-av" aria-hidden="true">果</span><span class="kid-name">果果</span><span class="kid-status"><i class="dot"></i>已接走</span><span class="kid-time">07:58 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="涵涵" data-time="08:16" data-persons="外公、妈妈"><span class="kid-av" aria-hidden="true">涵</span><span class="kid-name">涵涵</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:16 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="浩浩" data-time="08:04" data-persons="妈妈、爷爷"><span class="kid-av" aria-hidden="true">浩</span><span class="kid-name">浩浩</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:04 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="嘉嘉" data-time="08:19" data-persons="爸爸、外婆"><span class="kid-av" aria-hidden="true">嘉</span><span class="kid-name">嘉嘉</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:19 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="可心" data-time="08:06" data-persons="妈妈"><span class="kid-av" aria-hidden="true">可</span><span class="kid-name">可心</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:06 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="可可" data-time="08:12" data-persons="爸爸、奶奶"><span class="kid-av" aria-hidden="true">可</span><span class="kid-name">可可</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:12 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="朗朗" data-time="08:21" data-persons="外公、妈妈"><span class="kid-av" aria-hidden="true">朗</span><span class="kid-name">朗朗</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:21 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="满满" data-time="08:08" data-persons="妈妈、爷爷"><span class="kid-av" aria-hidden="true">满</span><span class="kid-name">满满</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:08 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="苗苗" data-time="08:13" data-persons="爸爸、外婆"><span class="kid-av" aria-hidden="true">苗</span><span class="kid-name">苗苗</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:13 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="沐沐" data-time="08:03" data-persons="妈妈"><span class="kid-av" aria-hidden="true">沐</span><span class="kid-name">沐沐</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:03 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="暖暖" data-time="08:17" data-persons="爸爸、奶奶"><span class="kid-av" aria-hidden="true">暖</span><span class="kid-name">暖暖</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:17 入园</span></button>
+<button class="kid" data-status="not_arrived" data-name="皮皮" data-persons="外公、妈妈"><span class="kid-av" aria-hidden="true">皮</span><span class="kid-name">皮皮</span><span class="kid-status"><i class="dot"></i>未入园</span><span class="kid-time">还没入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="七七" data-time="08:22" data-persons="妈妈、爷爷"><span class="kid-av" aria-hidden="true">七</span><span class="kid-name">七七</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:22 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="然然" data-time="08:10" data-persons="爸爸、外婆"><span class="kid-av" aria-hidden="true">然</span><span class="kid-name">然然</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:10 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="睿睿" data-time="08:18" data-persons="妈妈"><span class="kid-av" aria-hidden="true">睿</span><span class="kid-name">睿睿</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:18 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="糖糖" data-time="08:15" data-persons="爸爸、奶奶"><span class="kid-av" aria-hidden="true">糖</span><span class="kid-name">糖糖</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:15 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="彤彤" data-time="08:20" data-persons="外公、妈妈"><span class="kid-av" aria-hidden="true">彤</span><span class="kid-name">彤彤</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:20 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="晚晚" data-time="08:24" data-persons="妈妈、爷爷"><span class="kid-av" aria-hidden="true">晚</span><span class="kid-name">晚晚</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:24 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="西西" data-time="08:23" data-persons="爸爸、外婆"><span class="kid-av" aria-hidden="true">西</span><span class="kid-name">西西</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:23 入园</span></button>
+<button class="kid" data-status="not_picked_up" data-name="小北" data-time="08:25" data-persons="妈妈"><span class="kid-av" aria-hidden="true">小</span><span class="kid-name">小北</span><span class="kid-status"><i class="dot"></i>未接走</span><span class="kid-time">08:25 入园</span></button>
+<button class="kid" data-status="picked_up" data-name="一诺" data-time="08:01" data-persons="爸爸、奶奶"><span class="kid-av" aria-hidden="true">一</span><span class="kid-name">一诺</span><span class="kid-status"><i class="dot"></i>已接走</span><span class="kid-time">08:01 入园</span></button>
+<button class="kid" data-status="picked_up" data-name="元宝" data-time="08:26" data-persons="外公、妈妈"><span class="kid-av" aria-hidden="true">元</span><span class="kid-name">元宝</span><span class="kid-status"><i class="dot"></i>已接走</span><span class="kid-time">08:26 入园</span></button>
+        </div>
+        <div class="skeleton-grid" aria-hidden="true">
+          <div class="kid kid--sk"><span class="sk sk-av"></span><span class="sk sk-name"></span><span class="sk sk-status"></span><span class="sk sk-time"></span></div>
+          <div class="kid kid--sk"><span class="sk sk-av"></span><span class="sk sk-name"></span><span class="sk sk-status"></span><span class="sk sk-time"></span></div>
+          <div class="kid kid--sk"><span class="sk sk-av"></span><span class="sk sk-name"></span><span class="sk sk-status"></span><span class="sk sk-time"></span></div>
+          <div class="kid kid--sk"><span class="sk sk-av"></span><span class="sk sk-name"></span><span class="sk sk-status"></span><span class="sk sk-time"></span></div>
+          <div class="kid kid--sk"><span class="sk sk-av"></span><span class="sk sk-name"></span><span class="sk sk-status"></span><span class="sk sk-time"></span></div>
+          <div class="kid kid--sk"><span class="sk sk-av"></span><span class="sk sk-name"></span><span class="sk sk-status"></span><span class="sk sk-time"></span></div>
+        </div>
+        <div class="no-results" id="noResults">
+          <span class="state-icon state-icon--sm" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 4.5 4.5"/></svg></span>
+          <p class="no-results-text">没有找到符合条件的孩子</p>
+          <button class="link-btn" id="clearFilters" type="button">清除筛选</button>
+        </div>
+        <div class="empty" id="emptyState">
+          <span class="state-icon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.5-3.2 2.7-5 5.5-5s5 1.8 5.5 5"/><circle cx="17" cy="9" r="2.2"/><path d="M15.8 14.3c2.2.3 4 1.9 4.5 4.7"/></svg></span>
+          <p class="empty-title">班里还没有幼儿档案</p>
+          <button class="btn-primary" id="emptyRefresh" type="button" data-od-id="empty-refresh">刷新名单</button>
+        </div>
+      </section>
+      <p class="sr-only loading-note" role="status">正在加载班级信息</p>
+      <div class="error" id="errorState" role="alert">
+        <span class="state-icon state-icon--danger" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5a13 13 0 0 1 3.4-2.1M18 8.5a13 13 0 0 0-4.6-2.4M6.5 12a8.5 8.5 0 0 1 3.1-1.4M13.5 12c1 .2 2 .6 2.8 1.2M9.3 15.4c1.5-1 3.3-1 4.8 0"/><path d="M12 18.5h.01M4 4l16 16"/></svg></span>
+        <h2 class="error-title">班级信息加载失败</h2>
+        <p class="error-text">网络好像开小差了</p>
+        <button class="btn-primary" id="retryBtn" type="button" data-od-id="retry">重试</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="mp-demo" data-open="false">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+
+  <div class="sheet-layer" id="sheetLayer" data-open="false" aria-hidden="true">
+    <div class="sheet-scrim" data-close-sheet></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetName" data-od-id="sheet">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <span class="sheet-av" id="sheetAvatar" aria-hidden="true">乐</span>
+        <div class="sheet-id">
+          <h2 class="sheet-name" id="sheetName">乐乐</h2>
+          <span class="sheet-pill" id="sheetPill" data-status="picked_up"><i class="dot" aria-hidden="true"></i><span id="sheetPillText">已接走</span></span>
+        </div>
+      </div>
+      <dl class="sheet-rows">
+        <div class="sheet-row"><dt class="sheet-label">入园时间</dt><dd class="sheet-value" id="sheetTime">08:02</dd></div>
+        <div class="sheet-row"><dt class="sheet-label">接送状态</dt><dd class="sheet-value" id="sheetStatus">已接走</dd></div>
+        <div class="sheet-row"><dt class="sheet-label">授权接送人</dt><dd class="sheet-value" id="sheetPersons">妈妈、爷爷</dd></div>
+        <div class="sheet-row"><dt class="sheet-label">接送截止</dt><dd class="sheet-value" id="sheetDeadline">16:30</dd></div>
+      </dl>
+      <button class="sheet-close" id="sheetClose" type="button" data-close-sheet data-od-id="sheet-close">关闭</button>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

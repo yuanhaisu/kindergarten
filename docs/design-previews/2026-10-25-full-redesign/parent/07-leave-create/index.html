@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>请假申请 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">请假申请</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page" data-od-id="leave-create-page">
+
+        <div class="child-context" data-od-id="child-context">
+          <span class="child-avatar" aria-hidden="true">乐</span>
+          <p class="child-line"><span class="child-prefix">为</span><strong>乐乐</strong><span class="child-sep" aria-hidden="true">·</span><span>小一班</span></p>
+        </div>
+
+        <form class="form-flow" id="leaveForm" novalidate>
+          <section class="form-section" aria-labelledby="leaveTypeHeading" data-od-id="leave-type-section">
+            <div class="section-head">
+              <h2 class="section-title" id="leaveTypeHeading">请假类型</h2>
+            </div>
+            <div class="type-grid" role="group" aria-label="请假类型">
+              <button class="type-tile is-selected" type="button" aria-pressed="true" data-leave-type="sick" data-od-id="leave-type-sick">
+                <span class="type-check" aria-hidden="true">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m1.8 5.2 2 2 4.4-4.6"/></svg>
+                </span>
+                <span class="type-name">病假</span>
+                <span class="type-desc">因病需要休息</span>
+              </button>
+              <button class="type-tile" type="button" aria-pressed="false" data-leave-type="personal" data-od-id="leave-type-personal">
+                <span class="type-check" aria-hidden="true">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m1.8 5.2 2 2 4.4-4.6"/></svg>
+                </span>
+                <span class="type-name">事假</span>
+                <span class="type-desc">个人或家庭事务</span>
+              </button>
+              <button class="type-tile" type="button" aria-pressed="false" data-leave-type="other" data-od-id="leave-type-other">
+                <span class="type-check" aria-hidden="true">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m1.8 5.2 2 2 4.4-4.6"/></svg>
+                </span>
+                <span class="type-name">其他</span>
+                <span class="type-desc">其他原因</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="leaveTimeHeading" data-od-id="leave-time-section">
+            <div class="section-head">
+              <h2 class="section-title" id="leaveTimeHeading">请假时间</h2>
+              <span class="section-meta">必填</span>
+            </div>
+            <div class="form-card time-card">
+              <div class="date-field">
+                <button class="date-row" type="button" id="startDateRow" aria-haspopup="dialog" aria-describedby="startDateError" data-od-id="start-date-row">
+                  <span class="date-row-label">开始日期</span>
+                  <span class="date-readout">
+                    <span class="date-value is-set" id="startDateValue">2026-10-28</span>
+                    <span class="date-weekday" id="startDateWeekday">周三</span>
+                  </span>
+                  <svg class="date-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3.5 4.5 4.5L6 12.5"/></svg>
+                </button>
+                <p class="field-error" id="startDateError" hidden>请选择开始日期</p>
+              </div>
+              <div class="date-field">
+                <button class="date-row" type="button" id="endDateRow" aria-haspopup="dialog" aria-describedby="endDateError" data-od-id="end-date-row">
+                  <span class="date-row-label">结束日期</span>
+                  <span class="date-readout">
+                    <span class="date-value is-set" id="endDateValue">2026-10-29</span>
+                    <span class="date-weekday" id="endDateWeekday">周四</span>
+                  </span>
+                  <svg class="date-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3.5 4.5 4.5L6 12.5"/></svg>
+                </button>
+                <p class="field-error" id="endDateError" hidden>请选择结束日期</p>
+              </div>
+              <div class="days-summary" data-od-id="leave-duration-summary">
+                <span class="days-total" id="daysTotal">共 2 天</span>
+                <span class="days-note" id="daysNote">含首尾两天</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="leaveReasonHeading" data-od-id="reason-section">
+            <div class="section-head">
+              <h2 class="section-title" id="leaveReasonHeading">请假原因</h2>
+              <span class="section-meta">必填</span>
+            </div>
+            <div class="form-card reason-card">
+              <textarea class="reason-input" id="reasonInput" maxlength="500" rows="4" placeholder="请详细描述请假原因..." aria-describedby="reasonError reasonCharCount" data-od-id="leave-reason-input">乐乐昨晚开始发烧 38.5℃，今天已到儿科门诊就诊，医生建议在家休息两天观察，特此请假。</textarea>
+              <p class="field-error reason-error" id="reasonError" hidden>请填写请假原因</p>
+              <div class="reason-foot" id="reasonCharCount" aria-live="polite">
+                <span class="char-current" id="charCount">44</span><span class="char-total">/500</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="pickupHeading" data-od-id="pickup-section">
+            <div class="section-head">
+              <h2 class="section-title" id="pickupHeading">接送人信息</h2>
+              <span class="section-meta">选填</span>
+            </div>
+            <div class="form-card">
+              <div class="stack-field">
+                <label class="stack-label" for="pickupName">姓名</label>
+                <input class="text-input" id="pickupName" type="text" placeholder="接送人姓名" autocomplete="name" value="王芳" data-od-id="pickup-name-input">
+              </div>
+              <div class="stack-field">
+                <label class="stack-label" for="pickupPhone">手机号</label>
+                <input class="text-input" id="pickupPhone" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="11" placeholder="接送人手机号" autocomplete="tel-national" value="13812345678" data-od-id="pickup-phone-input">
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="attachmentHeading" data-od-id="attachments-section">
+            <div class="section-head">
+              <h2 class="section-title" id="attachmentHeading">附件</h2>
+            </div>
+            <div class="form-card attachment-card">
+              <p class="upload-intro">病假条、就诊记录等照片</p>
+              <p class="upload-meta">选填，最多 3 张</p>
+              <div class="upload-grid" id="uploadGrid" data-od-id="attachment-list">
+                <div class="photo-thumb" data-photo-id="1" data-od-id="attachment-photo-1">
+                  <button class="remove-photo" type="button" aria-label="删除附件 病假条" data-remove-photo="1">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="m2 2 6 6M8 2 2 8"/></svg>
+                  </button>
+                  <svg class="photo-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2.5" width="18" height="19" rx="3"/><path d="m6.5 16 3.3-3.7 2.7 2.7 2.2-2.2 2.8 3.2"/><circle cx="8.5" cy="8" r="1.3"/></svg>
+                  <span class="photo-name">病假条</span>
+                </div>
+                <button class="add-photo" id="addPhotoBtn" type="button" aria-label="添加照片，最多 3 张" data-od-id="add-photo-button">
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M11 4v14M4 11h14"/></svg>
+                  <span>添加照片</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        </form>
+
+        <div class="loading-flow" aria-hidden="true">
+          <div class="sk-section">
+            <span class="sk-heading"></span>
+            <div class="sk-type-grid">
+              <div class="sk-type"><span class="sk-block sk-title"></span><span class="sk-block sk-caption"></span></div>
+              <div class="sk-type"><span class="sk-block sk-title"></span><span class="sk-block sk-caption"></span></div>
+              <div class="sk-type"><span class="sk-block sk-title"></span><span class="sk-block sk-caption"></span></div>
+            </div>
+          </div>
+          <div class="sk-section">
+            <span class="sk-heading"></span>
+            <div class="sk-card">
+              <div class="sk-row"><span class="sk-block sk-label"></span><span class="sk-block sk-date"></span></div>
+              <div class="sk-row"><span class="sk-block sk-label"></span><span class="sk-block sk-date"></span></div>
+              <div class="sk-total"><span class="sk-block sk-short"></span><span class="sk-block sk-short"></span></div>
+            </div>
+          </div>
+          <div class="sk-section">
+            <span class="sk-heading"></span>
+            <div class="sk-card sk-reason">
+              <span class="sk-block sk-reason-line"></span>
+              <span class="sk-block sk-reason-line"></span>
+              <span class="sk-block sk-reason-line sk-reason-line--short"></span>
+            </div>
+          </div>
+          <div class="sk-section">
+            <span class="sk-heading"></span>
+            <div class="sk-card">
+              <div class="sk-field">
+                <span class="sk-block sk-field-label"></span>
+                <span class="sk-block sk-input"></span>
+              </div>
+              <div class="sk-field">
+                <span class="sk-block sk-field-label"></span>
+                <span class="sk-block sk-input"></span>
+              </div>
+            </div>
+          </div>
+          <div class="sk-section">
+            <span class="sk-heading"></span>
+            <div class="sk-card sk-attachment">
+              <span class="sk-block sk-label"></span>
+              <div class="sk-photo-row">
+                <span class="sk-block sk-photo"></span>
+                <span class="sk-block sk-photo"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <footer class="submit-dock" data-od-id="submit-dock">
+      <div class="submit-failure" id="submitFailure" role="alert" hidden>
+        <span class="failure-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 4.6v4.2"/><circle cx="8" cy="11.4" r=".7" fill="currentColor" stroke="none"/></svg>
+        </span>
+        <p>提交失败，请重试</p>
+        <button class="retry-btn" id="retryBtn" type="button" data-od-id="retry-submit">重试</button>
+      </div>
+      <p class="submit-hint" id="submitHint" aria-live="polite">共 2 天 · 提交后进入待审批</p>
+      <button class="submit-button" id="submitButton" type="submit" form="leaveForm" aria-disabled="false" data-od-id="submit-leave">
+        <span class="submit-spinner" aria-hidden="true"></span>
+        <span class="submit-label" id="submitLabel">提交申请</span>
+      </button>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+      <span class="toast-icon" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2.2 6.7 2.7 2.7 5.9-6"/></svg>
+      </span>
+      <span id="toastText">提交成功</span>
+    </div>
+
+    <div class="mp-demo" data-open="false" style="bottom: calc(120px + env(safe-area-inset-bottom))">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">必填未填</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="submitting" aria-pressed="false">提交中</button>
+        <button class="mp-demo-chip" data-mp-state="failed" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="sheet-layer" id="dateSheet" hidden>
+      <button class="sheet-scrim" type="button" tabindex="-1" aria-label="关闭日期选择" data-close-sheet></button>
+      <section class="date-sheet" id="dateSheetPanel" role="dialog" aria-modal="true" aria-labelledby="dateSheetTitle" tabindex="-1">
+        <div class="sheet-grabber" aria-hidden="true"></div>
+        <header class="sheet-head">
+          <h2 id="dateSheetTitle">开始日期</h2>
+        </header>
+        <div class="calendar-head">
+          <button class="month-button" id="prevMonth" type="button" aria-label="上个月">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 4-5 5 5 5"/></svg>
+          </button>
+          <p class="calendar-month" id="calendarMonth" aria-live="polite">2026年10月</p>
+          <button class="month-button" id="nextMonth" type="button" aria-label="下个月">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 4 5 5-5 5"/></svg>
+          </button>
+        </div>
+        <div class="weekday-grid" aria-hidden="true">
+          <span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid" role="group" aria-label="选择开始日期"></div>
+        <div class="sheet-actions">
+          <button class="sheet-cancel" id="cancelDate" type="button" data-od-id="date-picker-cancel">取消</button>
+          <button class="sheet-confirm" id="confirmDate" type="button" disabled data-od-id="date-picker-confirm">确定</button>
+        </div>
+      </section>
+    </div>
+
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

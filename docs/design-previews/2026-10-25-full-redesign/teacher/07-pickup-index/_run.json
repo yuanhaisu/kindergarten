@@ -1,0 +1,21 @@
+{
+  "slug": "teacher-pickup-index",
+  "surface": "teacher",
+  "title": "接送管理",
+  "projectId": "74bf5646-52ba-48a6-b9f2-8f284a23a870",
+  "conversationId": "91b5a4c7-84fc-42d7-80b2-679d5aa75129",
+  "runId": "e42dd2fc-eb30-44a7-b133-b7acea833176",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 221,
+  "files": [
+    ".mcp.json",
+    "index.html",
+    "tokens.css",
+    "_shared/shell.css",
+    "_shared/shell.js"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/74bf5646-52ba-48a6-b9f2-8f284a23a870",
+  "previewRendered": true
+}

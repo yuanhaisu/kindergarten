@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>成长详情 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" aria-label="返回">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">成长详情</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main">
+    <div class="growth-page">
+      <div class="growth-content">
+        <section class="card author-card" data-od-id="growth-author-card" aria-labelledby="authorName">
+          <div class="author-row">
+            <div class="author-avatar" aria-hidden="true">李</div>
+            <div class="author-copy">
+              <h2 class="author-name" id="authorName">李老师</h2>
+              <p class="author-time">10月22日 10:05</p>
+            </div>
+            <span class="award award--warning">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 1.6h6v3.1a3 3 0 0 1-6 0V1.6Z"/><path d="M4 2.7H2.2v.8c0 1.2 1 2.1 2.2 2.1M10 2.7h1.8v.8c0 1.2-1 2.1-2.2 2.1M7 7.6v2.1M5.1 12.2h3.8"/></svg>
+              <span>运动小达人</span>
+            </span>
+          </div>
+          <div class="day-status" aria-label="当日状态：早餐好，午餐好，午睡90分钟，情绪好">
+            <div class="day-cell"><span class="day-label">早餐</span><span class="day-value">好</span></div>
+            <div class="day-cell"><span class="day-label">午餐</span><span class="day-value">好</span></div>
+            <div class="day-cell"><span class="day-label">午睡</span><span class="day-value">90分钟</span></div>
+            <div class="day-cell"><span class="day-label">情绪</span><span class="day-value">好</span></div>
+          </div>
+        </section>
+
+        <article class="card record-card" data-od-id="growth-record-card" aria-label="成长记录">
+          <div class="record-copy">
+            <p>户外活动时间，孩子们在操场上玩「小兔拔萝卜」，乐乐跑得满头大汗，还主动把水杯递给了朵朵。</p>
+            <p>回到教室后，乐乐自己换了汗湿的背心，把外套叠好放进柜子，还提醒旁边的小朋友喝水。</p>
+          </div>
+          <ul class="tag-list" aria-label="表现标签">
+            <li class="tag">大动作</li>
+            <li class="tag">关心同伴</li>
+            <li class="tag">自理能力</li>
+          </ul>
+
+          <div class="photo-toolbar">
+            <div class="filter-group" role="group" aria-label="照片筛选">
+              <button class="filter-chip" type="button" data-filter="mine" aria-pressed="true">
+                <span class="chip-face">只看我的孩子</span>
+              </button>
+              <button class="filter-chip" type="button" data-filter="all" aria-pressed="false">
+                <span class="chip-face">看全部（6）</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="photo-grid" id="photoGrid" role="group" aria-label="记录照片">
+            <button class="photo" type="button" data-own="true" data-photo-id="1" aria-label="查看照片 1，我的孩子" data-od-id="photo-1">
+              <span class="photo-art tone-warm">
+                <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><circle cx="82" cy="33" r="13"/><path d="M-5 86c22-16 36-14 52-2s34 11 50-2 24-9 32 1"/><path d="M-3 101c20-10 36-9 54 1s38 9 70-4"/></svg>
+                <span class="photo-mine">我的孩子</span>
+              </span>
+            </button>
+            <button class="photo" type="button" data-own="true" data-photo-id="2" aria-label="查看照片 2，我的孩子" data-od-id="photo-2">
+              <span class="photo-art tone-sky">
+                <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><circle cx="37" cy="35" r="11"/><path d="M0 76c16 10 27 14 40 6s20-9 30-4 26 15 50 5"/><path d="M0 96c20-8 32-6 48 2s38 7 72-8"/><path d="M77 38h13M83.5 31v13"/></svg>
+                <span class="photo-mine">我的孩子</span>
+              </span>
+            </button>
+            <button class="photo" type="button" data-own="false" data-photo-id="3" aria-label="查看照片 3" data-od-id="photo-3" hidden>
+              <span class="photo-art tone-meadow">
+                <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><circle cx="60" cy="33" r="16"/><path d="M-4 78c20-18 34-25 51-21s21 14 33 17 28 4 44-6"/><path d="M-4 98c19-8 34-7 51 1s31 8 73-5"/></svg>
+              </span>
+            </button>
+            <button class="photo" type="button" data-own="false" data-photo-id="4" aria-label="查看照片 4" data-od-id="photo-4" hidden>
+              <span class="photo-art tone-dawn">
+                <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><circle cx="88" cy="29" r="9"/><path d="M-3 70c24 6 38 2 52-8s31-10 74 7"/><path d="M-3 91c20 11 39 14 58 5s35-8 67 4"/><path d="M13 46h12M19 40v12"/></svg>
+              </span>
+            </button>
+            <button class="photo" type="button" data-own="false" data-photo-id="5" aria-label="查看照片 5" data-od-id="photo-5" hidden>
+              <span class="photo-art tone-sand">
+                <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><circle cx="28" cy="30" r="14"/><path d="M-4 84c14-18 24-24 38-28s21 3 28 12 18 12 62 3"/><path d="M-4 101c24-8 40-5 55 3s36 6 73-6"/></svg>
+              </span>
+            </button>
+            <button class="photo" type="button" data-own="false" data-photo-id="6" aria-label="查看照片 6" data-od-id="photo-6" hidden>
+              <span class="photo-art tone-mint">
+                <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><circle cx="60" cy="30" r="12"/><circle cx="60" cy="30" r="20"/><path d="M-3 86c19-24 34-29 49-23s24 18 37 19 25-2 43-11"/><path d="M-3 104c23-9 40-6 56 2s36 6 70-8"/></svg>
+              </span>
+            </button>
+          </div>
+
+          <div class="photo-empty" id="photoEmpty" hidden>
+            <p>这些照片里暂时没有拍到您的孩子</p>
+            <button class="btn btn-primary" id="showAllPhotos" type="button">查看全部照片（6）</button>
+          </div>
+
+          <div class="engagement-bar" data-od-id="growth-engagement">
+            <button class="like-btn" id="likeBtn" type="button" aria-pressed="false" aria-label="点赞，12 个赞">
+              <svg class="like-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.1s-7.2-4.3-7.2-9.4A4.2 4.2 0 0 1 12 7.8a4.2 4.2 0 0 1 7.2 2.9c0 5.1-7.2 9.4-7.2 9.4Z"/></svg>
+              <span class="like-count" id="likeCount">12</span>
+            </button>
+            <span class="comment-tally" aria-label="评论数">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.2c0 3.6-3.6 6.5-8 6.5-1 0-2-.2-2.9-.5L5 19l1.1-3.1A6.2 6.2 0 0 1 4 11.2C4 7.6 7.6 4.7 12 4.7s8 2.9 8 6.5Z"/></svg>
+              <span data-comment-count>4</span><span class="count-empty">0</span>
+            </span>
+            <button class="comment-action" id="focusComment" type="button">评论</button>
+          </div>
+        </article>
+
+        <section class="card comments-card" data-od-id="growth-comments" aria-labelledby="commentsTitle">
+          <h2 class="comments-title" id="commentsTitle">评论 (<span data-comment-count>4</span><span class="count-empty">0</span>)</h2>
+
+          <div class="comment-list" id="commentList">
+            <article class="comment" data-comment-id="c1" data-od-id="comment-lele-mama">
+              <div class="comment-head">
+                <span class="comment-author">乐乐妈妈</span>
+                <span class="relation-tag">妈妈</span>
+                <time class="comment-time">10月22日 10:26</time>
+              </div>
+              <p class="comment-text">看到乐乐把水杯递给朵朵，在家里都没这么主动过。</p>
+              <div class="comment-foot"><button class="reply-btn" type="button">回复</button></div>
+              <div class="reply-thread">
+                <article class="comment reply-comment" data-comment-id="c1-r1" data-od-id="comment-teacher-reply">
+                  <div class="comment-head">
+                    <span class="comment-author">李老师</span>
+                    <time class="comment-time">10月22日 10:32</time>
+                  </div>
+                  <p class="comment-text">今天他还帮小朋友捡了好几次萝卜。</p>
+                  <div class="comment-foot"><button class="reply-btn" type="button">回复</button></div>
+                </article>
+              </div>
+            </article>
+
+            <article class="comment" data-comment-id="c2" data-od-id="comment-duoduo-mama">
+              <div class="comment-head">
+                <span class="comment-author">朵朵妈妈</span>
+                <span class="relation-tag">妈妈</span>
+                <time class="comment-time">10月22日 10:41</time>
+              </div>
+              <p class="comment-text">朵朵回家也说今天玩得很开心，谢谢李老师。</p>
+              <div class="comment-foot"><button class="reply-btn" type="button">回复</button></div>
+            </article>
+
+            <article class="comment" data-comment-id="c3" data-od-id="comment-xiaoyu-baba">
+              <div class="comment-head">
+                <span class="comment-author">小雨爸爸</span>
+                <span class="relation-tag">爸爸</span>
+                <time class="comment-time">10月22日 12:03</time>
+              </div>
+              <p class="comment-text">照片里的笑容太有感染力了。</p>
+              <div class="comment-foot"><button class="reply-btn" type="button">回复</button></div>
+            </article>
+
+            <article class="comment" data-comment-id="c4" data-od-id="comment-teacher-note">
+              <div class="comment-head">
+                <span class="comment-author">李老师</span>
+                <time class="comment-time">10月22日 12:30</time>
+              </div>
+              <p class="comment-text">下午还有手工课，晚点再发一组照片。</p>
+              <div class="comment-foot"><button class="reply-btn" type="button">回复</button></div>
+            </article>
+          </div>
+
+          <div class="comments-empty" id="commentsEmpty">
+            <span class="comments-empty-icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M20 11.2c0 3.6-3.6 6.5-8 6.5-1 0-2-.2-2.9-.5L5 19l1.1-3.1A6.2 6.2 0 0 1 4 11.2C4 7.6 7.6 4.7 12 4.7s8 2.9 8 6.5Z"/></svg>
+            </span>
+            <h3 class="comments-empty-title">还没有评论</h3>
+            <p class="comments-empty-desc">来说说这条记录里你看到的小细节</p>
+            <button class="btn btn-primary" id="writeFirst" type="button">写第一条评论</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="growth-skeleton" role="status" aria-label="成长记录加载中">
+        <span class="sr-only">正在加载这条成长记录</span>
+        <div aria-hidden="true">
+          <section class="sk-card">
+            <div class="sk-author">
+              <span class="sk-block sk-avatar"></span>
+              <div class="sk-lines"><span class="sk-block sk-line sk-w-50"></span><span class="sk-block sk-line sk-w-25"></span></div>
+            </div>
+            <div class="sk-status">
+              <span class="sk-stat"><span class="sk-block sk-mini"></span></span>
+              <span class="sk-stat"><span class="sk-block sk-mini"></span></span>
+              <span class="sk-stat"><span class="sk-block sk-mini"></span></span>
+              <span class="sk-stat"><span class="sk-block sk-mini"></span></span>
+            </div>
+          </section>
+          <section class="sk-card">
+            <div class="sk-body"><span class="sk-block sk-line"></span><span class="sk-block sk-line sk-w-90"></span><span class="sk-block sk-line sk-w-60"></span></div>
+            <div class="sk-photo-grid">
+              <span class="sk-photo"></span><span class="sk-photo"></span><span class="sk-photo"></span>
+              <span class="sk-photo"></span><span class="sk-photo"></span><span class="sk-photo"></span>
+            </div>
+            <div class="sk-actions"><span class="sk-block sk-line sk-w-20"></span><span class="sk-block sk-line sk-w-20"></span></div>
+          </section>
+          <section class="sk-card sk-comment-card">
+            <span class="sk-block sk-line sk-w-30"></span>
+            <div class="sk-comment"><span class="sk-block sk-line sk-w-40"></span><span class="sk-block sk-line sk-w-90"></span></div>
+            <div class="sk-comment"><span class="sk-block sk-line sk-w-30"></span><span class="sk-block sk-line sk-w-70"></span></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="growth-error">
+        <div class="error-card" role="alert" data-od-id="growth-error">
+          <span class="error-mark" aria-hidden="true">!</span>
+          <h2 class="error-title">这条记录加载失败</h2>
+          <p class="error-desc">网络异常，或老师已删除这条记录</p>
+          <button class="retry-btn" id="retryBtn" type="button">重试</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="composer" id="composer" data-reply="false">
+    <div class="reply-strip" role="status" aria-live="polite">
+      <p class="reply-context">回复中 · <strong id="replyName"></strong></p>
+      <button class="cancel-reply" id="cancelReply" type="button">取消</button>
+    </div>
+    <form class="composer-form" id="commentForm">
+      <label class="sr-only" for="commentInput">写评论</label>
+      <div class="composer-input-wrap">
+        <input class="composer-input" id="commentInput" type="text" placeholder="写评论..." autocomplete="off" enterkeyhint="send" aria-label="写评论">
+      </div>
+      <button class="composer-send" id="sendComment" type="submit" aria-disabled="true" disabled>发送</button>
+    </form>
+  </div>
+
+  <div class="photo-sheet" id="photoSheet" data-open="false" role="dialog" aria-modal="true" aria-labelledby="previewTitle" aria-hidden="true">
+    <div class="sheet-scrim" id="sheetScrim"></div>
+    <div class="sheet-panel">
+      <div class="sheet-head">
+        <div class="sheet-heading">
+          <h2 class="sheet-title" id="previewTitle">照片预览</h2>
+          <p class="preview-count" id="previewCount" aria-live="polite">第 1 张 / 共 1 张</p>
+        </div>
+        <button class="sheet-close" id="closePreview" type="button" aria-label="关闭照片预览">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg>
+        </button>
+      </div>
+      <div class="preview-stage" id="previewStage"></div>
+      <div class="preview-nav" id="previewNav" hidden>
+        <button class="preview-nav-btn" id="prevPhoto" type="button">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+          <span>上一张</span>
+        </button>
+        <button class="preview-nav-btn" id="nextPhoto" type="button">
+          <span>下一张</span>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="mp-demo" data-open="false" style="bottom: calc(84px + env(safe-area-inset-bottom))">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空评论</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+</div>
+
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

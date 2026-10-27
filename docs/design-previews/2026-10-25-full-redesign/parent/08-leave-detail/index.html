@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>请假详情 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="approved">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">请假详情</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page" data-od-id="leave-detail-page">
+        <div class="page-detail">
+
+          <section class="status-card state-approved" aria-labelledby="statusApprovedTitle" data-od-id="status-approved">
+            <div class="status-head">
+              <span class="status-orb is-success" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5.4 12.6 4.2 4.2 9-9.4"/></svg>
+              </span>
+              <div class="status-copy">
+                <h2 class="status-title" id="statusApprovedTitle">已同意</h2>
+              </div>
+            </div>
+            <ol class="timeline timeline--success" aria-label="审批进度">
+              <li class="timeline-step is-success">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">提交申请</p>
+                  <p class="timeline-meta">10月26日 08:12</p>
+                </div>
+              </li>
+              <li class="timeline-step is-success" aria-current="step">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">王老师已同意 <span class="timeline-sep">·</span> <span class="timeline-time">10月26日 08:40</span></p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="status-card state-pending" aria-labelledby="statusPendingTitle" data-od-id="status-pending">
+            <div class="status-head">
+              <span class="status-orb is-pending" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.3"/><path d="M12 7.4V12l3.1 2"/></svg>
+              </span>
+              <div class="status-copy">
+                <h2 class="status-title" id="statusPendingTitle">待审批</h2>
+                <p class="status-meta">申请已提交，正在等待老师处理</p>
+              </div>
+            </div>
+            <ol class="timeline" aria-label="审批进度">
+              <li class="timeline-step is-done">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">提交申请</p>
+                  <p class="timeline-meta">10月26日 08:12</p>
+                </div>
+              </li>
+              <li class="timeline-step is-waiting" aria-current="step">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">等待王老师审批</p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="status-card state-rejected" aria-labelledby="statusRejectedTitle" data-od-id="status-rejected">
+            <div class="status-head">
+              <span class="status-orb is-danger" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17"/></svg>
+              </span>
+              <div class="status-copy">
+                <h2 class="status-title" id="statusRejectedTitle">已驳回</h2>
+              </div>
+            </div>
+            <ol class="timeline" aria-label="审批进度">
+              <li class="timeline-step is-done">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">提交申请</p>
+                  <p class="timeline-meta">10月26日 08:12</p>
+                </div>
+              </li>
+              <li class="timeline-step is-danger" aria-current="step">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">王老师已拒绝 <span class="timeline-sep">·</span> <span class="timeline-time">10月26日 08:40</span></p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="status-card state-revoked" aria-labelledby="statusRevokedTitle" data-od-id="status-revoked">
+            <div class="status-head">
+              <span class="status-orb is-muted" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 8.1 4.6 11.8l3.6 3.7"/><path d="M4.8 11.8h8.4a5.7 5.7 0 0 1 5.7 5.7v1.3"/></svg>
+              </span>
+              <div class="status-copy">
+                <h2 class="status-title" id="statusRevokedTitle">已撤销</h2>
+                <p class="status-meta">你已撤回这次请假申请</p>
+              </div>
+            </div>
+            <ol class="timeline" aria-label="审批进度">
+              <li class="timeline-step is-done">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">提交申请</p>
+                  <p class="timeline-meta">10月26日 08:12</p>
+                </div>
+              </li>
+              <li class="timeline-step is-stopped" aria-current="step">
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <div class="timeline-copy">
+                  <p class="timeline-title">审批已终止</p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="sheet info-sheet" aria-labelledby="leaveInfoTitle" data-od-id="leave-info-card">
+            <header class="sheet-head">
+              <h2 class="sheet-title" id="leaveInfoTitle">请假信息</h2>
+            </header>
+            <dl class="info-list">
+              <div class="info-row">
+                <dt class="info-label">学生</dt>
+                <dd class="info-value student-line">
+                  <span class="mini-avatar" aria-hidden="true">乐</span>
+                  <span class="student-name">乐乐</span>
+                  <span class="student-sep" aria-hidden="true">·</span>
+                  <span class="student-class">小二班</span>
+                </dd>
+              </div>
+              <div class="info-row">
+                <dt class="info-label">日期</dt>
+                <dd class="info-value">10月27日 周二 <span class="range-arrow" aria-hidden="true">→</span> 10月29日 周四</dd>
+              </div>
+              <div class="info-row">
+                <dt class="info-label">天数</dt>
+                <dd class="info-value info-em">3 天</dd>
+              </div>
+              <div class="info-row">
+                <dt class="info-label">接送人</dt>
+                <dd class="info-value value-stack">
+                  <span>妈妈（林静）</span>
+                  <span class="value-sub">138****6688</span>
+                </dd>
+              </div>
+              <div class="info-row">
+                <dt class="info-label">事由</dt>
+                <dd class="info-value reason-text">换季感冒发烧，医生建议在家休息三天</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="sheet approval-sheet" aria-labelledby="approvalTitle" data-od-id="approval-card">
+            <header class="sheet-head">
+              <h2 class="sheet-title" id="approvalTitle">审批信息</h2>
+            </header>
+
+            <div class="approval-view approval-approved">
+              <div class="note note--approved">
+                <span class="note-label">审批意见</span>
+                <p class="note-text">已收到，注意休息，返园时记得带上复课证明。</p>
+              </div>
+            </div>
+
+            <div class="approval-view approval-rejected">
+              <div class="note note--danger">
+                <span class="note-label">审批意见</span>
+                <p class="note-text">体温还未稳定，建议继续在家观察一天，明天可重新提交。</p>
+              </div>
+            </div>
+
+            <div class="approval-view approval-pending">
+              <div class="approval-empty">
+                <span class="empty-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.3"/><path d="M12 7.4V12l3.1 2"/></svg>
+                </span>
+                <div>
+                  <p class="empty-title">尚未审批</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="approval-view approval-revoked">
+              <div class="approval-empty">
+                <span class="empty-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 8.1 4.6 11.8l3.6 3.7"/><path d="M4.8 11.8h8.4a5.7 5.7 0 0 1 5.7 5.7v1.3"/></svg>
+                </span>
+                <div>
+                  <p class="empty-title">无审批记录</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="revoke-block">
+            <button class="revoke-btn" type="button" id="revokeBtn" aria-describedby="revokeHint" data-od-id="revoke-request">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.2 8.1 4.6 11.8l3.6 3.7"/><path d="M4.8 11.8h8.4a5.7 5.7 0 0 1 5.7 5.7v1.3"/></svg>
+              <span>撤销申请</span>
+            </button>
+            <p class="revoke-hint" id="revokeHint">撤销后审批将同时终止，且无法恢复</p>
+          </div>
+
+          <p class="terminal-note">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+            <span>已结束的申请不可撤销，如需再次请假请重新提交</span>
+          </p>
+        </div>
+
+        <section class="page-loading" aria-label="正在加载请假详情" aria-busy="true">
+          <div class="skeleton-card" aria-hidden="true">
+            <div class="skeleton-row">
+              <span class="skeleton-dot"></span>
+              <span class="skeleton-line skeleton-line--wide"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-line skeleton-line--label"></span>
+              <span class="skeleton-line"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-line skeleton-line--label"></span>
+              <span class="skeleton-line skeleton-line--medium"></span>
+            </div>
+          </div>
+          <span class="sr-only">正在加载请假详情</span>
+        </section>
+
+        <section class="page-error" aria-labelledby="errorMessage">
+          <div class="error-card">
+            <span class="error-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 7.2v6.1"/><circle cx="12" cy="17.2" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9"/></svg>
+            </span>
+            <p class="error-text" id="errorMessage">请假详情加载失败，请检查网络后重试。</p>
+            <button class="retry-btn" type="button" id="retryBtn" data-od-id="retry-loading">重试</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" type="button" data-mp-state="approved" aria-pressed="true">已同意</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="pending" aria-pressed="false">待审批</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="rejected" aria-pressed="false">已驳回</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="dialog-layer" id="revokeDialog" role="dialog" aria-modal="true" aria-labelledby="revokeDialogTitle" aria-describedby="revokeDialogDesc" hidden>
+      <div class="dialog-backdrop" data-dialog-close></div>
+      <div class="dialog-panel">
+        <h2 class="dialog-title" id="revokeDialogTitle">确认撤销</h2>
+        <p class="dialog-desc" id="revokeDialogDesc">确定要撤销此请假申请吗？</p>
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn--cancel" type="button" id="revokeCancel">取消</button>
+          <button class="dialog-btn dialog-btn--confirm" type="button" id="revokeConfirm">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F8FAFC">
+  <title>意见反馈 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-view="form">
+  <div class="mp-app" data-state="normal" data-list-state="ok" data-submit-state="idle">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">意见反馈</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page" id="page">
+
+        <section class="note-card" aria-label="写反馈" data-od-id="feedback-form">
+          <div class="field">
+            <div class="field-head">
+              <span class="field-label" id="type-label">反馈类型</span>
+              <span class="field-tag">必选</span>
+            </div>
+            <div class="type-grid" role="group" aria-labelledby="type-label">
+              <button class="type-pill" type="button" data-category="suggestion" aria-pressed="true" data-od-id="category-suggestion">
+                <svg class="type-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.4 11.4h3.2M6.7 13.3h2.6"/><path d="M8 2.3a3.9 3.9 0 0 0-2.2 7.1c.5.4.7.9.7 1.5h3c0-.6.2-1.1.7-1.5A3.9 3.9 0 0 0 8 2.3Z"/></svg>
+                <span>建议</span>
+                <svg class="pill-check" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.3 4.8 8.7 9.6 3.6"/></svg>
+              </button>
+              <button class="type-pill" type="button" data-category="complaint" aria-pressed="false" data-od-id="category-complaint">
+                <svg class="type-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 6.5v3a1 1 0 0 0 1 1h1.6l4.9 2.7V2.8L5.4 5.5H3.8a1 1 0 0 0-1 1Z"/><path d="M12.6 6.1a2.7 2.7 0 0 1 0 3.8M5.5 10.5l.6 3"/></svg>
+                <span>投诉</span>
+                <svg class="pill-check" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.3 4.8 8.7 9.6 3.6"/></svg>
+              </button>
+              <button class="type-pill" type="button" data-category="bug" aria-pressed="false" data-od-id="category-bug">
+                <svg class="type-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.6"/><path d="M8 5.2v3.7"/><circle cx="8" cy="11.2" r=".65" fill="currentColor" stroke="none"/></svg>
+                <span>问题</span>
+                <svg class="pill-check" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.3 4.8 8.7 9.6 3.6"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label class="field-label" for="feedback-content">反馈内容</label>
+              <span class="field-tag">必填</span>
+            </div>
+            <div class="textarea-wrap">
+              <textarea id="feedback-content" name="content" rows="5" maxlength="500" spellcheck="false" placeholder="请描述您的意见或问题..." aria-describedby="content-hint char-counter" data-od-id="feedback-content">亲子任务的截止时间能改到晚上九点吗？下班路上经常来不及拍照提交。</textarea>
+              <span class="counter" id="char-counter" aria-hidden="true"><span id="char-count">32</span> / 500</span>
+            </div>
+            <p class="field-hint" id="content-hint">写明时间、地点或页面，园所处理更快</p>
+          </div>
+        </section>
+
+        <section class="records" id="my-feedback" aria-labelledby="records-title" data-od-id="my-feedback">
+          <div class="records-head">
+            <h2 class="section-title" id="records-title" data-od-id="my-feedback-title">我的反馈</h2>
+            <span class="records-count" id="records-count">共 3 条</span>
+          </div>
+
+          <div class="records-ok" data-od-id="feedback-records">
+            <ol class="timeline" id="records-list">
+              <li class="record" data-record-id="fb-1">
+                <span class="record-dot record-dot--submitted" aria-hidden="true"></span>
+                <article class="record-card" data-od-id="feedback-card-1">
+                  <div class="record-meta">
+                    <span class="badge badge--danger">问题</span>
+                    <span class="record-status"><span class="record-status-dot record-status-dot--submitted" aria-hidden="true"></span>已提交</span>
+                    <span class="record-date">10月24日 周六</span>
+                    <button class="record-toggle" type="button" aria-expanded="false" aria-controls="record-text-1" aria-label="展开反馈内容">
+                      <svg class="record-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.2 8 10.2 12 6.2"/></svg>
+                    </button>
+                  </div>
+                  <p class="record-text" id="record-text-1">接送二维码刷新后偶尔提示过期，重新进入就好了。</p>
+                </article>
+              </li>
+
+              <li class="record" data-record-id="fb-2">
+                <span class="record-dot record-dot--replied" aria-hidden="true"></span>
+                <article class="record-card" data-od-id="feedback-card-2">
+                  <div class="record-meta">
+                    <span class="badge badge--info">建议</span>
+                    <span class="record-status"><span class="record-status-dot record-status-dot--replied" aria-hidden="true"></span>已回复</span>
+                    <span class="record-date">10月19日 周一</span>
+                    <button class="record-toggle" type="button" aria-expanded="false" aria-controls="record-text-2" aria-label="展开反馈内容">
+                      <svg class="record-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.2 8 10.2 12 6.2"/></svg>
+                    </button>
+                  </div>
+                  <p class="record-text" id="record-text-2">希望成长记录里能看到孩子每天的午睡和进餐情况。</p>
+                  <div class="record-reply">
+                    <p class="record-reply-title">园所回复</p>
+                    <p class="record-reply-text">感谢建议！成长日报本周起增加午睡与进餐两栏，明天就能看到。</p>
+                  </div>
+                </article>
+              </li>
+
+              <li class="record" data-record-id="fb-3">
+                <span class="record-dot record-dot--closed" aria-hidden="true"></span>
+                <article class="record-card" data-od-id="feedback-card-3">
+                  <div class="record-meta">
+                    <span class="badge badge--warning">投诉</span>
+                    <span class="record-status"><span class="record-status-dot record-status-dot--closed" aria-hidden="true"></span>已关闭</span>
+                    <span class="record-date">10月8日 周四</span>
+                    <button class="record-toggle" type="button" aria-expanded="false" aria-controls="record-text-3" aria-label="展开反馈内容">
+                      <svg class="record-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.2 8 10.2 12 6.2"/></svg>
+                    </button>
+                  </div>
+                  <p class="record-text" id="record-text-3">周三放学时门口排队比较久，孩子等了二十多分钟。雨天家长都挤在同一个通道，建议按班级错峰放行，或者把西门也开放给高年级，避免孩子在雨里站太久。另外门口的雨棚有点短，希望能加长一些。</p>
+                  <div class="record-reply">
+                    <p class="record-reply-title">园所回复</p>
+                    <p class="record-reply-text">已与门卫沟通，本周起增开一个离园通道，欢迎继续监督。</p>
+                  </div>
+                </article>
+              </li>
+            </ol>
+          </div>
+
+          <div class="records-empty" data-od-id="records-empty">
+            <span class="empty-icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.6h16v10.2H9.4L5.2 19.2v-3.4H4z"/><circle cx="8.7" cy="10.7" r=".85" fill="currentColor" stroke="none"/><circle cx="12" cy="10.7" r=".85" fill="currentColor" stroke="none"/><circle cx="15.3" cy="10.7" r=".85" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <p class="state-title">还没有反馈记录</p>
+            <p class="state-desc">提交后可以在这里查看园所回复</p>
+            <button class="btn btn--secondary btn--sm" type="button" id="empty-write" data-od-id="empty-write">写下第一条</button>
+          </div>
+
+          <div class="records-skeleton" role="status" aria-live="polite">
+            <span class="sr-only">正在加载反馈记录</span>
+            <div class="skeleton-item" aria-hidden="true">
+              <span class="skeleton-dot"></span>
+              <div class="skeleton-card">
+                <div class="skeleton-meta"><span class="skeleton-pill"></span><span class="skeleton-date"></span></div>
+                <span class="skeleton-line"></span>
+                <span class="skeleton-line skeleton-line--short"></span>
+              </div>
+            </div>
+            <div class="skeleton-item" aria-hidden="true">
+              <span class="skeleton-dot"></span>
+              <div class="skeleton-card">
+                <div class="skeleton-meta"><span class="skeleton-pill"></span><span class="skeleton-date"></span></div>
+                <span class="skeleton-line"></span>
+                <span class="skeleton-line skeleton-line--short"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="records-error" data-od-id="records-error">
+            <span class="state-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.6v5.2"/><circle cx="12" cy="16.4" r=".9" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <p class="state-title">反馈记录加载失败</p>
+            <p class="state-desc">请稍后重试，或检查网络连接</p>
+            <button class="btn btn--secondary btn--sm" type="button" id="list-retry" data-od-id="records-retry">重试</button>
+          </div>
+        </section>
+      </div>
+
+      <section class="success-view" aria-labelledby="success-title" data-od-id="success-view">
+        <div class="success-mark" aria-hidden="true">
+          <span class="success-ring success-ring--outer"></span>
+          <span class="success-ring success-ring--mid"></span>
+          <span class="success-ring success-ring--inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7.5"/></svg>
+          </span>
+        </div>
+        <h2 class="success-title" id="success-title" tabindex="-1">反馈已提交</h2>
+        <p class="success-desc">园所的回复会出现在「我的反馈」里</p>
+        <div class="success-card">
+          <div class="success-card-head">
+            <span class="badge badge--info" id="success-type">建议</span>
+            <span class="success-card-date" id="success-date">10月26日 周一</span>
+          </div>
+          <p class="success-card-content" id="success-content">亲子任务的截止时间能改到晚上九点吗？下班路上经常来不及拍照提交。</p>
+        </div>
+        <div class="success-actions">
+          <button class="btn btn--primary" type="button" id="success-view-records" data-od-id="success-view-records">查看我的反馈</button>
+          <button class="btn btn--secondary" type="button" id="success-again" data-od-id="success-again">再提一条</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="submit-bar" data-od-id="submit-bar">
+      <div class="bar-error" role="alert">
+        <span class="bar-error-icon" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.6"/><path d="M7 3.9v3.4"/><circle cx="7" cy="9.8" r=".62" fill="currentColor" stroke="none"/></svg>
+        </span>
+        <span class="bar-error-text">提交失败，请重试</span>
+        <button class="bar-error-retry" type="button" id="submit-retry" data-od-id="submit-retry">重试</button>
+      </div>
+      <p class="bar-hint">
+        <span class="hint-default">提交后可在记录里查看进展</span>
+        <span class="hint-required">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.6"/><path d="M6 3.4v2.8"/><circle cx="6" cy="8.4" r=".55" fill="currentColor" stroke="none"/></svg>
+          还需填写：反馈内容
+        </span>
+        <span class="hint-submitting">正在提交，请稍候</span>
+      </p>
+      <button class="btn btn--primary submit-btn" type="button" id="submit-btn" aria-disabled="false" data-od-id="submit-feedback">
+        <span class="btn-busy"><span class="btn-spinner" aria-hidden="true"></span>提交中…</span>
+        <span class="btn-label">提交</span>
+      </button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="mp-demo" data-open="false" style="bottom: calc(104px + env(safe-area-inset-bottom))">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="required" aria-pressed="false">必填</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="submitting" aria-pressed="false">提交中</button>
+        <button class="mp-demo-chip" data-mp-state="failed" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+  </div>
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "slug": "parent-points",
+  "surface": "parent",
+  "title": "积分与成就",
+  "projectId": "357dc07c-8706-44f6-a09e-9c29dd73dbcd",
+  "runId": "36d98990-ed61-4256-a1fa-d71aa10691c7",
+  "status": "canceled",
+  "runStatus": "canceled",
+  "error": null,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "handAuthored": true,
+  "handAuthoredReason": "OpenDesign run 36d98990 从 21:18 起只反复输出 compacting 心跳，项目目录无任何产物（持续 20 分钟）。已取消该 run，整页按 brief 手写：index.html / styles.css / app.js 全部手写，四态与交互已实测。",
+  "daemonUrl": "http://127.0.0.1:7456/projects/357dc07c-8706-44f6-a09e-9c29dd73dbcd",
+  "previewRendered": true
+}

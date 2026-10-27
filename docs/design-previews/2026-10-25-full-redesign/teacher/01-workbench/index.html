@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>老师工作台 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <!-- 工作台是入口根页面：不画 mp-back -->
+  <header class="mp-navbar">
+    <h1 class="mp-title" data-od-id="nav-title">老师工作台</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main page" data-od-id="teacher-home">
+
+    <!-- 1. 顶部问候区（不套卡片）
+         源码自绘底栏的 4 个 tab 在本页都有落点：首页=本页、消息=铃铛、
+         我的=点头像、班级=点班级行（不画 tabBar，入口藏在问候区）。 -->
+    <section class="greeting" data-od-id="greeting">
+      <button type="button" class="avatar" data-open="我的" data-od-id="entry-profile" aria-label="我的，王老师">王</button>
+      <div class="greet-text">
+        <p class="greet-name" data-od-id="teacher-name">王老师</p>
+        <button type="button" class="greet-class" data-open="班级" data-od-id="entry-class" aria-label="班级，小一班">
+          <span class="greet-sub" data-od-id="class-info">小一班 · 主班老师</span>
+          <svg class="greet-chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <button type="button" class="bell" id="bell" data-od-id="bell-btn" aria-label="消息中心，5 条未读通知">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 16.2V11a6 6 0 0 0-12 0v5.2L4.4 18.5h15.2L18 16.2Z"/>
+          <path d="M9.8 21.2a2.4 2.4 0 0 0 4.4 0"/>
+        </svg>
+        <span class="bell-dot" aria-hidden="true"></span>
+      </button>
+    </section>
+
+    <!-- 2. 今日班级概况 -->
+    <section class="overview" data-od-id="overview">
+      <div class="section-head">
+        <h2 class="section-title">今日班级概况</h2>
+        <span class="section-meta" data-od-id="overview-date">2026年10月24日 星期五</span>
+      </div>
+      <div class="stat-card" data-od-id="stat-band">
+        <div class="stat" data-od-id="stat-present">
+          <span class="stat-v"><span class="stat-num">26</span><span class="sk sk-num"></span></span>
+          <span class="stat-k">已出勤</span>
+        </div>
+        <div class="stat" data-od-id="stat-leave">
+          <span class="stat-v"><span class="stat-num">2</span><span class="sk sk-num"></span></span>
+          <span class="stat-k">请假</span>
+        </div>
+        <div class="stat stat--accent" data-od-id="stat-pending">
+          <span class="stat-v"><span class="stat-num stat-num--pill">3</span><span class="sk sk-num"></span></span>
+          <span class="stat-k">待审批</span>
+        </div>
+        <div class="stat" data-od-id="stat-unread">
+          <span class="stat-v"><span class="stat-num">5</span><span class="sk sk-num"></span></span>
+          <span class="stat-k">未读通知</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 功能入口 4 × 2 -->
+    <section class="entries" data-od-id="entries" aria-label="功能入口">
+      <button type="button" class="entry" data-open="发布通知" data-od-id="entry-notice">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 10v4a1 1 0 0 0 1 1h2.6L14 19V5L7.6 9H5a1 1 0 0 0-1 1Z"/>
+            <path d="M17 9.6a3.6 3.6 0 0 1 0 4.8"/>
+            <path d="M19.6 7.1a7.2 7.2 0 0 1 0 9.8"/>
+          </svg>
+        </span>
+        <span class="entry-label">发布通知</span>
+      </button>
+      <button type="button" class="entry" data-open="成长记录" data-od-id="entry-growth">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 21v-8"/>
+            <path d="M12 13c0-3.3-2.7-6-6-6 0 3.3 2.7 6 6 6Z"/>
+            <path d="M12 13c0-3.9 3.1-7 7-7 0 3.9-3.1 7-7 7Z"/>
+          </svg>
+        </span>
+        <span class="entry-label">成长记录</span>
+      </button>
+      <button type="button" class="entry" data-open="接送管理" data-od-id="entry-pickup">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 8h14"/>
+            <path d="M14.5 4.5 18 8l-3.5 3.5"/>
+            <path d="M20 16H6"/>
+            <path d="M9.5 12.5 6 16l3.5 3.5"/>
+          </svg>
+        </span>
+        <span class="entry-label">接送管理</span>
+      </button>
+      <button type="button" class="entry" data-open="亲子任务" data-od-id="entry-task">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="9" cy="8" r="3.2"/>
+            <path d="M3.4 19c0-3 2.5-5.2 5.6-5.2s5.6 2.2 5.6 5.2"/>
+            <circle cx="17.2" cy="9.6" r="2.3"/>
+            <path d="M16.2 14.3c2.5.1 4.4 2 4.4 4.4"/>
+          </svg>
+        </span>
+        <span class="entry-label">亲子任务</span>
+      </button>
+      <button type="button" class="entry" data-open="班级日历" data-od-id="entry-calendar">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3.4" y="4.8" width="17.2" height="15.4" rx="3"/>
+            <path d="M8 3v3.4M16 3v3.4M3.4 9.8h17.2"/>
+          </svg>
+        </span>
+        <span class="entry-label">班级日历</span>
+      </button>
+      <button type="button" class="entry" data-open="请假审批" data-od-id="entry-approval">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4.2" y="3.6" width="15.6" height="16.8" rx="3"/>
+            <path d="M8.4 12.4l2.6 2.6 4.8-4.8"/>
+          </svg>
+        </span>
+        <span class="entry-label">请假审批</span>
+      </button>
+      <button type="button" class="entry" data-open="班级相册" data-od-id="entry-album">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3.2" y="4.6" width="17.6" height="14.8" rx="3"/>
+            <circle cx="8.6" cy="10" r="1.5"/>
+            <path d="M3.6 17.4 9 13l3.8 3.4L15.6 14l4.8 4"/>
+          </svg>
+        </span>
+        <span class="entry-label">班级相册</span>
+      </button>
+      <button type="button" class="entry entry--more" data-open="更多" data-od-id="entry-more">
+        <span class="entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8.4" cy="8.4" r="1.5"/>
+            <circle cx="15.6" cy="8.4" r="1.5"/>
+            <circle cx="8.4" cy="15.6" r="1.5"/>
+            <circle cx="15.6" cy="15.6" r="1.5"/>
+          </svg>
+        </span>
+        <span class="entry-label">更多</span>
+      </button>
+    </section>
+
+    <!-- 4. 待办事项 -->
+    <section class="todos" data-od-id="todos">
+      <div class="section-head">
+        <h2 class="section-title">待办事项</h2>
+        <button type="button" class="link-btn" id="view-all" data-od-id="view-all">
+          查看全部
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <div class="todo-card" data-od-id="todo-card">
+        <ul class="todo-list">
+          <li class="todo-item" data-od-id="todo-leave">
+            <div class="todo-row">
+              <span class="todo-chip" aria-hidden="true">审</span>
+              <div class="todo-main">
+                <h3 class="todo-title">乐乐妈妈的请假申请</h3>
+                <p class="todo-desc">感冒发烧，请假 2 天（10月24日–10月25日）</p>
+                <div class="todo-actions">
+                  <button type="button" class="btn btn--quiet" data-action="reject" data-od-id="reject-btn">拒绝</button>
+                  <button type="button" class="btn btn--soft" data-action="approve" data-od-id="approve-btn">同意</button>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="todo-item" data-od-id="todo-notice">
+            <div class="todo-row">
+              <span class="todo-chip" aria-hidden="true">通</span>
+              <div class="todo-main">
+                <h3 class="todo-title">「秋季亲子运动会」通知未读提醒</h3>
+                <p class="todo-desc">还有 5 位家长未读，可转发提醒</p>
+                <div class="todo-actions">
+                  <button type="button" class="btn btn--soft" data-action="share" data-od-id="share-btn">转发</button>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="todo-item" data-od-id="todo-record">
+            <div class="todo-row">
+              <span class="todo-chip" aria-hidden="true">录</span>
+              <div class="todo-main">
+                <h3 class="todo-title">今日成长记录待提交</h3>
+                <p class="todo-desc">还未上传今日班级活动照片和记录</p>
+                <div class="todo-actions">
+                  <button type="button" class="btn btn--soft" data-action="go_record" data-od-id="record-btn">去记录</button>
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="todo-state todo-empty" data-od-id="todo-empty">
+          <span class="state-ico state-ico--calm" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21v-7"/>
+              <path d="M12 14c0-3.3-2.7-6-6-6 0 3.3 2.7 6 6 6Z"/>
+              <path d="M12 14c0-3.9 3.1-7 7-7 0 3.9-3.1 7-7 7Z"/>
+            </svg>
+          </span>
+          <p class="state-text">今天没有新的待办，保持轻松节奏。</p>
+          <button type="button" class="btn btn--soft" id="empty-record" data-od-id="empty-record-btn">写今日记录</button>
+        </div>
+
+        <div class="todo-state todo-loading" aria-hidden="true">
+          <div class="sk-row">
+            <span class="sk sk-chip"></span>
+            <div class="sk-lines"><span class="sk sk-line"></span><span class="sk sk-line sk-line--short"></span></div>
+          </div>
+          <div class="sk-row">
+            <span class="sk sk-chip"></span>
+            <div class="sk-lines"><span class="sk sk-line"></span><span class="sk sk-line sk-line--short"></span></div>
+          </div>
+          <div class="sk-row">
+            <span class="sk sk-chip"></span>
+            <div class="sk-lines"><span class="sk sk-line"></span><span class="sk sk-line sk-line--short"></span></div>
+          </div>
+        </div>
+
+        <div class="todo-state todo-error" role="alert" data-od-id="todo-error">
+          <span class="state-ico state-ico--error" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="8.6"/>
+              <path d="M12 7.6v4.8M12 16.2h.01"/>
+            </svg>
+          </span>
+          <p class="state-text">班级数据加载失败</p>
+          <button type="button" class="btn btn--soft" id="retry" data-od-id="retry-btn">重试</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 原型演示状态切换（固定右下角，默认收起） -->
+  <div class="mp-demo" data-open="false" data-od-id="proto-control">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+
+  <!-- 拒绝原因对话框 -->
+  <div class="overlay" id="reject-overlay" data-od-id="reject-dialog">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="reject-title">
+      <h2 class="dialog-title" id="reject-title">拒绝原因</h2>
+      <p class="dialog-sub">填写后会同步给家长，请说明具体原因。</p>
+      <textarea class="dialog-input" id="reject-input" rows="3" maxlength="80" placeholder="例如：需提前一天提交请假申请"></textarea>
+      <div class="dialog-actions">
+        <button type="button" class="dialog-btn" data-close="reject-overlay">取消</button>
+        <button type="button" class="dialog-btn dialog-btn--primary" id="reject-confirm">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 转发 action sheet -->
+  <div class="overlay overlay--sheet" id="share-overlay" data-od-id="share-sheet">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="转发提醒">
+      <button type="button" class="sheet-item" data-share="friend">发送给微信好友</button>
+      <button type="button" class="sheet-item" data-share="group">分享到班级群</button>
+      <button type="button" class="sheet-item sheet-cancel" data-close="share-overlay">取消</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

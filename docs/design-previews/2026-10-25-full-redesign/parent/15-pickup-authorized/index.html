@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>授权接送人 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.2 5 6.1v5.1c0 4.2 2.9 7.8 7 9.4 4.1-1.6 7-5.2 7-9.4V6.1L12 3.2Z"/>
+      <path d="m9.3 11.8 1.8 1.8 3.7-3.9"/>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/>
+      <path d="m8.4 12.2 2.4 2.4 4.8-5"/>
+    </symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.3 4.3 3.6 16.4a1.7 1.7 0 0 0 1.5 2.5h13.8a1.7 1.7 0 0 0 1.5-2.5L13.7 4.3a2 2 0 0 0-3.4 0Z"/>
+      <path d="M12 9v4"/>
+      <circle cx="12" cy="16.7" r=".9" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/>
+      <path d="M12 11v5"/>
+      <path d="M12 7.8h.01"/>
+    </symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7h16"/>
+      <path d="M9 7V4.8c0-.7.6-1.3 1.3-1.3h3.4c.7 0 1.3.6 1.3 1.3V7"/>
+      <path d="m6.5 7 .8 12.1c.1 1 .9 1.9 2 1.9h5.4c1.1 0 1.9-.9 2-1.9L17.5 7"/>
+      <path d="M10 11v6M14 11v6"/>
+    </symbol>
+    <symbol id="icon-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9.5" cy="8.5" r="3.5"/>
+      <path d="M3.5 20c0-3.3 2.7-6 6-6 1.5 0 2.8.5 3.9 1.4"/>
+      <path d="M18 14v6M15 17h6"/>
+    </symbol>
+    <symbol id="icon-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/>
+      <path d="M12 7.7v5.1"/>
+      <circle cx="12" cy="16.3" r=".9" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M12 5v14M5 12h14"/>
+    </symbol>
+  </svg>
+
+  <div class="mp-app" data-state="normal" data-od-id="authorized-pickup-page">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回接送">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">授权接送人</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page">
+        <section class="safety-card" aria-labelledby="safetyTitle" data-od-id="authorized-safety-tip">
+          <span class="safety-icon" aria-hidden="true">
+            <svg width="16" height="16"><use href="#icon-shield"></use></svg>
+          </span>
+          <div class="safety-copy">
+            <h2 class="safety-title" id="safetyTitle">安全提示</h2>
+            <p class="safety-text">授权接送人信息仅供门卫核验身份，<br>请确保信息真实有效。</p>
+          </div>
+        </section>
+
+        <div class="toolbar" data-od-id="authorized-toolbar">
+          <p class="toolbar-count" id="rosterCount" data-od-id="authorized-count">5 位授权接送人</p>
+          <span class="toolbar-skeleton" aria-hidden="true"></span>
+          <button class="add-button" id="addPersonButton" type="button" aria-label="添加授权接送人" data-od-id="authorized-add-button">
+            <svg width="14" height="14" aria-hidden="true"><use href="#icon-plus"></use></svg>
+            <span>添加</span>
+          </button>
+        </div>
+
+        <div class="banner banner--assigned" id="assignedBanner" data-od-id="authorized-banner-today">
+          <span class="banner-icon" aria-hidden="true">
+            <svg width="18" height="18"><use href="#icon-check"></use></svg>
+          </span>
+          <div class="banner-copy">
+            <span class="banner-kicker">今日接走人</span>
+            <span class="banner-name" id="assignedPersonName">王建国</span>
+          </div>
+        </div>
+
+        <div class="banner banner--unassigned" id="unassignedBanner" hidden data-od-id="authorized-banner-unassigned">
+          <span class="banner-icon" aria-hidden="true">
+            <svg width="18" height="18"><use href="#icon-alert"></use></svg>
+          </span>
+          <div class="banner-copy">
+            <p class="banner-main">今日尚未指定接走人</p>
+            <p class="banner-sub">指定后才能获取接送二维码</p>
+          </div>
+        </div>
+
+        <div class="banner-skeleton" aria-hidden="true">
+          <span class="skeleton-line skeleton-line--banner"></span>
+        </div>
+
+        <section class="roster" id="rosterList" aria-label="授权接送人列表" data-od-id="authorized-roster">
+          <article class="person-card is-designated" data-person-id="p1" data-name="王建国" data-review-status="1" data-status="1" data-od-id="authorized-person-wang-jianguo">
+            <span class="person-avatar" aria-hidden="true">王</span>
+            <div class="person-body">
+              <div class="person-name-row">
+                <h2 class="person-name">王建国</h2>
+                <span class="badge badge--type">长期授权</span>
+                <span class="badge badge--today" data-today-badge>今日接走人</span>
+              </div>
+              <p class="person-meta">爷爷 · 138****6621</p>
+              <div class="permission-tags">
+                <span class="permission-tag permission-tag--pickup">可接送</span>
+                <span class="permission-tag permission-tag--record">看记录</span>
+              </div>
+              <div class="card-actions">
+                <button class="designate-button" type="button" data-action="designate" aria-disabled="false" aria-label="设为今日接走人：王建国" hidden>设为今日接走人</button>
+                <button class="delete-button" type="button" data-action="delete" aria-label="删除 王建国">
+                  <svg width="15" height="15" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article class="person-card" data-person-id="p2" data-name="李秀兰" data-review-status="1" data-status="1" data-od-id="authorized-person-li-xiulan">
+            <span class="person-avatar" aria-hidden="true">李</span>
+            <div class="person-body">
+              <div class="person-name-row">
+                <h2 class="person-name">李秀兰</h2>
+                <span class="badge badge--type">长期授权</span>
+                <span class="badge badge--today" data-today-badge hidden>今日接走人</span>
+              </div>
+              <p class="person-meta">奶奶 · 139****3382</p>
+              <div class="permission-tags">
+                <span class="permission-tag permission-tag--pickup">可接送</span>
+                <span class="permission-tag permission-tag--record">看记录</span>
+                <span class="permission-tag permission-tag--growth">看成长</span>
+              </div>
+              <div class="card-actions">
+                <button class="designate-button" type="button" data-action="designate" aria-disabled="false" aria-label="设为今日接走人：李秀兰">设为今日接走人</button>
+                <button class="delete-button" type="button" data-action="delete" aria-label="删除 李秀兰">
+                  <svg width="15" height="15" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article class="person-card" data-person-id="p3" data-name="陈梅" data-review-status="1" data-status="1" data-od-id="authorized-person-chen-mei">
+            <span class="person-avatar" aria-hidden="true">陈</span>
+            <div class="person-body">
+              <div class="person-name-row">
+                <h2 class="person-name">陈梅</h2>
+                <span class="badge badge--type">临时授权</span>
+                <span class="badge badge--today" data-today-badge hidden>今日接走人</span>
+              </div>
+              <p class="person-meta">阿姨 · 137****9045</p>
+              <div class="permission-tags">
+                <span class="permission-tag permission-tag--pickup">可接送</span>
+              </div>
+              <div class="card-actions">
+                <button class="designate-button" type="button" data-action="designate" aria-disabled="false" aria-label="设为今日接走人：陈梅">设为今日接走人</button>
+                <button class="delete-button" type="button" data-action="delete" aria-label="删除 陈梅">
+                  <svg width="15" height="15" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article class="person-card" data-person-id="p4" data-name="张建军" data-review-status="0" data-status="1" data-od-id="authorized-person-zhang-jianjun">
+            <span class="person-avatar" aria-hidden="true">张</span>
+            <div class="person-body">
+              <div class="person-name-row">
+                <h2 class="person-name">张建军</h2>
+                <span class="badge badge--type">长期授权</span>
+                <span class="badge badge--pending">待审核</span>
+                <span class="badge badge--today" data-today-badge hidden>今日接走人</span>
+              </div>
+              <p class="person-meta">叔叔 · 136****1187</p>
+              <div class="card-actions">
+                <button class="designate-button is-unavailable" type="button" data-action="designate" aria-disabled="true" aria-label="设为今日接走人：张建军">设为今日接走人</button>
+                <button class="delete-button" type="button" data-action="delete" aria-label="删除 张建军">
+                  <svg width="15" height="15" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article class="person-card" data-person-id="p5" data-name="刘芳" data-review-status="1" data-status="0" data-od-id="authorized-person-liu-fang">
+            <span class="person-avatar" aria-hidden="true">刘</span>
+            <div class="person-body">
+              <div class="person-name-row">
+                <h2 class="person-name">刘芳</h2>
+                <span class="badge badge--type">长期授权</span>
+                <span class="badge badge--revoked">已撤销</span>
+                <span class="badge badge--today" data-today-badge hidden>今日接走人</span>
+              </div>
+              <p class="person-meta">外婆 · 135****5508</p>
+              <div class="card-actions">
+                <button class="designate-button is-unavailable" type="button" data-action="designate" aria-disabled="true" aria-label="设为今日接走人：刘芳">设为今日接走人</button>
+                <button class="delete-button" type="button" data-action="delete" aria-label="删除 刘芳">
+                  <svg width="15" height="15" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <div class="roster-skeleton" aria-hidden="true">
+          <div class="skeleton-card">
+            <span class="skeleton-shape skeleton-avatar"></span>
+            <div class="skeleton-body">
+              <span class="skeleton-shape skeleton-line skeleton-line--name"></span>
+              <span class="skeleton-shape skeleton-line skeleton-line--meta"></span>
+              <span class="skeleton-tags"><span class="skeleton-shape skeleton-tag"></span><span class="skeleton-shape skeleton-tag"></span></span>
+              <span class="skeleton-action"><span class="skeleton-shape skeleton-line skeleton-line--action"></span></span>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <span class="skeleton-shape skeleton-avatar"></span>
+            <div class="skeleton-body">
+              <span class="skeleton-shape skeleton-line skeleton-line--name"></span>
+              <span class="skeleton-shape skeleton-line skeleton-line--meta"></span>
+              <span class="skeleton-tags"><span class="skeleton-shape skeleton-tag"></span><span class="skeleton-shape skeleton-tag"></span></span>
+              <span class="skeleton-action"><span class="skeleton-shape skeleton-line skeleton-line--action"></span></span>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <span class="skeleton-shape skeleton-avatar"></span>
+            <div class="skeleton-body">
+              <span class="skeleton-shape skeleton-line skeleton-line--name"></span>
+              <span class="skeleton-shape skeleton-line skeleton-line--meta"></span>
+              <span class="skeleton-tags"><span class="skeleton-shape skeleton-tag"></span><span class="skeleton-shape skeleton-tag"></span></span>
+              <span class="skeleton-action"><span class="skeleton-shape skeleton-line skeleton-line--action"></span></span>
+            </div>
+          </div>
+        </div>
+
+        <p class="footer-note" data-od-id="authorized-footer-note">
+          <svg width="13" height="13" aria-hidden="true"><use href="#icon-info"></use></svg>
+          <span>新添加的接送人需园所审核通过，<br>才能指定为今日接走人。</span>
+        </p>
+
+        <section class="state-panel empty-state" aria-labelledby="emptyTitle" data-od-id="authorized-empty-state">
+          <span class="state-icon state-icon--empty" aria-hidden="true">
+            <svg width="26" height="26"><use href="#icon-user-plus"></use></svg>
+          </span>
+          <h2 class="state-title" id="emptyTitle">还没有授权接送人</h2>
+          <p class="state-copy">添加家人后，<br>才能指定今日接走人并获取接送二维码</p>
+          <button class="state-button" id="addPersonEmptyButton" type="button" data-od-id="authorized-add-empty">添加接送人</button>
+        </section>
+
+        <section class="state-panel error-state" aria-labelledby="errorTitle" data-od-id="authorized-error-state">
+          <span class="state-icon state-icon--error" aria-hidden="true">
+            <svg width="26" height="26"><use href="#icon-error"></use></svg>
+          </span>
+          <h2 class="state-title" id="errorTitle">授权接送人加载失败</h2>
+          <p class="state-copy">网络不太稳定，请稍后再试</p>
+          <button class="state-button retry-button" id="retryButton" type="button" data-od-id="authorized-retry">重试</button>
+        </section>
+      </div>
+    </main>
+
+    <div class="modal-layer" id="designateDialog" aria-hidden="true" inert>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="designateDialogTitle" aria-describedby="designateDialogBody">
+        <h2 class="modal-title" id="designateDialogTitle">设为今日接走人</h2>
+        <p class="modal-body" id="designateDialogBody"></p>
+        <div class="modal-actions">
+          <button class="modal-button modal-button--cancel" type="button" data-close-dialog>取消</button>
+          <button class="modal-button modal-button--confirm" id="confirmDesignate" type="button">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-layer" id="deleteDialog" aria-hidden="true" inert>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteDialogTitle" aria-describedby="deleteDialogBody">
+        <h2 class="modal-title" id="deleteDialogTitle">确认删除</h2>
+        <p class="modal-body" id="deleteDialogBody"></p>
+        <div class="modal-actions">
+          <button class="modal-button modal-button--cancel" type="button" data-close-dialog>取消</button>
+          <button class="modal-button modal-button--confirm modal-button--danger" id="confirmDelete" type="button">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" data-od-id="authorized-toast"></div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

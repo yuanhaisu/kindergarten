@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>详情 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" id="app" data-state="normal">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">详情</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page">
+        <section class="web-surface" id="webSurface" data-od-id="web-container" aria-label="内嵌网页区域" aria-busy="false">
+          <div class="state-panel state-panel--normal">
+            <div class="placeholder">
+              <span class="placeholder-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                  <rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/>
+                  <path d="M3.5 8.6h17"/>
+                  <path d="M6.3 6.55h.01M8.8 6.55h.01"/>
+                  <circle cx="12" cy="13.9" r="3.1"/>
+                  <path d="M8.9 13.9h6.2M12 10.8c-1.2 1.9-1.2 4.3 0 6.2M12 10.8c1.2 1.9 1.2 4.3 0 6.2"/>
+                </svg>
+              </span>
+              <h2 class="placeholder-title">内嵌网页</h2>
+              <p class="placeholder-note">此处由外部网页渲染，原型以中性占位块代替</p>
+            </div>
+          </div>
+
+          <div class="state-panel state-panel--loading">
+            <div class="loading-block">
+              <span class="spinner" aria-hidden="true"></span>
+              <p class="state-message">正在加载网页…</p>
+              <div class="skeleton-set" aria-hidden="true">
+                <span class="skeleton-bar"></span>
+                <span class="skeleton-bar"></span>
+                <span class="skeleton-bar"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="state-panel state-panel--error">
+            <span class="state-icon state-icon--error" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <circle cx="12" cy="12" r="8.6"/>
+                <path d="M12 7.4v5.4"/>
+                <path d="M12 16.3h.01"/>
+              </svg>
+            </span>
+            <h2 class="state-title">网页无法打开</h2>
+            <p class="state-note">可能是网络异常，或当前小程序未开通内嵌网页能力</p>
+            <button class="btn-solid" id="retryBtn" type="button" data-od-id="retry-web">重新加载</button>
+            <button class="btn-text" id="errorBackBtn" type="button">返回上一页</button>
+          </div>
+        </section>
+
+        <section class="empty-state" data-od-id="web-empty" aria-labelledby="emptyTitle">
+          <span class="state-icon state-icon--empty" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+              <path d="m9.6 14.4 4.8-4.8"/>
+              <path d="M11.2 7.2 12.8 5.6a4 4 0 0 1 5.6 5.6l-1.6 1.6"/>
+              <path d="M12.8 16.8 11.2 18.4a4 4 0 0 1-5.6-5.6l1.6-1.6"/>
+              <path d="M4.2 4.2 19.8 19.8"/>
+            </svg>
+          </span>
+          <h2 class="empty-title" id="emptyTitle">未提供页面地址</h2>
+          <p class="empty-note">请从包含网页地址的入口进入本页</p>
+          <button class="btn-solid" id="emptyBackBtn" type="button">返回上一页</button>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="mp-demo" id="demoPanel" data-open="false" style="bottom: calc(20px + env(safe-area-inset-bottom))">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

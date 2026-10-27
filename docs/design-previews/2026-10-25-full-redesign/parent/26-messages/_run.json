@@ -1,0 +1,20 @@
+{
+  "slug": "parent-messages",
+  "surface": "parent",
+  "title": "消息",
+  "projectId": "935839d9-82dc-4995-aaa2-58f390cc2119",
+  "conversationId": "5048771b-b6ed-4657-b9c2-fd1d7299f791",
+  "runId": "dd3c0d1d-f049-4bfe-8c73-2eaf06cc6b93",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 452,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/935839d9-82dc-4995-aaa2-58f390cc2119",
+  "previewRendered": true
+}

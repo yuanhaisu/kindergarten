@@ -1,0 +1,20 @@
+{
+  "slug": "teacher-webview",
+  "surface": "teacher",
+  "title": "内嵌网页",
+  "projectId": "7c120f30-c595-492f-9928-ce3060540fcb",
+  "conversationId": "0df7af06-548e-4db6-828f-0d05b8283a33",
+  "runId": "4a9e3e50-577d-4a85-a0bd-7ea8c8a04fd2",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 271,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/7c120f30-c595-492f-9928-ce3060540fcb",
+  "previewRendered": true
+}

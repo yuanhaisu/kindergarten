@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>请假审批 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回老师工作台">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">请假审批</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main leave-main">
+      <div class="page" id="page">
+
+        <section class="stats-card" aria-labelledby="statsTitle">
+          <h2 class="sr-only" id="statsTitle">请假统计</h2>
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-num is-pending" id="statPending">3</span>
+              <span class="stat-label">待审批</span>
+            </div>
+            <div class="stat">
+              <span class="stat-num is-approved" id="statApproved">4</span>
+              <span class="stat-label">已同意</span>
+            </div>
+            <div class="stat">
+              <span class="stat-num is-rejected" id="statRejected">1</span>
+              <span class="stat-label">已拒绝</span>
+            </div>
+            <div class="stat">
+              <span class="stat-num is-total" id="statTotal">8</span>
+              <span class="stat-label">本月总计</span>
+            </div>
+          </div>
+          <p class="stats-foot">待审批/已同意/已拒绝为班级累计 · 分段与列表取最近 20 条</p>
+        </section>
+
+        <div class="filter-sticky">
+          <div class="filter-bar" id="filterBar" role="group" aria-label="按状态筛选">
+            <button class="filter-btn is-active" type="button" data-filter="all" aria-pressed="true">
+              全部<span class="filter-count" data-count="all">8</span>
+            </button>
+            <button class="filter-btn" type="button" data-filter="pending" aria-pressed="false">
+              待审批<span class="filter-count" data-count="pending">3</span>
+            </button>
+            <button class="filter-btn" type="button" data-filter="approved" aria-pressed="false">
+              已同意<span class="filter-count" data-count="approved">4</span>
+            </button>
+            <button class="filter-btn" type="button" data-filter="rejected" aria-pressed="false">
+              已拒绝<span class="filter-count" data-count="rejected">1</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="list-head">
+          <h2 class="list-title" id="listTitle">最近 20 条</h2>
+          <span class="list-sub" id="listSub">共 8 条 · 待审批优先，再按提交时间倒序</span>
+        </div>
+
+        <div class="leave-list" id="leaveList" aria-live="polite"></div>
+
+        <div class="skeleton-list" aria-hidden="true">
+          <div class="skel-card">
+            <div class="skel-row"><span class="skel-avatar"></span><span class="skel-lines"><span class="skel-line skel-w60"></span><span class="skel-line skel-w40"></span></span></div>
+            <span class="skel-line"></span>
+            <span class="skel-line skel-w80"></span>
+            <div class="skel-actions"><span class="skel-btn"></span><span class="skel-btn"></span></div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-row"><span class="skel-avatar"></span><span class="skel-lines"><span class="skel-line skel-w60"></span><span class="skel-line skel-w40"></span></span></div>
+            <span class="skel-line"></span>
+            <span class="skel-line skel-w80"></span>
+            <div class="skel-actions"><span class="skel-btn"></span><span class="skel-btn"></span></div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-row"><span class="skel-avatar"></span><span class="skel-lines"><span class="skel-line skel-w60"></span><span class="skel-line skel-w40"></span></span></div>
+            <span class="skel-line"></span>
+            <span class="skel-line skel-w80"></span>
+            <div class="skel-actions"><span class="skel-btn"></span><span class="skel-btn"></span></div>
+          </div>
+        </div>
+
+        <section class="state-view state-empty" aria-labelledby="emptyTitle">
+          <span class="state-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="16" height="20" rx="3"/><path d="M10 4.5h8M10 10h8M10 14h5"/><path d="m10.5 19 2 2 4-4.5"/></svg>
+          </span>
+          <h2 id="emptyTitle">暂无请假申请</h2>
+          <p id="emptySub">家长提交后会出现在这里，下拉可刷新</p>
+          <button class="state-btn" id="emptyAction" type="button">刷新列表</button>
+        </section>
+
+        <section class="state-view state-error" aria-labelledby="errorTitle">
+          <span class="state-icon is-danger" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 4.5 26 25H2L14 4.5Z" stroke-linejoin="round"/><path d="M14 11v6"/><circle cx="14" cy="20.6" r=".9" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <h2 id="errorTitle">请假列表加载失败</h2>
+          <p>网络异常，请检查网络后重试</p>
+          <button class="state-btn" id="retryBtn" type="button">重试</button>
+        </section>
+
+      </div>
+    </main>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="dialog-layer" id="rejectDialog" hidden>
+      <button class="dialog-backdrop" type="button" data-close-dialog aria-label="关闭拒绝原因对话框"></button>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="rejectTitle" aria-describedby="rejectSub">
+        <h2 id="rejectTitle">拒绝原因</h2>
+        <p class="dialog-sub" id="rejectSub">请填写拒绝原因，家长会收到这条说明</p>
+        <textarea id="rejectReason" maxlength="100" rows="3" placeholder="请输入拒绝原因"></textarea>
+        <span class="dialog-count"><span id="rejectCount">0</span>/100</span>
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-cancel" type="button" data-close-dialog>取消</button>
+          <button class="dialog-btn dialog-confirm" id="rejectConfirm" type="button" disabled aria-disabled="true">确定驳回</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f3ea">
+  <title>成长记录 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" id="app" data-state="normal">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">成长记录</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main mp-main--scroll" id="pageScroll">
+      <div class="page">
+
+        <section class="page-head" aria-label="今日概览" data-od-id="growth-header">
+          <div class="head-top">
+            <div class="date-block">
+              <h2 class="date-main" id="todayDate">10月24日</h2>
+              <span class="date-week">星期六</span>
+            </div>
+            <button class="publish-btn" id="publishBtn" type="button" aria-disabled="false" aria-label="发布成长记录" data-od-id="growth-publish">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 2.2v9.6M2.2 7h9.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+              </svg>
+              <span>发布</span>
+            </button>
+          </div>
+          <div class="stat-row" id="statRow" aria-label="今日统计">
+            <div class="stat">
+              <span class="stat-num" id="statToday">2</span>
+              <span class="stat-label">今日已记</span>
+            </div>
+            <span class="stat-divider" aria-hidden="true"></span>
+            <div class="stat">
+              <span class="stat-num" id="statPending">3</span>
+              <span class="stat-label">条待处理</span>
+            </div>
+            <span class="stat-scope" id="statScope">仅统计已加载</span>
+          </div>
+        </section>
+
+        <section class="tools" id="tools" aria-label="筛选与搜索" data-od-id="growth-tools">
+          <div class="filter-bar">
+            <button class="chip" id="classChip" type="button" aria-haspopup="dialog" aria-expanded="false" aria-disabled="false" data-od-id="growth-filter-class">
+              <span id="classChipText">全部班级</span>
+              <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="m3 4.8 3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+            <button class="chip" id="timeChip" type="button" aria-haspopup="dialog" aria-expanded="false" aria-disabled="false" data-od-id="growth-filter-time">
+              <span id="timeChipText">全部时间</span>
+              <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="m3 4.8 3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="search-shell" id="searchShell">
+            <svg class="search-icon" width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+              <circle cx="7.4" cy="7.4" r="4.9" stroke="currentColor" stroke-width="1.6"></circle>
+              <path d="m11.2 11.2 3.4 3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+            </svg>
+            <input class="search-input" id="searchInput" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜索内容或老师 · 仅最近 20 条" aria-label="搜索已加载的成长记录，仅最近 20 条">
+            <button class="search-clear" id="searchClear" type="button" aria-label="清除搜索" hidden>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="m3.5 3.5 7 7m0-7-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <div class="state-empty" id="stateEmpty">
+          <div class="empty-art" aria-hidden="true">
+            <span class="empty-orbit"></span>
+            <span class="empty-planet"></span>
+            <span class="empty-orbit-dot"></span>
+            <span class="empty-star s1"></span>
+            <span class="empty-star s2"></span>
+            <span class="empty-star s3"></span>
+          </div>
+          <p class="empty-text" id="emptyText">还没有成长记录，从今天开始吧</p>
+          <p class="empty-hint" id="emptyHint" hidden></p>
+          <button class="btn-gradient" id="emptyAction" type="button" data-action="publish-first">发布第一条</button>
+        </div>
+
+        <div class="state-loading" id="stateLoading" role="status" aria-label="加载成长记录">
+          <p class="loading-note"><span class="spinner" aria-hidden="true"></span>加载成长记录...</p>
+          <div class="skeleton-card" aria-hidden="true">
+            <div class="sk-block sk-media"></div>
+            <div class="sk-author">
+              <div class="sk-block sk-avatar"></div>
+              <div class="sk-lines">
+                <div class="sk-block sk-line line-a"></div>
+                <div class="sk-block sk-line line-b"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card" aria-hidden="true">
+            <div class="sk-block sk-media"></div>
+            <div class="sk-author">
+              <div class="sk-block sk-avatar"></div>
+              <div class="sk-lines">
+                <div class="sk-block sk-line line-a"></div>
+                <div class="sk-block sk-line line-b"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card" aria-hidden="true">
+            <div class="sk-block sk-media"></div>
+            <div class="sk-author">
+              <div class="sk-block sk-avatar"></div>
+              <div class="sk-lines">
+                <div class="sk-block sk-line line-a"></div>
+                <div class="sk-block sk-line line-b"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-error" id="stateError">
+          <span class="error-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+              <path d="M13 7.2v7.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              <circle cx="13" cy="19" r="1.35" fill="currentColor"></circle>
+            </svg>
+          </span>
+          <p class="error-title">加载失败，请检查网络</p>
+          <button class="btn-ghost" id="retryBtn" type="button" data-action="retry">重试</button>
+        </div>
+
+        <div class="list-region feed" id="listRegion" aria-live="polite"></div>
+        <p class="list-foot" id="listFoot">已显示最近 7 条 · 下拉刷新</p>
+      </div>
+    </main>
+
+    <div class="sheet-layer" id="sheetLayer" hidden>
+      <div class="sheet-scrim" id="sheetScrim" aria-hidden="true"></div>
+      <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+        <div class="sheet-grabber" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <h2 class="sheet-title" id="sheetTitle">选择班级</h2>
+          <button class="sheet-close" id="sheetClose" type="button" aria-label="关闭选择面板">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="m4 4 8 8m0-8-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="sheet-options" id="sheetOptions"></div>
+        <p class="sheet-note">筛选作用于已加载的最近 20 条</p>
+      </div>
+    </div>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

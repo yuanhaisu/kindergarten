@@ -1,0 +1,20 @@
+{
+  "slug": "parent-pickup-index",
+  "surface": "parent",
+  "title": "接送记录",
+  "projectId": "69793424-08b1-481f-b540-aa9f664d25e3",
+  "conversationId": "139d0f99-5326-4746-8e47-b7362ee1e280",
+  "runId": "d6f7daf7-6f55-4880-a2dc-b644e76ad98f",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 781,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/69793424-08b1-481f-b540-aa9f664d25e3",
+  "previewRendered": true
+}

@@ -1,0 +1,20 @@
+{
+  "slug": "parent-pickup-authorized-create",
+  "surface": "parent",
+  "title": "添加授权接送人",
+  "projectId": "cd31be46-f0ba-4608-acce-8518e9211b4e",
+  "conversationId": "8312f299-b380-4c7a-88b8-1c9bc3f6cd77",
+  "runId": "d9f43db8-563d-42b5-987d-84421bb6836a",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 322,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/cd31be46-f0ba-4608-acce-8518e9211b4e",
+  "previewRendered": true
+}

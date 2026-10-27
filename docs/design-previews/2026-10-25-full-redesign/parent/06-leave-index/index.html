@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>请假记录 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="icon-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+    <symbol id="icon-chevron" viewBox="0 0 24 24">
+      <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M7.5 3.4v3.2M16.5 3.4v3.2M3.8 9.6h16.4M8 13.2h3M8 16.3h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M12 7.7v5.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="12" cy="16.3" r=".95" fill="currentColor"/>
+    </symbol>
+  </svg>
+
+  <div class="mp-app" data-state="normal">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">请假记录</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="leave-page">
+        <section class="stats-card" data-od-id="leave-stats" aria-label="请假数据概览">
+          <div class="stat-cell">
+            <span class="stat-number" data-stat="all">6</span>
+            <span class="stat-skeleton" aria-hidden="true"></span>
+            <span class="stat-label">全部请假</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-number stat-number--accent" data-stat="pending">1</span>
+            <span class="stat-skeleton" aria-hidden="true"></span>
+            <span class="stat-label">待审批</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-number" data-stat="approved">2</span>
+            <span class="stat-skeleton" aria-hidden="true"></span>
+            <span class="stat-label">已同意</span>
+          </div>
+        </section>
+
+        <nav class="status-tabs" data-od-id="leave-status-tabs" aria-label="请假状态筛选">
+          <button class="status-tab is-active" type="button" data-filter="all" aria-pressed="true">全部</button>
+          <button class="status-tab" type="button" data-filter="pending" aria-pressed="false">待审批</button>
+          <button class="status-tab" type="button" data-filter="approved" aria-pressed="false">已同意</button>
+          <button class="status-tab" type="button" data-filter="rejected" aria-pressed="false">已拒绝</button>
+        </nav>
+
+        <div class="leave-list-area" data-od-id="leave-record-list">
+          <ul class="leave-list" aria-label="请假记录列表">
+            <li class="leave-item">
+              <button class="leave-card" type="button" data-leave-card data-status="pending" data-od-id="leave-card-01">
+                <span class="leave-avatar" aria-hidden="true">乐</span>
+                <span class="leave-copy">
+                  <span class="leave-heading">
+                    <span class="leave-name">乐乐</span>
+                    <span class="leave-badge leave-badge--pending">待审批</span>
+                  </span>
+                  <span class="leave-meta">
+                    <span class="leave-type">病假</span>
+                    <span class="leave-dates">10月28日 ~ 10月29日 · 2天</span>
+                  </span>
+                  <span class="leave-reason">发烧 38.5℃，医生建议在家休息两天，退了烧再回园。</span>
+                  <span class="leave-submitted">提交于 10月26日 20:15</span>
+                </span>
+                <svg class="leave-chevron" width="16" height="16" aria-hidden="true" focusable="false"><use href="#icon-chevron"></use></svg>
+              </button>
+            </li>
+
+            <li class="leave-item">
+              <button class="leave-card" type="button" data-leave-card data-status="approved" data-od-id="leave-card-02">
+                <span class="leave-avatar" aria-hidden="true">乐</span>
+                <span class="leave-copy">
+                  <span class="leave-heading">
+                    <span class="leave-name">乐乐</span>
+                    <span class="leave-badge leave-badge--approved">已同意</span>
+                  </span>
+                  <span class="leave-meta">
+                    <span class="leave-type">事假</span>
+                    <span class="leave-dates">10月20日 · 1天</span>
+                  </span>
+                  <span class="leave-reason">家里有事，需带乐乐回老家一趟。</span>
+                  <span class="approval-note approval-note--approved">
+                    <span class="approval-meta">审批意见 · 王老师 10月19日</span>
+                    <span class="approval-text">已知悉，路上注意安全。</span>
+                  </span>
+                </span>
+                <svg class="leave-chevron" width="16" height="16" aria-hidden="true" focusable="false"><use href="#icon-chevron"></use></svg>
+              </button>
+            </li>
+
+            <li class="leave-item">
+              <button class="leave-card" type="button" data-leave-card data-status="rejected" data-od-id="leave-card-03">
+                <span class="leave-avatar" aria-hidden="true">乐</span>
+                <span class="leave-copy">
+                  <span class="leave-heading">
+                    <span class="leave-name">乐乐</span>
+                    <span class="leave-badge leave-badge--rejected">已驳回</span>
+                  </span>
+                  <span class="leave-meta">
+                    <span class="leave-type">病假</span>
+                    <span class="leave-dates">10月15日 ~ 10月18日 · 4天</span>
+                  </span>
+                  <span class="leave-reason">感冒咳嗽，需要在家休养。</span>
+                  <span class="approval-note approval-note--rejected">
+                    <span class="approval-meta">审批意见 · 王老师 10月14日</span>
+                    <span class="approval-text">请假超过 3 天需补交医院证明，请补充后重新提交。</span>
+                  </span>
+                </span>
+                <svg class="leave-chevron" width="16" height="16" aria-hidden="true" focusable="false"><use href="#icon-chevron"></use></svg>
+              </button>
+            </li>
+
+            <li class="leave-item">
+              <button class="leave-card" type="button" data-leave-card data-status="approved" data-od-id="leave-card-04">
+                <span class="leave-avatar" aria-hidden="true">乐</span>
+                <span class="leave-copy">
+                  <span class="leave-heading">
+                    <span class="leave-name">乐乐</span>
+                    <span class="leave-badge leave-badge--approved">已同意</span>
+                  </span>
+                  <span class="leave-meta">
+                    <span class="leave-type">事假</span>
+                    <span class="leave-dates">9月30日 · 1天</span>
+                  </span>
+                  <span class="leave-reason">参加亲属婚礼，当天不来园。</span>
+                </span>
+                <svg class="leave-chevron" width="16" height="16" aria-hidden="true" focusable="false"><use href="#icon-chevron"></use></svg>
+              </button>
+            </li>
+
+            <li class="leave-item">
+              <button class="leave-card" type="button" data-leave-card data-status="rejected" data-od-id="leave-card-05">
+                <span class="leave-avatar" aria-hidden="true">乐</span>
+                <span class="leave-copy">
+                  <span class="leave-heading">
+                    <span class="leave-name">乐乐</span>
+                    <span class="leave-badge leave-badge--rejected">已驳回</span>
+                  </span>
+                  <span class="leave-meta">
+                    <span class="leave-type">其他</span>
+                    <span class="leave-dates">9月26日 · 1天</span>
+                  </span>
+                  <span class="leave-reason">想带乐乐去参加社区亲子活动。</span>
+                  <span class="approval-note approval-note--rejected">
+                    <span class="approval-meta">审批意见 · 王老师 9月25日</span>
+                    <span class="approval-text">非必要事由，建议安排在周末，不占用在园时间。</span>
+                  </span>
+                </span>
+                <svg class="leave-chevron" width="16" height="16" aria-hidden="true" focusable="false"><use href="#icon-chevron"></use></svg>
+              </button>
+            </li>
+
+            <li class="leave-item">
+              <button class="leave-card" type="button" data-leave-card data-status="cancelled" data-od-id="leave-card-06">
+                <span class="leave-avatar" aria-hidden="true">乐</span>
+                <span class="leave-copy">
+                  <span class="leave-heading">
+                    <span class="leave-name">乐乐</span>
+                    <span class="leave-badge leave-badge--cancelled">已取消</span>
+                  </span>
+                  <span class="leave-meta">
+                    <span class="leave-type">病假</span>
+                    <span class="leave-dates">9月22日 ~ 9月23日 · 2天</span>
+                  </span>
+                  <span class="leave-reason">肚子不舒服，先观察一天。</span>
+                </span>
+                <svg class="leave-chevron" width="16" height="16" aria-hidden="true" focusable="false"><use href="#icon-chevron"></use></svg>
+              </button>
+            </li>
+          </ul>
+
+          <div class="filter-empty" data-filter-empty hidden>
+            <p>该状态下暂无请假记录</p>
+            <button class="button-secondary" type="button" data-action="view-all">查看全部</button>
+          </div>
+
+          <p class="leave-footer" data-list-footer>共 <span data-footer-count>6</span> 条请假记录</p>
+        </div>
+
+        <div class="skeleton-list" data-od-id="leave-skeleton" role="status" aria-label="正在加载请假记录">
+          <div class="skeleton-card">
+            <span class="skeleton-avatar"></span>
+            <span class="skeleton-copy">
+              <span class="skeleton-line skeleton-line--title"></span>
+              <span class="skeleton-line skeleton-line--body"></span>
+              <span class="skeleton-line skeleton-line--meta"></span>
+            </span>
+          </div>
+          <div class="skeleton-card">
+            <span class="skeleton-avatar"></span>
+            <span class="skeleton-copy">
+              <span class="skeleton-line skeleton-line--title"></span>
+              <span class="skeleton-line skeleton-line--body"></span>
+              <span class="skeleton-line skeleton-line--meta"></span>
+            </span>
+          </div>
+          <div class="skeleton-card">
+            <span class="skeleton-avatar"></span>
+            <span class="skeleton-copy">
+              <span class="skeleton-line skeleton-line--title"></span>
+              <span class="skeleton-line skeleton-line--body"></span>
+              <span class="skeleton-line skeleton-line--meta"></span>
+            </span>
+          </div>
+        </div>
+
+        <section class="state-card empty-state" data-od-id="leave-empty" aria-labelledby="empty-title">
+          <span class="state-icon state-icon--empty" aria-hidden="true">
+            <svg width="22" height="22" focusable="false"><use href="#icon-calendar"></use></svg>
+          </span>
+          <h2 class="state-title" id="empty-title">暂无请假记录</h2>
+          <p class="state-desc">提交请假后，老师的审批结果会显示在这里</p>
+          <button class="button-primary state-action" type="button" data-action="create-leave">发起请假</button>
+        </section>
+
+        <section class="state-card error-state" data-od-id="leave-error" aria-labelledby="error-title">
+          <span class="state-icon state-icon--error" aria-hidden="true">
+            <svg width="22" height="22" focusable="false"><use href="#icon-alert"></use></svg>
+          </span>
+          <h2 class="state-title" id="error-title">请假记录加载失败</h2>
+          <p class="state-desc">网络不太稳定，请稍后再试</p>
+          <button class="button-primary state-action" type="button" data-action="retry">
+            <span data-retry-label>重试</span>
+          </button>
+        </section>
+      </div>
+    </main>
+
+    <button class="float-create" type="button" data-od-id="leave-create" data-action="create-leave">＋ 请假</button>
+
+    <div class="mp-demo" data-open="false" style="bottom: calc(84px + env(safe-area-inset-bottom))">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

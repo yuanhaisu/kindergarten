@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>发布通知 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" id="app" data-state="normal" data-od-id="notice-create">
+
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" aria-label="返回">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">发布通知</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main" id="scroll">
+    <div class="page">
+
+      <section class="group" aria-labelledby="typeHead" data-od-id="category-group">
+        <div class="group-head"><h2 id="typeHead">通知类型</h2></div>
+        <div class="card type-card">
+          <div class="chips" id="categoryChips" role="radiogroup" aria-label="通知类型">
+            <button class="chip is-on" type="button" role="radio" aria-checked="true" data-cat="homework">作业</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" data-cat="bring">带物</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" data-cat="activity">活动</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" data-cat="health">健康</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" data-cat="other">其他</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="quickHead" data-od-id="templates-group">
+        <div class="group-head"><h2 id="quickHead">快捷填写</h2></div>
+        <div class="card">
+          <div class="cell cell-tap" id="tplRow" role="button" tabindex="0" aria-haspopup="dialog">
+            <span class="cell-label">常用模板</span>
+            <span class="cell-trail">
+              <span class="cell-value" id="tplCount">3 条可用</span>
+              <span class="skeleton sk-count" id="tplSkeleton"></span>
+              <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </span>
+          </div>
+          <p class="cell-foot">套用模板后可继续修改内容</p>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="contentHead" data-od-id="content-group">
+        <div class="group-head">
+          <h2 id="contentHead">通知内容</h2>
+        </div>
+        <div class="card">
+          <div class="cell field-cell" data-od-id="title-field">
+            <label class="cell-label" for="titleInput">标题</label>
+            <input class="field-input" id="titleInput" type="text" maxlength="80" placeholder="请输入通知标题" autocomplete="off">
+            <span class="field-count" id="titleCount">0 / 80</span>
+          </div>
+          <p class="field-error" id="titleError" hidden>
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.6"></circle><path d="M10 5.8v4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><circle cx="10" cy="13.8" r="1" fill="currentColor"></circle></svg>
+            请输入通知标题
+          </p>
+          <div class="cell field-cell field-cell--stack" data-od-id="content-field">
+            <div class="field-head">
+              <label class="cell-label" for="contentInput">正文</label>
+              <span class="field-count" id="contentCount">0 字</span>
+            </div>
+            <textarea class="field-textarea" id="contentInput" rows="3" placeholder="请输入通知内容..."></textarea>
+          </div>
+          <p class="field-error" id="contentError" hidden>
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.6"></circle><path d="M10 5.8v4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><circle cx="10" cy="13.8" r="1" fill="currentColor"></circle></svg>
+            请输入通知内容
+          </p>
+          <div class="cell attach-cell" data-od-id="attachments">
+            <div class="attach-head">
+              <span class="cell-label">图片 / 视频</span>
+              <span class="attach-count" id="attachCount">0/9</span>
+            </div>
+            <div class="thumbs" id="thumbs"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="scopeHead" data-od-id="class-scope">
+        <div class="group-head">
+          <h2 id="scopeHead">接收范围</h2>
+          <span class="group-note">必选</span>
+        </div>
+        <div class="card">
+          <div class="cell cell-tap" id="classRow" role="button" tabindex="0" aria-haspopup="dialog">
+            <span class="cell-label">接收班级</span>
+            <span class="cell-trail">
+              <span class="cell-value" id="classValue">小一班全体家长</span>
+              <span class="skeleton sk-value" id="classSkeleton"></span>
+              <span class="class-error" id="classError">
+                班级列表加载失败
+                <button class="retry-btn" type="button" id="retryBtn">重试</button>
+              </span>
+              <svg class="chev" id="classChev" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </span>
+          </div>
+          <p class="cell-foot" id="classFoot">1 个班级 · 28 位家长将收到通知</p>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="sendHead" data-od-id="send-settings">
+        <div class="group-head"><h2 id="sendHead">发送设置</h2></div>
+        <div class="card">
+          <div class="cell switch-cell" data-od-id="need-confirm">
+            <span class="cell-text">
+              <span class="cell-label">需要家长确认收到</span>
+              <span class="cell-hint">开启后可查看已读未读状态</span>
+            </span>
+            <button class="switch" type="button" role="switch" aria-checked="true" aria-label="需要家长确认收到" id="confirmSwitch">
+              <span class="switch-knob"></span>
+            </button>
+          </div>
+          <div class="cell switch-cell" data-od-id="scheduled-switch">
+            <span class="cell-text">
+              <span class="cell-label">定时发送</span>
+              <span class="cell-hint" id="schedHint">立即发送</span>
+            </span>
+            <button class="switch" type="button" role="switch" aria-checked="false" aria-label="定时发送" id="schedSwitch">
+              <span class="switch-knob"></span>
+            </button>
+          </div>
+          <div class="schedule" id="scheduleFields" hidden data-od-id="scheduled-fields">
+            <div class="cell cell-tap" id="dateRow" role="button" tabindex="0" aria-haspopup="dialog">
+              <span class="cell-label">发送日期</span>
+              <span class="cell-trail">
+                <span class="cell-value" id="dateValue">2026年10月27日</span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </span>
+            </div>
+            <div class="cell cell-tap" id="timeRow" role="button" tabindex="0" aria-haspopup="dialog">
+              <span class="cell-label">发送时间</span>
+              <span class="cell-trail">
+                <span class="cell-value" id="timeValue">09:00</span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </span>
+            </div>
+            <p class="cell-foot">到点后自动发送，家长会收到微信提醒</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="dock" data-od-id="publish-dock">
+      <p class="dock-summary" id="dockSummary">小一班 · 立即发送 · 需家长确认</p>
+      <button class="publish-btn" id="publishBtn" type="button" data-od-id="publish-button">
+        <span class="spinner" id="publishSpinner" hidden aria-hidden="true"></span>
+        <span id="publishLabel">发布</span>
+      </button>
+    </div>
+  </main>
+
+  <div class="layer" id="classLayer">
+    <div class="scrim" data-close="class"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="classSheetTitle">
+      <header class="sheet-head">
+        <button class="sheet-btn" type="button" data-close="class">取消</button>
+        <h2 class="sheet-title" id="classSheetTitle">接收班级</h2>
+        <button class="sheet-btn sheet-btn--strong" type="button" id="classDone">完成</button>
+      </header>
+      <div class="sheet-body">
+        <div class="pick-list" id="classList"></div>
+        <p class="sheet-note">仅显示你任教的班级，可多选</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="layer" id="dateLayer">
+    <div class="scrim" data-close="date"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dateSheetTitle">
+      <header class="sheet-head">
+        <button class="sheet-btn" type="button" data-close="date">取消</button>
+        <h2 class="sheet-title" id="dateSheetTitle">发送日期</h2>
+        <button class="sheet-btn sheet-btn--strong" type="button" id="dateDone">完成</button>
+      </header>
+      <div class="wheel-wrap">
+        <span class="wheel-band" aria-hidden="true"></span>
+        <div class="wheel" id="yearWheel" aria-label="年份"></div>
+        <div class="wheel" id="monthWheel" aria-label="月份"></div>
+        <div class="wheel" id="dayWheel" aria-label="日期"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="layer" id="timeLayer">
+    <div class="scrim" data-close="time"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="timeSheetTitle">
+      <header class="sheet-head">
+        <button class="sheet-btn" type="button" data-close="time">取消</button>
+        <h2 class="sheet-title" id="timeSheetTitle">发送时间</h2>
+        <button class="sheet-btn sheet-btn--strong" type="button" id="timeDone">完成</button>
+      </header>
+      <div class="wheel-wrap">
+        <span class="wheel-band" aria-hidden="true"></span>
+        <div class="wheel" id="hourWheel" aria-label="小时"></div>
+        <div class="wheel" id="minuteWheel" aria-label="分钟"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="layer" id="tplLayer">
+    <div class="scrim" data-close="tpl"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="tplSheetTitle">
+      <header class="sheet-head">
+        <button class="sheet-btn" type="button" data-close="tpl">取消</button>
+        <h2 class="sheet-title" id="tplSheetTitle">常用模板</h2>
+        
+      </header>
+      <div class="sheet-body">
+        <div class="tpl-list" id="tplList"></div>
+        <p class="sheet-note">选择后会自动填入标题、正文和类型</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="layer layer--center" id="confirmLayer">
+    <div class="scrim" data-close="confirm"></div>
+    <section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlgTitle" aria-describedby="dlgDesc">
+      <div class="dialog-body">
+        <h2 id="dlgTitle">确认发布这条通知？</h2>
+        <p id="dlgDesc">发布后小一班全体家长会收到微信提醒。</p>
+        <dl class="dialog-meta">
+          <div><dt>类型</dt><dd id="dlgCat">作业</dd></div>
+          <div><dt>发送方式</dt><dd id="dlgWhen">立即发送</dd></div>
+        </dl>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" data-close="confirm" id="dialogCancel">取消</button>
+        <button type="button" id="confirmPublish">
+          
+          <span id="confirmLabel">确认发布</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span class="toast-icon" id="toastIcon"></span>
+    <span id="toastText"></span>
+  </div>
+
+  <div class="mp-demo" data-open="false" style="bottom: calc(104px + env(safe-area-inset-bottom))">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+
+</div>
+<script src="app.js"></script>
+<script src="../../_shared/shell.js"></script>
+</body>
+</html>

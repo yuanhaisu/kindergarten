@@ -1,0 +1,21 @@
+{
+  "slug": "parent-bind",
+  "surface": "parent",
+  "title": "绑定孩子",
+  "projectId": "256247f5-a07c-4305-aa55-5063e27e7d44",
+  "conversationId": "1c901425-649c-46a8-b0d2-3f3783e7f43e",
+  "runId": "b4d759e2-e2d9-414f-8ebb-9585619bfb2e",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 391,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/256247f5-a07c-4305-aa55-5063e27e7d44",
+  "previewRendered": true,
+  "note": "od-design-page 在 index.html 稳定 30s 时判定成功并快照（styles.css / app.js 当时还没落盘），之后从同一 OpenDesign 项目目录补齐了三件套；本次产物仍是 OpenDesign 生成，非手写。"
+}

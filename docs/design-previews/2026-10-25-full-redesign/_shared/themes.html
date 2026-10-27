@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>配色方案对比 · 养成星球</title>
+<style>
+  :root {
+    --bg: #f7f3ea;
+    --surface: #fffdf8;
+    --ink: #1e293b;
+    --ink-2: #475569;
+    --muted: #64748b;
+    --line: #e2d9c8;
+    --brand: #ff8a3d;
+    --brand-deep: #c2410c;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans SC", system-ui, -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 26px; line-height: 1.3; margin: 0 0 8px; }
+  .sub { color: var(--ink-2); margin: 0 0 12px; }
+  a { color: var(--brand-deep); }
+  .back { font-size: 13px; text-decoration: none; font-weight: 600; }
+  .schemes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin: 22px 0 28px;
+  }
+  .scheme {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .scheme h2 { font-size: 16px; margin: 0 0 4px; }
+  .scheme p { margin: 0 0 10px; font-size: 13px; color: var(--ink-2); }
+  .swatch { height: 12px; border-radius: 999px; margin: 10px 0 12px; }
+  .swatch--bright { background: linear-gradient(135deg, #ffa866, #ff8a3d); }
+  .swatch--deep { background: linear-gradient(135deg, #c2410c, #9a3412); }
+  .swatch--ink { background: linear-gradient(135deg, #ffa866, #ff8a3d); }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .badge--pass { background: #dcfce7; color: #166534; }
+  .note {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #7c2d12;
+    margin: 0 0 26px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 160px repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+  }
+  .grid .head {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .page-label {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .page-label small { display: block; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .page-label a { display: inline-block; font-size: 11px; font-weight: 500; margin-right: 6px; color: var(--brand-deep); }
+  figure {
+    margin: 0;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  figure img {
+    width: 100%;
+    display: block;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  figcaption { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
+  code { background: #f1e9db; padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+  @media (max-width: 760px) {
+    .schemes { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 76px repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .page-label { font-size: 11px; }
+    .page-label a { display: block; margin: 2px 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../index.html">← 返回总画廊</a>
+    <h1>配色方案对比</h1>
+    <p class="sub">同一批原型、同一套布局，只切换颜色 token。默认打开是「亮橙」；在页面地址后加 <code>?theme=deep</code> 或 <code>?theme=ink</code> 可实时切换。</p>
+  </header>
+
+  <section class="schemes">
+    <div class="scheme">
+      <h2>亮橙 · 默认</h2>
+      <p>原设计稿的视觉方向。白字压亮橙，暖度高、品牌感最强。</p>
+      <div class="swatch swatch--bright"></div>
+      <span class="badge">对比 2.35 / 2.80 · 不达 AA</span>
+    </div>
+    <div class="scheme">
+      <h2>深橙 · AA</h2>
+      <p>白字保留，品牌渐变加深为焦糖橙。整体更稳，合规。</p>
+      <div class="swatch swatch--deep"></div>
+      <span class="badge badge--pass">对比 5.18–7.31 · AA</span>
+    </div>
+    <div class="scheme">
+      <h2>亮橙 + 深墨字 · AA</h2>
+      <p>保留亮橙渐变，把按钮文字改为深墨色。品牌最亮，文字最清晰。</p>
+      <div class="swatch swatch--ink"></div>
+      <span class="badge badge--pass">对比 5.9–7.4 · AA</span>
+    </div>
+  </section>
+
+  <p class="note">「亮橙」是视觉参考，白字在亮橙上只有 2.35–2.80:1，不满足 WCAG AA；「深橙」与「亮橙+深墨字」均满足 AA。三套方案都由 <code>shared-design-tokens/tokens.json</code> 与 <code>themes.json</code> 驱动，不是三份手改 CSS。</p>
+
+  <div class="grid" role="table" aria-label="三套配色方案页面对比">
+    <div class="head">页面</div>
+    <div class="head">亮橙 · 默认</div>
+    <div class="head">深橙 · AA</div>
+    <div class="head">亮橙 + 深墨字</div>
+
+    <div class="page-label">老师工作台<small>teacher/01</small><a href="../teacher/01-workbench/index.html">亮橙</a><a href="../teacher/01-workbench/index.html?theme=deep">深橙</a><a href="../teacher/01-workbench/index.html?theme=ink">墨字</a></div>
+    <figure><img loading="lazy" src="../teacher/01-workbench/preview.png" alt="老师工作台 亮橙"><figcaption>亮橙默认</figcaption></figure>
+    <figure><img loading="lazy" src="../teacher/01-workbench/preview-deep.png" alt="老师工作台 深橙"><figcaption>深橙 AA</figcaption></figure>
+    <figure><img loading="lazy" src="../teacher/01-workbench/preview-ink.png" alt="老师工作台 墨字"><figcaption>亮橙+深墨字</figcaption></figure>
+
+    <div class="page-label">发布通知<small>teacher/03</small><a href="../teacher/03-notice-create/index.html">亮橙</a><a href="../teacher/03-notice-create/index.html?theme=deep">深橙</a><a href="../teacher/03-notice-create/index.html?theme=ink">墨字</a></div>
+    <figure><img loading="lazy" src="../teacher/03-notice-create/preview.png" alt="发布通知 亮橙"><figcaption>亮橙默认</figcaption></figure>
+    <figure><img loading="lazy" src="../teacher/03-notice-create/preview-deep.png" alt="发布通知 深橙"><figcaption>深橙 AA</figcaption></figure>
+    <figure><img loading="lazy" src="../teacher/03-notice-create/preview-ink.png" alt="发布通知 墨字"><figcaption>亮橙+深墨字</figcaption></figure>
+
+    <div class="page-label">我的班级<small>teacher/15</small><a href="../teacher/15-class-index/index.html">亮橙</a><a href="../teacher/15-class-index/index.html?theme=deep">深橙</a><a href="../teacher/15-class-index/index.html?theme=ink">墨字</a></div>
+    <figure><img loading="lazy" src="../teacher/15-class-index/preview.png" alt="我的班级 亮橙"><figcaption>亮橙默认</figcaption></figure>
+    <figure><img loading="lazy" src="../teacher/15-class-index/preview-deep.png" alt="我的班级 深橙"><figcaption>深橙 AA</figcaption></figure>
+    <figure><img loading="lazy" src="../teacher/15-class-index/preview-ink.png" alt="我的班级 墨字"><figcaption>亮橙+深墨字</figcaption></figure>
+
+    <div class="page-label">家长首页<small>parent/01</small><a href="../parent/01-home/index.html">亮橙</a><a href="../parent/01-home/index.html?theme=deep">深橙</a><a href="../parent/01-home/index.html?theme=ink">墨字</a></div>
+    <figure><img loading="lazy" src="../parent/01-home/preview.png" alt="家长首页 亮橙"><figcaption>亮橙默认</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/01-home/preview-deep.png" alt="家长首页 深橙"><figcaption>深橙 AA</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/01-home/preview-ink.png" alt="家长首页 墨字"><figcaption>亮橙+深墨字</figcaption></figure>
+
+    <div class="page-label">家长登录<small>parent/02</small><a href="../parent/02-login/index.html">亮橙</a><a href="../parent/02-login/index.html?theme=deep">深橙</a><a href="../parent/02-login/index.html?theme=ink">墨字</a></div>
+    <figure><img loading="lazy" src="../parent/02-login/preview.png" alt="家长登录 亮橙"><figcaption>亮橙默认</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/02-login/preview-deep.png" alt="家长登录 深橙"><figcaption>深橙 AA</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/02-login/preview-ink.png" alt="家长登录 墨字"><figcaption>亮橙+深墨字</figcaption></figure>
+
+    <div class="page-label">任务详情<small>parent/18</small><a href="../parent/18-tasks-detail/index.html">亮橙</a><a href="../parent/18-tasks-detail/index.html?theme=deep">深橙</a><a href="../parent/18-tasks-detail/index.html?theme=ink">墨字</a></div>
+    <figure><img loading="lazy" src="../parent/18-tasks-detail/preview.png" alt="任务详情 亮橙"><figcaption>亮橙默认</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/18-tasks-detail/preview-deep.png" alt="任务详情 深橙"><figcaption>深橙 AA</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/18-tasks-detail/preview-ink.png" alt="任务详情 墨字"><figcaption>亮橙+深墨字</figcaption></figure>
+
+    <div class="page-label">班级日历<small>parent/22</small><a href="../parent/22-calendar-index/index.html">亮橙</a><a href="../parent/22-calendar-index/index.html?theme=deep">深橙</a><a href="../parent/22-calendar-index/index.html?theme=ink">墨字</a></div>
+    <figure><img loading="lazy" src="../parent/22-calendar-index/preview.png" alt="班级日历 亮橙"><figcaption>亮橙默认</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/22-calendar-index/preview-deep.png" alt="班级日历 深橙"><figcaption>深橙 AA</figcaption></figure>
+    <figure><img loading="lazy" src="../parent/22-calendar-index/preview-ink.png" alt="班级日历 墨字"><figcaption>亮橙+深墨字</figcaption></figure>
+  </div>
+
+  <footer>
+    <p>主题入口：<code>shared-design-tokens/tokens.json</code>（亮橙默认）+ <code>shared-design-tokens/themes.json</code>（deep / ink）。生成：<code>node scripts/build-theme-css.mjs</code>。切换：页面地址加 <code>?theme=deep</code> / <code>?theme=ink</code>，或给 <code>&lt;html&gt;</code> 加 <code>data-theme</code>。</p>
+    <p>后续按园所偏好调整时，只需要把园所设置映射到这三个主题名，不需要逐页改 CSS。</p>
+  </footer>
+</div>
+</body>
+</html>

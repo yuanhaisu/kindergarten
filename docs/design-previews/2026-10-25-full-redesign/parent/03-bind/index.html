@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>绑定孩子 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal" data-od-id="parent-bind-page">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">绑定孩子</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main page" aria-labelledby="pageTitle" data-od-id="bind-main">
+
+      <section class="bind-hero" data-od-id="bind-hero">
+        <div class="hero-copy">
+          <h2 class="hero-title" id="pageTitle">认领孩子</h2>
+          <p class="hero-desc">输入老师提供的邀请码，或扫描二维码绑定</p>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <svg class="hero-svg" viewBox="0 0 108 108" fill="none">
+            <circle class="art-orbit-outer" cx="54" cy="54" r="38"/>
+            <circle class="art-orbit-inner" cx="54" cy="54" r="25"/>
+            <path class="art-link" d="M41.5 60.5c8.5-2.5 13-9.5 24-14"/>
+            <circle class="art-parent" cx="34" cy="64" r="8.2"/>
+            <circle class="art-parent-core" cx="34" cy="64" r="3"/>
+            <circle class="art-child" cx="72" cy="44.5" r="6"/>
+            <circle class="art-dust art-dust-a" cx="82.5" cy="27" r="1.8"/>
+            <circle class="art-dust art-dust-b" cx="24.5" cy="37.5" r="1.2"/>
+            <circle class="art-dust art-dust-c" cx="82.5" cy="75" r="1.1"/>
+          </svg>
+        </div>
+      </section>
+
+      <form class="bind-card" id="bindForm" novalidate data-od-id="bind-form">
+        <div class="field-block">
+          <div class="field-heading">
+            <label class="field-label" for="inviteCode">邀请码</label>
+            <span class="field-count" aria-hidden="true"><span id="codeCount">10</span><span class="field-count-total">/20</span></span>
+          </div>
+
+          <input
+            class="invite-input"
+            id="inviteCode"
+            name="invite_code"
+            type="text"
+            value="KP20241015"
+            placeholder="请输入邀请码"
+            maxlength="20"
+            inputmode="text"
+            autocapitalize="characters"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="done"
+            aria-invalid="false"
+            aria-describedby="fieldReport"
+            data-od-id="invite-code-input"
+          >
+
+          <p class="field-report" id="fieldReport" aria-live="polite">
+            <svg class="report-icon report-icon-info" viewBox="0 0 16 16" aria-hidden="true">
+              <circle class="report-info-ring" cx="8" cy="8" r="6.4"/>
+              <path class="report-info-line" d="M8 7.3v3.9"/>
+              <circle class="report-info-dot" cx="8" cy="4.9" r=".85"/>
+            </svg>
+            <svg class="report-icon report-icon-error" viewBox="0 0 16 16" aria-hidden="true" hidden>
+              <circle class="report-error-fill" cx="8" cy="8" r="6.6"/>
+              <path class="report-error-mark" d="M8 4.7v4.1"/>
+              <circle class="report-error-mark" cx="8" cy="11.4" r=".8"/>
+            </svg>
+            <span id="fieldReportText">邀请码由班级老师提供，每位孩子一个</span>
+          </p>
+        </div>
+
+        <div class="submit-block">
+          <button class="submit-btn" id="submitBtn" type="submit" data-od-id="confirm-bind-button">
+            <span class="submit-idle">确认绑定</span>
+            <span class="submit-loading">
+              <svg class="spinner" viewBox="0 0 18 18" aria-hidden="true">
+                <circle class="spinner-track" cx="9" cy="9" r="7"/>
+                <circle class="spinner-head" cx="9" cy="9" r="7"/>
+              </svg>
+              <span>绑定中...</span>
+            </span>
+          </button>
+
+          <div class="submit-meta" id="submitMeta" aria-live="polite">
+            <p class="cta-hint" id="ctaHint" hidden>
+              <span id="ctaHintText">还差邀请码</span>
+            </p>
+            <button class="refill-btn" id="refillBtn" type="button" hidden data-od-id="refill-invite-code">
+              <svg class="refill-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 6.3A5.4 5.4 0 1 0 13 10"/><path d="M13.3 2.9v3.6H9.7"/></svg>
+              <span>重新填写</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="or-divider" aria-hidden="true">
+          <span class="or-line"></span>
+          <span class="or-label">或</span>
+          <span class="or-line"></span>
+        </div>
+
+        <button class="scan-btn" id="scanBtn" type="button" data-od-id="scan-bind-button">
+          <span class="scan-icon-box" aria-hidden="true">
+            <svg class="camera-icon" viewBox="0 0 20 20" fill="none">
+              <path d="M3.2 6.6h3l1.2-2h5.2l1.2 2h3a1.2 1.2 0 0 1 1.2 1.2v7.4a1.2 1.2 0 0 1-1.2 1.2H3.2A1.2 1.2 0 0 1 2 15.2V7.8a1.2 1.2 0 0 1 1.2-1.2Z"/>
+              <circle cx="10" cy="11.2" r="3.1"/>
+            </svg>
+          </span>
+          <span>扫描二维码绑定</span>
+        </button>
+      </form>
+
+      <aside class="guide-card" aria-labelledby="guideTitle" data-od-id="invite-guide">
+        <h2 class="guide-title" id="guideTitle">关于邀请码</h2>
+        <ol class="guide-list">
+          <li class="guide-item" data-od-id="guide-invite-code">
+            <span class="guide-index" aria-hidden="true">01</span>
+            <div class="guide-item-copy">
+              <h3 class="guide-item-title">学号就是邀请码</h3>
+              <p class="guide-item-text">孩子在园里的学号即邀请码，由班级老师提供，每位孩子一个。</p>
+            </div>
+          </li>
+          <li class="guide-item" data-od-id="guide-multiple-children">
+            <span class="guide-index" aria-hidden="true">02</span>
+            <div class="guide-item-copy">
+              <h3 class="guide-item-title">可以绑多个孩子</h3>
+              <p class="guide-item-text">一个家长可绑定多个孩子，也不会替代孩子已有的主家长；之后可在「我的 → 我的孩子」查看、切换或解绑。</p>
+            </div>
+          </li>
+          <li class="guide-item" data-od-id="guide-contact-teacher">
+            <span class="guide-index" aria-hidden="true">03</span>
+            <div class="guide-item-copy">
+              <h3 class="guide-item-title">提示无效怎么办</h3>
+              <p class="guide-item-text">先确认是否已绑过这个孩子，再联系班级老师核对邀请码。</p>
+            </div>
+          </li>
+        </ol>
+      </aside>
+
+      <p class="page-foot" data-od-id="bind-footnote">
+        <svg class="foot-icon" viewBox="0 0 16 16" aria-hidden="true">
+          <circle class="foot-ring" cx="8" cy="8" r="6.4"/>
+          <path class="foot-mark" d="M8 7.2v4"/>
+          <circle class="foot-dot" cx="8" cy="4.9" r=".9"/>
+        </svg>
+        <span>家里另一位家长也能用自己的账号绑定同一个孩子。</span>
+      </p>
+
+    </main>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="scan-screen" id="scanScreen" role="dialog" aria-modal="true" aria-labelledby="scanTitle" aria-describedby="scanDesc" hidden>
+      <div class="scan-head">
+        <p class="scan-kicker">扫描二维码</p>
+        <button class="scan-close" id="scanClose" type="button" aria-label="关闭扫码">
+          <svg class="scan-close-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="m4.5 4.5 9 9M13.5 4.5l-9 9"/></svg>
+        </button>
+      </div>
+      <div class="scan-body">
+        <div class="scan-frame" aria-hidden="true">
+          <span class="scan-corner scan-corner-tl"></span>
+          <span class="scan-corner scan-corner-tr"></span>
+          <span class="scan-corner scan-corner-bl"></span>
+          <span class="scan-corner scan-corner-br"></span>
+          <span class="scan-sweep"></span>
+        </div>
+        <div class="scan-copy">
+          <h2 class="scan-title" id="scanTitle">将二维码放入框内</h2>
+          <p class="scan-desc" id="scanDesc">识别后会填入邀请码并自动提交</p>
+        </div>
+      </div>
+      <div class="scan-foot">
+        <span class="scan-detecting"><span class="scan-pulse" aria-hidden="true"></span>正在识别…</span>
+        <span class="scan-source">邀请码二维码由班级老师提供</span>
+      </div>
+    </div>
+
+    <div class="success-layer" id="successToast" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <div class="success-card">
+        <span class="success-mark" aria-hidden="true">
+          <svg class="success-check" viewBox="0 0 24 24" fill="none"><path d="m6.2 12.4 3.7 3.6 7.9-8.2"/></svg>
+        </span>
+        <p class="success-title">绑定成功</p>
+        <p class="success-sub">正在返回…</p>
+      </div>
+    </div>
+
+    <div class="simple-toast" id="simpleToast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

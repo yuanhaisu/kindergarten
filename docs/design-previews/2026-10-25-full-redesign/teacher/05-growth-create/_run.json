@@ -1,0 +1,18 @@
+{
+  "slug": "teacher-growth-create",
+  "surface": "teacher",
+  "title": "添加成长记录",
+  "projectId": "ab77f006-0a30-4c0a-9bcf-775074d6469f",
+  "conversationId": "ea484fd4-3b93-4c26-96d1-96287c48dcd8",
+  "runId": "2ce51139-d4b1-4d32-815b-e9db891e921c",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 463,
+  "files": [
+    ".mcp.json",
+    "index.html"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/ab77f006-0a30-4c0a-9bcf-775074d6469f",
+  "previewRendered": true
+}

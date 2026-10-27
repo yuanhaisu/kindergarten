@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>养成星球 · 家长首页</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="../../_shared/shell.css" />
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" data-state="normal" data-od-id="parent-home-app">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <h1 class="mp-title">养成星球</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="home" data-od-id="parent-home">
+
+        <section class="child-hero" aria-label="孩子信息" data-od-id="child-hero">
+          <div class="child-avatar" aria-hidden="true"><span id="avatar-initial">乐</span></div>
+          <div class="hero-body">
+            <div class="hero-name-row">
+              <h2 class="child-name" id="child-name" data-od-id="child-name">乐乐</h2>
+              <span class="class-pill" id="class-pill">小一班</span>
+            </div>
+            <p class="hero-greeting" id="greeting">妈妈 您好~</p>
+          </div>
+          <button class="settings-btn" type="button" aria-label="设置" data-toast="已打开设置" data-od-id="settings-button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M19.3 13.3a7.4 7.4 0 0 0 0-2.6l1.9-1.5-1.9-3.3-2.3.9a7.5 7.5 0 0 0-2.2-1.3L14.5 3h-3.8l-.3 2.5a7.5 7.5 0 0 0-2.2 1.3l-2.3-.9-1.9 3.3 1.9 1.5a7.4 7.4 0 0 0 0 2.6l-1.9 1.5 1.9 3.3 2.3-.9a7.5 7.5 0 0 0 2.2 1.3l.3 2.5h3.8l.3-2.5a7.5 7.5 0 0 0 2.2-1.3l2.3.9 1.9-3.3-1.9-1.5Z"/></svg>
+          </button>
+        </section>
+
+        <section class="today-card" aria-labelledby="today-heading" data-od-id="today-card">
+          <div class="today-head">
+            <h2 class="today-title" id="today-heading" data-od-id="today-heading">今日在校情况</h2>
+            <p class="today-date" data-od-id="today-date">2026年10月26日 星期一</p>
+          </div>
+
+          <div class="today-grid" data-od-id="today-status">
+            <div class="today-col">
+              <span class="sr-only">出勤</span>
+              <span class="stat-orb stat-orb--success" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 12.3 3.6 3.6 7.4-8"/></svg>
+              </span>
+              <span class="stat-value" id="stat-attendance">已入园</span>
+              <span class="stat-sub" id="stat-arrive">07:52</span>
+            </div>
+
+            <div class="today-col">
+              <span class="sr-only">进餐</span>
+              <span class="stat-orb stat-orb--info" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 11h16.4"/><path d="M5.6 11a6.5 6.5 0 0 0 12.8 0"/><path d="M9.6 7.6c0-.9.7-1.4.7-2.4"/><path d="M13.6 7.6c0-.9.7-1.4.7-2.4"/></svg>
+              </span>
+              <span class="stat-value" id="stat-meal">很好</span>
+              <span class="stat-sub" aria-hidden="true"></span>
+            </div>
+
+            <div class="today-col">
+              <span class="sr-only">午睡</span>
+              <span class="stat-orb stat-orb--warning" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.4 14.3A8.5 8.5 0 0 1 9.7 3.6a8.6 8.6 0 1 0 10.7 10.7Z"/></svg>
+              </span>
+              <span class="stat-value" id="stat-sleep">很好</span>
+              <span class="stat-sub" id="stat-nap">120分钟</span>
+            </div>
+
+            <div class="today-col">
+              <span class="sr-only">情绪</span>
+              <span class="stat-orb stat-orb--accent" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.3"/><path d="M8.7 14.1c.8 1.2 1.9 1.8 3.3 1.8s2.5-.6 3.3-1.8"/><path d="M9.3 9.8h.01"/><path d="M14.7 9.8h.01"/></svg>
+              </span>
+              <span class="stat-value" id="stat-mood">很好</span>
+              <span class="stat-sub" aria-hidden="true"></span>
+            </div>
+          </div>
+
+          <div class="today-skeleton" aria-hidden="true">
+            <span class="sk-col"><span class="sk-orb"></span><span class="sk-line"></span><span class="sk-line sk-line--short"></span></span>
+            <span class="sk-col"><span class="sk-orb"></span><span class="sk-line"></span><span class="sk-line sk-line--short"></span></span>
+            <span class="sk-col"><span class="sk-orb"></span><span class="sk-line"></span><span class="sk-line sk-line--short"></span></span>
+            <span class="sk-col"><span class="sk-orb"></span><span class="sk-line"></span><span class="sk-line sk-line--short"></span></span>
+          </div>
+
+          <div class="perf-bar" id="perf-bar" data-od-id="performance-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 3 2.7 5.6 6 .9-4.4 4.3 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.5l6-.9L12 3Z"/></svg>
+            <span id="perf-text">今日获得「小小艺术家」奖章</span>
+          </div>
+        </section>
+
+        <div class="error-card" role="alert" data-od-id="error-card">
+          <span class="error-orb" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6v5.2"/><path d="M12 16.4h.01"/></svg>
+          </span>
+          <p class="error-text">首页数据加载失败</p>
+          <button class="retry-btn" type="button" id="retry-btn" data-od-id="retry-button">重试</button>
+        </div>
+
+        <div class="child-switch" role="group" aria-label="切换孩子" data-od-id="child-switch">
+          <button class="child-pill" type="button" data-child="lele" aria-current="true" data-od-id="child-chip-lele">乐乐</button>
+          <button class="child-pill" type="button" data-child="xiaoyu" aria-current="false" data-od-id="child-chip-xiaoyu">小雨</button>
+        </div>
+
+        <nav class="quick-grid" aria-label="快捷功能" data-od-id="quick-actions">
+          <button class="quick-item" type="button" data-toast="已打开「通知公告」" data-od-id="quick-notice">
+            <span class="quick-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5a1.5 1.5 0 0 0 1.5 1.5h1.8l6.6 3.6V4.4L7.3 8H5.5A1.5 1.5 0 0 0 4 9.5Z"/><path d="M17.2 8.8a5 5 0 0 1 0 6.4"/><path d="M8.6 16v2.2a1.5 1.5 0 0 0 3 0"/></svg>
+              <span class="quick-badge" id="notice-badge">1</span>
+            </span>
+            <span class="quick-label">通知公告</span>
+            <span class="sr-only" id="notice-badge-sr">，1 条未读通知</span>
+          </button>
+
+          <button class="quick-item" type="button" data-toast="已打开「接送管理」" data-od-id="quick-pickup">
+            <span class="quick-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+            </span>
+            <span class="quick-label">接送管理</span>
+          </button>
+
+          <button class="quick-item" type="button" data-toast="已打开「亲子任务」" data-od-id="quick-tasks">
+            <span class="quick-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.2" cy="8" r="3"/><path d="M3.8 19.6c.5-3.8 2.6-5.8 5.4-5.8 1.4 0 2.6.5 3.5 1.4"/><path d="m14.4 15.9 2 2 3.6-4.2"/></svg>
+              <span class="quick-badge" id="task-badge">3</span>
+            </span>
+            <span class="quick-label">亲子任务</span>
+            <span class="sr-only" id="task-badge-sr">，3 个待办任务</span>
+          </button>
+
+          <button class="quick-item" type="button" data-toast="已打开「我要请假」" data-od-id="quick-leave">
+            <span class="quick-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="5.4" width="16.4" height="14.8" rx="2.6"/><path d="M7.8 3.2v4.2"/><path d="M16.2 3.2v4.2"/><path d="M3.8 10h16.4"/><path d="M8.8 14.6h6.4"/></svg>
+            </span>
+            <span class="quick-label">我要请假</span>
+          </button>
+        </nav>
+
+        <section class="tonight-section" aria-labelledby="tonight-heading" data-od-id="tonight-section">
+          <h2 class="block-title" id="tonight-heading">今晚一件事</h2>
+          <button class="tonight-card" type="button" data-toast="已打开任务详情" data-od-id="tonight-card">
+            <span class="tonight-row">
+              <span class="tonight-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+              </span>
+              <span class="tonight-name" id="tonight-name">亲子阅读 15 分钟</span>
+            </span>
+            <span class="tonight-desc" id="tonight-desc">和孩子一起读《好饿的毛毛虫》，说说毛毛虫都吃了什么</span>
+            <span class="tonight-foot">
+              <span class="cta">去完成<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5.5 6.5 6.5L9 18.5"/></svg></span>
+            </span>
+          </button>
+        </section>
+
+        <section class="feed-section" aria-labelledby="feed-heading" data-od-id="feed-section">
+          <h2 class="block-title" id="feed-heading">最新动态</h2>
+
+          <div class="feed-list" data-od-id="feed-list">
+            <button class="feed-card" type="button" data-toast="已打开通知详情" data-od-id="feed-card-notice">
+              <span class="feed-top"><span class="type-chip type-chip--notice">通知</span></span>
+              <span class="feed-title-row">
+                <span class="feed-title">秋季亲子运动会报名通知</span>
+                <span class="unread-dot" role="img" aria-label="未读"></span>
+              </span>
+              <span class="feed-preview">本周五上午 9:00 在大操场举行秋季亲子运动会，请填写回执交回班级。</span>
+              <span class="feed-time">2小时前</span>
+            </button>
+
+            <button class="feed-card" type="button" data-toast="已打开成长详情" data-od-id="feed-card-growth-1">
+              <span class="feed-top"><span class="type-chip type-chip--growth">成长</span></span>
+              <span class="feed-body">今天的美术课主题是《我心中的春天》，乐乐用棉签点画了一棵开满花的树。</span>
+              <span class="feed-time">5小时前</span>
+            </button>
+
+            <button class="feed-card" type="button" data-toast="已打开成长详情" data-od-id="feed-card-growth-2">
+              <span class="feed-top"><span class="type-chip type-chip--growth">成长</span></span>
+              <span class="feed-body">午睡后孩子们一起整理了自然角，小雨给多肉浇了水。</span>
+              <span class="feed-time">2026-10-25</span>
+            </button>
+          </div>
+
+          <div class="feed-empty" data-od-id="feed-empty">
+            <span class="empty-orb" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5v-6.7"/><path d="M12 13.8C12 9.4 15 6.4 20 6.4c0 4.4-3 7.4-8 7.4Z"/><path d="M12 16.4c0-3.2-2.5-5.4-5.7-5.4 0 3.2 2.5 5.4 5.7 5.4Z"/></svg>
+            </span>
+            <p class="empty-text">这周还没有新的通知和成长记录</p>
+            <button class="btn-primary" type="button" data-toast="已切换到成长时光" data-od-id="empty-cta">看看成长时光</button>
+          </div>
+
+          <div class="feed-skeleton" aria-hidden="true">
+            <div class="skeleton-card">
+              <span class="sk-chip"></span>
+              <span class="sk-title"></span>
+              <span class="sk-text"></span>
+              <span class="sk-text sk-text--short"></span>
+            </div>
+            <div class="skeleton-card">
+              <span class="sk-chip"></span>
+              <span class="sk-title"></span>
+              <span class="sk-text"></span>
+              <span class="sk-text sk-text--short"></span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <nav class="mp-tabbar" aria-label="主导航">
+      <button class="mp-tab" type="button" aria-current="page">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.8 10.6 12 3.4l8.2 7.2"/><path d="M5.8 9.4v10.2a1 1 0 0 0 1 1h10.4a1 1 0 0 0 1-1V9.4"/><path d="M9.9 20.6v-5.4h4.2v5.4"/></svg>
+        <span>首页</span>
+      </button>
+      <button class="mp-tab" type="button">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.4v-6.8"/><path d="M12 13.6c0-4.1 2.9-7 7-7 0 4.1-2.9 7-7 7Z"/><path d="M12 16.2c0-3.1-2.3-5.3-5.4-5.3 0 3.1 2.3 5.3 5.4 5.3Z"/></svg>
+        <span>成长</span>
+      </button>
+      <button class="mp-tab" type="button">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+        <span>接送</span>
+      </button>
+      <button class="mp-tab" type="button">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.3"/><path d="M5.3 20.2c.6-3.8 3.2-5.9 6.7-5.9s6.1 2.1 6.7 5.9"/></svg>
+        <span>我的</span>
+      </button>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" data-od-id="toast"></div>
+
+    <div class="mp-demo" style="bottom: calc(62px + env(safe-area-inset-bottom))" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

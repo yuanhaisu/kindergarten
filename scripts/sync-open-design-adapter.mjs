@@ -90,6 +90,7 @@ const vars = [
   ['--muted', color('shared.color.text.muted')],
   ['--hint', color('shared.color.text.hint')],
   ['--on-brand', color('shared.color.text.onBrand')],
+  ['--on-accent', color('shared.color.text.onAccent')],
   ['--border', color('shared.color.border.hairline')],
   ['--accent', color('parent.color.brand.primary')],
   ['--accent-soft', color('parent.color.brand.primaryLight')],

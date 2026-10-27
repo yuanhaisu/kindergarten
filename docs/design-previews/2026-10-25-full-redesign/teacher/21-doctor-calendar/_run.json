@@ -1,0 +1,18 @@
+{
+  "slug": "teacher-doctor-calendar",
+  "surface": "teacher",
+  "title": "园级事件",
+  "projectId": "9477f4c7-6878-4d2e-93cd-7d5df18ebe60",
+  "conversationId": "ddda5f1a-747e-4383-a464-c92d8d8979b9",
+  "runId": "ad12f624-2104-46f2-9f8a-a3afc78c8a45",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 401,
+  "files": [
+    "index.html",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/9477f4c7-6878-4d2e-93cd-7d5df18ebe60",
+  "previewRendered": true
+}

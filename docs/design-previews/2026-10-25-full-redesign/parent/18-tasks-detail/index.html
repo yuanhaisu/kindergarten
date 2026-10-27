@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>任务详情 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" aria-label="返回任务列表">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">任务详情</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main">
+    <div class="page">
+
+      <div class="mismatch" role="status">
+        <p class="mismatch-text">这条消息是另一个孩子的任务，当前看到的是「乐乐」</p>
+        <button class="mismatch-btn" id="switchChild" type="button">切换查看</button>
+      </div>
+
+      <div class="content" id="pageContent">
+
+        <!-- 任务说明 -->
+        <section class="card task-card" aria-labelledby="taskTitle">
+          <div class="task-top">
+            <span class="pill">每日任务</span>
+            <span class="chip chip--todo">本周期待提交</span>
+            <span class="chip chip--wait">已提交</span>
+            <span class="chip chip--ok">已通过</span>
+          </div>
+          <h2 class="task-title" id="taskTitle">每日阅读 10 分钟</h2>
+          <p class="task-desc">睡前陪乐乐读一本绘本，拍一张共读照片上传</p>
+          <p class="task-intro">本周开始每天睡前 10 分钟亲子共读，读完聊一聊今天最喜欢的一页。</p>
+
+          <div class="reqs" role="list" aria-label="任务要求">
+            <div class="req" role="listitem"><span class="req-num" aria-hidden="true">1</span><span class="req-text">每天阅读 10 分钟</span></div>
+            <div class="req" role="listitem"><span class="req-num" aria-hidden="true">2</span><span class="req-text">拍一张共读照片</span></div>
+            <div class="req" role="listitem"><span class="req-num" aria-hidden="true">3</span><span class="req-text">写一句今天读的书名</span></div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">截止时间</span>
+              <span class="meta-value">10月31日</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">星星罐</span>
+              <span class="meta-value meta-value--accent">20 星</span>
+            </div>
+          </div>
+
+          <div class="link-box">
+            <span class="link-label">学习关联</span>
+            <p class="link-text">延续本周班级的「春天」主题</p>
+          </div>
+        </section>
+
+        <p class="whisper">老师又给你留了一句悄悄话，往下面看 👇</p>
+
+        <!-- 老师的回应：与本周期是否提交、公开是否通过相互独立 -->
+        <section class="card feedback" aria-labelledby="feedbackTitle">
+          <div class="feedback-head">
+            <h2 class="feedback-title" id="feedbackTitle">王老师的回应</h2>
+            <span class="feedback-hint">共 2 条</span>
+          </div>
+
+          <article class="resp">
+            <div class="resp-head">
+              <span class="resp-glyph" aria-hidden="true">🌸</span>
+              <div class="resp-meta">
+                <span class="resp-tag">贴纸</span>
+                <span class="resp-time">10月25日 20:30</span>
+              </div>
+            </div>
+            <p class="resp-content">今天读得真认真</p>
+            <button class="voice" type="button" data-voice>▶ 播放老师的语音</button>
+            <div class="resp-foot">
+              <button class="link-btn" type="button" data-kid data-kid-glyph="🌸" data-kid-text="今天读得真认真">给孩子看</button>
+            </div>
+            <div class="reactions" role="group" aria-label="给老师的反馈">
+              <button class="reaction" type="button" data-reaction aria-pressed="false">孩子很开心</button>
+              <button class="reaction" type="button" data-reaction aria-pressed="false">收到了</button>
+              <button class="reaction" type="button" data-reaction aria-pressed="false">谢谢老师</button>
+            </div>
+
+            <div class="supplement">
+              <div class="sup-head">
+                <span class="sup-label">老师又补了一句</span>
+                <span class="sup-time">10月25日 21:02</span>
+              </div>
+              <p class="sup-content">⭐ 明天可以让他自己复述一页</p>
+              <div class="resp-foot">
+                <button class="link-btn" type="button" data-kid data-kid-glyph="⭐" data-kid-text="明天可以让他自己复述一页">给孩子看</button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- 我的提交（本周期已提交时）：公开状态与申请/取消公开入口 -->
+        <section class="card submit-card" aria-labelledby="submitTitle">
+          <div class="submit-head">
+            <h2 class="block-title" id="submitTitle">我的提交</h2>
+            <span class="submit-date">今天 20:12</span>
+          </div>
+          <p class="submit-text">今天读了《小王子》第三章，乐乐自己翻到下一页</p>
+          <div class="shot" role="img" aria-label="提交的照片">
+            <svg viewBox="0 0 160 120" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="118" cy="34" r="12"/>
+              <path d="M-4 92c26-18 44-22 64-14s34 12 52 6 30-10 52-2"/>
+              <path d="M-4 108c30-8 50-6 70 2s38 6 98-6"/>
+              <path d="M22 66c8-12 16-16 24-12s10 12 6 18"/>
+            </svg>
+          </div>
+          <div class="review" data-public-scope>
+            <span class="badge" data-public-badge hidden></span>
+            <span class="review-note" data-public-label hidden></span>
+            <button class="link-btn tl-action" type="button" data-public data-kind="none" data-step="idle">申请公开</button>
+          </div>
+        </section>
+
+        <!-- 打卡区（未提交） -->
+        <section class="card checkin-card" aria-labelledby="checkinTitle">
+          <div class="checkin-head">
+            <h2 class="block-title" id="checkinTitle">今日提交</h2>
+            <span class="checkin-hint">每日任务每天可提交一次</span>
+          </div>
+
+          <div class="upload-row">
+            <button class="upload-tile" id="uploadTile" type="button" aria-label="添加照片">
+              <span class="upload-plus" aria-hidden="true">+</span>
+              <span class="upload-label">添加照片</span>
+            </button>
+            <div class="upload-preview" id="uploadPreview" hidden>
+              <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="68" cy="30" r="8"/>
+                <path d="M-2 70c16-12 27-14 39-9s21 8 32 4 18-6 31-1"/>
+                <path d="M-2 84c18-5 31-4 43 1s23 4 59-4"/>
+              </svg>
+              <button class="upload-remove" id="removePhoto" type="button" aria-label="移除照片">×</button>
+            </div>
+            <div class="upload-copy">
+              <p class="upload-title">照片（可选）</p>
+              <p class="upload-note">每次提交支持 1 张照片</p>
+              <button class="ghost-btn" id="quickDone" type="button">今天完成了（一键提交）</button>
+            </div>
+          </div>
+
+          <label class="sr-only" for="checkinInput">记录今天的内容</label>
+          <textarea class="checkin-input" id="checkinInput" maxlength="500" placeholder="记录今天的内容..."></textarea>
+
+          <div class="checkin-foot">
+            <span class="checkin-note" id="checkinNote">填写内容或上传照片后可提交</span>
+            <button class="primary-btn" id="submitCheckin" type="button" disabled>打卡</button>
+          </div>
+        </section>
+
+        <!-- 打卡历史 -->
+        <section class="history" aria-labelledby="historyTitle">
+          <div class="section-head">
+            <h2 class="block-title" id="historyTitle">打卡历史</h2>
+          </div>
+
+          <ol class="timeline" id="historyList">
+            <li class="tl-item tl-item--latest" data-public-scope>
+              <div class="tl-head">
+                <span class="tl-date">10月25日 周日</span>
+                <span class="badge badge--ok" data-public-badge>老师已通过</span>
+              </div>
+              <p class="tl-text">今天读了《好饿的毛毛虫》，他自己数了蝴蝶</p>
+              <div class="tl-body">
+                <div class="tl-thumb" role="img" aria-label="这条提交的照片">
+                  <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="39" cy="18" r="6"/>
+                    <path d="M-2 41c10-7 17-9 25-5s14 5 21 2 9-3 14-1"/>
+                    <path d="M-2 50c11-3 19-2 26 1s14 2 34-3"/>
+                  </svg>
+                </div>
+                <div class="tl-foot">
+                  <span class="tl-public" data-public-label>本班家长可见</span>
+                  <button class="link-btn tl-action" type="button" data-public data-kind="approved" data-step="idle">取消公开</button>
+                </div>
+              </div>
+            </li>
+
+            <li class="tl-item" data-public-scope>
+              <div class="tl-head">
+                <span class="tl-date">10月24日 周六</span>
+                <span class="badge badge--ok" data-public-badge>老师已通过</span>
+              </div>
+              <p class="tl-text">读了《月亮的味道》，他说月亮像一块饼干</p>
+              <div class="tl-foot">
+                <span class="tl-public" data-public-label>暂不对本班展示</span>
+                <button class="link-btn tl-action" type="button" data-public data-kind="approved" data-step="idle">取消公开</button>
+              </div>
+            </li>
+
+            <li class="tl-item" data-public-scope>
+              <div class="tl-head">
+                <span class="tl-date">10月23日 周五</span>
+                <span class="badge badge--pending" data-public-badge>待审核</span>
+              </div>
+              <p class="tl-text">一起读了《猜猜我有多爱你》，他学小兔子张开手臂</p>
+              <div class="tl-foot">
+                <span class="tl-public" data-public-label>已申请，等待老师审核</span>
+                <button class="link-btn tl-action" type="button" data-public data-kind="pending" data-step="idle">取消公开</button>
+              </div>
+            </li>
+
+            <li class="tl-item" data-public-scope>
+              <div class="tl-head">
+                <span class="tl-date">10月22日 周四</span>
+                <span class="badge badge--muted" data-public-badge>未公开</span>
+              </div>
+              <p class="tl-text">读了《彩虹色的花》，他说想种一朵</p>
+              <div class="tl-foot">
+                <span class="tl-public" data-public-label hidden></span>
+                <button class="link-btn tl-action" type="button" data-public data-kind="revoked" data-step="idle">重新申请</button>
+              </div>
+            </li>
+
+            <li class="tl-item">
+              <div class="tl-head">
+                <span class="tl-date">10月21日 周三</span>
+              </div>
+              <p class="tl-text tl-text--quiet">（一键完成）</p>
+            </li>
+          </ol>
+
+          <p class="history-more">仅显示最近 5 条提交（共 7 条）</p>
+
+          <div class="empty-history">
+            <span class="empty-icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H14l4 4v9.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 4 17.5Z"/><path d="M14 4v4h4M8.5 13.5l2 2 3.5-3.5"/></svg>
+            </span>
+            <p class="empty-title">还没有打卡记录</p>
+            <p class="empty-desc">今天完成了就记一笔，老师会看到的</p>
+            <button class="primary-btn empty-cta" id="emptyCta" type="button">去打卡</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="skeleton" aria-hidden="true">
+        <div class="sk-card">
+          <span class="sk-block sk-pill"></span>
+          <span class="sk-block sk-line sk-w-60"></span>
+          <span class="sk-block sk-line sk-w-90"></span>
+          <span class="sk-block sk-line sk-w-40"></span>
+          <div class="sk-grid">
+            <span class="sk-block sk-mini"></span>
+            <span class="sk-block sk-mini"></span>
+            <span class="sk-block sk-mini"></span>
+          </div>
+        </div>
+        <div class="sk-card">
+          <span class="sk-block sk-line sk-w-30"></span>
+          <span class="sk-block sk-line sk-w-80"></span>
+          <span class="sk-block sk-shot"></span>
+        </div>
+        <div class="sk-card">
+          <span class="sk-block sk-line sk-w-25"></span>
+          <span class="sk-block sk-line sk-w-70"></span>
+        </div>
+      </div>
+
+      <div class="error-block">
+        <div class="error-card" role="alert">
+          <span class="error-mark" aria-hidden="true">!</span>
+          <h2 class="error-title">任务已结束或不存在</h2>
+          <p class="error-desc">可能老师已删除这条任务，或它不属于乐乐</p>
+          <button class="retry-btn" id="retryBtn" type="button">重试</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="kid-mask" id="kidMask" hidden>
+    <div class="kid-body" role="dialog" aria-modal="true" aria-labelledby="kidText">
+      <div class="kid-glyph" id="kidGlyph" aria-hidden="true">🌸</div>
+      <p class="kid-text" id="kidText">今天读得真认真</p>
+      <button class="kid-play" id="kidPlay" type="button">▶ 听老师说</button>
+      <p class="kid-hint">轻触空白处关闭</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="mp-demo" data-open="false">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">未打卡</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="submitted" aria-pressed="false">已提交</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="approved" aria-pressed="false">已通过</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="replied" aria-pressed="false">有回应·未提交</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+</div>
+
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

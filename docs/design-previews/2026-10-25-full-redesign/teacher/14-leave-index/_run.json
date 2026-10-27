@@ -1,0 +1,24 @@
+{
+  "slug": "teacher-leave-index",
+  "surface": "teacher",
+  "title": "请假审批",
+  "projectId": "77802961-9d7c-4c23-8f37-da43f6826ca6",
+  "conversationId": "880f8478-a278-4e9e-8da1-d41be7e841be",
+  "runId": "839bde85-c647-49f6-ba0a-146dbec391c9",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 717,
+  "files": [
+    "index.html",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/77802961-9d7c-4c23-8f37-da43f6826ca6",
+  "previewRendered": true,
+  "handAuthored": true,
+  "handAuthoredReason": "OpenDesign 两次 run（585da322 / 839bde85）均只产出 index.html + tokens.css，缺 styles.css 与 app.js；按兜底规则以同一 tokens.css + 共享 shell 手写整页。",
+  "openDesignRuns": [
+    { "runId": "585da322-340f-4dc5-a0da-cdba669301fb", "elapsedSec": 647, "files": ["index.html", "tokens.css"] },
+    { "runId": "839bde85-c647-49f6-ba0a-146dbec391c9", "elapsedSec": 717, "files": ["index.html", "tokens.css"] }
+  ]
+}

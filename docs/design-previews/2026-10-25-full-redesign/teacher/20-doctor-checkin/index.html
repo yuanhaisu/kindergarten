@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>入园晨检 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal" data-od-id="morning-checkin">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回工作台">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">入园晨检</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <svg class="icon-sprite" aria-hidden="true" focusable="false">
+        <symbol id="i-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h2.9L8.4 6h7.2l1.5 2.5H20a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18v-8A1.5 1.5 0 0 1 4 8.5Z"/><circle cx="12" cy="14" r="3.2"/></g></symbol>
+        <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.7v5.5M12 16.4v.2"/></g></symbol>
+      </svg>
+
+      <div class="page">
+        <section class="today-card" aria-label="今日晨检概况" data-od-id="today-summary">
+          <div class="today-top">
+            <p class="today-date"><strong>10月26日</strong><span>周一</span></p>
+            <span class="policy-pill" id="policyPill">
+              <span class="policy-dot" aria-hidden="true"></span>
+              <span id="policyText">按需测温 · 体温选填</span>
+            </span>
+          </div>
+          <div class="today-stats" role="group" aria-label="今日晨检统计">
+            <div class="stat">
+              <span class="stat-num" id="statTotal">18</span>
+              <span class="stat-skel sk" aria-hidden="true"></span>
+              <span class="stat-label">总入园</span>
+            </div>
+            <div class="stat stat--pending" id="pendingStat">
+              <span class="stat-num" id="statPending">5</span>
+              <span class="stat-skel sk" aria-hidden="true"></span>
+              <span class="stat-label">待检</span>
+            </div>
+            <div class="stat">
+              <span class="stat-num" id="statDone">13</span>
+              <span class="stat-skel sk" aria-hidden="true"></span>
+              <span class="stat-label">已完成</span>
+            </div>
+          </div>
+        </section>
+
+        <button class="event-cell" id="eventEntry" type="button" data-od-id="event-entry">
+          <span class="event-icon" aria-hidden="true">园</span>
+          <span class="event-copy">
+            <span class="event-title">发布园级事件</span>
+            <span class="event-sub">体检等 · 全园可见</span>
+          </span>
+          <svg class="ico event-chev" width="16" height="16" aria-hidden="true"><use href="#i-chevron-right"></use></svg>
+        </button>
+
+        <div class="filter-wrap" id="filterWrap" role="group" aria-label="按班级筛选" data-od-id="class-filter"></div>
+
+        <section class="pending-section" id="pendingSection" aria-labelledby="pendingTitle" data-od-id="pending-section">
+          <div class="section-head">
+            <h2 class="section-title" id="pendingTitle">待检 <span class="section-count" id="pendingCount">5 人</span></h2>
+            <p class="section-hint" id="pendingHint">点开逐项检查</p>
+          </div>
+          <div class="child-list" id="pendingList" data-od-id="pending-list"></div>
+        </section>
+
+        <div class="skeleton-list" id="loadingView" role="status" aria-live="polite" hidden>
+          <div class="sk-card" aria-hidden="true"><span class="sk sk-avatar"></span><span class="sk-lines"><span class="sk sk-line" style="width:38%"></span><span class="sk sk-line sk-line--sub" style="width:64%"></span></span></div>
+          <div class="sk-card" aria-hidden="true"><span class="sk sk-avatar"></span><span class="sk-lines"><span class="sk sk-line" style="width:46%"></span><span class="sk sk-line sk-line--sub" style="width:58%"></span></span></div>
+          <div class="sk-card" aria-hidden="true"><span class="sk sk-avatar"></span><span class="sk-lines"><span class="sk sk-line" style="width:34%"></span><span class="sk sk-line sk-line--sub" style="width:68%"></span></span></div>
+          <p class="sr-only">正在加载晨检数据</p>
+        </div>
+
+        <section class="state-block empty-block" id="emptyView" hidden aria-labelledby="emptyTitle" data-od-id="empty-state">
+          <span class="state-icon state-icon--success" aria-hidden="true"><svg class="ico" width="28" height="28"><use href="#i-check"></use></svg></span>
+          <h2 id="emptyTitle">今天的晨检都完成了</h2>
+          <p><strong id="emptyTotal">18</strong> 名幼儿已完成，<strong id="emptyAttention">3</strong> 人需留意</p>
+          <button class="primary-btn state-cta" id="emptyReview" type="button">查看已完成</button>
+        </section>
+
+        <section class="state-block error-block" id="errorView" hidden role="alert" aria-labelledby="errorTitle" data-od-id="load-error">
+          <span class="state-icon state-icon--danger" aria-hidden="true"><svg class="ico" width="28" height="28"><use href="#i-alert"></use></svg></span>
+          <h2 id="errorTitle">晨检数据加载失败</h2>
+          <p>网络异常，或当前账号没有保健医权限</p>
+          <button class="primary-btn state-cta" id="retryLoad" type="button">重试</button>
+        </section>
+
+        <section class="completed-section" id="completedSection" aria-labelledby="completedHeading" hidden data-od-id="completed-section">
+          <h2 class="completed-heading" id="completedHeading">
+            <button class="completed-toggle" id="completedToggle" type="button" aria-expanded="true" aria-controls="completedList">
+              <span class="section-title">已完成 <span class="section-count" id="completedCount">13</span></span>
+              <span class="completed-action"><span id="completedToggleText">收起</span><svg class="ico chev" width="14" height="14" aria-hidden="true"><use href="#i-chevron-down"></use></svg></span>
+            </button>
+          </h2>
+          <ul class="completed-card" id="completedList"></ul>
+        </section>
+      </div>
+    </main>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

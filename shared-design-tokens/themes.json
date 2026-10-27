@@ -1,0 +1,48 @@
+{
+  "deep": {
+    "shared": {
+      "muted": "#475569",
+      "hint": "#5F6B7A",
+      "success": "#15803D",
+      "warning": "#92400E",
+      "danger": "#B91C1C",
+      "info": "#1D4ED8",
+      "onAccent": "#FFFFFF"
+    },
+    "teacher": {
+      "primaryDark": "#9A3412",
+      "gradientBrand": "linear-gradient(135deg, #C2410C 0%, #9A3412 100%)"
+    },
+    "parent": {
+      "primaryDark": "#9A3412",
+      "gradientBrand": "linear-gradient(135deg, #C2410C 0%, #9A3412 100%)"
+    },
+    "admin": {
+      "primaryDark": "#1D4ED8",
+      "gradientBrand": "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)"
+    }
+  },
+  "ink": {
+    "shared": {
+      "muted": "#475569",
+      "hint": "#5F6B7A",
+      "success": "#15803D",
+      "warning": "#92400E",
+      "danger": "#B91C1C",
+      "info": "#1D4ED8",
+      "onAccent": "#1E293B"
+    },
+    "teacher": {
+      "primaryDark": "#9A3412",
+      "gradientBrand": "linear-gradient(135deg, #ffa866 0%, #ff8a3d 100%)"
+    },
+    "parent": {
+      "primaryDark": "#9A3412",
+      "gradientBrand": "linear-gradient(135deg, #FB923C 0%, #F97316 100%)"
+    },
+    "admin": {
+      "primaryDark": "#1D4ED8",
+      "gradientBrand": "linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)"
+    }
+  }
+}

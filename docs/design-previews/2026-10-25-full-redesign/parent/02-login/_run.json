@@ -1,0 +1,23 @@
+{
+  "slug": "parent-login",
+  "surface": "parent",
+  "title": "家长登录",
+  "projectId": "c13c9b78-6f4a-4e72-ad6f-76a4a6247b44",
+  "conversationId": "c50e11fa-1af0-4d3b-ac42-936048b03cfe",
+  "runId": "18ce3432-d267-4525-88e1-76b6fa442a58",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 467,
+  "files": [
+    ".file-versions/0eb547304658805aad788d32/0001-87ad61bd-5f85-494c-8174-7d7961f0b10c.html",
+    ".file-versions/0eb547304658805aad788d32/manifest.json",
+    "app.js",
+    "index.html",
+    "index.html.artifact.json",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/c13c9b78-6f4a-4e72-ad6f-76a4a6247b44",
+  "previewRendered": true
+}

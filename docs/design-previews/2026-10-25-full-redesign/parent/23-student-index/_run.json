@@ -1,0 +1,20 @@
+{
+  "slug": "parent-student-index",
+  "surface": "parent",
+  "title": "孩子信息",
+  "projectId": "2fa736d2-b205-460c-a349-05d3023c6ec0",
+  "conversationId": "d1646dab-e3b5-42f6-b39d-d0d1a6497874",
+  "runId": "c8d484e9-4ca9-4428-99f8-5b75e33af310",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 1208,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/2fa736d2-b205-460c-a349-05d3023c6ec0",
+  "previewRendered": true
+}

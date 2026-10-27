@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>更多功能 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg class="symbol-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <symbol id="i-megaphone" viewBox="0 0 24 24">
+    <path d="M4.5 9.2v5.6h3l8.9 3.8V5.4L7.5 9.2h-3Z"/>
+    <path d="M7.5 14.8V18a2 2 0 0 0 2 2h.9"/>
+    <path d="M19.4 9.7a3.6 3.6 0 0 1 0 4.6"/>
+  </symbol>
+  <symbol id="i-message" viewBox="0 0 24 24">
+    <path d="M5.4 4.5h13.2A2.4 2.4 0 0 1 21 6.9v6.8a2.4 2.4 0 0 1-2.4 2.4h-6.2L8.2 20v-3.9H5.4A2.4 2.4 0 0 1 3 13.7V6.9a2.4 2.4 0 0 1 2.4-2.4Z"/>
+    <path d="M8 9.7h.01M12 9.7h.01M16 9.7h.01"/>
+  </symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24">
+    <path d="M12 20v-7.3"/>
+    <path d="M12 14.1c0-3.4 2.3-5.9 5.9-5.9H20v1.5c0 3.5-2.7 5.9-6.2 5.9H12Z"/>
+    <path d="M12 15.4c0-2.9-2-5.1-5.3-5.1H4.5v1.2c0 3 2.4 5.2 5.6 5.2H12Z"/>
+  </symbol>
+  <symbol id="i-album" viewBox="0 0 24 24">
+    <rect x="3.5" y="5" width="17" height="14.5" rx="3"/>
+    <circle cx="9" cy="10" r="1.4"/>
+    <path d="m5 17.4 4.1-4 3.1 3 2-1.9 4.5 4.4"/>
+  </symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24">
+    <path d="M8.5 3.5H6.3A2.8 2.8 0 0 0 3.5 6.3v2.2"/>
+    <path d="M15.5 3.5h2.2a2.8 2.8 0 0 1 2.8 2.8v2.2"/>
+    <path d="M20.5 15.5v2.2a2.8 2.8 0 0 1-2.8 2.8h-2.2"/>
+    <path d="M8.5 20.5H6.3a2.8 2.8 0 0 1-2.8-2.8v-2.2"/>
+    <path d="M6.5 12h11"/>
+  </symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24">
+    <path d="M9 4.8H7.3A2.3 2.3 0 0 0 5 7.1v11.6A2.3 2.3 0 0 0 7.3 21h9.4a2.3 2.3 0 0 0 2.3-2.3V7.1a2.3 2.3 0 0 0-2.3-2.3H15"/>
+    <path d="M9 3.3h6v3H9z"/>
+    <path d="M8.7 11.2h6.6M8.7 14.8h6.6M8.7 18.2h4"/>
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24">
+    <rect x="3.5" y="5" width="17" height="15.5" rx="3"/>
+    <path d="M3.5 9.8h17M8.2 3.2v3.6M15.8 3.2v3.6"/>
+    <path d="M7.8 13.3h.01M12 13.3h.01M16.2 13.3h.01M7.8 17h.01M12 17h.01M16.2 17h.01"/>
+  </symbol>
+  <symbol id="i-approval" viewBox="0 0 24 24">
+    <path d="M13.8 3H7.5A2.5 2.5 0 0 0 5 5.5v13A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V8.2L13.8 3Z"/>
+    <path d="M13.8 3v5.2H19"/>
+    <path d="m8.7 14.8 2.2 2.2 4.4-4.6"/>
+  </symbol>
+  <symbol id="i-family" viewBox="0 0 24 24">
+    <circle cx="9.2" cy="8" r="3"/>
+    <path d="M3.7 19.8c.2-3.2 2.3-5.4 5.5-5.4s5.3 2.2 5.5 5.4"/>
+    <circle cx="16.9" cy="9.3" r="2.2"/>
+    <path d="M16.4 14.8c2.5.2 4 2 4.1 4.5"/>
+  </symbol>
+  <symbol id="i-health" viewBox="0 0 24 24">
+    <path d="M12 20.2S4.5 15.7 4.5 10.1a4.1 4.1 0 0 1 7.5-2.3 4.1 4.1 0 0 1 7.5 2.3c0 5.6-7.5 10.1-7.5 10.1Z"/>
+    <path d="M7.4 11.4h2.2l1.2-2.4 2.4 4.8 1.2-2.4h2.2"/>
+  </symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24">
+    <path d="m9.3 5.5 6.4 6.5-6.4 6.5"/>
+  </symbol>
+  <symbol id="i-grid-empty" viewBox="0 0 24 24">
+    <rect x="3.5" y="3.5" width="7" height="7" rx="2"/>
+    <rect x="13.5" y="3.5" width="7" height="7" rx="2"/>
+    <rect x="3.5" y="13.5" width="7" height="7" rx="2"/>
+    <path d="M17 13.6v6.8M13.6 17h6.8"/>
+  </symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6"/>
+    <path d="M12 7.4v5.4"/>
+    <path d="M12 16.5h.01"/>
+  </symbol>
+</svg>
+
+<div class="mp-app" data-state="normal">
+  <div class="mp-statusbar" aria-hidden="true"><span class="mp-time">9:41</span><span class="mp-status-icons">
+    <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+    <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+    <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+  </span></div>
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" aria-label="返回"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg></button>
+    <h1 class="mp-title">更多功能</h1>
+    <div class="mp-capsule" aria-hidden="true"><span class="mp-capsule-dots">···</span><span class="mp-capsule-divider"></span><span class="mp-capsule-ring">◎</span></div>
+  </header>
+
+  <main class="mp-main">
+    <div class="menu-page" data-od-id="teacher-more-page">
+
+      <div class="menu-groups">
+        <section class="menu-group" aria-labelledby="group-communication" data-od-id="more-group-communication">
+          <div class="group-head">
+            <h2 class="group-title" id="group-communication">通知与沟通</h2>
+          </div>
+          <div class="menu-card">
+            <button class="menu-row" type="button" data-entry="发布通知" data-od-id="entry-publish-notice">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-megaphone"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">发布通知</span>
+                <span class="menu-desc">向班级家长发送通知</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+            <button class="menu-row" type="button" data-entry="消息中心" data-od-id="entry-message-center">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-message"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">消息中心</span>
+                <span class="menu-desc">通知、请假与系统消息</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="menu-group" aria-labelledby="group-growth" data-od-id="more-group-growth">
+          <div class="group-head">
+            <h2 class="group-title" id="group-growth">成长与相册</h2>
+          </div>
+          <div class="menu-card">
+            <button class="menu-row" type="button" data-entry="成长记录" data-od-id="entry-growth-record">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-sprout"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">成长记录</span>
+                <span class="menu-desc">查看与添加成长记录</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+            <button class="menu-row" type="button" data-entry="班级相册" data-od-id="entry-class-album">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-album"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">班级相册</span>
+                <span class="menu-desc">班级照片集</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="menu-group" aria-labelledby="group-pickup" data-od-id="more-group-pickup">
+          <div class="group-head">
+            <h2 class="group-title" id="group-pickup">接送管理</h2>
+          </div>
+          <div class="menu-card">
+            <button class="menu-row" type="button" data-entry="接送管理" data-od-id="entry-pickup-management">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-scan"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">接送管理</span>
+                <span class="menu-desc">扫码或手动登记接送</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+            <button class="menu-row" type="button" data-entry="接送记录" data-od-id="entry-pickup-history">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-clipboard"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">接送记录</span>
+                <span class="menu-desc">查看历史接送明细</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="menu-group" aria-labelledby="group-affairs" data-od-id="more-group-affairs">
+          <div class="group-head">
+            <h2 class="group-title" id="group-affairs">班级事务</h2>
+          </div>
+          <div class="menu-card">
+            <button class="menu-row" type="button" data-entry="班级日历" data-od-id="entry-class-calendar">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-calendar"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">班级日历</span>
+                <span class="menu-desc">班级活动与安排</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+            <button class="menu-row" type="button" data-entry="请假审批" data-od-id="entry-leave-approval">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-approval"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">请假审批</span>
+                <span class="menu-desc">处理家长请假申请</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+            <button class="menu-row" type="button" data-entry="亲子任务" data-od-id="entry-family-task">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-family"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">亲子任务</span>
+                <span class="menu-desc">发布与查看亲子任务</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="menu-group" aria-labelledby="group-health" data-od-id="more-group-health">
+          <div class="group-head">
+            <h2 class="group-title" id="group-health">保健</h2>
+            <span class="role-badge">仅保健医</span>
+          </div>
+          <div class="menu-card">
+            <button class="menu-row" type="button" data-entry="入园晨检" data-od-id="entry-morning-check">
+              <span class="menu-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-health"></use></svg>
+              </span>
+              <span class="menu-copy">
+                <span class="menu-label">入园晨检</span>
+                <span class="menu-desc">录入晨检结果</span>
+              </span>
+              <svg class="menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <section class="menu-state menu-empty" data-od-id="more-empty-state" aria-labelledby="empty-title">
+        <span class="state-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-grid-empty"></use></svg>
+        </span>
+        <h2 class="state-title" id="empty-title">暂无可用的功能入口</h2>
+        <button class="state-action" type="button" id="empty-back" data-od-id="empty-back">返回工作台</button>
+      </section>
+
+      <section class="menu-loading" role="status" aria-live="polite" aria-label="正在加载功能入口">
+        <span class="sr-only">正在加载功能入口</span>
+        <div class="skeleton-group" aria-hidden="true">
+          <span class="skeleton-heading"></span>
+          <div class="skeleton-card">
+            <div class="skeleton-row">
+              <span class="skeleton-icon"></span>
+              <span class="skeleton-copy">
+                <span class="skeleton-line skeleton-line--title"></span>
+                <span class="skeleton-line skeleton-line--desc"></span>
+              </span>
+              <span class="skeleton-tail"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-icon"></span>
+              <span class="skeleton-copy">
+                <span class="skeleton-line skeleton-line--title"></span>
+                <span class="skeleton-line skeleton-line--desc"></span>
+              </span>
+              <span class="skeleton-tail"></span>
+            </div>
+          </div>
+        </div>
+        <div class="skeleton-group" aria-hidden="true">
+          <span class="skeleton-heading"></span>
+          <div class="skeleton-card">
+            <div class="skeleton-row">
+              <span class="skeleton-icon"></span>
+              <span class="skeleton-copy">
+                <span class="skeleton-line skeleton-line--title"></span>
+                <span class="skeleton-line skeleton-line--desc"></span>
+              </span>
+              <span class="skeleton-tail"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-icon"></span>
+              <span class="skeleton-copy">
+                <span class="skeleton-line skeleton-line--title"></span>
+                <span class="skeleton-line skeleton-line--desc"></span>
+              </span>
+              <span class="skeleton-tail"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="menu-state menu-error" data-od-id="more-error-state" role="alert" aria-labelledby="error-title">
+        <span class="state-icon state-icon--error" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-alert"></use></svg>
+        </span>
+        <h2 class="state-title" id="error-title">功能入口加载失败</h2>
+        <button class="state-action" type="button" id="retry-button" data-od-id="more-retry">重试</button>
+      </section>
+
+    </div>
+  </main>
+
+  <div class="mp-demo" data-open="false">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

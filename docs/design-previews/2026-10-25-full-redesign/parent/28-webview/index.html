@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>详情 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" id="app" data-state="normal">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">详情</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page" data-od-id="webview-page">
+        <section class="confirm-state" id="confirmState" aria-labelledby="confirmTitle" data-od-id="web-confirm">
+          <span class="state-icon state-icon--accent" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+              <circle cx="12" cy="12" r="8.6"/>
+              <path d="M3.6 12h16.8"/>
+              <path d="M12 3.4c2.2 2.3 3.4 5.2 3.4 8.6s-1.2 6.3-3.4 8.6c-2.2-2.3-3.4-5.2-3.4-8.6S9.8 5.7 12 3.4Z"/>
+            </svg>
+          </span>
+          <h2 class="state-title" id="confirmTitle">即将打开外部网页</h2>
+          <p class="state-note">该页面由第三方站点提供，请注意保护个人信息</p>
+          <div class="source-card" data-od-id="web-source">
+            <span class="source-domain">example.com</span>
+            <span class="source-url">https://example.com/kindergarten/notice</span>
+          </div>
+          <button class="primary-button" id="openBtn" type="button" data-od-id="open-web">继续打开</button>
+          <button class="text-button" id="confirmBackBtn" type="button">返回</button>
+        </section>
+
+        <section class="web-canvas" id="webCanvas" aria-label="外部网页画布" aria-busy="false" data-od-id="web-canvas">
+          <div class="canvas-inner">
+            <div class="canvas-state state-normal" data-od-id="web-normal">
+              <div class="web-placeholder">
+                <span class="placeholder-icon" aria-hidden="true">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                    <rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/>
+                    <path d="M3.5 8.6h17"/>
+                    <path d="M6.4 6.55h.01M8.9 6.55h.01"/>
+                    <circle cx="12" cy="14" r="2.8"/>
+                    <path d="M9.2 14h5.6M12 11.2v5.6"/>
+                  </svg>
+                </span>
+                <h2 class="placeholder-title">外部网页内容</h2>
+                <p class="placeholder-note">页面内容由第三方站点提供，此处以中性占位块代替</p>
+              </div>
+            </div>
+
+            <div class="canvas-state state-loading" role="status" aria-live="polite">
+              <div class="loading-block">
+                <span class="loading-spinner" aria-hidden="true"></span>
+                <p class="loading-text">正在加载网页…</p>
+                <div class="skeleton-stack" aria-hidden="true">
+                  <span class="skeleton-bar"></span>
+                  <span class="skeleton-bar"></span>
+                  <span class="skeleton-bar"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="canvas-state state-error" role="group" aria-labelledby="errorTitle">
+              <span class="state-icon state-icon--error" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                  <circle cx="12" cy="12" r="8.6"/>
+                  <path d="M12 7.4v5.3"/>
+                  <path d="M12 16.4h.01"/>
+                </svg>
+              </span>
+              <h2 class="state-title" id="errorTitle">网页无法访问</h2>
+              <p class="state-note">可能是网络不稳定，或链接已失效，请稍后重试</p>
+              <button class="primary-button" id="retryBtn" type="button" data-od-id="retry-web">重新加载</button>
+              <button class="text-button" id="errorBackBtn" type="button">返回上一页</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="empty-state" id="emptyState" aria-labelledby="emptyTitle" data-od-id="web-empty">
+          <span class="state-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+              <path d="m9.3 14.7 5.4-5.4"/>
+              <path d="M11.3 7.2 12.8 5.7a3.8 3.8 0 0 1 5.4 5.4l-1.5 1.5"/>
+              <path d="m12.7 16.8-1.5 1.5a3.8 3.8 0 0 1-5.4-5.4l1.5-1.5"/>
+              <path d="M4.2 4.2 19.8 19.8"/>
+            </svg>
+          </span>
+          <h2 class="state-title" id="emptyTitle">缺少页面地址</h2>
+          <p class="state-note">请从带有网页链接的入口进入本页</p>
+          <button class="primary-button" id="emptyBackBtn" type="button">返回上一页</button>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="mp-demo" id="demoPanel" data-open="false" style="bottom: calc(20px + env(safe-area-inset-bottom))">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" type="button" data-mp-state="confirm" aria-pressed="false">打开前</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

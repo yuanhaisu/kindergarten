@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>亲子任务 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal" data-student-bound="true" data-od-id="parent-tasks-page">
+<div class="mp-statusbar" aria-hidden="true">
+<span class="mp-time">9:41</span>
+<span class="mp-status-icons">
+<svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+<svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+<svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+</span>
+</div>
+<header class="mp-navbar">
+<button class="mp-back" id="backButton" type="button" aria-label="返回首页">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+</button>
+<h1 class="mp-title">亲子任务</h1>
+<div class="mp-capsule" aria-hidden="true">
+<span class="mp-capsule-dots">···</span>
+<span class="mp-capsule-divider"></span>
+<span class="mp-capsule-ring">◎</span>
+</div>
+</header>
+<main class="mp-main">
+<div class="page" data-od-id="tasks-page-body">
+<button class="wall-entry" id="wallEntry" type="button" data-od-id="class-wall-entry">
+<span class="wall-icon" aria-hidden="true">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="7" height="7" rx="2"/><rect x="13.5" y="4.5" width="7" height="4" rx="2"/><rect x="13.5" y="11.5" width="7" height="8" rx="2"/><rect x="3.5" y="14.5" width="7" height="5" rx="2"/></svg>
+</span>
+<span class="wall-copy">
+<span class="wall-title">班级墙</span>
+<span class="wall-desc">看看本班孩子的分享</span>
+</span>
+<span class="wall-chevron" aria-hidden="true">
+<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+</span>
+</button>
+<section class="filter-block" aria-label="任务分类" data-od-id="task-filters">
+<div class="segmented" role="group" aria-label="按任务状态筛选">
+<button class="segment" type="button" data-filter="active" aria-pressed="false" aria-label="进行中，2 个任务待提交" data-od-id="filter-active">
+<span>进行中</span>
+<span class="filter-badge" id="pendingBadge" aria-hidden="true">2</span>
+</button>
+<button class="segment" type="button" data-filter="checked" aria-pressed="false" data-od-id="filter-checked"><span>已打卡</span></button>
+<button class="segment is-selected" type="button" data-filter="all" aria-pressed="true" data-od-id="filter-all"><span>全部</span></button>
+</div>
+</section>
+<p class="pending-note" id="pendingNote" data-od-id="pending-note">
+<span class="pending-dot" aria-hidden="true"></span>
+本周期还有 <strong id="pendingNoteCount">2</strong> 个任务待提交
+</p>
+<div class="inline-error" id="inlineError" hidden>
+<button class="inline-error-btn" type="button" data-retry>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 9A8 8 0 1 0 20 14"/><path d="M19.5 4.5V9H15"/></svg>
+<span data-retry-label>加载失败，点击重试</span>
+</button>
+</div>
+<div class="task-list" id="taskList" aria-label="任务列表" data-od-id="task-list">
+<article class="task-card" data-task-id="reading" data-task-status="1" data-submitted="false" data-title="每日阅读 10 分钟" data-od-id="task-card-reading">
+<div class="task-top">
+<span class="task-icon" aria-hidden="true">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.8A2.3 2.3 0 0 1 5.8 3.5H11v16H5.8a2.3 2.3 0 0 0-2.3 2V5.8Z"/><path d="M20.5 5.8a2.3 2.3 0 0 0-2.3-2.3H13v16h5.2a2.3 2.3 0 0 1 2.3 2V5.8Z"/></svg>
+</span>
+<div class="task-heading">
+<div class="task-titleline">
+<h2 class="task-title">每日阅读 10 分钟</h2>
+<span class="task-badge task-badge--todo">待完成</span>
+</div>
+<p class="task-desc">睡前陪乐乐读一本绘本，拍一张共读照片上传</p>
+</div>
+</div>
+<div class="task-period">
+<p class="task-meta-line"><span>每日任务 · 累计打卡 3 次</span><span class="task-due">截止 10月31日</span></p>
+<div class="cycle-row">
+<span class="cycle-state cycle-state--todo"><span class="cycle-mark cycle-mark--hollow" aria-hidden="true"></span><span>本周期待提交</span></span>
+<span class="star-jar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.8 2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3.8Z"/></svg>星星罐 20 星</span>
+</div>
+</div>
+<div class="task-actions">
+<button class="task-btn task-btn--primary" type="button" data-action="primary" data-intent="submit" aria-label="去提交：每日阅读 10 分钟">去提交</button>
+<button class="task-btn task-btn--secondary" type="button" data-action="detail" aria-label="查看详情：每日阅读 10 分钟">查看详情</button>
+</div>
+</article>
+<article class="task-card" data-task-id="washing" data-task-status="1" data-submitted="false" data-title="饭前洗手小卫士" data-od-id="task-card-washing">
+<div class="task-top">
+<span class="task-icon" aria-hidden="true">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8.5" r="3.2"/><circle cx="16.5" cy="5.5" r="1.7"/><circle cx="17" cy="13" r="3.4"/><path d="M3.5 20c3.4-1.7 13.1-1.7 17 0"/></svg>
+</span>
+<div class="task-heading">
+<div class="task-titleline">
+<h2 class="task-title">饭前洗手小卫士</h2>
+<span class="task-badge task-badge--todo">待完成</span>
+</div>
+<p class="task-desc">饭前用七步洗手法搓出泡泡，拍一张小手照片</p>
+</div>
+</div>
+<div class="task-period">
+<p class="task-meta-line"><span>每日任务 · 累计打卡 6 次</span><span class="task-due">截止 11月5日</span></p>
+<div class="cycle-row">
+<span class="cycle-state cycle-state--todo"><span class="cycle-mark cycle-mark--hollow" aria-hidden="true"></span><span>本周期待提交</span></span>
+<span class="star-jar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.8 2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3.8Z"/></svg>星星罐 10 星</span>
+</div>
+</div>
+<div class="task-actions">
+<button class="task-btn task-btn--primary" type="button" data-action="primary" data-intent="submit" aria-label="去提交：饭前洗手小卫士">去提交</button>
+<button class="task-btn task-btn--secondary" type="button" data-action="detail" aria-label="查看详情：饭前洗手小卫士">查看详情</button>
+</div>
+</article>
+<article class="task-card" data-task-id="plant" data-task-status="1" data-submitted="true" data-title="给绿萝浇水" data-od-id="task-card-plant" hidden>
+<div class="task-top">
+<span class="task-icon" aria-hidden="true">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V10.5"/><path d="M12 15.5c-4.2 0-6.5-2.6-6.5-6.4 4.1 0 6.5 2.3 6.5 6.4Z"/><path d="M12 12c0-3.4 2.2-5.7 5.8-6.2.1 3.7-2.1 5.8-5.8 6.2Z"/><path d="M8 21h8"/></svg>
+</span>
+<div class="task-heading">
+<div class="task-titleline">
+<h2 class="task-title">给绿萝浇水</h2>
+<span class="task-badge task-badge--done">已提交</span>
+</div>
+</div>
+</div>
+<div class="task-period">
+<p class="task-meta-line"><span>每周任务 · 累计打卡 5 次</span><span class="task-due">截止 11月2日</span></p>
+<div class="cycle-row">
+<span class="cycle-state cycle-state--done"><span class="cycle-mark" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.2 3.2 3.2L13 4.8"/></svg></span><span>本周期已提交</span></span>
+<span class="star-jar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.8 2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3.8Z"/></svg>星星罐 15 星</span>
+</div>
+</div>
+<div class="task-actions">
+<button class="task-btn task-btn--primary" type="button" data-action="primary" data-intent="history" aria-label="查看记录：给绿萝浇水">查看记录</button>
+<button class="task-btn task-btn--secondary" type="button" data-action="detail" aria-label="查看详情：给绿萝浇水">查看详情</button>
+</div>
+</article>
+<article class="task-card" data-task-id="shoes" data-task-status="1" data-submitted="true" data-title="我会自己穿鞋" data-od-id="task-card-shoes" hidden>
+<div class="task-top">
+<span class="task-icon" aria-hidden="true">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 17.5V9.2a2.2 2.2 0 0 1 4.4 0v3l3.9 1.3 4.7 1.2a3 3 0 0 1 2 2.8v.7H7a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M9 8h.01"/><path d="M4.5 14.5c3.2.3 5.4-1.5 6.4-5.3"/></svg>
+</span>
+<div class="task-heading">
+<div class="task-titleline">
+<h2 class="task-title">我会自己穿鞋</h2>
+<span class="task-badge task-badge--reply">已回应</span>
+</div>
+</div>
+</div>
+<div class="task-period">
+<p class="task-meta-line"><span>每日任务 · 累计打卡 12 次</span><span class="task-due">截止 10月30日</span></p>
+<div class="cycle-row">
+<span class="cycle-state cycle-state--reply"><span class="cycle-mark" aria-hidden="true"><svg width="14" height="12" viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m1.5 6.2 3 3L10.5 3"/><path d="m7.5 9.2 3 3L16.5 6"/></svg></span><span>老师已回应</span></span>
+<span class="star-jar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.8 2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3.8Z"/></svg>班级星星罐</span>
+</div>
+</div>
+<p class="unread-note" data-od-id="task-unread-shoes"><span class="unread-dot" aria-hidden="true"></span>老师又给你留了一句悄悄话</p>
+<div class="task-actions">
+<button class="task-btn task-btn--primary" type="button" data-action="primary" data-intent="history" aria-label="查看记录：我会自己穿鞋">查看记录</button>
+<button class="task-btn task-btn--secondary" type="button" data-action="detail" aria-label="查看详情：我会自己穿鞋">查看详情</button>
+</div>
+</article>
+<article class="task-card task-card--ended" data-task-id="craft" data-task-status="0" data-submitted="false" data-title="周末亲子手工" data-od-id="task-card-craft" hidden>
+<div class="task-top">
+<span class="task-icon" aria-hidden="true">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5c.8-8.1 6.5-13.6 15-14-1 8-5.4 13-15 14Z"/><path d="M5.5 18.5c3.8-5.5 7.1-7.7 10.8-9"/></svg>
+</span>
+<div class="task-heading">
+<div class="task-titleline">
+<h2 class="task-title">周末亲子手工</h2>
+<span class="task-badge task-badge--ended">已结束</span>
+</div>
+<p class="task-desc">用落叶和彩纸做一幅秋天拼贴画，周一带来班级分享</p>
+</div>
+</div>
+<div class="task-period">
+<p class="task-meta-line"><span>一次性任务 · 累计打卡 1 次</span><span class="task-due">截止 10月20日</span></p>
+<div class="cycle-row">
+<span class="cycle-state cycle-state--ended"><span class="cycle-mark" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 8h9"/></svg></span><span>任务已结束</span></span>
+<span class="star-jar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.8 2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3.8Z"/></svg>星星罐 10 星</span>
+</div>
+</div>
+<div class="task-actions">
+<button class="task-btn task-btn--primary" type="button" disabled>已结束</button>
+<button class="task-btn task-btn--secondary" type="button" data-action="detail" aria-label="查看详情：周末亲子手工">查看详情</button>
+</div>
+</article>
+</div>
+<div class="skeleton-list" id="taskSkeleton" role="status" aria-label="正在加载任务" hidden>
+<div class="skeleton-card" aria-hidden="true">
+<div class="sk-head"><span class="sk sk-icon"></span><span class="sk sk-title"></span></div>
+<span class="sk sk-line"></span>
+<span class="sk sk-meta"></span>
+<div class="sk-status"><span class="sk sk-mark"></span><span class="sk sk-status-text"></span></div>
+<div class="sk-buttons"><span class="sk sk-button"></span><span class="sk sk-button"></span></div>
+</div>
+<div class="skeleton-card" aria-hidden="true">
+<div class="sk-head"><span class="sk sk-icon"></span><span class="sk sk-title sk-title--short"></span></div>
+<span class="sk sk-line"></span>
+<span class="sk sk-meta"></span>
+<div class="sk-status"><span class="sk sk-mark"></span><span class="sk sk-status-text"></span></div>
+<div class="sk-buttons"><span class="sk sk-button"></span><span class="sk sk-button"></span></div>
+</div>
+<div class="skeleton-card" aria-hidden="true">
+<div class="sk-head"><span class="sk sk-icon"></span><span class="sk sk-title"></span></div>
+<span class="sk sk-line"></span>
+<span class="sk sk-meta"></span>
+<div class="sk-status"><span class="sk sk-mark"></span><span class="sk sk-status-text"></span></div>
+<div class="sk-buttons"><span class="sk sk-button"></span><span class="sk sk-button"></span></div>
+</div>
+</div>
+<section class="empty-state state-panel" id="emptyState" aria-labelledby="emptyTitle" hidden data-od-id="tasks-empty">
+<span class="state-icon" aria-hidden="true">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5h15"/><path d="M6.5 9.5v8.8a1.7 1.7 0 0 0 1.7 1.7h7.6a1.7 1.7 0 0 0 1.7-1.7V9.5"/><path d="M9 9.5V7.6a3 3 0 0 1 6 0v1.9"/><path d="M9.5 14h5"/></svg>
+</span>
+<h2 class="state-title" id="emptyTitle">当前没有待完成的任务</h2>
+<p class="state-desc" id="emptyDesc">老师发布新任务后会出现在这里</p>
+<button class="state-action" id="emptyAction" type="button" data-od-id="empty-action">
+<span id="emptyActionLabel">查看全部</span>
+<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+</button>
+</section>
+<section class="error-state state-panel" id="errorState" aria-labelledby="errorTitle" hidden data-od-id="tasks-error">
+<span class="state-icon state-icon--error" aria-hidden="true">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3.5 21 21.5"/><path d="M8.3 8.5A10.8 10.8 0 0 1 21 10.3"/><path d="M5.1 7.3A14.6 14.6 0 0 0 2.5 9"/><path d="M8.7 12.5a6.9 6.9 0 0 1 3.8-1.5"/><path d="M11.2 16.3a2.2 2.2 0 0 1 2.7.5"/><path d="M12 20h.01"/></svg>
+</span>
+<h2 class="state-title" id="errorTitle">任务加载失败</h2>
+<p class="state-desc" id="errorDesc">网络开了小差，请稍后再试</p>
+<button class="state-action" id="fullRetry" type="button" data-retry>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 9A8 8 0 1 0 20 14"/><path d="M19.5 4.5V9H15"/></svg>
+<span data-retry-label>重新加载</span>
+</button>
+</section>
+<p class="list-foot">任务由老师发布 · 下拉可刷新</p>
+</div>
+</main>
+<div class="mp-demo" data-open="false">
+<div class="mp-demo-chips" role="group" aria-label="页面数据状态">
+<button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+<button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+<button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+<button class="mp-demo-chip" type="button" data-mp-state="error-inline" aria-pressed="false">刷新失败</button>
+<button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">首次失败</button>
+</div>
+<button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<div class="sr-only" id="screenReaderStatus" aria-live="polite" aria-atomic="true"></div>
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

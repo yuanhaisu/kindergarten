@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>班级信息 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="../../_shared/shell.css" />
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" data-state="normal" aria-busy="false">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">班级信息</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page">
+        <section class="identity-card" data-od-id="class-identity-card" aria-labelledby="class-name">
+          <div class="identity-real">
+            <div class="identity-lead">
+              <span class="class-emblem" aria-hidden="true">小一</span>
+              <div class="identity-copy">
+                <h2 class="class-name" id="class-name">小一班</h2>
+                <p class="class-meta">
+                  <span>小班</span>
+                  <span class="meta-dot" aria-hidden="true">·</span>
+                  <span>2025-2026 学年</span>
+                </p>
+              </div>
+            </div>
+            <div class="class-size" role="group" aria-label="在班 28 人">
+              <span class="class-size-label" aria-hidden="true">在班</span>
+              <span class="class-size-value" aria-hidden="true">28<span class="class-size-unit">人</span></span>
+            </div>
+          </div>
+
+          <div class="identity-skeleton" aria-hidden="true">
+            <span class="sk-seal"></span>
+            <span class="sk-copy">
+              <span class="sk-line sk-line--title"></span>
+              <span class="sk-line sk-line--meta"></span>
+            </span>
+            <span class="sk-number"></span>
+          </div>
+        </section>
+
+        <section class="teacher-section" data-od-id="class-teachers" aria-labelledby="teachers-title">
+          <div class="section-head">
+            <h2 class="section-title" id="teachers-title">班级老师</h2>
+            <span class="section-meta teacher-total">3 位</span>
+          </div>
+
+          <div class="group-card">
+            <ul class="teacher-list">
+              <li class="teacher-row" data-od-id="teacher-wang">
+                <span class="teacher-avatar" aria-hidden="true">王</span>
+                <div class="teacher-copy">
+                  <div class="teacher-head">
+                    <span class="teacher-name">王老师</span>
+                    <span class="role-pill role-pill--lead">主班老师</span>
+                  </div>
+                  <span class="teacher-phone">138****1234</span>
+                </div>
+              </li>
+              <li class="teacher-row" data-od-id="teacher-li">
+                <span class="teacher-avatar" aria-hidden="true">李</span>
+                <div class="teacher-copy">
+                  <div class="teacher-head">
+                    <span class="teacher-name">李老师</span>
+                    <span class="role-pill">副班老师</span>
+                  </div>
+                  <span class="teacher-phone">139****5678</span>
+                </div>
+              </li>
+              <li class="teacher-row" data-od-id="teacher-liu">
+                <span class="teacher-avatar" aria-hidden="true">刘</span>
+                <div class="teacher-copy">
+                  <div class="teacher-head">
+                    <span class="teacher-name">刘老师</span>
+                    <span class="role-pill">生活老师</span>
+                  </div>
+                  <span class="teacher-phone">137****9012</span>
+                </div>
+              </li>
+            </ul>
+
+            <div class="teacher-empty" data-od-id="teachers-empty-state" role="group" aria-labelledby="teachers-empty-title">
+              <span class="empty-icon" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8" r="3.5" />
+                  <path d="M5 20c.7-3.6 3.5-5.5 7-5.5s6.3 1.9 7 5.5" />
+                </svg>
+              </span>
+              <h3 class="empty-title" id="teachers-empty-title">暂无老师信息</h3>
+              <p class="empty-desc">班级老师尚未配置，请稍后重新加载</p>
+              <button class="state-action" type="button" data-od-id="reload-teachers" aria-disabled="false">重新加载</button>
+            </div>
+
+            <div class="teacher-skeleton" aria-hidden="true">
+              <div class="teacher-skeleton-row">
+                <span class="sk-avatar"></span>
+                <span class="sk-teacher-copy">
+                  <span class="sk-line sk-line--name"></span>
+                  <span class="sk-line sk-line--phone"></span>
+                </span>
+              </div>
+              <div class="teacher-skeleton-row">
+                <span class="sk-avatar"></span>
+                <span class="sk-teacher-copy">
+                  <span class="sk-line sk-line--name"></span>
+                  <span class="sk-line sk-line--phone"></span>
+                </span>
+              </div>
+              <div class="teacher-skeleton-row">
+                <span class="sk-avatar"></span>
+                <span class="sk-teacher-copy">
+                  <span class="sk-line sk-line--name"></span>
+                  <span class="sk-line sk-line--phone"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="related-section" data-od-id="class-related" aria-labelledby="related-title">
+          <div class="section-head">
+            <h2 class="section-title" id="related-title">班级相关</h2>
+          </div>
+          <div class="group-card">
+            <button class="entry-cell" type="button" data-od-id="entry-growth-album" data-toast="已打开成长相册">
+              <span class="entry-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3.5" y="5" width="17" height="14" rx="3" />
+                  <circle cx="8.7" cy="10" r="1.5" />
+                  <path d="m6 16.8 3.9-3.6a1.6 1.6 0 0 1 2.2 0l4.7 4.3" />
+                  <path d="m13.8 14.2 1.4-1.3a1.6 1.6 0 0 1 2.2 0l3.1 2.8" />
+                </svg>
+              </span>
+              <span class="entry-title">成长相册</span>
+              <svg class="entry-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" />
+              </svg>
+            </button>
+            <button class="entry-cell" type="button" data-od-id="entry-notice" data-toast="已打开通知公告">
+              <span class="entry-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6.5 10a5.5 5.5 0 0 1 11 0v4l1.4 2.3a.8.8 0 0 1-.7 1.2H5.8a.8.8 0 0 1-.7-1.2L6.5 14v-4Z" />
+                  <path d="M9.8 20a2.4 2.4 0 0 0 4.4 0" />
+                </svg>
+              </span>
+              <span class="entry-title">通知公告</span>
+              <svg class="entry-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" />
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <p class="page-footer">班级信息由园所统一维护</p>
+
+        <section class="error-state" data-od-id="class-error-state" role="alert" aria-labelledby="error-title">
+          <span class="error-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M12 7v6.2" />
+              <circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <h2 class="error-title" id="error-title">班级信息加载失败</h2>
+          <p class="error-desc">网络不太稳定，请稍后再试</p>
+          <button class="state-action" type="button" data-od-id="retry-class-info" aria-disabled="false">重试</button>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" role="status" aria-live="polite"></div>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+  </div>
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

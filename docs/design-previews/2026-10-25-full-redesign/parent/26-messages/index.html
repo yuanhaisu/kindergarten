@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <title>消息 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-notice" viewBox="0 0 24 24">
+        <path d="M3.8 10.1v3.5a1.5 1.5 0 0 0 1.5 1.5h2l7 3.5V5.1l-7 3.5h-2a1.5 1.5 0 0 0-1.5 1.5Z"/>
+        <path d="M7.3 15.1v3.3"/>
+        <path d="M18.6 8.9a4.3 4.3 0 0 1 0 6.2"/>
+      </symbol>
+      <symbol id="i-leave" viewBox="0 0 24 24">
+        <rect x="3.5" y="4.8" width="17" height="15.4" rx="3"/>
+        <path d="M8 3.2v3.4M16 3.2v3.4M3.5 9.4h17"/>
+        <path d="m8.9 14.5 2.1 2.1 4-4.1"/>
+      </symbol>
+      <symbol id="i-pickup" viewBox="0 0 24 24">
+        <path d="M14 3.6H6.4a1.7 1.7 0 0 0-1.7 1.7v13.4a1.7 1.7 0 0 0 1.7 1.7H14"/>
+        <path d="M9.6 12h9.8M16 8.6l3.4 3.4-3.4 3.4"/>
+      </symbol>
+      <symbol id="i-growth" viewBox="0 0 24 24">
+        <rect x="2.8" y="6.8" width="18.4" height="13.4" rx="2.8"/>
+        <path d="M8.1 6.8 9.6 4.2h4.8l1.5 2.6"/>
+        <circle cx="12" cy="13.5" r="3.5"/>
+      </symbol>
+      <symbol id="i-task" viewBox="0 0 24 24">
+        <path d="M9 4.6H7.6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h8.8a2 2 0 0 0 2-2V6.6a2 2 0 0 0-2-2H15"/>
+        <rect x="9" y="3.1" width="6" height="3" rx="1.2"/>
+        <path d="m9.1 13.2 2 2 3.8-4"/>
+      </symbol>
+      <symbol id="i-system" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3.2"/>
+        <path d="M12 3.1v2.3M12 18.6v2.3M3.1 12h2.3M18.6 12h2.3M5.7 5.7l1.6 1.6M16.7 16.7l1.6 1.6M5.7 18.3l1.6-1.6M16.7 7.3l1.6-1.6"/>
+      </symbol>
+      <symbol id="i-inbox" viewBox="0 0 24 24">
+        <path d="M4.1 13.4 6.7 5.5a1.6 1.6 0 0 1 1.5-1.1h7.6a1.6 1.6 0 0 1 1.5 1.1l2.6 7.9"/>
+        <path d="M4.1 13.4h4.1l1.2 2.3h5.2l1.2-2.3h4.1v4.2a2 2 0 0 1-2 2H6.1a2 2 0 0 1-2-2v-4.2Z"/>
+      </symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24">
+        <path d="M12 3.9 21 19.6H3L12 3.9Z"/>
+        <path d="M12 9.4v4.7"/>
+        <circle cx="12" cy="17.1" r="1" fill="currentColor" stroke="none"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="mp-app" data-state="normal">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">消息</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page" data-od-id="messages-page">
+
+        <section class="inbox-bar" data-od-id="messages-summary" aria-label="消息概览">
+          <p class="inbox-unread" id="unreadLine">
+            <span class="inbox-dot" aria-hidden="true"></span>
+            <span id="unreadText">3 条未读</span>
+          </p>
+          <p class="inbox-total">共 <span id="totalText">8</span> 条</p>
+        </section>
+        <div class="inbox-rule" aria-hidden="true"></div>
+
+        <section class="error-card" data-od-id="messages-error" role="alert">
+          <span class="error-badge" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-alert"></use></svg>
+          </span>
+          <div class="error-copy">
+            <h2 class="error-title">消息加载失败</h2>
+            <p class="error-desc">下拉刷新或点击重试</p>
+          </div>
+          <button class="retry-btn" id="retryBtn" type="button" data-od-id="messages-retry">重试</button>
+        </section>
+
+        <div class="inbox-groups" data-od-id="messages-list" id="inboxGroups">
+          <section class="msg-group" data-od-id="messages-group-today" aria-labelledby="groupToday">
+            <h2 class="group-title" id="groupToday">今天</h2>
+            <ul class="msg-list" role="list">
+              <li>
+                <button class="msg-card" type="button" data-od-id="message-card-leave-approved" data-type="leave" data-read="false" data-action="/pages/leave/detail?id=101">
+                  <span class="msg-tile t-leave" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-leave"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">请假申请已通过<span class="msg-dot" aria-hidden="true"></span><span class="sr-only msg-unread-label">，未读</span></span>
+                    <span class="msg-summary">乐乐的请假申请（10月27日-10月28日）已被王老师批准。</span>
+                    <span class="msg-meta"><span class="msg-type">请假</span><span class="msg-time">09:12</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true">
+                    <svg class="msg-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m6.3 3.2 4.8 4.8-4.8 4.8"/></svg>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="msg-card" type="button" data-od-id="message-card-task-reading" data-type="task" data-read="false" data-action="/pages/tasks/detail?id=52&amp;student_id=18">
+                  <span class="msg-tile t-task" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-task"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">新亲子任务：周末亲子阅读打卡<span class="msg-dot" aria-hidden="true"></span><span class="sr-only msg-unread-label">，未读</span></span>
+                    <span class="msg-summary">王老师发布了新任务，请陪乐乐阅读《好饿的毛毛虫》并上传照片。</span>
+                    <span class="msg-meta"><span class="msg-type">任务</span><span class="msg-time">08:30</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true">
+                    <svg class="msg-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m6.3 3.2 4.8 4.8-4.8 4.8"/></svg>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="msg-card" type="button" data-od-id="message-card-pickup-arrival" data-type="pickup" data-read="false">
+                  <span class="msg-tile t-pickup" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-pickup"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">乐乐已入园<span class="msg-dot" aria-hidden="true"></span><span class="sr-only msg-unread-label">，未读</span></span>
+                    <span class="msg-summary">乐乐已于 07:58 刷卡入园，由门卫李师傅核验。</span>
+                    <span class="msg-meta"><span class="msg-type">接送</span><span class="msg-time">07:58</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true"></span>
+                </button>
+              </li>
+            </ul>
+          </section>
+
+          <section class="msg-group" data-od-id="messages-group-yesterday" aria-labelledby="groupYesterday">
+            <h2 class="group-title" id="groupYesterday">昨天</h2>
+            <ul class="msg-list" role="list">
+              <li>
+                <button class="msg-card is-read" type="button" data-od-id="message-card-growth-photos" data-type="growth" data-read="true" data-action="/pages/growth/detail?id=830">
+                  <span class="msg-tile t-growth" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-growth"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">新增 3 张成长照片<span class="msg-dot" aria-hidden="true"></span></span>
+                    <span class="msg-summary">王老师上传了乐乐在美工区的活动照片。</span>
+                    <span class="msg-meta"><span class="msg-type">成长</span><span class="msg-time">17:20</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true">
+                    <svg class="msg-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m6.3 3.2 4.8 4.8-4.8 4.8"/></svg>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="msg-card is-read" type="button" data-od-id="message-card-notice-sports" data-type="notice" data-read="true" data-action="/pages/notice/detail?id=309">
+                  <span class="msg-tile t-notice" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-notice"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">秋季亲子运动会报名通知<span class="msg-dot" aria-hidden="true"></span></span>
+                    <span class="msg-summary">本周五上午 9:00 在大操场举行，请填写回执交回班级。</span>
+                    <span class="msg-meta"><span class="msg-type">通知</span><span class="msg-time">16:40</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true">
+                    <svg class="msg-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m6.3 3.2 4.8 4.8-4.8 4.8"/></svg>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </section>
+
+          <section class="msg-group" data-od-id="messages-group-earlier" aria-labelledby="groupEarlier">
+            <h2 class="group-title" id="groupEarlier">更早</h2>
+            <ul class="msg-list" role="list">
+              <li>
+                <button class="msg-card is-read" type="button" data-od-id="message-card-system-checkup" data-type="system" data-read="true">
+                  <span class="msg-tile t-system" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-system"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">秋季体检安排<span class="msg-dot" aria-hidden="true"></span></span>
+                    <span class="msg-summary">10月29日上午进行常规体检，请让孩子空腹并穿宽松衣物。</span>
+                    <span class="msg-meta"><span class="msg-type">系统</span><span class="msg-time">10月24日</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true"></span>
+                </button>
+              </li>
+              <li>
+                <button class="msg-card is-read" type="button" data-od-id="message-card-leave-submitted" data-type="leave" data-read="true">
+                  <span class="msg-tile t-leave" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-leave"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">请假申请已提交<span class="msg-dot" aria-hidden="true"></span></span>
+                    <span class="msg-summary">乐乐的请假申请已提交给王老师审批。</span>
+                    <span class="msg-meta"><span class="msg-type">请假</span><span class="msg-time">10月23日</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true"></span>
+                </button>
+              </li>
+              <li>
+                <button class="msg-card is-read" type="button" data-od-id="message-card-pickup-picked" data-type="pickup" data-read="true">
+                  <span class="msg-tile t-pickup" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-pickup"></use></svg>
+                  </span>
+                  <span class="msg-body">
+                    <span class="msg-title">乐乐已被接走<span class="msg-dot" aria-hidden="true"></span></span>
+                    <span class="msg-summary">乐乐已于 17:32 被妈妈接走，门卫李师傅核验。</span>
+                    <span class="msg-meta"><span class="msg-type">接送</span><span class="msg-time">10月22日</span></span>
+                  </span>
+                  <span class="msg-tail" aria-hidden="true"></span>
+                </button>
+              </li>
+            </ul>
+          </section>
+        </div>
+
+        <section class="empty-card" data-od-id="messages-empty" aria-labelledby="emptyTitle">
+          <span class="empty-badge" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-inbox"></use></svg>
+          </span>
+          <h2 class="empty-title" id="emptyTitle">暂无消息</h2>
+          <p class="empty-desc">老师发布通知、审批结果和接送提醒后会出现在这里</p>
+          <button class="refresh-btn" id="refreshBtn" type="button" data-od-id="messages-refresh">刷新</button>
+        </section>
+
+        <div class="skel-wrap" id="skelWrap" data-od-id="messages-loading" aria-hidden="true">
+          <div class="skel-head"><span class="skel-line skel-line--summary"></span></div>
+          <div class="skel-list">
+            <div class="skel-card">
+              <span class="skel-tile"></span>
+              <span class="skel-lines">
+                <span class="skel-line skel-line--title"></span>
+                <span class="skel-line skel-line--body"></span>
+                <span class="skel-line skel-line--meta"></span>
+              </span>
+            </div>
+            <div class="skel-card">
+              <span class="skel-tile"></span>
+              <span class="skel-lines">
+                <span class="skel-line skel-line--title"></span>
+                <span class="skel-line skel-line--body"></span>
+                <span class="skel-line skel-line--meta"></span>
+              </span>
+            </div>
+            <div class="skel-card">
+              <span class="skel-tile"></span>
+              <span class="skel-lines">
+                <span class="skel-line skel-line--title"></span>
+                <span class="skel-line skel-line--body"></span>
+                <span class="skel-line skel-line--meta"></span>
+              </span>
+            </div>
+            <div class="skel-card">
+              <span class="skel-tile"></span>
+              <span class="skel-lines">
+                <span class="skel-line skel-line--title"></span>
+                <span class="skel-line skel-line--body"></span>
+                <span class="skel-line skel-line--meta"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <div class="page-toast" id="pageToast" role="status" aria-live="polite" aria-atomic="true" data-od-id="messages-toast"></div>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

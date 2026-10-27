@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#F8FAFC">
+  <title>设置 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal" data-od-id="parent-settings-page">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回上一页">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title" data-od-id="settings-title">设置</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="settings-page">
+
+        <section class="settings-group" data-od-id="notification-settings" aria-labelledby="notificationsHeading">
+          <h2 class="group-title" id="notificationsHeading" data-od-id="notifications-heading">消息通知</h2>
+          <div class="settings-card">
+            <button class="switch-row" type="button" role="switch" aria-checked="true" data-key="notice_push" data-od-id="notice-push-row">
+              <span class="row-label">通知推送</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+            <button class="switch-row" type="button" role="switch" aria-checked="true" data-key="leave_push" data-od-id="leave-push-row">
+              <span class="row-label">请假通知</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+            <button class="switch-row" type="button" role="switch" aria-checked="true" data-key="pickup_push" data-od-id="pickup-push-row">
+              <span class="row-label">接送通知</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+            <button class="switch-row" type="button" role="switch" aria-checked="true" data-key="growth_push" data-od-id="growth-push-row">
+              <span class="row-label">成长记录</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+            <button class="switch-row" type="button" role="switch" aria-checked="false" data-key="task_push" data-od-id="task-push-row">
+              <span class="row-label">任务提醒</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+            <button class="switch-row" type="button" role="switch" aria-checked="true" data-key="announcement_push" data-od-id="announcement-push-row">
+              <span class="row-label">公告通知</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+          </div>
+          <p class="group-note">关闭后消息仍会保留在消息列表，只是不再提醒。</p>
+        </section>
+
+        <section class="settings-group" data-od-id="privacy-settings" aria-labelledby="privacyHeading">
+          <h2 class="group-title" id="privacyHeading" data-od-id="privacy-heading">隐私</h2>
+          <div class="settings-card">
+            <button class="switch-row" type="button" role="switch" aria-checked="true" data-key="show_phone_to_teacher" data-od-id="show-phone-row">
+              <span class="row-label">向老师展示手机号</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+            <button class="switch-row" type="button" role="switch" aria-checked="false" data-key="allow_growth_share" data-od-id="growth-share-row">
+              <span class="row-label">允许展示成长记录</span>
+              <span class="row-tail">
+                <span class="row-sync" aria-hidden="true">同步中…</span>
+                <span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </span>
+            </button>
+          </div>
+          <p class="group-note">仅影响老师和同班家长看到的信息。</p>
+        </section>
+
+        <section class="state-view state-empty" data-od-id="settings-empty-state" aria-labelledby="emptyTitle">
+          <div class="empty-card">
+            <span class="empty-icon" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 5.6c-4.1 0-6.9 3.1-6.9 7.2v3.6l-1.9 3.2h17.6l-1.9-3.2v-3.6c0-4.1-2.8-7.2-6.9-7.2Z"/>
+                <path d="M12.2 22.4a2.9 2.9 0 0 0 5.6 0"/>
+                <path d="M15 5.6V3.8"/>
+              </svg>
+            </span>
+            <h2 class="empty-title" id="emptyTitle" data-od-id="empty-heading">还没有可设置的提醒项</h2>
+            <button class="btn-primary" id="reloadBtn" type="button" data-od-id="settings-reload">重新加载</button>
+          </div>
+        </section>
+
+        <div class="state-view state-loading" data-od-id="settings-loading-state" role="status" aria-live="polite">
+          <span class="sr-only">正在加载设置</span>
+          <span class="skeleton-heading-bar" aria-hidden="true"></span>
+          <div class="settings-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-row">
+              <span class="skeleton-bar skeleton-bar--medium"></span>
+              <span class="skeleton-switch"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar skeleton-bar--short"></span>
+              <span class="skeleton-switch"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar skeleton-bar--wide"></span>
+              <span class="skeleton-switch"></span>
+            </div>
+          </div>
+        </div>
+
+        <section class="state-view state-error" data-od-id="settings-error-state" aria-labelledby="errorTitle">
+          <span class="error-icon" aria-hidden="true">
+            <svg width="24" height="27" viewBox="0 0 24 27" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M12 3v12.4"/>
+              <circle cx="12" cy="22.3" r="1.6" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <h2 class="error-title" id="errorTitle" data-od-id="error-heading">设置加载失败</h2>
+          <p class="error-desc">网络不太稳定，请稍后再试</p>
+          <button class="btn-primary" id="retryBtn" type="button" data-od-id="settings-retry">重试</button>
+        </section>
+
+        <div class="logout-wrap" data-od-id="settings-logout">
+          <button class="logout-button" id="logoutBtn" type="button" aria-haspopup="dialog" aria-controls="logoutDialog" data-od-id="logout-button">退出登录</button>
+        </div>
+
+      </div>
+    </main>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="disabled" aria-pressed="false">同步中</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="dialog-layer" id="logoutDialog" hidden>
+      <div class="dialog-scrim" data-dialog-close aria-hidden="true"></div>
+      <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="logoutDialogTitle" aria-describedby="logoutDialogDesc" tabindex="-1" data-od-id="logout-dialog">
+        <div class="dialog-content">
+          <h2 class="dialog-title" id="logoutDialogTitle" data-od-id="logout-dialog-title">退出登录</h2>
+          <p class="dialog-desc" id="logoutDialogDesc">退出后需重新微信授权登录。</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="dialog-button" id="logoutCancel" type="button">取消</button>
+          <button class="dialog-button dialog-button--confirm" id="logoutConfirm" type="button" data-od-id="logout-confirm">退出登录</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

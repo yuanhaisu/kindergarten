@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>接送二维码 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal" data-od-id="pickup-qrcode-page">
+
+    <!-- 状态栏 -->
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <!-- 导航栏（子页：返回箭头 + 标题） -->
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回接送记录">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">接送二维码</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page" data-refreshing="false" data-od-id="pickup-qrcode-body">
+
+        <!-- 1. 当日接走凭证 -->
+        <article class="pass-card" data-od-id="pickup-pass-card">
+          <div class="pass-head">
+            <span class="pass-kicker">接送凭证</span>
+            <span class="status-pill status-pill--valid" data-od-id="pickup-status-valid">
+              <span class="status-dot" aria-hidden="true"></span>有效
+            </span>
+            <span class="status-pill status-pill--expired" data-od-id="pickup-status-expired">
+              <span class="status-dot" aria-hidden="true"></span>已过期
+            </span>
+            <span class="status-pill status-pill--refresh" data-od-id="pickup-status-refresh">
+              <span class="status-dot" aria-hidden="true"></span>刷新中
+            </span>
+          </div>
+
+          <h2 class="pass-title" data-od-id="pickup-pass-title">乐乐的接送二维码</h2>
+
+          <div class="pass-persons" data-od-id="pickup-persons">
+            <div class="person" data-od-id="pickup-student">
+              <span class="pass-avatar" aria-hidden="true">乐</span>
+              <span class="person-name">乐乐</span>
+              <span class="person-tag">孩子</span>
+            </div>
+            <div class="person-arrow" aria-hidden="true">
+              <svg width="28" height="16" viewBox="0 0 28 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 8h19" stroke-width="1.4" stroke-dasharray="3 3"></path>
+                <path d="M17.5 4.5 21.5 8l-4 3.5" stroke-width="1.6"></path>
+              </svg>
+            </div>
+            <div class="person" data-od-id="pickup-person">
+              <span class="pass-avatar" aria-hidden="true">奶</span>
+              <span class="person-name">奶奶</span>
+              <span class="person-tag">奶奶</span>
+            </div>
+          </div>
+
+          <!-- 票根缺口 -->
+          <div class="pass-tear" aria-hidden="true"></div>
+
+          <div class="pass-qr">
+            <div class="qr-panel" data-od-id="pickup-qr-panel">
+              <svg class="qr-svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="接送二维码（原型占位）"></svg>
+              <span class="qr-expired" role="status">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 9A8 8 0 1 0 20 14"></path><path d="M19.5 4.5V9H15"></path></svg>
+                已过期 · 刷新后可用
+              </span>
+              <span class="qr-refreshing" aria-hidden="true"><span class="spinner"></span></span>
+            </div>
+
+            <p class="expiry">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+              <span class="expiry-normal">有效期至 10月26日 23:59</span>
+              <span class="expiry-expired">已于 10月26日 23:59 过期</span>
+            </p>
+            <p class="pass-tip">请向老师出示此码，核验后一次有效</p>
+          </div>
+        </article>
+
+        <!-- 加载骨架 -->
+        <div class="pass-skeleton" aria-hidden="true" data-od-id="pickup-skeleton">
+          <div class="sk-top">
+            <span class="sk sk-kicker"></span>
+            <span class="sk sk-pill"></span>
+          </div>
+          <span class="sk sk-title"></span>
+          <div class="sk-persons">
+            <span class="sk sk-avatar"></span>
+            <span class="sk sk-arrow"></span>
+            <span class="sk sk-avatar"></span>
+          </div>
+          <span class="sk sk-qr"></span>
+          <span class="sk sk-copy sk-copy--1"></span>
+          <span class="sk sk-copy sk-copy--2"></span>
+        </div>
+
+        <!-- 空态：未指定今日接走人 -->
+        <section class="state-card state-card--empty" data-od-id="pickup-empty" aria-labelledby="emptyTitle">
+          <span class="state-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3.5" y="5" width="17" height="14" rx="2.2"></rect>
+              <path d="M14.5 5v14" stroke-dasharray="2.5 3"></path>
+            </svg>
+          </span>
+          <h2 class="state-title" id="emptyTitle">还没有接送凭证</h2>
+          <p class="state-copy">请先指定今日接走人，<br>指定后即可获取二维码</p>
+          <button class="btn btn--primary" type="button" id="designatePerson" data-od-id="pickup-designate">
+            <span class="btn-label">去指定今日接走人</span>
+          </button>
+        </section>
+
+        <!-- 失败态：网络异常或授权失效，保留源码的「去指定今日接走人」恢复入口 -->
+        <section class="state-card state-card--error" data-od-id="pickup-error" role="alert" aria-labelledby="errorTitle">
+          <span class="state-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="12" cy="12" r="8.5"></circle>
+              <path d="M12 7.6v5.2"></path>
+              <path d="M12 16.4h.01"></path>
+            </svg>
+          </span>
+          <h2 class="state-title" id="errorTitle">凭证加载失败</h2>
+          <p class="state-copy">网络不太稳定，也可能是所选接走人授权已失效</p>
+          <button class="btn btn--primary" type="button" id="retryLoad" data-od-id="pickup-retry">
+            <span class="spinner spinner--sm" aria-hidden="true"></span>
+            <span class="btn-label">重试</span>
+          </button>
+          <button class="state-link" type="button" id="designateFromError" data-od-id="pickup-designate-from-error">
+            去指定今日接走人
+          </button>
+        </section>
+
+        <!-- 2. 操作区（正常/过期完整展示；失败态只留「更换今日接走人」） -->
+        <div class="action-stack" data-od-id="pickup-actions">
+          <button class="btn btn--primary" type="button" id="refreshQr" data-od-id="pickup-refresh">
+            <span class="spinner spinner--sm" aria-hidden="true"></span>
+            <span class="btn-label">刷新二维码</span>
+          </button>
+          <p class="refresh-note">刷新后即可继续使用</p>
+          <button class="btn btn--secondary" type="button" id="changePerson" data-od-id="pickup-change-person">
+            <span class="btn-label">更换今日接走人</span>
+          </button>
+        </div>
+
+        <!-- 3. 使用说明 -->
+        <section class="guide-card" data-od-id="pickup-guide" aria-labelledby="guideTitle">
+          <h2 class="guide-head" id="guideTitle">使用说明</h2>
+          <ol class="guide-list">
+            <li class="guide-item" data-od-id="pickup-guide-step-1">
+              <span class="guide-num" aria-hidden="true">1</span>
+              <span class="guide-text">到园接孩子时，把本页二维码出示给老师。</span>
+            </li>
+            <li class="guide-item" data-od-id="pickup-guide-step-2">
+              <span class="guide-num" aria-hidden="true">2</span>
+              <span class="guide-text">老师扫码核验通过后，本凭证立即失效。</span>
+            </li>
+            <li class="guide-item" data-od-id="pickup-guide-step-3">
+              <span class="guide-num" aria-hidden="true">3</span>
+              <span class="guide-text">凭证当日 23:59 过期，<br>过期或需换人时点「刷新二维码」。</span>
+            </li>
+          </ol>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- 原型演示状态条 -->
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="expired" aria-pressed="false">已过期</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" data-od-id="pickup-toast"></div>
+
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

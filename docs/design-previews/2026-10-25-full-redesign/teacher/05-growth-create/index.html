@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>添加成长记录 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" aria-label="返回成长记录" id="navBack">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">添加成长记录</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main">
+    <div class="screen">
+    <div class="page" id="pageScroll">
+
+      <!-- 日期 -->
+      <section class="day" aria-label="记录日期">
+        <button class="day-arrow" type="button" id="dayPrev" aria-label="前一天">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 6.5 10 12 15.5"/></svg>
+        </button>
+        <div class="day-main">
+          <span class="day-date" id="dayDate">10月24日 周六</span>
+          <span class="day-sub" id="daySub">2026年 · 今天</span>
+        </div>
+        <button class="day-arrow" type="button" id="dayNext" aria-label="后一天" disabled>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4.5 13.5 10 8 15.5"/></svg>
+        </button>
+      </section>
+
+      <!-- 记录对象 -->
+      <div class="mode" role="tablist" aria-label="记录对象">
+        <button class="mode-btn is-on" type="button" role="tab" aria-selected="true" data-mode="class">全班记录</button>
+        <button class="mode-btn" type="button" role="tab" aria-selected="false" data-mode="student">指定幼儿</button>
+      </div>
+
+      <!-- 快速记录（班级记录） -->
+      <section class="card" id="obsCard" aria-labelledby="obsTitle">
+        <div class="card-head">
+          <h2 class="card-title" id="obsTitle">快速记录</h2>
+          <span class="card-note">可跳过</span>
+        </div>
+
+        <div class="obs-body">
+          <div class="obs-row">
+            <span class="obs-label">饮食</span>
+            <div class="obs-main">
+              <div class="meal">
+                <span class="meal-name">早餐</span>
+                <div class="rates" data-group="breakfast">
+                  <button class="rate is-on" type="button" data-value="3" aria-pressed="true" aria-label="早餐 好">😋</button>
+                  <button class="rate" type="button" data-value="2" aria-pressed="false" aria-label="早餐 一般">😐</button>
+                  <button class="rate" type="button" data-value="1" aria-pressed="false" aria-label="早餐 不好">😞</button>
+                </div>
+              </div>
+              <div class="meal">
+                <span class="meal-name">午餐</span>
+                <div class="rates" data-group="lunch">
+                  <button class="rate is-on" type="button" data-value="3" aria-pressed="true" aria-label="午餐 好">😋</button>
+                  <button class="rate" type="button" data-value="2" aria-pressed="false" aria-label="午餐 一般">😐</button>
+                  <button class="rate" type="button" data-value="1" aria-pressed="false" aria-label="午餐 不好">😞</button>
+                </div>
+              </div>
+              <div class="meal">
+                <span class="meal-name">晚餐</span>
+                <div class="rates" data-group="dinner">
+                  <button class="rate" type="button" data-value="3" aria-pressed="false" aria-label="晚餐 好">😋</button>
+                  <button class="rate" type="button" data-value="2" aria-pressed="false" aria-label="晚餐 一般">😐</button>
+                  <button class="rate" type="button" data-value="1" aria-pressed="false" aria-label="晚餐 不好">😞</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="obs-row">
+            <span class="obs-label">睡眠</span>
+            <div class="obs-main">
+              <span class="sub-label">午睡时长</span>
+              <div class="chips" data-group="nap" role="group" aria-label="午睡时长">
+                <button class="chip" type="button" data-value="1" aria-pressed="false">1 小时</button>
+                <button class="chip is-on" type="button" data-value="2" aria-pressed="true">2 小时</button>
+                <button class="chip" type="button" data-value="3" aria-pressed="false">3 小时</button>
+              </div>
+              <span class="sub-label">睡眠质量</span>
+              <div class="chips" data-group="sleep" role="group" aria-label="睡眠质量">
+                <button class="chip is-on" type="button" data-value="3" aria-pressed="true">很好</button>
+                <button class="chip" type="button" data-value="2" aria-pressed="false">一般</button>
+                <button class="chip" type="button" data-value="1" aria-pressed="false">不好</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="obs-row">
+            <span class="obs-label">情绪</span>
+            <div class="obs-main">
+              <div class="meal">
+                <span class="meal-name">上午</span>
+                <div class="rates" data-group="moodAM">
+                  <button class="rate is-on" type="button" data-value="3" aria-pressed="true" aria-label="上午情绪 好">😋</button>
+                  <button class="rate" type="button" data-value="2" aria-pressed="false" aria-label="上午情绪 一般">😐</button>
+                  <button class="rate" type="button" data-value="1" aria-pressed="false" aria-label="上午情绪 不好">😞</button>
+                </div>
+              </div>
+              <div class="meal">
+                <span class="meal-name">下午</span>
+                <div class="rates" data-group="moodPM">
+                  <button class="rate" type="button" data-value="3" aria-pressed="false" aria-label="下午情绪 好">😋</button>
+                  <button class="rate is-on" type="button" data-value="2" aria-pressed="true" aria-label="下午情绪 一般">😐</button>
+                  <button class="rate" type="button" data-value="1" aria-pressed="false" aria-label="下午情绪 不好">😞</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="obs-row">
+            <span class="obs-label">表现</span>
+            <div class="obs-main">
+              <div class="tags" data-group="perfClass" role="group" aria-label="表现标签" id="tagsClass"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sk-rows" aria-hidden="true">
+          <span class="sk w70"></span>
+          <span class="sk w85"></span>
+          <span class="sk w50"></span>
+        </div>
+      </section>
+
+      <!-- 指定幼儿 -->
+      <section class="card" id="studentCard" aria-labelledby="studentTitle" hidden>
+        <div class="card-head">
+          <h2 class="card-title" id="studentTitle">选择幼儿</h2>
+          <span class="card-note" id="pickCount">已选 5 人</span>
+        </div>
+
+        <div class="picked" id="pickedBox">
+          <div class="avatars" id="avatars" aria-hidden="true"></div>
+          <p class="picked-text" id="pickedText">乐乐、小雨、朵朵 等 5 人</p>
+          <button class="link-btn" type="button" id="editPick">编辑</button>
+        </div>
+
+        <div class="pick-empty" id="pickEmpty" hidden>
+          <span class="empty-art" aria-hidden="true">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+              <circle cx="30" cy="30" r="26" fill="var(--accent-wash)"/>
+              <circle cx="24" cy="26" r="7" fill="var(--warning-wash)" stroke="var(--accent-soft)" stroke-width="1.5"/>
+              <circle cx="38" cy="32" r="6" fill="var(--success-wash)" stroke="var(--success)" stroke-width="1.5"/>
+              <path d="M14 46c4-3 9-4.5 16-4.5S42 43 46 46" stroke="var(--accent-soft)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <p class="empty-title">还没有选择幼儿</p>
+          <p class="empty-hint">小一班共 28 位孩子，从名单里挑一位或几位</p>
+          <button class="btn-soft" type="button" id="openPickEmpty">选择幼儿</button>
+        </div>
+
+        <div class="tags-wrap">
+          <span class="sub-label">表现标签</span>
+          <div class="tags" data-group="perfStudent" role="group" aria-label="表现标签" id="tagsStudent"></div>
+        </div>
+
+        <p class="fineprint">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none;margin-top:1px"><circle cx="10" cy="10" r="7.4" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.6" r=".9" fill="currentColor"/></svg>
+          <span>这条记录只会推给所选幼儿的家长，不出现在班级动态</span>
+        </p>
+      </section>
+
+      <!-- 照片 / 视频 -->
+      <section class="card" aria-labelledby="mediaTitle">
+        <div class="card-head">
+          <h2 class="card-title" id="mediaTitle">照片 / 视频</h2>
+          <span class="card-note" id="mediaCount">2 / 20</span>
+        </div>
+
+        <div class="media-bar" id="mediaBar">
+          <span class="media-tip" id="namedTip">已点名 1 张</span>
+          <button class="mini-btn" type="button" id="batchBtn">批量点名</button>
+          <div class="batch-tools" id="batchTools" hidden>
+            <button class="mini-btn" type="button" id="selectAllPhotos">全选</button>
+            <button class="mini-btn" type="button" id="pickStudentsBtn">选择学生</button>
+            <button class="mini-btn" type="button" id="cancelBatchBtn">取消</button>
+          </div>
+        </div>
+
+        <div class="grid" id="mediaGrid"></div>
+
+        <div class="desc-list" id="descList">
+          <div class="desc-row">
+            <span class="desc-thumb" aria-hidden="true"><span class="art art-leaf"><i></i><i></i><i></i></span></span>
+            <input class="desc-input" type="text" value="乐乐在试第三种颜色" aria-label="第一张照片的说明">
+          </div>
+          <div class="desc-row">
+            <span class="desc-thumb" aria-hidden="true"><span class="art art-clay"><i></i><i></i><i></i></span></span>
+            <input class="desc-input" type="text" value="" placeholder="为这张照片写句说明（可选）" aria-label="第二张照片的说明">
+          </div>
+        </div>
+
+        <p class="fineprint">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none;margin-top:1px"><circle cx="10" cy="10" r="7.4" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.6" r=".9" fill="currentColor"/></svg>
+          <span>拍照建议：尽量拍单人照（AI 自动点名更准）；集体照用「全班」一键点名</span>
+        </p>
+        <p class="fineprint">
+          <span>最多 20 张，单张不超过 20MB</span>
+        </p>
+      </section>
+
+      <!-- 记录内容 -->
+      <section class="card" aria-labelledby="contentTitle">
+        <div class="card-head">
+          <h2 class="card-title" id="contentTitle">记录内容<span class="req-mark" aria-hidden="true">*</span></h2>
+          <span class="card-note" id="charCount">0 字</span>
+        </div>
+        <textarea class="textarea" id="contentInput" rows="5" placeholder="写写今天孩子们做了什么、说了什么"></textarea>
+      </section>
+
+      <!-- 授予徽章 -->
+      <section class="card" id="badgeCard" aria-labelledby="badgeTitle">
+        <div class="card-head">
+          <h2 class="card-title" id="badgeTitle">授予徽章</h2>
+          <span class="card-note">可选</span>
+        </div>
+        <div class="badges" id="badges" role="group" aria-label="徽章">
+          <button class="badge-chip is-on" type="button" data-badge="整理小能手" aria-pressed="true"><span class="b-ico" aria-hidden="true">🏅</span>整理小能手</button>
+          <button class="badge-chip" type="button" data-badge="勇敢之星" aria-pressed="false"><span class="b-ico" aria-hidden="true">🌟</span>勇敢之星</button>
+          <button class="badge-chip" type="button" data-badge="分享达人" aria-pressed="false"><span class="b-ico" aria-hidden="true">🤝</span>分享达人</button>
+          <button class="badge-chip" type="button" data-badge="专注宝贝" aria-pressed="false"><span class="b-ico" aria-hidden="true">🎯</span>专注宝贝</button>
+        </div>
+
+        <div class="grant" id="grantBox">
+          <span class="sub-label">授予给</span>
+          <div class="chips" id="grantStudents" role="group" aria-label="授予给哪些幼儿">
+            <button class="chip is-on" type="button" aria-pressed="true">乐乐</button>
+            <button class="chip" type="button" aria-pressed="false">小雨</button>
+            <button class="chip" type="button" aria-pressed="false">朵朵</button>
+          </div>
+          <button class="check-row" type="button" id="witness" aria-pressed="true">
+            <span class="box" aria-hidden="true">✓</span>
+            <span>本记录作为获奖见证（家长将在该记录看到徽章）</span>
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 底部提交栏 -->
+    <div class="dock" id="dock">
+      <div class="err-strip" id="errStrip" role="alert">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.6"/><path d="M10 6v4.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="10" cy="13.6" r=".9" fill="currentColor"/></svg>
+        <span>发布失败：网络连接超时</span>
+        <button class="err-retry" type="button" id="errRetry">重试</button>
+      </div>
+      <div class="dock-meta">
+        <span class="scope" id="scopeText">小一班全体家长可见</span>
+        <span class="switch-row" id="syncRow">
+          <span>同步到班级动态</span>
+          <button class="sw" type="button" id="syncSw" role="switch" aria-checked="true" aria-label="同步到班级动态"></button>
+        </span>
+      </div>
+      <p class="dock-reason" id="dockReason" hidden></p>
+      <button class="publish" type="button" id="publishBtn">发布班级记录</button>
+    </div>
+
+    </div>
+  </main>
+
+  <!-- 幼儿多选弹层 -->
+  <div class="layer" id="sheetLayer" hidden>
+    <div class="scrim" data-close="sheet"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="sheet-head">
+        <button class="sheet-cancel" type="button" data-close="sheet">取消</button>
+        <h2 class="sheet-title" id="sheetTitle">选择幼儿</h2>
+        <button class="sheet-all" type="button" id="selectAll">全选</button>
+      </div>
+      <p class="sheet-desc" id="sheetDesc">小一班 · 共 28 位 · 已选 5 人</p>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="5.6" stroke="currentColor" stroke-width="1.6"/><path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input type="search" id="searchInput" placeholder="搜索幼儿姓名" autocomplete="off" aria-label="搜索幼儿姓名">
+      </div>
+      <div class="sheet-list" id="sheetList"></div>
+      <div class="sheet-foot">
+        <button class="publish" type="button" id="confirmPick">确定（已选 5 人）</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <div class="mp-demo" data-open="false" style="bottom: calc(168px + env(safe-area-inset-bottom))">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" data-mp-state="edit" aria-pressed="false">编辑</button>
+      <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

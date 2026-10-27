@@ -1,0 +1,20 @@
+{
+  "slug": "parent-calendar-index",
+  "surface": "parent",
+  "title": "班级日历",
+  "projectId": "f85031aa-886b-4acb-9822-f6e3a6146319",
+  "conversationId": "1bd411a5-0123-4335-b9a6-e65b276b35a5",
+  "runId": "c39488b7-1009-479b-9c8e-29565391d000",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 617,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/f85031aa-886b-4acb-9822-f6e3a6146319",
+  "previewRendered": true
+}

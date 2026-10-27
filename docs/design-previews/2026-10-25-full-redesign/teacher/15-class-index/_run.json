@@ -1,0 +1,24 @@
+{
+  "slug": "teacher-class-index",
+  "surface": "teacher",
+  "title": "我的班级",
+  "projectId": "cd48cbb6-d763-4ed5-b936-6340f6155ef7",
+  "conversationId": "eab1721a-2fd6-4a85-a184-e397ff1fe031",
+  "runId": "f74acc8e-2555-4061-9f16-62b1abe0a423",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 51,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css",
+    "preview.png",
+    "notes.md"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/cd48cbb6-d763-4ed5-b936-6340f6155ef7",
+  "previewRendered": true,
+  "handAuthored": true,
+  "note": "OpenDesign 两次 run 均只产出 index.html，styles.css / app.js 缺失；按 fallback 规则由 Claude 手写 styles.css / app.js，index.html 沿用 OpenDesign 产物并校正 shell 标记。"
+}

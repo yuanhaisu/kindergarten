@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>成长时光 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.2S4 15.4 4 9.7a4.3 4.3 0 0 1 8-2.2 4.3 4.3 0 0 1 8 2.2c0 5.7-8 10.5-8 10.5Z"/></symbol>
+      <symbol id="i-comment" viewBox="0 0 24 24"><path d="M5 4.8h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 3.2v-3.2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6.5" cy="12" r="2.4"/><circle cx="17.5" cy="5.8" r="2.4"/><circle cx="17.5" cy="18.2" r="2.4"/><path d="m8.6 10.8 6.8-3.8M8.6 13.2l6.8 3.8"/></symbol>
+      <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="m8.5 13.4-2 7.1 5.5-2.8 5.5 2.8-2-7.1"/></symbol>
+      <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 3v10m0 0 3.4-3.4M12 13 8.6 9.6M4 15.5v3.2A2.3 2.3 0 0 0 6.3 21h11.4a2.3 2.3 0 0 0 2.3-2.3v-3.2"/></symbol>
+      <symbol id="i-photos" viewBox="0 0 24 24"><rect x="7" y="3.5" width="13.5" height="13.5" rx="2.5"/><path d="M17 20.5H6.5A3 3 0 0 1 3.5 17.5V7"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="mp-app" data-state="normal">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <h1 class="mp-title">乐乐的成长时光</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="page" data-od-id="growth-page">
+        <section class="child-card" aria-labelledby="childName" data-od-id="growth-child-card">
+          <div class="child-top">
+            <span class="child-avatar" aria-hidden="true">乐</span>
+            <div class="child-info">
+              <h2 class="child-name" id="childName">乐乐</h2>
+              <p class="child-class">小一班</p>
+            </div>
+            <button class="export-btn js-export" type="button" aria-label="导出相册" aria-disabled="false" data-od-id="growth-export">
+              <span class="export-pill">
+                <svg class="icon export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-export"/></svg>
+                导出相册
+              </span>
+            </button>
+          </div>
+          <div class="child-stats" role="list" aria-label="成长数据">
+            <div class="stat stat--records" role="listitem">
+              <span class="stat-value"><span class="stat-value__normal">6</span><span class="stat-value__zero">0</span></span>
+              <span class="stat-label">成长记录</span>
+              <span class="stat-skel" aria-hidden="true"><i></i><i></i></span>
+            </div>
+            <div class="stat" role="listitem">
+              <span class="stat-value stat-value--dash">—</span>
+              <span class="stat-label">精彩照片</span>
+              <span class="stat-skel" aria-hidden="true"><i></i><i></i></span>
+            </div>
+            <div class="stat" role="listitem">
+              <span class="stat-value">5</span>
+              <span class="stat-label">获得奖章</span>
+              <span class="stat-skel" aria-hidden="true"><i></i><i></i></span>
+            </div>
+            <div class="stat" role="listitem">
+              <span class="stat-value stat-value--dash">—</span>
+              <span class="stat-label">出勤率</span>
+              <span class="stat-skel" aria-hidden="true"><i></i><i></i></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="view-switch" aria-label="查看方式" data-od-id="growth-view-switch">
+          <div class="seg" role="group" aria-label="查看方式">
+            <button class="seg-btn is-active" type="button" data-view="child" aria-pressed="true" aria-disabled="false">
+              <span class="seg-btn__label">只看孩子</span>
+              <span class="seg-btn__meta">5 条 · 8 张</span>
+            </button>
+            <button class="seg-btn" type="button" data-view="all" aria-pressed="false" aria-disabled="false">
+              <span class="seg-btn__label">看全部</span>
+              <span class="seg-btn__meta">6 条 · 15 张</span>
+            </button>
+          </div>
+          <p class="seg-hint">只显示与乐乐确认相关的内容；切换「看全部」可浏览班级动态</p>
+        </section>
+
+        <section class="skeleton-list" role="status" aria-label="正在加载成长时光" data-od-id="growth-loading">
+          <div class="skel-card" aria-hidden="true"><div class="skel-head"><span class="skel-avatar"></span><span class="skel-lines"><span class="skel-bar"></span><span class="skel-bar"></span></span></div><span class="skel-photo"></span></div>
+          <div class="skel-card" aria-hidden="true"><div class="skel-head"><span class="skel-avatar"></span><span class="skel-lines"><span class="skel-bar"></span><span class="skel-bar"></span></span></div><span class="skel-photo"></span></div>
+          <div class="skel-card" aria-hidden="true"><div class="skel-head"><span class="skel-avatar"></span><span class="skel-lines"><span class="skel-bar"></span><span class="skel-bar"></span></span></div><span class="skel-photo"></span></div>
+        </section>
+
+        <section class="empty-state" aria-labelledby="emptyTitle" data-od-id="growth-empty">
+          <div class="empty-art" aria-hidden="true">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="32" cy="34" r="14"/>
+              <ellipse cx="32" cy="34" rx="27" ry="9" transform="rotate(-18 32 34)" opacity=".5"/>
+              <path d="M32 30c0-5 3-9 8-9 0 5-3 9-8 9Z" fill="currentColor" stroke="none" opacity=".8"/>
+              <path d="M32 30v11"/>
+              <circle cx="14" cy="15" r="1.5" fill="currentColor" stroke="none" opacity=".7"/>
+              <circle cx="52" cy="50" r="1.8" fill="currentColor" stroke="none" opacity=".45"/>
+            </svg>
+          </div>
+          <h2 class="empty-title" id="emptyTitle">老师还没有发布成长记录</h2>
+          <p class="empty-desc">等老师记录后，这里会显示乐乐的成长时光</p>
+          <button class="btn-primary js-refresh" type="button" data-od-id="growth-refresh">刷新看看</button>
+        </section>
+
+        <section class="error-state" aria-labelledby="errorTitle" aria-live="polite" data-od-id="growth-error">
+          <div class="error-card">
+            <span class="error-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5.5v8"/><circle cx="12" cy="18.3" r="1.2" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <h2 class="error-title" id="errorTitle">加载成长时光失败</h2>
+            <button class="btn-primary js-retry" type="button" data-od-id="growth-retry">重试</button>
+          </div>
+        </section>
+
+        <section class="timeline" aria-labelledby="timelineTitle" data-od-id="growth-timeline">
+          <div class="timeline-head">
+            <div class="timeline-title-wrap">
+              <h2 class="timeline-title" id="timelineTitle">时光轴</h2>
+              <span class="year-pill">2026年</span>
+            </div>
+            <span class="timeline-count" data-timeline-count aria-live="polite">5 条</span>
+          </div>
+
+          <div class="months">
+            <section class="month-group" data-month="2026-10">
+              <h3 class="month-head"><span class="month-dot" aria-hidden="true"></span><span class="month-label">2026年10月</span><span class="month-line" aria-hidden="true"></span></h3>
+              <div class="month-records">
+
+                <article class="rec" data-scope="individual" tabindex="0" aria-label="10月24日 王老师发布的成长记录" data-od-id="growth-record-1024">
+                  <header class="rec-head">
+                    <span class="rec-avatar" aria-hidden="true">王</span>
+                    <div class="rec-who">
+                      <p class="rec-name">王老师</p>
+                      <time class="rec-time" datetime="2026-10-24T15:20">10月24日 15:20</time>
+                    </div>
+                    <span class="scope scope--individual">专属记录</span>
+                  </header>
+                  <div class="award award--warning">
+                    <span class="award-tag">获奖见证</span>
+                    <span class="award-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-medal"/></svg></span>
+                    <span class="award-name">小小艺术家</span>
+                  </div>
+                  <p class="rec-text">今天的美术课主题是《我心中的春天》，乐乐用棉签点画了一棵开满花的树，还给树下画了小蚂蚁。</p>
+                  <div class="photo-grid" data-count="3">
+                    <div class="photo ph--leaf" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                    <div class="photo ph--sky" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                    <div class="photo ph--sand" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                  </div>
+                  <div class="rec-actions">
+                    <div class="rec-actions__left">
+                      <button class="action js-like" type="button" aria-pressed="false" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-heart"/></svg><span class="like-label">点赞</span>
+                      </button>
+                      <button class="action js-comment" type="button" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-comment"/></svg><span>2条评论</span>
+                      </button>
+                    </div>
+                    <button class="action js-share" type="button" aria-disabled="false">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-share"/></svg><span>分享</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="rec" data-scope="class" tabindex="0" aria-label="10月22日 李老师发布的成长记录" data-od-id="growth-record-1022">
+                  <header class="rec-head">
+                    <span class="rec-avatar" aria-hidden="true">李</span>
+                    <div class="rec-who">
+                      <p class="rec-name">李老师</p>
+                      <time class="rec-time" datetime="2026-10-22T10:05">10月22日 10:05</time>
+                    </div>
+                    <span class="scope scope--group">集体 · 含孩子</span>
+                  </header>
+                  <p class="rec-text">户外活动时间，孩子们在操场上玩「小兔拔萝卜」，乐乐跑得满头大汗，还主动把水杯递给了朵朵。</p>
+                  <div class="photo-grid" data-count="2">
+                    <div class="photo ph--leaf" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                    <div class="photo ph--sky" data-tagged="false" role="img" aria-label="成长照片占位" hidden></div>
+                    <div class="photo ph--sand" data-tagged="false" role="img" aria-label="成长照片占位" hidden></div>
+                    <div class="photo ph--sky" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                    <div class="photo ph--leaf" data-tagged="false" role="img" aria-label="成长照片占位" hidden></div>
+                    <div class="photo ph--mint" data-tagged="false" role="img" aria-label="成长照片占位" hidden></div>
+                  </div>
+                  <p class="rec-more"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-photos"/></svg><span class="rec-more__text">还有 4 张班级照片，切到「看全部」查看</span></p>
+                  <div class="rec-actions">
+                    <div class="rec-actions__left">
+                      <button class="action js-like is-liked" type="button" aria-pressed="true" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-heart"/></svg><span class="like-label">已点赞</span>
+                      </button>
+                      <button class="action js-comment" type="button" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-comment"/></svg><span>5条评论</span>
+                      </button>
+                    </div>
+                    <button class="action js-share" type="button" aria-disabled="false">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-share"/></svg><span>分享</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="rec" data-scope="class" tabindex="0" aria-label="10月20日 王老师发布的成长记录" data-od-id="growth-record-1020">
+                  <header class="rec-head">
+                    <span class="rec-avatar" aria-hidden="true">王</span>
+                    <div class="rec-who">
+                      <p class="rec-name">王老师</p>
+                      <time class="rec-time" datetime="2026-10-20T09:40">10月20日 09:40</time>
+                    </div>
+                    <span class="scope scope--class">班级记录</span>
+                  </header>
+                  <p class="rec-text">午睡后孩子们一起整理了自然角，乐乐给多肉浇了水，还认真擦了每一片叶子。</p>
+                  <div class="rec-actions">
+                    <div class="rec-actions__left">
+                      <button class="action js-like" type="button" aria-pressed="false" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-heart"/></svg><span class="like-label">点赞</span>
+                      </button>
+                      <button class="action js-comment" type="button" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-comment"/></svg><span>评论</span>
+                      </button>
+                    </div>
+                    <button class="action js-share" type="button" aria-disabled="false">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-share"/></svg><span>分享</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="rec" data-scope="individual" tabindex="0" aria-label="10月18日 王老师发布的成长记录" data-od-id="growth-record-1018">
+                  <header class="rec-head">
+                    <span class="rec-avatar" aria-hidden="true">王</span>
+                    <div class="rec-who">
+                      <p class="rec-name">王老师</p>
+                      <time class="rec-time" datetime="2026-10-18T16:10">10月18日 16:10</time>
+                    </div>
+                    <span class="scope scope--individual">专属记录</span>
+                  </header>
+                  <div class="award award--info">
+                    <span class="award-tag">获奖见证</span>
+                    <span class="award-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-medal"/></svg></span>
+                    <span class="award-name">全勤小明星</span>
+                  </div>
+                  <p class="rec-text">这一周乐乐每天都自己穿好外套和鞋子，是班里的「自理小能手」。</p>
+                  <div class="photo-grid" data-count="1">
+                    <div class="photo ph--sand" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                  </div>
+                  <div class="rec-actions">
+                    <div class="rec-actions__left">
+                      <button class="action js-like" type="button" aria-pressed="false" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-heart"/></svg><span class="like-label">点赞</span>
+                      </button>
+                      <button class="action js-comment" type="button" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-comment"/></svg><span>1条评论</span>
+                      </button>
+                    </div>
+                    <button class="action js-share" type="button" aria-disabled="false">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-share"/></svg><span>分享</span>
+                    </button>
+                  </div>
+                </article>
+
+              </div>
+            </section>
+
+            <section class="month-group" data-month="2026-09">
+              <h3 class="month-head"><span class="month-dot" aria-hidden="true"></span><span class="month-label">2026年9月</span><span class="month-line" aria-hidden="true"></span></h3>
+              <div class="month-records">
+
+                <article class="rec" data-scope="class" tabindex="0" aria-label="9月28日 李老师发布的成长记录" data-od-id="growth-record-0928" hidden>
+                  <header class="rec-head">
+                    <span class="rec-avatar" aria-hidden="true">李</span>
+                    <div class="rec-who">
+                      <p class="rec-name">李老师</p>
+                      <time class="rec-time" datetime="2026-09-28T14:30">9月28日 14:30</time>
+                    </div>
+                    <span class="scope scope--other">其他孩子</span>
+                  </header>
+                  <p class="rec-text">秋游日，孩子们在公园里捡了很多落叶，回园后做成了树叶贴画。</p>
+                  <div class="photo-grid" data-count="3">
+                    <div class="photo ph--sky" data-tagged="false" role="img" aria-label="成长照片占位"></div>
+                    <div class="photo ph--leaf" data-tagged="false" role="img" aria-label="成长照片占位"></div>
+                    <div class="photo ph--mint" data-tagged="false" role="img" aria-label="成长照片占位"></div>
+                  </div>
+                  <div class="rec-actions">
+                    <div class="rec-actions__left">
+                      <button class="action js-like" type="button" aria-pressed="false" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-heart"/></svg><span class="like-label">点赞</span>
+                      </button>
+                      <button class="action js-comment" type="button" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-comment"/></svg><span>6条评论</span>
+                      </button>
+                    </div>
+                    <button class="action js-share" type="button" aria-disabled="false">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-share"/></svg><span>分享</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="rec" data-scope="class" tabindex="0" aria-label="9月15日 王老师发布的成长记录" data-od-id="growth-record-0915">
+                  <header class="rec-head">
+                    <span class="rec-avatar" aria-hidden="true">王</span>
+                    <div class="rec-who">
+                      <p class="rec-name">王老师</p>
+                      <time class="rec-time" datetime="2026-09-15T11:20">9月15日 11:20</time>
+                    </div>
+                    <span class="scope scope--included">含孩子</span>
+                  </header>
+                  <p class="rec-text">手工课上，乐乐用彩泥捏了一只小蜗牛，还给蜗牛做了两只长长的触角。</p>
+                  <div class="photo-grid" data-count="2">
+                    <div class="photo ph--leaf" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                    <div class="photo ph--sky" data-tagged="true" role="img" aria-label="成长照片占位"></div>
+                  </div>
+                  <div class="rec-actions">
+                    <div class="rec-actions__left">
+                      <button class="action js-like" type="button" aria-pressed="false" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-heart"/></svg><span class="like-label">点赞</span>
+                      </button>
+                      <button class="action js-comment" type="button" aria-disabled="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-comment"/></svg><span>3条评论</span>
+                      </button>
+                    </div>
+                    <button class="action js-share" type="button" aria-disabled="false">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-share"/></svg><span>分享</span>
+                    </button>
+                  </div>
+                </article>
+
+              </div>
+            </section>
+          </div>
+
+          <section class="mode-empty" hidden aria-labelledby="modeEmptyTitle" data-od-id="growth-mode-empty">
+            <h3 class="mode-empty-title" id="modeEmptyTitle">还没有与乐乐相关的成长记录</h3>
+            <p class="mode-empty-text" id="modeEmptyText">可以先看看班级动态，或等老师发布新的记录。</p>
+          </section>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" role="status" aria-live="polite" aria-atomic="true"><span class="toast__text"></span></div>
+
+    <nav class="mp-tabbar" aria-label="主导航">
+      <button class="mp-tab" type="button">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 9.6 11 3.4l7.5 6.2"/><path d="M5.5 8.7v9.1h11V8.7"/><path d="M9 17.8v-4.6h4v4.6"/></svg>
+        <span>首页</span>
+      </button>
+      <button class="mp-tab" type="button" aria-current="page">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19V9.4"/><path d="M11 12.1c0-3.7-2.5-6.4-6-6.4 0 3.7 2.5 6.4 6 6.4Z"/><path d="M11 9.2c0-3 2.1-5.2 5-5.2 0 3-2.1 5.2-5 5.2Z"/><path d="M7.5 19h7"/></svg>
+        <span>成长</span>
+      </button>
+      <button class="mp-tab" type="button">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.8" y="4.5" width="16.4" height="11" rx="3"/><path d="M2.8 9.8h16.4"/><path d="M7 4.5v5.3"/><path d="M15 4.5v5.3"/><circle cx="7" cy="17.1" r="1.4"/><circle cx="15" cy="17.1" r="1.4"/></svg>
+        <span>接送</span>
+      </button>
+      <button class="mp-tab" type="button">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="7.2" r="3.5"/><path d="M4.6 18.4c.8-3.4 3.3-5.3 6.4-5.3s5.6 1.9 6.4 5.3"/></svg>
+        <span>我的</span>
+      </button>
+    </nav>
+
+    <div class="mp-demo" style="bottom: calc(62px + env(safe-area-inset-bottom))" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+  </div>
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

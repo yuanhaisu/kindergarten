@@ -1,0 +1,23 @@
+{
+  "slug": "parent-growth-index",
+  "surface": "parent",
+  "title": "成长时光",
+  "projectId": "ac6466af-6655-4a9b-95e3-0612e39d913b",
+  "conversationId": "a30ecad9-1611-41ec-8fa4-35abafdfed71",
+  "runId": "803de176-1810-496e-a215-378921371d9b",
+  "status": "succeeded",
+  "runStatus": "canceled",
+  "error": null,
+  "elapsedSec": 772,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "handAuthored": true,
+  "handAuthoredReason": "OpenDesign run 803de176 从 17:57 起卡在 context compaction，只输出心跳，始终没有 app.js；index.html / styles.css 由该 run 产出，app.js 按既有 markup 手写补齐。页面四态与交互完整。",
+  "daemonUrl": "http://127.0.0.1:7456/projects/ac6466af-6655-4a9b-95e3-0612e39d913b",
+  "previewRendered": true
+}

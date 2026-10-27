@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="description" content="养成星球家长端班级日历高保真原型">
+<title>班级日历 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" aria-label="返回我的" data-od-id="calendar-back">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">班级日历</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main">
+    <div class="page" data-od-id="parent-calendar-page">
+
+      <section class="changes-card" id="changesCard" aria-labelledby="changesTitle" data-od-id="calendar-changes" hidden>
+        <header class="changes-head">
+          <span class="changes-mark" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.4a5 5 0 0 1 10 0c0 4 1.4 5.3 1.4 5.3H2.6S4 11.4 4 7.4Z"/><path d="M7.3 15.1a1.8 1.8 0 0 0 3.4 0"/><circle cx="13.6" cy="3.2" r="2.2" fill="var(--warning-wash)"/><circle cx="13.6" cy="3.2" r="1.1" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <h2 class="changes-title" id="changesTitle">安排有变更</h2>
+          <span class="changes-count" id="changesCount">0 项</span>
+        </header>
+        <div class="change-list" id="changeList"></div>
+        <button class="changes-toggle" id="changesToggle" type="button" aria-expanded="false" aria-controls="changeList" data-od-id="changes-toggle" hidden>
+          <span id="changesToggleText">另有 1 条</span>
+          <svg class="changes-caret" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg>
+        </button>
+      </section>
+
+      <section class="month-bar" aria-label="月份切换">
+        <div class="month-stepper">
+          <button class="month-nav" id="prevMonth" type="button" aria-label="上个月" data-od-id="prev-month">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 4.2-4.6 4.8L11 13.8"/></svg>
+          </button>
+          <div class="month-center">
+            <h2 class="month-title" id="monthTitle" aria-live="polite">2026年10月</h2>
+            <p class="month-sub" id="monthSub">本月 9 个活动</p>
+          </div>
+          <button class="month-nav" id="nextMonth" type="button" aria-label="下个月" data-od-id="next-month">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 4.2 4.6 4.8L7 13.8"/></svg>
+          </button>
+        </div>
+        <button class="today-pill" id="todayBtn" type="button" aria-label="回到今天" data-od-id="today-button" disabled>今天</button>
+      </section>
+
+      <section class="calendar-card" id="calendarCard" aria-labelledby="calendarLabel" data-od-id="calendar-month-grid">
+        <h2 class="sr-only" id="calendarLabel">2026年10月月历</h2>
+        <div class="week-head" aria-hidden="true">
+          <span class="is-weekend">日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="is-weekend">六</span>
+        </div>
+        <div class="day-grid" id="dayGrid" role="group" aria-label="2026年10月日期"></div>
+        <div class="calendar-legend" id="calendarLegend" aria-label="活动类型图例" hidden></div>
+      </section>
+
+      <section class="calendar-skeleton" id="calendarSkeleton" aria-hidden="true">
+        <div class="skeleton-week">
+          <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+        </div>
+        <div class="skeleton-grid" id="skeletonGrid"></div>
+        <div class="skeleton-legend"><span></span><span></span><span></span></div>
+      </section>
+
+      <section class="events-section" id="eventsSection" aria-labelledby="eventsTitle" data-od-id="calendar-day-events">
+        <header class="events-head">
+          <div class="events-heading">
+            <h2 class="events-title" id="eventsTitle">当日安排</h2>
+            <p class="events-date" id="eventsDate">10月26日 周一</p>
+          </div>
+          <span class="events-count" id="eventsCount" aria-live="polite">2 个活动</span>
+        </header>
+
+        <div class="event-list" id="eventList"></div>
+
+        <div class="empty-card empty-card--day" id="dayEmpty" hidden>
+          <span class="empty-icon" aria-hidden="true">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="4.5"/><path d="M8 3.5v3.2M16 3.5v3.2M3.5 9.6h17"/><path d="M9 14h6"/></svg>
+          </span>
+          <p class="empty-title" id="dayEmptyTitle">这一天暂无活动安排</p>
+          <p class="empty-desc">可以点选其他日期看看</p>
+        </div>
+
+        <div class="empty-card empty-card--month" id="monthEmpty" hidden>
+          <span class="empty-icon" aria-hidden="true">
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="4.5"/><path d="M8 3.5v3.2M16 3.5v3.2M3.5 9.6h17"/><path d="M9 14h6"/></svg>
+          </span>
+          <p class="empty-title" id="monthEmptyTitle">12月暂无活动安排</p>
+          <p class="empty-desc">园所还没发布这个月的安排</p>
+          <button class="btn-primary" id="backToday" type="button" data-od-id="empty-back-today">回到今天</button>
+        </div>
+
+        <div class="event-skeletons" id="eventSkeletons" aria-hidden="true"></div>
+      </section>
+
+      <section class="error-panel" id="errorPanel" role="alert" aria-labelledby="errorTitle" data-od-id="calendar-error">
+        <span class="error-icon" aria-hidden="true">
+          <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 18.4h9.9a4.1 4.1 0 0 0 .7-8.14 5.6 5.6 0 0 0-10.6-.9 4.6 4.6 0 0 0 0 9.04Z"/><path d="m4.3 4.3 15.4 15.4"/></svg>
+        </span>
+        <h2 class="error-title" id="errorTitle">日历加载失败</h2>
+        <p class="error-desc">网络异常，未获取到本月活动</p>
+        <button class="btn-primary" id="retryCalendar" type="button" data-od-id="retry-calendar">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.2 6.6A5.4 5.4 0 1 0 13.4 9"/><path d="M13.4 2.8v3.9H9.5"/></svg>
+          重新加载
+        </button>
+      </section>
+
+      <p class="sr-only" id="liveStatus" aria-live="polite"></p>
+    </div>
+  </main>
+
+  <div class="mp-demo" data-open="false">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

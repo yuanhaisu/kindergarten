@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="养成星球家长端班级墙">
+  <title>班级墙 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+    <header class="mp-navbar">
+      <button class="mp-back" type="button" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title">班级墙</h1>
+      <div class="mp-capsule" aria-hidden="true"><span class="mp-capsule-dots">···</span><span class="mp-capsule-divider"></span><span class="mp-capsule-ring">◎</span></div>
+    </header>
+
+    <main class="mp-main wall-main">
+      <div class="wall-page" data-od-id="class-wall-page">
+        <button class="wall-stale" type="button" id="stale-banner" data-od-id="wall-refresh-error" aria-live="polite">
+          <svg class="wall-stale-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 1.8 14.6 13H1.4L8 1.8Z"/>
+            <path d="M8 6v3.1"/>
+            <circle cx="8" cy="11.2" r=".65" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="wall-stale-text">网络开小差了，点击重试</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M13 6.2A5.4 5.4 0 1 0 13.2 10"/>
+            <path d="M13 2.4v3.9H9.1"/>
+          </svg>
+        </button>
+
+        <div class="wall-head" data-od-id="wall-head">
+          <div class="wall-rule">
+            <svg class="wall-lock" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2.2" y="5.4" width="7.6" height="5.1" rx="1.6"/>
+              <path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/>
+            </svg>
+            <span class="wall-rule-text">老师确认后才会出现在这里 · 仅本班可见</span>
+          </div>
+          <span class="wall-count" data-od-id="wall-share-count">7 份分享</span>
+        </div>
+
+        <div class="wall-feed" data-od-id="wall-feed">
+          <section class="wall-day" aria-labelledby="wall-date-today" data-od-id="wall-day-today">
+            <div class="wall-datebar" data-od-id="wall-date-today">
+              <h2 class="wall-date" id="wall-date-today">今天</h2>
+              <span class="wall-date-count">3 份</span>
+              <span class="wall-date-line" aria-hidden="true"></span>
+            </div>
+            <div class="wall-stack">
+              <article class="share-card share-card--photo" data-od-id="wall-post-lele-reading">
+                <button class="photo-hit" type="button" data-photo="reading" data-child="乐乐" data-task="本周亲子共读" aria-label="查看乐乐的照片：本周亲子共读">
+                  <span class="wall-art" data-photo="reading" aria-hidden="true"></span>
+                  <span class="task-chip">本周亲子共读</span>
+                </button>
+                <div class="share-body">
+                  <p class="share-copy">今天第一次自己读完《好饿的毛毛虫》，读到毛毛虫变蝴蝶那页，她自己也张开了手。</p>
+                  <div class="share-meta">
+                    <span class="avatar" aria-hidden="true">乐</span>
+                    <span class="child-name">乐乐</span>
+                    <time class="share-time" datetime="2026-10-26T19:30:00+08:00">19:30</time>
+                  </div>
+                </div>
+              </article>
+
+              <article class="share-card share-card--photo" data-od-id="wall-post-duoduo-shoelaces">
+                <button class="photo-hit" type="button" data-photo="laces" data-child="朵朵" data-task="生活小能手" aria-label="查看朵朵的照片：生活小能手">
+                  <span class="wall-art" data-photo="laces" aria-hidden="true"></span>
+                  <span class="task-chip">生活小能手</span>
+                </button>
+                <div class="share-body">
+                  <p class="share-copy">终于学会自己系鞋带了，系完在客厅转了三圈。</p>
+                  <div class="share-meta">
+                    <span class="avatar" aria-hidden="true">朵</span>
+                    <span class="child-name">朵朵</span>
+                    <time class="share-time" datetime="2026-10-26T18:05:00+08:00">18:05</time>
+                  </div>
+                </div>
+              </article>
+
+              <article class="share-card share-card--note" data-od-id="wall-post-yuxiao-chores">
+                <div class="note-topline">
+                  <span class="note-quote" aria-hidden="true">“</span>
+                  <span class="task-chip task-chip--note">家务小帮手</span>
+                </div>
+                <p class="share-copy share-copy--note">晚饭前主动帮奶奶摆好碗筷，说这是老师教的办法：从左往右摆。</p>
+                <div class="share-meta">
+                  <span class="avatar" aria-hidden="true">雨</span>
+                  <span class="child-name">小雨</span>
+                  <time class="share-time" datetime="2026-10-26T17:20:00+08:00">17:20</time>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="wall-day" aria-labelledby="wall-date-yesterday" data-od-id="wall-day-yesterday">
+            <div class="wall-datebar" data-od-id="wall-date-yesterday">
+              <h2 class="wall-date" id="wall-date-yesterday">昨天</h2>
+              <span class="wall-date-count">2 份</span>
+              <span class="wall-date-line" aria-hidden="true"></span>
+            </div>
+            <div class="wall-stack">
+              <article class="share-card share-card--photo" data-od-id="wall-post-xuanxuan-puzzle">
+                <button class="photo-hit" type="button" data-photo="puzzle" data-child="轩轩" data-task="专注力小挑战" aria-label="查看轩轩的照片：专注力小挑战">
+                  <span class="wall-art" data-photo="puzzle" aria-hidden="true"></span>
+                  <span class="task-chip">专注力小挑战</span>
+                </button>
+                <div class="share-body">
+                  <p class="share-copy">60 片恐龙拼图，中间一次都没有喊人帮忙。</p>
+                  <div class="share-meta">
+                    <span class="avatar" aria-hidden="true">轩</span>
+                    <span class="child-name">轩轩</span>
+                    <time class="share-time" datetime="2026-10-25T20:10:00+08:00">20:10</time>
+                  </div>
+                </div>
+              </article>
+
+              <article class="share-card share-card--photo" data-od-id="wall-post-yuxiao-leaves">
+                <button class="photo-hit" type="button" data-photo="leaves" data-child="小雨" data-task="自然观察日记" aria-label="查看小雨的照片：自然观察日记">
+                  <span class="wall-art" data-photo="leaves" aria-hidden="true"></span>
+                  <span class="task-chip">自然观察日记</span>
+                </button>
+                <div class="share-body">
+                  <div class="share-meta">
+                    <span class="avatar" aria-hidden="true">雨</span>
+                    <span class="child-name">小雨</span>
+                    <time class="share-time" datetime="2026-10-25T19:45:00+08:00">19:45</time>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="wall-day" aria-labelledby="wall-date-oct24" data-od-id="wall-day-oct24">
+            <div class="wall-datebar" data-od-id="wall-date-oct24">
+              <h2 class="wall-date" id="wall-date-oct24">10月24日</h2>
+              <span class="wall-date-count">2 份</span>
+              <span class="wall-date-line" aria-hidden="true"></span>
+            </div>
+            <div class="wall-stack">
+              <article class="share-card share-card--note" data-od-id="wall-post-duoduo-backpack">
+                <div class="note-topline">
+                  <span class="note-quote" aria-hidden="true">“</span>
+                  <span class="task-chip task-chip--note">自理小任务</span>
+                </div>
+                <p class="share-copy share-copy--note">睡前自己把书包收好了，还把水壶灌满放在门口。</p>
+                <div class="share-meta">
+                  <span class="avatar" aria-hidden="true">朵</span>
+                  <span class="child-name">朵朵</span>
+                  <time class="share-time" datetime="2026-10-24T21:00:00+08:00">21:00</time>
+                </div>
+              </article>
+
+              <article class="share-card share-card--photo" data-od-id="wall-post-lele-autumn">
+                <button class="photo-hit" type="button" data-photo="autumn" data-child="乐乐" data-task="秋天在哪里" aria-label="查看乐乐的照片：秋天在哪里">
+                  <span class="wall-art" data-photo="autumn" aria-hidden="true"></span>
+                  <span class="task-chip">秋天在哪里</span>
+                </button>
+                <div class="share-body">
+                  <p class="share-copy">在公园捡了七种不同的叶子，回家贴成了一只小刺猬。</p>
+                  <div class="share-meta">
+                    <span class="avatar" aria-hidden="true">乐</span>
+                    <span class="child-name">乐乐</span>
+                    <time class="share-time" datetime="2026-10-24T16:30:00+08:00">16:30</time>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="wall-state wall-state--loading" data-od-id="wall-state-loading" role="status" aria-label="正在加载本班分享">
+          <div class="skel-list" aria-hidden="true">
+            <div class="skel-card">
+              <span class="skel-art"></span>
+              <div class="skel-body">
+                <span class="skel-line"></span>
+                <span class="skel-line skel-line--short"></span>
+                <div class="skel-meta"><span class="skel-avatar"></span><span class="skel-line skel-line--tiny"></span></div>
+              </div>
+            </div>
+            <div class="skel-card">
+              <span class="skel-art"></span>
+              <div class="skel-body">
+                <span class="skel-line"></span>
+                <span class="skel-line skel-line--short"></span>
+                <div class="skel-meta"><span class="skel-avatar"></span><span class="skel-line skel-line--tiny"></span></div>
+              </div>
+            </div>
+            <div class="skel-card">
+              <span class="skel-art"></span>
+              <div class="skel-body">
+                <span class="skel-line"></span>
+                <span class="skel-line skel-line--short"></span>
+                <div class="skel-meta"><span class="skel-avatar"></span><span class="skel-line skel-line--tiny"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wall-state wall-state--error" data-od-id="wall-state-error" role="alert">
+          <p class="wall-state-title">班级墙暂时打不开</p>
+          <p class="wall-state-text">网络好像不太稳定，请稍后再试。</p>
+          <button class="state-action" type="button" id="retry-load" data-od-id="wall-retry">重试</button>
+        </div>
+
+        <div class="wall-state wall-state--empty" data-od-id="wall-state-empty">
+          <svg class="wall-empty-art" width="76" height="76" viewBox="0 0 76 76" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="19" y="15" width="38" height="46" rx="9" transform="rotate(-7 38 38)"/>
+            <rect x="15" y="19" width="38" height="46" rx="9"/>
+            <circle cx="26" cy="31" r="3.4"/>
+            <path d="M15 52l9.5-9.5 7 7 5.5-5.5L47 54"/>
+            <circle cx="54" cy="18" r="4.5" fill="currentColor" stroke="none"/>
+          </svg>
+          <p class="wall-state-title">本班还没有分享</p>
+          <p class="wall-state-text">家长提交、老师确认之后，会出现在这里</p>
+          <button class="state-action" type="button" id="go-tasks" data-od-id="wall-go-tasks">去任务列表</button>
+        </div>
+
+        <div class="wall-foot" data-od-id="wall-feed-end">
+          <p class="wall-foot-text">没有更多了</p>
+        </div>
+      </div>
+    </main>
+
+    <div class="preview-layer" id="photo-preview" role="dialog" aria-modal="true" aria-labelledby="preview-caption" data-od-id="photo-preview" hidden>
+      <div class="preview-backdrop" data-preview-close aria-hidden="true"></div>
+      <button class="preview-close" id="preview-close" type="button" aria-label="关闭照片预览">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="m5.5 5.5 9 9"/>
+          <path d="m14.5 5.5-9 9"/>
+        </svg>
+      </button>
+      <div class="preview-stage">
+        <div class="wall-art preview-art" id="preview-art" data-photo="reading" aria-hidden="true"></div>
+        <p class="preview-caption" id="preview-caption">照片预览</p>
+      </div>
+    </div>
+
+    <div class="proto-toast" id="proto-toast" role="status" aria-live="polite"></div>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+        <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+        <button class="mp-demo-chip" data-mp-state="stale" aria-pressed="false">刷新失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

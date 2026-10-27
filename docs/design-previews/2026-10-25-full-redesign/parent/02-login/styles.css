@@ -1,0 +1,491 @@
+/* 家长登录 · 家长端
+ * 页面只负责内容样式；外壳、状态条与演示条来自 ../../_shared/shell.css。
+ * 颜色、圆角、阴影、字号全部引用 tokens.css。
+ */
+
+/* ---------- 基础重置 ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+/* ---------- 页面骨架 ---------- */
+/* 状态栏 20px + 导航栏 44px = 64px，剩余高度给登录内容垂直居中 */
+.login-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-height: calc(100dvh - 64px);
+  padding: 32px 20px calc(32px + env(safe-area-inset-bottom));
+}
+
+/* ---------- 品牌区 ---------- */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 350px;
+  margin-top: auto;
+  text-align: center;
+}
+
+.brand-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 14px;
+}
+
+.brand-orbit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: color-mix(in srgb, var(--accent-soft) 58%, var(--border));
+}
+
+.brand-satellite {
+  fill: var(--accent);
+}
+
+.brand-core {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--on-brand) 55%, transparent) 0%, transparent 46%),
+    var(--accent-gradient);
+  box-shadow: var(--shadow-md);
+}
+
+.brand-name {
+  margin: 0;
+  color: var(--fg);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.brand-sub {
+  margin: var(--space-sm) 0 0;
+  color: var(--muted);
+  font-size: var(--text-md);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 登录卡 ---------- */
+.login-card {
+  width: 100%;
+  max-width: 350px;
+  margin-top: 32px;
+  padding: var(--space-xl);
+  border: 1px solid color-mix(in srgb, var(--border) 42%, transparent);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- 内联错误条 ---------- */
+.error-bar {
+  display: none;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 18%, transparent);
+  border-radius: var(--radius-xl);
+  background: var(--danger-wash);
+}
+
+.mp-app[data-state="error"] .error-bar {
+  display: flex;
+  animation: error-in var(--motion-base) var(--ease) both;
+}
+
+.error-icon {
+  flex: none;
+  margin-top: 1px;
+  color: color-mix(in srgb, var(--danger) 72%, var(--fg));
+}
+
+.error-copy {
+  min-width: 0;
+}
+
+.error-title {
+  margin: 0;
+  color: color-mix(in srgb, var(--danger) 72%, var(--fg));
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+
+.error-desc {
+  margin: 2px 0 0;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 主按钮 ---------- */
+.login-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--space-xl);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent-gradient);
+  color: var(--on-accent);
+  font-family: inherit;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  box-shadow: var(--shadow-md);
+  transition:
+    opacity var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease),
+    box-shadow var(--motion-fast) var(--ease),
+    filter var(--motion-fast) var(--ease);
+}
+
+.login-btn:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 3px;
+}
+
+.login-btn:disabled {
+  cursor: not-allowed;
+}
+
+.login-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-sm);
+  filter: brightness(0.94);
+}
+
+.mp-app[data-state="loading"] .login-btn {
+  opacity: 0.55;
+  box-shadow: var(--shadow-sm);
+  transform: none;
+  filter: none;
+}
+
+.btn-label {
+  display: none;
+}
+
+/* 登录中由转圈接管，微信图标让位，避免两个图形并排 */
+.btn-wechat {
+  display: block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.mp-app[data-state="loading"] .btn-wechat {
+  display: none;
+}
+
+.btn-label--idle {
+  display: inline;
+}
+
+.mp-app[data-state="loading"] .btn-label--idle,
+.mp-app[data-state="error"] .btn-label--idle {
+  display: none;
+}
+
+.mp-app[data-state="loading"] .btn-label--loading {
+  display: inline;
+}
+
+.mp-app[data-state="error"] .btn-label--retry {
+  display: inline;
+}
+
+.btn-spinner {
+  display: none;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border: 2px solid color-mix(in srgb, var(--on-brand) 34%, transparent);
+  border-top-color: var(--on-brand);
+  border-radius: 50%;
+}
+
+.mp-app[data-state="loading"] .btn-spinner {
+  display: block;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ---------- 协议行 ---------- */
+.agree {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  margin: 12px -8px 0;
+  padding: 0 8px;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.agree:active {
+  background-color: var(--accent-wash);
+}
+
+.agree.is-nudged {
+  animation: agree-nudge 360ms var(--ease);
+}
+
+.agree-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  opacity: 0;
+}
+
+.agree-box {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--muted);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease),
+    opacity var(--motion-fast) var(--ease);
+}
+
+.agree-check {
+  color: var(--on-brand);
+  opacity: 0;
+  transform: scale(0.7);
+  transition:
+    opacity var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.agree-input:checked + .agree-box {
+  border-color: var(--accent-deep);
+  background: var(--accent-deep);
+}
+
+.agree-input:checked + .agree-box .agree-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.agree-input:focus-visible + .agree-box {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 2px;
+}
+
+.agree:active .agree-box {
+  transform: scale(0.9);
+}
+
+.agree-text {
+  min-width: 0;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  transition: color var(--motion-fast) var(--ease);
+}
+
+.mp-app[data-state="empty"] .agree-box {
+  border-color: var(--accent-deep);
+}
+
+.mp-app[data-state="empty"] .agree-text {
+  color: var(--fg);
+}
+
+.mp-app[data-state="loading"] .agree {
+  pointer-events: none;
+  cursor: default;
+}
+
+.mp-app[data-state="loading"] .agree-box {
+  opacity: 0.55;
+}
+
+/* ---------- 卡外脚注 ---------- */
+.login-note {
+  width: 100%;
+  max-width: 350px;
+  margin: var(--space-xl) 0 auto;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 轻提示 ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 11px 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 38%, transparent);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-body);
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity var(--motion-base) var(--ease),
+    transform var(--motion-base) var(--ease);
+  pointer-events: none;
+}
+
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.toast-glyph {
+  display: none;
+}
+
+.toast[data-tone="warning"] .toast-glyph--warning {
+  display: block;
+  color: color-mix(in srgb, var(--warning) 72%, var(--fg));
+}
+
+.toast[data-tone="success"] .toast-glyph--success {
+  display: block;
+  color: color-mix(in srgb, var(--success) 72%, var(--fg));
+}
+
+.toast[data-tone="danger"] .toast-glyph--danger {
+  display: block;
+  color: color-mix(in srgb, var(--danger) 72%, var(--fg));
+}
+
+.toast-text {
+  min-width: 0;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 动效 ---------- */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes agree-nudge {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-3px); }
+  48% { transform: translateX(3px); }
+  72% { transform: translateX(-1px); }
+}
+
+/* ---------- 指针设备反馈 ---------- */
+@media (hover: hover) {
+  .login-btn:hover:not(:disabled) {
+    box-shadow: var(--shadow-lg);
+    filter: brightness(0.97);
+  }
+
+  .agree:hover {
+    background-color: color-mix(in srgb, var(--accent-wash) 62%, transparent);
+  }
+
+  .agree:hover .agree-input:not(:checked) + .agree-box {
+    border-color: var(--accent-deep);
+  }
+}

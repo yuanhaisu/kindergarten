@@ -6,7 +6,8 @@ export default {
       "onBrand": "#FFFFFF",
       "body": "#334155",
       "muted": "#64748B",
-      "hint": "#94A3B8"
+      "hint": "#94A3B8",
+      "onAccent": "#FFFFFF"
     },
     "semantic": {
       "success": "#16A34A",

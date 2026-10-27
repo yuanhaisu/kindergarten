@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>积分与成就 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+<div class="mp-statusbar" aria-hidden="true">
+<span class="mp-time">9:41</span>
+<span class="mp-status-icons">
+<svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+<svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+<svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+</span>
+</div>
+<header class="mp-navbar">
+<button class="mp-back" id="backButton" type="button" aria-label="返回我的">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+</button>
+<h1 class="mp-title">积分与成就</h1>
+<div class="mp-capsule" aria-hidden="true">
+<span class="mp-capsule-dots">···</span>
+<span class="mp-capsule-divider"></span>
+<span class="mp-capsule-ring">◎</span>
+</div>
+</header>
+
+<main class="mp-main">
+<div class="page">
+
+<section class="hero-card" aria-label="积分总览">
+<div class="hero-top">
+<span class="level-chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.2 14.6 9l6.2.6-4.7 4.1 1.4 6.1L12 16.6 6.5 19.8l1.4-6.1L3.2 9.6 9.4 9z"/></svg>Lv.5 超级小星星</span>
+<span class="rank-chip">班级第 3 / 28</span>
+</div>
+<div class="points-line">
+<span class="points-value">1245</span>
+<span class="points-unit">积分</span>
+</div>
+<div class="level-progress">
+<div class="progress-head"><span>距离下一等级</span><span class="progress-gap">还差 255 分</span></div>
+<div class="progress-track" role="progressbar" aria-label="等级进度" aria-valuemin="0" aria-valuemax="1500" aria-valuenow="1245">
+<span class="progress-fill" style="width:83%"></span>
+</div>
+<div class="progress-scale"><span>已获得 1245</span><span>目标 1500</span></div>
+</div>
+</section>
+
+<div class="tabs" role="tablist" aria-label="积分与成就切换">
+<button class="tab is-active" type="button" role="tab" id="tabPoints" aria-selected="true" aria-controls="panelPoints" data-tab="points">积分</button>
+<button class="tab" type="button" role="tab" id="tabRank" aria-selected="false" aria-controls="panelRank" data-tab="rank">排行榜</button>
+<button class="tab" type="button" role="tab" id="tabAchievements" aria-selected="false" aria-controls="panelAchievements" data-tab="achievements">成就</button>
+</div>
+
+<section class="panel" id="panelPoints" role="tabpanel" aria-labelledby="tabPoints" data-panel="points">
+<div class="stat-grid" aria-label="积分统计">
+<div class="stat-card"><span class="stat-label">本周积分</span><span class="stat-value">45</span></div>
+<div class="stat-card"><span class="stat-label">本月积分</span><span class="stat-value">180</span></div>
+</div>
+<div class="panel-head">
+<div class="panel-heading"><h2 class="panel-title">积分明细</h2><p class="panel-sub">最近获得与消耗</p></div>
+<span class="panel-meta">最近 9 条</span>
+</div>
+<ul class="ledger" id="ledger">
+<li><button class="ledger-row" type="button" data-source="任务打卡" data-amount="+10">
+<span class="ledger-icon is-earn" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+<span class="ledger-main"><span class="ledger-title">任务打卡</span><span class="ledger-desc">完成任务【每日阅读10分钟】</span><span class="ledger-time">10月25日 20:30</span></span>
+<span class="ledger-side"><span class="ledger-amount is-plus">+10</span><span class="ledger-balance">余额 1245</span></span>
+</button></li>
+<li><button class="ledger-row" type="button" data-source="成长日志被推荐" data-amount="+10">
+<span class="ledger-icon is-earn" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+<span class="ledger-main"><span class="ledger-title">成长日志被推荐</span><span class="ledger-desc">《第一次自己系鞋带》被老师推荐</span><span class="ledger-time">10月24日 19:10</span></span>
+<span class="ledger-side"><span class="ledger-amount is-plus">+10</span><span class="ledger-balance">余额 1235</span></span>
+</button></li>
+<li><button class="ledger-row" type="button" data-source="任务打卡" data-amount="+10">
+<span class="ledger-icon is-earn" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+<span class="ledger-main"><span class="ledger-title">任务打卡</span><span class="ledger-desc">完成任务【自己整理书包】</span><span class="ledger-time">10月23日 20:05</span></span>
+<span class="ledger-side"><span class="ledger-amount is-plus">+10</span><span class="ledger-balance">余额 1225</span></span>
+</button></li>
+<li><button class="ledger-row" type="button" data-source="任务打卡" data-amount="+5">
+<span class="ledger-icon is-earn" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+<span class="ledger-main"><span class="ledger-title">任务打卡</span><span class="ledger-desc">完成任务【帮妈妈摆碗筷】</span><span class="ledger-time">10月22日 18:40</span></span>
+<span class="ledger-side"><span class="ledger-amount is-plus">+5</span><span class="ledger-balance">余额 1215</span></span>
+</button></li>
+<li><button class="ledger-row" type="button" data-source="周全勤" data-amount="+10">
+<span class="ledger-icon is-earn" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+<span class="ledger-main"><span class="ledger-title">周全勤</span><span class="ledger-desc">上周五天全勤</span><span class="ledger-time">10月20日 08:30</span></span>
+<span class="ledger-side"><span class="ledger-amount is-plus">+10</span><span class="ledger-balance">余额 1210</span></span>
+</button></li>
+<li><button class="ledger-row" type="button" data-source="管理员调整" data-amount="-20">
+<span class="ledger-icon is-spend" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+<span class="ledger-main"><span class="ledger-title">管理员调整</span><span class="ledger-desc">活动积分更正</span><span class="ledger-time">10月18日 15:20</span></span>
+<span class="ledger-side"><span class="ledger-amount is-minus">-20</span><span class="ledger-balance">余额 1200</span></span>
+</button></li>
+<li><button class="ledger-row" type="button" data-source="月全勤" data-amount="+30">
+<span class="ledger-icon is-earn" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+<span class="ledger-main"><span class="ledger-title">月全勤</span><span class="ledger-desc">9月全勤奖励</span><span class="ledger-time">10月15日 09:00</span></span>
+<span class="ledger-side"><span class="ledger-amount is-plus">+30</span><span class="ledger-balance">余额 1220</span></span>
+</button></li>
+</ul>
+<button class="load-more" id="loadMore" type="button">加载更多</button>
+</section>
+
+<section class="panel" id="panelRank" role="tabpanel" aria-labelledby="tabRank" data-panel="rank" hidden>
+<div class="panel-head">
+<div class="panel-heading"><h2 class="panel-title">本周排行榜</h2><p class="panel-sub">按本周获得积分排序</p></div>
+</div>
+<ol class="rank-list">
+<li><button class="rank-row" type="button" data-name="李小花" data-points="60">
+<span class="rank-num is-top">1</span><span class="rank-avatar">李</span><span class="rank-name">李小花</span><span class="rank-points">60<small>分</small></span>
+</button></li>
+<li><button class="rank-row" type="button" data-name="张小强" data-points="50">
+<span class="rank-num is-top">2</span><span class="rank-avatar">张</span><span class="rank-name">张小强</span><span class="rank-points">50<small>分</small></span>
+</button></li>
+<li><button class="rank-row is-self" type="button" data-name="乐乐" data-points="45">
+<span class="rank-num is-top">3</span><span class="rank-avatar">乐</span><span class="rank-name">乐乐<span class="self-pill">我</span></span><span class="rank-points">45<small>分</small></span>
+</button></li>
+<li><button class="rank-row" type="button" data-name="陈小雨" data-points="40">
+<span class="rank-num">4</span><span class="rank-avatar">陈</span><span class="rank-name">陈小雨</span><span class="rank-points">40<small>分</small></span>
+</button></li>
+<li><button class="rank-row" type="button" data-name="赵朵朵" data-points="35">
+<span class="rank-num">5</span><span class="rank-avatar">赵</span><span class="rank-name">赵朵朵</span><span class="rank-points">35<small>分</small></span>
+</button></li>
+</ol>
+<p class="panel-foot">仅显示本班前 20 名（在园 28 人）</p>
+</section>
+
+<section class="panel" id="panelAchievements" role="tabpanel" aria-labelledby="tabAchievements" data-panel="achievements" hidden>
+<div class="panel-head">
+<div class="panel-heading"><h2 class="panel-title">成就徽章</h2><p class="panel-sub">已获得 8 / 12</p></div>
+</div>
+<div class="badge-grid">
+<button class="badge is-earned" type="button" data-earned="true" data-name="全勤之星" data-desc="连续一个月全勤" data-date="10月1日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M8.5 13l2.2 2.2 4.3-4.4"/></svg></span>
+<span class="badge-name">全勤之星</span>
+</button>
+<button class="badge is-earned" type="button" data-earned="true" data-name="小小艺术家" data-desc="发布 10 条成长记录" data-date="10月5日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-.9 2-1.8 0-1.1-.9-1.5-.9-2.4 0-.9.7-1.5 1.7-1.5h1.4c2.4 0 4.3-1.9 4.3-4.3 0-3.8-3.8-7-8.5-7Z"/><circle cx="8" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r=".9" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></span>
+<span class="badge-name">小小艺术家</span>
+</button>
+<button class="badge is-earned" type="button" data-earned="true" data-name="阅读小达人" data-desc="完成 20 次阅读打卡" data-date="10月8日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5Z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5Z"/></svg></span>
+<span class="badge-name">阅读小达人</span>
+</button>
+<button class="badge is-earned" type="button" data-earned="true" data-name="运动小健将" data-desc="参加 10 次户外活动" data-date="9月28日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="4.5" r="1.8"/><path d="M13.5 9 10 11l-2 4M13.5 9l3 3 3 .5M10 11 6 10M11.5 15l-2 6M11.5 15l4 1.5 2 4.5"/></svg></span>
+<span class="badge-name">运动小健将</span>
+</button>
+<button class="badge is-earned" type="button" data-earned="true" data-name="礼貌小天使" data-desc="主动问好满 30 天" data-date="10月12日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.7-7 9-7 9Z"/></svg></span>
+<span class="badge-name">礼貌小天使</span>
+</button>
+<button class="badge is-earned" type="button" data-earned="true" data-name="劳动小能手" data-desc="完成 15 次自理任务" data-date="10月15日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6M16.5 6.5 8 15M8 15l-3 6 6-3 5-5"/></svg></span>
+<span class="badge-name">劳动小能手</span>
+</button>
+<button class="badge is-earned" type="button" data-earned="true" data-name="分享之星" data-desc="和同伴分享 10 次" data-date="10月18日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.2"/><circle cx="18" cy="6" r="2.2"/><circle cx="18" cy="18" r="2.2"/><path d="M8 11 16 7M8 13l8 4"/></svg></span>
+<span class="badge-name">分享之星</span>
+</button>
+<button class="badge is-earned" type="button" data-earned="true" data-name="坚持之星" data-desc="连续打卡 30 天" data-date="10月22日" data-points="10">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s5 4.2 5 9a5 5 0 0 1-10 0c0-2 .8-3.5 2-5 .2 1.6.8 2.6 1.8 3.2C11 8.5 11.5 6 12 3Z"/></svg></span>
+<span class="badge-name">坚持之星</span>
+</button>
+<button class="badge is-locked" type="button" data-earned="false" data-name="艺术小天才" data-desc="参与 10 次美术/手工活动">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-8 8H6v-6Z"/><path d="M6 18c-1.5.5-2 1.5-2 3 1.5 0 2.5-.5 3-2"/></svg></span>
+<span class="badge-name">艺术小天才</span>
+</button>
+<button class="badge is-locked" type="button" data-earned="false" data-name="故事大王" data-desc="在班级分享 5 个故事">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M8.5 21h7"/></svg></span>
+<span class="badge-name">故事大王</span>
+</button>
+<button class="badge is-locked" type="button" data-earned="false" data-name="小小科学家" data-desc="完成 8 次自然观察">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7 15h10"/></svg></span>
+<span class="badge-name">小小科学家</span>
+</button>
+<button class="badge is-locked" type="button" data-earned="false" data-name="时间小管家" data-desc="连续 21 天按时入园">
+<span class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
+<span class="badge-name">时间小管家</span>
+</button>
+</div>
+<p class="panel-foot">灰色徽章尚未获得</p>
+</section>
+
+<section class="state state-empty" id="emptyState" aria-live="polite">
+<span class="state-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 14.5 9l6 .6-4.5 4 1.3 5.9L12 16.3 6.7 19.5 8 13.6 3.5 9.6 9.5 9z"/></svg></span>
+<h2 class="state-title" id="emptyTitle">还没有积分记录</h2>
+<p class="state-desc" id="emptyDesc">完成任务、坚持出勤都会获得积分</p>
+<button class="state-btn" id="emptyAction" type="button">查看亲子任务</button>
+</section>
+
+<section class="state state-loading" id="loadingState" aria-label="加载中">
+<div class="skeleton-card" aria-hidden="true">
+<div class="skeleton-row"><span class="sk-circle"></span><span class="sk-lines"><span class="sk-line w60"></span><span class="sk-line w40"></span></span><span class="sk-line w18"></span></div>
+<div class="skeleton-row"><span class="sk-circle"></span><span class="sk-lines"><span class="sk-line w50"></span><span class="sk-line w35"></span></span><span class="sk-line w18"></span></div>
+<div class="skeleton-row"><span class="sk-circle"></span><span class="sk-lines"><span class="sk-line w65"></span><span class="sk-line w30"></span></span><span class="sk-line w18"></span></div>
+</div>
+<p class="state-desc">正在加载积分记录…</p>
+</section>
+
+<section class="state state-error" id="errorState" aria-live="polite">
+<span class="state-icon is-error" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17.5h9.5a3.5 3.5 0 0 0 .6-6.9A5.5 5.5 0 0 0 6.6 9.3 4.1 4.1 0 0 0 7 17.5Z"/><path d="m9.5 12.5 5 5M14.5 12.5l-5 5"/></svg></span>
+<h2 class="state-title">积分记录加载失败</h2>
+<p class="state-desc">网络开小差了，请稍后重试</p>
+<button class="state-btn" id="retryButton" type="button"><span id="retryLabel">重试</span></button>
+</section>
+
+</div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<section class="badge-sheet" id="badgeSheet" role="dialog" aria-modal="true" aria-labelledby="sheetName" hidden>
+<span class="sheet-handle" aria-hidden="true"></span>
+<button class="sheet-close" id="sheetClose" type="button" aria-label="关闭">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+</button>
+<span class="sheet-icon" id="sheetIcon" aria-hidden="true"></span>
+<h2 class="sheet-name" id="sheetName"></h2>
+<p class="sheet-desc" id="sheetDesc"></p>
+<p class="sheet-meta" id="sheetMeta"></p>
+<button class="sheet-btn" id="sheetConfirm" type="button">知道了</button>
+</section>
+
+<div class="mp-demo" data-open="false">
+<div class="mp-demo-chips" role="group" aria-label="原型状态">
+<button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+<button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+<button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+<button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+</div>
+<button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+</div>
+
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

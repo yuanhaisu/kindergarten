@@ -1,0 +1,26 @@
+{
+  "slug": "parent-tasks-detail",
+  "surface": "parent",
+  "title": "任务详情",
+  "handAuthored": true,
+  "handAuthorReason": "OpenDesign run 1b61e8a8 卡在 context compaction：20:56 起仅反复输出 compacting 心跳，项目目录零产物，已取消后手写",
+  "projectId": "a90af33d-bb0c-4ff5-bca0-f12f29d0b68b",
+  "conversationId": "d0d0bd10-5a01-4d64-9f31-80cedc63a5f7",
+  "runId": "1b61e8a8-9c62-4578-b568-f7e097da402d",
+  "status": "canceled",
+  "error": "run stalled in context compaction; artifactCount=0",
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css",
+    "notes.md",
+    "preview.png"
+  ],
+  "gate": {
+    "odCheck": "problems: [] (normal / submitted / approved / empty / loading / error)",
+    "odAudit": "本页无 ✗",
+    "interactionCdp": "20 项交互全通过，console 无报错",
+    "vision": "状态栏 / 导航栏 / 胶囊 / 返回箭头齐全，无 tabBar，无直角，三格小卡不变形，无裁切"
+  }
+}
