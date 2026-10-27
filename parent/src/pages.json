@@ -180,7 +180,7 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "养成星球",
-    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarBackgroundColor": "#F8FAFC",
     "backgroundColor": "#F8FAFC",
     "backgroundTextStyle": "dark"
   },

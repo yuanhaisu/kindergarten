@@ -151,7 +151,7 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "幼儿园老师端",
-    "navigationBarBackgroundColor": "#FFF7E8",
+    "navigationBarBackgroundColor": "#F7F3EA",
     "backgroundColor": "#F7F3EA",
     "backgroundTextStyle": "dark"
   }
