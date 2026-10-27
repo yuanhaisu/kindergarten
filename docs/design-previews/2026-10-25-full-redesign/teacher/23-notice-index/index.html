@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>通知 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal" data-od-id="notice-list-screen">
+
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="mp-time">9:41</span>
+    <span class="mp-status-icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+    </span>
+  </div>
+
+  <header class="mp-navbar">
+    <button class="mp-back" type="button" id="backBtn" aria-label="返回工作台">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <h1 class="mp-title">通知</h1>
+    <div class="mp-capsule" aria-hidden="true">
+      <span class="mp-capsule-dots">···</span>
+      <span class="mp-capsule-divider"></span>
+      <span class="mp-capsule-ring">◎</span>
+    </div>
+  </header>
+
+  <main class="mp-main page">
+
+    <section class="hero" aria-labelledby="noticeTitle">
+      <div class="hero-top">
+        <div class="hero-copy">
+          <p class="hero-eyebrow">小一班 · 王老师</p>
+          <h2 class="hero-title" id="noticeTitle">通知中心</h2>
+          <p class="hero-sub">发布通知，跟进家长已读与确认</p>
+        </div>
+        <a class="publish-btn" href="../03-notice-create/index.html" data-od-id="publish-notice">发布通知</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><b>36</b><span>全部通知</span></div>
+        <div class="hero-stat"><b>28</b><span>已发布</span></div>
+        <div class="hero-stat"><b>84%</b><span>平均已读</span></div>
+      </div>
+    </section>
+
+    <section class="filters" aria-label="筛选通知">
+      <div class="segmented" role="group" aria-label="按状态筛选">
+        <button class="seg-btn" type="button" data-status="all" aria-pressed="true">全部</button>
+        <button class="seg-btn" type="button" data-status="2" aria-pressed="false">已发布</button>
+        <button class="seg-btn" type="button" data-status="1" aria-pressed="false">定时</button>
+        <button class="seg-btn" type="button" data-status="0" aria-pressed="false">草稿</button>
+        <button class="seg-btn" type="button" data-status="3" aria-pressed="false">已撤回</button>
+      </div>
+      <div class="category-row" role="group" aria-label="按通知类型筛选">
+        <button class="cat-btn" type="button" data-category="all" aria-pressed="true">全部</button>
+        <button class="cat-btn" type="button" data-category="homework" aria-pressed="false">作业</button>
+        <button class="cat-btn" type="button" data-category="bring" aria-pressed="false">带物</button>
+        <button class="cat-btn" type="button" data-category="activity" aria-pressed="false">活动</button>
+        <button class="cat-btn" type="button" data-category="health" aria-pressed="false">健康</button>
+        <button class="cat-btn" type="button" data-category="other" aria-pressed="false">其他</button>
+      </div>
+    </section>
+
+    <div class="list-head">
+      <span class="list-count" id="listCount">共 5 条通知</span>
+      <button class="reset-btn" type="button" id="clearFilters" hidden>清除筛选</button>
+    </div>
+
+    <section class="notice-list" id="noticeList" aria-label="通知列表">
+
+      <article class="notice-card" data-id="1" data-status="2" data-category="homework" tabindex="0" role="button" aria-label="查看通知：周末作业通知">
+        <div class="card-top">
+          <span class="cat-chip cat-homework">作业</span>
+          <span class="status status-published">已发布</span>
+          <time class="card-time" datetime="2026-10-24T09:00">10月24日 09:00</time>
+        </div>
+        <h3 class="card-title">周末作业通知</h3>
+        <p class="card-preview">各位家长您好，本周作业如下：1. 复习本周学过的儿歌；2. 完成手工制作《我的家》。请周一带回。</p>
+        <div class="card-meta">
+          <span class="class-chip">小一班</span>
+          <span class="class-chip">小二班</span>
+          <span class="attach-chip">2 个附件</span>
+        </div>
+        <div class="read-row">
+          <div class="read-bar" aria-hidden="true"><span class="read-fill" style="width:83%"></span></div>
+          <span class="read-text">已读 25/30 · 83%</span>
+        </div>
+        <div class="card-foot">
+          <span class="confirm-chip">需家长确认</span>
+          <span class="open-hint">查看详情
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+          </span>
+        </div>
+      </article>
+
+      <article class="notice-card" data-id="2" data-status="2" data-category="activity" tabindex="0" role="button" aria-label="查看通知：秋游集合时间与物品清单">
+        <div class="card-top">
+          <span class="cat-chip cat-activity">活动</span>
+          <span class="status status-published">已发布</span>
+          <time class="card-time" datetime="2026-10-23T16:20">10月23日 16:20</time>
+        </div>
+        <h3 class="card-title">秋游集合时间与物品清单</h3>
+        <p class="card-preview">周五秋游 8:30 在幼儿园门口集合，请给孩子准备水壶、遮阳帽和轻便午餐，穿运动鞋。</p>
+        <div class="card-meta">
+          <span class="class-chip">小一班</span>
+          <span class="attach-chip">1 个附件</span>
+        </div>
+        <div class="read-row">
+          <div class="read-bar" aria-hidden="true"><span class="read-fill read-fill--high" style="width:93%"></span></div>
+          <span class="read-text">已读 28/30 · 93%</span>
+        </div>
+        <div class="card-foot">
+          <span class="confirm-chip">需家长确认</span>
+          <span class="open-hint">查看详情
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+          </span>
+        </div>
+      </article>
+
+      <article class="notice-card" data-id="3" data-status="1" data-category="health" tabindex="0" role="button" aria-label="查看通知：下周一视力筛查安排">
+        <div class="card-top">
+          <span class="cat-chip cat-health">健康</span>
+          <span class="status status-scheduled">定时待发</span>
+          <time class="card-time" datetime="2026-10-26T08:30">10月26日 08:30 发送</time>
+        </div>
+        <h3 class="card-title">下周一视力筛查安排</h3>
+        <p class="card-preview">下周一上午进行视力筛查，请家长让孩子前一晚早点休息，当天正常入园即可。</p>
+        <div class="card-meta">
+          <span class="class-chip">小一班</span>
+        </div>
+        <p class="draft-note">定时发送中 · 到点后开始统计已读</p>
+        <div class="card-foot">
+          <span class="confirm-chip">需家长确认</span>
+          <span class="open-hint">查看详情
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+          </span>
+        </div>
+      </article>
+
+      <article class="notice-card" data-id="4" data-status="0" data-category="bring" tabindex="0" role="button" aria-label="查看通知：明天请带水彩笔和围裙">
+        <div class="card-top">
+          <span class="cat-chip cat-bring">带物</span>
+          <span class="status status-draft">草稿</span>
+          <time class="card-time">最后编辑 10月22日 20:10</time>
+        </div>
+        <h3 class="card-title">明天请带水彩笔和围裙</h3>
+        <p class="card-preview">明天美术课需要用到水彩笔和围裙，请家长今晚帮孩子放进书包，谢谢配合。</p>
+        <div class="card-meta">
+          <span class="class-chip">小一班</span>
+        </div>
+        <p class="draft-note">仅自己可见 · 发布后开始统计已读</p>
+        <div class="card-foot">
+          <span class="draft-hint">尚未发布</span>
+          <span class="open-hint">查看详情
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+          </span>
+        </div>
+      </article>
+
+      <article class="notice-card" data-id="5" data-status="3" data-category="other" tabindex="0" role="button" aria-label="查看通知：临时调整放学地点">
+        <div class="card-top">
+          <span class="cat-chip cat-other">其他</span>
+          <span class="status status-revoked">已撤回</span>
+          <time class="card-time" datetime="2026-10-21T15:00">10月21日 15:00</time>
+        </div>
+        <h3 class="card-title">临时调整放学地点</h3>
+        <p class="card-preview">因园区施工，今天放学地点临时调整到东门，请家长按班级牌有序接孩子。</p>
+        <div class="card-meta">
+          <span class="class-chip">小一班</span>
+        </div>
+        <div class="read-row read-row--muted">
+          <div class="read-bar" aria-hidden="true"><span class="read-fill read-fill--low" style="width:60%"></span></div>
+          <span class="read-text">撤回前已读 18/30 · 60%</span>
+        </div>
+        <div class="card-foot">
+          <span class="draft-hint">家长已不可见</span>
+          <span class="open-hint">查看详情
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+          </span>
+        </div>
+      </article>
+
+    </section>
+
+    <div class="filter-empty" id="filterEmpty" hidden>
+      <span class="empty-icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v10.2a1.3 1.3 0 0 1-1.3 1.3H5.3A1.3 1.3 0 0 1 4 16.7Z"/><path d="m4.5 7.2 7.5 5.4 7.5-5.4"/></svg>
+      </span>
+      <h2 class="empty-title">这个筛选下没有通知</h2>
+      <p class="empty-copy">换个状态或类型看看，或者清除筛选。</p>
+      <button class="empty-btn" type="button" id="emptyReset">清除筛选</button>
+    </div>
+
+    <div class="empty-state" id="emptyState">
+      <span class="empty-icon" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v10.2a1.3 1.3 0 0 1-1.3 1.3H5.3A1.3 1.3 0 0 1 4 16.7Z"/><path d="m4.5 7.2 7.5 5.4 7.5-5.4"/></svg>
+      </span>
+      <h2 class="empty-title">还没有发布过通知</h2>
+      <p class="empty-copy">发布第一条通知，家长会在微信里收到提醒。</p>
+      <a class="empty-btn" href="../03-notice-create/index.html">去发布通知</a>
+    </div>
+
+    <div class="loading-state" id="loadingState" aria-hidden="true">
+      <div class="skeleton-card"><span class="sk sk-line sk-line--short"></span><span class="sk sk-line"></span><span class="sk sk-line"></span></div>
+      <div class="skeleton-card"><span class="sk sk-line sk-line--short"></span><span class="sk sk-line"></span><span class="sk sk-line"></span></div>
+      <div class="skeleton-card"><span class="sk sk-line sk-line--short"></span><span class="sk sk-line"></span><span class="sk sk-line"></span></div>
+    </div>
+
+    <div class="error-state" id="errorState" role="alert">
+      <span class="empty-icon empty-icon--danger" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.6v4.8M12 16.2h.01"/></svg>
+      </span>
+      <h2 class="empty-title">通知加载失败</h2>
+      <p class="empty-copy">网络好像开小差了，请稍后重试。</p>
+      <button class="empty-btn" type="button" id="retryBtn">重试</button>
+    </div>
+
+  </main>
+
+  <!-- 通知详情：列表页内的快速查看弹层；完整详情/已读名单页仍待补 -->
+  <div class="sheet-layer" id="detailSheet" aria-hidden="true">
+    <div class="sheet-scrim" data-close-detail></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <div class="sheet-tags">
+          <span class="cat-chip" id="detailCategory">作业</span>
+          <span class="status" id="detailStatus">已发布</span>
+        </div>
+        <h2 class="sheet-title" id="detailTitle">周末作业通知</h2>
+        <p class="sheet-meta" id="detailMeta">小一班、小二班 · 10月24日 09:00</p>
+      </div>
+      <div class="sheet-body">
+        <p class="sheet-content" id="detailContent"></p>
+        <div class="sheet-stats" id="detailStats">
+          <div><b id="detailRead">25</b><span>已读</span></div>
+          <div><b id="detailUnread">5</b><span>未读</span></div>
+          <div><b id="detailConfirmed">20</b><span>已确认</span></div>
+        </div>
+        <div class="sheet-progress" aria-hidden="true"><span class="sheet-progress-fill" id="detailProgress" style="width:83%"></span></div>
+        <div class="sheet-actions">
+          <button class="sheet-btn sheet-btn--soft" type="button" id="detailUnreadBtn">查看未读家长</button>
+          <button class="sheet-btn sheet-btn--primary" type="button" id="detailRemindBtn">再次提醒</button>
+          <a class="sheet-btn sheet-btn--primary" id="detailEditLink" href="../03-notice-create/index.html" hidden>继续编辑</a>
+        </div>
+        <div class="unread-list" id="detailUnreadList" hidden>
+          <p class="unread-title">未读家长（5）</p>
+          <div class="unread-row"><span class="unread-avatar">乐</span><span>乐乐妈妈</span><span class="unread-class">小一班</span></div>
+          <div class="unread-row"><span class="unread-avatar">雨</span><span>小雨爸爸</span><span class="unread-class">小一班</span></div>
+          <div class="unread-row"><span class="unread-avatar">朵</span><span>朵朵妈妈</span><span class="unread-class">小二班</span></div>
+          <div class="unread-row"><span class="unread-avatar">安</span><span>安安爸爸</span><span class="unread-class">小二班</span></div>
+          <div class="unread-row"><span class="unread-avatar">禾</span><span>禾禾妈妈</span><span class="unread-class">小一班</span></div>
+        </div>
+        <p class="sheet-note" id="detailNote"></p>
+      </div>
+      <button class="sheet-close" type="button" data-close-detail>关闭</button>
+    </section>
+  </div>
+
+  <!-- 原型演示状态切换（仅原型可见） -->
+  <div class="mp-demo" data-open="false" data-od-id="proto-control">
+    <div class="mp-demo-chips" role="group" aria-label="原型状态">
+      <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+      <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+      <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+      <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+    </div>
+    <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -134,7 +134,7 @@
 }
 .mp-main--scroll { overflow-y: auto; }
 
-/* 6. 底部 tabBar（仅家长端 4 个 tab 页）--------------------------------- */
+/* 6. 底部 tabBar（家长端 4 个 tab 页；老师端 4 个常驻页）----------------- */
 .mp-tabbar {
   position: sticky;
   bottom: 0;
@@ -159,9 +159,34 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .mp-tab svg { width: 22px; height: 22px; display: block; }
 .mp-tab[aria-current="page"] { color: var(--accent); }
+.mp-tab:active { opacity: 0.72; }
+.mp-tab-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.mp-tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -10px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: var(--on-brand);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  box-sizing: border-box;
+}
 
 /* 7. 原型演示状态条（仅原型可见）-------------------------------------- */
 .mp-demo {

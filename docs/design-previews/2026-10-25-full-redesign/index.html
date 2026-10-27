@@ -7,7 +7,7 @@
 <style>
   :root {
     --bg: #f7f3ea; --surface: #fff; --fg: #1e293b; --fg-2: #475569; --muted: #64748b;
-    --accent: #f97316; --accent-wash: #fff1e6; --border: #e7e0d4;
+    --accent: #f97316; --accent-deep: #9a3412; --accent-wash: #fff1e6; --border: #e7e0d4;
     --teacher: #ff8a3d; --parent: #f97316; --ok: #16a34a; --bad: #dc2626;
     --radius: 16px; --shadow: 0 8px 24px rgba(178, 122, 52, .12);
   }
@@ -24,6 +24,18 @@
   }
   .hero h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: .2px; }
   .hero p { margin: 0; color: var(--muted); }
+  .hero__art { width: 300px; max-width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--border); background: #fbfaf6; }
+  .hero--art .hero__copy { flex: 1 1 320px; min-width: 0; }
+  .pp-art-group { margin-top: 34px; }
+  .pp-art-grid { display: grid; gap: 16px; }
+  .pp-art-grid--scenes { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .pp-art-grid--bands { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .pp-art-card { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .pp-art-card img { display: block; width: 100%; height: auto; background: #fbfaf6; }
+  .pp-art-card figcaption { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .pp-art-card b { font-size: 13px; }
+  .pp-art-card span { color: var(--muted); font-size: 11px; }
+  .pp-art-card em { color: var(--accent-deep); font-style: normal; font-size: 12px; }
   .stats { display: flex; gap: 24px; }
   .stat b { display: block; font-size: 26px; line-height: 1.2; }
   .stat span { color: var(--muted); font-size: 12px; }
@@ -62,19 +74,23 @@
   .links a { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 500; }
   .links a:hover { text-decoration: underline; }
   .empty { padding: 40px; text-align: center; color: var(--muted); }
+  footer { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; line-height: 1.9; }
+  footer p { margin: 0; }
+  footer code { background: var(--accent-wash); padding: 1px 5px; border-radius: 5px; color: var(--accent-deep); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="hero">
-    <div>
+    <div class="hero__copy">
       <h1>养成星球 · 全量页面重设计</h1>
       <p>老师端 + 家长端全部页面 · 微信小程序风格 · 每页独立 HTML 原型</p>
       <p style="margin-top:8px"><a href="_shared/themes.html" style="color:var(--accent-deep);font-weight:600;text-decoration:none">查看三套配色方案对比（亮橙 / 深橙 AA / 亮橙+深墨字）→</a></p>
     </div>
+
     <div class="stats">
-      <div class="stat"><b>50</b><span>页面</span></div>
-      <div class="stat"><b>50</b><span>已出稿</span></div>
+      <div class="stat"><b>51</b><span>页面</span></div>
+      <div class="stat"><b>51</b><span>已出稿</span></div>
       <div class="stat"><b>0</b><span>待补</span></div>
     </div>
   </header>
@@ -85,10 +101,11 @@
     <button type="button" data-filter="parent" aria-pressed="false">家长端</button>
   </div>
 
+
   <section class="group" data-group="teacher">
     <header class="group__head">
       <h2>老师端</h2>
-      <span>22 页 · 无 tabBar · 暖奶白底</span>
+      <span>23 页 · 4 页常驻底栏 · 暖奶白底</span>
     </header>
     <div class="grid">
     <article class="card" data-surface="teacher" data-state="ok">
@@ -137,7 +154,7 @@
         <div class="meta">
           <span class="badge badge--teacher">老师</span>
           <span class="badge badge--ok">已出稿</span>
-          
+
         </div>
         <h3>notice-create</h3>
         <p class="slug">03-notice-create</p>
@@ -509,6 +526,25 @@
         </div>
       </div>
     </article>
+    <article class="card" data-surface="teacher" data-state="ok">
+      <a class="shot" href="teacher/23-notice-index/index.html" target="_blank" rel="noreferrer">
+        <img src="teacher/23-notice-index/preview.png" alt="通知列表 预览" loading="lazy" />
+      </a>
+      <div class="body">
+        <div class="meta">
+          <span class="badge badge--teacher">老师</span>
+          <span class="badge badge--ok">已出稿</span>
+
+        </div>
+        <h3>通知列表</h3>
+        <p class="slug">23-notice-index</p>
+        <div class="links">
+          <a href="teacher/23-notice-index/index.html" target="_blank" rel="noreferrer">原型</a>
+          <a href="teacher/23-notice-index/notes.md">说明</a>
+          <a href="teacher/23-notice-index/preview.png" target="_blank" rel="noreferrer">长图</a>
+        </div>
+      </div>
+    </article>
     </div>
   </section>
 
@@ -849,7 +885,7 @@
         <div class="meta">
           <span class="badge badge--parent">家长</span>
           <span class="badge badge--ok">已出稿</span>
-          
+
         </div>
         <h3>任务详情</h3>
         <p class="slug">18-tasks-detail</p>
@@ -887,7 +923,7 @@
         <div class="meta">
           <span class="badge badge--parent">家长</span>
           <span class="badge badge--ok">已出稿</span>
-          
+
         </div>
         <h3>积分与成就</h3>
         <p class="slug">20-points</p>
@@ -1054,6 +1090,7 @@
   </section>
 
   <p class="empty" id="empty" hidden>该端还没有页面产物。</p>
+
 </div>
 
 <script>

@@ -173,7 +173,26 @@
       </div>
     </main>
 
-    <div class="mp-demo" id="demoPanel" data-open="false" style="bottom: calc(20px + env(safe-area-inset-bottom))">
+  <nav class="mp-tabbar" aria-label="主导航">
+    <a class="mp-tab" href="../01-workbench/index.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.8 10.6 12 3.4l8.2 7.2"/><path d="M5.8 9.4v10.2a1 1 0 0 0 1 1h10.4a1 1 0 0 0 1-1V9.4"/><path d="M9.9 20.6v-5.4h4.2v5.4"/></svg>
+      <span>首页</span>
+    </a>
+    <a class="mp-tab" href="../15-class-index/index.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19.2c.5-3.4 2.8-5.2 5.5-5.2s5 1.8 5.5 5.2"/><path d="M15.5 5.4a3 3 0 0 1 0 5.6"/><path d="M17.2 14.1c2 .6 3.2 2.3 3.6 4.7"/></svg>
+      <span>班级</span>
+    </a>
+    <a class="mp-tab" href="../18-messages-index/index.html" aria-current="page">
+      <span class="mp-tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 11.2c0 3.6-3.8 6.5-8.4 6.5-1 0-2-.1-2.9-.4L4.2 20v-3.6c-1.1-1.2-1.8-2.8-1.8-4.6 0-3.6 3.8-6.5 8.4-6.5s9.6 2.9 9.6 6.5Z"/><path d="M7.5 9.9h9M7.5 13.1h6"/></svg><span class="mp-tab-badge">4</span></span>
+      <span>消息</span>
+    </a>
+    <a class="mp-tab" href="../19-profile-index/index.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.3"/><path d="M5.3 20.2c.6-3.8 3.2-5.9 6.7-5.9s6.1 2.1 6.7 5.9"/></svg>
+      <span>我的</span>
+    </a>
+  </nav>
+
+    <div class="mp-demo" id="demoPanel" data-open="false" style="bottom: calc(62px + env(safe-area-inset-bottom))">
       <div class="mp-demo-chips" role="group" aria-label="原型状态">
         <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
         <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>

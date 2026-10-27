@@ -44,13 +44,15 @@
 
     <main class="mp-main">…页面内容…</main>
 
-    <!-- 仅家长端 4 个 tab 页 -->
+    <!-- 家长端 4 个 tab 页；老师端 4 个常驻页（01 工作台 / 15 班级 / 18 消息 / 19 我的） -->
     <nav class="mp-tabbar" aria-label="主导航">
       <button class="mp-tab" aria-current="page">…图标 + 首页…</button>
       <button class="mp-tab">…成长…</button>
       <button class="mp-tab">…接送…</button>
       <button class="mp-tab">…我的…</button>
     </nav>
+    <!-- 老师端消息项可加角标：<span class="mp-tab-icon">…svg…<span class="mp-tab-badge">3</span></span> -->
+    <!-- 老师端底栏链接到 ../01-workbench/、../15-class-index/、../18-messages-index/、../19-profile-index/ -->
 
     <!-- 原型演示状态条，仅原型可见 -->
     <div class="mp-demo" data-open="false">
@@ -94,7 +96,7 @@
 3. **外壳吸顶**：状态栏 `top:0`、导航栏 `top:20px`，两者都是 `position: sticky` + 页面底色。页面不得给 `.mp-app` 加 `overflow`（会破坏 sticky），也不得给 `body` 设 `overflow:auto`。
 4. **导航标题**单行省略，不换行；标题就是 `pages.json` 的 `navigationBarTitleText`。
 5. **返回箭头**：入口页（老师工作台、家长首页、登录页）不画；由 `navigateTo` 进入的子页画。
-6. **tabBar**：家长端只有首页/成长/接送/我的四个页面画，其他人不画；老师端一律不画。
+6. **tabBar**：家长端只有首页/成长/接送/我的四个页面画；老师端只有 01-workbench / 15-class-index / 18-messages-index / 19-profile-index 四个常驻页画，其余页面不画。
 7. **演示条**固定在手机框右下（`right: max(12px, calc(50vw - 183px))`），默认收起；有固定底栏时在 `mp-demo` 上写行内 `style="bottom: calc(底栏高度 + 12px + env(safe-area-inset-bottom))"`，这是唯一允许的行内外壳覆盖。
 8. 页面 CSS 里出现 `.mp-*` 选择器即视为违规，唯一例外是 `[data-state]` 状态选择器。
 9. `od-check` 会在可滚动页面上滚 400px 验证吸顶（statusbar=0、navbar=20），失败即 `problems` 非空。

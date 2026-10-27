@@ -95,6 +95,13 @@
 | A41 | 25 设置 | 隐私分组契约有、源码未渲染 | 真机无隐私开关 | 落地需补 `togglePrivacy` |
 | A42 | 25 设置 | 用第 5 个演示芯片承载「禁用态（同步中）」 | 与 A22 / A35 的「严格 4 态」约定冲突 | 批次统一演示芯片规范 |
 
+## 老师端通知列表（2026-10-27 补设计）
+
+| # | 页面 | 发现 | 影响 | 建议 |
+|---|---|---|---|---|
+| N1 | 老师端 工作台分享 | `teacher/src/pages/index/index.vue:141` 的 `onShareAppMessage` 指向 `/pages/notice/index`，但原 `pages.json` 没有该页、源码也没有 `.vue` | 原分享卡片打开即死链；老师没有查看已发通知的入口 | **2026-10-27 已补** `teacher/src/pages/notice/index.vue` 并注册；设计稿见 `teacher/23-notice-index` |
+| N2 | 老师端 通知列表 | 契约 `GET /teacher/notices` 支持 `status` / `category` / `read_rate` / `read_count` / `total_count`，原前端没有页面消费 | 已读率、待确认、草稿/定时状态无处查看 | **2026-10-27 已按 `23-notice-index` 接入**列表/筛选/详情；建议后续服务端筛选 + 分页 |
+
 ## 生成方式统计
 
 | 页 | 生成方式 |

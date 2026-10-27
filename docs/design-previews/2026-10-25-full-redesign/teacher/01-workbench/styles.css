@@ -35,7 +35,7 @@ textarea:focus-visible,
 
 /* ---------- 页面 ---------- */
 
-/* 老师端没有 tabBar：页面到底就是内容结束 + 安全区 */
+/* 老师端 4 个常驻页有共享底栏；内容区在底栏之上结束 + 安全区 */
 .page {
   padding: 0 var(--page-pad-x) calc(24px + env(safe-area-inset-bottom));
 }

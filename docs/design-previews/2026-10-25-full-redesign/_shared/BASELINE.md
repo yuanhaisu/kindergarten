@@ -2,6 +2,8 @@
 
 > Git tag：`design-baseline-2026-10-27`（本地提交，未 push）
 > 范围：`docs/design-previews/2026-10-25-full-redesign/` + `shared-design-tokens/` 亮橙默认与主题层。
+>
+> **2026-10-27 后补（不在 tag 内）**：老师端 01/15/18/19 补共享 4 项底栏；新增 `teacher/23-notice-index`，并补源码 `teacher/src/pages/notice/index.vue` + `pages.json` 注册。`baseline.sha256` 仍是冻结时快照，不含这些后补项。
 
 ## 1. 冻结内容
 

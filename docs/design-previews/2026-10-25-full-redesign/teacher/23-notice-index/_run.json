@@ -1,0 +1,15 @@
+{
+  "slug": "teacher-notice-index",
+  "surface": "teacher",
+  "title": "通知列表",
+  "status": "succeeded",
+  "handAuthored": true,
+  "elapsedSec": 0,
+  "files": [
+    "app.js",
+    "index.html",
+    "notes.md",
+    "styles.css",
+    "tokens.css"
+  ]
+}

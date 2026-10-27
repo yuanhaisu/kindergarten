@@ -8,7 +8,7 @@
 
 ## 信息层级
 
-1. 微信外壳：状态栏 + 导航栏（返回箭头；老师端无 tabBar，本页从工作台或「我的」进入，返回不写死目的地）
+1. 微信外壳：状态栏 + 导航栏 + 共享 4 项底栏（本页「班级」高亮）；返回箭头回上一页，不写死目的地
 2. 班级 hero（全页唯一渐变）：班级徽记、`name`、`grade · academic_year`、`kindergarten_name`、老师行（`teacher_name · title_label`）、人数胶囊、右上铃铛入口
 3. 今日接送概览：日期 + 四列（已入园 / 未入园 / 已接走 / 未接走），数字来自 `GET /teacher/pickup/overview`
 4. 最新通知：`GET /teacher/notices`（page_size=2）的两条通知 + 已读率进度条，进度条宽度按 `read_rate` 百分比取值
@@ -41,7 +41,7 @@
 - 源码幼儿卡片本身无点击行为；原型新增只读简要卡，字段全部来自学生对象（`arrive_time`、`pickup_status`、`authorized_persons`，`pickup_deadline` 取班级级值），不放任何改数据按钮。
 - 源码名单是纵向列表；原型改为 3 列网格卡，便于一屏看到更多人。
 - 源码的搜索只按姓名，原型保持；后端不返回学号，未画学号搜索。
-- 源码 `BottomNav`（首页 / 班级 / 消息 / 我的）在本页有渲染，但 `pages.json` 没有 tabBar，本批次约定老师端不画底部导航；原型按批次约定省略，差异见下。
+- 源码 `BottomNav`（首页 / 班级 / 消息 / 我的）在本页有渲染；2026-10-27 已按产品决定补成共享 `mp-tabbar`，本页「班级」高亮。
 
 ## 验证
 
@@ -54,7 +54,7 @@
 
 ## 遗留 / 需产品确认
 
-1. **老师端底部导航的真实形态**：`pages.json` 无 tabBar，但 `class/index.vue` 渲染了自绘 `BottomNav`（4 项）。本批次统一约定老师端不画 tabBar，原型据此省略；若线上这个自绘导航是真实交互，需要批次层面确认是否恢复，以及它与 `pages.json` 的关系。
+1. **老师端底部导航已补**：`pages.json` 仍无 `tabBar`，但 `class/index.vue` 渲染了自绘 `BottomNav`（4 项）。2026-10-27 已按产品决定在 01/15/18/19 四页补共享 `mp-tabbar`；落地前需把源码的自绘底栏抽成统一组件或改 `pages.json` 的自定义 tabBar，避免两套实现。
 2. **多老师展示**：`backend/api/api-teacher/09-class-and-tasks.md` 的示例是 `teachers[]`（主班/副班/生活），实现 `GET /teacher/class/info` 返回的是单个 `teacher` 对象。原型按实现画一位老师；若产品要展示副班/生活老师，需要后端先补数组。
 3. **逾期未接**：学生对象有 `is_overdue`，概览有 `overdue_not_picked` / `abnormal`，但源码班级页未使用。原型没有新增逾期标记；若需要，应在批次层面统一逾期文案与颜色（不要新造第四种状态色）。
 4. **头像**：真实 `avatar` 可能是 URL；原型不引外部资源，一律用姓名首字圆形底。接入时替换为图片即可，尺寸与圆角 token 已定。

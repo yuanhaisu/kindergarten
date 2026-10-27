@@ -2,12 +2,12 @@
 
 老师端 + 家长端所有页面，每页一份独立 HTML 原型。先看 [index.html](index.html) 画廊。
 
-- 页面总数：50
-- 已出稿：50
+- 页面总数：51
+- 已出稿：51
 - 共享约束：[_shared/brief.md](_shared/brief.md)
 - 设计系统：`user:nurture-planet-local`
 
-### 老师端（22）
+### 老师端（23）
 
 | # | 页面 | slug | 原型 | 说明 |
 |---|---|---|---|---|
@@ -33,6 +33,7 @@
 | 20 | 入园晨检 | `20-doctor-checkin` | [打开](teacher/20-doctor-checkin/index.html) | [notes](teacher/20-doctor-checkin/notes.md) |
 | 21 | 园级事件 | `21-doctor-calendar` | [打开](teacher/21-doctor-calendar/index.html) | [notes](teacher/21-doctor-calendar/notes.md) |
 | 22 | 内嵌网页 | `22-webview` | [打开](teacher/22-webview/index.html) | [notes](teacher/22-webview/notes.md) |
+| 23 | 通知列表 | `23-notice-index` | [打开](teacher/23-notice-index/index.html) | [notes](teacher/23-notice-index/notes.md) |
 
 ### 家长端（28）
 

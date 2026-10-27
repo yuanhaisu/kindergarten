@@ -1,7 +1,7 @@
 # 全量页面重设计 · 对抗性审查报告
 
-> 2026-10-27。范围：老师端 22 页 + 家长端 28 页，共 50 页。
-> 方法：50 个独立 subagent 逐页审查（完整度 / 逻辑 / 设计核心 / 冗余错位 / 导航意图 / notes 准确性），主会话负责跨页与整体逻辑。单页明细见 `_shared/reviews/`。
+> 2026-10-27。范围：老师端 22 页 + 家长端 28 页，共 50 页；2026-10-27 后补 teacher/23-notice-index，共 51 页。
+> 方法：50 个独立 subagent 逐页审查（完整度 / 逻辑 / 设计核心 / 冗余错位 / 导航意图 / notes 准确性），主会话负责跨页与整体逻辑。单页明细见 `_shared/reviews/`（50 份原批次 + 1 份后补 23-notice-index）。
 
 ## 0. 结论摘要
 
@@ -17,10 +17,11 @@
 **先修 5 条 P0，再处理 90 条 P1；P2 可在进入 Impeccable 落地阶段时逐页清理。**
 
 > 2026-10-27 更新：5 条 P0 已全部修复；P1 已修 85 条、暂缓 8 条（批次级）。详见 §2.1 与 §3.1。
+> 2026-10-27 补设计：新增 teacher/23-notice-index；老师端 01/15/18/19 四页补共享底栏。
 
 ## 1. 整体逻辑审查（主会话）
 
-### 1.1 导航完整性：4 个页面零入边 + 1 个死链
+### 1.1 导航完整性：4 个页面零入边（原 1 个死链已补）
 
 | 页面 | 问题 |
 |---|---|
@@ -28,10 +29,13 @@
 | 家长端 `/pages/auth/bind` | 源码零入边，无任何入口 |
 | 家长端 `/pages/messages/index` | 零入边（findings A39） |
 | 家长端 `/pages/webview/index` | 零入边（findings A38） |
-| 老师端 `/pages/notice/index` | 工作台待办硬编码跳转，但 `pages.json` 无此页 → **死链** |
-| 老师端「我的」 | 源码自绘 4 项底栏，`pages.json` 无 tabBar；原型按规则不画（已记录） |
 
-其余 45 页在源码里都有入边；原型集覆盖 `pages.json` 全部 50 页（老师 22 / 家长 28）。
+其余 47 页在源码里都有入边；原型集覆盖 `pages.json` 全部 51 页（老师 23 / 家长 28）。
+
+- 老师端 `/pages/notice/index`：原为分享死链；2026-10-27 已补 `teacher/src/pages/notice/index.vue` 并在 `pages.json` 注册，分享路径已通；设计见 `teacher/23-notice-index`。
+- 老师端「我的」：源码自绘 4 项底栏，`pages.json` 无 tabBar；2026-10-27 已补 01/15/18/19 四页共享 `mp-tabbar`，源码 4 页已统一使用 `BottomNav` 组件。
+
+> 2026-10-27 补设计说明：老师端 01/15/18/19 四页补了共享 4 项底栏，源码 4 页已统一使用 `BottomNav` 组件；`teacher/23-notice-index` 覆盖 `/pages/notice/index`，源码已补 `.vue` 并注册。底栏仍是自绘实现（`pages.json` 无 tabBar），后续可改自定义 tabBar 或保持组件方案。
 
 ### 1.2 跨页数据一致性
 
@@ -48,11 +52,11 @@
 - **演示芯片不统一**：38 页 4 个（正常/空态/加载/失败），9 页 5 个，3 页 6 个；标签与命名也不一致（`error` vs `failed`、`空态` vs `空评论`、`必填未填` vs `必填未完成`）。
 - `parent/08-leave-detail` 没有「正常/空态」，只有「已同意 / 待审批 / 已驳回 / 加载 / 失败」。
 - 9 页存在 10–12px 小字（多为徽章/时间戳；brief 要求正文 ≥13px，属边缘）。
-- 通过项：50/50 `tokens.css` 与设计系统同源、50/50 预览图 780px、外壳标记 50/50 完整、4 个 tab 页高亮正确、老师端零 tabBar、无 `.mcp.json` / 无 `shell.css` 副本。
+- 通过项：51/51 `tokens.css` 与设计系统同源、51/51 预览图 780px、外壳标记 51/51 完整、家长端 4 个 tab 页高亮正确、老师端 4 个常驻页底栏 4/4、无 `.mcp.json` / 无 `shell.css` 副本。
 
 ### 1.5 交付物一致性
 
-- **3 页 `preview.png` 落后于源码改动**：`teacher/12-calendar-create`、`teacher/19-profile-index`、`parent/12-growth-report`（HTML/CSS/JS 比截图新 39–112 秒）。
+- **3 页 `preview.png` 曾落后于源码改动**：`teacher/12-calendar-create`、`teacher/19-profile-index`、`parent/12-growth-report`（HTML/CSS/JS 比截图新 39–112 秒）。`teacher/19-profile-index` 已于 2026-10-27 补底栏时重出；其余 2 页仍待重出。
 - `teacher/03-notice-create` 的 `<script>` 顺序是 `app.js` → `shell.js`，与批次约定相反（notes 已说明是刻意为之）。
 
 ## 2. P0 明细（必须修）
@@ -102,7 +106,7 @@
 | P0-4 | teacher/06-growth-detail | 横幅静态 3 → 1；`syncAiState` 按 `.status--ok` 实时计算并在无高置信行时隐藏 | 实测：初始 1 条；全部确认后横幅隐藏、toast「已确认 1 条」 |
 | P0-5 | teacher/14-leave-index | `NOW_STAMP` 由空格分隔改为 `2026-10-26T12:00` | 实测：同意/驳回后时间「今天 12:00」，无 NaN，计数同步 |
 
-**复验**：5 页 `od-check` 均 `problems: []`；批次 `od-audit` 50/50 通过；8 张预览已重出（5 张修复页 + 3 张原过期页），全批次无过期 `preview.png`。
+**复验**：5 页 `od-check` 均 `problems: []`；批次 `od-audit` 51/51 通过；8 张预览已重出（5 张修复页 + 3 张原过期页）；2026-10-27 补设计又重出 5 张（01/15/18/19/23）。
 
 ## 3. P1 明细（按页面）
 
@@ -459,7 +463,7 @@
 - P0：5 条全部修复（见 §2.1）。
 - P1：85/90 已修，8 条暂缓（批次级）。
 - P2：253 条仍未处理。
-- 批次门禁：`od-audit` 50/50 通过、0 问题；50 张 `preview.png` 均为 780px 宽，无过期预览。
+- 批次门禁（2026-10-27 补设计后）：`od-audit` 51/51 通过、0 问题；51 张 `preview.png` 均为 780px 宽；`teacher/12-calendar-create` 与 `parent/12-growth-report` 仍是旧截图，待重出。
 
 ## 3.2 配色方案分层（2026-10-27）
 
@@ -533,7 +537,7 @@
 
 > P2 的逐条证据与修法见 `_shared/reviews/<page>.md`。
 
-## 5. 50 页 verdict 总表
+## 5. 50 页 verdict 总表（原批次；23-notice-index 为 2026-10-27 后补）
 
 | 页面 | verdict | score | P0 | P1 | P2 |
 |---|---|---|---|---|---|

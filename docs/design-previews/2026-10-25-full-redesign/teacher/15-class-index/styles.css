@@ -913,7 +913,7 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(32px + env(safe-area-inset-bottom));
+  bottom: calc(72px + env(safe-area-inset-bottom));
   z-index: 40;
   max-width: calc(100vw - 48px);
   padding: 10px 16px;

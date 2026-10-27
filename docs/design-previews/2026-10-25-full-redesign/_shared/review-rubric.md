@@ -53,7 +53,7 @@
 - 页面内每个可点元素的**隐含目的地**是否与源码 `.vue` 的 `uni.navigateTo / switchTab / redirectTo / reLaunch` 一致
 - 目的地是否在下方「原型清单」中存在；指向不存在的页面 = 缺陷
 - 家长端 tabBar 只有 4 页：`01-home` / `09-growth-index` / `13-pickup-index` / `27-profile`；其余页不画 tabBar，且是子页要有返回箭头
-- 老师端**一律不画 tabBar**（`pages.json` 无 tabBar 字段）
+- 老师端仅 `01-workbench` / `15-class-index` / `18-messages-index` / `19-profile-index` 四个常驻页画 4 项共享底栏；其余老师端页面不画（`pages.json` 仍无 tabBar 字段，底栏是源码自绘）
 
 ## 6. notes 准确性（notes-accuracy）
 
