@@ -4,7 +4,7 @@ import { onLoad } from "@dcloudio/uni-app"
 import { getUser, clearAuth } from "@/utils/auth"
 import { ensureLogin } from "@/utils/login"
 import { fetchTeacherHomeOverview } from "@/api/teacher-home"
-import { goTab } from "@/utils/nav"
+import BottomNav from "@/components/BottomNav.vue"
 
 const user = ref(getUser() || {})
 const stats = ref({ present: 0, leave: 0, pending: 0 })
@@ -42,13 +42,6 @@ const featureItems = [
   { title: "设置", desc: "关于、意见反馈", icon: "设", bg: "#F1F5F9", fg: "#64748B", path: "" }
 ]
 
-const navItems = [
-  { label: "首页", icon: "首", path: "/pages/index/index" },
-  { label: "班级", icon: "班", path: "/pages/class/index" },
-  { label: "消息", icon: "消", path: "/pages/messages/index" },
-  { label: "我的", icon: "我", path: "/pages/profile/index", active: true }
-]
-
 async function loadProfile() {
   loading.value = true
   try {
@@ -74,11 +67,6 @@ function handleFeature(item) {
     return
   }
   uni.navigateTo({ url: item.path })
-}
-
-// 底部 tab 统一走 goTab，避免 navigateTo push 撑爆页面栈
-function navigateTo(path) {
-  goTab(path)
 }
 
 function confirmLogout() {
@@ -176,19 +164,8 @@ onLoad(() => {
     <!-- 底部占位 -->
     <view class="bottom-placeholder" />
 
-    <!-- 底部导航栏 -->
-    <view class="bottom-nav">
-      <view
-        v-for="item in navItems"
-        :key="item.label"
-        class="nav-item"
-        :class="{ active: item.active }"
-        @click="navigateTo(item.path)"
-      >
-        <text class="nav-icon" :class="{ 'active-icon': item.active }">{{ item.icon }}</text>
-        <text class="nav-label" :class="{ 'active-label': item.active }">{{ item.label }}</text>
-      </view>
-    </view>
+    <!-- 底部导航栏：4 个常驻页共用组件 -->
+    <BottomNav :active="3" />
   </view>
 </template>
 
@@ -425,47 +402,4 @@ onLoad(() => {
   height: 140rpx;
 }
 
-// ===== 底部导航栏 =====
-.bottom-nav {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 20;
-  display: flex;
-  justify-content: space-between;
-  max-width: 430px;
-  margin: 0 auto;
-  padding: 23rpx 46rpx calc(23rpx + env(safe-area-inset-bottom));
-  background: #fff;
-  box-shadow: 0 -2rpx 20rpx rgba(120, 53, 15, 0.06);
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rpx;
-  padding: $spacing-xs 0;
-}
-
-.nav-icon {
-  font-size: 48rpx;
-  font-weight: 600;
-  color: #94A3B8;
-}
-
-.nav-label {
-  font-size: $typography-font-size-xs;
-  color: #94A3B8;
-}
-
-.active-icon {
-  color: $color-semantic-info;
-}
-
-.active-label {
-  color: $color-semantic-info;
-  font-weight: 600;
-}
 </style>

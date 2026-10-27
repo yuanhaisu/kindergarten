@@ -16,6 +16,7 @@ const isDoctor = computed(() => {
 const items = computed(() => {
   const list = [
     { title: "发布通知", desc: "向班级家长发送通知", path: "/pages/notice/create" },
+    { title: "通知管理", desc: "查看已发通知与家长已读情况", path: "/pages/notice/index" },
     { title: "成长记录", desc: "查看与添加成长记录", path: "/pages/growth/index" },
     { title: "接送管理", desc: "扫码或手动登记接送", path: "/pages/pickup/index" },
     { title: "接送记录", desc: "查看历史接送明细", path: "/pages/pickup/records" },

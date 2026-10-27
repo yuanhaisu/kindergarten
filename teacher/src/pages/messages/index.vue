@@ -3,6 +3,7 @@ import { ref, computed } from "vue"
 import { onLoad, onReachBottom, onPullDownRefresh } from "@dcloudio/uni-app"
 import BottomNav from "@/components/BottomNav.vue"
 import { fetchTeacherMessages } from "@/api/messages"
+import { fetchTeacherHomeOverview } from "@/api/teacher-home"
 
 const activeTab = ref("全部")
 const tabs = ["全部", "通知", "审批", "系统"]
@@ -11,6 +12,7 @@ const loading = ref(false)
 const allMessages = ref([])
 const page = ref(1)
 const total = ref(0)
+const overview = ref({})
 const hasMore = computed(() => allMessages.value.length < total.value)
 
 // ---- 字段映射 ----
@@ -70,7 +72,7 @@ const messages = computed(() => {
   return allMessages.value.filter(m => m._type === t)
 })
 
-const unreadTotal = computed(() => 0)
+const unreadTotal = computed(() => Number(overview.value.unread_notices || 0))
 
 // ---- Tab 切换 ----
 
@@ -109,6 +111,15 @@ async function loadMore() {
   await loadMessages(false)
 }
 
+async function loadUnread() {
+  try {
+    const res = await fetchTeacherHomeOverview()
+    overview.value = res.data || {}
+  } catch {
+    // 角标是增强信息，失败不影响列表
+  }
+}
+
 // ---- 操作 ----
 
 function markAllRead() {
@@ -126,8 +137,14 @@ function goDetail(item) {
 
 // ---- 生命周期 ----
 
-onLoad(() => { loadMessages(true) })
-onPullDownRefresh(() => { loadMessages(true) })
+onLoad(() => {
+  loadMessages(true)
+  loadUnread()
+})
+onPullDownRefresh(() => {
+  loadMessages(true)
+  loadUnread()
+})
 onReachBottom(loadMore)
 </script>
 

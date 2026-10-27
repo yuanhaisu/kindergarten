@@ -4,6 +4,7 @@ import { onLoad, onPullDownRefresh, onShareAppMessage } from "@dcloudio/uni-app"
 import { fetchTeacherHomeOverview, fetchTeacherTodos, updateTeacherTodoAction } from "@/api/teacher-home"
 import { ensureLogin } from "@/utils/login"
 import { goTab } from "@/utils/nav"
+import BottomNav from "@/components/BottomNav.vue"
 
 const loading = ref(false)
 const overview = ref({})
@@ -14,6 +15,7 @@ const teacherName = computed(() => overview.value.teacher_name || "老师")
 const className = computed(() => overview.value.class_info?.name || overview.value.class_name || "小一班")
 const classRole = computed(() => overview.value.class_info?.role || overview.value.role || "主班老师")
 const visibleTodos = computed(() => todos.value.slice(0, 3))
+const unreadCount = computed(() => Number(overview.value.unread_notices || 0))
 
 const todayDate = computed(() => {
   const now = new Date()
@@ -268,25 +270,8 @@ onShareAppMessage((res) => {
       </view>
     </view>
 
-    <!-- 底部导航栏 -->
-    <view class="bottom-nav">
-      <view class="nav-item active" @click="navigateTo('/pages/index/index')">
-        <text class="nav-icon active-icon">首</text>
-        <text class="nav-label active-label">首页</text>
-      </view>
-      <view class="nav-item" @click="navigateTo('/pages/class/index')">
-        <text class="nav-icon">班</text>
-        <text class="nav-label">班级</text>
-      </view>
-      <view class="nav-item" @click="navigateTo('/pages/messages/index')">
-        <text class="nav-icon">消</text>
-        <text class="nav-label">消息</text>
-      </view>
-      <view class="nav-item" @click="navigateTo('/pages/profile/index')">
-        <text class="nav-icon">我</text>
-        <text class="nav-label">我的</text>
-      </view>
-    </view>
+    <!-- 底部导航栏：4 个常驻页共用组件，避免每页复制 -->
+    <BottomNav :active="0" :unread-count="unreadCount" />
   </view>
 </template>
 
@@ -611,47 +596,4 @@ onShareAppMessage((res) => {
   border: none;
 }
 
-// ===== 底部导航栏 =====
-.bottom-nav {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 20;
-  display: flex;
-  justify-content: space-between;
-  max-width: 430px;
-  margin: 0 auto;
-  padding: $spacing-lg 46rpx calc(24rpx + env(safe-area-inset-bottom));
-  background: #fff;
-  box-shadow: 0 -2rpx 20rpx rgba(120, 53, 15, 0.06);
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rpx;
-  padding: $spacing-xs 0;
-}
-
-.nav-icon {
-  font-size: 48rpx;
-  font-weight: 600;
-  color: #94A3B8;
-}
-
-.nav-label {
-  font-size: $typography-font-size-xs;
-  color: #94A3B8;
-}
-
-.active-icon {
-  color: $color-semantic-info;
-}
-
-.active-label {
-  color: $color-semantic-info;
-  font-weight: 600;
-}
 </style>

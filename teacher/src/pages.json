@@ -20,6 +20,13 @@
       }
     },
     {
+      "path": "pages/notice/index",
+      "style": {
+        "navigationBarTitleText": "通知",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
       "path": "pages/growth/index",
       "style": {
         "navigationBarTitleText": "成长记录",

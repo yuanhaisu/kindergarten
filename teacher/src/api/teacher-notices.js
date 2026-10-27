@@ -25,8 +25,12 @@ export function revokeTeacherNotice(id) {
 }
 
 
-export function fetchTeacherNoticeReadStatus(id) {
-  return requestWithAuth({ url: `/teacher/notices/${id}/read-status`, method: "GET" })
+export function fetchTeacherNoticeReadStatus(id, params = {}) {
+  return requestWithAuth({ url: `/teacher/notices/${id}/read-status`, method: "GET", data: params })
+}
+
+export function remindTeacherNotice(id) {
+  return requestWithAuth({ url: `/teacher/notices/${id}/remind`, method: "POST" })
 }
 
 export function fetchTeacherNoticeTemplates() {

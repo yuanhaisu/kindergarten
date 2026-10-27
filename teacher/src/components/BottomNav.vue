@@ -15,6 +15,7 @@ const tabs = [
 ]
 
 const showBadge = computed(() => props.unreadCount > 0)
+const badgeText = computed(() => (props.unreadCount > 99 ? "99+" : String(props.unreadCount)))
 
 function onTab(tab, index) {
   // 点当前 tab 时 goTab 内部会滚动置顶，与原来的行为一致
@@ -37,7 +38,9 @@ function onTab(tab, index) {
     >
       <view v-if="index === 2" class="msg-icon-wrap">
         <text class="nav-icon" :class="{ 'active-icon': active === index }">{{ tab.icon }}</text>
-        <view v-if="showBadge" class="msg-badge" />
+        <view v-if="showBadge" class="msg-badge">
+          <text class="msg-badge-text">{{ badgeText }}</text>
+        </view>
       </view>
       <text v-else class="nav-icon" :class="{ 'active-icon': active === index }">{{ tab.icon }}</text>
       <text class="nav-label" :class="{ 'active-label': active === index }">{{ tab.label }}</text>
@@ -57,7 +60,7 @@ function onTab(tab, index) {
   max-width: 430px;
   margin: 0 auto;
   padding: $spacing-lg 46rpx calc($spacing-lg + env(safe-area-inset-bottom));
-  background: #fff;
+  background: $color-bg-card;
   box-shadow: 0 -2rpx 20rpx rgba(120, 53, 15, 0.06);
 }
 
@@ -97,11 +100,23 @@ function onTab(tab, index) {
 
 .msg-badge {
   position: absolute;
-  top: -4rpx;
-  right: -8rpx;
-  width: 18rpx;
-  height: 16rpx;
-  background: $color-semantic-danger;
+  top: -8rpx;
+  right: -14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 6rpx;
   border-radius: $border-radius-full;
+  background: $color-semantic-danger;
+  box-sizing: border-box;
+}
+
+.msg-badge-text {
+  font-size: 18rpx;
+  font-weight: 700;
+  line-height: 1;
+  color: $color-text-on-brand;
 }
 </style>

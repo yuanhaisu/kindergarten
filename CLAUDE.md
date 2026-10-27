@@ -406,13 +406,13 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 ### Teacher mini-program structure (`teacher/`)
 
-- `src/pages.json` — uni-app page routing (**20 pages**, 无 tabBar):
+- `src/pages.json` — uni-app page routing (**23 pages**, 无 `tabBar` 字段；工作台/班级/消息/我的 4 页用自绘底栏):
 
   | 模块 | 页面 |
   | --------- | ------------------------------------------------------ |
   | 工作台    | `index/index`                                          |
   | 登录      | `auth/login`                                           |
-  | 通知      | `notice/create`                                        |
+  | 通知      | `notice/index`、`notice/create`                        |
   | 成长记录  | `growth/index`、`growth/create`、`growth/detail`       |
   | 接送      | `pickup/index`、`pickup/records`                       |
   | 亲子任务  | `tasks/index`                                          |
