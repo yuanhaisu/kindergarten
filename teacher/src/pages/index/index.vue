@@ -5,6 +5,8 @@ import { fetchTeacherHomeOverview, fetchTeacherTodos, updateTeacherTodoAction } 
 import { ensureLogin } from "@/utils/login"
 import { goTab } from "@/utils/nav"
 import BottomNav from "@/components/BottomNav.vue"
+import PageShell from "@/components/PageShell.vue"
+import AppIcon from "@/components/AppIcon.vue"
 
 const loading = ref(false)
 const overview = ref({})
@@ -32,15 +34,16 @@ const todayDate = computed(() => {
 
 // 图标改为品牌插画位图（统一暖橙渐变，消除原先 8 个入口 8 种颜色的「彩虹」）。
 // 位图不随主题换色，故所有入口共用同一套图标；语义区分交给图形本身。
+// 页面只记图标名，路径与降级由 AppIcon 统一处理。
 const quickActions = [
-  { title: "发布通知", img: "/static/icons/notice.png", path: "/pages/notice/create" },
-  { title: "成长记录", img: "/static/icons/growth.png", path: "/pages/growth/index" },
-  { title: "接送管理", img: "/static/icons/pickup.png", path: "/pages/pickup/index" },
-  { title: "亲子任务", img: "/static/icons/task.png", path: "/pages/tasks/index" },
-  { title: "班级日历", img: "/static/icons/calendar.png", path: "/pages/calendar/index" },
-  { title: "请假审批", img: "/static/icons/leave.png", path: "/pages/leave/index" },
-  { title: "班级相册", img: "/static/icons/album.png", path: "/pages/album/index" },
-  { title: "更多", img: "/static/icons/more.png", path: "/pages/more/index" }
+  { title: "发布通知", icon: "notice", path: "/pages/notice/create" },
+  { title: "成长记录", icon: "growth", path: "/pages/growth/index" },
+  { title: "接送管理", icon: "pickup", path: "/pages/pickup/index" },
+  { title: "亲子任务", icon: "task", path: "/pages/tasks/index" },
+  { title: "班级日历", icon: "calendar", path: "/pages/calendar/index" },
+  { title: "请假审批", icon: "leave", path: "/pages/leave/index" },
+  { title: "班级相册", icon: "album", path: "/pages/album/index" },
+  { title: "更多", icon: "more", path: "/pages/more/index" }
 ]
 
 const todoIconMap = {
@@ -167,7 +170,7 @@ onShareAppMessage((res) => {
 </script>
 
 <template>
-  <view class="page">
+  <PageShell bottom-space="180rpx" max-width="430px" flush-top>
     <!-- 问候区：头像进「我的」，班级行进「班级」，铃铛进「消息」 -->
     <view class="greeting">
       <view class="avatar" @click="navigateTo('/pages/profile/index')">
@@ -232,7 +235,7 @@ onShareAppMessage((res) => {
         @click="handleAction(action)"
       >
         <view class="entry-ico">
-          <image class="entry-img" :src="action.img" mode="aspectFit" />
+          <AppIcon :name="action.icon" :size="72" :label="action.title" />
         </view>
         <text class="entry-label">{{ action.title }}</text>
       </view>
@@ -301,21 +304,13 @@ onShareAppMessage((res) => {
     </view>
 
     <!-- 底部导航栏：4 个常驻页共用组件，避免每页复制 -->
-    <BottomNav :active="0" :unread-count="unreadCount" />
-  </view>
+    <template #bottom>
+      <BottomNav :active="0" :unread-count="unreadCount" />
+    </template>
+  </PageShell>
 </template>
 
 <style scoped lang="scss">
-
-.page {
-  min-height: 100vh;
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 430px;
-  margin: 0 auto;
-  padding: 0 $component-page-padding-x calc(180rpx + env(safe-area-inset-bottom));
-  background: $color-bg-page;
-}
 
 // ===== 问候区 =====
 .greeting {
@@ -529,11 +524,6 @@ onShareAppMessage((res) => {
   height: 88rpx;
   border-radius: $border-radius-xl;
   background: $color-brand-primary-bg;
-}
-
-.entry-img {
-  width: 72rpx;
-  height: 72rpx;
 }
 
 .entry-label {
