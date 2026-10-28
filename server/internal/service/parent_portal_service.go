@@ -1432,22 +1432,165 @@ func (s *ParentPortalService) UnlikeGrowth(ctx context.Context, pc *ParentPortal
 	return map[string]any{"is_liked": false, "likes_count": count}, nil
 }
 
+// commentAuthor 是评论作者在「这条记录」语境下的家长身份。
+// 教师/员工没有 StudentParent 行，按契约省略这些字段（不报错）。
+type commentAuthor struct {
+	Relation    string
+	StudentName string
+}
+
+// commentAuthorExtras 批量解析评论作者与孩子的家长关系。
+//
+// 一个家长可能关联多个孩子，关系必须取「与这条记录相关」的那个：个体记录优先取
+// 记录点名到的孩子，全班记录优先取同班孩子，避免把 B 班孩子的称呼安到 A 班记录上。
+func (s *ParentPortalService) commentAuthorExtras(
+	ctx context.Context, kgID uint64, log *domain.GrowthDailyLog, userIDs []uint64,
+) (map[uint64]commentAuthor, error) {
+	extras := make(map[uint64]commentAuthor, len(userIDs))
+	if len(userIDs) == 0 {
+		return extras, nil
+	}
+	linked := make(map[uint64]bool)
+	if log.TargetType == 2 {
+		var links []domain.GrowthLogStudent
+		if err := s.db.WithContext(ctx).Where("log_id = ?", log.ID).Find(&links).Error; err != nil {
+			return nil, err
+		}
+		for _, l := range links {
+			linked[l.StudentID] = true
+		}
+	}
+	var rows []struct {
+		UserID      uint64
+		StudentID   uint64
+		StudentName string
+		ClassID     uint64
+		Relation    string
+	}
+	if err := s.db.WithContext(ctx).Table("student_parents").
+		Select("student_parents.user_id, student_parents.student_id, students.name AS student_name, students.class_id, student_parents.relation").
+		Joins("JOIN students ON students.id = student_parents.student_id").
+		Where("student_parents.deleted_at IS NULL AND students.deleted_at IS NULL").
+		Where("student_parents.user_id IN ? AND students.kindergarten_id = ?", userIDs, kgID).
+		Order("student_parents.is_primary DESC, student_parents.id ASC").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	// 每个作者保留匹配度最高的一条；同分保留先出现的（is_primary 优先）。
+	best := make(map[uint64]int, len(userIDs))
+	for _, r := range rows {
+		score := 0
+		if r.ClassID == log.ClassID {
+			score = 1
+		}
+		if linked[r.StudentID] {
+			score = 2
+		}
+		if cur, ok := best[r.UserID]; ok && cur >= score {
+			continue
+		}
+		best[r.UserID] = score
+		extras[r.UserID] = commentAuthor{Relation: r.Relation, StudentName: r.StudentName}
+	}
+	return extras, nil
+}
+
+// topAncestorID 沿 parent_id 上溯到本记录内的顶层评论。
+// 链路断裂（父评论已删/不在结果集）或出现环时返回 0，调用方按孤立评论处理。
+func topAncestorID(c domain.GrowthComment, byID map[uint64]domain.GrowthComment) uint64 {
+	seen := map[uint64]bool{c.ID: true}
+	cur := c
+	for cur.ParentID != nil {
+		parent, ok := byID[*cur.ParentID]
+		if !ok || seen[parent.ID] {
+			return 0
+		}
+		if parent.ParentID == nil {
+			return parent.ID
+		}
+		seen[parent.ID] = true
+		cur = parent
+	}
+	return c.ID
+}
+
 func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *ParentPortalContext, logID uint64) (map[string]any, error) {
-	if _, err := s.verifyGrowthAccess(ctx, pc, logID); err != nil {
+	log, err := s.verifyGrowthAccess(ctx, pc, logID)
+	if err != nil {
 		return nil, err
 	}
 	var rows []domain.GrowthComment
-	if err := s.db.WithContext(ctx).Preload("User").Where("log_id = ?", logID).Order("created_at ASC").Find(&rows).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("User").Where("log_id = ?", logID).
+		Order("created_at ASC, id ASC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	list := make([]map[string]any, len(rows))
-	for i, r := range rows {
+
+	userIDs := make([]uint64, 0, len(rows))
+	seenUser := make(map[uint64]bool, len(rows))
+	for _, r := range rows {
+		if !seenUser[r.UserID] {
+			seenUser[r.UserID] = true
+			userIDs = append(userIDs, r.UserID)
+		}
+	}
+	extras, err := s.commentAuthorExtras(ctx, pc.KindergartenID, log, userIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	buildUser := func(r domain.GrowthComment) map[string]any {
 		u := map[string]any{}
 		if r.User != nil {
 			u = map[string]any{"id": r.User.ID, "nickname": r.User.Nickname, "avatar": r.User.Avatar}
 		}
-		list[i] = map[string]any{"id": r.ID, "content": r.Content, "parent_id": r.ParentID, "user": u, "created_at": r.CreatedAt.UTC().Format(time.RFC3339)}
+		if ex, ok := extras[r.UserID]; ok && ex.Relation != "" {
+			u["relation"] = ex.Relation
+			if ex.StudentName != "" {
+				u["student_name"] = ex.StudentName
+			}
+		}
+		return u
 	}
+	build := func(r domain.GrowthComment) map[string]any {
+		return map[string]any{
+			"id": r.ID, "content": r.Content, "parent_id": r.ParentID,
+			"user": buildUser(r), "created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+		}
+	}
+
+	// 顶层 + 一层 replies（契约如此）。多级回复归属到最近的顶层祖先，
+	// 否则只渲染一层的家长端会把它当孤儿丢掉。
+	byID := make(map[uint64]domain.GrowthComment, len(rows))
+	for _, r := range rows {
+		byID[r.ID] = r
+	}
+	topIndex := make(map[uint64]int, len(rows))
+	list := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		if r.ParentID != nil {
+			continue
+		}
+		topIndex[r.ID] = len(list)
+		item := build(r)
+		item["replies"] = make([]map[string]any, 0)
+		list = append(list, item)
+	}
+	orphans := make([]map[string]any, 0)
+	for _, r := range rows {
+		if r.ParentID == nil {
+			continue
+		}
+		if idx, ok := topIndex[topAncestorID(r, byID)]; ok {
+			item := list[idx]
+			item["replies"] = append(item["replies"].([]map[string]any), build(r))
+			continue
+		}
+		// 父评论不在本记录（被删/脏数据）：提升为顶层，宁可位置不准也不丢评论。
+		item := build(r)
+		item["replies"] = make([]map[string]any, 0)
+		orphans = append(orphans, item)
+	}
+	list = append(list, orphans...)
 	return map[string]any{"list": list, "total": len(rows)}, nil
 }
 
@@ -1468,22 +1611,58 @@ func (s *ParentPortalService) CreateGrowthComment(ctx context.Context, pc *Paren
 	return map[string]any{"id": row.ID, "created_at": row.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
+// albumMediaRow 是相册查询的扁平投影：媒体字段 + 所属记录的日期。
+// 相册按「记录所属日期」归月与分组（契约 group.date），而不是上传时刻——
+// 照片补传到几周前的记录上，仍应出现在活动当天，而不是上传当天。
+type albumMediaRow struct {
+	ID       uint64
+	FileURL  string
+	ThumbURL string
+	FileType string
+	LogID    uint64
+	LogDate  time.Time
+}
+
 func (s *ParentPortalService) ListGrowthMedia(ctx context.Context, pc *ParentPortalContext, year, month int) (map[string]any, error) {
-	db := s.db.WithContext(ctx).Model(&domain.GrowthMedia{}).
-		Where("kindergarten_id = ?", pc.KindergartenID)
+	// 可见性按**当前孩子**收缩：多孩家庭的相册不能混入另一个孩子的照片。
+	// ResolveContext 已把 student_id 收敛到该家长的孩子，无值时取默认孩子。
+	visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, nil, pc.CurrentStudent)
+	q := s.db.WithContext(ctx).Table("growth_media").
+		Select("growth_media.id AS id, growth_media.file_url AS file_url, growth_media.thumb_url AS thumb_url, "+
+			"growth_media.file_type AS file_type, growth_media.log_id AS log_id, growth_daily_logs.date AS log_date").
+		Joins("JOIN growth_daily_logs ON growth_daily_logs.id = growth_media.log_id").
+		Where("growth_media.deleted_at IS NULL AND growth_daily_logs.deleted_at IS NULL").
+		Where("growth_media.kindergarten_id = ?", pc.KindergartenID).
+		Where(visWhere, visArgs...)
 	if year > 0 && month > 0 {
 		start := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Local)
 		end := start.AddDate(0, 1, 0)
-		db = db.Where("created_at >= ? AND created_at < ?", start, end)
+		q = q.Where("growth_daily_logs.date >= ? AND growth_daily_logs.date < ?", start, end)
 	}
-	// 可见性与成长时光一致：只含孩子所在班级的全班记录媒体，或发给孩子的个体记录媒体。
-	visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, pc.Students, nil)
-	db = db.Where("log_id IN (SELECT id FROM growth_daily_logs WHERE "+visWhere+")", visArgs...)
-	var rows []domain.GrowthMedia
-	if err := db.Order("created_at DESC").Find(&rows).Error; err != nil {
+	var rows []albumMediaRow
+	if err := q.Order("growth_daily_logs.date DESC, growth_media.created_at DESC, growth_media.id DESC").
+		Scan(&rows).Error; err != nil {
 		return nil, err
 	}
-	return map[string]any{"list": rows, "total": len(rows), "year": year, "month": month}, nil
+
+	// 契约：groups[].date（YYYY-MM-DD）+ groups[].media[]，组内最新在前。
+	groups := make([]map[string]any, 0)
+	for _, r := range rows {
+		date := r.LogDate.Format("2006-01-02")
+		var group map[string]any
+		if n := len(groups); n > 0 && groups[n-1]["date"] == date {
+			group = groups[n-1]
+		}
+		if group == nil {
+			group = map[string]any{"date": date, "media": make([]map[string]any, 0)}
+			groups = append(groups, group)
+		}
+		group["media"] = append(group["media"].([]map[string]any), map[string]any{
+			"id": r.ID, "file_url": r.FileURL, "thumb_url": r.ThumbURL,
+			"file_type": r.FileType, "log_id": r.LogID,
+		})
+	}
+	return map[string]any{"year": year, "month": month, "groups": groups, "total": len(rows)}, nil
 }
 
 func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPortalContext, studentID uint64, reportType string) (map[string]any, error) {

@@ -170,6 +170,8 @@
 ### GET `/parent/growth/feed/:id/comments`
 
 > 评论列表
+>
+> `replies` 只嵌一层：更深的回复归属到其最近的顶层评论，`parent_id` 仍指向直接父级。`user.relation` / `user.student_name` 仅在作者是本园家长时返回，教师/员工省略这两个字段。`total` 为该记录下的评论总数（含回复）。
 
 ```json
 // Query: ?page=1&page_size=20
@@ -228,7 +230,9 @@
 
 ### GET `/parent/growth/album`
 
-> 成长相册（按月份分组的照片视频列表）
+> 成长相册（按月查询、按**记录日期**分组的照片视频列表）
+>
+> 分组口径：`groups[].date` 取成长记录所属日期（`growth_daily_logs.date`，`YYYY-MM-DD`），**不是**媒体上传时刻；`year` / `month` 只是查询范围。`total` 为本次返回的媒体条数（与 `media` 元素总数一致）。
 
 ```json
 // Query: ?student_id=1&year=2026&month=3
