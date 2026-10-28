@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**B06 worker**
+- 下一动作：**P02 worker**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -26,7 +26,7 @@
 | X00 | W0 | 零入边页面决策：老师 webview、家长 bind/messages/webview | passed | - | - | - | 4 项决策已记录 |
 | S01 | W1* | 原生 custom-tab-bar + 4 tab 页去 BottomNav | passed | 0434244 | 48cb569 | impl-reviews/S01.md | 0 P1 / 5 P2；原生底栏四页闭环 |
 | P01 | W1 | 家长首页 01 | passed | 6d1a2f9 | 516c591 | impl-reviews/P01.md | 0 P1 / 5 P2；S01 原生底栏后复审通过 |
-| B06 | W1* | 成长相册 groups/student_id + 评论 replies/relation | briefed | ee4aa37 | - | - | P02 前置；对齐 04-growth 契约 |
+| B06 | W1* | 成长相册 groups/student_id + 评论 replies/relation | passed | ee4aa37 | 8804b0a | impl-reviews/B06.md | 0 P1 / 6 P2；契约对齐，6/6 测试通过 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | pending | - | - | - | 依赖 F0、B04、B06 |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0 |
@@ -64,10 +64,10 @@
 ```json
 {
   "slice_id": "B06",
-  "phase": "briefed",
-  "commit_sha": null,
-  "next_action": "spawn B06 worker",
-  "updated_at": "2026-10-28T21:50:00+08:00"
+  "phase": "committed",
+  "commit_sha": "8804b0ab052d638077754c5665cc7ad16f6cf838",
+  "next_action": "P02 brief",
+  "updated_at": "2026-10-28T22:15:00+08:00"
 }
 ```
 
@@ -97,3 +97,4 @@
 | B05 | ee5dcb5 | 2026-10-28 | 0 P1 / 6 P2；feed 按孩子过滤 + relation/relation_label |
 | S01 | 48cb569 | 2026-10-28 | 0 P1 / 5 P2；原生 custom-tab-bar，四页闭环 |
 | P01 | 516c591 | 2026-10-28 | 0 P1 / 5 P2；家长首页六块/四态/多孩/feed 隔离 |
+| B06 | 8804b0a | 2026-10-28 | 0 P1 / 6 P2；album groups + comments replies |
