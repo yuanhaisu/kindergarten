@@ -1,9 +1,9 @@
 <script setup>
 import { ref } from "vue"
-import { onLoad } from "@dcloudio/uni-app"
+import { onLoad, onShow } from "@dcloudio/uni-app"
 import { getUser } from "@/utils/auth"
 import { ensureLogin } from "@/utils/login"
-import BottomNav from "@/components/BottomNav.vue"
+import { syncTabBar } from "@/utils/tabbar"
 
 const user = ref(null)
 
@@ -26,6 +26,9 @@ onLoad(async () => {
   await ensureLogin()
   user.value = getUser()
 })
+
+// switchTab 切回本页不重跑 onLoad，高亮必须每次 onShow 校正到「我的」（index 3）
+onShow(() => syncTabBar(3))
 
 // 家长端有 tabBar（见 pages.json），跳 tabBar 页必须用 switchTab ——
 // navigateTo 到 tabBar 页会静默失败，点「接送记录」没有任何反应。
@@ -54,12 +57,12 @@ function goPage(path) {
         <text class="arrow">›</text>
       </view>
     </view>
-    <BottomNav :active="3" />
   </view>
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: $spacing-lg 28rpx; background: $color-bg-page; }
+/* 底部留白 = 原生 custom-tab-bar 约 126rpx + 安全区（见 custom-tab-bar/index.wxss） */
+.page { min-height: 100vh; padding: $spacing-lg 28rpx calc(140rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
 .user-card { display: flex; flex-direction: column; align-items: center; padding: 40rpx; margin-bottom: 24rpx; border-radius: $border-radius-xl; background: $color-bg-card; box-shadow: $shadow-sm; }
 .avatar-placeholder { display: flex; align-items: center; justify-content: center; width: 120rpx; height: 120rpx; border-radius: 999rpx; background: linear-gradient(135deg, #FB923C, #F97316); }
 .avatar-text { color: #fff; font-size: 48rpx; font-weight: 700; }

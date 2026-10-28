@@ -1,0 +1,58 @@
+/*
+ * 原生 custom-tab-bar 被原样复制到 dist，不经过 SCSS 编译，无法引用 $token 变量。
+ * 图标字体由 app.wxss 里的 @font-face 全局注册（App.vue 引 remixicon.css），
+ * 组件 options.styleIsolation = "apply-shared" 即可用。
+ * 不要在本文件里引入 remixicon.css：WXSS 不支持导入 .css，编译期静默失败会让所有 tab 页白屏。
+ * 下面的大写常量与 shared-design-tokens/build/scss/tokens-parent.scss 一一对应：
+ *   #FFFFFF = $color-bg-card
+ *   #94A3B8 = $color-text-muted
+ *   #F97316 = $color-brand-primary（家长端）
+ * 24rpx = $spacing-lg，48rpx = 图标字号（同 BottomNav），22rpx = $typography-font-size-xs。
+ * 改动这些数值时请同步 tokens 与 shared-ui/BottomNav，保持两端底栏一致。
+ */
+.ctb {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 999;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-sizing: border-box;
+  /* 内容 78rpx（图标 48 + gap 4 + 文字 26）+ 上下各 24rpx ≈ 126rpx，不含安全区 */
+  padding: 24rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+  background: #FFFFFF;
+  border-top: 1rpx solid rgba(106, 77, 42, 0.08);
+}
+
+.ctb__item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+}
+
+.ctb__icon {
+  font-family: remixicon;
+  font-size: 48rpx;
+  line-height: 1;
+  color: #94A3B8;
+}
+
+.ctb__label {
+  font-size: 22rpx;
+  line-height: 1.2;
+  color: #94A3B8;
+}
+
+.ctb__item.is-active .ctb__icon {
+  color: #F97316;
+}
+
+.ctb__item.is-active .ctb__label {
+  color: #F97316;
+  font-weight: 500;
+}

@@ -15,7 +15,7 @@
 | 返回 | 原生返回；根页面/登录页无返回，子页由系统显示 |
 | 导航背景 | 老师端 `#F7F3EA`（`--bg`），家长端 `#F8FAFC`（`--bg`）；标题黑色 |
 | 页面高度 | 原生导航栏已在页面区域之外；不再减 64px |
-| 底部 | 家长端沿用 `custom-tab-bar`；老师端沿用 `BottomNav`；安全区照旧 |
+| 底部 | 家长端用原生 `custom-tab-bar`（见 §7）；老师端沿用 `BottomNav`；安全区照旧 |
 | 下拉刷新 | 继续用 `enablePullDownRefresh`；原生导航栏不冲突 |
 
 ## 2. 为什么选原生导航栏
@@ -107,3 +107,22 @@
 - 微信原生导航栏在目标机型上出现无法接受的样式问题。
 
 否则保持原生导航栏，不在单页偷偷加 `navigationStyle: custom`。
+
+## 7. 2026-10-28 修订：家长端改用原生 custom-tab-bar
+
+**决定**：家长端底栏从「每页挂 `<BottomNav>`」改为微信原生自定义 tabBar（`parent/src/custom-tab-bar/index.{js,json,wxml,wxss}`）；`pages.json` 保持 `tabBar.custom: true` 与 4 项 list 不变；4 个 tab 页（首页 / 成长 / 接送 / 我的）移除页内 `BottomNav`。老师端没有 tabBar，继续用 `BottomNav`。
+
+**原因**：`custom: true` 但缺原生组件时，微信不渲染任何底栏；原先的 `custom-tab-bar/index.vue` 会被编译器**原样复制**进 dist（不编译），所以从未生效。页内 BottomNav 只能覆盖「碰巧写了它」的页面，每页各写一份也容易漏。
+
+| 项 | 取值 |
+|---|---|
+| 组件位置 | `parent/src/custom-tab-bar/index.{js,json,wxml,wxss}`；编译器整目录原样复制到 dist，不走 uni/Vue 编译 |
+| 选中态 | 各 tab 页 `onShow` 调 `utils/tabbar.js` 的 `syncTabBar(1/2/3)` 回写；首页默认 0，不额外同步。组件内不再用 `getCurrentPages()` 自算——切 tab 时栈顶可能还是旧页 |
+| 切换 | 同 tab 直接 return；否则先对所有已创建的 tabBar 实例 `setData({ selected })` 再 `wx.switchTab({ url: "/" + pagePath })`（原生组件内没有 `uni`）。微信为每个 tab 页各建一个组件实例，只改当前页那份会让隐藏页保留旧高亮 |
+| 高度 | 内容 78rpx（图标 48 + gap 4 + 文字 26）+ 上下 padding 48rpx ≈ **126rpx**，不含安全区 |
+| 安全区 | `padding-bottom: calc(24rpx + env(safe-area-inset-bottom))` |
+| 页面留白 | 统一 `calc(140rpx + env(safe-area-inset-bottom))`（126rpx 底栏 + 约 14rpx 余量） |
+| 配色 | 白底 `#FFFFFF`，上边框 `rgba(106,77,42,0.08)`；未选中 `#94A3B8`，选中家长端品牌橙 `#F97316` |
+| 图标 | remixicon 字体（码位同 BottomNav）；依赖 `App.vue` → `app.wxss` 的 `@font-face` + 组件 `styleIsolation: apply-shared`。**不要**在组件 WXSS 里 `@import` remixicon.css：WXSS 把 `.css` 的 `@import` 编译失败时会静默让所有 tab 页白屏 |
+
+**遗留（P2）**：P01 首页 `PageShell bottom-space="180rpx"` 比统一值 140rpx 多 40rpx，是否收窄交给 P01 复审。

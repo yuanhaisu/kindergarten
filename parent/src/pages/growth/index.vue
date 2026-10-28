@@ -6,7 +6,7 @@ import { fetchGrowthFeed, likeGrowth, unlikeGrowth } from "@/api/parent-growth"
 import { fetchParentHomeOverview } from "@/api/parent-home"
 import { fetchAchievements } from "@/api/parent-points"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
-import BottomNav from "@/components/BottomNav.vue"
+import { syncTabBar } from "@/utils/tabbar"
 import StateBlock from "@/components/StateBlock.vue"
 
 const feeds = ref([])
@@ -227,8 +227,12 @@ async function loadData() {
   }
 }
 
-// tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad，切完孩子会看不到变化
-onShow(loadData)
+// tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad，切完孩子会看不到变化。
+// 同时把原生底栏高亮校正到「成长」（index 1）——组件内算不准当前 tab，见 utils/tabbar.js。
+onShow(() => {
+  syncTabBar(1)
+  loadData()
+})
 onPullDownRefresh(loadData)
 </script>
 
@@ -423,9 +427,6 @@ onPullDownRefresh(loadData)
 
       <view class="bottom-safe" />
     </scroll-view>
-
-    <!-- 底部导航 -->
-    <BottomNav :active="1" />
   </view>
 </template>
 
@@ -935,7 +936,9 @@ onPullDownRefresh(loadData)
   color: $color-brand-primary;
 }
 
+// 原生 custom-tab-bar 约 126rpx 高（见 custom-tab-bar/index.wxss），
+// 固定定位在 scroll-view 之上，这里留出等高占位 + 安全区。
 .bottom-safe {
-  height: calc(120rpx + env(safe-area-inset-bottom));
+  height: calc(140rpx + env(safe-area-inset-bottom));
 }
 </style>

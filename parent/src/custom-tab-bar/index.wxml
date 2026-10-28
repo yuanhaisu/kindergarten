@@ -1,0 +1,12 @@
+<view class="ctb">
+  <view
+    wx:for="{{list}}"
+    wx:key="pagePath"
+    class="ctb__item {{selected === index ? 'is-active' : ''}}"
+    data-index="{{index}}"
+    bindtap="onTabTap"
+  >
+    <text class="ctb__icon">{{item.icon}}</text>
+    <text class="ctb__label">{{item.text}}</text>
+  </view>
+</view>

@@ -1,9 +1,9 @@
 <script setup>
 import { ref } from "vue"
-import BottomNav from "@/components/BottomNav.vue"
 import { onShow } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId } from "@/utils/currentStudent"
+import { syncTabBar } from "@/utils/tabbar"
 import { fetchPickupRecords } from "@/api/parent-pickup"
 
 const records = ref([])
@@ -21,8 +21,12 @@ async function loadData() {
   } finally { loading.value = false }
 }
 
-// tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad
-onShow(loadData)
+// tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad。
+// 同时把原生底栏高亮校正到「接送」（index 2）——组件内算不准当前 tab，见 utils/tabbar.js。
+onShow(() => {
+  syncTabBar(2)
+  loadData()
+})
 </script>
 
 <template>
@@ -42,12 +46,12 @@ onShow(loadData)
         <text class="person">{{ item.pickup_name }} ({{ item.pickup_relation }})</text>
       </view>
     </view>
-    <BottomNav :active="2" />
   </view>
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: $spacing-lg 28rpx; background: $color-bg-page; }
+/* 底部留白 = 原生 custom-tab-bar 约 126rpx + 安全区（见 custom-tab-bar/index.wxss） */
+.page { min-height: 100vh; padding: $spacing-lg 28rpx calc(140rpx + env(safe-area-inset-bottom)); background: $color-bg-page; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
 .page-title { color: $color-text-primary; font-size: $typography-font-size-2xl; font-weight: 800; }
 .link-btn { padding: 14rpx 28rpx; border-radius: 999rpx; background: $color-semantic-info; color: #fff; font-size: $typography-font-size-sm; }
