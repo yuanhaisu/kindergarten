@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**S01 worker**
+- 下一动作：**P01 supervisor (round 2)**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -24,7 +24,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F0 | W0 | 落地基线：AppIcon / PageShell / StateBlock / CSS 兼容 / secret scan | passed | 30f1982 | cabe031 | impl-reviews/F0.md | 0 P1 / 6 P2；README D01/D02 已修 e3b39cc |
 | X00 | W0 | 零入边页面决策：老师 webview、家长 bind/messages/webview | passed | - | - | - | 4 项决策已记录 |
-| S01 | W1* | 原生 custom-tab-bar + 4 tab 页去 BottomNav | briefed | 0434244 | - | - | P01 前置；用户选原生方案 |
+| S01 | W1* | 原生 custom-tab-bar + 4 tab 页去 BottomNav | passed | 0434244 | 48cb569 | impl-reviews/S01.md | 0 P1 / 5 P2；原生底栏四页闭环 |
 | P01 | W1 | 家长首页 01 | blocked | 6d1a2f9 | - | impl-reviews/P01.md | FAIL P1：首页无底栏；用户选原生 custom-tab-bar；S01 前置 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | pending | - | - | - | 依赖 F0、B04 |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0 |
@@ -90,3 +90,4 @@
 | F0 | cabe031 | 2026-10-28 | 0 P1 / 6 P2；AppIcon/PageShell/CSS-COMPAT；5 页回归通过 |
 | B04 | 8011f8d | 2026-10-28 | 0 P1 / 5 P2；点赞并发 1062 修复 + 回归测试 |
 | B05 | ee5dcb5 | 2026-10-28 | 0 P1 / 6 P2；feed 按孩子过滤 + relation/relation_label |
+| S01 | 48cb569 | 2026-10-28 | 0 P1 / 5 P2；原生 custom-tab-bar，四页闭环 |
