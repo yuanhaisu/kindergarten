@@ -24,7 +24,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F0 | W0 | 落地基线：AppIcon / PageShell / StateBlock / CSS 兼容 / secret scan | passed | 30f1982 | cabe031 | impl-reviews/F0.md | 0 P1 / 6 P2；README D01/D02 已修 e3b39cc |
 | X00 | W0 | 零入边页面决策：老师 webview、家长 bind/messages/webview | passed | - | - | - | 4 项决策已记录 |
-| P01 | W1 | 家长首页 01 | pending | - | - | - | 依赖 F0、B05 |
+| P01 | W1 | 家长首页 01 | briefed | 6d1a2f9 | - | - | 依赖 F0、B05 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | pending | - | - | - | 依赖 F0、B04 |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0 |
@@ -61,11 +61,11 @@
 
 ```json
 {
-  "slice_id": "B05",
-  "phase": "committed",
-  "commit_sha": "ee5dcb5552efe4bda3691b8146b7c3b83d43d0c7",
-  "next_action": "P01 brief",
-  "updated_at": "2026-10-28T15:50:00+08:00"
+  "slice_id": "P01",
+  "phase": "briefed",
+  "commit_sha": null,
+  "next_action": "spawn P01 worker",
+  "updated_at": "2026-10-28T15:55:00+08:00"
 }
 ```
 
