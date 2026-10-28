@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**P01 supervisor (round 2)**
+- 下一动作：**P02（新会话接手）**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -25,7 +25,7 @@
 | F0 | W0 | 落地基线：AppIcon / PageShell / StateBlock / CSS 兼容 / secret scan | passed | 30f1982 | cabe031 | impl-reviews/F0.md | 0 P1 / 6 P2；README D01/D02 已修 e3b39cc |
 | X00 | W0 | 零入边页面决策：老师 webview、家长 bind/messages/webview | passed | - | - | - | 4 项决策已记录 |
 | S01 | W1* | 原生 custom-tab-bar + 4 tab 页去 BottomNav | passed | 0434244 | 48cb569 | impl-reviews/S01.md | 0 P1 / 5 P2；原生底栏四页闭环 |
-| P01 | W1 | 家长首页 01 | blocked | 6d1a2f9 | - | impl-reviews/P01.md | FAIL P1：首页无底栏；用户选原生 custom-tab-bar；S01 前置 |
+| P01 | W1 | 家长首页 01 | passed | 6d1a2f9 | 516c591 | impl-reviews/P01.md | 0 P1 / 5 P2；S01 原生底栏后复审通过 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | pending | - | - | - | 依赖 F0、B04 |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0 |
@@ -62,26 +62,30 @@
 
 ```json
 {
-  "slice_id": "S01",
-  "phase": "briefed",
-  "commit_sha": null,
-  "next_action": "spawn S01 worker",
-  "updated_at": "2026-10-28T17:10:00+08:00"
+  "slice_id": "P01",
+  "phase": "committed",
+  "commit_sha": "516c591c95bfdd11ba7ac452a7cdd9450fd6b31e",
+  "next_action": "P02 brief in a fresh session",
+  "updated_at": "2026-10-28T21:15:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-当主会话上下文 >40% 或发生 auto-compact 时，在这里写：
+### Handoff 2026-10-28T21:15+08:00
 
-```markdown
-### Handoff <timestamp>
-- 当前切片：
-- 已完成阶段：
-- 下一步：
-- 必须读的文件：
-- 已知阻塞：
-```
+- 当前切片：P01 已 passed/committed；下一片 **P02 家长成长三页**
+- 已完成阶段：W0（F0、X00）；W1 前置（B04、B05、S01）；P01
+- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 P02 行，写 `.claude/runs/P02/brief.md`，派 `slice-worker`
+- 必须读：
+  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P02 行
+  - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
+  - `parent/09-growth-index/`、`10-growth-detail/`、`11-growth-album/`
+  - `_shared/reviews/parent-09-growth-index.md`、`parent-10-growth-detail.md`、`parent-11-growth-album.md`
+  - S01 commit `48cb569`（原生底栏）、B04 commit `8011f8d`（点赞并发）
+- 已知阻塞：无。后端 `b4vjgfrxc` PID 41208 运行；DevTools 锁空闲。
+- P01 带入后续的 P2：首页 180rpx 留白、首页缺 `onShow -> syncTabBar(0)`、空态/角标/图标按 brief 的差异、截图不可用。
+- 上下文：主会话已约 45%，按约定在此 handoff；新会话只读上述文件，不要重读旧对话。
 
 ## 最近完成
 
@@ -91,3 +95,4 @@
 | B04 | 8011f8d | 2026-10-28 | 0 P1 / 5 P2；点赞并发 1062 修复 + 回归测试 |
 | B05 | ee5dcb5 | 2026-10-28 | 0 P1 / 6 P2；feed 按孩子过滤 + relation/relation_label |
 | S01 | 48cb569 | 2026-10-28 | 0 P1 / 5 P2；原生 custom-tab-bar，四页闭环 |
+| P01 | 516c591 | 2026-10-28 | 0 P1 / 5 P2；家长首页六块/四态/多孩/feed 隔离 |
