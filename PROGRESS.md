@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**B05 worker**
+- 下一动作：**P01 worker**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -34,7 +34,7 @@
 | B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
 | B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
 | B04 | W1* | 点赞落库复核 + 两端防连点 | passed | e3b39cc | 8011f8d | impl-reviews/B04.md | 0 P1 / 5 P2；原症状已由 97f4dd8f 修复，本次修并发 1062 |
-| B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | briefed | 0c63e14 | - | - | P01 前置；多孩串数据 |
+| B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | passed | 0c63e14 | ee5dcb5 | impl-reviews/B05.md | 0 P1 / 6 P2 |
 | P05 | W3 | 家长通知列表/详情 04/05 | pending | - | - | - | 依赖 F0 |
 | P06 | W3 | 家长请假列表/创建/详情 06/07/08 | pending | - | - | - | 依赖 F0 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
@@ -62,10 +62,10 @@
 ```json
 {
   "slice_id": "B05",
-  "phase": "briefed",
-  "commit_sha": null,
-  "next_action": "spawn B05 worker",
-  "updated_at": "2026-10-28T15:35:00+08:00"
+  "phase": "committed",
+  "commit_sha": "ee5dcb5552efe4bda3691b8146b7c3b83d43d0c7",
+  "next_action": "P01 brief",
+  "updated_at": "2026-10-28T15:50:00+08:00"
 }
 ```
 
@@ -88,3 +88,4 @@
 | --- | --- | --- | --- |
 | F0 | cabe031 | 2026-10-28 | 0 P1 / 6 P2；AppIcon/PageShell/CSS-COMPAT；5 页回归通过 |
 | B04 | 8011f8d | 2026-10-28 | 0 P1 / 5 P2；点赞并发 1062 修复 + 回归测试 |
+| B05 | ee5dcb5 | 2026-10-28 | 0 P1 / 6 P2；feed 按孩子过滤 + relation/relation_label |
