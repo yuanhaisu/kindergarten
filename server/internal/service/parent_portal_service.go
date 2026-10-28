@@ -33,6 +33,9 @@ type ParentPortalContext struct {
 	Students       []domain.Student
 	Class          *domain.Class
 	Relation       string
+	// Relations 是每个孩子与当前家长的 StudentParent 关系码（father/mother/...）。
+	// 首页多孩切换要按孩子取称呼，只有 Relation（当前孩子）不够。
+	Relations map[uint64]string
 }
 
 type ParentPortalService struct {
@@ -69,10 +72,12 @@ func (s *ParentPortalService) ResolveContext(ctx context.Context, userID, kinder
 		return nil, ErrParentContext
 	}
 	var students []domain.Student
+	relations := make(map[uint64]string, len(spRows))
 	for _, sp := range spRows {
 		if sp.Student != nil {
 			students = append(students, *sp.Student)
 		}
+		relations[sp.StudentID] = string(sp.Relation)
 	}
 	if len(students) == 0 {
 		return nil, ErrParentContext
@@ -96,6 +101,7 @@ func (s *ParentPortalService) ResolveContext(ctx context.Context, userID, kinder
 		CurrentStudent: current,
 		Students:       students,
 		Relation:       relation,
+		Relations:      relations,
 	}
 	if current != nil {
 		class, _ := s.classes.FindByID(ctx, kindergartenID, current.ClassID)
@@ -517,6 +523,19 @@ func RelationLabel(r domain.ParentRelation) string {
 		return v
 	}
 	return string(r)
+}
+
+// parentRelationLabel 首页问候语的称呼。relation 缺失（没有 StudentParent 关系或未配置）
+// 时回退「家长」，而不是让页面显示空白。不复用 RelationLabel 的兜底：它对未知 code
+// 原样返回，会把脏值直接显示成称呼。
+func parentRelationLabel(relation string) string {
+	switch domain.ParentRelation(relation) {
+	case domain.RelationFather, domain.RelationMother,
+		domain.RelationGrandfather, domain.RelationGrandmother, domain.RelationOther:
+		return RelationLabel(domain.ParentRelation(relation))
+	default:
+		return "家长"
+	}
 }
 
 // ==================== Authorized Persons ====================
@@ -2563,7 +2582,14 @@ func (s *ParentPortalService) HomeOverview(ctx context.Context, pc *ParentPortal
 		if st.Class != nil {
 			cname = st.Class.Name
 		}
-		studentsList[i] = map[string]any{"id": st.ID, "name": st.Name, "avatar": st.Avatar, "class_name": cname, "class_id": st.ClassID}
+		studentsList[i] = map[string]any{
+			"id": st.ID, "name": st.Name, "avatar": st.Avatar,
+			"class_name": cname, "class_id": st.ClassID,
+			// relation 是 StudentParent 的关系码（father/mother/...），页面按码映射称呼；
+			// relation_label 是服务端已映射好的文案，关系缺失时为「家长」。
+			"relation":       pc.Relations[st.ID],
+			"relation_label": parentRelationLabel(pc.Relations[st.ID]),
+		}
 	}
 
 	// Today summary
@@ -2806,6 +2832,11 @@ func (s *ParentPortalService) ListHomeFeeds(ctx context.Context, pc *ParentPorta
 	if len(pc.Students) == 0 {
 		return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil
 	}
+	// 成长记录只取「当前孩子」。没有当前孩子时不能退化成家庭合集，
+	// 否则多孩家庭切到 B 仍会看到 A 班级的记录（列表串数据）。
+	if pc.CurrentStudent == nil {
+		return nil, ErrParentInvalidParams
+	}
 
 	// 收集孩子所在的所有班级
 	classIDs := make([]uint64, 0, len(pc.Students))
@@ -2855,9 +2886,10 @@ func (s *ParentPortalService) ListHomeFeeds(ctx context.Context, pc *ParentPorta
 		})
 	}
 
-	// 2) 成长记录（最近 3 条）。与成长时光同一可见性规则：不含发给其他孩子的个体记录。
+	// 2) 成长记录（最近 3 条）。按当前孩子取数：多孩切换后动态流必须跟着切，
+	// 否则切到 B 仍显示 A 班的记录。可见性规则（班级全班 + 发给本孩子的个体）不变。
 	var logs []domain.GrowthDailyLog
-	visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, pc.Students, nil)
+	visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, nil, pc.CurrentStudent)
 	s.db.WithContext(ctx).Preload("Creator").Model(&domain.GrowthDailyLog{}).
 		Where(visWhere, visArgs...).
 		Order("date DESC, id DESC").Limit(3).Find(&logs)

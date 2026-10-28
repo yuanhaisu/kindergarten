@@ -23,8 +23,8 @@
     "class_id": 1
   },
   "students": [
-    { "id": 1, "name": "王小明", "avatar": "...", "class_name": "小一班" },
-    { "id": 5, "name": "王小花", "avatar": "...", "class_name": "大二班" }
+    { "id": 1, "name": "王小明", "avatar": "...", "class_name": "小一班", "relation": "mother", "relation_label": "妈妈" },
+    { "id": 5, "name": "王小花", "avatar": "...", "class_name": "大二班", "relation": "father", "relation_label": "爸爸" }
   ],
   "today_summary": {
     "attendance_status": "present",
@@ -46,6 +46,10 @@
   }
 }
 ```
+
+> `students[].relation` 是家长与该孩子的关系码（`father` / `mother` / `grandfather` /
+> `grandmother` / `other`），前端按码映射称呼；`relation_label` 是服务端映射好的文案，
+> 关系缺失或未配置时为「家长」。
 
 ---
 
@@ -99,6 +103,12 @@
 ### GET `/parent/home/feeds`
 
 > 首页动态流（成长记录 + 通知混合流）
+>
+> `student_id` 决定成长记录部分取哪个孩子：不传时按当前孩子（首个绑定的孩子）处理，
+> 与 overview 的 `current_student` 一致。通知部分不按孩子过滤，始终按家长绑定孩子的班级集下发。
+>
+> 成长条目的数据键是 `growth`（历史文档误写为 `growth_log`，两端客户端均未消费过该键，
+> 故以实现为准修正文档，不保留兼容键）。
 
 ```json
 // Query: ?page=1&page_size=10&student_id=1
@@ -109,7 +119,7 @@
     {
       "id": 1,
       "type": "growth",
-      "growth_log": {
+      "growth": {
         "id": 1,
         "content": "今天的美术课主题是《我心中的春天》...",
         "media_preview": [
