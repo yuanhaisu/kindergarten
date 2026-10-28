@@ -90,7 +90,7 @@ slot：
    之外，页面顶部**不要再加** `statusBarHeight` / 64px 假外壳；页内 `top` 从内容间距算。
    详见 `_shared/SHELL-DECISION.md`。
 2. **水平 padding**：用 `$component-page-padding-x`（28rpx），不再写裸 `28rpx`
-   （历史页 `teacher/src/pages/notice/index.vue` 仍是裸值，留给 D01 收口）。
+   （历史页 `teacher/src/pages/notice/index.vue` 仍是裸值，留给 D02 收口）。
 3. **底部安全区只算一次**：用 PageShell 时页面不要再写
    `padding-bottom: calc(... + env(safe-area-inset-bottom))`。底栏自身的安全区属于底栏高度，
    `bottomSpace` 负责让内容滚出底栏。
