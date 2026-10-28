@@ -7,16 +7,23 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**F0 brief**
+- 下一动作：**B04 worker**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
+
+## X00 零入边决策（2026-10-28）
+
+- 老师端 `pages/webview/index`：隐藏入口，保留空态页。
+- 家长端 `pages/auth/bind`：仅保留首次绑定流程，不单独放入口。
+- 家长端 `pages/messages/index`：在首页/我的补消息入口。
+- 家长端 `pages/webview/index`：隐藏入口，保留空态页，等业务域名配置。
 
 ## 切片状态
 
 | ID | 波次 | 范围 | 状态 | Base | Commit | Review | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| F0 | W0 | 落地基线：AppIcon / PageShell / StateBlock / CSS 兼容 / secret scan | pending | - | - | - | 其他切片的前置 |
-| X00 | W0 | 零入边页面决策：老师 webview、家长 bind/messages/webview | pending | - | - | - | 需用户决策 |
+| F0 | W0 | 落地基线：AppIcon / PageShell / StateBlock / CSS 兼容 / secret scan | passed | 30f1982 | cabe031 | impl-reviews/F0.md | 0 P1 / 6 P2；README D01/D02 已修 e3b39cc |
+| X00 | W0 | 零入边页面决策：老师 webview、家长 bind/messages/webview | passed | - | - | - | 4 项决策已记录 |
 | P01 | W1 | 家长首页 01 | pending | - | - | - | 依赖 F0 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | pending | - | - | - | 依赖 F0、B04 |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0 |
@@ -26,7 +33,7 @@
 | B01 | W2 | 成长报告四格统计 | pending | - | - | - | OpenSpec；页面 12 已存在 |
 | B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
 | B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
-| B04 | W2 | 点赞落库复核 + 两端防连点 | pending | - | - | - | **提前到 P02 之前** |
+| B04 | W1* | 点赞落库复核 + 两端防连点 | briefed | e3b39cc | - | - | **提前到 P02 之前** |
 | P05 | W3 | 家长通知列表/详情 04/05 | pending | - | - | - | 依赖 F0 |
 | P06 | W3 | 家长请假列表/创建/详情 06/07/08 | pending | - | - | - | 依赖 F0 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
@@ -53,10 +60,11 @@
 
 ```json
 {
-  "slice_id": null,
-  "phase": "idle",
-  "next_action": "F0 brief",
-  "updated_at": "2026-10-28T00:00:00+08:00"
+  "slice_id": "F0",
+  "phase": "committed",
+  "commit_sha": "cabe031eaf4baba90d0583b093ca466c5599bce1",
+  "next_action": "X00 decision + B04 worker",
+  "updated_at": "2026-10-28T14:40:00+08:00"
 }
 ```
 
@@ -77,4 +85,4 @@
 
 | Slice | Commit | 日期 | 备注 |
 | --- | --- | --- | --- |
-| - | - | - | - |
+| F0 | cabe031 | 2026-10-28 | 0 P1 / 6 P2；AppIcon/PageShell/CSS-COMPAT；5 页回归通过 |

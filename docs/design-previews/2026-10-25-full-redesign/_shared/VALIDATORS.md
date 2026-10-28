@@ -103,20 +103,20 @@
 适用：F0。
 
 - [ ] `AppIcon` 覆盖约定图标集（工作台 8 入口 + 导航/状态）。
-- [ ] `PageShell` / 安全区 / 底栏约定已文档化，试点页已使用。
+- [ ] `PageShell` / 安全区 / 底栏约定已文档化；teacher 工作台已采用；另外 4 个试点页记录根容器差异，不重构。
 - [ ] `StateBlock` 覆盖 loading / empty / error / retry。
 - [ ] `CSS-COMPAT` 指南覆盖已知不支持特性及替代写法。
 - [ ] `.gitignore` 包含 `.claude/runs/`、`.claude/locks/`，并放行 `.claude/skills/slice-delivery/`。
 - [ ] `scripts/check-secrets.mjs` 存在；干净树退出 0；临时伪造 secret 能非零退出且不打印密文。
 - [ ] 5 个试点页（老师工作台、老师发通知、老师通知列表、家长成长报告、家长接送二维码）无回归。
-- [ ] 两端 `npm run dev:mp-weixin` 退出 0；`check-tokens` 无新增违规。
+- [ ] 两端 `npm run dev:mp-weixin` 退出 0；`check-tokens` 不高于基线（teacher 204 / parent 152）。
 - [ ] 失败构建方案可行性结论（支持 / 不支持，及替代方案）。
 
 ### 证据格式
 
 ```markdown
 - AppIcon: <路径>；覆盖 <N> 个图标
-- PageShell: <路径>；试点页 <...> 已引用
+- PageShell: <路径>；teacher 工作台已引用；其他试点页根容器差异 <...>
 - StateBlock: <四态验证结果>
 - CSS-COMPAT: <文档路径>；覆盖 <...>
 - .gitignore: <新增行>
