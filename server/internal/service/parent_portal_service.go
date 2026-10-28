@@ -1375,7 +1375,10 @@ func (s *ParentPortalService) LikeGrowth(ctx context.Context, pc *ParentPortalCo
 		Where("log_id = ? AND user_id = ?", logID, pc.UserID).First(&existing).Error
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound):
-		if e := s.db.WithContext(ctx).Create(&domain.GrowthLike{LogID: logID, UserID: pc.UserID}).Error; e != nil {
+		// 并发双击时两个请求都会查不到行，唯一索引 idx_log_user 只允许一个 Create 成功；
+		// 点赞本身幂等，撞键说明对方已写入，不能把「点赞失败」抛给客户端。
+		if e := s.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).
+			Create(&domain.GrowthLike{LogID: logID, UserID: pc.UserID}).Error; e != nil {
 			return nil, e
 		}
 	case err != nil:

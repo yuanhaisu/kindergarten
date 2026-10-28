@@ -59,19 +59,29 @@ function previewPhoto(idx) {
   uni.previewImage({ urls, current: urls[idx] })
 }
 
+// 同一记录在途时忽略后续点击：双击会并发发两个点赞/取消请求，
+// 先返回的 500 会弹「操作失败」，与最终状态矛盾。
+const likePending = ref(false)
+
 async function handleLike() {
+  if (likePending.value) return
+  likePending.value = true
   try {
-    if (detail.value.is_liked) {
-      const r = await unlikeGrowth(detail.value.id)
-      detail.value.is_liked = r.data?.is_liked
-      detail.value.likes_count = r.data?.likes_count
-    } else {
-      const r = await likeGrowth(detail.value.id)
-      detail.value.is_liked = r.data?.is_liked
-      detail.value.likes_count = r.data?.likes_count
+    const r = detail.value.is_liked
+      ? await unlikeGrowth(detail.value.id)
+      : await likeGrowth(detail.value.id)
+    const next = r?.data?.is_liked
+    // 缺少布尔值时不静默翻转 —— 宁可报错也不把未知状态当取消点赞。
+    if (typeof next !== "boolean") throw new Error("点赞状态未更新")
+    detail.value.is_liked = next
+    if (typeof r?.data?.likes_count === "number") {
+      detail.value.likes_count = r.data.likes_count
     }
   } catch (err) {
+    // 不做乐观翻转：失败时本地仍是服务端已确认的状态，无需回滚。
     uni.showToast({ title: err?.message || "操作失败", icon: "none" })
+  } finally {
+    likePending.value = false
   }
 }
 

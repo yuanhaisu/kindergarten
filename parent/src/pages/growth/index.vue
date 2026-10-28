@@ -148,16 +148,28 @@ const monthLabels = computed(() => {
 
 // 与详情页 handleLike 同口径：调接口后以服务端返回的 is_liked 为准，不做乐观翻转。
 // 列表契约不含 likes_count（2026-10 随字段审查移除），故只回写 is_liked。
+// 同一记录在途时忽略后续点击：快速双击会并发发两个 POST，先返回的 500 会弹「操作失败」，
+// 与最终已点赞的状态矛盾（服务端已做幂等，这里只是避免无谓请求和误导性提示）。
+const likePending = new Set()
+
 async function toggleLike(item) {
+  if (likePending.has(item.id)) return
+  likePending.add(item.id)
   try {
     const r = item.is_liked ? await unlikeGrowth(item.id) : await likeGrowth(item.id)
+    const next = r?.data?.is_liked
+    // 缺少布尔值时不静默翻转成 false —— 宁可报错也不把未知状态当取消点赞。
+    if (typeof next !== "boolean") throw new Error("点赞状态未更新")
     // 模板直接遍历 feeds，但小程序渲染层对「深层属性原地赋值」的 setData diff 不可靠。
     // 整体替换数组最稳：计算属性必然重算、渲染层必然拿到新值。
     feeds.value = feeds.value.map(f =>
-      f.id === item.id ? { ...f, is_liked: r.data?.is_liked } : f
+      f.id === item.id ? { ...f, is_liked: next } : f
     )
   } catch (err) {
+    // 不做乐观翻转：失败时本地仍是服务端已确认的状态，无需回滚。
     uni.showToast({ title: err?.message || "操作失败", icon: "none" })
+  } finally {
+    likePending.delete(item.id)
   }
 }
 
