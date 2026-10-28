@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
-import { createTeacherNotice, fetchTeacherNoticeTemplates } from "@/api/teacher-notices"
+import { onLoad } from "@dcloudio/uni-app"
+import { createTeacherNotice, fetchTeacherNotice, fetchTeacherNoticeTemplates, updateTeacherNotice } from "@/api/teacher-notices"
 import { requestWithAuth } from "@/api/http"
 
 const categories = [
@@ -12,6 +13,17 @@ const categories = [
 ]
 
 const submitting = ref(false)
+const editingId = ref(0)
+const loadingNotice = ref(false)
+const isEditing = computed(() => editingId.value > 0)
+const attempted = ref(false)
+const showClassSheet = ref(false)
+const showTemplateSheet = ref(false)
+const showConfirm = ref(false)
+const classError = ref("")
+const classLoading = ref(false)
+const templatesLoading = ref(false)
+const templatesError = ref("")
 const form = ref({
   category: "homework",
   title: "",
@@ -30,6 +42,43 @@ const currentClassLabel = computed(() => {
     .map((c) => c.class_name)
   return names.length ? `${names.join("、")}全体家长` : "请选择班级"
 })
+const categoryLabel = computed(() => categories.find((c) => c.key === form.value.category)?.label || "其他")
+const scheduledDate = computed(() => (form.value.scheduled_at || "").split(" ")[0] || "")
+const scheduledTime = computed(() => (form.value.scheduled_at || "").split(" ")[1] || "")
+const scheduledDateLabel = computed(() => {
+  const [y, m, d] = scheduledDate.value.split("-")
+  if (!y || !m || !d) return ""
+  return `${y}年${Number(m)}月${Number(d)}日`
+})
+const scheduleLabel = computed(() => (form.value.scheduled_enabled && form.value.scheduled_at ? form.value.scheduled_at : "立即发送"))
+const showTitleError = computed(() => attempted.value && !form.value.title.trim())
+const showContentError = computed(() => attempted.value && !form.value.content.trim())
+const classFoot = computed(() => {
+  if (classError.value) return classError.value
+  if (form.value.class_ids.length === 0) return "请选择接收班级"
+  return `${form.value.class_ids.length} 个班级 · 发布后家长会收到微信提醒`
+})
+const canSubmit = computed(() => {
+  if (loadingNotice.value || classLoading.value || classError.value) return false
+  if (!form.value.title.trim() || !form.value.content.trim()) return false
+  if (form.value.class_ids.length === 0) return false
+  if (form.value.scheduled_enabled && !form.value.scheduled_at) return false
+  return true
+})
+const dockSummary = computed(() => {
+  if (loadingNotice.value) return "通知加载中，请稍候"
+  if (classLoading.value) return "正在加载班级信息…"
+  if (classError.value) return "班级信息未加载，暂不能发布"
+  if (!form.value.title.trim() && !form.value.content.trim()) return "还差标题和正文"
+  if (!form.value.title.trim()) return "还差标题"
+  if (!form.value.content.trim()) return "还差正文"
+  if (form.value.class_ids.length === 0) return "还差接收班级"
+  if (form.value.scheduled_enabled && !form.value.scheduled_at) return "还差发送时间"
+  return `${currentClassLabel.value} · ${scheduleLabel.value} · ${form.value.need_confirm ? "需家长确认" : "无需确认"}`
+})
+const confirmDesc = computed(() => isEditing.value
+  ? "修改会保存到这条草稿，不会立即发送。"
+  : `发布后${currentClassLabel.value}会收到微信提醒。`)
 
 function toggleClass(classId: number) {
   const i = form.value.class_ids.indexOf(classId)
@@ -37,16 +86,66 @@ function toggleClass(classId: number) {
   else form.value.class_ids.push(classId)
 }
 
-onMounted(async () => {
+async function loadClassList() {
+  classLoading.value = true
+  classError.value = ""
   try {
     const res: any = await requestWithAuth({ url: "/teacher/class/list", method: "GET" })
     const data = res.data || res
-    classList.value = Array.isArray(data) ? data : (data.list || [])
-    if (classList.value.length > 0 && form.value.class_ids.length === 0) {
-      form.value.class_ids = [classList.value[0].class_id]
+    const raw = Array.isArray(data) ? data : (data.list || [])
+    classList.value = raw.map((c) => ({ ...c, class_id: Number(c.class_id) }))
+    // 编辑模式等详情返回后再按 class_names 映射，避免默认选中第一个班。
+    if (!isEditing.value && classList.value.length > 0 && form.value.class_ids.length === 0) {
+      form.value.class_ids = [Number(classList.value[0].class_id)]
     }
-  } catch { /* */ }
-})
+  } catch (e) {
+    console.error("loadClassList failed", e)
+    classError.value = "班级列表加载失败，点击重试"
+  } finally {
+    classLoading.value = false
+  }
+}
+
+async function loadNotice(id: number) {
+  loadingNotice.value = true
+  try {
+    const res: any = await fetchTeacherNotice(id)
+    const notice = res.data || res
+    if (Number(notice?.status) !== 0) {
+      uni.showToast({ title: "仅草稿可编辑", icon: "none" })
+      setTimeout(() => uni.navigateBack(), 600)
+      return
+    }
+
+    form.value.category = notice.category || "homework"
+    form.value.title = notice.title || ""
+    form.value.content = notice.content || ""
+    form.value.need_confirm = notice.need_confirm !== false
+    form.value.scheduled_enabled = false
+    form.value.scheduled_at = ""
+    form.value.attachments = (notice.attachments || [])
+      .map((item) => item?.file_url || item)
+      .filter(Boolean)
+
+    // 详情契约只回 class_names，没有 class_ids；按名称映射回任教班级。
+    const names = Array.isArray(notice.class_names) ? notice.class_names : []
+    const ids = []
+    const missing = []
+    names.forEach((name) => {
+      const matched = classList.value.find((c) => c.class_name === name)
+      if (matched) ids.push(Number(matched.class_id))
+      else missing.push(name)
+    })
+    form.value.class_ids = ids
+    if (missing.length) {
+      uni.showToast({ title: "部分接收班级未匹配，请重新选择", icon: "none" })
+    }
+  } catch (e) {
+    uni.showToast({ title: e?.message || "通知加载失败", icon: "none" })
+  } finally {
+    loadingNotice.value = false
+  }
+}
 
 function selectCategory(key) {
   form.value.category = key
@@ -60,23 +159,80 @@ function addAttachment() {
 }
 function removeAttachment(i) { form.value.attachments.splice(i, 1) }
 
+function todayString() {
+  const now = new Date()
+  const m = String(now.getMonth() + 1).padStart(2, "0")
+  const d = String(now.getDate()).padStart(2, "0")
+  return `${now.getFullYear()}-${m}-${d}`
+}
+
+function toggleSchedule() {
+  form.value.scheduled_enabled = !form.value.scheduled_enabled
+  if (form.value.scheduled_enabled && !form.value.scheduled_at) {
+    form.value.scheduled_at = `${todayString()} 09:00`
+  }
+}
+
 function onScheduleDateChange(e) {
-  form.value.scheduled_at = e.detail.value + " " + ((form.value.scheduled_at || "").split(" ")[1] || "09:00")
+  form.value.scheduled_at = `${e.detail.value} ${scheduledTime.value || "09:00"}`
 }
 function onScheduleTimeChange(e) {
-  form.value.scheduled_at = ((form.value.scheduled_at || "").split(" ")[0] || "") + " " + e.detail.value
+  form.value.scheduled_at = `${scheduledDate.value || todayString()} ${e.detail.value}`
+}
+
+function openClassSheet() {
+  if (classLoading.value) return
+  if (classError.value) {
+    loadClassList()
+    return
+  }
+  showClassSheet.value = true
+}
+function closeClassSheet() {
+  showClassSheet.value = false
+}
+function openTemplateSheet() {
+  showTemplateSheet.value = true
+}
+function closeTemplateSheet() {
+  showTemplateSheet.value = false
 }
 
 // 模板
 const templates = ref<any[]>([])
-onMounted(async () => {
-  try { const res = await fetchTeacherNoticeTemplates(); templates.value = res.data?.list || [] } catch { /* */ }
-})
+async function loadTemplates() {
+  templatesLoading.value = true
+  templatesError.value = ""
+  try {
+    const res = await fetchTeacherNoticeTemplates()
+    templates.value = res.data?.list || []
+  } catch {
+    templates.value = []
+    templatesError.value = "模板加载失败"
+    uni.showToast({ title: "模板加载失败", icon: "none" })
+  } finally {
+    templatesLoading.value = false
+  }
+}
 function useTemplate(t: Record<string, any>) {
   form.value.title = t.title || ""
   form.value.content = t.content || ""
   if (t.category) form.value.category = t.category
+  showTemplateSheet.value = false
 }
+
+onLoad((options) => {
+  const id = Number(options?.id || 0)
+  if (id) {
+    editingId.value = id
+    uni.setNavigationBarTitle({ title: "编辑通知" })
+  }
+})
+
+onMounted(async () => {
+  await Promise.all([loadClassList(), loadTemplates()])
+  if (editingId.value) await loadNotice(editingId.value)
+})
 
 function validate() {
   if (!form.value.title.trim()) return "请输入通知标题"
@@ -86,21 +242,55 @@ function validate() {
   return ""
 }
 
+function onPublishClick() {
+  attempted.value = true
+  if (loadingNotice.value) {
+    uni.showToast({ title: "通知加载中，请稍候", icon: "none" })
+    return
+  }
+  if (classError.value) {
+    uni.showToast({ title: "班级信息未加载，请先重试", icon: "none" })
+    return
+  }
+  const msg = validate()
+  if (msg) {
+    uni.showToast({ title: msg, icon: "none" })
+    return
+  }
+  showConfirm.value = true
+}
+
+async function doSubmit() {
+  showConfirm.value = false
+  await submit()
+}
+
 async function submit() {
+  if (loadingNotice.value || submitting.value) {
+    return
+  }
   const msg = validate()
   if (msg) { uni.showToast({ title: msg, icon: "none" }); return }
   submitting.value = true
+  let succeeded = false
   try {
-    await createTeacherNotice(form.value)
-    uni.showToast({ title: "已发布", icon: "success" })
+    if (isEditing.value) {
+      await updateTeacherNotice(editingId.value, form.value)
+      uni.showToast({ title: "已保存", icon: "success" })
+    } else {
+      await createTeacherNotice(form.value)
+      uni.showToast({ title: "已发布", icon: "success" })
+    }
+    succeeded = true
     setTimeout(() => {
         const pages = getCurrentPages()
         pages.length > 1 ? uni.navigateBack() : uni.reLaunch({ url: "/pages/index/index" })
       }, 600)
   } catch (e) {
-    uni.showToast({ title: e?.message || "发布失败", icon: "none" })
+    uni.showToast({ title: e?.message || (isEditing.value ? "保存失败" : "发布失败"), icon: "none" })
   } finally {
-    submitting.value = false
+    // 成功后保持“发布中/保存中”直到 600ms 后的返回，避免这段时间内重复提交。
+    if (!succeeded) submitting.value = false
   }
 }
 </script>
@@ -108,370 +298,992 @@ async function submit() {
 <template>
   <view class="page">
     <scroll-view class="body" scroll-y>
-      <!-- 通知类型 -->
-      <view class="section">
-        <view class="card">
-          <text class="card-title">通知类型</text>
-          <view class="category-row">
-            <view
-              v-for="c in categories" :key="c.key"
-              class="category-pill"
-              :class="{ active: form.category === c.key }"
-              @click="selectCategory(c.key)"
-            >{{ c.label }}</view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 标题 -->
-      <view class="section">
-        <view class="card">
-          <text class="card-title">标题</text>
-          <input v-model="form.title" class="input" placeholder="请输入通知标题" maxlength="80" />
-        </view>
-      </view>
-
-      <!-- 内容 -->
-      <view class="section">
-        <view class="card">
-          <text class="card-title">内容</text>
-          <textarea v-model="form.content" class="textarea" placeholder="请输入通知内容..." />
-        </view>
-      </view>
-
-      <!-- 添加图片/视频 -->
-      <view class="section">
-        <view class="card">
-          <text class="card-title">添加图片/视频</text>
-          <view class="media-row">
-            <view class="media-add" @click="addAttachment">
-              <text class="add-icon">＋</text>
-              <text class="add-text">添加</text>
-            </view>
-            <view v-for="(img, i) in form.attachments" :key="i" class="media-item">
-              <image :src="img" mode="aspectFill" class="media-img" />
-              <view class="media-del" @click="removeAttachment(i)">✕</view>
+      <view class="content">
+        <!-- 通知类型 -->
+        <view class="group">
+          <view class="group-head"><text class="group-title">通知类型</text></view>
+          <view class="card type-card">
+            <view class="chips">
+              <view
+                v-for="c in categories"
+                :key="c.key"
+                class="chip"
+                :class="{ on: form.category === c.key }"
+                @click="selectCategory(c.key)"
+              >{{ c.label }}</view>
             </view>
           </view>
         </view>
-      </view>
 
-      <!-- 接收范围（任教班级多选） -->
-      <view class="section">
-        <view class="card">
-          <view class="row-card" style="padding:0">
-            <view>
-              <text class="card-title" style="margin-bottom:4rpx">接收范围</text>
-              <text class="card-sub">{{ currentClassLabel }}</text>
-            </view>
-          </view>
-          <view v-if="classList.length > 1" class="class-options">
-            <view
-              v-for="c in classList"
-              :key="c.class_id"
-              class="class-option"
-              :class="{ checked: form.class_ids.includes(c.class_id) }"
-              @click="toggleClass(c.class_id)"
-            >
-              <view class="class-check" :class="{ on: form.class_ids.includes(c.class_id) }">
-                <text v-if="form.class_ids.includes(c.class_id)" class="class-check-mark">✓</text>
+        <!-- 快捷填写 -->
+        <view class="group">
+          <view class="group-head"><text class="group-title">快捷填写</text></view>
+          <view class="card">
+            <view class="cell cell-tap" @click="openTemplateSheet">
+              <text class="cell-label">常用模板</text>
+              <view class="cell-trail">
+                <text v-if="templatesLoading" class="cell-value">加载中…</text>
+                <text v-else-if="templatesError" class="class-error">{{ templatesError }}</text>
+                <text v-else class="cell-value">{{ templates.length ? templates.length + " 条可用" : "暂无模板" }}</text>
+                <text class="chev">›</text>
               </view>
-              <text class="class-option-name">{{ c.class_name }}</text>
+            </view>
+            <text class="cell-foot">套用模板后可继续修改内容</text>
+          </view>
+        </view>
+
+        <!-- 通知内容 -->
+        <view class="group">
+          <view class="group-head"><text class="group-title">通知内容</text></view>
+          <view class="card">
+            <view class="cell field-cell">
+              <text class="cell-label">标题</text>
+              <input
+                v-model="form.title"
+                class="field-input"
+                maxlength="80"
+                placeholder="请输入通知标题"
+                placeholder-class="field-placeholder"
+              />
+              <text class="field-count">{{ form.title.length }} / 80</text>
+            </view>
+            <view v-if="showTitleError" class="field-error"><text>请输入通知标题</text></view>
+
+            <view class="cell field-cell field-cell--stack">
+              <view class="field-head">
+                <text class="cell-label">正文</text>
+                <text class="field-count">{{ form.content.length }} 字</text>
+              </view>
+              <textarea
+                v-model="form.content"
+                class="field-textarea"
+                maxlength="-1"
+                placeholder="请输入通知内容..."
+                placeholder-class="field-placeholder"
+              />
+            </view>
+            <view v-if="showContentError" class="field-error"><text>请输入通知内容</text></view>
+
+            <view class="cell attach-cell">
+              <view class="attach-head">
+                <text class="cell-label">图片 / 视频</text>
+                <text class="attach-count">{{ form.attachments.length }}/9</text>
+              </view>
+              <view class="thumbs">
+                <view v-for="(img, i) in form.attachments" :key="img + i" class="thumb">
+                  <image :src="img" mode="aspectFill" class="thumb-img" />
+                  <view v-if="!isEditing" class="thumb-del" @click="removeAttachment(i)">×</view>
+                </view>
+                <view v-if="!isEditing && form.attachments.length < 9" class="add-thumb" @click="addAttachment">
+                  <text class="plus">＋</text>
+                  <text>添加</text>
+                </view>
+              </view>
+              <text v-if="isEditing" class="edit-hint">编辑草稿暂不支持修改附件</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 接收范围 -->
+        <view class="group">
+          <view class="group-head">
+            <text class="group-title">接收范围</text>
+            <text class="group-note">必选</text>
+          </view>
+          <view class="card">
+            <view class="cell cell-tap" :class="{ 'cell-disabled': classLoading }" @click="openClassSheet">
+              <text class="cell-label">接收班级</text>
+              <view class="cell-trail">
+                <text v-if="classLoading" class="cell-value">加载中…</text>
+                <text v-else-if="classError" class="class-error">{{ classError }}</text>
+                <text v-else class="cell-value">{{ currentClassLabel }}</text>
+                <text class="chev">›</text>
+              </view>
+            </view>
+            <text class="cell-foot">{{ classFoot }}</text>
+          </view>
+        </view>
+
+        <!-- 发送设置 -->
+        <view class="group">
+          <view class="group-head"><text class="group-title">发送设置</text></view>
+          <view class="card">
+            <view class="cell switch-cell">
+              <view class="cell-text">
+                <text class="cell-label">需要家长确认收到</text>
+                <text class="cell-hint">开启后可查看已读未读状态</text>
+              </view>
+              <view class="switch" :class="{ on: form.need_confirm }" @click="form.need_confirm = !form.need_confirm">
+                <view class="switch-knob" />
+              </view>
+            </view>
+
+            <view v-if="!isEditing" class="cell switch-cell">
+              <view class="cell-text">
+                <text class="cell-label">定时发送</text>
+                <text class="cell-hint">{{ scheduleLabel }}</text>
+              </view>
+              <view class="switch" :class="{ on: form.scheduled_enabled }" @click="toggleSchedule">
+                <view class="switch-knob" />
+              </view>
+            </view>
+
+            <view v-if="!isEditing && form.scheduled_enabled" class="schedule">
+              <picker mode="date" :value="scheduledDate" @change="onScheduleDateChange">
+                <view class="cell cell-tap">
+                  <text class="cell-label">发送日期</text>
+                  <view class="cell-trail">
+                    <text class="cell-value">{{ scheduledDateLabel || "请选择日期" }}</text>
+                    <text class="chev">›</text>
+                  </view>
+                </view>
+              </picker>
+              <picker mode="time" :value="scheduledTime" @change="onScheduleTimeChange">
+                <view class="cell cell-tap">
+                  <text class="cell-label">发送时间</text>
+                  <view class="cell-trail">
+                    <text class="cell-value">{{ scheduledTime || "请选择时间" }}</text>
+                    <text class="chev">›</text>
+                  </view>
+                </view>
+              </picker>
+              <text class="cell-foot">到点后自动发送，家长会收到微信提醒</text>
             </view>
           </view>
         </view>
       </view>
-
-      <!-- 需要家长确认收到 -->
-      <view class="section">
-        <view class="card row-card">
-          <view>
-            <text class="card-title" style="margin-bottom:4rpx">需要家长确认收到</text>
-            <text class="card-sub">开启后可查看已读未读状态</text>
-          </view>
-          <view
-            class="toggle"
-            :class="{ on: form.need_confirm }"
-            @click="form.need_confirm = !form.need_confirm"
-          >
-            <view class="toggle-knob" />
-          </view>
-        </view>
-      </view>
-
-      <!-- 定时发送 -->
-      <view class="section">
-        <view class="card row-card">
-          <view>
-            <text class="card-title" style="margin-bottom:4rpx">定时发送</text>
-            <text class="card-sub">{{ form.scheduled_enabled && form.scheduled_at ? form.scheduled_at : '立即发送' }}</text>
-          </view>
-          <view
-            class="toggle"
-            :class="{ on: form.scheduled_enabled }"
-            @click="form.scheduled_enabled = !form.scheduled_enabled"
-          >
-            <view class="toggle-knob" />
-          </view>
-        </view>
-        <view v-if="form.scheduled_enabled" style="margin-top:16rpx">
-          <picker
-            mode="date"
-            :value="(form.scheduled_at || '').split(' ')[0]"
-            @change="onScheduleDateChange"
-          >
-            <view class="schedule-field">
-              <text class="field-label">发送日期</text>
-              <text class="field-value">{{ (form.scheduled_at || '').split(' ')[0] || '请选择日期' }}</text>
-            </view>
-          </picker>
-          <picker
-            mode="time"
-            :value="(form.scheduled_at || '').split(' ')[1] || ''"
-            @change="onScheduleTimeChange"
-          >
-            <view class="schedule-field">
-              <text class="field-label">发送时间</text>
-              <text class="field-value">{{ (form.scheduled_at || '').split(' ')[1] || '请选择时间' }}</text>
-            </view>
-          </picker>
-        </view>
-      </view>
-
-      <!-- 常用模板 -->
-      <view v-if="templates.length" class="section">
-        <view class="template-header">
-          <text class="section-label">常用模板</text>
-          <text class="section-link">查看更多</text>
-        </view>
-        <view v-for="t in templates" :key="t.id" class="card template-card">
-          <view class="template-top">
-            <text class="template-name">{{ t.title }}</text>
-            <view class="template-use" @click="useTemplate(t)">使用</view>
-          </view>
-          <text class="template-preview">{{ t.content }}</text>
-        </view>
-      </view>
-
-      <view style="height:16rpx"></view>
     </scroll-view>
 
-    <!-- 底部发布 -->
-    <view class="bottom-bar">
-      <button class="publish-btn" :loading="submitting" @click="submit">
-        {{ submitting ? "发布中..." : "发布" }}
+    <!-- 底部固定提交栏 -->
+    <view class="dock">
+      <text class="dock-summary">{{ dockSummary }}</text>
+      <button
+        class="publish-btn"
+        :class="{ 'is-disabled': !canSubmit || submitting || loadingNotice }"
+        :disabled="submitting || loadingNotice"
+        @click="onPublishClick"
+      >
+        {{ loadingNotice ? "加载中..." : submitting ? (isEditing ? "保存中..." : "发布中...") : (isEditing ? "保存修改" : "发布") }}
       </button>
+    </view>
+
+    <!-- 接收班级弹层 -->
+    <view v-if="showClassSheet" class="layer">
+      <view class="scrim" @click="closeClassSheet" />
+      <view class="sheet">
+        <view class="sheet-head">
+          <text class="sheet-btn" @click="closeClassSheet">取消</text>
+          <text class="sheet-title">接收班级</text>
+          <text class="sheet-btn sheet-btn--strong" @click="closeClassSheet">完成</text>
+        </view>
+        <view class="sheet-body">
+          <view
+            v-for="c in classList"
+            :key="c.class_id"
+            class="pick-row"
+            @click="toggleClass(c.class_id)"
+          >
+            <view class="pick-copy">
+              <text class="pick-name">{{ c.class_name }}</text>
+              <text class="pick-meta">{{ c.title_label || c.title || "" }}</text>
+            </view>
+            <view class="check-dot" :class="{ on: form.class_ids.includes(c.class_id) }">
+              <text v-if="form.class_ids.includes(c.class_id)">✓</text>
+            </view>
+          </view>
+          <text v-if="classList.length === 0" class="sheet-note">暂无可选班级</text>
+          <text class="sheet-note">仅显示你任教的班级，可多选</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 常用模板弹层 -->
+    <view v-if="showTemplateSheet" class="layer">
+      <view class="scrim" @click="closeTemplateSheet" />
+      <view class="sheet">
+        <view class="sheet-head">
+          <text class="sheet-btn" @click="closeTemplateSheet">取消</text>
+          <text class="sheet-title">常用模板</text>
+          <text class="sheet-btn" />
+        </view>
+        <view class="sheet-body">
+          <view v-for="t in templates" :key="t.id" class="tpl-row" @click="useTemplate(t)">
+            <view class="tpl-text">
+              <text class="tpl-title">{{ t.title }}</text>
+              <text class="tpl-preview">{{ t.content }}</text>
+            </view>
+            <text class="use-btn">使用</text>
+          </view>
+          <text v-if="templates.length === 0" class="sheet-note">暂无可用模板</text>
+          <text class="sheet-note">选择后会自动填入标题、正文和类型</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 发布确认 -->
+    <view v-if="showConfirm" class="layer layer--center">
+      <view class="scrim" @click="showConfirm = false" />
+      <view class="dialog">
+        <view class="dialog-body">
+          <text class="dialog-title">{{ isEditing ? "确认保存修改？" : "确认发布这条通知？" }}</text>
+          <text class="dialog-desc">{{ confirmDesc }}</text>
+          <view class="dialog-meta">
+            <view class="dialog-row">
+              <text class="dialog-key">类型</text>
+              <text class="dialog-val">{{ categoryLabel }}</text>
+            </view>
+            <view class="dialog-row">
+              <text class="dialog-key">发送方式</text>
+              <text class="dialog-val">{{ scheduleLabel }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="dialog-actions">
+          <button class="dialog-btn" @click="showConfirm = false">取消</button>
+          <button class="dialog-btn dialog-btn--primary" :disabled="submitting" @click="doSubmit">
+            {{ submitting ? "处理中..." : (isEditing ? "确认保存" : "确认发布") }}
+          </button>
+        </view>
+      </view>
     </view>
   </view>
 </template>
 
 <style scoped lang="scss">
+
 .page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: $color-bg-card;
+  background: $color-bg-page;
 }
-.body { flex: 1; }
 
-.section { padding: 0 48rpx 32rpx 48rpx; }
-.section:first-child { padding-top: $spacing-xl; }
-
-/* 卡片 */
-.card {
-  padding: $spacing-xl;
-  background: #ffffff;
-  border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
+.body {
+  flex: 1;
+  min-height: 0;
 }
-.card-title {
-  display: block;
-  font-size: $typography-font-size-lg;
-  font-weight: 700;
-  color: $color-text-primary;
-  margin-bottom: $spacing-lg;
-}
-.card-sub { font-size: $typography-font-size-base; color: $color-text-muted; }
 
-/* 分类胶囊 */
-.category-row {
+.content {
+  padding: $component-page-padding-y $component-page-padding-x calc(224rpx + env(safe-area-inset-bottom));
+}
+
+.group {
+  margin-bottom: 36rpx;
+}
+
+.group-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-lg;
-}
-.category-pill {
-  padding: $spacing-md $spacing-xl;
-  border: 1rpx solid #E2E8F0;
-  border-radius: $border-radius-full;
-  background: #f1f5f9;
-  font-size: $typography-font-size-md;
-  color: $color-text-muted;
-  &.active {
-    background: $color-semantic-info-bg;
-    border-color: #bfdbfe;
-    color: $color-semantic-info;
-    font-weight: 600;
-  }
-}
-
-/* 输入 */
-.input {
-  width: 100%;
-  height: 88rpx;
-  padding: 0 $spacing-lg;
-  border-radius: $border-radius-lg;
-  background: $color-bg-card;
-  font-size: $typography-font-size-lg;
-  color: $color-text-primary;
-  box-sizing: border-box;
-}
-.textarea {
-  width: 100%;
-  height: 240rpx;
-  padding: $spacing-lg;
-  border-radius: $border-radius-lg;
-  background: $color-bg-card;
-  font-size: $typography-font-size-lg;
-  color: $color-text-primary;
-  box-sizing: border-box;
-}
-
-/* 附件上传 */
-.media-row { display: flex; gap: $spacing-lg; flex-wrap: wrap; }
-.media-add {
-  width: 160rpx; height: 160rpx;
-  border: 1rpx dashed #cbd5e1;
-  border-radius: $border-radius-xl;
-  background: $color-bg-card;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: $spacing-xs;
-}
-.add-icon { font-size: 48rpx; color: $color-text-hint; }
-.add-text { font-size: $typography-font-size-sm; color: $color-text-hint; }
-.media-item {
-  width: 160rpx; height: 160rpx;
-  border-radius: $border-radius-xl; overflow: hidden;
-  position: relative;
-}
-.media-img { width: 100%; height: 100%; }
-.media-del {
-  position: absolute; top: 8rpx; right: 8rpx;
-  width: 40rpx; height: 40rpx;
-  background: rgba(0,0,0,0.5); color: #fff;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: $typography-font-size-sm;
-}
-
-/* 行卡片 */
-.row-card {
-  display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-}
-.row-card .card-title { margin-bottom: 0; }
-.row-arrow { font-size: $typography-font-size-md; color: $color-text-hint; }
-
-/* 接收范围多选 */
-.class-options {
-  display: flex;
-  flex-wrap: wrap;
   gap: $spacing-md;
-  margin-top: $spacing-lg;
+  padding: 0 8rpx 16rpx;
 }
-.class-option {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-md $spacing-lg;
-  border: 1rpx solid #E2E8F0;
-  border-radius: $border-radius-full;
-  background: #f1f5f9;
-  &.checked {
-    background: $color-semantic-info-bg;
-    border-color: #bfdbfe;
-  }
-}
-.class-check {
-  width: 32rpx;
-  height: 32rpx;
-  border-radius: $border-radius-full;
-  border: 1rpx solid #cbd5e1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  &.on {
-    background: $color-semantic-info;
-    border-color: $color-semantic-info;
-  }
-}
-.class-check-mark { font-size: $typography-font-size-xs; color: #fff; line-height: 1; }
-.class-option-name { font-size: $typography-font-size-md; color: $color-text-primary; }
 
-/* 定时发送 */
-.schedule-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 80rpx;
-  padding: 0 $spacing-lg;
-  margin-bottom: $spacing-md;
-  border-radius: $border-radius-lg;
+.group-title {
+  font-size: $typography-font-size-sm;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: $color-text-body;
+}
+
+.group-note {
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+  color: $color-text-muted;
+}
+
+.card {
   background: $color-bg-card;
-}
-.field-label { font-size: $typography-font-size-md; color: $color-text-primary; }
-.field-value { font-size: $typography-font-size-base; color: $color-text-muted; }
-
-/* 自定义开关 */
-.toggle {
-  width: 96rpx; height: 48rpx;
-  border-radius: $border-radius-full;
-  background: #E2E8F0;
-  position: relative;
-  transition: background 0.2s;
-  &.on { background: $color-semantic-info; }
-}
-.toggle-knob {
-  width: 42rpx; height: 42rpx;
-  border-radius: 50%;
-  background: #fff;
-  position: absolute; top: 3rpx; left: 3rpx;
-  transition: left 0.2s;
-  .toggle.on & { left: 51rpx; }
-}
-
-/* 模板 */
-.template-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: $spacing-lg;
-}
-.section-label { font-size: $typography-font-size-xl; font-weight: 700; color: $color-text-primary; }
-.section-link { font-size: $typography-font-size-md; color: $color-semantic-info; }
-.template-card { margin-bottom: 24rpx; }
-.template-top {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: $spacing-md;
-}
-.template-name { font-size: $typography-font-size-md; font-weight: 700; color: $color-text-primary; }
-.template-use {
-  padding: $spacing-xs $spacing-md;
-  background: $color-semantic-info-bg; color: $color-semantic-info;
-  border-radius: $border-radius-sm;
-  font-size: $typography-font-size-sm; font-weight: 600;
-}
-.template-preview {
-  font-size: $typography-font-size-base; color: $color-text-muted;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $component-card-radius;
+  box-shadow: $shadow-md;
   overflow: hidden;
 }
 
-/* 底部 */
-.bottom-bar { padding: $spacing-lg 48rpx 48rpx 48rpx; background: #ffffff; }
+/* 类型 */
+.type-card {
+  padding: 24rpx 28rpx;
+}
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.chip {
+  height: 88rpx;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8rpx;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.chip.on {
+  background: $color-brand-primary-bg;
+  border-color: $color-brand-primary;
+  color: $color-brand-primary-dark;
+  font-weight: 600;
+}
+
+/* cell */
+.cell {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  min-height: 104rpx;
+  padding: 20rpx 28rpx;
+  border-top: 1rpx solid $color-border-hairline;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.card > .cell:first-child {
+  border-top: 0;
+}
+
+.cell-tap:active {
+  background: $color-bg-page;
+}
+
+.cell-disabled {
+  opacity: 0.6;
+}
+
+.cell-label {
+  flex: none;
+  font-size: $typography-font-size-md;
+  font-weight: 500;
+  line-height: 1.4;
+  color: $color-text-primary;
+}
+
+.cell-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+  flex: 1;
+}
+
+.cell-hint {
+  font-size: $typography-font-size-sm;
+  line-height: 1.45;
+  color: $color-text-muted;
+}
+
+.cell-trail {
+  flex: 1;
+  min-width: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+}
+
+.cell-value {
+  font-size: $typography-font-size-md;
+  line-height: 1.45;
+  color: $color-text-muted;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.chev {
+  flex: none;
+  color: $color-text-muted;
+  font-size: $typography-font-size-lg;
+}
+
+.cell-foot {
+  display: block;
+  padding: 0 28rpx 24rpx;
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+  line-height: 1.5;
+  color: $color-text-muted;
+}
+
+/* 内容 */
+.field-cell {
+  padding: 0 28rpx;
+  min-height: 108rpx;
+}
+
+.field-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 30rpx 0;
+  border: 0;
+  background: transparent;
+  color: $color-text-primary;
+  font-size: $typography-font-size-lg;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.field-count {
+  flex: none;
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+  color: $color-text-muted;
+}
+
+.field-placeholder {
+  color: $color-text-muted;
+  font-weight: 400;
+}
+
+.field-cell--stack {
+  display: block;
+  padding: 24rpx 28rpx 28rpx;
+  min-height: 0;
+}
+
+.field-cell--stack .cell-label {
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: 12rpx;
+}
+
+.field-head .cell-label {
+  margin-bottom: 0;
+}
+
+.field-textarea {
+  display: block;
+  width: 100%;
+  min-height: 168rpx;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+  line-height: 1.75;
+  box-sizing: border-box;
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 18rpx 28rpx;
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-base;
+  font-weight: 500;
+  line-height: 1.45;
+  border-top: 1rpx solid $color-border-hairline;
+}
+
+.attach-cell {
+  display: block;
+  padding: 26rpx 28rpx 28rpx;
+}
+
+.attach-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+  margin-bottom: 18rpx;
+}
+
+.attach-count {
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+  color: $color-text-muted;
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.thumb {
+  position: relative;
+  // 3 列九宫格媒体位，设计稿 100px；token 无媒体专用尺寸。
+  height: 200rpx;
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+  border: 1rpx solid $color-border-hairline;
+  background: $color-bg-page;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.thumb-del {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-on-brand;
+  font-size: 36rpx;
+  line-height: 1;
+  // 图片右上角的半透明压暗层；token 中没有 overlay 色，按 DESIGN.md 允许单点特殊值。
+  background: rgba(30, 41, 59, 0.55);
+  border-bottom-left-radius: $border-radius-full;
+}
+
+.add-thumb {
+  height: 200rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  border: 1rpx dashed $color-border-hairline;
+  border-radius: $border-radius-lg;
+  background: $color-bg-page;
+  color: $color-text-muted;
+  font-size: $typography-font-size-xs;
+  font-weight: 500;
+}
+
+.add-thumb .plus {
+  font-size: 44rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.edit-hint {
+  display: block;
+  margin-top: 12rpx;
+  font-size: $typography-font-size-xs;
+  color: $color-text-hint;
+}
+
+/* 范围 */
+.class-error {
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* 发送设置 */
+.switch-cell {
+  min-height: 128rpx;
+  gap: 28rpx;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 96rpx;
+  height: 56rpx;
+  border: 1rpx solid transparent;
+  border-radius: $border-radius-full;
+  background: $color-border-hairline;
+  transition: background $animation-duration-fast;
+}
+
+.switch.on {
+  background: $color-brand-primary;
+  border-color: $color-brand-primary;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+  transition: transform $animation-duration-fast;
+}
+
+.switch.on .switch-knob {
+  transform: translateX(40rpx);
+}
+
+.schedule {
+  border-top: 1rpx solid $color-border-hairline;
+  background: $color-brand-primary-bg;
+}
+
+.schedule .cell {
+  border-top: 1rpx solid $color-border-hairline;
+}
+
+.schedule .cell:first-child {
+  border-top: 0;
+}
+
+/* 底部提交栏 */
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  z-index: 30;
+  padding: 20rpx 28rpx calc(24rpx + env(safe-area-inset-bottom));
+  background: $color-bg-card;
+  border-top: 1rpx solid $color-border-hairline;
+  box-sizing: border-box;
+}
+
+.dock-summary {
+  display: block;
+  margin-bottom: 16rpx;
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+  line-height: 1.45;
+  color: $color-text-muted;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
 .publish-btn {
-  width: 100%; height: 96rpx;
-  background: $color-semantic-info;
-  color: #fff; font-size: $typography-font-size-xl; font-weight: 700;
-  border-radius: $border-radius-xl; border: 0; line-height: 96rpx;
+  width: 100%;
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid transparent;
+  border-radius: $border-radius-full;
+  background: $gradient-brand;
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-xl;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: $shadow-md;
+}
+
+.publish-btn.is-disabled,
+.publish-btn[disabled] {
+  background: $color-bg-card;
+  border-color: $color-border-hairline;
+  color: $color-text-muted;
+  box-shadow: none;
+}
+
+/* 弹层 */
+.layer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.layer--center {
+  align-items: center;
+  padding: 48rpx;
+}
+
+.scrim {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: $color-text-primary;
+  opacity: 0.42;
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg-card;
+  border-radius: $border-radius-2xl $border-radius-2xl 0 0;
+  box-shadow: $shadow-lg;
+  padding-bottom: env(safe-area-inset-bottom);
+  overflow: hidden;
+}
+
+.sheet-head {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8rpx;
+  min-height: 108rpx;
+  padding: 0 16rpx;
+  border-bottom: 1rpx solid $color-border-hairline;
+}
+
+.sheet-title {
+  font-size: $typography-font-size-lg;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  color: $color-text-primary;
+}
+
+.sheet-btn {
+  justify-self: start;
+  min-width: 120rpx;
+  min-height: 88rpx;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16rpx;
+  background: transparent;
+  color: $color-text-body;
+  font-size: $typography-font-size-lg;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.sheet-btn--strong {
+  justify-self: end;
+  color: $color-brand-primary-dark;
+  font-weight: 600;
+}
+
+.sheet-body {
+  overflow-y: auto;
+  max-height: 62vh;
+}
+
+.sheet-note {
+  display: block;
+  padding: 20rpx 32rpx 28rpx;
+  font-size: $typography-font-size-sm;
+  line-height: 1.5;
+  color: $color-text-muted;
+}
+
+.pick-row {
+  width: 100%;
+  min-height: 112rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 16rpx 32rpx;
+  border-top: 1rpx solid $color-border-hairline;
+  box-sizing: border-box;
+}
+
+.pick-row:first-child {
+  border-top: 0;
+}
+
+.pick-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.pick-name {
+  font-size: $typography-font-size-lg;
+  font-weight: 500;
+  line-height: 1.4;
+  color: $color-text-primary;
+}
+
+.pick-meta {
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+}
+
+.check-dot {
+  flex: none;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-sm;
+}
+
+.check-dot.on {
+  background: $color-brand-primary;
+  border-color: $color-brand-primary;
+}
+
+/* 模板 */
+.tpl-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 28rpx 32rpx;
+  border-top: 1rpx solid $color-border-hairline;
+  box-sizing: border-box;
+}
+
+.tpl-row:first-child {
+  border-top: 0;
+}
+
+.tpl-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tpl-title {
+  display: block;
+  font-size: $typography-font-size-md;
+  font-weight: 600;
+  line-height: 1.4;
+  color: $color-text-primary;
+  margin-bottom: 6rpx;
+}
+
+.tpl-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: $typography-font-size-sm;
+  line-height: 1.6;
+  color: $color-text-muted;
+}
+
+.use-btn {
+  flex: none;
+  min-height: 88rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 28rpx;
+  border: 1rpx solid $color-brand-primary-light;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-sm;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* 确认框 */
+.dialog {
+  position: relative;
+  width: 100%;
+  max-width: 624rpx;
+  background: $color-bg-card;
+  border-radius: $border-radius-xl;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+}
+
+.dialog-body {
+  padding: 44rpx 40rpx 36rpx;
+  text-align: center;
+}
+
+.dialog-title {
+  display: block;
+  font-size: $typography-font-size-2xl;
+  font-weight: 600;
+  line-height: 1.4;
+  color: $color-text-primary;
+  margin-bottom: 16rpx;
+}
+
+.dialog-desc {
+  display: block;
+  font-size: $typography-font-size-md;
+  line-height: 1.6;
+  color: $color-text-body;
+  overflow-wrap: anywhere;
+}
+
+.dialog-meta {
+  margin-top: 28rpx;
+  padding: 20rpx 24rpx;
+  display: grid;
+  gap: 12rpx;
+  background: $color-bg-page;
+  border-radius: $border-radius-lg;
+  text-align: left;
+}
+
+.dialog-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.dialog-key {
+  flex: none;
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+  color: $color-text-muted;
+}
+
+.dialog-val {
+  font-size: $typography-font-size-base;
+  font-weight: 500;
+  color: $color-text-primary;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1rpx solid $color-border-hairline;
+}
+
+.dialog-btn {
+  min-height: 104rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: $color-text-body;
+  font-size: $typography-font-size-xl;
+  font-weight: 500;
+}
+
+.dialog-btn + .dialog-btn {
+  border-left: 1rpx solid $color-border-hairline;
+  color: $color-brand-primary-dark;
+  font-weight: 600;
+}
+
+.dialog-btn::after {
+  border: none;
 }
 </style>

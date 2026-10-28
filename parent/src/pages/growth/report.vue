@@ -6,6 +6,7 @@ import { fetchGrowthReport } from "@/api/parent-growth"
 
 const report = ref({})
 const loading = ref(false)
+const error = ref("")
 const reportType = ref("weekly")
 
 const types = [
@@ -13,165 +14,797 @@ const types = [
   { key: "monthly", label: "月报" },
   { key: "term", label: "学期" }
 ]
+// 后端按 dim_name 的唯一索引返回，中文排序不稳定；这里固定产品口径的维度顺序。
+const DIM_ORDER = ["语言", "认知", "社交", "运动", "艺术", "自理", "情绪"]
 
+const typeLabel = computed(() => types.find((t) => t.key === reportType.value)?.label || "报告")
+const hasReport = computed(() => Boolean(report.value.id || report.value.report_type || report.value.student?.name))
+const dimensions = computed(() => report.value.dimensions || [])
+const highlights = computed(() => report.value.highlights || [])
+const concerns = computed(() => report.value.concerns || [])
+const teacherComment = computed(() => report.value.teacher_comment || "")
 const periodLabel = computed(() => {
-  const p = report.value.period
-  if (!p) return ""
-  return `${p.start_date} ~ ${p.end_date}`
+  const p = report.value.period || {}
+  const start = formatDate(p.start_date)
+  const end = formatDate(p.end_date)
+  return start && end ? `${start} – ${end}` : "—"
 })
+const stats = computed(() => {
+  const r = report.value
+  const tasks = r.tasks_completed != null && r.tasks_total != null
+    ? `${r.tasks_completed}/${r.tasks_total}`
+    : "—"
+  return [
+    { value: formatRate(r.attendance?.rate), label: "出勤率" },
+    { value: r.points_earned ?? "—", label: "获得积分" },
+    { value: tasks, label: "完成任务" },
+    { value: r.growth_media_count ?? "—", label: "成长记录" }
+  ]
+})
+const emptyCta = computed(() => {
+  if (reportType.value === "weekly") return "查看月报"
+  if (reportType.value === "monthly") return "查看学期报告"
+  return "返回成长时光"
+})
+
+function formatRate(value) {
+  if (value === null || value === undefined || value === "") return "—"
+  return typeof value === "number" ? `${value}%` : value
+}
+
+function formatDate(value) {
+  if (!value) return ""
+  const text = String(value).slice(0, 10)
+  const [y, m, d] = text.split("-")
+  if (!y || !m || !d) return text
+  return `${Number(m)}月${Number(d)}日`
+}
+
+function toList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : item?.text || item?.content || ""))
+      .filter(Boolean)
+  }
+  if (typeof value !== "string" || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed)) return toList(parsed)
+  } catch {
+    // 旧数据是换行/分号分隔的纯文本，继续走下面的拆分。
+  }
+  return value.split(/\n|；|;/).map((item) => item.trim()).filter(Boolean)
+}
+
+function normalize(data) {
+  const raw = data || {}
+  const r = raw.report || raw
+  const period = r.period || {
+    type: r.report_type,
+    start_date: r.period_start,
+    end_date: r.period_end
+  }
+  const dims = raw.dimensions || r.dimensions || []
+  return {
+    ...r,
+    student: r.student || raw.student || {},
+    period,
+    dimensions: dims.map((d) => ({
+      ...d,
+      name: d.name || d.dim_name || "",
+      score: Number(d.score) || 0,
+      max_score: Number(d.max_score) || 100
+    })).sort((a, b) => {
+      const ia = DIM_ORDER.indexOf(a.name)
+      const ib = DIM_ORDER.indexOf(b.name)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+    }),
+    highlights: toList(r.highlights),
+    concerns: toList(r.concerns),
+    teacher_comment: r.teacher_comment || r.content || ""
+  }
+}
 
 async function loadData() {
   loading.value = true
+  error.value = ""
   try {
     await ensureLogin()
     const res = await fetchGrowthReport({ type: reportType.value })
-    report.value = res.data || {}
-  } finally { loading.value = false }
+    report.value = normalize(res.data)
+  } catch (e) {
+    report.value = {}
+    error.value = e?.message || "成长报告加载失败"
+  } finally {
+    loading.value = false
+  }
 }
 
 function switchType(t) {
-  if (reportType.value === t.key) return
+  if (loading.value || error.value || reportType.value === t.key) return
   reportType.value = t.key
   loadData()
 }
 
-onLoad(loadData)
+function handleEmptyCta() {
+  if (reportType.value === "weekly") {
+    switchType({ key: "monthly" })
+    return
+  }
+  if (reportType.value === "monthly") {
+    switchType({ key: "term" })
+    return
+  }
+  const pages = getCurrentPages()
+  if (pages.length > 1) uni.navigateBack()
+  else uni.reLaunch({ url: "/pages/growth/index" })
+}
+
+function dimPercent(d) {
+  const max = Number(d.max_score) || 100
+  return Math.max(0, Math.min(100, (Number(d.score) / max) * 100))
+}
+
+function dimName(d) {
+  return d.name || d.dim_name || ""
+}
+
+onLoad(() => loadData(false))
 </script>
 
 <template>
   <view class="page">
-    <!-- 报告类型切换 -->
-    <view class="type-tabs">
-      <view v-for="t in types" :key="t.key"
-        class="type-tab" :class="{ active: reportType === t.key }"
-        @click="switchType(t)">
-        <text>{{ t.label }}</text>
+    <!-- 周期切换 -->
+    <view class="segmented">
+      <view
+        v-for="t in types"
+        :key="t.key"
+        class="seg-btn"
+        :class="{ on: reportType === t.key, disabled: loading || error }"
+        @click="switchType(t)"
+      >{{ t.label }}</view>
+    </view>
+
+    <!-- 加载骨架 -->
+    <view v-if="loading" class="report-card skeleton">
+      <view class="skel-cover">
+        <view class="sk skel-circle" />
+        <view class="skel-stack">
+          <view class="sk skel-name" />
+          <view class="sk skel-period" />
+        </view>
+      </view>
+      <view class="skel-stats">
+        <view v-for="i in 4" :key="i" class="skel-stat">
+          <view class="sk skel-value" />
+          <view class="sk skel-label" />
+        </view>
+      </view>
+      <view class="skeleton-body">
+        <view class="sk skel-title" />
+        <view class="skel-bars">
+          <view v-for="i in 7" :key="i" class="sk skel-bar" />
+        </view>
+        <view class="sk skel-line" />
+        <view class="sk skel-line skel-line--short" />
       </view>
     </view>
 
-    <view v-if="loading" class="state">加载中...</view>
-    <template v-else>
-      <!-- 学生信息 -->
-      <view class="header-card">
-        <image v-if="report.student?.avatar" :src="report.student.avatar" class="header-avatar" mode="aspectFill" />
-        <view v-else class="header-avatar-placeholder"><text class="hap-icon"></text></view>
-        <view class="spacer-w12" />
-        <view>
-          <text class="header-name">{{ report.student?.name || "" }}</text>
-          <text class="header-period">{{ periodLabel }}</text>
+    <!-- 失败 -->
+    <view v-else-if="error" class="state-panel">
+      <view class="state-orb state-orb--danger"><text>!</text></view>
+      <text class="state-title">成长报告加载失败</text>
+      <text class="state-copy">网络断开，或报告还在生成中</text>
+      <button class="state-btn" @click="loadData(false)">重试</button>
+    </view>
+
+    <!-- 空态 -->
+    <view v-else-if="!hasReport" class="state-panel">
+      <view class="state-orb"><text>页</text></view>
+      <text class="state-title">这个周期还没有成长报告</text>
+      <text class="state-copy">{{ reportType === "weekly" ? "老师通常周五整理周报，先看看月报或学期报告" : reportType === "monthly" ? "这个月的报告还没整理好，先看看学期报告吧" : "学期报告还在整理中，先回成长时光看看其他记录吧" }}</text>
+      <button class="state-btn" @click="handleEmptyCta">{{ emptyCta }}</button>
+    </view>
+
+    <!-- 报告纸面 -->
+    <view v-else class="report-card">
+      <view class="sheet-head">
+        <view class="head-avatar">
+          <image v-if="report.student?.avatar" :src="report.student.avatar" class="head-avatar-img" mode="aspectFill" />
+          <text v-else>{{ report.student?.name ? report.student.name[0] : "" }}</text>
+        </view>
+        <view class="head-copy">
+          <view class="head-line">
+            <text class="head-name">{{ report.student?.name || "孩子" }}</text>
+            <text class="period-tag">{{ typeLabel }}</text>
+          </view>
+          <text class="head-period">{{ periodLabel }}</text>
         </view>
       </view>
 
-      <!-- 统计概览 -->
-      <view class="stats-row">
-        <view class="stat-box">
-          <text class="stat-num">{{ report.attendance?.rate || "-" }}</text>
-          <text class="stat-label">出勤率</text>
-        </view>
-        <view class="stat-box">
-          <text class="stat-num">{{ report.points_earned || 0 }}</text>
-          <text class="stat-label">获得积分</text>
-        </view>
-        <view class="stat-box">
-          <text class="stat-num">{{ report.tasks_completed || 0 }}/{{ report.tasks_total || 0 }}</text>
-          <text class="stat-label">完成任务</text>
-        </view>
-        <view class="stat-box">
-          <text class="stat-num">{{ report.growth_media_count || 0 }}</text>
-          <text class="stat-label">成长记录</text>
+      <view class="stats">
+        <view v-for="s in stats" :key="s.label" class="stat">
+          <text class="stat-value">{{ s.value }}</text>
+          <text class="stat-label">{{ s.label }}</text>
         </view>
       </view>
 
-      <!-- 雷达图维度 -->
-      <view v-if="report.dimensions?.length" class="card">
-        <text class="card-title">能力评估</text>
-        <view class="spacer-h16" />
-        <view class="dim-list">
-          <view v-for="d in report.dimensions" :key="d.name" class="dim-row">
-            <text class="dim-name">{{ d.name }}</text>
-            <view class="dim-bar-wrap">
-              <view class="dim-bar" :style="{ width: (d.score / d.max_score * 100) + '%' }" />
+      <view v-if="dimensions.length" class="rule" />
+      <view v-if="dimensions.length" class="block">
+        <view class="sec-head">
+          <text class="sec-title">能力评估</text>
+          <text class="sec-meta">满分 100</text>
+        </view>
+        <view class="dims">
+          <view v-for="(d, i) in dimensions" :key="i" class="dim">
+            <view class="dim-track">
+              <view class="dim-bar" :style="{ height: dimPercent(d) + '%' }">
+                <text class="dim-score">{{ d.score }}</text>
+              </view>
             </view>
-            <text class="dim-score">{{ d.score }}</text>
+            <text class="dim-name">{{ dimName(d) }}</text>
+          </view>
+        </view>
+        <text class="dims-note">条形越高表示该维度表现越好</text>
+      </view>
+
+      <view v-if="highlights.length" class="rule" />
+      <view v-if="highlights.length" class="block">
+        <view class="sec-head"><text class="sec-title">成长亮点</text></view>
+        <view class="items">
+          <view v-for="(item, i) in highlights" :key="i" class="item">
+            <view class="dot dot--good" />
+            <text class="item-text">{{ item }}</text>
           </view>
         </view>
       </view>
 
-      <!-- 亮点 -->
-      <view v-if="report.highlights?.length" class="card" style="margin-top:24rpx">
-        <text class="card-title">成长亮点</text>
-        <view class="spacer-h12" />
-        <view v-for="(h, i) in report.highlights" :key="i" class="hl-item">
-          <view class="hl-dot" />
-          <text class="hl-text">{{ h }}</text>
+      <view v-if="concerns.length" class="rule" />
+      <view v-if="concerns.length" class="block">
+        <view class="sec-head"><text class="sec-title">需要关注</text></view>
+        <view class="items">
+          <view v-for="(item, i) in concerns" :key="i" class="item">
+            <view class="dot dot--watch" />
+            <text class="item-text">{{ item }}</text>
+          </view>
         </view>
       </view>
 
-      <!-- 关注 -->
-      <view v-if="report.concerns?.length" class="card" style="margin-top:24rpx">
-        <text class="card-title">需要关注</text>
-        <view class="spacer-h12" />
-        <view v-for="(c, i) in report.concerns" :key="i" class="hl-item">
-          <view class="hl-dot concern" />
-          <text class="hl-text">{{ c }}</text>
+      <view v-if="teacherComment" class="rule" />
+      <view v-if="teacherComment" class="block">
+        <view class="sec-head"><text class="sec-title">老师评语</text></view>
+        <view class="comment-box">
+          <view class="comment-avatar"><text>师</text></view>
+          <text class="comment-text">{{ teacherComment }}</text>
         </view>
       </view>
-
-      <!-- 老师评语 -->
-      <view v-if="report.teacher_comment" class="card" style="margin-top:24rpx">
-        <text class="card-title">老师评语</text>
-        <view class="spacer-h12" />
-        <view class="teacher-row">
-          <view class="teacher-avatar"><text class="ta-icon"></text></view>
-          <view class="spacer-w12" />
-          <text class="comment-text">{{ report.teacher_comment }}</text>
-        </view>
-      </view>
-    </template>
+    </view>
   </view>
 </template>
 
 <style scoped lang="scss">
-.page { min-height: 100vh; padding: $spacing-lg 28rpx 160rpx; background: $color-bg-page; }
-.spacer-w12 { width: 24rpx; flex-shrink: 0; }
-.spacer-h12 { height: 24rpx; }
-.spacer-h16 { height: 32rpx; }
+.page {
+  min-height: 100vh;
+  padding: $component-page-padding-y $component-page-padding-x calc(56rpx + env(safe-area-inset-bottom));
+  background: $color-bg-page;
+}
 
-.type-tabs { display: flex; gap: $spacing-md; margin-bottom: 24rpx; }
-.type-tab { flex: 1; padding: 20rpx 0; border-radius: 9999rpx; background: $color-bg-card; text-align: center; font-size: $typography-font-size-base; color: $color-text-muted; }
-.type-tab.active { background: $color-brand-primary; color: #fff; font-weight: 600; }
+/* 周期切换 */
+.segmented {
+  display: flex;
+  height: 88rpx;
+  margin-bottom: $spacing-lg;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  overflow: hidden;
+}
 
-.state { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: $color-text-hint; font-size: $typography-font-size-md; }
+.seg-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  color: $color-text-muted;
+  font-size: $typography-font-size-base;
+  font-weight: 500;
+}
 
-.header-card { display: flex; align-items: center; padding: $spacing-xl; border-radius: $border-radius-lg; background: $color-bg-card; box-shadow: $shadow-sm; margin-bottom: 24rpx; }
-.header-avatar { width: 128rpx; height: 128rpx; border-radius: 9999rpx; }
-.header-avatar-placeholder { width: 128rpx; height: 128rpx; border-radius: 9999rpx; background: #DBEAFE; display: flex; align-items: center; justify-content: center; }
-.hap-icon { font-family: remixicon; font-size: 48rpx; color: #2563EB; }
-.header-name { display: block; font-size: $typography-font-size-2xl; font-weight: 700; color: $color-text-primary; }
-.header-period { display: block; margin-top: 8rpx; font-size: $typography-font-size-sm; color: $color-text-hint; }
+.seg-btn.on {
+  background: $color-brand-primary;
+  color: $color-text-on-brand;
+  font-weight: 600;
+}
 
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: $spacing-sm; margin-bottom: 24rpx; }
-.stat-box { padding: $spacing-lg 8rpx; border-radius: $border-radius-md; background: $color-bg-card; text-align: center; box-shadow: $shadow-sm; }
-.stat-num { display: block; font-size: $typography-font-size-xl; font-weight: 700; color: $color-text-primary; }
-.stat-label { display: block; margin-top: 8rpx; font-size: $typography-font-size-xs; color: $color-text-hint; }
+.seg-btn.disabled {
+  color: $color-text-hint;
+}
 
-.card { padding: $spacing-xl; border-radius: $border-radius-lg; background: $color-bg-card; box-shadow: $shadow-sm; }
-.card-title { font-size: $typography-font-size-md; font-weight: 600; color: $color-text-primary; }
+/* 纸面 */
+.report-card {
+  width: 100%;
+  overflow: hidden;
+  border-radius: $component-card-radius;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+}
 
-.dim-list { display: flex; flex-direction: column; gap: $spacing-md; }
-.dim-row { display: flex; align-items: center; }
-.dim-name { width: 80rpx; font-size: $typography-font-size-sm; color: $color-text-primary; flex-shrink: 0; }
-.dim-bar-wrap { flex: 1; height: 16rpx; margin: 0 16rpx; border-radius: 9999rpx; background: #F1F5F9; overflow: hidden; }
-.dim-bar { height: 100%; border-radius: 9999rpx; background: linear-gradient(90deg, #FB923C, #F97316); }
-.dim-score { width: 60rpx; font-size: $typography-font-size-sm; font-weight: 600; color: $color-brand-primary; text-align: right; }
+.sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  padding: 36rpx 32rpx;
+  background: $gradient-brand-soft;
+  overflow: hidden;
+}
 
-.hl-item { display: flex; align-items: flex-start; margin-bottom: 12rpx; }
-.hl-dot { width: 16rpx; height: 16rpx; border-radius: 9999rpx; background: #16A34A; margin-top: 8rpx; flex-shrink: 0; margin-right: 12rpx; }
-.hl-dot.concern { background: #F59E0B; }
-.hl-text { font-size: $typography-font-size-base; color: $color-text-body; line-height: 1.5; flex: 1; }
+.sheet-head::before {
+  content: "";
+  position: absolute;
+  top: -84rpx;
+  right: -60rpx;
+  width: 264rpx;
+  height: 264rpx;
+  border: 1rpx solid $color-brand-primary-light;
+  border-radius: $border-radius-full;
+  opacity: 0.28;
+}
 
-.teacher-row { display: flex; }
-.teacher-avatar { width: 80rpx; height: 80rpx; border-radius: 9999rpx; background: #DBEAFE; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.ta-icon { font-family: remixicon; font-size: $typography-font-size-2xl; color: #2563EB; }
-.comment-text { font-size: $typography-font-size-base; color: $color-text-body; line-height: 1.6; flex: 1; }
+.head-avatar {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 112rpx;
+  width: 112rpx;
+  height: 112rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-3xl;
+  font-weight: 600;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.head-avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.head-copy {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.head-line {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.head-name {
+  flex: 1;
+  min-width: 0;
+  font-size: $typography-font-size-3xl;
+  font-weight: 600;
+  line-height: 1.4;
+  color: $color-text-primary;
+}
+
+.period-tag {
+  flex: none;
+  min-height: 48rpx;
+  padding: 0 20rpx;
+  display: inline-flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+}
+
+.head-period {
+  display: block;
+  margin-top: 8rpx;
+  color: $color-text-body;
+  font-size: $typography-font-size-sm;
+  line-height: 1.5;
+}
+
+/* 统计带 */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: $color-bg-card;
+}
+
+.stat {
+  min-height: 144rpx;
+  padding: 28rpx 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  text-align: center;
+}
+
+.stat + .stat {
+  border-left: 1rpx solid $color-border-hairline;
+}
+
+.stat-value {
+  color: $color-text-primary;
+  font-size: $typography-font-size-2xl;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.stat-label {
+  color: $color-text-muted;
+  font-size: $typography-font-size-xs;
+  line-height: 1.35;
+}
+
+.rule {
+  height: 1rpx;
+  margin: 0 $spacing-xl;
+  background: $color-border-hairline;
+}
+
+.block {
+  padding: $spacing-xl;
+}
+
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: 20rpx;
+}
+
+.sec-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.sec-meta {
+  color: $color-text-muted;
+  font-size: $typography-font-size-xs;
+  line-height: 1.4;
+}
+
+/* 7 柱能力评估 */
+.dims {
+  display: flex;
+  align-items: flex-end;
+  padding-top: 32rpx;
+  gap: 4rpx;
+}
+
+.dim {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dim-track {
+  // 7 柱评估的固定轨道，设计稿 16×96px；token 无图表专用尺寸。
+  width: 32rpx;
+  height: 192rpx;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+}
+
+.dim-bar {
+  position: relative;
+  width: 100%;
+  min-height: 8rpx;
+  border-radius: $border-radius-full;
+  background: $gradient-brand;
+}
+
+.dim-score {
+  position: absolute;
+  bottom: calc(100% + 8rpx);
+  left: 50%;
+  transform: translateX(-50%);
+  color: $color-text-body;
+  font-size: $typography-font-size-xs;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.dim-name {
+  max-width: 100%;
+  margin-top: 14rpx;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.dims-note {
+  display: block;
+  margin-top: 24rpx;
+  color: $color-text-muted;
+  font-size: $typography-font-size-xs;
+  line-height: 1.5;
+}
+
+/* 亮点 / 关注 */
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+}
+
+.dot {
+  flex: none;
+  width: 12rpx;
+  height: 12rpx;
+  margin-top: 10rpx;
+  border-radius: $border-radius-full;
+}
+
+.dot--good {
+  background: $color-semantic-success;
+}
+
+.dot--watch {
+  background: $color-semantic-warning;
+}
+
+.item-text {
+  flex: 1;
+  min-width: 0;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+  line-height: 1.65;
+}
+
+/* 老师评语 */
+.comment-box {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  padding: 28rpx;
+  border-radius: $border-radius-xl;
+  background: $color-bg-page;
+  border-left: 6rpx solid $color-brand-primary-light;
+}
+
+.comment-avatar {
+  flex: 0 0 64rpx;
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-sm;
+  font-weight: 600;
+}
+
+.comment-text {
+  flex: 1;
+  min-width: 0;
+  color: $color-text-body;
+  font-size: $typography-font-size-md;
+  line-height: 1.75;
+}
+
+/* 状态 */
+.state-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 32rpx 80rpx;
+  text-align: center;
+}
+
+.state-orb {
+  width: 192rpx;
+  height: 192rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: 56rpx;
+  font-weight: 600;
+}
+
+.state-orb--danger {
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+}
+
+.state-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-xl;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.state-copy {
+  max-width: 560rpx;
+  margin-top: 16rpx;
+  color: $color-text-muted;
+  font-size: $typography-font-size-base;
+  line-height: 1.6;
+}
+
+.state-btn {
+  min-width: 280rpx;
+  min-height: 96rpx;
+  margin-top: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: $border-radius-full;
+  background: $gradient-brand;
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-md;
+  font-weight: 600;
+  box-shadow: $shadow-md;
+}
+
+.state-btn::after {
+  border: none;
+}
+
+/* 骨架 */
+.skeleton {
+  overflow: hidden;
+}
+
+.skel-cover {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  padding: 36rpx 32rpx;
+  background: $color-bg-page;
+}
+
+.skel-circle {
+  flex: none;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: $border-radius-full;
+}
+
+.skel-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.sk {
+  display: block;
+  background: $color-border-hairline;
+  border-radius: $border-radius-full;
+  opacity: 0.45;
+  animation: skPulse 1.6s $animation-easing-default infinite;
+}
+
+.skel-name {
+  width: 36%;
+  height: 28rpx;
+}
+
+.skel-period {
+  width: 62%;
+  height: 20rpx;
+}
+
+.skel-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.skel-stat {
+  min-height: 144rpx;
+  padding: 28rpx 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+}
+
+.skel-stat + .skel-stat {
+  border-left: 1rpx solid $color-border-hairline;
+}
+
+.skel-value {
+  width: 44%;
+  height: 24rpx;
+}
+
+.skel-label {
+  width: 58%;
+  height: 16rpx;
+}
+
+.skeleton-body {
+  padding: 32rpx;
+}
+
+.skel-title {
+  width: 26%;
+  height: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.skel-bars {
+  height: 192rpx;
+  display: flex;
+  align-items: flex-end;
+  gap: 8rpx;
+  margin-bottom: 32rpx;
+}
+
+.skel-bar {
+  flex: 1;
+  height: 100%;
+  border-radius: $border-radius-full;
+}
+
+.skel-bar:nth-child(2n) {
+  height: 64%;
+}
+
+.skel-line {
+  width: 100%;
+  height: 18rpx;
+  margin-top: 16rpx;
+}
+
+.skel-line--short {
+  width: 64%;
+}
+
+@keyframes skPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.22; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .spinner {
+    animation: none;
+  }
+}
 </style>

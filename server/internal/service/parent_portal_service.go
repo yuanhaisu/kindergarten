@@ -1484,6 +1484,7 @@ func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPor
 		}
 	}
 	db := s.db.WithContext(ctx).Model(&domain.GrowthReport{}).
+		Preload("Student").
 		Where("student_id = ? AND kindergarten_id = ? AND status = ?", target.ID, pc.KindergartenID, 1)
 	if reportType != "" {
 		db = db.Where("report_type = ?", reportType)

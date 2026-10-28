@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav.vue"
 const loading = ref(false)
 const overview = ref({})
 const todos = ref([])
+const processed = ref({})
 const loadError = ref("")
 
 const teacherName = computed(() => overview.value.teacher_name || "老师")
@@ -16,6 +17,9 @@ const className = computed(() => overview.value.class_info?.name || overview.val
 const classRole = computed(() => overview.value.class_info?.role || overview.value.role || "主班老师")
 const visibleTodos = computed(() => todos.value.slice(0, 3))
 const unreadCount = computed(() => Number(overview.value.unread_notices || 0))
+const presentCount = computed(() => overview.value.attendance?.present ?? overview.value.present_count ?? 0)
+const leaveCount = computed(() => overview.value.attendance?.leave ?? overview.value.leave_count ?? 0)
+const pendingCount = computed(() => overview.value.pending_approvals ?? todos.value.length ?? 0)
 
 const todayDate = computed(() => {
   const now = new Date()
@@ -40,17 +44,10 @@ const quickActions = [
 ]
 
 const todoIconMap = {
-  approve: { bg: "#FEE2E2", fg: "#EF4444", ch: "审" },
-  reject: { bg: "#FEE2E2", fg: "#EF4444", ch: "审" },
-  share: { bg: "#FFEDD5", fg: "#F97316", ch: "通" },
-  go_record: { bg: "#F3E8FF", fg: "#A855F7", ch: "录" }
-}
-
-const todoColorMap = {
-  approve: { bg: "#F0FDF4", fg: "#10B981" },
-  reject: { bg: "#FEF2F2", fg: "#EF4444" },
-  share: { bg: "#EFF6FF", fg: "#3B82F6" },
-  go_record: { bg: "#FAF5FF", fg: "#8B5CF6" }
+  approve: "审",
+  reject: "审",
+  share: "通",
+  go_record: "录"
 }
 
 async function loadHome() {
@@ -61,7 +58,8 @@ async function loadHome() {
     await ensureLogin()
     const [overviewRes, todosRes] = await Promise.all([fetchTeacherHomeOverview(), fetchTeacherTodos()])
     overview.value = overviewRes.data || {}
-    todos.value = todosRes.data?.list || todosRes.data || []
+    const todoList = todosRes.data?.list ?? todosRes.data
+    todos.value = Array.isArray(todoList) ? todoList : []
   } catch (err) {
     loadError.value = err?.message || "首页数据加载失败"
   } finally {
@@ -85,13 +83,28 @@ function todoActionLabel(action) {
   return labels[action] || "处理"
 }
 
-function todoActionBg(action) {
-  return todoColorMap[action] || { bg: "#EFF6FF", fg: "#3B82F6" }
+function todoKey(todo) {
+  return String(todo.id || todo.reference_id || todo.title || "")
+}
+
+function isProcessed(todo) {
+  return Boolean(processed.value[todoKey(todo)])
+}
+
+function processedActionLabel(todo, action) {
+  const done = processed.value[todoKey(todo)]
+  if (!done) return todoActionLabel(action)
+  if (done === action) return done === "approve" ? "已同意" : done === "reject" ? "已拒绝" : "已处理"
+  return "已处理"
 }
 
 function getTodoIcon(todo) {
   const primaryAction = todo.actions?.[0] || ""
-  return todoIconMap[primaryAction] || { bg: "#F1F5F9", fg: "#64748B", ch: "待" }
+  return { ch: todoIconMap[primaryAction] || "待" }
+}
+
+function goRecord() {
+  uni.navigateTo({ url: "/pages/growth/create" })
 }
 
 function askRejectReason() {
@@ -112,7 +125,7 @@ function askRejectReason() {
 
 async function handleTodoAction(todo, action) {
   if (action === "go_record") {
-    uni.navigateTo({ url: "/pages/growth/create" })
+    goRecord()
     return
   }
   let remark = ""
@@ -126,6 +139,9 @@ async function handleTodoAction(todo, action) {
 
   try {
     const res = await updateTeacherTodoAction(todo.reference_id || todo.id, action, remark)
+    if (action === "approve" || action === "reject") {
+      processed.value[todoKey(todo)] = action
+    }
     uni.showToast({ title: res.data?.message || "处理成功", icon: "none" })
     await loadHome()
   } catch (err) {
@@ -152,119 +168,133 @@ onShareAppMessage((res) => {
 
 <template>
   <view class="page">
-    <!-- 顶部渐变区域 -->
-    <view class="header-area">
-      <view class="status-bar" :style="{ height: 'var(--status-bar-height)' }" />
-      <view class="header-row">
-        <view class="user-info">
-          <view class="avatar">
-            <text class="avatar-icon">{{ teacherName[0] }}</text>
-          </view>
-          <view class="user-text">
-            <text class="user-name">{{ teacherName }}</text>
-            <text class="user-sub">{{ className }} · {{ classRole }}</text>
-          </view>
-        </view>
-        <view class="bell-btn" @click="navigateTo('/pages/messages/index')">
-          <view class="bell-dot" v-if="overview.unread_notices > 0" />
-          <text class="bell-icon">铃</text>
+    <!-- 问候区：头像进「我的」，班级行进「班级」，铃铛进「消息」 -->
+    <view class="greeting">
+      <view class="avatar" @click="navigateTo('/pages/profile/index')">
+        <text class="avatar-icon">{{ teacherName[0] }}</text>
+      </view>
+      <view class="greet-text">
+        <text class="greet-name">{{ teacherName }}</text>
+        <view class="greet-class" @click="navigateTo('/pages/class/index')">
+          <text class="greet-sub">{{ className }} · {{ classRole }}</text>
+          <text class="greet-chev">›</text>
         </view>
       </view>
-
-      <!-- 今日数据卡片 -->
-      <view class="stats-card">
-        <view class="stats-head">
-          <text class="stats-title">今日班级概况</text>
-          <text class="stats-date">{{ todayDate }}</text>
-        </view>
-        <view class="stats-grid">
-          <view class="stat-item">
-            <text class="stat-num is-green">{{ overview.attendance?.present ?? overview.present_count ?? 0 }}</text>
-            <text class="stat-label">已出勤</text>
-          </view>
-          <view class="stat-item">
-            <text class="stat-num is-amber">{{ overview.attendance?.leave ?? overview.leave_count ?? 0 }}</text>
-            <text class="stat-label">请假</text>
-          </view>
-          <view class="stat-item">
-            <text class="stat-num is-red">{{ overview.pending_approvals ?? todos.length ?? 0 }}</text>
-            <text class="stat-label">待审批</text>
-          </view>
-          <view class="stat-item">
-            <text class="stat-num is-blue">{{ overview.unread_notices ?? overview.unread_count ?? 0 }}</text>
-            <text class="stat-label">未读通知</text>
-          </view>
-        </view>
+      <view class="bell" @click="navigateTo('/pages/messages/index')">
+        <text class="bell-icon">铃</text>
+        <view v-if="unreadCount > 0" class="bell-dot" />
       </view>
     </view>
 
-    <!-- 功能入口 -->
-    <view class="feature-card">
-      <view class="feature-grid">
-        <view
-          v-for="action in quickActions"
-          :key="action.title"
-          class="feature-item"
-          @click="handleAction(action)"
-        >
-          <view class="feature-icon-box">
-            <image class="feature-icon-img" :src="action.img" mode="aspectFit" />
-          </view>
-          <text class="feature-label">{{ action.title }}</text>
+    <!-- 今日概况数字带：只有「待审批」带强调色 -->
+    <view class="section-head">
+      <text class="section-title">今日班级概况</text>
+      <text class="section-meta">{{ todayDate }}</text>
+    </view>
+    <view class="stat-card">
+      <view class="stat">
+        <view class="stat-v">
+          <text v-if="!loading" class="stat-num">{{ presentCount }}</text>
+          <view v-else class="sk sk-num" />
         </view>
+        <text class="stat-k">已出勤</text>
+      </view>
+      <view class="stat">
+        <view class="stat-v">
+          <text v-if="!loading" class="stat-num">{{ leaveCount }}</text>
+          <view v-else class="sk sk-num" />
+        </view>
+        <text class="stat-k">请假</text>
+      </view>
+      <view class="stat stat--accent">
+        <view class="stat-v">
+          <text v-if="!loading" class="stat-num stat-num--pill">{{ pendingCount }}</text>
+          <view v-else class="sk sk-num" />
+        </view>
+        <text class="stat-k">待审批</text>
+      </view>
+      <view class="stat">
+        <view class="stat-v">
+          <text v-if="!loading" class="stat-num">{{ unreadCount }}</text>
+          <view v-else class="sk sk-num" />
+        </view>
+        <text class="stat-k">未读通知</text>
       </view>
     </view>
 
-    <!-- 待办事项 -->
-    <view class="todo-section">
-      <view class="todo-head">
-        <text class="todo-title">待办事项</text>
-        <text class="todo-more" @click="navigateTo('/pages/more/index')">查看全部</text>
+    <!-- 功能入口 4 × 2 -->
+    <view class="entries">
+      <view
+        v-for="action in quickActions"
+        :key="action.title"
+        class="entry"
+        :class="{ 'entry--more': action.title === '更多' }"
+        @click="handleAction(action)"
+      >
+        <view class="entry-ico">
+          <image class="entry-img" :src="action.img" mode="aspectFit" />
+        </view>
+        <text class="entry-label">{{ action.title }}</text>
+      </view>
+    </view>
+
+    <!-- 待办事项：一张分格卡，操作在第二行右对齐 -->
+    <view class="todos">
+      <view class="section-head">
+        <text class="section-title">待办事项</text>
+        <text class="link-btn" @click="navigateTo('/pages/more/index')">查看全部 ›</text>
       </view>
 
-      <view v-if="loadError" class="state-card">
+      <view v-if="loading" class="todo-card">
+        <view v-for="i in 2" :key="i" class="sk-row" :class="{ 'sk-row--first': i === 1 }">
+          <view class="sk sk-chip" />
+          <view class="sk-lines">
+            <view class="sk sk-line" />
+            <view class="sk sk-line sk-line--short" />
+          </view>
+        </view>
+      </view>
+
+      <view v-else-if="loadError" class="todo-card todo-state">
+        <view class="state-ico state-ico--error"><text>!</text></view>
         <text class="state-text">{{ loadError }}</text>
-        <button class="retry-btn" @click="loadHome">重试</button>
+        <button class="btn btn--soft" @click="loadHome">重试</button>
       </view>
 
-      <view v-else-if="!loading && todos.length === 0" class="state-card">
+      <view v-else-if="todos.length === 0" class="todo-card todo-state">
+        <view class="state-ico"><text>今</text></view>
         <text class="state-text">今天没有新的待办，保持轻松节奏。</text>
+        <view class="btn btn--soft" @click="goRecord">写今日记录</view>
       </view>
 
-      <view v-else class="todo-list">
-        <view v-for="todo in visibleTodos" :key="todo.id || todo.title" class="todo-card">
-          <view class="todo-icon-box" :style="{ backgroundColor: getTodoIcon(todo).bg }">
-            <text class="todo-icon" :style="{ color: getTodoIcon(todo).fg }">{{ getTodoIcon(todo).ch }}</text>
-          </view>
-          <view class="todo-body">
-            <text class="todo-item-title">{{ todo.title || "待处理事项" }}</text>
-            <text class="todo-item-desc">{{ todo.description || todo.content || "请及时处理班级事务" }}</text>
-          </view>
-          <view v-if="todo.actions?.length" class="todo-btns">
-            <template v-for="action in todo.actions" :key="action">
-              <button
-                v-if="action === 'share'"
-                class="todo-btn share-btn"
-                :style="{
-                  backgroundColor: todoActionBg(action).bg,
-                  color: todoActionBg(action).fg
-                }"
-                open-type="share"
-              >
-                {{ todoActionLabel(action) }}
-              </button>
-              <view
-                v-else
-                class="todo-btn"
-                :style="{
-                  backgroundColor: todoActionBg(action).bg,
-                  color: todoActionBg(action).fg
-                }"
-                @click="handleTodoAction(todo, action)"
-              >
-                {{ todoActionLabel(action) }}
+      <view v-else class="todo-card">
+        <view v-for="todo in visibleTodos" :key="todo.id || todo.title" class="todo-item">
+          <view class="todo-row">
+            <view class="todo-chip">{{ getTodoIcon(todo).ch }}</view>
+            <view class="todo-main">
+              <text class="todo-title">{{ todo.title || "待处理事项" }}</text>
+              <text class="todo-desc">{{ todo.description || todo.content || "请及时处理班级事务" }}</text>
+              <view v-if="todo.actions?.length" class="todo-actions">
+                <template v-for="action in todo.actions" :key="action">
+                  <button
+                    v-if="action === 'share'"
+                    class="btn btn--quiet"
+                    open-type="share"
+                  >
+                    {{ todoActionLabel(action) }}
+                  </button>
+                  <button
+                    v-else
+                    class="btn"
+                    :class="[action === 'reject' ? 'btn--quiet' : 'btn--soft', { 'btn--disabled': isProcessed(todo) }]"
+                    :disabled="isProcessed(todo)"
+                    @click="!isProcessed(todo) && handleTodoAction(todo, action)"
+                  >
+                    {{ processedActionLabel(todo, action) }}
+                  </button>
+                </template>
               </view>
-            </template>
+            </view>
           </view>
         </view>
       </view>
@@ -283,317 +313,449 @@ onShareAppMessage((res) => {
   width: 100%;
   max-width: 430px;
   margin: 0 auto;
-  background: $gradient-page;
+  padding: 0 $component-page-padding-x calc(180rpx + env(safe-area-inset-bottom));
+  background: $color-bg-page;
 }
 
-// ===== 顶部渐变区域 =====
-.header-area {
-  padding: 0 46rpx 46rpx;
-  background: $gradient-brand;
-}
-
-.status-bar {
-  width: 100%;
-}
-
-.header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 96rpx;
-  margin-top: 24rpx;
-}
-
-.user-info {
+// ===== 问候区 =====
+.greeting {
   display: flex;
   align-items: center;
   gap: $spacing-lg;
+  padding: $spacing-sm 0 $spacing-xl;
 }
 
 .avatar {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 96rpx;
-  height: 96rpx;
+  width: $component-avatar-sm;
+  height: $component-avatar-sm;
   border-radius: $border-radius-full;
-  background: rgba(255, 255, 255, 1);
+  background: $color-brand-primary-bg;
+  border: 1rpx solid $color-border-hairline;
+  color: $color-brand-primary-dark;
 }
 
 .avatar-icon {
-  font-size: $typography-font-size-3xl;
-  font-weight: 700;
-  color: $color-semantic-info;
+  font-size: $typography-font-size-2xl;
+  font-weight: 600;
+  line-height: 1;
 }
 
-.user-text {
+.greet-text {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6rpx;
+  align-items: flex-start;
 }
 
-.user-name {
+.greet-name {
   font-size: $typography-font-size-2xl;
-  font-weight: 700;
-  color: #fff;
+  font-weight: 600;
+  line-height: 1.4;
+  color: $color-text-primary;
 }
 
-.user-sub {
-  font-size: $typography-font-size-md;
-  color: #DBEAFE;
+.greet-class {
+  display: inline-flex;
+  align-items: center;
+  gap: 2rpx;
+  margin-top: 4rpx;
+  padding: 8rpx 0;
 }
 
-.bell-btn {
+.greet-sub {
+  font-size: $typography-font-size-base;
+  color: $color-text-body;
+  line-height: 1.5;
+}
+
+.greet-chev {
+  color: $color-text-muted;
+  font-size: $typography-font-size-lg;
+  line-height: 1;
+}
+
+.bell {
   position: relative;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 80rpx;
-  height: 80rpx;
+  width: $component-input-height;
+  height: $component-input-height;
+  border: 1rpx solid $color-border-hairline;
   border-radius: $border-radius-full;
-  background: rgba(255, 255, 255, 0.2);
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+}
+
+.bell-icon {
+  font-size: $typography-font-size-xl;
+  font-weight: 600;
+  color: $color-text-body;
+  line-height: 1;
 }
 
 .bell-dot {
   position: absolute;
-  top: 2rpx;
-  right: 2rpx;
-  width: 20rpx;
-  height: 20rpx;
+  top: 20rpx;
+  right: 20rpx;
+  width: 16rpx;
+  height: 16rpx;
   border-radius: $border-radius-full;
   background: $color-semantic-danger;
+  outline: 4rpx solid $color-bg-card;
 }
 
-.bell-icon {
-  font-size: $typography-font-size-2xl;
-  font-weight: 700;
-  color: #fff;
-}
-
-// ===== 今日数据卡片 =====
-.stats-card {
-  margin-top: 48rpx;
-  padding: $spacing-xl;
-  border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: $shadow-md;
-}
-
-.stats-head {
+// ===== 区块标题 =====
+.section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: $spacing-md;
+  min-height: $component-input-height;
 }
 
-.stats-title {
-  font-size: $typography-font-size-xl;
-  font-weight: 700;
+.section-title {
+  font-size: $typography-font-size-lg;
+  font-weight: 600;
+  line-height: 1.4;
   color: $color-text-primary;
 }
 
-.stats-date {
-  font-size: $typography-font-size-base;
-  color: $color-text-muted;
+.section-meta {
+  font-size: $typography-font-size-xs;
+  font-weight: 500;
+  line-height: 1.4;
+  color: $color-text-body;
+  font-variant-numeric: tabular-nums;
 }
 
-.stats-grid {
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: $component-input-height;
+  padding: 0 2rpx;
+  color: $color-text-body;
+  font-size: $typography-font-size-sm;
+  font-weight: 500;
+}
+
+// ===== 今日概况数字带 =====
+.stat-card {
   display: flex;
-  justify-content: space-between;
-  margin-top: 32rpx;
+  margin-top: 4rpx;
+  background: $color-bg-card;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $component-card-radius;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
 }
 
-.stat-item {
+.stat {
+  position: relative;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $spacing-xs;
+  gap: 4rpx;
+  padding: $spacing-lg 4rpx;
+}
+
+.stat + .stat {
+  border-left: 1rpx solid $color-border-hairline;
+}
+
+.stat-v {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
 }
 
 .stat-num {
-  font-size: 48rpx;
-  font-weight: 800;
+  font-size: $typography-font-size-3xl;
+  font-weight: 600;
+  line-height: 1;
+  color: $color-text-primary;
+  font-variant-numeric: tabular-nums;
 }
 
-.is-green { color: $color-semantic-success; }
-.is-amber { color: $color-semantic-warning; }
-.is-red   { color: $color-semantic-danger; }
-.is-blue  { color: $color-semantic-info; }
+.stat-num--pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68rpx;
+  height: 56rpx;
+  padding: 0 20rpx;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+}
 
-.stat-label {
-  font-size: $typography-font-size-sm;
+.stat-k {
+  font-size: $typography-font-size-xs;
+  font-weight: 500;
+  line-height: 1.4;
   color: $color-text-muted;
+  white-space: nowrap;
 }
 
 // ===== 功能入口 =====
-.feature-card {
-  margin: $spacing-xl 46rpx;
-  padding: $spacing-xl;
-  border-radius: $border-radius-xl;
-  background: #fff;
-  box-shadow: $shadow-md;
-}
-
-.feature-grid {
+.entries {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  row-gap: 48rpx;
-  column-gap: 20rpx;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24rpx 20rpx;
+  margin: $spacing-xl 0 $spacing-md;
 }
 
-.feature-item {
+.entry {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18rpx;
+  gap: 10rpx;
+  min-height: $component-input-height;
 }
 
-.feature-icon-box {
+.entry-ico {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 112rpx;
-  height: 112rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: $border-radius-xl;
-  // 入口底色统一为品牌浅底，不再每个入口一种颜色
   background: $color-brand-primary-bg;
 }
 
-.feature-icon-img {
-  width: 100rpx;
-  height: 100rpx;
+.entry-img {
+  width: 72rpx;
+  height: 72rpx;
 }
 
-.feature-label {
-  font-size: $typography-font-size-base;
+.entry-label {
+  font-size: $typography-font-size-xs;
   font-weight: 500;
+  line-height: 1.4;
   color: $color-text-body;
+  white-space: nowrap;
 }
 
-// ===== 待办事项 =====
-.todo-section {
-  padding: 0 46rpx 180rpx;
+.entry--more .entry-ico {
+  background: transparent;
+  border: 1rpx solid $color-border-hairline;
 }
 
-.todo-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 32rpx;
-}
-
-.todo-title {
-  font-size: $typography-font-size-2xl;
-  font-weight: 700;
-  color: $color-text-primary;
-}
-
-.todo-more {
-  font-size: $typography-font-size-md;
-  color: $color-semantic-info;
-}
-
-.state-card {
-  padding: 56rpx 32rpx;
-  border-radius: $border-radius-xl;
-  background: #fff;
-  text-align: center;
-  box-shadow: $shadow-sm;
-}
-
-.state-text {
-  font-size: $typography-font-size-md;
+.entry--more .entry-label {
   color: $color-text-muted;
 }
 
-.retry-btn {
-  width: 180rpx;
-  height: 72rpx;
-  margin: 28rpx auto 0;
-  border-radius: $border-radius-full;
-  background: $color-semantic-info;
-  color: #fff;
-  font-size: $typography-font-size-base;
-}
-
-// 待办列表
-.todo-list {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
+// ===== 待办事项 =====
+.todos .section-head {
+  margin-bottom: 4rpx;
 }
 
 .todo-card {
-  display: flex;
-  align-items: center;
-  gap: $spacing-lg;
-  padding: $spacing-xl;
-  border-radius: $border-radius-xl;
-  background: #fff;
+  background: $color-bg-card;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $component-card-radius;
   box-shadow: $shadow-sm;
+  overflow: hidden;
 }
 
-.todo-icon-box {
+.todo-item + .todo-item {
+  border-top: 1rpx solid $color-border-hairline;
+}
+
+.todo-row {
   display: flex;
-  flex-shrink: 0;
+  gap: $spacing-lg;
+  padding: $spacing-lg $spacing-xl $spacing-xl;
+}
+
+.todo-chip {
+  flex: none;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: $border-radius-full;
+  width: 60rpx;
+  height: 60rpx;
+  margin-top: 2rpx;
+  border-radius: $border-radius-lg;
+  background: $color-bg-page;
+  color: $color-text-body;
+  font-size: $typography-font-size-sm;
+  font-weight: 600;
+  line-height: 1;
 }
 
-.todo-icon {
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.todo-body {
+.todo-main {
   flex: 1;
   min-width: 0;
 }
 
-.todo-item-title {
+.todo-title {
   display: block;
-  font-size: $typography-font-size-lg;
+  font-size: $typography-font-size-md;
   font-weight: 600;
+  line-height: 1.45;
   color: $color-text-primary;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.todo-item-desc {
+.todo-desc {
   display: block;
-  margin-top: 8rpx;
-  font-size: $typography-font-size-sm;
-  color: $color-text-muted;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.todo-btns {
-  display: flex;
-  flex-shrink: 0;
-  gap: $spacing-md;
-}
-
-.todo-btn {
-  padding: $spacing-sm 24rpx;
-  border-radius: $border-radius-lg;
+  margin-top: 6rpx;
   font-size: $typography-font-size-base;
+  line-height: 1.55;
+  color: $color-text-muted;
+}
+
+.todo-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $component-input-height;
+  padding: 0 36rpx;
+  border-radius: $border-radius-full;
+  font-size: $typography-font-size-base;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn--soft {
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+}
+
+.btn--quiet {
+  padding: 0 24rpx;
+  background: transparent;
+  color: $color-text-muted;
   font-weight: 500;
-  white-space: nowrap;
 }
 
-.share-btn {
-  margin: 0;
-  border: none;
-  line-height: inherit;
+.btn--disabled {
+  background: $color-bg-card;
+  border: 1rpx solid $color-border-hairline;
+  color: $color-text-muted;
 }
 
-.share-btn::after {
-  border: none;
+// ===== 待办状态 =====
+.todo-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-lg;
+  padding: 64rpx $spacing-xl;
+  text-align: center;
 }
 
+.state-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  color: $color-text-muted;
+  font-size: $typography-font-size-xl;
+  font-weight: 600;
+}
+
+.state-ico--error {
+  color: $color-semantic-danger;
+  background: $color-semantic-danger-bg;
+}
+
+.state-text {
+  max-width: 22em;
+  font-size: $typography-font-size-base;
+  line-height: 1.6;
+  color: $color-text-muted;
+}
+
+// ===== 骨架 =====
+.sk {
+  display: block;
+  background: $color-border-hairline;
+  border-radius: $border-radius-sm;
+  opacity: 0.45;
+  animation: skPulse 1.6s $animation-easing-default infinite;
+}
+
+.sk-num {
+  width: 72rpx;
+  height: 44rpx;
+  border-radius: $border-radius-md;
+}
+
+.sk-row {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-lg;
+  width: 100%;
+  padding: $spacing-lg 0;
+}
+
+.sk-row--first {
+  padding-top: $spacing-xl;
+}
+
+.sk-row + .sk-row {
+  border-top: 1rpx solid $color-border-hairline;
+}
+
+.sk-chip {
+  flex: none;
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: $border-radius-lg;
+}
+
+.sk-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-top: 6rpx;
+}
+
+.sk-line {
+  width: 78%;
+  height: 26rpx;
+}
+
+.sk-line--short {
+  width: 46%;
+  height: 22rpx;
+}
+
+@keyframes skPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.22; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .spinner {
+    animation: none;
+  }
+}
 </style>
