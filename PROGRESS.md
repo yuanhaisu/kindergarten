@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**P01 worker**
+- 下一动作：**B05 worker**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -24,7 +24,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F0 | W0 | 落地基线：AppIcon / PageShell / StateBlock / CSS 兼容 / secret scan | passed | 30f1982 | cabe031 | impl-reviews/F0.md | 0 P1 / 6 P2；README D01/D02 已修 e3b39cc |
 | X00 | W0 | 零入边页面决策：老师 webview、家长 bind/messages/webview | passed | - | - | - | 4 项决策已记录 |
-| P01 | W1 | 家长首页 01 | pending | - | - | - | 依赖 F0 |
+| P01 | W1 | 家长首页 01 | pending | - | - | - | 依赖 F0、B05 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | pending | - | - | - | 依赖 F0、B04 |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0 |
@@ -34,6 +34,7 @@
 | B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
 | B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
 | B04 | W1* | 点赞落库复核 + 两端防连点 | passed | e3b39cc | 8011f8d | impl-reviews/B04.md | 0 P1 / 5 P2；原症状已由 97f4dd8f 修复，本次修并发 1062 |
+| B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | briefed | 0c63e14 | - | - | P01 前置；多孩串数据 |
 | P05 | W3 | 家长通知列表/详情 04/05 | pending | - | - | - | 依赖 F0 |
 | P06 | W3 | 家长请假列表/创建/详情 06/07/08 | pending | - | - | - | 依赖 F0 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
@@ -60,11 +61,11 @@
 
 ```json
 {
-  "slice_id": "B04",
-  "phase": "committed",
-  "commit_sha": "8011f8d226fe8d66e816324829d7bd4defc8b48b",
-  "next_action": "P01 brief",
-  "updated_at": "2026-10-28T15:25:00+08:00"
+  "slice_id": "B05",
+  "phase": "briefed",
+  "commit_sha": null,
+  "next_action": "spawn B05 worker",
+  "updated_at": "2026-10-28T15:35:00+08:00"
 }
 ```
 
