@@ -75,6 +75,10 @@ ruvector.db
 .claude/*.bak
 .claude/*.bak-*
 
+# Slice-delivery runtime state: checkpoints, logs, DevTools lock (local only)
+.claude/runs/
+.claude/locks/
+
 # Python 字节码
 __pycache__/
 
@@ -105,6 +109,8 @@ __pycache__/
 !.claude/skills/pdf/
 !.claude/skills/pptx/
 !.claude/skills/skill-creator/
+!.claude/skills/slice-delivery/
+!.claude/skills/slice-delivery/**
 !.claude/skills/slack-gif-creator/
 !.claude/skills/system-enums/
 !.claude/skills/template/
