@@ -25,6 +25,13 @@
 - 全班记录「相关 N 位小朋友」：后端无该口径，**全班记录只显示同步状态**；个体记录保留相关人数。
 - 创建页「照片 / 视频」：**仅照片**，不渲染视频入口，差异记录待后续切片。
 
+## B03 相关决策（2026-10-29）
+
+- 拆两片：B03a 落库 + 老师端 UI；B03b 定时发布 worker。
+- 定时到点由**新增 worker 扫表**触发（status=1 且 scheduled_at<=now → 发布）。
+- 创建页增加「存草稿」次按钮；草稿允许标题或正文不完整暂存。
+- 附件**仅图片 ≤9 张、单张 ≤20MB**，仅老师端展示；家长端附件延后。
+
 ## T02 相关决策（2026-10-29）
 
 - 授权接送人：**先做 B11**，返回 `authorized_person_list[{name, relation, relation_label}]`（保留旧字符串兼容）。
@@ -54,7 +61,8 @@
 | T02 | W1 | 老师接送列表/记录 07/08 | passed | d0a67b3 | b808659 | impl-reviews/T02.md | 0 P1 / 2 P2；复审通过（B12 修复后） |
 | B01 | W2 | 成长报告四格统计 | passed | 722054a | c398c0c | impl-reviews/B01.md | 0 P1 / 5 P2；四格实测 67%/45/8-12/15；已归档 |
 | B02 | W2 | 班级家长人数 | passed | e3ab84a | f846bf3 | impl-reviews/B02.md | 0 P1 / 3 P2；实测 5/4 人，底部 2 班 9 人；已归档 |
-| B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
+| B03a | W2 | 草稿/定时/附件落库 + 老师端 UI | proposed | - | - | - | OpenSpec `notice-drafts-attachments`；**待批准** |
+| B03b | W2 | 定时发布 worker 扫表 | proposed | - | - | - | OpenSpec `notice-scheduled-publish`；**待批准**；依赖 B03a |
 | B04 | W1* | 点赞落库复核 + 两端防连点 | passed | e3b39cc | 8011f8d | impl-reviews/B04.md | 0 P1 / 5 P2；原症状已由 97f4dd8f 修复，本次修并发 1062 |
 | B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | passed | 0c63e14 | ee5dcb5 | impl-reviews/B05.md | 0 P1 / 6 P2 |
 | P05 | W3 | 家长通知列表/详情 04/05 | pending | - | - | - | 依赖 F0 |
