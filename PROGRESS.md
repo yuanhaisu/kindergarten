@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**P03 worker（brief 已写）**
+- 下一动作：**P04（新会话接手）**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -29,7 +29,7 @@
 | B06 | W1* | 成长相册 groups/student_id + 评论 replies/relation | passed | ee4aa37 | 8804b0a | impl-reviews/B06.md | 0 P1 / 6 P2；契约对齐，6/6 测试通过 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | passed | 56c01ac | ecd7a05 | impl-reviews/P02.md | 0 P1 / 5 P2；三页/四态/嵌套评论/album groups |
 | B07 | W1* | 接送记录/授权人按孩子过滤 + 关系枚举 9 值 | passed | bbe7afe | f7e1c6c | impl-reviews/B07.md | 0 P1 / 7 P2；A/B 隔离 + 9 值校验 |
-| P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | briefed | 49f036d | - | - | 依赖 F0、B07 |
+| P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | passed | 49f036d | f8a1eda | impl-reviews/P03.md | 0 P1 / 7 P2；三页/三态/9 关系/入口 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0 |
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | pending | - | - | - | 依赖 F0；保留既有发布工作台行为 |
 | T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0 |
@@ -65,29 +65,29 @@
 ```json
 {
   "slice_id": "P03",
-  "phase": "briefed",
-  "commit_sha": null,
-  "next_action": "spawn P03 worker",
-  "updated_at": "2026-10-29T10:10:00+08:00"
+  "phase": "committed",
+  "commit_sha": "f8a1eda4e204f401df4c18e06c75b93356b96a92",
+  "next_action": "P04 brief in a fresh session",
+  "updated_at": "2026-10-29T11:05:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-29T09:15+08:00
+### Handoff 2026-10-29T11:05+08:00
 
-- 当前切片：P02 已 passed/committed；下一片 **P03 家长接送三页**
-- 已完成：W0（F0、X00）；W1 前置（B04、B05、B06、S01）；P01、P02
-- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 P03 行，写 `.claude/runs/P03/brief.md`，派 `slice-worker`
+- 当前切片：P03 已 passed/committed；下一片 **P04 家长我的 + 设置**
+- 已完成：W0（F0、X00）；W1 前置（B04、B05、B06、B07、S01）；P01、P02、P03
+- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 P04 行，写 `.claude/runs/P04/brief.md`，派 `slice-worker`
 - 必须读：
-  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P03 行
+  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P04 行
   - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
-  - `parent/13-pickup-index/`、`15-pickup-authorized/`、`16-pickup-authorized-create/`
-  - `_shared/reviews/parent-13-pickup-index.md`、`parent-15-pickup-authorized.md`、`parent-16-pickup-authorized-create.md`
-  - S01 commit `48cb569`（原生底栏）、P02 commit `ecd7a05`（三页模式）、B06 commit `8804b0a`
-- 已知阻塞：无。后端 `8080` PID 13712 运行（可能被低内存停）；DevTools 锁空闲。
-- P02 带入 P03 的 P2：album 下拉刷新未开启、评论计数口径、video 原生层级、P01 `formatTime` 未迁移、album 错误态冻结换月。
-- 上下文：主会话已约 60%，按约定 handoff；新会话只读上述文件，不要重读旧对话。
+  - `parent/27-profile/`、`25-settings/`
+  - `_shared/reviews/parent-27-profile.md`、`parent-25-settings.md`
+  - S01 commit `48cb569`（原生底栏）、P03 commit `f8a1eda`（接送页模式）、`utils/relation.js`
+- 已知阻塞：无。后端 `8080` PID 45860 运行（可能被低内存停）；DevTools 锁空闲。
+- P03 带入 P04 的 P2：指定查询静默失败、create 表单被 overview 门控、关系面板滚动锁、index 刷新失败无提示、后端 `student_id` 回退观察、设计保留 P2。
+- 上下文：主会话已约 67%，按约定 handoff；新会话只读上述文件，不要重读旧对话。
 
 ## 最近完成
 
@@ -101,3 +101,4 @@
 | B06 | 8804b0a | 2026-10-28 | 0 P1 / 6 P2；album groups + comments replies |
 | P02 | ecd7a05 | 2026-10-29 | 0 P1 / 5 P2；成长三页/四态/嵌套评论/album groups |
 | B07 | f7e1c6c | 2026-10-29 | 0 P1 / 7 P2；接送多孩过滤 + 关系 9 值 |
+| P03 | f8a1eda | 2026-10-29 | 0 P1 / 7 P2；接送三页/三态/9 关系/入口 |
