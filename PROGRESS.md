@@ -50,7 +50,8 @@
 | B10 | W1* | 老师评论补齐：relation/student_name/likes_count/parent_id + 回复 | passed | f9df5df | fb3dba6 | impl-reviews/B10.md | 0 P1 / 5 P2；嵌套评论/关系标签/评论赞幂等 |
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | passed | fb3dba6 | 1f78208 | impl-reviews/T01.md | 0 P1 / 7 P2；三页四态+真实交互，token 175 |
 | B11 | W1* | 老师接送：授权人结构 + 例外登记同时置异常 | passed | 0079e04 | d0a67b3 | impl-reviews/B11.md | 0 P1 / 4 P2；数组与旧串同源同序；override 置异常 |
-| T02 | W1 | 老师接送列表/记录 07/08 | in_progress | d0a67b3 | - | - | 依赖 F0、B11 |
+| B12 | W1* | 修复接送记录 date 过滤（UTC→本地） | in_progress | 4686d8e | - | - | T02 阻断；预存 bug `:2710` |
+| T02 | W1 | 老师接送列表/记录 07/08 | failed | d0a67b3 | - | impl-reviews/T02.md | 1 P1（后端 date 解析）；待 B12 后复审 |
 | B01 | W2 | 成长报告四格统计 | pending | - | - | - | OpenSpec；页面 12 已存在 |
 | B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
 | B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
