@@ -40,8 +40,8 @@
 | B08 | W1* | 家长设置开关持久化（6 通知 + 2 隐私） | passed | 4a8bbb9 | f9f841e | impl-reviews/B08.md | 0 P1 / 5 P2；默认/部分更新/隔离 |
 | P04 | W1 | 家长我的+设置 27/25 | passed | 86c56c8 | e3f315d | impl-reviews/P04.md | 0 P1 / 5 P2；logout 路由待 B09 |
 | B09 | W1* | 恢复 `/auth/logout` + token 吊销（B09-full） | passed | e3f315d | 9433a9e | impl-reviews/B09.md | 0 P1 / 7 P2；access/refresh 吊销闭环 |
-| B10 | W1* | 老师评论补齐：relation/student_name/likes_count/parent_id + 回复 | pending | - | - | - | 由 T01 决策派生；参照 B06 |
-| T01 | W1 | 老师成长列表/创建/详情 04/05/06 | pending | - | - | - | 依赖 F0、B10；保留既有发布工作台行为 |
+| B10 | W1* | 老师评论补齐：relation/student_name/likes_count/parent_id + 回复 | passed | f9df5df | fb3dba6 | impl-reviews/B10.md | 0 P1 / 5 P2；嵌套评论/关系标签/评论赞幂等 |
+| T01 | W1 | 老师成长列表/创建/详情 04/05/06 | in_progress | fb3dba6 | - | - | 依赖 F0、B10；保留既有发布工作台行为 |
 | T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0 |
 | B01 | W2 | 成长报告四格统计 | pending | - | - | - | OpenSpec；页面 12 已存在 |
 | B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
@@ -74,31 +74,33 @@
 
 ```json
 {
-  "slice_id": "B09",
+  "slice_id": "B10",
   "phase": "committed",
-  "commit_sha": "9433a9e46416516142ca1661e34b3964bec32890",
-  "next_action": "T01 brief in a fresh session",
-  "updated_at": "2026-10-29T14:05:00+08:00"
+  "commit_sha": "fb3dba6",
+  "next_action": "T01 worker in progress",
+  "updated_at": "2026-10-29T15:05:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-29T14:05+08:00
+### Handoff 2026-10-29T15:05+08:00
 
-- 当前切片：W1 家长端页面全部完成；下一片 **T01 老师成长三页**
-- 已完成：W0（F0、X00）；B04–B09；S01；P01–P04
-- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 T01 行，写 `.claude/runs/T01/brief.md`，派 `slice-worker`
+- 当前切片：**T01 老师成长三页**（worker 执行中，base `fb3dba6`）
+- 已完成：W0（F0、X00）；B04–B10；S01；P01–P04
+- 下一步：读 `.claude/runs/T01/brief.md` 与 `checkpoint.json`；worker 完成后派全新 `slice-supervisor`
 - 必须读：
   - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` T01 行
   - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
   - `teacher/04-growth-index/`、`05-growth-create/`、`06-growth-detail/`
   - `_shared/reviews/teacher-04-growth-index.md`、`teacher-05-growth-create.md`、`teacher-06-growth-detail.md`
-  - F0 commit `cabe031`（AppIcon/PageShell）、P02 commit `ecd7a05`（成长三页模式，家长端可参考）、B09 commit `9433a9e`（auth logout）
+  - `_shared/impl-reviews/B10.md`（评论契约）
+  - P02 commit `ecd7a05`（家长端同构三页，可参考）
+- T01 四项决策：班级筛选静态化；全班记录只显示同步状态；仅照片；评论按 B10 做全。
 - 老师端无 tabBar；4 个常驻页仍用 BottomNav；原生导航栏；不要引入 `switchTab`。
-- 已知阻塞：无。后端 `8080` PID 30552 运行（可能被低内存停）；DevTools 锁空闲。
+- 已知阻塞：无。后端 `8080` PID 11968（B10 新二进制，supervisor 起）；DevTools 锁已释放。
+- B10 带入 P2：契约写 400 实为 422、relation 按家长关联判定、可见范围谓词重复、GET 契约残留分页提示。
 - B09 带入的 P2：每请求 Redis EXISTS、Redis 故障 503、旧无 jti token 过期前不可吊销、teacher/admin 不调用 logout、refresh 归属未校验、E2E 绕过 Casbin。
-- 上下文：主会话已约 67%，按约定 handoff；新会话只读上述文件，不要重读旧对话。
 
 ## 最近完成
 
