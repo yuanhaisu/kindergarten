@@ -51,9 +51,9 @@
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | passed | fb3dba6 | 1f78208 | impl-reviews/T01.md | 0 P1 / 7 P2；三页四态+真实交互，token 175 |
 | B11 | W1* | 老师接送：授权人结构 + 例外登记同时置异常 | passed | 0079e04 | d0a67b3 | impl-reviews/B11.md | 0 P1 / 4 P2；数组与旧串同源同序；override 置异常 |
 | B12 | W1* | 修复接送记录 date 过滤（UTC→本地） | passed | 4686d8e | 1d41578 | impl-reviews/B12.md | 0 P1 / 3 P2；HTTP 旧二进制 0 → 新 6 条 |
-| T02 | W1 | 老师接送列表/记录 07/08 | in_progress | d0a67b3 | - | impl-reviews/T02.md | 复审中（B12 已修） |
-| B01 | W2 | 成长报告四格统计 | pending | - | - | - | OpenSpec；页面 12 已存在 |
-| B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
+| T02 | W1 | 老师接送列表/记录 07/08 | passed | d0a67b3 | b808659 | impl-reviews/T02.md | 0 P1 / 2 P2；复审通过（B12 修复后） |
+| B01 | W2 | 成长报告四格统计 | proposed | - | - | - | OpenSpec `growth-report-stats`；**待用户批准** |
+| B02 | W2 | 班级家长人数 | proposed | - | - | - | OpenSpec `teacher-class-parent-count`；**待用户批准** |
 | B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
 | B04 | W1* | 点赞落库复核 + 两端防连点 | passed | e3b39cc | 8011f8d | impl-reviews/B04.md | 0 P1 / 5 P2；原症状已由 97f4dd8f 修复，本次修并发 1062 |
 | B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | passed | 0c63e14 | ee5dcb5 | impl-reviews/B05.md | 0 P1 / 6 P2 |
