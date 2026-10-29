@@ -81,6 +81,7 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.ClassTeacher{},
 		&domain.TeacherProfile{},
 		&domain.ParentProfile{},
+		&domain.ParentSetting{},
 		&domain.Student{},
 		&domain.StudentParent{},
 

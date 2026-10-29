@@ -2732,16 +2732,176 @@ func (s *ParentPortalService) UnbindStudent(ctx context.Context, pc *ParentPorta
 
 // ==================== Settings ====================
 
-func (s *ParentPortalService) GetSettings(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
+// parentSettings 是家长端 8 个开关的强类型形态。
+// 默认值与契约 11-settings、原型 parent/25-settings 一致：
+// 任务提醒、允许展示成长记录默认关，其余默认开。
+type parentSettings struct {
+	NoticePush         bool
+	LeavePush          bool
+	PickupPush         bool
+	GrowthPush         bool
+	TaskPush           bool
+	AnnouncementPush   bool
+	ShowPhoneToTeacher bool
+	AllowGrowthShare   bool
+}
+
+func defaultParentSettings() parentSettings {
+	return parentSettings{
+		NoticePush:         true,
+		LeavePush:          true,
+		PickupPush:         true,
+		GrowthPush:         true,
+		TaskPush:           false,
+		AnnouncementPush:   true,
+		ShowPhoneToTeacher: true,
+		AllowGrowthShare:   false,
+	}
+}
+
+func parentSettingsFromRow(row *domain.ParentSetting) parentSettings {
+	return parentSettings{
+		NoticePush:         row.NoticePush,
+		LeavePush:          row.LeavePush,
+		PickupPush:         row.PickupPush,
+		GrowthPush:         row.GrowthPush,
+		TaskPush:           row.TaskPush,
+		AnnouncementPush:   row.AnnouncementPush,
+		ShowPhoneToTeacher: row.ShowPhoneToTeacher,
+		AllowGrowthShare:   row.AllowGrowthShare,
+	}
+}
+
+func (ps parentSettings) applyTo(row *domain.ParentSetting) {
+	row.NoticePush = ps.NoticePush
+	row.LeavePush = ps.LeavePush
+	row.PickupPush = ps.PickupPush
+	row.GrowthPush = ps.GrowthPush
+	row.TaskPush = ps.TaskPush
+	row.AnnouncementPush = ps.AnnouncementPush
+	row.ShowPhoneToTeacher = ps.ShowPhoneToTeacher
+	row.AllowGrowthShare = ps.AllowGrowthShare
+}
+
+func (ps parentSettings) asResponse() map[string]any {
 	return map[string]any{
-		"notification": map[string]any{"notice_push": true, "leave_push": true, "pickup_push": true, "growth_push": true, "task_push": true, "announcement_push": true},
-		"privacy":      map[string]any{"show_phone_to_teacher": true, "allow_growth_share": true},
-	}, nil
+		"notification": map[string]any{
+			"notice_push":       ps.NoticePush,
+			"leave_push":        ps.LeavePush,
+			"pickup_push":       ps.PickupPush,
+			"growth_push":       ps.GrowthPush,
+			"task_push":         ps.TaskPush,
+			"announcement_push": ps.AnnouncementPush,
+		},
+		"privacy": map[string]any{
+			"show_phone_to_teacher": ps.ShowPhoneToTeacher,
+			"allow_growth_share":    ps.AllowGrowthShare,
+		},
+	}
+}
+
+// apply 只接受契约里的两个分组和 8 个布尔项；其余一律报错而不是静默丢弃，
+// 否则前端拼错字段名会「保存成功但值没变」。分组回传 null 视为不更新。
+func (ps *parentSettings) apply(settings map[string]any) error {
+	for group, raw := range settings {
+		if group != "notification" && group != "privacy" {
+			return fmt.Errorf("%w: 未知设置分组 %q", ErrParentInvalidParams, group)
+		}
+		if raw == nil {
+			continue
+		}
+		groupMap, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("%w: %s 必须是对象", ErrParentInvalidParams, group)
+		}
+		for key, val := range groupMap {
+			b, ok := val.(bool)
+			if !ok {
+				return fmt.Errorf("%w: %s.%s 必须是布尔", ErrParentInvalidParams, group, key)
+			}
+			if !ps.set(group, key, b) {
+				return fmt.Errorf("%w: 未知设置项 %s.%s", ErrParentInvalidParams, group, key)
+			}
+		}
+	}
+	return nil
+}
+
+func (ps *parentSettings) set(group, key string, v bool) bool {
+	switch group + "." + key {
+	case "notification.notice_push":
+		ps.NoticePush = v
+	case "notification.leave_push":
+		ps.LeavePush = v
+	case "notification.pickup_push":
+		ps.PickupPush = v
+	case "notification.growth_push":
+		ps.GrowthPush = v
+	case "notification.task_push":
+		ps.TaskPush = v
+	case "notification.announcement_push":
+		ps.AnnouncementPush = v
+	case "privacy.show_phone_to_teacher":
+		ps.ShowPhoneToTeacher = v
+	case "privacy.allow_growth_share":
+		ps.AllowGrowthShare = v
+	default:
+		return false
+	}
+	return true
+}
+
+// loadParentSettings 读 (user, kindergarten) 的设置；无记录返回默认值且不建行。
+func (s *ParentPortalService) loadParentSettings(ctx context.Context, pc *ParentPortalContext) (parentSettings, error) {
+	if pc == nil || pc.UserID == 0 || pc.KindergartenID == 0 {
+		return parentSettings{}, ErrParentInvalidParams
+	}
+	var row domain.ParentSetting
+	err := s.db.WithContext(ctx).
+		Where("user_id = ? AND kindergarten_id = ?", pc.UserID, pc.KindergartenID).
+		First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return defaultParentSettings(), nil
+	}
+	if err != nil {
+		return parentSettings{}, err
+	}
+	return parentSettingsFromRow(&row), nil
+}
+
+func (s *ParentPortalService) GetSettings(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
+	cur, err := s.loadParentSettings(ctx, pc)
+	if err != nil {
+		return nil, err
+	}
+	return cur.asResponse(), nil
 }
 
 func (s *ParentPortalService) UpdateSettings(ctx context.Context, pc *ParentPortalContext, settings map[string]any) error {
-	// Settings are stored in-memory/session for now; persistent storage can be added later
-	return nil
+	cur, err := s.loadParentSettings(ctx, pc)
+	if err != nil {
+		return err
+	}
+	if len(settings) == 0 {
+		return nil
+	}
+	next := cur
+	if err := next.apply(settings); err != nil {
+		return err
+	}
+	if next == cur {
+		return nil // 没有实际变化（含 null 分组）不落库，也不凭空建行
+	}
+	row := domain.ParentSetting{UserID: pc.UserID, KindergartenID: pc.KindergartenID}
+	next.applyTo(&row)
+	// 唯一索引 (user_id, kindergarten_id) 上的 upsert：并发首写与重复保存都不会多出一行。
+	return s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "user_id"}, {Name: "kindergarten_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"notice_push", "leave_push", "pickup_push", "growth_push", "task_push",
+			"announcement_push", "show_phone_to_teacher", "allow_growth_share", "updated_at",
+		}),
+	}).Create(&row).Error
 }
 
 // ==================== Home Overview ====================
