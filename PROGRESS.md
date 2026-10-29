@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**P02 worker（brief 已写）**
+- 下一动作：**P03（新会话接手）**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -27,7 +27,7 @@
 | S01 | W1* | 原生 custom-tab-bar + 4 tab 页去 BottomNav | passed | 0434244 | 48cb569 | impl-reviews/S01.md | 0 P1 / 5 P2；原生底栏四页闭环 |
 | P01 | W1 | 家长首页 01 | passed | 6d1a2f9 | 516c591 | impl-reviews/P01.md | 0 P1 / 5 P2；S01 原生底栏后复审通过 |
 | B06 | W1* | 成长相册 groups/student_id + 评论 replies/relation | passed | ee4aa37 | 8804b0a | impl-reviews/B06.md | 0 P1 / 6 P2；契约对齐，6/6 测试通过 |
-| P02 | W1 | 家长成长列表/详情/相册 09/10/11 | briefed | 56c01ac | - | - | 依赖 F0、B04、B06 |
+| P02 | W1 | 家长成长列表/详情/相册 09/10/11 | passed | 56c01ac | ecd7a05 | impl-reviews/P02.md | 0 P1 / 5 P2；三页/四态/嵌套评论/album groups |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0 |
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | pending | - | - | - | 依赖 F0；保留既有发布工作台行为 |
@@ -64,29 +64,29 @@
 ```json
 {
   "slice_id": "P02",
-  "phase": "briefed",
-  "commit_sha": null,
-  "next_action": "spawn P02 worker",
-  "updated_at": "2026-10-28T22:20:00+08:00"
+  "phase": "committed",
+  "commit_sha": "ecd7a0500d13344d7cab9de2d188e3b22de215b3",
+  "next_action": "P03 brief in a fresh session",
+  "updated_at": "2026-10-29T09:15:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-28T21:15+08:00
+### Handoff 2026-10-29T09:15+08:00
 
-- 当前切片：P01 已 passed/committed；下一片 **P02 家长成长三页**
-- 已完成阶段：W0（F0、X00）；W1 前置（B04、B05、S01）；P01
-- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 P02 行，写 `.claude/runs/P02/brief.md`，派 `slice-worker`
+- 当前切片：P02 已 passed/committed；下一片 **P03 家长接送三页**
+- 已完成：W0（F0、X00）；W1 前置（B04、B05、B06、S01）；P01、P02
+- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 P03 行，写 `.claude/runs/P03/brief.md`，派 `slice-worker`
 - 必须读：
-  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P02 行
+  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P03 行
   - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
-  - `parent/09-growth-index/`、`10-growth-detail/`、`11-growth-album/`
-  - `_shared/reviews/parent-09-growth-index.md`、`parent-10-growth-detail.md`、`parent-11-growth-album.md`
-  - S01 commit `48cb569`（原生底栏）、B04 commit `8011f8d`（点赞并发）
-- 已知阻塞：无。后端 `b4vjgfrxc` PID 41208 运行；DevTools 锁空闲。
-- P01 带入后续的 P2：首页 180rpx 留白、首页缺 `onShow -> syncTabBar(0)`、空态/角标/图标按 brief 的差异、截图不可用。
-- 上下文：主会话已约 45%，按约定在此 handoff；新会话只读上述文件，不要重读旧对话。
+  - `parent/13-pickup-index/`、`15-pickup-authorized/`、`16-pickup-authorized-create/`
+  - `_shared/reviews/parent-13-pickup-index.md`、`parent-15-pickup-authorized.md`、`parent-16-pickup-authorized-create.md`
+  - S01 commit `48cb569`（原生底栏）、P02 commit `ecd7a05`（三页模式）、B06 commit `8804b0a`
+- 已知阻塞：无。后端 `8080` PID 13712 运行（可能被低内存停）；DevTools 锁空闲。
+- P02 带入 P03 的 P2：album 下拉刷新未开启、评论计数口径、video 原生层级、P01 `formatTime` 未迁移、album 错误态冻结换月。
+- 上下文：主会话已约 60%，按约定 handoff；新会话只读上述文件，不要重读旧对话。
 
 ## 最近完成
 
@@ -98,3 +98,4 @@
 | S01 | 48cb569 | 2026-10-28 | 0 P1 / 5 P2；原生 custom-tab-bar，四页闭环 |
 | P01 | 516c591 | 2026-10-28 | 0 P1 / 5 P2；家长首页六块/四态/多孩/feed 隔离 |
 | B06 | 8804b0a | 2026-10-28 | 0 P1 / 6 P2；album groups + comments replies |
+| P02 | ecd7a05 | 2026-10-29 | 0 P1 / 5 P2；成长三页/四态/嵌套评论/album groups |
