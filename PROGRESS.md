@@ -62,7 +62,7 @@
 | B01 | W2 | 成长报告四格统计 | passed | 722054a | c398c0c | impl-reviews/B01.md | 0 P1 / 5 P2；四格实测 67%/45/8-12/15；已归档 |
 | B02 | W2 | 班级家长人数 | passed | e3ab84a | f846bf3 | impl-reviews/B02.md | 0 P1 / 3 P2；实测 5/4 人，底部 2 班 9 人；已归档 |
 | B03a | W2 | 草稿/定时/附件落库 + 老师端 UI | passed | b839890 | 1cbabcb | impl-reviews/B03a.md | 0 P1 / 4 P2；HTTP 34/34；UI 复验延后 V01（IDE 登录失效） |
-| B03b | W2 | 定时发布 worker 扫表 | in_progress | 96fc2fc | - | - | OpenSpec `notice-scheduled-publish` |
+| B03b | W2 | 定时发布 worker 扫表 | passed | 96fc2fc | 1fa2128 | impl-reviews/B03b.md | 0 P1 / 4 P2；并发仅 1 次成功；已归档 |
 | B04 | W1* | 点赞落库复核 + 两端防连点 | passed | e3b39cc | 8011f8d | impl-reviews/B04.md | 0 P1 / 5 P2；原症状已由 97f4dd8f 修复，本次修并发 1062 |
 | B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | passed | 0c63e14 | ee5dcb5 | impl-reviews/B05.md | 0 P1 / 6 P2 |
 | P05 | W3 | 家长通知列表/详情 04/05 | pending | - | - | - | 依赖 F0 |
