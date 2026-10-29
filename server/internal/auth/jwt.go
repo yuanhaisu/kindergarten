@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type AccessClaims struct {
@@ -25,6 +26,8 @@ func SignAccess(secret []byte, userID string, roles []string, kindergartenID uin
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    "kindergarten-api",
 			Subject:   userID,
+			// 每次签发都换新 jti：登出只能吊销某一枚 token，不能按用户或前缀误伤。
+			ID: uuid.NewString(),
 		},
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

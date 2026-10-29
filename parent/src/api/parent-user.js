@@ -1,7 +1,11 @@
 import { requestWithAuth } from "@/api/http"
+import { getRefreshToken } from "@/utils/auth"
 
 /**
- * 退出登录（使当前 access token 失效）。
+ * 退出登录（使当前 access token 与 refresh token 都失效）。
+ *
+ * 必须带 refresh_token：服务端只凭 access token 找不到对应的 refresh 会话，
+ * 不带的话登出后仍能拿 refresh token 换新 access。
  *
  * silent：设置页在确认退出后无论请求成败都会清本地并回登录页，失败提示由页面
  * 自己给；交给 http.js 弹全局 toast 会和页面的「已清除本地登录」提示互相覆盖。
@@ -10,7 +14,7 @@ export function logout() {
   return requestWithAuth({
     url: "/auth/logout",
     method: "POST",
-    data: {},
+    data: { refresh_token: getRefreshToken() },
     silent: true
   })
 }

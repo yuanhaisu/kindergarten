@@ -1,12 +1,16 @@
 package handler
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/service"
 	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
 )
@@ -143,22 +147,59 @@ func (h *Handler) Refresh(c *gin.Context) {
 
 	result, err := h.authSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		response.ErrUnauthorized(c, "刷新令牌无效或已过期")
+		switch {
+		case errors.Is(err, service.ErrTokenRevoked):
+			response.ErrUnauthorized(c, "登录状态已失效，请重新登录")
+		case errors.Is(err, service.ErrAuthStorageUnavailable):
+			log.L(c.Request.Context()).Error("refresh token blacklist check failed", "err", err)
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
+		default:
+			response.ErrUnauthorized(c, "刷新令牌无效或已过期")
+		}
 		return
 	}
 
 	response.OK(c, result)
 }
 
+type logoutReq struct {
+	// 可选：客户端带上 refresh token 时一并吊销，否则登出后仍能拿它换新 access。
+	RefreshToken string `json:"refresh_token"`
+}
+
+// Logout 吊销当前 access token；请求体带 refresh_token 时连同 refresh 会话一起吊销。
+// 吊销存储写失败必须报错——返回 200 会让客户端以为服务端已经失效了 token。
 func (h *Handler) Logout(c *gin.Context) {
-	header := c.GetHeader("Authorization")
 	const prefix = "Bearer "
-	if len(header) > len(prefix) && strings.HasPrefix(header, prefix) {
-		tokenStr := header[len(prefix):]
-		_ = h.authSvc.Logout(c.Request.Context(), tokenStr)
+	header := c.GetHeader("Authorization")
+	if len(header) <= len(prefix) || !strings.HasPrefix(header, prefix) {
+		response.ErrUnauthorized(c, "缺少认证凭证")
+		return
+	}
+
+	var req logoutReq
+	// 允许空 body：客户端只发 `{}`，但也不该因为没带 refresh token 就失败。
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+
+	if err := h.authSvc.Logout(c.Request.Context(), header[len(prefix):], req.RefreshToken); err != nil {
+		log.L(c.Request.Context()).Error("logout revoke failed", "err", err)
+		response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
+		return
 	}
 
 	response.JSON(c, http.StatusOK, response.Envelope{Code: 0, Message: "success", Data: gin.H{}})
+}
+
+// TokenRevoker 暴露吊销存储给路由装配。走 Handler 而不是改 NewRouter 签名，
+// 是为了不触发 wire_gen.go 重新生成（本次改动不拥有 DI 生成物）。
+func (h *Handler) TokenRevoker() auth.TokenRevoker {
+	if h == nil || h.authSvc == nil {
+		return nil
+	}
+	return h.authSvc.TokenRevoker()
 }
 
 type bindInviteReq struct {

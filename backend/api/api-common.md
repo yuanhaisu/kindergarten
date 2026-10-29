@@ -212,11 +212,13 @@
 
 ### POST `/auth/logout`
 
-> 退出登录（使当前 token 失效）
+> 退出登录：吊销当前 access token；`refresh_token` 可选，携带时一并吊销该 refresh 会话。
 
 ```json
 // Request
-{}
+{
+  "refresh_token": "<登录返回的 refresh_token>"  // 可选；不带则只吊销 access token
+}
 
 // Response
 {}

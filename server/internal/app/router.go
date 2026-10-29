@@ -7,6 +7,7 @@ import (
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 
+	"kindergarten-server/internal/auth"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/middleware"
 )
@@ -33,10 +34,11 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 
 		// 需要认证的接口
 		authed := v1.Group("")
-		authed.Use(middleware.AuthJWT([]byte(secret)))
+		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker))
 		authed.Use(middleware.CasbinRBAC(e))
 		{
-			// 退出登�?			authed.POST("/auth/logout", h.inner.Logout)
+			// 退出登录
+			authed.POST("/auth/logout", h.inner.Logout)
 
 			// 文件上传
 			authed.POST("/common/upload", h.inner.Upload)
@@ -570,8 +572,10 @@ func registerDoctorRoutes(dg *gin.RouterGroup, h *handler.Handler) {
 
 type AppHandler struct {
 	inner *handler.Handler
+	// tokenRevoker 由认证服务提供，AuthJWT 用它校验登出黑名单；两处必须是同一份存储。
+	tokenRevoker auth.TokenRevoker
 }
 
 func NewAppHandler(h *handler.Handler) *AppHandler {
-	return &AppHandler{inner: h}
+	return &AppHandler{inner: h, tokenRevoker: h.TokenRevoker()}
 }

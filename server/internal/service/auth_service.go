@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -55,6 +56,7 @@ type AuthService struct {
 	invitationRepo InvitationRepository
 	adminPerms     AdminPermissionResolver
 	rdb            *redis.Client
+	revoker        auth.TokenRevoker
 	wx             *auth.WeChatClient
 	secret         []byte
 	atTTL          time.Duration
@@ -80,6 +82,7 @@ func NewAuthService(
 		invitationRepo: invitationRepo,
 		adminPerms:     adminPerms,
 		rdb:            rdb,
+		revoker:        auth.NewTokenRevoker(rdb),
 		wx:             wx,
 		secret:         secret,
 		atTTL:          atTTL,
@@ -430,8 +433,26 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 	return s.issueTokensFromRoles(ctx, user, roles)
 }
 
+// ErrTokenRevoked 表示 token 已被登出吊销；ErrAuthStorageUnavailable 表示吊销存储
+// （Redis）不可用。两者由 handler 映射成 401 / 503，不能混进「token 无效」。
+var (
+	ErrTokenRevoked           = errors.New("TOKEN_REVOKED")
+	ErrAuthStorageUnavailable = errors.New("AUTH_STORAGE_UNAVAILABLE")
+)
+
 // RefreshToken 刷新令牌
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*LoginResult, error) {
+	if s.revoker == nil {
+		return nil, fmt.Errorf("%w: token revoker not configured", ErrAuthStorageUnavailable)
+	}
+	revoked, err := s.revoker.Revoked(ctx, refreshToken)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
+	}
+	if revoked {
+		return nil, ErrTokenRevoked
+	}
+
 	userIDStr, err := auth.ConsumeRefresh(ctx, s.rdb, refreshToken)
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh token")
@@ -453,18 +474,45 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 	return s.issueTokens(ctx, user)
 }
 
-// Logout 退出登录，将当前 access token 加入黑名单
-func (s *AuthService) Logout(ctx context.Context, tokenStr string) error {
+// Logout 退出登录：吊销当前 access token；请求带 refresh token 时一并吊销。
+func (s *AuthService) Logout(ctx context.Context, tokenStr, refreshToken string) error {
+	if s.revoker == nil {
+		return fmt.Errorf("token revoker not configured")
+	}
 	claims, err := auth.ParseAccess(s.secret, tokenStr)
 	if err != nil {
+		// 中间件已校验过签名，走到这里说明调用路径异常；没有可吊销的声明，不谎报失败。
 		return nil
 	}
-	ttl := time.Until(claims.ExpiresAt.Time)
-	if ttl > 0 {
-		key := fmt.Sprintf("token_blacklist:%s", tokenStr[:16])
-		s.rdb.Set(ctx, key, "1", ttl)
+
+	if claims.ID != "" && claims.ExpiresAt != nil {
+		ttl := time.Until(claims.ExpiresAt.Time) + time.Second
+		if err := s.revoker.Revoke(ctx, claims.ID, ttl); err != nil {
+			return fmt.Errorf("revoke access token: %w", err)
+		}
+	}
+
+	if refreshToken != "" {
+		ttl, err := auth.RefreshRemainingTTL(ctx, s.rdb, refreshToken)
+		if err != nil {
+			return fmt.Errorf("read refresh token ttl: %w", err)
+		}
+		// 已经消费/过期的 refresh token 没有可吊销的会话，不必写黑名单。
+		if ttl > 0 {
+			if err := s.revoker.Revoke(ctx, refreshToken, ttl+time.Second); err != nil {
+				return fmt.Errorf("revoke refresh token: %w", err)
+			}
+		}
 	}
 	return nil
+}
+
+// TokenRevoker 暴露吊销存储给路由装配：AuthJWT 必须与签发方共用同一份黑名单。
+func (s *AuthService) TokenRevoker() auth.TokenRevoker {
+	if s == nil {
+		return nil
+	}
+	return s.revoker
 }
 
 func maskPhone(phone string) string {
