@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**B09 worker**
+- 下一动作：**T01（新会话接手）**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -32,7 +32,7 @@
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | passed | 49f036d | f8a1eda | impl-reviews/P03.md | 0 P1 / 7 P2；三页/三态/9 关系/入口 |
 | B08 | W1* | 家长设置开关持久化（6 通知 + 2 隐私） | passed | 4a8bbb9 | f9f841e | impl-reviews/B08.md | 0 P1 / 5 P2；默认/部分更新/隔离 |
 | P04 | W1 | 家长我的+设置 27/25 | passed | 86c56c8 | e3f315d | impl-reviews/P04.md | 0 P1 / 5 P2；logout 路由待 B09 |
-| B09 | W1* | 恢复 `/auth/logout` 路由 | briefed | e3f315d | - | - | P04 遗留 |
+| B09 | W1* | 恢复 `/auth/logout` + token 吊销（B09-full） | passed | e3f315d | 9433a9e | impl-reviews/B09.md | 0 P1 / 7 P2；access/refresh 吊销闭环 |
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | pending | - | - | - | 依赖 F0；保留既有发布工作台行为 |
 | T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0 |
 | B01 | W2 | 成长报告四格统计 | pending | - | - | - | OpenSpec；页面 12 已存在 |
@@ -67,28 +67,29 @@
 ```json
 {
   "slice_id": "B09",
-  "phase": "briefed",
-  "commit_sha": null,
-  "next_action": "spawn B09 worker",
-  "updated_at": "2026-10-29T12:20:00+08:00"
+  "phase": "committed",
+  "commit_sha": "9433a9e46416516142ca1661e34b3964bec32890",
+  "next_action": "T01 brief in a fresh session",
+  "updated_at": "2026-10-29T14:05:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-29T11:05+08:00
+### Handoff 2026-10-29T14:05+08:00
 
-- 当前切片：P03 已 passed/committed；下一片 **P04 家长我的 + 设置**
-- 已完成：W0（F0、X00）；W1 前置（B04、B05、B06、B07、S01）；P01、P02、P03
-- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 P04 行，写 `.claude/runs/P04/brief.md`，派 `slice-worker`
+- 当前切片：W1 家长端页面全部完成；下一片 **T01 老师成长三页**
+- 已完成：W0（F0、X00）；B04–B09；S01；P01–P04
+- 下一步：新会话读 `PROGRESS.md` + `IMPLEMENTATION-PLAN.md` 的 T01 行，写 `.claude/runs/T01/brief.md`，派 `slice-worker`
 - 必须读：
-  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P04 行
+  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` T01 行
   - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
-  - `parent/27-profile/`、`25-settings/`
-  - `_shared/reviews/parent-27-profile.md`、`parent-25-settings.md`
-  - S01 commit `48cb569`（原生底栏）、P03 commit `f8a1eda`（接送页模式）、`utils/relation.js`
-- 已知阻塞：无。后端 `8080` PID 45860 运行（可能被低内存停）；DevTools 锁空闲。
-- P03 带入 P04 的 P2：指定查询静默失败、create 表单被 overview 门控、关系面板滚动锁、index 刷新失败无提示、后端 `student_id` 回退观察、设计保留 P2。
+  - `teacher/04-growth-index/`、`05-growth-create/`、`06-growth-detail/`
+  - `_shared/reviews/teacher-04-growth-index.md`、`teacher-05-growth-create.md`、`teacher-06-growth-detail.md`
+  - F0 commit `cabe031`（AppIcon/PageShell）、P02 commit `ecd7a05`（成长三页模式，家长端可参考）、B09 commit `9433a9e`（auth logout）
+- 老师端无 tabBar；4 个常驻页仍用 BottomNav；原生导航栏；不要引入 `switchTab`。
+- 已知阻塞：无。后端 `8080` PID 30552 运行（可能被低内存停）；DevTools 锁空闲。
+- B09 带入的 P2：每请求 Redis EXISTS、Redis 故障 503、旧无 jti token 过期前不可吊销、teacher/admin 不调用 logout、refresh 归属未校验、E2E 绕过 Casbin。
 - 上下文：主会话已约 67%，按约定 handoff；新会话只读上述文件，不要重读旧对话。
 
 ## 最近完成
@@ -106,3 +107,4 @@
 | P03 | f8a1eda | 2026-10-29 | 0 P1 / 7 P2；接送三页/三态/9 关系/入口 |
 | B08 | f9f841e | 2026-10-29 | 0 P1 / 5 P2；设置 8 键持久化 |
 | P04 | e3f315d | 2026-10-29 | 0 P1 / 5 P2；我的/设置/消息入口/退出 |
+| B09 | 9433a9e | 2026-10-29 | 0 P1 / 7 P2；logout + access/refresh 吊销 |
