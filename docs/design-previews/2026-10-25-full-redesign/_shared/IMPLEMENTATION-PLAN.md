@@ -60,7 +60,7 @@ D01 在 W3 完成后做；D02 每片顺手修，W7 终检。
 | P01 | W1 | 家长 01-home → `pages/index/index.vue` | 1 | M | F0、B05 | 首页四入口、今日卡片、tabBar |
 | P02 | W1 | 家长 09/10/11 → `growth/index`、`growth/detail`、`growth/album` | 3 | L | F0、B04、B06 | 点赞态以 B04 结论为准；复用 report 的日期/维度处理 |
 | P03 | W1 | 家长 13/15/16 → `pickup/index`、`pickup/authorized`、`pickup/authorized-create` | 3 | L | F0、B07 | 复用 qrcode 的关系映射；D01 前允许先复制 |
-| P04 | W1 | 家长 27/25 → `profile/index`、`settings/index` | 2 | M | F0 | 设置项、退出登录 |
+| P04 | W1 | 家长 27/25 → `profile/index`、`settings/index` | 2 | M | F0、B08 | 设置项、退出登录 |
 | T01 | W1 | 老师 04/05/06 → `growth/index`、`growth/create`、`growth/detail` | 3 | L | F0 | 与既有「发布工作台」改造合并，不得回退已验证行为 |
 | T02 | W1 | 老师 07/08 → `pickup/index`、`pickup/records` | 2 | M | F0 | 接送码、记录状态 |
 | B01 | W2 | 成长报告四格统计 | - | M | 无（页面 12 已存在） | Go service + `backend/api/api-parent/` + `report.vue`；触点 ≥3 层，走 OpenSpec |
@@ -70,6 +70,7 @@ D01 在 W3 完成后做；D02 每片顺手修，W7 终检。
 | B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | - | S | 无 | **提前到 P01 之前**；修复多孩串数据 |
 | B06 | W1* | 成长相册 groups/student_id + 评论 replies/relation | - | M | 无 | **提前到 P02 之前**；对齐 04-growth 契约 |
 | B07 | W1* | 接送记录/授权人按孩子过滤 + 关系枚举 9 值 | - | M | 无 | **提前到 P03 之前**；多孩过滤 + 关系口径 |
+| B08 | W1* | 设置开关持久化（6 通知 + 2 隐私） | - | M | 无 | **提前到 P04 之前**；替换硬编码/空实现 |
 | P05 | W3 | 家长 04/05 → `notice/index`、`notice/detail` | 2 | M | F0 | 已读/未读、确认回执 |
 | P06 | W3 | 家长 06/07/08 → `leave/index`、`leave/create`、`leave/detail` | 3 | L | F0 | 与老师请假 T04 共用类型映射 |
 | P07 | W3 | 家长 17/18/19 → `tasks/index`、`tasks/detail`、`tasks/wall` | 3 | L | F0 | 打卡态、任务墙 |
@@ -92,7 +93,7 @@ D01 在 W3 完成后做；D02 每片顺手修，W7 终检。
 | D01 | W7 | 共享逻辑收口：StateBlock / relationLabels / normalize / PageShell | - | M | W3 完成 | 只改 `shared-ui/` + 引用页 |
 | D02 | W7 | token/样式债清理：裸 rpx、硬编码色、reduced-motion | - | M | 全部页面片 | 每片顺手修，本片终检 |
 
-合计 36 片（含后补的 B05、B06、B07），覆盖 46 个剩余页面，无重复、无遗漏。
+合计 37 片（含后补的 B05、B06、B07、B08），覆盖 46 个剩余页面，无重复、无遗漏。
 
 > Shell 修复 S01（原生 custom-tab-bar）不在 34 个页面切片内，但先于 P01；见 `SHELL-DECISION.md`。
 
@@ -162,7 +163,7 @@ D01 在 W3 完成后做；D02 每片顺手修，W7 终检。
 ## 7. 建议执行节奏
 
 1. 先做 F0 + X00，一次把基线与边界决策定掉。
-2. W1 按 B04 → B05 → S01 → P01 → B06 → P02 → B07 → P03 → P04 → T01 → T02 顺序做（B04/B06 前置 P02，B05 前置 P01，B07 前置 P03）；每片一个 commit。
+2. W1 按 B04 → B05 → S01 → P01 → B06 → P02 → B07 → P03 → B08 → P04 → T01 → T02 顺序做（B04/B06 前置 P02，B05 前置 P01，B07 前置 P03，B08 前置 P04）；每片一个 commit。
 3. W2 后端片可与 W1 交错，但 B03 需先走 OpenSpec。
 4. 每波结束跑一次：两端 build、`check-tokens`、本波新增页面遍历、真实交互抽检。
 5. W3 完成后再做 D01，避免过早抽象。
