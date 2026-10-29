@@ -41,7 +41,7 @@
 | P04 | W1 | 家长我的+设置 27/25 | passed | 86c56c8 | e3f315d | impl-reviews/P04.md | 0 P1 / 5 P2；logout 路由待 B09 |
 | B09 | W1* | 恢复 `/auth/logout` + token 吊销（B09-full） | passed | e3f315d | 9433a9e | impl-reviews/B09.md | 0 P1 / 7 P2；access/refresh 吊销闭环 |
 | B10 | W1* | 老师评论补齐：relation/student_name/likes_count/parent_id + 回复 | passed | f9df5df | fb3dba6 | impl-reviews/B10.md | 0 P1 / 5 P2；嵌套评论/关系标签/评论赞幂等 |
-| T01 | W1 | 老师成长列表/创建/详情 04/05/06 | in_progress | fb3dba6 | - | - | 依赖 F0、B10；保留既有发布工作台行为 |
+| T01 | W1 | 老师成长列表/创建/详情 04/05/06 | passed | fb3dba6 | 1f78208 | impl-reviews/T01.md | 0 P1 / 7 P2；三页四态+真实交互，token 175 |
 | T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0 |
 | B01 | W2 | 成长报告四格统计 | pending | - | - | - | OpenSpec；页面 12 已存在 |
 | B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
@@ -74,31 +74,31 @@
 
 ```json
 {
-  "slice_id": "B10",
+  "slice_id": "T01",
   "phase": "committed",
-  "commit_sha": "fb3dba6",
-  "next_action": "T01 worker in progress",
-  "updated_at": "2026-10-29T15:05:00+08:00"
+  "commit_sha": "1f78208",
+  "next_action": "T02 brief",
+  "updated_at": "2026-10-29T16:12:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-29T15:05+08:00
+### Handoff 2026-10-29T16:12+08:00
 
-- 当前切片：**T01 老师成长三页**（worker 执行中，base `fb3dba6`）
-- 已完成：W0（F0、X00）；B04–B10；S01；P01–P04
-- 下一步：读 `.claude/runs/T01/brief.md` 与 `checkpoint.json`；worker 完成后派全新 `slice-supervisor`
+- 当前切片：**T02 老师接送两页**（`pickup/index`、`pickup/records`，设计 07/08）
+- 已完成：W0（F0、X00）；B04–B10；S01；P01–P04；T01
+- 下一步：读 `IMPLEMENTATION-PLAN.md` T02 行、设计 `teacher/07-pickup-index/`、`08-pickup-records/`、对应 reviews；写 `.claude/runs/T02/brief.md`，派 `slice-worker` → 全新 `slice-supervisor`
 - 必须读：
-  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` T01 行
+  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` T02 行
   - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
-  - `teacher/04-growth-index/`、`05-growth-create/`、`06-growth-detail/`
-  - `_shared/reviews/teacher-04-growth-index.md`、`teacher-05-growth-create.md`、`teacher-06-growth-detail.md`
-  - `_shared/impl-reviews/B10.md`（评论契约）
-  - P02 commit `ecd7a05`（家长端同构三页，可参考）
-- T01 四项决策：班级筛选静态化；全班记录只显示同步状态；仅照片；评论按 B10 做全。
+  - `teacher/07-pickup-index/`、`08-pickup-records/`
+  - `_shared/reviews/teacher-07-*.md`、`teacher-08-*.md`
+  - `_shared/impl-reviews/T01.md`（同端外壳/四态/时间工具先例）
+  - P03 commit `f8a1eda`（家长端接送三页，可参考）
 - 老师端无 tabBar；4 个常驻页仍用 BottomNav；原生导航栏；不要引入 `switchTab`。
-- 已知阻塞：无。后端 `8080` PID 11968（B10 新二进制，supervisor 起）；DevTools 锁已释放。
+- 已知阻塞：无。后端 `8080` 运行中（T01 supervisor 已恢复）；DevTools 锁已释放。
+- T01 带入 P2：详情两处小节计数被 WXML 丢弃、创建同步开关无效（后端零值省略）、表现标签空字典不回退、授徽章守卫不可达、大合影多按钮、视觉 1–2px、15 分钟 token 无 refresh 拦截。
 - B10 带入 P2：契约写 400 实为 422、relation 按家长关联判定、可见范围谓词重复、GET 契约残留分页提示。
 - B09 带入的 P2：每请求 Redis EXISTS、Redis 故障 503、旧无 jti token 过期前不可吊销、teacher/admin 不调用 logout、refresh 归属未校验、E2E 绕过 Casbin。
 
@@ -118,3 +118,5 @@
 | B08 | f9f841e | 2026-10-29 | 0 P1 / 5 P2；设置 8 键持久化 |
 | P04 | e3f315d | 2026-10-29 | 0 P1 / 5 P2；我的/设置/消息入口/退出 |
 | B09 | 9433a9e | 2026-10-29 | 0 P1 / 7 P2；logout + access/refresh 吊销 |
+| B10 | fb3dba6 | 2026-10-29 | 0 P1 / 5 P2；老师评论嵌套/关系/赞 |
+| T01 | 1f78208 | 2026-10-29 | 0 P1 / 7 P2；老师成长三页，token 175 |
