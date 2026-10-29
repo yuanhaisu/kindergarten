@@ -25,6 +25,13 @@
 - 全班记录「相关 N 位小朋友」：后端无该口径，**全班记录只显示同步状态**；个体记录保留相关人数。
 - 创建页「照片 / 视频」：**仅照片**，不渲染视频入口，差异记录待后续切片。
 
+## T02 相关决策（2026-10-29）
+
+- 授权接送人：**先做 B11**，返回 `authorized_person_list[{name, relation, relation_label}]`（保留旧字符串兼容）。
+- 概览「异常」：用后端 `overview.abnormal`（今日异常记录数），不改口径。
+- 扫码核验失败：**通用失败弹层 + 后端 message**，不显示学生姓名/班级。
+- 例外登记语义：**后端改为同时置异常**（`is_authorized_override` → 同时写 abnormal/原因）。
+
 ## 切片状态
 
 | ID | 波次 | 范围 | 状态 | Base | Commit | Review | 备注 |
@@ -42,7 +49,8 @@
 | B09 | W1* | 恢复 `/auth/logout` + token 吊销（B09-full） | passed | e3f315d | 9433a9e | impl-reviews/B09.md | 0 P1 / 7 P2；access/refresh 吊销闭环 |
 | B10 | W1* | 老师评论补齐：relation/student_name/likes_count/parent_id + 回复 | passed | f9df5df | fb3dba6 | impl-reviews/B10.md | 0 P1 / 5 P2；嵌套评论/关系标签/评论赞幂等 |
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | passed | fb3dba6 | 1f78208 | impl-reviews/T01.md | 0 P1 / 7 P2；三页四态+真实交互，token 175 |
-| T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0 |
+| B11 | W1* | 老师接送：授权人结构 + 例外登记同时置异常 | pending | - | - | - | 由 T02 决策派生 |
+| T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0、B11 |
 | B01 | W2 | 成长报告四格统计 | pending | - | - | - | OpenSpec；页面 12 已存在 |
 | B02 | W2 | 班级家长人数 | pending | - | - | - | OpenSpec；页面 03 已存在 |
 | B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
