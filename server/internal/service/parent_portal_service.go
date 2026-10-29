@@ -1469,12 +1469,12 @@ type commentAuthor struct {
 	StudentName string
 }
 
-// commentAuthorExtras 批量解析评论作者与孩子的家长关系。
+// commentAuthorExtras 批量解析评论作者与孩子的家长关系。老师端与家长端共用。
 //
 // 一个家长可能关联多个孩子，关系必须取「与这条记录相关」的那个：个体记录优先取
 // 记录点名到的孩子，全班记录优先取同班孩子，避免把 B 班孩子的称呼安到 A 班记录上。
-func (s *ParentPortalService) commentAuthorExtras(
-	ctx context.Context, kgID uint64, log *domain.GrowthDailyLog, userIDs []uint64,
+func commentAuthorExtras(
+	ctx context.Context, db *gorm.DB, kgID uint64, log *domain.GrowthDailyLog, userIDs []uint64,
 ) (map[uint64]commentAuthor, error) {
 	extras := make(map[uint64]commentAuthor, len(userIDs))
 	if len(userIDs) == 0 {
@@ -1483,7 +1483,7 @@ func (s *ParentPortalService) commentAuthorExtras(
 	linked := make(map[uint64]bool)
 	if log.TargetType == 2 {
 		var links []domain.GrowthLogStudent
-		if err := s.db.WithContext(ctx).Where("log_id = ?", log.ID).Find(&links).Error; err != nil {
+		if err := db.WithContext(ctx).Where("log_id = ?", log.ID).Find(&links).Error; err != nil {
 			return nil, err
 		}
 		for _, l := range links {
@@ -1497,7 +1497,7 @@ func (s *ParentPortalService) commentAuthorExtras(
 		ClassID     uint64
 		Relation    string
 	}
-	if err := s.db.WithContext(ctx).Table("student_parents").
+	if err := db.WithContext(ctx).Table("student_parents").
 		Select("student_parents.user_id, student_parents.student_id, students.name AS student_name, students.class_id, student_parents.relation").
 		Joins("JOIN students ON students.id = student_parents.student_id").
 		Where("student_parents.deleted_at IS NULL AND students.deleted_at IS NULL").
@@ -1544,6 +1544,42 @@ func topAncestorID(c domain.GrowthComment, byID map[uint64]domain.GrowthComment)
 	return c.ID
 }
 
+// buildCommentTree 把平铺的评论行组装成「顶层 + 一层 replies」，老师端与家长端共用。
+// 多级回复归属到最近的顶层祖先，否则只渲染一层的客户端会把它当孤儿丢掉；
+// 父评论不在本记录（被删/脏数据）时提升为顶层，宁可位置不准也不丢评论。
+func buildCommentTree(rows []domain.GrowthComment, build func(domain.GrowthComment) map[string]any) []map[string]any {
+	byID := make(map[uint64]domain.GrowthComment, len(rows))
+	for _, r := range rows {
+		byID[r.ID] = r
+	}
+	topIndex := make(map[uint64]int, len(rows))
+	list := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		if r.ParentID != nil {
+			continue
+		}
+		topIndex[r.ID] = len(list)
+		item := build(r)
+		item["replies"] = make([]map[string]any, 0)
+		list = append(list, item)
+	}
+	orphans := make([]map[string]any, 0)
+	for _, r := range rows {
+		if r.ParentID == nil {
+			continue
+		}
+		if idx, ok := topIndex[topAncestorID(r, byID)]; ok {
+			item := list[idx]
+			item["replies"] = append(item["replies"].([]map[string]any), build(r))
+			continue
+		}
+		item := build(r)
+		item["replies"] = make([]map[string]any, 0)
+		orphans = append(orphans, item)
+	}
+	return append(list, orphans...)
+}
+
 func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *ParentPortalContext, logID uint64) (map[string]any, error) {
 	log, err := s.verifyGrowthAccess(ctx, pc, logID)
 	if err != nil {
@@ -1563,7 +1599,7 @@ func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *Parent
 			userIDs = append(userIDs, r.UserID)
 		}
 	}
-	extras, err := s.commentAuthorExtras(ctx, pc.KindergartenID, log, userIDs)
+	extras, err := commentAuthorExtras(ctx, s.db, pc.KindergartenID, log, userIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1590,37 +1626,7 @@ func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *Parent
 
 	// 顶层 + 一层 replies（契约如此）。多级回复归属到最近的顶层祖先，
 	// 否则只渲染一层的家长端会把它当孤儿丢掉。
-	byID := make(map[uint64]domain.GrowthComment, len(rows))
-	for _, r := range rows {
-		byID[r.ID] = r
-	}
-	topIndex := make(map[uint64]int, len(rows))
-	list := make([]map[string]any, 0, len(rows))
-	for _, r := range rows {
-		if r.ParentID != nil {
-			continue
-		}
-		topIndex[r.ID] = len(list)
-		item := build(r)
-		item["replies"] = make([]map[string]any, 0)
-		list = append(list, item)
-	}
-	orphans := make([]map[string]any, 0)
-	for _, r := range rows {
-		if r.ParentID == nil {
-			continue
-		}
-		if idx, ok := topIndex[topAncestorID(r, byID)]; ok {
-			item := list[idx]
-			item["replies"] = append(item["replies"].([]map[string]any), build(r))
-			continue
-		}
-		// 父评论不在本记录（被删/脏数据）：提升为顶层，宁可位置不准也不丢评论。
-		item := build(r)
-		item["replies"] = make([]map[string]any, 0)
-		orphans = append(orphans, item)
-	}
-	list = append(list, orphans...)
+	list := buildCommentTree(rows, build)
 	return map[string]any{"list": list, "total": len(rows)}, nil
 }
 

@@ -688,7 +688,8 @@ func (h *Handler) TeacherGrowthComments(c *gin.Context) {
 }
 
 type teacherCommentReq struct {
-	Content string `json:"content"`
+	Content  string  `json:"content"`
+	ParentID *uint64 `json:"parent_id"`
 }
 
 func (h *Handler) TeacherCreateGrowthComment(c *gin.Context) {
@@ -705,12 +706,48 @@ func (h *Handler) TeacherCreateGrowthComment(c *gin.Context) {
 		response.ErrValidation(c, err.Error())
 		return
 	}
-	data, err := h.teacherPortalSvc.CreateGrowthComment(c.Request.Context(), tc, id, req.Content)
+	data, err := h.teacherPortalSvc.CreateGrowthComment(c.Request.Context(), tc, id, req.Content, req.ParentID)
 	if err != nil {
 		teacherPortalErr(c, err, "评论失败")
 		return
 	}
 	response.Created(c, data)
+}
+
+// TeacherLikeGrowthComment 点赞评论
+func (h *Handler) TeacherLikeGrowthComment(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.LikeGrowthComment(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "点赞失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherUnlikeGrowthComment 取消点赞评论
+func (h *Handler) TeacherUnlikeGrowthComment(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.UnlikeGrowthComment(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "取消点赞失败")
+		return
+	}
+	response.OK(c, data)
 }
 
 func (h *Handler) TeacherGrowthLikes(c *gin.Context) {

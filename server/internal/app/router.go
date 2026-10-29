@@ -124,6 +124,8 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 		growth.DELETE("/logs/:id", h.TeacherDeleteGrowthLog)
 		growth.GET("/logs/:id/comments", h.TeacherGrowthComments)
 		growth.POST("/logs/:id/comments", h.TeacherCreateGrowthComment)
+		growth.POST("/comments/:id/like", h.TeacherLikeGrowthComment)
+		growth.DELETE("/comments/:id/like", h.TeacherUnlikeGrowthComment)
 		growth.GET("/logs/:id/likes", h.TeacherGrowthLikes)
 		growth.POST("/logs/:id/like", h.TeacherGrowthLike)
 		growth.DELETE("/logs/:id/like", h.TeacherGrowthUnlike)

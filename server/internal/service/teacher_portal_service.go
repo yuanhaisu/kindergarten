@@ -1775,40 +1775,204 @@ func (s *TeacherPortalService) DeleteGrowthLog(ctx context.Context, tc *TeacherP
 	return nil
 }
 
+// growthLogRow 取记录行，施加与 GetGrowthLog 相同的可见范围（园所 + 班级）。
+// 评论列表只需要记录的归属与 target_type 来解析家长称呼，不必拉全量媒体与点名。
+func (s *TeacherPortalService) growthLogRow(ctx context.Context, tc *TeacherPortalContext, id uint64) (*domain.GrowthDailyLog, error) {
+	var r domain.GrowthDailyLog
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND class_id = ?", id, tc.KindergartenID, tc.ClassID).
+		First(&r).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTeacherNotFound
+		}
+		return nil, err
+	}
+	return &r, nil
+}
+
+// growthCommentRow 取评论，并沿 log 校验其所属记录在本教师班级内。
+func (s *TeacherPortalService) growthCommentRow(ctx context.Context, tc *TeacherPortalContext, id uint64) (*domain.GrowthComment, error) {
+	var c domain.GrowthComment
+	if err := s.db.WithContext(ctx).
+		Joins("JOIN growth_daily_logs ON growth_daily_logs.id = growth_comments.log_id").
+		Where("growth_comments.id = ? AND growth_daily_logs.kindergarten_id = ? AND growth_daily_logs.class_id = ?", id, tc.KindergartenID, tc.ClassID).
+		Where("growth_daily_logs.deleted_at IS NULL").
+		Take(&c).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTeacherNotFound
+		}
+		return nil, err
+	}
+	return &c, nil
+}
+
+// growthCommentLikeStats 统计一批评论的点赞数，并标出当前用户赞过哪些。
+func (s *TeacherPortalService) growthCommentLikeStats(
+	ctx context.Context, commentIDs []uint64, userID uint64,
+) (map[uint64]int64, map[uint64]bool, error) {
+	counts := make(map[uint64]int64, len(commentIDs))
+	liked := make(map[uint64]bool, len(commentIDs))
+	if len(commentIDs) == 0 {
+		return counts, liked, nil
+	}
+	var rows []struct {
+		CommentID uint64
+		Cnt       int64
+	}
+	if err := s.db.WithContext(ctx).Model(&domain.GrowthCommentLike{}).
+		Select("comment_id, COUNT(*) AS cnt").Where("comment_id IN ?", commentIDs).
+		Group("comment_id").Scan(&rows).Error; err != nil {
+		return nil, nil, err
+	}
+	for _, r := range rows {
+		counts[r.CommentID] = r.Cnt
+	}
+	var mine []uint64
+	if err := s.db.WithContext(ctx).Model(&domain.GrowthCommentLike{}).
+		Where("comment_id IN ? AND user_id = ?", commentIDs, userID).
+		Pluck("comment_id", &mine).Error; err != nil {
+		return nil, nil, err
+	}
+	for _, cid := range mine {
+		liked[cid] = true
+	}
+	return counts, liked, nil
+}
+
 func (s *TeacherPortalService) GrowthComments(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {
-	if _, err := s.GetGrowthLog(ctx, tc, id); err != nil {
+	log, err := s.growthLogRow(ctx, tc, id)
+	if err != nil {
 		return nil, err
 	}
 	var rows []domain.GrowthComment
-	if err := s.db.WithContext(ctx).Preload("User").Where("log_id = ?", id).Order("created_at ASC").Find(&rows).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("User").Where("log_id = ?", id).
+		Order("created_at ASC, id ASC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	list := make([]map[string]any, 0, len(rows))
+
+	userIDs := make([]uint64, 0, len(rows))
+	commentIDs := make([]uint64, 0, len(rows))
+	seenUser := make(map[uint64]bool, len(rows))
 	for _, r := range rows {
+		commentIDs = append(commentIDs, r.ID)
+		if !seenUser[r.UserID] {
+			seenUser[r.UserID] = true
+			userIDs = append(userIDs, r.UserID)
+		}
+	}
+	extras, err := commentAuthorExtras(ctx, s.db, tc.KindergartenID, log, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	likeCounts, likedByMe, err := s.growthCommentLikeStats(ctx, commentIDs, tc.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	build := func(r domain.GrowthComment) map[string]any {
 		u := map[string]any{}
 		if r.User != nil {
 			u = map[string]any{"id": r.User.ID, "nickname": r.User.Nickname, "avatar": r.User.Avatar}
 		}
-		list = append(list, map[string]any{
-			"id": r.ID, "user": u, "content": r.Content,
-			"parent_id": r.ParentID, "created_at": r.CreatedAt.UTC().Format(time.RFC3339),
-		})
+		// 老师/员工没有 StudentParent 行：按契约省略 relation / student_name，不报错。
+		if ex, ok := extras[r.UserID]; ok && ex.Relation != "" {
+			u["relation"] = ex.Relation
+			if ex.StudentName != "" {
+				u["student_name"] = ex.StudentName
+			}
+		}
+		return map[string]any{
+			"id": r.ID, "user": u, "content": r.Content, "parent_id": r.ParentID,
+			"likes_count": likeCounts[r.ID], "liked": likedByMe[r.ID],
+			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+		}
 	}
-	return map[string]any{"list": list, "total": len(list)}, nil
+	// total 含回复（契约）；list 只放顶层，回复在各自的 replies[] 里。
+	return map[string]any{"list": buildCommentTree(rows, build), "total": len(rows)}, nil
 }
 
-func (s *TeacherPortalService) CreateGrowthComment(ctx context.Context, tc *TeacherPortalContext, id uint64, content string) (map[string]any, error) {
+func (s *TeacherPortalService) CreateGrowthComment(ctx context.Context, tc *TeacherPortalContext, id uint64, content string, parentID *uint64) (map[string]any, error) {
 	if strings.TrimSpace(content) == "" {
 		return nil, ErrTeacherInvalidParams
 	}
-	if _, err := s.GetGrowthLog(ctx, tc, id); err != nil {
+	if _, err := s.growthLogRow(ctx, tc, id); err != nil {
 		return nil, err
 	}
 	row := &domain.GrowthComment{LogID: id, UserID: tc.UserID, Content: strings.TrimSpace(content)}
+	if parentID != nil {
+		// 只允许回复本记录下的顶层评论：契约承诺只有一层回复，多级回复在渲染端会被摊平，
+		// 与其让家长看到错位，不如在写入时拒绝。
+		var parent domain.GrowthComment
+		if err := s.db.WithContext(ctx).Where("id = ?", *parentID).Take(&parent).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, ErrTeacherInvalidParams
+			}
+			return nil, err
+		}
+		if parent.LogID != id || parent.ParentID != nil {
+			return nil, ErrTeacherInvalidParams
+		}
+		row.ParentID = parentID
+	}
 	if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
 		return nil, err
 	}
 	return map[string]any{"id": row.ID, "created_at": row.CreatedAt.UTC().Format(time.RFC3339)}, nil
+}
+
+// LikeGrowthComment 点赞一条评论。重复赞幂等：不报错、不重复计数。
+func (s *TeacherPortalService) LikeGrowthComment(ctx context.Context, tc *TeacherPortalContext, commentID uint64) (map[string]any, error) {
+	if _, err := s.growthCommentRow(ctx, tc, commentID); err != nil {
+		return nil, err
+	}
+	// 与成长记录点赞同因同解（B04）：先 Unscoped 查，软删行复活，查不到才插入。
+	// 并发双击时两个请求都会走插入分支，唯一索引 uk_comment_like_user 只允许一个成功——
+	// 点赞本身幂等，撞键说明对方已写入，不能把错误抛给客户端。
+	var existing domain.GrowthCommentLike
+	err := s.db.WithContext(ctx).Unscoped().
+		Where("comment_id = ? AND user_id = ?", commentID, tc.UserID).Take(&existing).Error
+	switch {
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		if e := s.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).
+			Create(&domain.GrowthCommentLike{CommentID: commentID, UserID: tc.UserID}).Error; e != nil {
+			return nil, e
+		}
+	case err != nil:
+		return nil, err
+	case existing.DeletedAt.Valid:
+		if e := s.db.WithContext(ctx).Unscoped().Model(&existing).
+			Update("deleted_at", nil).Error; e != nil {
+			return nil, e
+		}
+	}
+	return s.growthCommentLikeResult(ctx, commentID, tc.UserID)
+}
+
+// UnlikeGrowthComment 取消点赞。未点过赞时同样成功（幂等）。
+func (s *TeacherPortalService) UnlikeGrowthComment(ctx context.Context, tc *TeacherPortalContext, commentID uint64) (map[string]any, error) {
+	if _, err := s.growthCommentRow(ctx, tc, commentID); err != nil {
+		return nil, err
+	}
+	// 硬删：软删行会占住 uk_comment_like_user，导致再次点赞撞键（见 LikeGrowthComment）。
+	if err := s.db.WithContext(ctx).Unscoped().
+		Where("comment_id = ? AND user_id = ?", commentID, tc.UserID).
+		Delete(&domain.GrowthCommentLike{}).Error; err != nil {
+		return nil, err
+	}
+	return s.growthCommentLikeResult(ctx, commentID, tc.UserID)
+}
+
+func (s *TeacherPortalService) growthCommentLikeResult(ctx context.Context, commentID, userID uint64) (map[string]any, error) {
+	var count, mine int64
+	if err := s.db.WithContext(ctx).Model(&domain.GrowthCommentLike{}).
+		Where("comment_id = ?", commentID).Count(&count).Error; err != nil {
+		return nil, err
+	}
+	if err := s.db.WithContext(ctx).Model(&domain.GrowthCommentLike{}).
+		Where("comment_id = ? AND user_id = ?", commentID, userID).Count(&mine).Error; err != nil {
+		return nil, err
+	}
+	return map[string]any{"liked": mine > 0, "likes_count": count}, nil
 }
 
 func (s *TeacherPortalService) GrowthLikes(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {

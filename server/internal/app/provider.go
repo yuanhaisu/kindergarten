@@ -105,6 +105,7 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.GrowthMediaStudent{},
 		&domain.GrowthComment{},
 		&domain.GrowthLike{},
+		&domain.GrowthCommentLike{},
 		&domain.GrowthReport{},
 		&domain.GrowthReportDimension{},
 		&domain.StudentDailySummary{},

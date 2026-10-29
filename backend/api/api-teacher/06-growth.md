@@ -17,6 +17,8 @@
 - `DELETE /teacher/growth/logs/:id`
 - `GET /teacher/growth/logs/:id/comments`
 - `POST /teacher/growth/logs/:id/comments`
+- `POST /teacher/growth/comments/:id/like`
+- `DELETE /teacher/growth/comments/:id/like`
 - `GET /teacher/growth/logs/:id/likes`
 - `GET /teacher/growth/logs/:id/related-students`
 - `GET /teacher/growth/logs/:id/tagging-status`
@@ -233,7 +235,7 @@
 
 ### GET `/teacher/growth/logs/:id/comments`
 
-> 成长日志评论列表
+> 成长日志评论列表（顶层评论 + 一层 `replies`）
 
 ```json
 // Query: ?page=1&page_size=20
@@ -252,6 +254,8 @@
       },
       "content": "谢谢李老师的表扬和鼓励！小明回家特别开心，说今天画画特别有意思，还要继续努力呢 😊",
       "parent_id": null,
+      "likes_count": 3,
+      "liked": false,
       "replies": [
         {
           "id": 5,
@@ -262,6 +266,8 @@
           },
           "content": "小明今天表现确实很棒，超级优秀，想象力很强！",
           "parent_id": 1,
+          "likes_count": 0,
+          "liked": true,
           "created_at": "2026-03-19T13:10:00Z"
         }
       ],
@@ -278,6 +284,8 @@
       },
       "content": "看到小花的作品了，画的真好看！谢谢老师拍照记录～",
       "parent_id": null,
+      "likes_count": 0,
+      "liked": false,
       "replies": [],
       "created_at": "2026-03-19T13:12:00Z"
     }
@@ -286,11 +294,24 @@
 }
 ```
 
+> **嵌套语义（与家长端 `GET /parent/growth/feed/:id/comments` 同口径）**：
+> `list[]` 只放顶层评论（`parent_id` 为空），其回复放 `replies[]`，只展开一层；
+> 多级回复归到**最近的顶层祖先**下，父评论已被删除的孤立回复**提升为顶层**（不丢评论）。
+> 排序：顶层与回复各自按 `created_at ASC, id ASC`。
+>
+> `user.relation` / `user.student_name` 只有**家长作者**才有（取与这条记录相关的那个孩子）：
+> 个体记录优先记录点名到的孩子，全班记录优先同班孩子。老师/员工作者**不含这两个字段**。
+>
+> **`total` 是该记录下的评论总数，含 `replies`**（不是 `list` 的长度）。
+>
+> `likes_count` 为该条评论的点赞数；`liked` 为**当前登录老师**是否已点赞该条评论。
+> 顶层的 `replies[]` 与顶层评论同形（同样带 `likes_count` / `liked`）。
+
 ---
 
 ### POST `/teacher/growth/logs/:id/comments`
 
-> 回复评论
+> 发表评论 / 回复评论
 
 ```json
 // Request
@@ -305,6 +326,49 @@
   "created_at": "2026-03-19T13:10:00Z"
 }
 ```
+
+> `parent_id` 只接受**这条记录下的顶层评论**（其自身 `parent_id` 为空）——回复只有一层。
+> 父评论不存在、不属于该记录、或本身已是回复时返回 400，且**不落库**。
+> `content` 去空白后为空同样 400。
+
+---
+
+### POST `/teacher/growth/comments/:id/like`
+
+> 点赞一条评论（幂等）
+
+```json
+// Request
+{}
+
+// Response
+{
+  "liked": true,
+  "likes_count": 4
+}
+```
+
+> **幂等**：重复点赞不报错、`likes_count` 不重复计数（`growth_comment_likes` 上
+> `uk_comment_like_user(comment_id, user_id)` 唯一，重复写入被吞掉）。
+> 评论所属记录必须在本教师班级内，否则 404。
+> `likes_count` 为该评论的**最新**点赞总数（含其他用户），客户端直接以它渲染。
+
+---
+
+### DELETE `/teacher/growth/comments/:id/like`
+
+> 取消点赞一条评论（幂等）
+
+```json
+// Response
+{
+  "liked": false,
+  "likes_count": 3
+}
+```
+
+> 未点过赞时调用同样成功（不报错），`likes_count` 不变。
+> 取消赞是**删行**，不留软删记录（软删行会占住 `uk_comment_like_user` 唯一键，导致再次点赞撞键）。
 
 ---
 

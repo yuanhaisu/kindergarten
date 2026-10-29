@@ -129,6 +129,17 @@ type GrowthLike struct {
 
 func (GrowthLike) TableName() string { return "growth_likes" }
 
+// GrowthCommentLike 成长评论点赞（老师与家长都可对单条评论点赞）。
+// 取消赞必须硬删（service 走 Unscoped）：BaseModel 带 DeletedAt，普通 Delete 会留软删行，
+// 而软删行仍占住 uk_comment_like_user 唯一键，再次点赞会撞键失败。
+type GrowthCommentLike struct {
+	BaseModel
+	CommentID uint64 `json:"comment_id" gorm:"not null;index;uniqueIndex:uk_comment_like_user"`
+	UserID    uint64 `json:"user_id" gorm:"not null;uniqueIndex:uk_comment_like_user"`
+}
+
+func (GrowthCommentLike) TableName() string { return "growth_comment_likes" }
+
 // GrowthReport AI 成长报告
 type GrowthReport struct {
 	SoftDeleteModel
