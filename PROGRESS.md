@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**P03 worker**
+- 下一动作：**P03 worker（brief 已写）**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -29,7 +29,7 @@
 | B06 | W1* | 成长相册 groups/student_id + 评论 replies/relation | passed | ee4aa37 | 8804b0a | impl-reviews/B06.md | 0 P1 / 6 P2；契约对齐，6/6 测试通过 |
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | passed | 56c01ac | ecd7a05 | impl-reviews/P02.md | 0 P1 / 5 P2；三页/四态/嵌套评论/album groups |
 | B07 | W1* | 接送记录/授权人按孩子过滤 + 关系枚举 9 值 | passed | bbe7afe | f7e1c6c | impl-reviews/B07.md | 0 P1 / 7 P2；A/B 隔离 + 9 值校验 |
-| P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | pending | - | - | - | 依赖 F0、B07 |
+| P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | briefed | 49f036d | - | - | 依赖 F0、B07 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0 |
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | pending | - | - | - | 依赖 F0；保留既有发布工作台行为 |
 | T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0 |
@@ -64,11 +64,11 @@
 
 ```json
 {
-  "slice_id": "B07",
-  "phase": "committed",
-  "commit_sha": "f7e1c6cc26671d4883c6771c2f0919aa3cb71675",
-  "next_action": "P03 brief",
-  "updated_at": "2026-10-29T10:05:00+08:00"
+  "slice_id": "P03",
+  "phase": "briefed",
+  "commit_sha": null,
+  "next_action": "spawn P03 worker",
+  "updated_at": "2026-10-29T10:10:00+08:00"
 }
 ```
 
