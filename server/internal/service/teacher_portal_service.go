@@ -2707,7 +2707,7 @@ func (s *TeacherPortalService) PickupRecords(ctx context.Context, tc *TeacherPor
 	q := parseTeacherPortalPage(page, pageSize)
 	db := s.db.WithContext(ctx).Model(&domain.PickupRecord{}).Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
 	if date != "" {
-		d, err := time.Parse("2006-01-02", date)
+		d, err := time.ParseInLocation("2006-01-02", date, time.Local)
 		if err == nil {
 			db = db.Where("date = ?", d)
 		}
