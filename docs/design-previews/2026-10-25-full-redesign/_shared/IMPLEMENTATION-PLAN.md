@@ -61,6 +61,7 @@ D01 在 W3 完成后做；D02 每片顺手修，W7 终检。
 | P02 | W1 | 家长 09/10/11 → `growth/index`、`growth/detail`、`growth/album` | 3 | L | F0、B04、B06 | 点赞态以 B04 结论为准；复用 report 的日期/维度处理 |
 | P03 | W1 | 家长 13/15/16 → `pickup/index`、`pickup/authorized`、`pickup/authorized-create` | 3 | L | F0、B07 | 复用 qrcode 的关系映射；D01 前允许先复制 |
 | P04 | W1 | 家长 27/25 → `profile/index`、`settings/index` | 2 | M | F0、B08 | 设置项、退出登录 |
+| B09 | W1* | 恢复 `/auth/logout` 路由 | - | S | 无 | P04 遗留；服务端吊销 token |
 | T01 | W1 | 老师 04/05/06 → `growth/index`、`growth/create`、`growth/detail` | 3 | L | F0 | 与既有「发布工作台」改造合并，不得回退已验证行为 |
 | T02 | W1 | 老师 07/08 → `pickup/index`、`pickup/records` | 2 | M | F0 | 接送码、记录状态 |
 | B01 | W2 | 成长报告四格统计 | - | M | 无（页面 12 已存在） | Go service + `backend/api/api-parent/` + `report.vue`；触点 ≥3 层，走 OpenSpec |
@@ -93,7 +94,7 @@ D01 在 W3 完成后做；D02 每片顺手修，W7 终检。
 | D01 | W7 | 共享逻辑收口：StateBlock / relationLabels / normalize / PageShell | - | M | W3 完成 | 只改 `shared-ui/` + 引用页 |
 | D02 | W7 | token/样式债清理：裸 rpx、硬编码色、reduced-motion | - | M | 全部页面片 | 每片顺手修，本片终检 |
 
-合计 37 片（含后补的 B05、B06、B07、B08），覆盖 46 个剩余页面，无重复、无遗漏。
+合计 38 片（含后补的 B05、B06、B07、B08、B09），覆盖 46 个剩余页面，无重复、无遗漏。
 
 > Shell 修复 S01（原生 custom-tab-bar）不在 34 个页面切片内，但先于 P01；见 `SHELL-DECISION.md`。
 
@@ -163,7 +164,7 @@ D01 在 W3 完成后做；D02 每片顺手修，W7 终检。
 ## 7. 建议执行节奏
 
 1. 先做 F0 + X00，一次把基线与边界决策定掉。
-2. W1 按 B04 → B05 → S01 → P01 → B06 → P02 → B07 → P03 → B08 → P04 → T01 → T02 顺序做（B04/B06 前置 P02，B05 前置 P01，B07 前置 P03，B08 前置 P04）；每片一个 commit。
+2. W1 按 B04 → B05 → S01 → P01 → B06 → P02 → B07 → P03 → B08 → P04 → B09 → T01 → T02 顺序做（B04/B06 前置 P02，B05 前置 P01，B07 前置 P03，B08 前置 P04，B09 修 P04 遗留）；每片一个 commit。
 3. W2 后端片可与 W1 交错，但 B03 需先走 OpenSpec。
 4. 每波结束跑一次：两端 build、`check-tokens`、本波新增页面遍历、真实交互抽检。
 5. W3 完成后再做 D01，避免过早抽象。
