@@ -59,7 +59,8 @@
 
 > 未接走 / 全部学生接送状态列表
 >
-> **本次契约变更**：每人新增 `is_overdue` / `pickup_deadline` / `last_remark` / `is_authorized_override`。
+> **本次契约变更**：每人新增 `is_overdue` / `pickup_deadline` / `last_remark` / `is_authorized_override`；
+> 新增 `authorized_person_list`（结构化授权接送人，`authorized_persons` 转为兼容字段）。
 
 ```json
 // Query: ?status=not_picked_up
@@ -73,6 +74,11 @@
       "name": "王小明",
       "avatar": "https://cdn.example.com/avatar/s1.jpg",
       "authorized_persons": "爸爸、妈妈、爷爷",
+      "authorized_person_list": [
+        { "name": "爸爸", "relation": "father" },
+        { "name": "妈妈", "relation": "mother" },
+        { "name": "爷爷", "relation": "grandfather" }
+      ],
       "arrive_time": "07:52",
       "pickup_status": "not_picked_up",
       "is_overdue": true,
@@ -85,6 +91,10 @@
       "name": "李小花",
       "avatar": "https://cdn.example.com/avatar/s2.jpg",
       "authorized_persons": "妈妈、奶奶",
+      "authorized_person_list": [
+        { "name": "妈妈", "relation": "mother" },
+        { "name": "奶奶", "relation": "grandmother" }
+      ],
       "arrive_time": "08:05",
       "pickup_status": "not_picked_up",
       "is_overdue": false,
@@ -103,6 +113,14 @@
 - `pickup_deadline`：该生所在班级的放学时刻，格式 `HH:mm`；未配置时为缺省 `16:00`
 - `last_remark`：当日最后一次登记的理由（重复接走 / 提前接走时必填）
 - `is_authorized_override`：当日最后一次接走是否走了授权例外通道
+- `authorized_person_list`：有效授权接送人的结构化列表，元素 `{name: string, relation: string}`。
+  过滤口径与 `authorized_persons` 完全一致（`status=1` 且 `review_status=1` 且未软删），
+  顺序也与之一致（同一 `ORDER BY id`）；无有效授权人时为 `[]`
+- `relation`：关系 9 码闭集 —— `father` / `mother` / `grandfather` / `grandmother` /
+  `maternal_grandfather` / `maternal_grandmother` / `uncle` / `aunt` / `other`。
+  **接口只返回码值，中文名由端上映射**；库值为空时原样返回空字符串，接口不编造
+- `authorized_persons`：**兼容字段**（姓名顿号串，无有效授权人时为「暂无」），
+  供旧版页面渲染；新页面请改用 `authorized_person_list`
 
 ---
 
@@ -214,6 +232,9 @@
 - `is_authorized_override`：`true` 表示本次为授权例外，此时 `override_name` 必填
 - `override_name`：例外情形下的来接者姓名，用于事后复核
 - 例外**不阻断**登记，仅留痕可统计
+- **例外同时置异常**：`is_authorized_override=true` 的接走记录落库时同时写
+  `is_abnormal=true`，`abnormal_reason` 取 `remark`（trim 后为空则用固定文案
+  「非授权接送人例外放行」）。非例外的手动接走、入园、扫码路径一律不自动置异常
 - `is_authorized`：本次接走人是否在有效授权集合内（例外通道时为 `false`）
 
 ---
@@ -307,7 +328,7 @@
 
 ### PUT `/teacher/pickup/records/:id/abnormal`
 
-> 标记接送异常（老师手动开启/取消，系统不自动置异常）
+> 标记接送异常（老师手动开启/取消；系统仅在授权例外登记时自动置异常）
 
 ```json
 // Request
@@ -325,7 +346,9 @@
 }
 ```
 
-**说明**：重复接走、提前接走、授权例外**均不**自动置异常，只保留相应理由与例外标记。
+**说明**：重复接走、提前接走**不**自动置异常，只保留相应理由；授权例外不在此列 ——
+例外接走落库时**自动置 `is_abnormal=true`** 并写入异常原因（见 `POST /teacher/pickup/manual`），
+其余路径仍只能由老师通过本接口手动标记或取消。
 
 ---
 

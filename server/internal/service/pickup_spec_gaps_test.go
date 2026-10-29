@@ -34,6 +34,8 @@ func TestDropOff_DoesNotRequirePerson(t *testing.T) {
 	assert.Nil(t, rec.PickupPersonID, "送入不得落 PickupPersonID")
 	assert.False(t, rec.IsAuthorizedOverride, "送入不得误标授权例外")
 	assert.Empty(t, rec.OverrideName, "送入不得记来接者姓名")
+	assert.False(t, rec.IsAbnormal, "送入不得置异常")
+	assert.Empty(t, rec.AbnormalReason, "送入不得有异常原因")
 }
 
 // TC-NEW-PKU-071 送入不要求理由
@@ -85,35 +87,43 @@ func TestAbnormal_ManualUnmark(t *testing.T) {
 	assert.False(t, rec.IsAbnormal, "取消后不得再计为异常")
 }
 
-// TC-NEW-PKU-082 系统不自动置异常
-func TestAbnormal_NotAutoSet(t *testing.T) {
-	// 三个「本该被留意」的触发：重复接走、提前接走、授权例外
-	deadline := "23:59" // 恒「提前」
+// TC-NEW-PKU-082 例外自动置异常，其余触发不置异常
+//
+// 2026-10-29 语义修订（用户确认）：授权例外 = 非授权接送人放行，属风险信号，
+// 登记时即置 is_abnormal。重复接走、提前接走仍只留理由、不自动置异常。
+func TestAbnormal_OverrideAutoSet(t *testing.T) {
+	deadline := "23:59" // 恒「提前」，故接走必须带理由
 	f := newPickupFixture(t, deadline, testPickupClass)
 	authID := f.makeAuthorization(t, "奶奶（张三）", 1, 1, nil)
 
-	step := func(typ int8, remark string, override bool, overrideName string) {
+	step := func(typ int8, remark string, auth *uint64, override bool, overrideName string) {
 		_, err := f.svc.CreatePickupRecord(ctx(), f.tc, TeacherPickupInput{
 			StudentID: f.studentID, Type: typ,
-			AuthorizationID: &authID, Remark: remark,
+			AuthorizationID: auth, Remark: remark,
 			IsAuthorizedOverride: override, OverrideName: overrideName,
 		}, domain.PickupMethodManual)
 		require.NoError(t, err)
 	}
 
-	step(1, "", false, "")             // 送入
-	step(2, "提前接走", false, "")       // 提前接走 → 理由必填，但不得自动标异常
-	step(1, "", false, "")             // 返园
-	step(2, "重复接走", false, "")       // 重复接走 → 理由必填，但不得自动标异常
-	step(1, "", false, "")             // 再返园
-	step(2, "例外", true, "邻居王五")   // 授权例外 → 不得自动标异常
+	step(1, "", nil, false, "")                // 送入
+	step(2, "提前接走", &authID, false, "")        // 提前接走 → 不置异常
+	step(1, "", nil, false, "")                // 返园
+	step(2, "重复接走", &authID, false, "")        // 重复接走 → 不置异常
+	step(1, "", nil, false, "")                // 再返园
+	step(2, "家长临时委托，已电话确认", nil, true, "邻居王五") // 授权例外 → 置异常
 
 	var recs []domain.PickupRecord
 	require.NoError(t, f.svc.db.Where("student_id = ?", f.studentID).Order("id ASC").Find(&recs).Error)
 	require.Len(t, recs, 6)
-	for i, r := range recs {
-		assert.Falsef(t, r.IsAbnormal, "第 %d 条不得被系统自动置异常", i+1)
+
+	for i, r := range recs[:5] {
+		assert.Falsef(t, r.IsAbnormal, "第 %d 条（非例外）不得被系统自动置异常", i+1)
+		assert.Emptyf(t, r.AbnormalReason, "第 %d 条（非例外）不得有异常原因", i+1)
 	}
+	assert.True(t, recs[5].IsAuthorizedOverride, "第 6 条应为例外接走")
+	assert.True(t, recs[5].IsAbnormal, "例外接走必须自动置异常")
+	assert.Equal(t, "家长临时委托，已电话确认", recs[5].AbnormalReason,
+		"异常原因取登记理由")
 }
 
 // ==================== Req 13 接走事件按配置通知家长 ====================

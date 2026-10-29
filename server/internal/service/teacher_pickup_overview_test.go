@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/repository"
 )
 
 // 覆盖 PickupOverview / PickupStudents 的状态派生（B1 看最后一条）
@@ -128,6 +130,73 @@ func TestPickupStudents_IsOverdueLive(t *testing.T) {
 
 	item := f.pickupItem(t, "all")
 	assert.Equal(t, true, item["is_overdue"], "仍在园且已过放学时刻应标 is_overdue")
+}
+
+// authorized_person_list：只含有效授权人，name/relation 正确且与字符串同序
+func TestPickupStudents_AuthorizedPersonList(t *testing.T) {
+	f := newPickupFixture(t, "00:00", testPickupClass)
+
+	// 有效：两个不同关系（按 id 升序即创建顺序）
+	f.makeAuthorizationWithRelation(t, "奶奶（张三）", "grandmother", 1, 1, nil)
+	f.makeAuthorizationWithRelation(t, "爸爸（王明）", "father", 1, 1, nil)
+	// 无效：未审核 / 已撤销 / 软删，三种都不得出现在列表里
+	f.makeAuthorizationWithRelation(t, "叔叔（王强）", "uncle", 0, 1, nil)
+	f.makeAuthorizationWithRelation(t, "阿姨（李梅）", "aunt", 1, 0, nil)
+	softDeletedID := f.makeAuthorizationWithRelation(t, "爷爷（王老）", "grandfather", 1, 1, nil)
+	require.NoError(t, repository.NewPickupRepo(f.svc.db).
+		SoftDeleteAuthorization(ctx(), f.studentID, softDeletedID))
+
+	item := f.pickupItem(t, "all")
+
+	persons, ok := item["authorized_person_list"].([]pickupAuthorizedPerson)
+	require.True(t, ok, "authorized_person_list 必须是结构化数组")
+	require.Len(t, persons, 2, "未审核/已撤销/软删的授权人都必须被过滤")
+	assert.Equal(t, pickupAuthorizedPerson{Name: "奶奶（张三）", Relation: "grandmother"}, persons[0])
+	assert.Equal(t, pickupAuthorizedPerson{Name: "爸爸（王明）", Relation: "father"}, persons[1])
+
+	// 线上形状：json tag 决定端上拿到的字段名，逐字节断言，避免改名漏测
+	raw, err := json.Marshal(persons)
+	require.NoError(t, err)
+	t.Logf("authorized_person_list JSON: %s", raw)
+	assert.JSONEq(t,
+		`[{"name":"奶奶（张三）","relation":"grandmother"},{"name":"爸爸（王明）","relation":"father"}]`,
+		string(raw))
+
+	// 兼容字段仍在，且与数组同源同序
+	assert.Equal(t, "奶奶（张三）、爸爸（王明）", item["authorized_persons"],
+		"authorized_persons 字符串必须与结构化列表同序")
+}
+
+// 无有效授权人时：兼容串回落「暂无」，数组为空数组而非 null
+func TestPickupStudents_AuthorizedPersonListEmpty(t *testing.T) {
+	f := newPickupFixture(t, "00:00", testPickupClass)
+
+	item := f.pickupItem(t, "all")
+	persons, ok := item["authorized_person_list"].([]pickupAuthorizedPerson)
+	require.True(t, ok, "无授权人也必须返回数组，不能是 null")
+	assert.Empty(t, persons)
+	assert.Equal(t, "暂无", item["authorized_persons"], "兼容串保持既有回落文案")
+}
+
+// 例外接走后 overview.abnormal 计 1；普通登记不计
+func TestPickupOverview_OverrideCountedAsAbnormal(t *testing.T) {
+	f := newPickupFixture(t, "00:00", testPickupClass)
+
+	_, err := f.svc.CreatePickupRecord(ctx(), f.tc, TeacherPickupInput{
+		StudentID: f.studentID, Type: 1,
+	}, domain.PickupMethodManual)
+	require.NoError(t, err)
+	require.Equal(t, int64(0), asI64(f.overview(t)["abnormal"]), "普通送入不置异常")
+
+	_, err = f.svc.CreatePickupRecord(ctx(), f.tc, TeacherPickupInput{
+		StudentID: f.studentID, Type: 2,
+		IsAuthorizedOverride: true, OverrideName: "邻居王五",
+		Remark: "家长临时委托",
+	}, domain.PickupMethodManual)
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(1), asI64(f.overview(t)["abnormal"]),
+		"例外接走必须计入当日异常数")
 }
 
 // ---------- 辅助 ----------

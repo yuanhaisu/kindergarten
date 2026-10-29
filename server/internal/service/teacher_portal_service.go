@@ -2139,6 +2139,44 @@ func (s *TeacherPortalService) classStudentIDs(ctx context.Context, tc *TeacherP
 	return ids
 }
 
+// pickupAuthorizedPerson 是 students 列表里 authorized_person_list 的元素。
+//
+// Relation 为 9 码闭集（father/mother/…/other），中文由端上映射：
+// 接口层不翻译，避免新增关系值时两端文案不一致。库值为空时原样返回空串。
+type pickupAuthorizedPerson struct {
+	Name     string `json:"name"`
+	Relation string `json:"relation"`
+}
+
+// pickupAuthInfo 是一名学生当日有效授权人的两种视图（兼容串 + 结构化）。
+type pickupAuthInfo struct {
+	names   string
+	persons []pickupAuthorizedPerson
+}
+
+// parseAuthorizedPersonPairs 拆分 GROUP_CONCAT 产出的 `name|relation` 片段。
+//
+// 片段分隔用换行（姓名与关系都不含换行），姓名与关系之间用 '|'。
+// 姓名理论上可能含 '|'，故从右侧找最后一个 '|' 切分 —— relation 是枚举，
+// 不会含分隔符，这样姓名带 '|' 也不会串位。
+func parseAuthorizedPersonPairs(raw string) []pickupAuthorizedPerson {
+	if raw == "" {
+		return nil
+	}
+	out := make([]pickupAuthorizedPerson, 0, strings.Count(raw, "\n")+1)
+	for _, pair := range strings.Split(raw, "\n") {
+		if pair == "" {
+			continue
+		}
+		name, relation := pair, ""
+		if i := strings.LastIndex(pair, "|"); i >= 0 {
+			name, relation = pair[:i], pair[i+1:]
+		}
+		out = append(out, pickupAuthorizedPerson{Name: name, Relation: relation})
+	}
+	return out
+}
+
 // PickupStudents 本班学生接送状态列表。
 //
 // 状态口径与 PickupOverview 一致（看最后一条方向）：
@@ -2221,21 +2259,28 @@ func (s *TeacherPortalService) PickupStudents(ctx context.Context, tc *TeacherPo
 		arriveMap[a.StudentID] = a.FirstDrop.Format("15:04")
 	}
 
-	// 有效授权接送人姓名
-	authMap := make(map[uint64]string)
+	// 有效授权接送人：字符串（兼容字段）与结构化列表同一条 SQL 产出，
+	// 避免为新增字段多打一次库；两者用同一 ORDER BY，保证顺序一致。
+	authMap := make(map[uint64]pickupAuthInfo)
 	var authRows []struct {
-		StudentID uint64 `gorm:"column:student_id"`
-		Names     string `gorm:"column:names"`
+		StudentID   uint64 `gorm:"column:student_id"`
+		Names       string `gorm:"column:names"`
+		PersonPairs string `gorm:"column:person_pairs"`
 	}
 	if len(filtered) > 0 {
 		_ = s.db.WithContext(ctx).Raw(
-			`SELECT student_id, GROUP_CONCAT(name SEPARATOR '、') AS names
+			`SELECT student_id,
+			        GROUP_CONCAT(name ORDER BY id ASC SEPARATOR '、') AS names,
+			        GROUP_CONCAT(CONCAT_WS('|', name, relation) ORDER BY id ASC SEPARATOR '\n') AS person_pairs
 			 FROM pickup_authorizations
 			 WHERE student_id IN ? AND deleted_at IS NULL AND status = 1 AND review_status = 1
 			 GROUP BY student_id`, filtered).Scan(&authRows).Error
 	}
 	for _, a := range authRows {
-		authMap[a.StudentID] = a.Names
+		authMap[a.StudentID] = pickupAuthInfo{
+			names:   a.Names,
+			persons: parseAuthorizedPersonPairs(a.PersonPairs),
+		}
 	}
 
 	list := make([]map[string]any, 0, len(rows))
@@ -2264,9 +2309,15 @@ func (s *TeacherPortalService) PickupStudents(ctx context.Context, tc *TeacherPo
 				&domain.PickupRecord{Type: domain.PickupType(lr.Type)}, now, deadline)
 		}
 
-		ap := authMap[r.ID]
+		ai := authMap[r.ID]
+		ap := ai.names
 		if ap == "" {
 			ap = "暂无"
+		}
+		persons := ai.persons
+		if persons == nil {
+			// 无有效授权人时返回空数组而不是 null，端上无需判空分支
+			persons = []pickupAuthorizedPerson{}
 		}
 
 		list = append(list, map[string]any{
@@ -2274,6 +2325,7 @@ func (s *TeacherPortalService) PickupStudents(ctx context.Context, tc *TeacherPo
 			"name":                   r.Name,
 			"avatar":                 r.Avatar,
 			"authorized_persons":     ap,
+			"authorized_person_list": persons,
 			"arrive_time":            arriveMap[r.ID],
 			"pickup_status":          ps,
 			"is_overdue":             overdue,
@@ -2285,6 +2337,10 @@ func (s *TeacherPortalService) PickupStudents(ctx context.Context, tc *TeacherPo
 
 	return map[string]any{"list": list, "total": len(list)}, nil
 }
+
+// pickupOverrideAbnormalReason 例外接走未填理由时的异常原因缺省文案。
+// 固定文案（而非空串）使家长端与统计侧能区分「有原因」与「漏填」。
+const pickupOverrideAbnormalReason = "非授权接送人例外放行"
 
 type TeacherPickupInput struct {
 	// StudentID 仅手动登记需要；扫码路径由凭证自解释，忽略此字段
@@ -2466,6 +2522,16 @@ func (s *TeacherPortalService) CreatePickupRecord(ctx context.Context, tc *Teach
 		PickupName:     pickupName, PickupRelation: pickupRelation,
 		OperatorID: tc.UserID, RecordedAt: now, Remark: req.Remark,
 		IsAuthorizedOverride: isOverride, OverrideName: overrideName,
+	}
+	// 例外接走 = 非授权接送人放行，属风险信号，故登记即置异常。
+	// 原因优先取老师登记时写的理由（他已在现场说明）；没填则用固定文案，
+	// 保证家长端/统计侧不会看到一条「异常但无原因」的记录。
+	if isOverride {
+		row.IsAbnormal = true
+		row.AbnormalReason = pickupOverrideAbnormalReason
+		if r := strings.TrimSpace(req.Remark); r != "" {
+			row.AbnormalReason = r
+		}
 	}
 	if err := s.db.WithContext(ctx).Create(row).Error; err != nil {
 		return nil, err

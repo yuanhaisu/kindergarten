@@ -171,15 +171,21 @@ func cleanupPickupData(t *testing.T, db *gorm.DB, classID uint64) {
 	// 否则并存的第二个 fixture（如 DeadlinePerClass 的两班）会被误删外键目标。
 }
 
-// makeAuthorization 建一条授权接送人，返回 ID。
+// makeAuthorization 建一条授权接送人，返回 ID。关系固定为 grandmother。
 func (f *pickupFixture) makeAuthorization(t *testing.T, name string, reviewStatus, status int8, expireAt *time.Time) uint64 {
+	t.Helper()
+	return f.makeAuthorizationWithRelation(t, name, "grandmother", reviewStatus, status, expireAt)
+}
+
+// makeAuthorizationWithRelation 同 makeAuthorization，但可指定关系（9 码）。
+func (f *pickupFixture) makeAuthorizationWithRelation(t *testing.T, name, relation string, reviewStatus, status int8, expireAt *time.Time) uint64 {
 	t.Helper()
 	ctx := context.Background()
 	auth := &domain.PickupAuthorization{
 		StudentID:    f.studentID,
 		Name:         name,
 		Phone:        "13800000000",
-		Relation:     "grandmother",
+		Relation:     relation,
 		Avatar:       "https://cdn.example.com/pickup/person/3.jpg",
 		Status:       status,
 		ReviewStatus: reviewStatus,
@@ -209,6 +215,47 @@ func (f *pickupFixture) makeQR(t *testing.T, authID uint64, code string, expireA
 }
 
 func ctx() context.Context { return context.Background() }
+
+// 夹具清理证据：cleanupPickupData 按固定 ID 硬删后相关表 0 残留。
+// 软删行会占唯一索引并让下一轮重跑撞键，故用 Unscoped 统计。
+func TestPickupFixture_CleanupLeavesNoResidue(t *testing.T) {
+	f := newPickupFixture(t, "00:00", testPickupClass)
+	parentUserID := f.makeParent(t)
+	authID := f.makeAuthorization(t, "奶奶（张三）", 1, 1, nil)
+	f.makeQR(t, authID, "QCLEANUP001", endOfDay(), true)
+
+	_, err := f.svc.CreatePickupRecord(ctx(), f.tc, TeacherPickupInput{
+		StudentID: f.studentID, Type: 1,
+	}, domain.PickupMethodManual)
+	require.NoError(t, err)
+	_, err = f.svc.CreatePickupRecord(ctx(), f.tc, TeacherPickupInput{
+		StudentID: f.studentID, Type: 2, AuthorizationID: &authID,
+	}, domain.PickupMethodManual)
+	require.NoError(t, err)
+
+	cleanupPickupData(t, f.svc.db, f.classID)
+
+	count := func(model any, q string, args ...any) int64 {
+		var n int64
+		require.NoError(t, f.svc.db.Unscoped().Model(model).Where(q, args...).Count(&n).Error)
+		return n
+	}
+	studentID := f.classID * 1000
+	residue := map[string]int64{
+		"pickup_records":        count(&domain.PickupRecord{}, "student_id = ?", studentID),
+		"pickup_qr_codes":       count(&domain.PickupQRCode{}, "student_id = ?", studentID),
+		"pickup_authorizations": count(&domain.PickupAuthorization{}, "student_id = ?", studentID),
+		"morning_health_checks": count(&domain.MorningHealthCheck{}, "student_id = ?", studentID),
+		"messages":              count(&domain.Message{}, "user_id = ?", parentUserID),
+		"student_parents":       count(&domain.StudentParent{}, "student_id = ?", studentID),
+		"students":              count(&domain.Student{}, "id = ?", studentID),
+		"classes":               count(&domain.Class{}, "id = ?", f.classID),
+	}
+	t.Logf("cleanup residue=%v", residue)
+	for table, n := range residue {
+		assert.Zero(t, n, "%s 清理后不应残留", table)
+	}
+}
 
 // endOfDay 返回当日 23:59:59，用作「未过期」凭证的过期时刻。
 func endOfDay() time.Time {
@@ -250,6 +297,8 @@ func TestCreatePickupRecord_ScanAttributesToPerson(t *testing.T) {
 	require.NoError(t, f.svc.db.Where("student_id = ?", f.studentID).Order("id DESC").First(&rec).Error)
 	require.NotNil(t, rec.PickupPersonID, "PickupPersonID 不得为空")
 	assert.Equal(t, authID, *rec.PickupPersonID, "PickupPersonID 必须为凭证绑定的授权人")
+	assert.False(t, rec.IsAbnormal, "扫码授权接走不得置异常")
+	assert.Empty(t, rec.AbnormalReason, "扫码授权接走不得有异常原因")
 
 	// 凭证即焚
 	var qr domain.PickupQRCode
@@ -315,6 +364,8 @@ func TestCreatePickupRecord_ManualPickFromList(t *testing.T) {
 	require.NotNil(t, rec.PickupPersonID, "PickupPersonID 不得为空")
 	assert.Equal(t, authID, *rec.PickupPersonID, "PickupPersonID 必须落为所选授权人")
 	assert.False(t, rec.IsAuthorizedOverride)
+	assert.False(t, rec.IsAbnormal, "从授权人列表选人的普通接走不得置异常")
+	assert.Empty(t, rec.AbnormalReason, "普通接走不得有异常原因")
 }
 
 // 场景：标记为非授权/临时（TC-NEW-PKU-031）
@@ -344,6 +395,32 @@ func TestCreatePickupRecord_ManualOverride(t *testing.T) {
 	assert.Equal(t, "邻居王五", rec.OverrideName, "来接者姓名必须落库")
 	assert.Nil(t, rec.PickupPersonID, "例外时 PickupPersonID 必须为空")
 	assert.True(t, rec.IsAuthorizedOverride)
+
+	// 例外 = 非授权人放行，登记即置异常；本用例未填理由 → 用缺省文案
+	assert.True(t, rec.IsAbnormal, "例外接走必须同时置异常")
+	assert.Equal(t, "非授权接送人例外放行", rec.AbnormalReason,
+		"未填理由时异常原因必须是固定缺省文案")
+}
+
+// 场景：例外接走的异常原因取登记理由（trim 后）
+func TestCreatePickupRecord_OverrideAbnormalUsesRemark(t *testing.T) {
+	f := newPickupFixture(t, "00:00", testPickupClass)
+
+	_, err := f.svc.CreatePickupRecord(ctx(), f.tc, TeacherPickupInput{StudentID: f.studentID, Type: 1}, domain.PickupMethodManual)
+	require.NoError(t, err, "先送入，接走才成立")
+
+	_, err = f.svc.CreatePickupRecord(ctx(), f.tc, TeacherPickupInput{
+		StudentID: f.studentID, Type: 2,
+		IsAuthorizedOverride: true, OverrideName: "邻居王五",
+		Remark: "  家长临时委托，已电话确认  ",
+	}, domain.PickupMethodManual)
+	require.NoError(t, err)
+
+	var rec domain.PickupRecord
+	require.NoError(t, f.svc.db.Where("student_id = ?", f.studentID).Order("id DESC").First(&rec).Error)
+	assert.True(t, rec.IsAbnormal)
+	assert.Equal(t, "家长临时委托，已电话确认", rec.AbnormalReason,
+		"异常原因应取 trim 后的登记理由，而不是固定文案")
 }
 
 // 场景：例外缺姓名被拒（例外不阻断，但必须留痕）
