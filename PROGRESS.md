@@ -7,7 +7,7 @@
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
 - 当前波次：**W0**
-- 下一动作：**B08 worker**
+- 下一动作：**P04 worker**
 - 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
 - 最后更新：2026-10-28
 
@@ -30,7 +30,7 @@
 | P02 | W1 | 家长成长列表/详情/相册 09/10/11 | passed | 56c01ac | ecd7a05 | impl-reviews/P02.md | 0 P1 / 5 P2；三页/四态/嵌套评论/album groups |
 | B07 | W1* | 接送记录/授权人按孩子过滤 + 关系枚举 9 值 | passed | bbe7afe | f7e1c6c | impl-reviews/B07.md | 0 P1 / 7 P2；A/B 隔离 + 9 值校验 |
 | P03 | W1 | 家长接送首页/授权人/新增 13/15/16 | passed | 49f036d | f8a1eda | impl-reviews/P03.md | 0 P1 / 7 P2；三页/三态/9 关系/入口 |
-| B08 | W1* | 家长设置开关持久化（6 通知 + 2 隐私） | briefed | 4a8bbb9 | - | - | P04 前置 |
+| B08 | W1* | 家长设置开关持久化（6 通知 + 2 隐私） | passed | 4a8bbb9 | f9f841e | impl-reviews/B08.md | 0 P1 / 5 P2；默认/部分更新/隔离 |
 | P04 | W1 | 家长我的+设置 27/25 | pending | - | - | - | 依赖 F0、B08 |
 | T01 | W1 | 老师成长列表/创建/详情 04/05/06 | pending | - | - | - | 依赖 F0；保留既有发布工作台行为 |
 | T02 | W1 | 老师接送列表/记录 07/08 | pending | - | - | - | 依赖 F0 |
@@ -66,10 +66,10 @@
 ```json
 {
   "slice_id": "B08",
-  "phase": "briefed",
-  "commit_sha": null,
-  "next_action": "spawn B08 worker",
-  "updated_at": "2026-10-29T11:25:00+08:00"
+  "phase": "committed",
+  "commit_sha": "f9f841ea27c3f54680a9b9d92e2b71ee1fc6b5be",
+  "next_action": "P04 brief",
+  "updated_at": "2026-10-29T11:50:00+08:00"
 }
 ```
 
@@ -103,3 +103,4 @@
 | P02 | ecd7a05 | 2026-10-29 | 0 P1 / 5 P2；成长三页/四态/嵌套评论/album groups |
 | B07 | f7e1c6c | 2026-10-29 | 0 P1 / 7 P2；接送多孩过滤 + 关系 9 值 |
 | P03 | f8a1eda | 2026-10-29 | 0 P1 / 7 P2；接送三页/三态/9 关系/入口 |
+| B08 | f9f841e | 2026-10-29 | 0 P1 / 5 P2；设置 8 键持久化 |
