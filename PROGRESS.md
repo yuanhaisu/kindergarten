@@ -53,7 +53,7 @@
 | B12 | W1* | 修复接送记录 date 过滤（UTC→本地） | passed | 4686d8e | 1d41578 | impl-reviews/B12.md | 0 P1 / 3 P2；HTTP 旧二进制 0 → 新 6 条 |
 | T02 | W1 | 老师接送列表/记录 07/08 | passed | d0a67b3 | b808659 | impl-reviews/T02.md | 0 P1 / 2 P2；复审通过（B12 修复后） |
 | B01 | W2 | 成长报告四格统计 | passed | 722054a | c398c0c | impl-reviews/B01.md | 0 P1 / 5 P2；四格实测 67%/45/8-12/15；已归档 |
-| B02 | W2 | 班级家长人数 | in_progress | e3ab84a | - | - | OpenSpec `teacher-class-parent-count` |
+| B02 | W2 | 班级家长人数 | passed | e3ab84a | f846bf3 | impl-reviews/B02.md | 0 P1 / 3 P2；实测 5/4 人，底部 2 班 9 人；已归档 |
 | B03 | W2 | 草稿编辑定时/附件 | pending | - | - | - | OpenSpec；可选 |
 | B04 | W1* | 点赞落库复核 + 两端防连点 | passed | e3b39cc | 8011f8d | impl-reviews/B04.md | 0 P1 / 5 P2；原症状已由 97f4dd8f 修复，本次修并发 1062 |
 | B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | passed | 0c63e14 | ee5dcb5 | impl-reviews/B05.md | 0 P1 / 6 P2 |
@@ -83,32 +83,33 @@
 
 ```json
 {
-  "slice_id": "T01",
+  "slice_id": "B02",
   "phase": "committed",
-  "commit_sha": "1f78208",
-  "next_action": "T02 brief",
-  "updated_at": "2026-10-29T16:12:00+08:00"
+  "commit_sha": "f846bf3",
+  "next_action": "P05 brief or B03 decision",
+  "updated_at": "2026-10-29T22:45:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-29T16:12+08:00
+### Handoff 2026-10-29T22:45+08:00
 
-- 当前切片：**T02 老师接送两页**（`pickup/index`、`pickup/records`，设计 07/08）
-- 已完成：W0（F0、X00）；B04–B10；S01；P01–P04；T01
-- 下一步：读 `IMPLEMENTATION-PLAN.md` T02 行、设计 `teacher/07-pickup-index/`、`08-pickup-records/`、对应 reviews；写 `.claude/runs/T02/brief.md`，派 `slice-worker` → 全新 `slice-supervisor`
+- 当前切片：**W2 后端片完成**（B01、B02 均已提交并归档）；**W1 全部完成**（F0/X00/B04–B12/S01/P01–P04/T01–T02）
+- 下一步：**W3 页面片 P05**（家长通知列表/详情 04/05），或先做可选 B03（草稿编辑定时/附件，需产品确认）
 - 必须读：
-  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` T02 行
+  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P05 行
   - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
-  - `teacher/07-pickup-index/`、`08-pickup-records/`
-  - `_shared/reviews/teacher-07-*.md`、`teacher-08-*.md`
-  - `_shared/impl-reviews/T01.md`（同端外壳/四态/时间工具先例）
-  - P03 commit `f8a1eda`（家长端接送三页，可参考）
-- 老师端无 tabBar；4 个常驻页仍用 BottomNav；原生导航栏；不要引入 `switchTab`。
-- 已知阻塞：无。后端 `8080` 运行中（T01 supervisor 已恢复）；DevTools 锁已释放。
-- T01 带入 P2：详情两处小节计数被 WXML 丢弃、创建同步开关无效（后端零值省略）、表现标签空字典不回退、授徽章守卫不可达、大合影多按钮、视觉 1–2px、15 分钟 token 无 refresh 拦截。
-- B10 带入 P2：契约写 400 实为 422、relation 按家长关联判定、可见范围谓词重复、GET 契约残留分页提示。
+  - `parent/04-notice-index/`、`05-notice-detail/`
+  - `_shared/reviews/parent-04-*.md`、`parent-05-*.md`
+  - `_shared/impl-reviews/T01.md`（四态/时间工具先例）、`P02.md`（家长端列表先例）
+  - 活基线规格：`openspec/specs/growth-report/`、`openspec/specs/class-roster/`
+- 家长端有 tabBar（4 项），tab 页跳转用 `switchTab`；老师端无 tabBar。
+- 已知阻塞：无。后端 `8080` 运行中（B02 新码）；DevTools 锁已释放。
+- B01 带入 P2：报告正文未按周期过滤、term 未配置时页面显示通用网络错误、任务可见性 SQL 内联重复、测试数记 10 实为 11。
+- B02 带入 P2：TC 映射与 spec 漂移、弹层文案含职务前缀、null 失败分支无单测。
+- T02 带入 P2：授权人未过滤 expire_at、token 15 分钟无 refresh。
+- T01 带入 P2：详情小节计数被 WXML 丢弃、创建同步开关无效、表现标签空字典不回退、授徽章守卫不可达、大合影多按钮、视觉 1–2px。
 - B09 带入的 P2：每请求 Redis EXISTS、Redis 故障 503、旧无 jti token 过期前不可吊销、teacher/admin 不调用 logout、refresh 归属未校验、E2E 绕过 Casbin。
 
 ## 最近完成
