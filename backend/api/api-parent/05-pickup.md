@@ -6,6 +6,29 @@
 
 ---
 
+## 关系枚举（`relation` / `pickup_relation`）
+
+接送关系统一为 **9 个稳定代码**，中文标签由前端映射；服务端不返回 `relation_label`。
+
+| code | 中文标签 |
+| --- | --- |
+| `father` | 爸爸 |
+| `mother` | 妈妈 |
+| `grandfather` | 爷爷 |
+| `grandmother` | 奶奶 |
+| `maternal_grandfather` | 外公 |
+| `maternal_grandmother` | 外婆 |
+| `uncle` | 叔叔 |
+| `aunt` | 阿姨 |
+| `other` | 其他 |
+
+- 旧 5 个 code（`father` / `mother` / `grandfather` / `grandmother` / `other`）继续有效，新增 4 个。
+- 写接口（添加 / 编辑授权接送人）接受上表 9 个中文标签作为过渡兼容，并**归一化为代码落库**；
+  存量历史数据若已是中文，读取时**原样返回**，前端映射需同时兼容 code 与中文标签。
+- 不在上表内的值一律拒绝（校验错）。
+
+---
+
 ### POST `/parent/pickup/designate`
 
 > 指定今日接走人（本次契约变更新增）
@@ -107,10 +130,18 @@
 
 ### GET `/parent/pickup/records`
 
-> 接送记录
+> 接送记录（分页）
+>
+> **按当前孩子隔离**：只返回该孩子的记录，不混入其他孩子。`student_id` 缺省时取当前孩子。
+
+**Query 参数**：
+
+- `student_id`（可选）：指定孩子，须为当前家长已绑定的孩子；缺省时使用当前孩子
+- `page`（可选）：默认 1
+- `page_size`（可选）：默认 20，最大 50
 
 ```json
-// Query: ?student_id=1&page=1&page_size=20
+// Request: ?student_id=1&page=1&page_size=20
 
 // Response
 {
@@ -148,12 +179,21 @@
 
 > 授权接送人列表（分页）
 >
+> **按当前孩子隔离**：授权记录挂在具体学生下（`student_id` 是授权记录自身的归属孩子），
+> 列表只返回该孩子的授权人，不是家庭级名单；`student_id` 缺省时取当前孩子。
+>
 > **本次契约变更**：响应字段改为与实现一致 ——
 > 移除 `id_card_tail`（不暴露证件号）、`status_label`（语义并入 `review_status_label`）；
 > `phone` 为脱敏值；补 `review_status` / `review_status_label` 与分页字段。
 
+**Query 参数**：
+
+- `student_id`（可选）：指定孩子，须为当前家长已绑定的孩子；缺省时使用当前孩子
+- `page`（可选）：默认 1
+- `page_size`（可选）：默认 20，最大 50
+
 ```json
-// Query: ?student_id=1&page=1&page_size=20
+// Request: ?student_id=1&page=1&page_size=20
 
 // Response
 {
@@ -189,6 +229,8 @@
 
 - `phone`：脱敏后返回，不返回完整号码
 - **不返回**证件号相关字段
+- `relation`：关系代码，取值见「关系枚举」；前端按 code 映射中文标签
+- `student_id` / `student_name`：该授权人所属的孩子（授权是孩子级，不是家庭级）
 - `review_status`：`0` 待审核 / `1` 已通过 / `2` 已拒绝（来源 `domain.PickupAuthorization.ReviewStatus`）
 - `status`：`1` 有效 / `0` 已撤销（与 `review_status` 是两套独立状态）
 - 「有效接送人」判定口径 = `status = 1` **且** `review_status = 1`
@@ -198,11 +240,14 @@
 ### POST `/parent/pickup/authorized-persons`
 
 > 添加授权接送人
+>
+> 授权人挂在该孩子下：`student_id` 走 **query**（与列表接口一致），body 中的同名字段被忽略。
+> `relation` 必须是「关系枚举」中的 9 个 code（过渡期也接受 9 个中文标签，服务端归一化为 code）；
+> 未知值返回校验错。
 
 ```json
-// Request
+// Request: ?student_id=1
 {
-  "student_id": 1,
   "name": "爷爷（王建国）",
   "relation": "grandfather",
   "phone": "13600005555",
@@ -231,11 +276,14 @@
 ### PUT `/parent/pickup/authorized-persons/:id`
 
 > 编辑授权接送人
+>
+> `relation` 如提交，校验规则同添加接口（9 个 code，过渡期兼容 9 个中文标签并归一化）。
 
 ```json
 // Request
 {
   "name": "二姨（陈梅）",
+  "relation": "aunt",
   "phone": "137****3333",
   "avatar": "https://cdn.example.com/uploads/pickup/person_new.jpg"
 }

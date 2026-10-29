@@ -449,14 +449,13 @@ func pickupLabel(t domain.PickupType) string {
 }
 
 // ListPickupRecords 家长查看孩子的接送记录（分页）。
+//
+// 按当前孩子隔离：显式 student_id 已由 ResolveContext 解析进 CurrentStudent，
+// 缺省时也指向默认孩子。不能用 pc.Students 全量取数，否则切到 A 仍会看到
+// B 的记录（多孩串数据）。
 func (s *ParentPortalService) ListPickupRecords(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
-	if len(pc.Students) == 0 {
+	if pc.CurrentStudent == nil {
 		return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil
-	}
-
-	studentIDs := make([]uint64, len(pc.Students))
-	for i, st := range pc.Students {
-		studentIDs[i] = st.ID
 	}
 
 	if page <= 0 {
@@ -467,7 +466,7 @@ func (s *ParentPortalService) ListPickupRecords(ctx context.Context, pc *ParentP
 	}
 	offset := (page - 1) * pageSize
 
-	rows, total, err := s.pickup.ListRecordsByStudentIDs(ctx, pc.KindergartenID, studentIDs, offset, pageSize)
+	rows, total, err := s.pickup.ListRecordsByStudentIDs(ctx, pc.KindergartenID, []uint64{pc.CurrentStudent.ID}, offset, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -511,15 +510,23 @@ func (s *ParentPortalService) ListPickupRecords(ctx context.Context, pc *ParentP
 	}, nil
 }
 
+// parentRelationLabels 9 个关系码的中文标签。
+// 契约约定「前端按 code 映射标签」，这里保留服务端映射供既有响应字段
+// （首页称呼、家长详情等）继续使用，也是旧版中文入参归一化的对照表。
+var parentRelationLabels = map[domain.ParentRelation]string{
+	domain.RelationFather:              "爸爸",
+	domain.RelationMother:              "妈妈",
+	domain.RelationGrandfather:         "爷爷",
+	domain.RelationGrandmother:         "奶奶",
+	domain.RelationMaternalGrandfather: "外公",
+	domain.RelationMaternalGrandmother: "外婆",
+	domain.RelationUncle:               "叔叔",
+	domain.RelationAunt:                "阿姨",
+	domain.RelationOther:               "其他",
+}
+
 func RelationLabel(r domain.ParentRelation) string {
-	m := map[domain.ParentRelation]string{
-		domain.RelationFather:      "爸爸",
-		domain.RelationMother:      "妈妈",
-		domain.RelationGrandfather: "爷爷",
-		domain.RelationGrandmother: "奶奶",
-		domain.RelationOther:       "其他",
-	}
-	if v, ok := m[r]; ok {
+	if v, ok := parentRelationLabels[r]; ok {
 		return v
 	}
 	return string(r)
@@ -529,13 +536,31 @@ func RelationLabel(r domain.ParentRelation) string {
 // 时回退「家长」，而不是让页面显示空白。不复用 RelationLabel 的兜底：它对未知 code
 // 原样返回，会把脏值直接显示成称呼。
 func parentRelationLabel(relation string) string {
-	switch domain.ParentRelation(relation) {
-	case domain.RelationFather, domain.RelationMother,
-		domain.RelationGrandfather, domain.RelationGrandmother, domain.RelationOther:
-		return RelationLabel(domain.ParentRelation(relation))
-	default:
-		return "家长"
+	if v, ok := parentRelationLabels[domain.ParentRelation(relation)]; ok {
+		return v
 	}
+	return "家长"
+}
+
+// normalizePickupRelation 把家长端提交的关系值归一化为 9 个稳定代码。
+//
+// 旧版家长端（pages/pickup/authorized-create）直接提交中文标签，而契约已统一为代码。
+// 写入边界接受这 9 个中文标签并归一化落库，既保证新数据只有一种编码，
+// 也不改写存量中文行（历史数据按原值读出，前端映射需兼容）。
+func normalizePickupRelation(raw string) (string, bool) {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return "", false
+	}
+	if domain.ParentRelation(v).Valid() {
+		return v, true
+	}
+	for code, label := range parentRelationLabels {
+		if label == v {
+			return string(code), true
+		}
+	}
+	return "", false
 }
 
 // ==================== Authorized Persons ====================
@@ -573,16 +598,13 @@ type UpdateAuthorizedPersonInput struct {
 }
 
 // ListAuthorizedPersons 家长查看授权接送人列表。
+//
+// 授权记录挂在具体学生下（PickupAuthorization.StudentID），列表按当前孩子隔离；
+// 显式 student_id 由 ResolveContext 解析进 CurrentStudent。用全部 pc.Students
+// 取数会把 A 的名单混进 B（多孩串数据）。
 func (s *ParentPortalService) ListAuthorizedPersons(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
-	if len(pc.Students) == 0 {
+	if pc.CurrentStudent == nil {
 		return map[string]any{"list": []any{}, "total": int64(0), "page": page, "page_size": pageSize}, nil
-	}
-
-	studentIDs := make([]uint64, len(pc.Students))
-	studentIDSet := make(map[uint64]bool)
-	for i, st := range pc.Students {
-		studentIDs[i] = st.ID
-		studentIDSet[st.ID] = true
 	}
 
 	if page <= 0 {
@@ -593,7 +615,7 @@ func (s *ParentPortalService) ListAuthorizedPersons(ctx context.Context, pc *Par
 	}
 	offset := (page - 1) * pageSize
 
-	rows, total, err := s.pickup.ListAuthorizationsByStudentIDs(ctx, pc.KindergartenID, studentIDs, offset, pageSize)
+	rows, total, err := s.pickup.ListAuthorizationsByStudentIDs(ctx, pc.KindergartenID, []uint64{pc.CurrentStudent.ID}, offset, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -657,6 +679,10 @@ func (s *ParentPortalService) CreateAuthorizedPerson(ctx context.Context, pc *Pa
 	if req.Name == "" || req.Phone == "" || req.Relation == "" {
 		return nil, ErrParentInvalidParams
 	}
+	relation, ok := normalizePickupRelation(req.Relation)
+	if !ok {
+		return nil, ErrParentInvalidParams
+	}
 	// 校验学生归属
 	found := false
 	for _, st := range pc.Students {
@@ -701,7 +727,7 @@ func (s *ParentPortalService) CreateAuthorizedPerson(ctx context.Context, pc *Pa
 		StudentID:       pc.CurrentStudent.ID,
 		Name:            req.Name,
 		Phone:           req.Phone,
-		Relation:        req.Relation,
+		Relation:        relation,
 		IDCard:          req.IDCardNumber,
 		Avatar:          req.Avatar,
 		Status:          1, // 1=有效
@@ -757,7 +783,11 @@ func (s *ParentPortalService) UpdateAuthorizedPerson(ctx context.Context, pc *Pa
 		updates["avatar"] = req.Avatar
 	}
 	if req.Relation != "" {
-		updates["relation"] = req.Relation
+		relation, ok := normalizePickupRelation(req.Relation)
+		if !ok {
+			return nil, ErrParentInvalidParams
+		}
+		updates["relation"] = relation
 	}
 	if req.AuthType != "" {
 		updates["auth_type"] = req.AuthType

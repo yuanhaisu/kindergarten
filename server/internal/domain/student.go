@@ -31,8 +31,29 @@ const (
 	RelationMother      ParentRelation = "mother"
 	RelationGrandfather ParentRelation = "grandfather"
 	RelationGrandmother ParentRelation = "grandmother"
-	RelationOther       ParentRelation = "other"
+	// 母系祖辈与叔伯姨舅：2026-10 接送关系枚举统一为 9 值，中文标签由前端映射。
+	RelationMaternalGrandfather ParentRelation = "maternal_grandfather"
+	RelationMaternalGrandmother ParentRelation = "maternal_grandmother"
+	RelationUncle               ParentRelation = "uncle"
+	RelationAunt                ParentRelation = "aunt"
+	RelationOther               ParentRelation = "other"
 )
+
+// Valid 报告关系码是否属于 9 值合法集合。
+//
+// 关系码是跨端契约的一部分（pickup 授权人、student_parents），
+// 合法性判断只在这里维护一份，避免各 service 各自 switch 漂移。
+func (r ParentRelation) Valid() bool {
+	switch r {
+	case RelationFather, RelationMother,
+		RelationGrandfather, RelationGrandmother,
+		RelationMaternalGrandfather, RelationMaternalGrandmother,
+		RelationUncle, RelationAunt, RelationOther:
+		return true
+	default:
+		return false
+	}
+}
 
 // StudentParent 学生-家长关联
 type StudentParent struct {
