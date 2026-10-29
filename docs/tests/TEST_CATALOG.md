@@ -66,6 +66,18 @@
 | TC-CLS-011 | 教师职称解析 | P1 | Unit | ✅ |
 | TC-CLS-012 | 教师职称标签 | P1 | Unit | ✅ |
 
+### 班级家长人数（teacher-class-parent-count）
+
+> 端点 `GET /teacher/class/list` 的 `parent_count`。测试：`server/internal/service/teacher_class_parent_count_test.go`。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-CLS-0001 | 班级列表-多班家长人数一次读取各自正确 | P0 | Unit | ✅ |
+| TC-NEW-CLS-0002 | 班级列表-同一家长两个孩子同班只计 1 | P0 | Unit | ✅ |
+| TC-NEW-CLS-0003 | 班级列表-无在读学生返回 0 而非 null | P0 | Unit | ✅ |
+| TC-NEW-CLS-0004 | 班级列表-非在读/软删学生与软删绑定不计入 | P0 | Unit | ✅ |
+| TC-NEW-CLS-0005 | 班级列表-同班互不串数且跨园所隔离 | P0 | Unit | ✅ |
+
 ## 接送 (PKU)
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |

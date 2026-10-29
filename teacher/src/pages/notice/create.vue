@@ -36,6 +36,20 @@ const form = ref({
 })
 
 const classList = ref<any[]>([])
+// 家长人数来自 /teacher/class/list 的 parent_count；旧接口或计数失败时字段缺失/null，
+// 此处统一归一成 null，页面回退为只显示班级名，不把 null 渲染成「0 位家长」。
+function parentCountOf(c: any): number | null {
+  const raw = c?.parent_count
+  if (raw === null || raw === undefined || raw === "") return null
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+function classMeta(c: any): string {
+  const title = c.title_label || c.title || ""
+  const count = parentCountOf(c)
+  if (count === null) return title
+  return title ? `${title} · ${count} 位家长` : `${count} 位家长`
+}
 const currentClassLabel = computed(() => {
   const names = classList.value
     .filter((c) => form.value.class_ids.includes(c.class_id))
@@ -53,9 +67,22 @@ const scheduledDateLabel = computed(() => {
 const scheduleLabel = computed(() => (form.value.scheduled_enabled && form.value.scheduled_at ? form.value.scheduled_at : "立即发送"))
 const showTitleError = computed(() => attempted.value && !form.value.title.trim())
 const showContentError = computed(() => attempted.value && !form.value.content.trim())
+const selectedParentCount = computed(() => {
+  if (form.value.class_ids.length === 0) return null
+  let sum = 0
+  for (const id of form.value.class_ids) {
+    const count = parentCountOf(classList.value.find((c) => c.class_id === id))
+    // 任一班缺人数就不给合计：少算比不显示更误导（跨班同一家长也会重复计数，见文案取舍）。
+    if (count === null) return null
+    sum += count
+  }
+  return sum
+})
 const classFoot = computed(() => {
   if (classError.value) return classError.value
   if (form.value.class_ids.length === 0) return "请选择接收班级"
+  const count = selectedParentCount.value
+  if (count !== null) return `${form.value.class_ids.length} 个班级 · ${count} 位家长`
   return `${form.value.class_ids.length} 个班级 · 发布后家长会收到微信提醒`
 })
 const canSubmit = computed(() => {
@@ -485,7 +512,7 @@ async function submit() {
           >
             <view class="pick-copy">
               <text class="pick-name">{{ c.class_name }}</text>
-              <text class="pick-meta">{{ c.title_label || c.title || "" }}</text>
+              <text class="pick-meta">{{ classMeta(c) }}</text>
             </view>
             <view class="check-dot" :class="{ on: form.class_ids.includes(c.class_id) }">
               <text v-if="form.class_ids.includes(c.class_id)">✓</text>

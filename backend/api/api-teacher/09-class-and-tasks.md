@@ -12,6 +12,7 @@
 
 班级学生：
 
+- `GET /teacher/class/list`
 - `GET /teacher/class/info`
 - `GET /teacher/class/students`
 - `GET /teacher/class/present-students`
@@ -37,6 +38,38 @@
 ---
 
 ## 7. 班级学生
+
+### GET `/teacher/class/list`
+
+> 当前老师在该园所**任教**的班级列表（`class_teachers.status=1`，按任教关系 id 升序）。
+>
+> 老师端「发布通知」的接收班级选择器在用。无 query 参数。
+
+```json
+// Response（data 为数组，无分页包络）
+[
+  {
+    "class_id": 1,
+    "class_name": "小一班",
+    "title": "head",
+    "title_label": "主班老师",
+    "parent_count": 28
+  }
+]
+```
+
+- `title` / `title_label`：当前老师在该班的职务码与中文标签（`head`/`assistant`/`nursery`，其它按「老师」）。
+- `parent_count`：该班**潜在触达家长数**——本班**在读学生**（`students.status=1` 且未删除）
+  绑定的**去重家长用户数**（`COUNT(DISTINCT student_parents.user_id)`，`student_parents` 未删除）。
+  同一家长有两个孩子同班只计 1；已毕业/退学/待入学学生与其家长不计入。
+- **与通知实际接收人不是同一口径**：本字段只表示班级潜在触达范围，不随某条通知的
+  target 选择、已读/确认变化。某条通知的实际接收人数以通知详情为准。
+- 没有在读学生或没有绑定家长 → `0`（不是 `null`）。
+- 计数查询失败时返回 `null`（不是 `0`），且有服务端日志；客户端应回退为不显示人数，
+  不能把 `null` 当成「0 位家长」。
+- 列表级一次 `GROUP BY class_id` 聚合，不逐班查询。
+
+---
 
 ### GET `/teacher/class/info`
 

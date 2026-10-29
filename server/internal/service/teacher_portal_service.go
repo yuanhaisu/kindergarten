@@ -3049,6 +3049,9 @@ func (s *TeacherPortalService) ClassStudent(ctx context.Context, tc *TeacherPort
 }
 
 // ListTeacherClasses 返回当前老师在该园所的所有关联班级。
+//
+// 每班带 parent_count（潜在触达家长数）：本班在读学生绑定的去重家长用户数。
+// 口径与通知实际接收人不同（通知按 target 计算），页面只用它表示触达范围。
 func (s *TeacherPortalService) ListTeacherClasses(ctx context.Context, tc *TeacherPortalContext) ([]map[string]any, error) {
 	var cts []domain.ClassTeacher
 	if err := s.db.WithContext(ctx).Preload("Class").
@@ -3057,20 +3060,70 @@ func (s *TeacherPortalService) ListTeacherClasses(ctx context.Context, tc *Teach
 		Order("class_teachers.id ASC").Find(&cts).Error; err != nil {
 		return nil, err
 	}
+	classIDs := make([]uint64, 0, len(cts))
+	for _, ct := range cts {
+		classIDs = append(classIDs, ct.ClassID)
+	}
+	counts, err := s.classParentCounts(ctx, tc.KindergartenID, classIDs)
+	if err != nil {
+		// 人数是选择器上的辅助信息：查询失败不能连班级列表一起挂掉，否则老师发不了通知。
+		// 返回 null 而不是 0——0 会被页面显示成「0 位家长」，比不显示更误导。
+		log.L(ctx).Error("list teacher classes parent count failed", "kindergarten", tc.KindergartenID, "err", err)
+		counts = nil
+	}
 	out := make([]map[string]any, 0, len(cts))
 	for _, ct := range cts {
 		cn := ""
 		if ct.Class != nil {
 			cn = ct.Class.Name
 		}
-		out = append(out, map[string]any{
+		item := map[string]any{
 			"class_id":    ct.ClassID,
 			"class_name":  cn,
 			"title":       string(ct.Title),
 			"title_label": teacherPortalTitleLabel(ct.Title),
-		})
+		}
+		if counts != nil {
+			item["parent_count"] = counts[ct.ClassID]
+		} else {
+			// 字段始终存在：失败时显式 null，客户端据「不是数字」回退，不靠缺 key 猜测。
+			item["parent_count"] = nil
+		}
+		out = append(out, item)
 	}
 	return out, nil
+}
+
+// classParentCounts 一次 GROUP BY 取每班潜在触达家长数（禁止逐班 COUNT 造成 N+1）。
+// 只统计在读且未删除的学生、未删除的绑定关系；同一家长多孩同班只计一次。
+func (s *TeacherPortalService) classParentCounts(ctx context.Context, kindergartenID uint64, classIDs []uint64) (map[uint64]int64, error) {
+	counts := make(map[uint64]int64, len(classIDs))
+	for _, id := range classIDs {
+		counts[id] = 0
+	}
+	if len(classIDs) == 0 {
+		return counts, nil
+	}
+	type row struct {
+		ClassID     uint64 `gorm:"column:class_id"`
+		ParentCount int64  `gorm:"column:parent_count"`
+	}
+	var rows []row
+	// 用 Table 而非 Model：这里要显式写 deleted_at 条件，避免 GORM 自动软删作用域
+	// 只作用在单表而漏掉 join 表。
+	err := s.db.WithContext(ctx).Table("students AS st").
+		Select("st.class_id AS class_id, COUNT(DISTINCT sp.user_id) AS parent_count").
+		Joins("INNER JOIN student_parents AS sp ON sp.student_id = st.id AND sp.deleted_at IS NULL").
+		Where("st.kindergarten_id = ? AND st.class_id IN ? AND st.status = ? AND st.deleted_at IS NULL",
+			kindergartenID, classIDs, 1).
+		Group("st.class_id").Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		counts[r.ClassID] = r.ParentCount
+	}
+	return counts, nil
 }
 
 // TeacherTaskInput 老师端创建/编辑任务入参。
