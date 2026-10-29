@@ -100,7 +100,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	timetableRepo := repository.NewTimetableRepo(db)
 	timetableService := service.NewTimetableServiceForApp(db, calendarRepo, timetableRepo, kindergartenAppSettingRepo)
 	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService, faceRegistryService, gardenCalendarService, timetableService)
-	appHandler := NewAppHandler(handlerHandler)
+	noticeScheduler := ProvideNoticeScheduler(db)
+	appHandler := NewAppHandlerWithBackgroundWorkers(handlerHandler, noticeScheduler)
 	casbinConfig := ProvideCasbinConfig(cfg)
 	enforcer, err := rbac.NewEnforcer(casbinConfig)
 	if err != nil {

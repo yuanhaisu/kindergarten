@@ -15,6 +15,7 @@ import (
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
+	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/service"
 	ossx "kindergarten-server/internal/storage/oss"
 )
@@ -235,4 +236,18 @@ func ProvideOSSStorage(cfg *config.Config) (*ossx.Storage, error) {
 		AccessKeySecret: cfg.OSS.AccessKeySecret,
 		BucketName:      cfg.OSS.BucketName,
 	})
+}
+
+// ProvideNoticeScheduler 定时通知发布 worker（openspec: notice-scheduled-publish）。
+// 只构造不启动：启动挂在 AppHandler 装配处，见 NewAppHandlerWithBackgroundWorkers。
+func ProvideNoticeScheduler(db *gorm.DB) *service.NoticeScheduler {
+	return service.NewNoticeSchedulerForApp(db)
+}
+
+// NewAppHandlerWithBackgroundWorkers 装配 AppHandler 时启动进程内后台 worker。
+// InjectEngine 的返回类型固定为 *gin.Engine，后台任务没有别的可挂点；做成显式依赖
+// （而不是手工往 wire_gen.go 里加一行）可以保证 make wire 重新生成后启动仍然存在。
+func NewAppHandlerWithBackgroundWorkers(h *handler.Handler, scheduler *service.NoticeScheduler) *AppHandler {
+	scheduler.Start()
+	return NewAppHandler(h)
 }

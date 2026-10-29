@@ -39,9 +39,11 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		// NewRouter 的细闸中间件按接口收依赖（middleware.PermissionResolver）
 		wire.Bind(new(middleware.PermissionResolver), new(*service.AdminAuthzService)),
 		ProvideAuthService,
+		// 定时通知发布 worker：显式依赖到 AppHandler 装配，启动见 NewAppHandlerWithBackgroundWorkers
+		ProvideNoticeScheduler,
 		service.Set,
 		handler.Set,
-		NewAppHandler,
+		NewAppHandlerWithBackgroundWorkers,
 		NewRouter,
 	)
 	return nil, nil

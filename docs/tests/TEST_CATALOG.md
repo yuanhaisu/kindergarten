@@ -233,6 +233,20 @@
 | TC-NEW-NOT-0011 | 删除撤回-仅草稿可删、仅已发布可撤回 | P0 | Unit | ✅ |
 | TC-NEW-NOT-0012 | 家长确认-仅已发布可确认，草稿/定时/撤回不产生记录 | P0 | Unit | ✅ |
 
+### 通知定时发布（对应 OpenSpec 变更 `notice-scheduled-publish`）
+
+> 覆盖 `openspec/changes/notice-scheduled-publish/specs/notice-scheduling/spec.md` 的 6 个 Scenario，
+> 实现见 `server/internal/service/notice_scheduler_test.go`（真实 MySQL，夹具 990201，硬删清理）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-SCH-0001 | 到点发布-状态 1→2 且写入 published_at | P0 | Unit | ✅ |
+| TC-NEW-SCH-0002 | 未到点-预定时间在未来不改变状态 | P0 | Unit | ✅ |
+| TC-NEW-SCH-0003 | 幂等-连续两轮扫描不重写 published_at | P0 | Unit | ✅ |
+| TC-NEW-SCH-0004 | 并发-两个 goroutine 同扫一条只成功一次 | P0 | Unit | ✅ |
+| TC-NEW-SCH-0005 | 失败隔离-单条失败其余仍发布，失败条目下一轮重试 | P0 | Unit | ✅ |
+| TC-NEW-SCH-0006 | 状态跳过-草稿/已发布/已撤回/软删均不发布 | P0 | Unit | ✅ |
+
 ## 成长 (GRW)
 
 ### 数据模型（8 张表）

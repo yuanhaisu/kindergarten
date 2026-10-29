@@ -385,6 +385,38 @@ func (r *NoticeRepo) CreateAttachments(ctx context.Context, list []domain.Notice
 	return r.db.WithContext(ctx).Create(&list).Error
 }
 
+// ListDueScheduledNotices 到期待发布的定时通知（status=1 且 scheduled_at<=now），
+// 按预定时间升序供后台 worker 逐条发布；软删通知不参与。
+func (r *NoticeRepo) ListDueScheduledNotices(ctx context.Context, now time.Time, limit int) ([]domain.Notice, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	var list []domain.Notice
+	err := r.db.WithContext(ctx).
+		Where("status = ? AND scheduled_at <= ? AND deleted_at IS NULL", domain.NoticeStatusScheduled, now).
+		Order("scheduled_at ASC, id ASC").
+		Limit(limit).
+		Find(&list).Error
+	return list, err
+}
+
+// PublishScheduledNotice 条件发布：只有仍处于定时状态且已到点的通知才会被置为已发布。
+// 返回 true 表示本次调用真正发布了该通知；false 表示 0 行受影响——已被其它实例/轮次
+// 发布，或状态在扫描后变化，调用方直接跳过即可（幂等与多实例安全靠这个条件更新）。
+func (r *NoticeRepo) PublishScheduledNotice(ctx context.Context, noticeID uint64, now time.Time) (bool, error) {
+	res := r.db.WithContext(ctx).Model(&domain.Notice{}).
+		Where("id = ? AND status = ? AND scheduled_at <= ? AND deleted_at IS NULL",
+			noticeID, domain.NoticeStatusScheduled, now).
+		Updates(map[string]interface{}{
+			"status":       domain.NoticeStatusPublished,
+			"published_at": now,
+		})
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected == 1, nil
+}
+
 func (r *NoticeRepo) UpdateNoticeFields(ctx context.Context, kindergartenID, noticeID uint64, patch map[string]interface{}) (int64, error) {
 	res := r.db.WithContext(ctx).Model(&domain.Notice{}).
 		Where("kindergarten_id = ? AND id = ? AND deleted_at IS NULL", kindergartenID, noticeID).
