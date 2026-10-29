@@ -6,7 +6,8 @@
 
 ## What Changes
 
-- `GET /parent/growth/report` 在**没有报告行**时也返回 `stats`，按 `student_id` + `type` 周期**实时聚合**四格；有报告行时 `report`/`dimensions` 保持现有结构。
+- `GET /parent/growth/report` 在**没有报告行**时也返回契约中已声明的四项统计（`attendance`、`points_earned`、`tasks_completed`/`tasks_total`、成长记录数），按 `student_id` + `type` 周期**实时聚合**；有报告行时正文/维度仍读报告行。
+- 成长记录字段由契约中的 `growth_media_count` 更名为 `growth_record_count`（该字段从未被实现，且语义为「可见记录条数」而非媒体数），家长端同步读取新字段。
 - 四格口径（用户已确认）：
   - 出勤率：分母 = 周期内班级实际产生考勤记录的天数；迟到算出席；请假未记考勤不进分母。
   - 获得积分：周期内正向积分流水合计。
@@ -32,7 +33,7 @@
 
 ## Impact
 
-- 契约：`backend/api/api-parent/04-growth.md`（report 响应增加 stats、`date` 生效、`term` 校验）。
+- 契约：`backend/api/api-parent/04-growth.md`（四格字段从「已声明未实现」变为真实返回；`growth_media_count` 更名 `growth_record_count`；`date` 生效、`term` 校验）。
 - 后端：`server/internal/service/parent_portal_service.go`（report 聚合）、`server/internal/handler/http/parent_portal.go`（参数）、定向测试。
 - 家长端：`parent/src/pages/growth/report.vue` 兼容 stats（四格取数改为 stats 优先、旧字段回退），无路由/样式改动。
 - 其它端：teacher / admin 不受影响。

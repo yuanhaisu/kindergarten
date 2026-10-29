@@ -40,11 +40,17 @@
 
 备选：出勤率以校历工作日为分母（日历数据不完整，会算不准）；积分净额（与「获得」不符）；任务按频率展开（复杂且需产品再确认）。均未采用，作为后续可演进点。
 
-### D3 响应形状：新增 `stats`，保留 `report`/`dimensions`
+### D3 响应形状：实现既有字段，不新增 `stats`
 
-- `stats` 为固定四键对象，缺数据时为 0；`report`/`dimensions` 原样保留（未来生成链路落地后自然填充）。
-- 不在顶层散落四个字段，避免与 `report` 内字段冲突。
-- `date` 参数按契约生效：给定日期落在哪个周期就取哪个周期；`type` 只接受 weekly/monthly/term，非法返回参数错误。
+契约 `04-growth.md` 已声明 `attendance{present_days,leave_days,total_days,rate}`、`points_earned`、
+`tasks_completed`/`tasks_total`、`growth_media_count`，缺的是实现。因此：
+
+- 直接填充这些既有字段，**不新增 `stats` 对象**（避免同一语义两份字段）。
+- `growth_media_count` 更名 `growth_record_count`：该字段从未实现且语义为「可见记录条数」，
+  名称与页面标签「成长记录」一致；家长端同步改读新字段。
+- `date` 参数按契约生效：给定日期落在哪个周期就取哪个周期；`type` 只接受 weekly/monthly/term，
+  非法返回参数错误。`term` 周期取 `academic_years` 中覆盖该日期的学期区间；
+  未配置学期时返回参数错误（不臆造日期范围）。
 
 ### D4 聚合查询与可见性
 
@@ -64,8 +70,8 @@
 | handler | 会改 | `parent_portal.go` report handler 读取 `date`、校验 `type`/`date` |
 | Casbin policy | 不改 | `/parent/growth/report` 已在现有策略内 |
 | router.go | 不改 | 路由已存在 |
-| backend/api 契约 | 会改（契约变更） | `api-parent/04-growth.md`：新增 `stats` 四键；`date` 生效；`term` 校验 |
-| 端页面 | parent 会改 | `parent/src/pages/growth/report.vue`：stats 优先、旧扁平字段回退；teacher/admin 不改 |
+| backend/api 契约 | 会改（契约变更） | `api-parent/04-growth.md`：四格字段变为真实返回；`growth_media_count` → `growth_record_count`；`date` 生效；`term` 校验 |
+| 端页面 | parent 会改 | `parent/src/pages/growth/report.vue`：读 `growth_record_count`，四格直接取既有字段；teacher/admin 不改 |
 | design token | 不改 | 无新增样式 |
 | 迁移 | 不改 | 无表结构变化 |
 
@@ -73,10 +79,10 @@
 
 | 字段 | 出处 |
 | --- | --- |
-| `stats.attendance_rate` | 设计 `parent/12-growth-report` 四格「出勤率」 |
-| `stats.points_earned` | 同页「获得积分」 |
-| `stats.tasks_completed` / `stats.tasks_total` | 同页「完成任务 8/12」 |
-| `stats.growth_record_count` | 同页「成长记录 15」；不能由已有字段派生（报告行为空） |
+| `attendance.rate`（含 `present_days`/`leave_days`/`total_days`） | 设计 `parent/12-growth-report` 四格「出勤率」；契约已声明，本次实现 |
+| `points_earned` | 同页「获得积分」；契约已声明 |
+| `tasks_completed` / `tasks_total` | 同页「完成任务 8/12」；契约已声明 |
+| `growth_record_count` | 同页「成长记录 15」；由未实现的 `growth_media_count` 更名，语义为可见记录条数 |
 | `date` | 契约已声明但未实现，本次补齐 |
 
 ## Risks / Trade-offs

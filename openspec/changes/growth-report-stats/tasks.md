@@ -2,7 +2,7 @@
 
 ## 1. 契约（先改）
 
-- [ ] 1.1 `backend/api/api-parent/04-growth.md`：report 响应新增 `stats`（出勤率/获得积分/完成任务/成长记录），说明无报告行也返回；补 `date` 生效规则与 `type` 允许值（weekly/monthly/term）；不新增其它字段
+- [ ] 1.1 `backend/api/api-parent/04-growth.md`：四格字段（`attendance`/`points_earned`/`tasks_completed`/`tasks_total`/成长记录）由「已声明未实现」改为真实返回；`growth_media_count` 更名 `growth_record_count`；补 `date` 生效规则与 `type` 允许值（weekly/monthly/term）；不新增 `stats` 等重复字段
 - [ ] 1.2 对照 design「契约字段溯源」逐项核对，确认无多余字段
 
 ## 2. 后端
@@ -14,7 +14,7 @@
 
 ## 3. 家长端页面
 
-- [ ] 3.1 `parent/src/pages/growth/report.vue`：四格优先读 `stats`，缺失时回退旧扁平字段；空数据展示零值而非空态错误
+- [ ] 3.1 `parent/src/pages/growth/report.vue`：四格读既有字段（`attendance.rate`、`points_earned`、`tasks_completed/total`、`growth_record_count`）；空数据展示零值而非空态错误
 - [ ] 3.2 周期切换（周/月/学期）传参正确；`date` 按当前所选周期传递
 - [ ] 3.3 不改样式 token、不改路由；家长端 tabBar 跳转如需返回成长时光用 `switchTab`
 
