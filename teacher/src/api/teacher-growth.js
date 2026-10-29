@@ -8,20 +8,33 @@ export function fetchTeacherGrowthLog(id) {
   return requestWithAuth({ url: `/teacher/growth/logs/${id}`, method: "GET" })
 }
 
-export function createTeacherGrowthLog(data) {
-  return requestWithAuth({ url: "/teacher/growth/logs", method: "POST", data })
+// options.silent：创建页用「失败红条 + 重试」承载错误，不需要全局 toast 重复提示。
+export function createTeacherGrowthLog(data, options = {}) {
+  return requestWithAuth({ url: "/teacher/growth/logs", method: "POST", data, silent: options.silent })
 }
 
-export function updateTeacherGrowthLog(id, data) {
-  return requestWithAuth({ url: `/teacher/growth/logs/${id}`, method: "PUT", data })
+export function updateTeacherGrowthLog(id, data, options = {}) {
+  return requestWithAuth({ url: `/teacher/growth/logs/${id}`, method: "PUT", data, silent: options.silent })
 }
 
-export function fetchTeacherGrowthComments(id) {
-  return requestWithAuth({ url: `/teacher/growth/logs/${id}/comments`, method: "GET" })
+export function fetchTeacherGrowthComments(id, params = { page: 1, page_size: 50 }) {
+  return requestWithAuth({ url: `/teacher/growth/logs/${id}/comments`, method: "GET", data: params })
 }
 
-export function createTeacherGrowthComment(id, content) {
-  return requestWithAuth({ url: `/teacher/growth/logs/${id}/comments`, method: "POST", data: { content } })
+// parent_id 只接受该记录下的顶层评论（回复只有一层，B10 契约）；不传即一级评论。
+export function createTeacherGrowthComment(id, content, parentId = null) {
+  const data = { content }
+  if (parentId) data.parent_id = parentId
+  return requestWithAuth({ url: `/teacher/growth/logs/${id}/comments`, method: "POST", data })
+}
+
+// 评论赞/取消赞（幂等）：返回 { liked, likes_count }，客户端直接以服务端最新值渲染。
+export function likeTeacherGrowthComment(commentId) {
+  return requestWithAuth({ url: `/teacher/growth/comments/${commentId}/like`, method: "POST", data: {} })
+}
+
+export function unlikeTeacherGrowthComment(commentId) {
+  return requestWithAuth({ url: `/teacher/growth/comments/${commentId}/like`, method: "DELETE" })
 }
 
 // 照片识别状态与建议（详情页轮询用）：
@@ -62,10 +75,12 @@ export function confirmHighSuggestions(logId) {
 // 上传成长记录素材，走统一上传通道（素材管理基线 §6：biz_type=growth）。
 // 返回体 data：{ id, file_url, thumb_url, file_type, file_name, file_size }；
 // 其中 id 即创建/编辑记录时 media[].file_id 所用的素材标识。
-export function uploadGrowthMedia(filePath) {
+// onProgressUpdate 可选：上传进度百分比（0–100），创建页用于展示真实进度。
+export function uploadGrowthMedia(filePath, onProgressUpdate = null) {
   return uploadFile({
     url: "/common/upload",
     filePath,
-    formData: { biz_type: "growth" }
+    formData: { biz_type: "growth" },
+    onProgressUpdate
   })
 }

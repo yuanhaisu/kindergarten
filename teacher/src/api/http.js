@@ -80,10 +80,20 @@ export function requestWithAuth(options) {
 // 文件上传（multipart）：与 request() 同一套 token 注入、401 处理与错误归一化约定。
 // 服务端契约见 POST /common/upload：form 字段 file + biz_type；成功判定同为 2xx + code===0。
 // 用法（成长记录）：uploadFile({ url: "/common/upload", filePath, formData: { biz_type: "growth" } })
-export function uploadFile({ url, filePath, name = "file", formData = {}, header = {}, silent = false }) {
+// onProgressUpdate 可选：把 uni.uploadFile 返回任务的进度回调整体透传出去
+// （参数 { progress, totalBytesSent, totalBytesExpectedToSend }）；不传时行为不变。
+export function uploadFile({
+  url,
+  filePath,
+  name = "file",
+  formData = {},
+  header = {},
+  silent = false,
+  onProgressUpdate = null
+}) {
   return new Promise((resolve, reject) => {
     const token = getToken()
-    uni.uploadFile({
+    const task = uni.uploadFile({
       url: `${config.baseURL}${url}`,
       filePath,
       name,
@@ -123,5 +133,9 @@ export function uploadFile({ url, filePath, name = "file", formData = {}, header
         reject({ ...err, message: err?.message || "上传失败" })
       }
     })
+    // 老基础库 / 非上传环境可能不返回 UploadTask，此时静默跳过进度，不影响上传本身
+    if (typeof onProgressUpdate === "function" && task && typeof task.onProgressUpdate === "function") {
+      task.onProgressUpdate(({ progress }) => onProgressUpdate(progress))
+    }
   })
 }

@@ -1,42 +1,31 @@
 <script setup>
-import { ref, computed } from "vue"
+import { computed, reactive, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
-import { createTeacherGrowthLog, fetchTeacherGrowthLog, updateTeacherGrowthLog, uploadGrowthMedia, fetchPresentStudents } from "@/api/teacher-growth"
-import { fetchTeacherClassStudents } from "@/api/teacher-class"
+import {
+  createTeacherGrowthLog,
+  fetchTeacherGrowthLog,
+  updateTeacherGrowthLog,
+  uploadGrowthMedia,
+  fetchPresentStudents
+} from "@/api/teacher-growth"
+import { fetchTeacherClassStudents, fetchTeacherClassInfo } from "@/api/teacher-class"
 import { fetchDict } from "@/api/dict"
 import { fetchTeacherAchievements, grantAchievement } from "@/api/teacher-achievements"
+import { addDays, formatDateAnchor, todayKey } from "@/utils/time"
+import PageShell from "@/components/PageShell.vue"
 
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-}
-
-function formatDate(ymd) {
-  const d = new Date(ymd.replace(/-/g, "/"))
-  const w = ["日", "一", "二", "三", "四", "五", "六"]
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${w[d.getDay()]}`
-}
-
-function addDays(ymd, n) {
-  const d = new Date(ymd.replace(/-/g, "/"))
-  d.setDate(d.getDate() + n)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, "0")
-  const dd = String(d.getDate()).padStart(2, "0")
-  return `${y}-${m}-${dd}`
-}
+const MAX_PHOTOS = 20
+const MAX_PHOTO_BYTES = 20 * 1024 * 1024
+const UPLOAD_TIMEOUT_MS = 30000
 
 const submitting = ref(false)
+const submitError = ref("")
 const students = ref([])
-// 学生选择器：30 人班的检索入口（本地过滤，无需后端接口）
-const studentQuery = ref("")
-const filteredStudents = computed(() => {
-  const q = studentQuery.value.trim().toLowerCase()
-  if (!q) return students.value
-  return students.value.filter(s => (s.name || "").toLowerCase().includes(q))
-})
+const className = ref("")
+const classStudentCount = ref(0)
+
 const form = ref({
-  date: todayStr(),
+  date: todayKey(),
   breakfast_rating: 0,
   lunch_rating: 0,
   dinner_rating: 0,
@@ -52,440 +41,42 @@ const form = ref({
   student_ids: []
 })
 
-const dateDisplay = computed(() => formatDate(form.value.date))
-
-// 编辑态：从详情页带 id 进入时更新原记录，而非新建。
-// 日期在编辑态只读——记录的日期是「这一天发生了什么」的锚点，改动会让家长端时间线错位。
 const editId = ref(null)
 const isEdit = computed(() => editId.value != null)
+const dateAnchor = computed(() => formatDateAnchor(form.value.date))
+const nextDisabled = computed(() => isEdit.value || form.value.date >= todayKey())
+const nextDayHint = computed(() => (nextDisabled.value ? "" : "后一天"))
+const childCount = computed(() => classStudentCount.value || students.value.length)
 
-function prevDay() { if (isEdit.value) return; form.value.date = addDays(form.value.date, -1) }
-function nextDay() {
-  if (isEdit.value) return
-  const n = addDays(form.value.date, 1)
-  if (n <= todayStr()) form.value.date = n
-}
-
-function toggleTag(tag) {
-  const i = form.value.performance_tags.indexOf(tag)
-  if (i >= 0) form.value.performance_tags.splice(i, 1)
-  else form.value.performance_tags.push(tag)
-}
-
-function toggleStudent(sid) {
-  const i = form.value.student_ids.indexOf(sid)
-  if (i >= 0) form.value.student_ids.splice(i, 1)
-  else form.value.student_ids.push(sid)
-}
-
-// ---- 授予徽章（可选）----
-// 记录先发布，再授予：见证需要 log_id，所以授予必须发生在发布成功之后。
-const achievements = ref([])
-const grant = ref({ achievement_id: null, student_ids: [], as_witness: true })
-
-function toggleGrantStudent(sid) {
-  const i = grant.value.student_ids.indexOf(sid)
-  if (i >= 0) grant.value.student_ids.splice(i, 1)
-  else grant.value.student_ids.push(sid)
-}
-
-function selectAchievement(id) {
-  grant.value.achievement_id = grant.value.achievement_id === id ? null : id
-}
-
-async function loadAchievements() {
-  try {
-    const res = await fetchTeacherAchievements()
-    achievements.value = res.data?.list || []
-  } catch (e) {
-    // 徽章列表失败不阻塞发布——授予是可选动作
-  }
-}
-
-async function grantAfterPublish(logId) {
-  const g = grant.value
-  if (!g.achievement_id) return
-  const target = g.student_ids.length ? g.student_ids : form.value.student_ids
-  if (!target.length) {
-    uni.showToast({ title: "请选择要授予的学生", icon: "none" })
-    return
-  }
-  try {
-    await grantAchievement(g.achievement_id, {
-      student_ids: target,
-      log_id: g.as_witness ? logId : undefined,
-    })
-    uni.showToast({ title: "已授予徽章", icon: "success" })
-  } catch (e) {
-    // 授予失败不影响已发布的记录——单独提示
-    uni.showToast({ title: e?.message || "授予徽章失败", icon: "none" })
-  }
-}
-
-function switchTargetType() {
-  form.value.target_type = form.value.target_type === 2 ? 1 : 2
-  if (form.value.target_type === 1) {
-    form.value.student_ids = []
-    form.value.sync_to_feed = true
-  } else {
-    form.value.sync_to_feed = false
-    loadStudents()
-  }
-}
-
-async function loadStudents() {
-  try {
-    const res = await fetchTeacherClassStudents()
-    students.value = res.data?.list || []
-  } catch (e) {
-    // 学生列表加载失败不阻塞页面
-  }
-}
-
-onLoad((options) => {
-  const id = options?.id
-  if (id) {
-    editId.value = id
-    loadExistingLog(id)
-  }
-  loadStudents()
-  loadPerformanceTags()
-  loadAchievements()
-})
-
-async function loadExistingLog(id) {
-  try {
-    const res = await fetchTeacherGrowthLog(id)
-    const rec = res.data || {}
-    const f = form.value
-    f.content = rec.content || ""
-    f.breakfast_rating = rec.breakfast_rating || 0
-    f.lunch_rating = rec.lunch_rating || 0
-    f.dinner_rating = rec.dinner_rating || 0
-    f.nap_duration = rec.nap_duration || 0
-    f.sleep_quality = rec.sleep_quality || 0
-    f.morning_mood = rec.morning_mood || 0
-    f.afternoon_mood = rec.afternoon_mood || 0
-    f.performance_tags = Array.isArray(rec.performance_tags) ? rec.performance_tags : []
-    f.target_type = rec.target_type === 2 ? 2 : 1
-    f.sync_to_feed = rec.sync_to_feed !== false
-    // 详情响应日期为 "2006-01-02" 格式，可直接回填
-    if (rec.date) f.date = String(rec.date).slice(0, 10)
-    f.student_ids = (rec.related_students || []).map(s => s.id)
-    // 既有照片回显（编辑态）：保留 media.id 供服务端识别「保留项」，ref_desc 可继续编辑
-    f.media = (rec.media || []).map(m => ({
-      id: m.id || 0,
-      file_id: m.file_id || 0,
-      file_url: m.file_url || "",
-      thumb_url: m.thumb_url || m.file_url || "",
-      file_type: m.file_type || "image",
-      ref_desc: m.ref_desc || "",
-      status: "done",
-      // 点名（D8）：已确认名单；AI 建议仅供展示与预勾——未在编辑态提交的建议保持原状
-      student_ids: Array.isArray(m.student_ids) ? [...m.student_ids] : [],
-      suggestions: Array.isArray(m.student_suggestions) ? m.student_suggestions : [],
-      _named: false
-    }))
-  } catch (e) {
-    uni.showToast({ title: e?.message || "加载记录失败", icon: "none" })
-  }
-}
-
-function addMedia() {
-  uni.chooseImage({
-    count: 20 - form.value.media.length,
-    success(res) { res.tempFilePaths.forEach(p => uploadOne(p)) }
-  })
-}
-
-// 上传超时护栏：网络挂起时不能永远停在「上传中」——超时即判失败、可重试（specs/growth-media-pipeline「上传失败可重试」）。
-const UPLOAD_TIMEOUT_MS = 30000
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error("上传超时")), ms))
-  ])
-}
-
-function fillUploaded(item, d) {
-  item.file_id = d.id
-  item.file_url = d.file_url
-  item.thumb_url = d.thumb_url || d.file_url
-  item.file_type = d.file_type || "image"
-  item.status = "done"
-}
-
-// 每张照片独立上传：成功项保存 file_id（提交时的引用标识）与展示 URL；
-// 失败项保留本地路径并标记 failed，供逐张重试。
-async function uploadOne(tempPath) {
-  const item = { file_id: 0, file_url: "", thumb_url: "", file_type: "image", ref_desc: "", status: "uploading", _temp: tempPath, student_ids: [], suggestions: [], _named: true }
-  form.value.media.push(item)
-  try {
-    const res = await withTimeout(uploadGrowthMedia(tempPath), UPLOAD_TIMEOUT_MS)
-    fillUploaded(item, res.data || {})
-  } catch (e) {
-    item.status = "failed"
-  }
-}
-
-function retryMedia(i) {
-  const item = form.value.media[i]
-  if (!item || item.status !== "failed" || !item._temp) return
-  item.status = "uploading"
-  withTimeout(uploadGrowthMedia(item._temp), UPLOAD_TIMEOUT_MS)
-    .then(res => { fillUploaded(item, res.data || {}) })
-    .catch(() => { item.status = "failed" })
-}
-
-function mediaDisplayUrl(item) {
-  return item.thumb_url || item.file_url || item._temp || ""
-}
-
-function removeMedia(i) { form.value.media.splice(i, 1) }
-
-// ── 照片点名（D8：批量追加 + 单张微调）─────────────────────────────
-// 批量 = 把勾选的学生「追加」到所选照片（不叠加，TC-NEW-PTG-0003/0004）；
-// 单张 = 编辑这张照片的完整名单（加/减皆可，TC-NEW-PTG-0005/0006）。
-
-const batchMode = ref(false)
-const batchSelected = ref(new Set())
-const namingOpen = ref(false)
-const namingTargets = ref([]) // 待点名的照片下标
-const namingStudents = ref(new Set())
-// 显式区分「批量」与「单张」入口：之前用 targets.length===1 推断，
-// 导致批量只选 1 张时悄悄变成「替换」语义（已有名单被清掉）——与追加承诺不符
-const namingIsBatch = ref(false)
-
-// 批量模式下这批照片**已有**的点名（并集）：面板要把它显性展示出来，
-// 否则「已点 2 人 + 新增 1 人 = 点名 3」对老师是惊吓（2026-10-15 手动测试反馈）
-const batchExisting = computed(() => {
-  if (!namingIsBatch.value) return new Set()
-  const s = new Set()
-  namingTargets.value.forEach(i => {
-    const m = form.value.media[i]
-    if (m) (m.student_ids || []).forEach(id => s.add(id))
-  })
-  return s
-})
-
-// 确定后的每张人数 = 新增 ∪ 已有。两者可能重叠（「全班」会一次选中含已有的整份名单），
-// 简单相加会把重叠的孩子算两次（曾实测：2 新增 + 2 已有显示「共 4 人」，实际 2 人）。
-function namingTotalCount() {
-  if (!namingIsBatch.value) return namingStudents.value.size
-  const all = new Set(namingStudents.value)
-  batchExisting.value.forEach(id => all.add(id))
-  return all.size
-}
-
-// 可点名学生 = 记录范围内的学生（白名单与后端一致：个体记录仅目标学生）
-const namingCandidates = computed(() => {
-  if (form.value.target_type === 2) {
-    return students.value.filter(s => form.value.student_ids.includes(s.student_id))
-  }
-  return students.value
-})
-
-function namedCount(m) {
-  return Array.isArray(m.student_ids) ? m.student_ids.length : 0
-}
-
-function mediaSuggestionCount(m) {
-  return Array.isArray(m.suggestions) ? m.suggestions.length : 0
-}
-
-// 单张：建议的置信分级（high 预勾、low 仅提示）——阈值由服务端判定，前端不硬编码
-function suggestionOf(sid) {
-  if (namingTargets.value.length !== 1) return null
-  const m = form.value.media[namingTargets.value[0]]
-  if (!m || !Array.isArray(m.suggestions)) return null
-  return m.suggestions.find(s => s.student_id === sid) || null
-}
-
-function startBatch() {
-  batchMode.value = true
-  batchSelected.value = new Set()
-}
-
-function cancelBatch() {
-  batchMode.value = false
-  batchSelected.value = new Set()
-}
-
-function toggleBatchSelect(i) {
-  const m = form.value.media[i]
-  if (!m || m.status !== "done") return
-  const next = new Set(batchSelected.value)
-  if (next.has(i)) next.delete(i)
-  else next.add(i)
-  batchSelected.value = next
-}
-
-// 全选可点名的照片（同活动连续命名时省掉逐张点击，D10）
-const doneMediaIndexes = computed(() =>
-  form.value.media.map((m, i) => (m.status === "done" ? i : -1)).filter((i) => i >= 0),
+const pickedStudents = computed(() =>
+  form.value.student_ids
+    .map(id => students.value.find(s => s.student_id === id))
+    .filter(Boolean)
 )
-const allPhotosSelected = computed(
-  () => doneMediaIndexes.value.length > 0 && batchSelected.value.size === doneMediaIndexes.value.length,
-)
-
-function toggleSelectAll() {
-  batchSelected.value = allPhotosSelected.value ? new Set() : new Set(doneMediaIndexes.value)
-}
-
-function openSingleNaming(i) {
-  if (batchMode.value) { toggleBatchSelect(i); return }
-  const m = form.value.media[i]
-  if (m.status !== "done") return
-  namingTargets.value = [i]
-  namingIsBatch.value = false
-  // 预勾：已确认名单 + 高置信建议（D6：预勾只是默认选中，可取消）
-  const pre = new Set(m.student_ids || [])
-  ;(m.suggestions || []).forEach(s => { if (s.tier === "high") pre.add(s.student_id) })
-  namingStudents.value = pre
-  namingOpen.value = true
-}
-
-function openBatchNaming() {
-  const targets = [...batchSelected.value].sort((a, b) => a - b)
-  if (!targets.length) {
-    uni.showToast({ title: "请先选择照片", icon: "none" })
-    return
+const pickedPreview = computed(() => pickedStudents.value.slice(0, 3))
+const pickedText = computed(() => {
+  const names = pickedStudents.value.map(s => s.name)
+  if (!names.length) {
+    return form.value.student_ids.length ? `已选 ${form.value.student_ids.length} 人` : "还没有选择幼儿"
   }
-  namingTargets.value = targets
-  namingIsBatch.value = true
-  namingStudents.value = new Set() // 批量追加语义：从空开始，不覆盖各自已有点名
-  namingOpen.value = true
-}
+  if (names.length <= 3) return names.join("、")
+  return `${names.slice(0, 3).join("、")} 等 ${names.length} 人`
+})
 
-// 已有点名不可在批量面板里取消（取消也不生效——合并语义是并集），点击给个说明
-function toggleNamingStudent(sid) {
-  if (batchExisting.value.has(sid)) {
-    uni.showToast({ title: "该孩子已在照片上（批量只做追加）", icon: "none" })
-    return
-  }
-  const next = new Set(namingStudents.value)
-  if (next.has(sid)) next.delete(sid)
-  else next.add(sid)
-  namingStudents.value = next
-}
-
-function closeNaming() {
-  namingOpen.value = false
-}
-
-// 全班 = 记录当日的到场学生作为默认名单（D11）：填入后仍可逐人增减——
-// 「全班」是默认值而非锁定（拍合影时总有个别孩子不在画面）。
-const rosterLoading = ref(false)
-
-async function pickWholeClass() {
-  if (rosterLoading.value) return
-  rosterLoading.value = true
-  try {
-    const res = await fetchPresentStudents(String(form.value.date || "").slice(0, 10))
-    const list = res.data?.list || []
-    const allowed = new Set(namingCandidates.value.map(s => s.student_id))
-    const present = list.filter(id => allowed.has(id))
-    let picked = present
-    // 批量模式：已在该批照片上的孩子不进入「新增」勾选集（与 toggleNamingStudent 的追加语义一致，
-    // 也避免点它们时弹出「已在照片上」却不能取消的困惑）
-    if (namingIsBatch.value) picked = present.filter(id => !batchExisting.value.has(id))
-    if (!picked.length) {
-      // 批量模式下还有另一种空：到场名单非空，但已全部在所选照片上（无需追加）
-      const title = namingIsBatch.value && present.length ? "到场孩子已全部在这批照片上" : "当日到场名单为空"
-      uni.showToast({ title, icon: "none" })
-      return
-    }
-    namingStudents.value = new Set(picked)
-    // 批量是追加语义：报「新增 N 人」并带上到场总数，避免把筛选后的新增数误读成到场数
-    const title = namingIsBatch.value
-      ? `新增 ${picked.length} 人（当日到场共 ${present.length} 人）`
-      : `已选当日到场 ${picked.length} 人，可增减`
-    uni.showToast({ title, icon: "none" })
-  } catch (e) {
-    uni.showToast({ title: e?.message || "获取到场名单失败", icon: "none" })
-  } finally {
-    rosterLoading.value = false
-  }
-}
-
-function confirmNaming() {
-  const picked = [...namingStudents.value]
-  if (!namingIsBatch.value) {
-    // 单张微调 = 编辑这张照片的完整名单（加/减皆可）
-    const m = form.value.media[namingTargets.value[0]]
-    if (m) { m.student_ids = picked; m._named = true }
-  } else {
-    // 批量 = 追加：与各照片已有点名取并集，重复应用不叠加（TC-NEW-PTG-0003/0004）
-    if (!picked.length) {
-      // 无新增 = 无操作。不能把照片标记为「已动过」——提交时会带上空名单，连带清掉它的 AI 建议
-      // （「全班」把在场孩子一次选完时最易走到这里：全是「已有」，新增集为空）
-      cancelBatch()
-      namingOpen.value = false
-      uni.showToast({ title: "未选择新增孩子，未做改动", icon: "none" })
-      return
-    }
-    namingTargets.value.forEach(i => {
-      const m = form.value.media[i]
-      if (!m) return
-      const merged = new Set(m.student_ids || [])
-      picked.forEach(sid => merged.add(sid))
-      m.student_ids = [...merged]
-      m._named = true
-    })
-    cancelBatch()
-  }
-  namingOpen.value = false
-}
-
-const mediaPending = computed(() => form.value.media.filter(m => m.status !== "done").length)
-
-// 提交载荷：只送引用（id/file_id/ref_desc），URL 等物理属性由服务端反查（基线 L2）。
-// student_ids 仅在老师动过这张照片的点名时携带（_named）——未动过的照片不提交该字段，
-// 服务端保持其既有点名与待处理建议不变（D8：提交即最终名单，缺省即不触碰）。
-function mediaPayload() {
-  return form.value.media.map(m => {
-    const item = { id: m.id || 0, file_id: m.file_id, ref_desc: m.ref_desc || "" }
-    if (m._named) item.student_ids = m.student_ids || []
-    return item
-  })
-}
-
-async function publish() {
-  if (!form.value.content.trim()) {
-    uni.showToast({ title: "请输入记录内容", icon: "none" })
-    return
-  }
-  if (form.value.target_type === 2 && form.value.student_ids.length === 0) {
-    uni.showToast({ title: "请选择至少一位学生", icon: "none" })
-    return
-  }
-  // 存在未上传完成/失败的素材时阻断提交（宁可不出，不静默丢图）
-  if (mediaPending.value > 0) {
-    const failed = form.value.media.some(m => m.status === "failed")
-    uni.showToast({ title: failed ? "有照片上传失败，请重试或移除" : "照片上传中，请稍候", icon: "none" })
-    return
-  }
-  submitting.value = true
-  try {
-    const payload = { ...form.value, media: mediaPayload() }
-    if (isEdit.value) {
-      await updateTeacherGrowthLog(editId.value, payload)
-      uni.showToast({ title: "已保存", icon: "success" })
-    } else {
-      const created = await createTeacherGrowthLog(payload)
-      // 授予是可选的追加动作，且需要刚发布的记录作见证——放在发布成功之后
-      await grantAfterPublish(created?.data?.id)
-      uni.showToast({ title: "已发布", icon: "success" })
-    }
-    setTimeout(() => uni.navigateBack(), 600)
-  } catch (e) {
-    uni.showToast({ title: e?.message || (isEdit.value ? "保存失败" : "发布失败"), icon: "none" })
-  } finally {
-    submitting.value = false
-  }
-}
-
+const meals = [
+  { field: "breakfast_rating", label: "早餐" },
+  { field: "lunch_rating", label: "午餐" },
+  { field: "dinner_rating", label: "晚餐" }
+]
+const moods = [
+  { field: "morning_mood", label: "上午" },
+  { field: "afternoon_mood", label: "下午" }
+]
+const ratingOptions = [
+  { value: 3, emoji: "😋", label: "好" },
+  { value: 2, emoji: "😐", label: "一般" },
+  { value: 1, emoji: "😞", label: "不好" }
+]
 const sleepOptions = [1, 2, 3]
 const qualityOptions = [
   { value: 3, label: "很好" },
@@ -495,898 +86,2057 @@ const qualityOptions = [
 
 const performanceOptions = ref([])
 
+function prevDay() {
+  if (isEdit.value) return
+  form.value.date = addDays(form.value.date, -1)
+}
+
+function nextDay() {
+  if (isEdit.value) return
+  const next = addDays(form.value.date, 1)
+  if (next <= todayKey()) form.value.date = next
+}
+
+function setMode(mode) {
+  if (isEdit.value || form.value.target_type === mode) return
+  form.value.target_type = mode
+  if (mode === 1) {
+    form.value.student_ids = []
+    form.value.sync_to_feed = true
+  } else {
+    form.value.sync_to_feed = false
+  }
+}
+
+function setRating(field, value) {
+  form.value[field] = form.value[field] === value ? 0 : value
+}
+
+function toggleTag(tag) {
+  const list = form.value.performance_tags
+  const index = list.indexOf(tag)
+  if (index >= 0) list.splice(index, 1)
+  else list.push(tag)
+}
+
+// ---- 选择幼儿 ----
+const sheetOpen = ref(false)
+const sheetMode = ref("pick") // pick | single | batch
+const sheetQuery = ref("")
+const sheetPicked = ref(new Set())
+const sheetTargets = ref([])
+
+const sheetCandidates = computed(() => {
+  let pool = students.value
+  if (form.value.target_type === 2 && sheetMode.value !== "pick") {
+    pool = pool.filter(s => form.value.student_ids.includes(s.student_id))
+  }
+  const query = sheetQuery.value.trim().toLowerCase()
+  if (!query) return pool
+  return pool.filter(s => String(s.name || "").toLowerCase().includes(query))
+})
+
+const sheetBatchExisting = computed(() => {
+  if (sheetMode.value !== "batch") return new Set()
+  const set = new Set()
+  sheetTargets.value.forEach(index => {
+    const media = form.value.media[index]
+    ;(media?.student_ids || []).forEach(id => set.add(id))
+  })
+  return set
+})
+
+const sheetSelectedCount = computed(() => sheetPicked.value.size)
+
+const allSheetSelected = computed(() => {
+  if (!sheetCandidates.value.length) return false
+  return sheetCandidates.value.every(s =>
+    sheetPicked.value.has(s.student_id) || sheetBatchExisting.value.has(s.student_id)
+  )
+})
+
+const sheetTitle = computed(() => {
+  if (sheetMode.value === "single") return "照片点名"
+  if (sheetMode.value === "batch") return "批量点名"
+  return "选择幼儿"
+})
+
+const sheetDesc = computed(() => {
+  if (sheetMode.value === "single") return "勾选这张照片里的孩子（AI 建议可一并确认）"
+  if (sheetMode.value === "batch") {
+    return `勾选的孩子会追加到所选 ${sheetTargets.value.length} 张照片，已有名单保留`
+  }
+  return `${className.value || "本班"} · 共 ${students.value.length} 位 · 已选 ${sheetPicked.value.size} 人`
+})
+
+function reloadSheetPicked(next) {
+  sheetPicked.value = next
+}
+
+function openPickSheet() {
+  sheetMode.value = "pick"
+  sheetQuery.value = ""
+  reloadSheetPicked(new Set(form.value.student_ids))
+  sheetOpen.value = true
+}
+
+function openSingleNaming(index) {
+  if (batchMode.value) {
+    toggleBatchSelect(index)
+    return
+  }
+  const media = form.value.media[index]
+  if (!media || media.status !== "done") return
+  sheetMode.value = "single"
+  sheetTargets.value = [index]
+  sheetQuery.value = ""
+  // 预勾：已确认名单 + 高置信建议（阈值由服务端判定，前端不硬编码）
+  const pre = new Set(media.student_ids || [])
+  ;(media.suggestions || []).forEach(s => {
+    if (s.tier === "high") pre.add(s.student_id)
+  })
+  reloadSheetPicked(pre)
+  sheetOpen.value = true
+}
+
+function openBatchNaming() {
+  const targets = [...batchSelected.value].sort((a, b) => a - b)
+  if (!targets.length) {
+    uni.showToast({ title: "请先选择照片", icon: "none" })
+    return
+  }
+  sheetMode.value = "batch"
+  sheetTargets.value = targets
+  sheetQuery.value = ""
+  reloadSheetPicked(new Set()) // 批量 = 追加语义，从空开始
+  sheetOpen.value = true
+}
+
+function toggleSheetStudent(id) {
+  if (sheetBatchExisting.value.has(id)) {
+    uni.showToast({ title: "该孩子已在照片上（批量只做追加）", icon: "none" })
+    return
+  }
+  const next = new Set(sheetPicked.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  reloadSheetPicked(next)
+}
+
+function toggleSelectAllSheet() {
+  if (allSheetSelected.value) {
+    const keep = new Set()
+    sheetCandidates.value.forEach(s => {
+      if (sheetBatchExisting.value.has(s.student_id)) keep.add(s.student_id)
+    })
+    reloadSheetPicked(keep)
+    return
+  }
+  const next = new Set(sheetPicked.value)
+  sheetCandidates.value.forEach(s => {
+    if (!sheetBatchExisting.value.has(s.student_id)) next.add(s.student_id)
+  })
+  reloadSheetPicked(next)
+}
+
+function closeSheet() {
+  sheetOpen.value = false
+}
+
+function confirmSheet() {
+  const picked = [...sheetPicked.value]
+  if (sheetMode.value === "pick") {
+    form.value.student_ids = picked
+  } else if (sheetMode.value === "single") {
+    const media = form.value.media[sheetTargets.value[0]]
+    if (media) {
+      media.student_ids = picked
+      media._named = true
+    }
+    uni.showToast({ title: picked.length ? `已点名 ${picked.length} 位幼儿` : "已清空这张照片的点名", icon: "none" })
+  } else {
+    if (!picked.length) {
+      closeSheet()
+      cancelBatch()
+      uni.showToast({ title: "未选择新增孩子，未做改动", icon: "none" })
+      return
+    }
+    sheetTargets.value.forEach(index => {
+      const media = form.value.media[index]
+      if (!media) return
+      const merged = new Set(media.student_ids || [])
+      picked.forEach(id => merged.add(id))
+      media.student_ids = [...merged]
+      media._named = true
+    })
+    cancelBatch()
+  }
+  closeSheet()
+}
+
+// ---- 照片 ----
+const batchMode = ref(false)
+const batchSelected = ref(new Set())
+
+const doneMediaIndexes = computed(() =>
+  form.value.media.map((media, index) => (media.status === "done" ? index : -1)).filter(i => i >= 0)
+)
+const allPhotosSelected = computed(
+  () => doneMediaIndexes.value.length > 0 && batchSelected.value.size === doneMediaIndexes.value.length
+)
+const namedPhotoCount = computed(
+  () => form.value.media.filter(media => media.status === "done" && (media.student_ids || []).length).length
+)
+const uploadingCount = computed(() => form.value.media.filter(media => media.status === "uploading").length)
+const failedCount = computed(() => form.value.media.filter(media => media.status === "failed").length)
+
+function startBatch() {
+  if (!form.value.media.length) {
+    uni.showToast({ title: "先添加照片，再点名", icon: "none" })
+    return
+  }
+  if (!doneMediaIndexes.value.length) {
+    uni.showToast({ title: "等照片上传完成，再点名", icon: "none" })
+    return
+  }
+  batchMode.value = true
+  batchSelected.value = new Set()
+}
+
+function cancelBatch() {
+  batchMode.value = false
+  batchSelected.value = new Set()
+}
+
+function toggleBatchSelect(index) {
+  const media = form.value.media[index]
+  if (!media || media.status !== "done") return
+  const next = new Set(batchSelected.value)
+  if (next.has(index)) next.delete(index)
+  else next.add(index)
+  batchSelected.value = next
+}
+
+function toggleSelectAllPhotos() {
+  batchSelected.value = allPhotosSelected.value ? new Set() : new Set(doneMediaIndexes.value)
+}
+
+function mediaDisplayUrl(media) {
+  return media.thumb_url || media.file_url || media._temp || ""
+}
+
+function mediaBadgeText(media) {
+  const named = (media.student_ids || []).length
+  if (named) return `点名 ${named}`
+  const suggestions = (media.suggestions || []).length
+  if (suggestions) return `AI 建议 ${suggestions}`
+  return "待点名"
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("上传超时")), ms))
+  ])
+}
+
+function fillUploaded(media, data) {
+  media.file_id = data.id
+  media.file_url = data.file_url
+  media.thumb_url = data.thumb_url || data.file_url
+  media.file_type = data.file_type || "image"
+  media.progress = 100
+  media.status = "done"
+}
+
+async function uploadOne(tempPath) {
+  // 必须用 reactive：直接 push 裸对象后改 raw 属性不会触发渲染，
+  // 进度百分比与「上传中 → 完成」的状态迁移就永远停在首帧。
+  const media = reactive({
+    file_id: 0,
+    file_url: "",
+    thumb_url: "",
+    file_type: "image",
+    ref_desc: "",
+    status: "uploading",
+    progress: 0,
+    _temp: tempPath,
+    student_ids: [],
+    suggestions: [],
+    _named: true
+  })
+  form.value.media.push(media)
+  try {
+    const res = await withTimeout(
+      uploadGrowthMedia(tempPath, progress => {
+        if (media.status === "uploading") media.progress = progress
+      }),
+      UPLOAD_TIMEOUT_MS
+    )
+    fillUploaded(media, res.data || {})
+  } catch (err) {
+    media.status = "failed"
+  }
+}
+
+function pickPhotos() {
+  const remain = MAX_PHOTOS - form.value.media.length
+  if (remain <= 0) {
+    uni.showToast({ title: `最多 ${MAX_PHOTOS} 张照片`, icon: "none" })
+    return
+  }
+  uni.chooseImage({
+    count: remain,
+    sizeType: ["compressed", "original"],
+    sourceType: ["album", "camera"],
+    success(res) {
+      const paths = res.tempFilePaths || []
+      const files = res.tempFiles || []
+      let rejected = 0
+      paths.forEach((path, index) => {
+        const size = Number(files[index]?.size || 0)
+        if (size > MAX_PHOTO_BYTES) {
+          rejected += 1
+          return
+        }
+        uploadOne(path)
+      })
+      if (rejected) {
+        uni.showToast({ title: `有 ${rejected} 张照片超过 20MB，未添加`, icon: "none" })
+      }
+    }
+  })
+}
+
+function retryMedia(index) {
+  const media = form.value.media[index]
+  if (!media || media.status !== "failed" || !media._temp) return
+  media.status = "uploading"
+  media.progress = 0
+  withTimeout(
+    uploadGrowthMedia(media._temp, progress => {
+      if (media.status === "uploading") media.progress = progress
+    }),
+    UPLOAD_TIMEOUT_MS
+  )
+    .then(res => fillUploaded(media, res.data || {}))
+    .catch(() => {
+      media.status = "failed"
+    })
+}
+
+function removeMedia(index) {
+  form.value.media.splice(index, 1)
+}
+
+// ---- 徽章（可选） ----
+const achievements = ref([])
+const grant = ref({ achievement_id: null, student_ids: [], as_witness: true })
+
+function selectAchievement(id) {
+  grant.value.achievement_id = grant.value.achievement_id === id ? null : id
+}
+
+function toggleGrantStudent(id) {
+  const list = grant.value.student_ids
+  const index = list.indexOf(id)
+  if (index >= 0) list.splice(index, 1)
+  else list.push(id)
+}
+
+async function loadAchievements() {
+  try {
+    const res = await fetchTeacherAchievements()
+    achievements.value = res.data?.list || []
+  } catch (err) {
+    // 徽章列表失败不阻塞发布——授予是可选动作
+    console.warn("[growth-create] load achievements failed:", err?.message || err)
+  }
+}
+
+async function grantAfterPublish(logId) {
+  const current = grant.value
+  if (!current.achievement_id) return
+  const target = current.student_ids.length ? current.student_ids : form.value.student_ids
+  if (!target.length) {
+    uni.showToast({ title: "请选择要授予的学生", icon: "none" })
+    return
+  }
+  try {
+    await grantAchievement(current.achievement_id, {
+      student_ids: target,
+      log_id: current.as_witness ? logId : undefined
+    })
+    uni.showToast({ title: "已授予徽章", icon: "success" })
+  } catch (err) {
+    // 授予失败不影响已发布的记录——单独提示
+    uni.showToast({ title: err?.message || "授予徽章失败", icon: "none" })
+  }
+}
+
+// ---- 加载 ----
+async function loadStudents() {
+  try {
+    const res = await fetchTeacherClassStudents()
+    students.value = res.data?.list || []
+  } catch (err) {
+    // 学生列表失败不阻塞页面；选择幼儿时会提示暂无名单
+    console.warn("[growth-create] load students failed:", err?.message || err)
+  }
+}
+
+async function loadClassInfo() {
+  try {
+    const res = await fetchTeacherClassInfo()
+    className.value = res.data?.name || ""
+    classStudentCount.value = Number(res.data?.student_count || 0)
+  } catch (err) {
+    console.warn("[growth-create] load class failed:", err?.message || err)
+  }
+}
+
 async function loadPerformanceTags() {
   try {
     const res = await fetchDict("performance_tag")
-    performanceOptions.value = (res.data?.items || []).map(i => i.item_label)
-  } catch (e) {
-    // fallback to defaults
+    performanceOptions.value = (res.data?.items || []).map(item => item.item_label)
+  } catch (err) {
     performanceOptions.value = [
       "乐于助人", "积极发言", "遵守纪律", "动手能力强",
       "专注力强", "有礼貌", "爱干净", "团结友善", "勇于尝试"
     ]
   }
 }
+
+async function loadExistingLog(id) {
+  try {
+    const res = await fetchTeacherGrowthLog(id)
+    const record = res.data || {}
+    const f = form.value
+    f.content = record.content || ""
+    f.breakfast_rating = record.breakfast_rating || 0
+    f.lunch_rating = record.lunch_rating || 0
+    f.dinner_rating = record.dinner_rating || 0
+    f.nap_duration = record.nap_duration || 0
+    f.sleep_quality = record.sleep_quality || 0
+    f.morning_mood = record.morning_mood || 0
+    f.afternoon_mood = record.afternoon_mood || 0
+    f.performance_tags = Array.isArray(record.performance_tags) ? [...record.performance_tags] : []
+    f.target_type = record.target_type === 2 ? 2 : 1
+    f.sync_to_feed = record.sync_to_feed !== false
+    if (record.date) f.date = String(record.date).slice(0, 10)
+    f.student_ids = (record.related_students || []).map(s => s.id)
+    // 既有照片回显（编辑态）：保留 media.id 供服务端识别「保留项」，ref_desc 可继续编辑
+    f.media = (record.media || []).map(media => ({
+      id: media.id || 0,
+      file_id: media.file_id || 0,
+      file_url: media.file_url || "",
+      thumb_url: media.thumb_url || media.file_url || "",
+      file_type: media.file_type || "image",
+      ref_desc: media.ref_desc || "",
+      status: "done",
+      progress: 100,
+      student_ids: Array.isArray(media.student_ids) ? [...media.student_ids] : [],
+      suggestions: Array.isArray(media.student_suggestions) ? media.student_suggestions : [],
+      _named: false
+    }))
+  } catch (err) {
+    uni.showToast({ title: err?.message || "加载记录失败", icon: "none" })
+  }
+}
+
+onLoad(options => {
+  const id = options?.id
+  if (id) {
+    editId.value = id
+    loadExistingLog(id)
+  }
+  loadStudents()
+  loadClassInfo()
+  loadPerformanceTags()
+  loadAchievements()
+})
+
+// ---- 提交 ----
+const blockReasons = computed(() => {
+  const reasons = []
+  if (form.value.target_type === 2 && form.value.student_ids.length === 0) {
+    reasons.push("请先选择至少一位幼儿")
+  }
+  if (!form.value.content.trim()) reasons.push("请输入记录内容")
+  if (uploadingCount.value) reasons.push(`${uploadingCount.value} 张照片上传中，完成后可发布`)
+  if (failedCount.value) reasons.push(`有 ${failedCount.value} 张照片上传失败，请重试或移除`)
+  return reasons
+})
+const canSubmit = computed(() => blockReasons.value.length === 0 && !submitting.value)
+const bottomSpace = computed(() => (submitError.value ? "440rpx" : "300rpx"))
+
+const scopeText = computed(() => {
+  if (isEdit.value) {
+    return form.value.target_type === 2 ? "该记录仅被选中的幼儿家长可见" : "该记录对全班家长可见"
+  }
+  if (form.value.target_type === 2) {
+    return form.value.student_ids.length
+      ? `仅 ${form.value.student_ids.length} 位幼儿家长可见`
+      : "仅选中的幼儿家长可见"
+  }
+  return `${className.value || "本班"}全体家长可见`
+})
+
+const publishLabel = computed(() => {
+  if (submitting.value) return isEdit.value ? "保存中…" : "发布中…"
+  if (submitError.value) return isEdit.value ? "重新保存" : "重新发布"
+  if (isEdit.value) return "保存修改"
+  return form.value.target_type === 2 ? "发布个体记录" : "发布班级记录"
+})
+
+// 提交载荷：只送引用（id/file_id/ref_desc），URL 等物理属性由服务端反查。
+// student_ids 仅在老师动过这张照片的点名时携带（_named），未动过的照片不触碰既有点名。
+function mediaPayload() {
+  return form.value.media.map(media => {
+    const item = { id: media.id || 0, file_id: media.file_id, ref_desc: media.ref_desc || "" }
+    if (media._named) item.student_ids = media.student_ids || []
+    return item
+  })
+}
+
+async function submit() {
+  if (!canSubmit.value) return
+  submitting.value = true
+  submitError.value = ""
+  try {
+    const payload = { ...form.value, media: mediaPayload() }
+    if (isEdit.value) {
+      await updateTeacherGrowthLog(editId.value, payload, { silent: true })
+      uni.showToast({ title: "已保存", icon: "success" })
+    } else {
+      const created = await createTeacherGrowthLog(payload, { silent: true })
+      await grantAfterPublish(created?.data?.id)
+      uni.showToast({ title: "已发布", icon: "success" })
+    }
+    setTimeout(() => uni.navigateBack(), 600)
+  } catch (err) {
+    submitError.value = err?.message || (isEdit.value ? "保存失败" : "发布失败")
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function fetchRosterList() {
+  const res = await fetchPresentStudents(String(form.value.date || "").slice(0, 10))
+  return res.data?.list || []
+}
+
+// 课堂点名面板里的「全班（当日到场）」快捷入口：填入后仍可逐人增减。
+const rosterLoading = ref(false)
+async function pickWholeClass() {
+  if (rosterLoading.value) return
+  rosterLoading.value = true
+  try {
+    const present = await fetchRosterList()
+    // 名单范围与「可点名学生」一致：个体记录只允许本记录的目标幼儿
+    const scope = form.value.target_type === 2
+      ? students.value.filter(s => form.value.student_ids.includes(s.student_id))
+      : students.value
+    const allowed = new Set(scope.map(s => s.student_id))
+    const candidates = present.filter(id => allowed.has(id))
+    const picked = sheetMode.value === "batch"
+      ? candidates.filter(id => !sheetBatchExisting.value.has(id))
+      : candidates
+    if (!picked.length) {
+      uni.showToast({ title: "当日到场名单为空", icon: "none" })
+      return
+    }
+    reloadSheetPicked(new Set(picked))
+    uni.showToast({ title: `已选当日到场 ${picked.length} 人，可增减`, icon: "none" })
+  } catch (err) {
+    uni.showToast({ title: err?.message || "获取到场名单失败", icon: "none" })
+  } finally {
+    rosterLoading.value = false
+  }
+}
 </script>
 
 <template>
-  <view class="page">
-    <scroll-view class="body" scroll-y>
-      <!-- 日期选择栏（编辑态只读：记录日期不可改） -->
-      <view class="date-bar">
-        <view class="date-arrow" :class="{ disabled: isEdit }" @click="prevDay"><text>◀</text></view>
-        <text class="date-text">{{ dateDisplay }}</text>
-        <view class="date-arrow" :class="{ disabled: isEdit || form.date >= todayStr() }" @click="nextDay">
-          <text>▶</text>
+  <PageShell :bottom-space="bottomSpace">
+    <view class="page">
+      <!-- 日期锚点 -->
+      <view class="day">
+        <view class="day-arrow" :class="{ 'is-disabled': isEdit }" @click="prevDay">
+          <text class="icon">&#xea64;</text>
+        </view>
+        <view class="day-main">
+          <text class="day-date">{{ dateAnchor.main }}</text>
+          <text class="day-sub">{{ dateAnchor.sub }}</text>
+        </view>
+        <view class="day-arrow" :class="{ 'is-disabled': nextDisabled }" @click="nextDay" :aria-label="nextDayHint">
+          <text class="icon">&#xea6e;</text>
         </view>
       </view>
 
-      <!-- 快速记录模板 — 仅班级记录 -->
-      <view v-if="form.target_type === 1" class="section">
-        <text class="section-title">快速记录</text>
+      <!-- 记录对象：填写前先明确可见范围 -->
+      <view class="mode">
+        <view
+          class="mode-btn"
+          :class="{ 'is-on': form.target_type === 1, 'is-disabled': isEdit }"
+          @click="setMode(1)"
+        >全班记录</view>
+        <view
+          class="mode-btn"
+          :class="{ 'is-on': form.target_type === 2, 'is-disabled': isEdit }"
+          @click="setMode(2)"
+        >指定幼儿</view>
+      </view>
 
-        <view class="template-row">
-          <!-- 饮食 -->
-          <view class="template-card">
-            <view class="card-header">
-              <view class="card-icon" style="background:rgba(220,252,231,1)">🍽️</view>
-              <text class="card-title">饮食</text>
-            </view>
-            <view class="card-body">
-              <!-- 早餐 -->
-              <view class="meal-row">
-                <text class="meal-label">早餐</text>
-                <view class="emoji-row">
-                  <view class="emoji-btn" :style="{ background: form.breakfast_rating === 3 ? '#dcfce7' : '#f1f5f9' }" @click="form.breakfast_rating = form.breakfast_rating === 3 ? 0 : 3">😋</view>
-                  <view class="emoji-btn" :style="{ background: form.breakfast_rating === 2 ? '#dcfce7' : '#f1f5f9' }" @click="form.breakfast_rating = form.breakfast_rating === 2 ? 0 : 2">😐</view>
-                  <view class="emoji-btn" :style="{ background: form.breakfast_rating === 1 ? '#dcfce7' : '#f1f5f9' }" @click="form.breakfast_rating = form.breakfast_rating === 1 ? 0 : 1">😞</view>
-                </view>
-              </view>
-              <!-- 午餐 -->
-              <view class="meal-row">
-                <text class="meal-label">午餐</text>
-                <view class="emoji-row">
-                  <view class="emoji-btn" :style="{ background: form.lunch_rating === 3 ? '#dcfce7' : '#f1f5f9' }" @click="form.lunch_rating = form.lunch_rating === 3 ? 0 : 3">😋</view>
-                  <view class="emoji-btn" :style="{ background: form.lunch_rating === 2 ? '#dcfce7' : '#f1f5f9' }" @click="form.lunch_rating = form.lunch_rating === 2 ? 0 : 2">😐</view>
-                  <view class="emoji-btn" :style="{ background: form.lunch_rating === 1 ? '#dcfce7' : '#f1f5f9' }" @click="form.lunch_rating = form.lunch_rating === 1 ? 0 : 1">😞</view>
-                </view>
-              </view>
-              <!-- 晚餐 -->
-              <view class="meal-row">
-                <text class="meal-label">晚餐</text>
-                <view class="emoji-row">
-                  <view class="emoji-btn" :style="{ background: form.dinner_rating === 3 ? '#dcfce7' : '#f1f5f9' }" @click="form.dinner_rating = form.dinner_rating === 3 ? 0 : 3">😋</view>
-                  <view class="emoji-btn" :style="{ background: form.dinner_rating === 2 ? '#dcfce7' : '#f1f5f9' }" @click="form.dinner_rating = form.dinner_rating === 2 ? 0 : 2">😐</view>
-                  <view class="emoji-btn" :style="{ background: form.dinner_rating === 1 ? '#dcfce7' : '#f1f5f9' }" @click="form.dinner_rating = form.dinner_rating === 1 ? 0 : 1">😞</view>
-                </view>
-              </view>
-            </view>
-          </view>
-
-          <!-- 睡眠 -->
-          <view class="template-card">
-            <view class="card-header">
-              <view class="card-icon" style="background:rgba(243,232,255,1)">💤</view>
-              <text class="card-title">睡眠</text>
-            </view>
-            <view class="card-body">
-              <text class="field-label">午睡时长</text>
-              <view class="chip-row">
-                <view
-                  v-for="h in sleepOptions" :key="h"
-                  class="chip"
-                  :class="{ active: form.nap_duration === h }"
-                  @click="form.nap_duration = form.nap_duration === h ? 0 : h"
-                >{{ h }}小时</view>
-              </view>
-              <text class="field-label" style="margin-top:12rpx">睡眠质量</text>
-              <view class="chip-row">
-                <view
-                  v-for="q in qualityOptions" :key="q.value"
-                  class="chip"
-                  :class="{ active: form.sleep_quality === q.value }"
-                  @click="form.sleep_quality = form.sleep_quality === q.value ? 0 : q.value"
-                >{{ q.label }}</view>
-              </view>
-            </view>
-          </view>
+      <!-- 快速记录（仅全班） -->
+      <view v-if="form.target_type === 1" class="card">
+        <view class="card-head">
+          <text class="card-title">快速记录</text>
+          <text class="card-note">可跳过</text>
         </view>
-
-        <view class="template-row">
-          <!-- 情绪 -->
-          <view class="template-card">
-            <view class="card-header">
-              <view class="card-icon" style="background:rgba(255,237,213,1)">😊</view>
-              <text class="card-title">情绪</text>
-            </view>
-            <view class="card-body">
-<!-- 上午 -->
-              <view class="meal-row">
-                <text class="meal-label">上午</text>
-                <view class="emoji-row">
-                  <view class="emoji-btn" :style="{ background: form.morning_mood === 3 ? '#dcfce7' : '#f1f5f9' }" @click="form.morning_mood = form.morning_mood === 3 ? 0 : 3">😋</view>
-                  <view class="emoji-btn" :style="{ background: form.morning_mood === 2 ? '#dcfce7' : '#f1f5f9' }" @click="form.morning_mood = form.morning_mood === 2 ? 0 : 2">😐</view>
-                  <view class="emoji-btn" :style="{ background: form.morning_mood === 1 ? '#dcfce7' : '#f1f5f9' }" @click="form.morning_mood = form.morning_mood === 1 ? 0 : 1">😞</view>
-                </view>
-              </view>
-              <!-- 下午 -->
-              <view class="meal-row">
-                <text class="meal-label">下午</text>
-                <view class="emoji-row">
-                  <view class="emoji-btn" :style="{ background: form.afternoon_mood === 3 ? '#dcfce7' : '#f1f5f9' }" @click="form.afternoon_mood = form.afternoon_mood === 3 ? 0 : 3">😋</view>
-                  <view class="emoji-btn" :style="{ background: form.afternoon_mood === 2 ? '#dcfce7' : '#f1f5f9' }" @click="form.afternoon_mood = form.afternoon_mood === 2 ? 0 : 2">😐</view>
-                  <view class="emoji-btn" :style="{ background: form.afternoon_mood === 1 ? '#dcfce7' : '#f1f5f9' }" @click="form.afternoon_mood = form.afternoon_mood === 1 ? 0 : 1">😞</view>
+        <view class="obs-body">
+          <view class="obs-row">
+            <text class="obs-label">饮食</text>
+            <view class="obs-main">
+              <view v-for="meal in meals" :key="meal.field" class="meal">
+                <text class="meal-name">{{ meal.label }}</text>
+                <view class="rates">
+                  <view
+                    v-for="option in ratingOptions"
+                    :key="option.value"
+                    class="rate"
+                    :class="{ 'is-on': form[meal.field] === option.value }"
+                    @click="setRating(meal.field, option.value)"
+                  >{{ option.emoji }}</view>
                 </view>
               </view>
             </view>
           </view>
 
-          <!-- 表现 -->
-          <view class="template-card">
-            <view class="card-header">
-              <view class="card-icon" style="background:rgba(254,226,226,1)">🌟</view>
-              <text class="card-title">表现</text>
-            </view>
-            <view class="card-body">
-              <view class="tag-cloud">
+          <view class="obs-row">
+            <text class="obs-label">睡眠</text>
+            <view class="obs-main">
+              <text class="sub-label">午睡时长</text>
+              <view class="chips">
                 <view
-                  v-for="t in performanceOptions" :key="t"
+                  v-for="hours in sleepOptions"
+                  :key="hours"
+                  class="chip"
+                  :class="{ 'is-on': form.nap_duration === hours }"
+                  @click="form.nap_duration = form.nap_duration === hours ? 0 : hours"
+                >{{ hours }} 小时</view>
+              </view>
+              <text class="sub-label">睡眠质量</text>
+              <view class="chips">
+                <view
+                  v-for="option in qualityOptions"
+                  :key="option.value"
+                  class="chip"
+                  :class="{ 'is-on': form.sleep_quality === option.value }"
+                  @click="form.sleep_quality = form.sleep_quality === option.value ? 0 : option.value"
+                >{{ option.label }}</view>
+              </view>
+            </view>
+          </view>
+
+          <view class="obs-row">
+            <text class="obs-label">情绪</text>
+            <view class="obs-main">
+              <view v-for="mood in moods" :key="mood.field" class="meal">
+                <text class="meal-name">{{ mood.label }}</text>
+                <view class="rates">
+                  <view
+                    v-for="option in ratingOptions"
+                    :key="option.value"
+                    class="rate"
+                    :class="{ 'is-on': form[mood.field] === option.value }"
+                    @click="setRating(mood.field, option.value)"
+                  >{{ option.emoji }}</view>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <view class="obs-row">
+            <text class="obs-label">表现</text>
+            <view class="obs-main">
+              <view class="tags">
+                <view
+                  v-for="tag in performanceOptions"
+                  :key="tag"
                   class="tag"
-                  :class="{ active: form.performance_tags.includes(t) }"
-                  @click="toggleTag(t)"
-                >{{ t }}</view>
+                  :class="{ 'is-on': form.performance_tags.includes(tag) }"
+                  @click="toggleTag(tag)"
+                >{{ tag }}</view>
               </view>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- 指定学生模式 — 学生选择器 + 表现标签 -->
-      <view v-if="form.target_type === 2" class="section">
-        <view class="student-head">
-          <text class="section-title">选择学生</text>
-          <text class="student-count">已选 {{ form.student_ids.length }} 人</text>
+      <!-- 指定幼儿：已选摘要 / 未选空态按真实人数互斥 -->
+      <view v-if="form.target_type === 2" class="card">
+        <view class="card-head">
+          <text class="card-title">选择幼儿</text>
+          <text class="card-note">已选 {{ form.student_ids.length }} 人</text>
         </view>
-        <view v-if="students.length" class="student-search">
-          <input
-            v-model="studentQuery"
-            class="search-input"
-            placeholder="搜索学生姓名"
-            placeholder-style="color: #94A3B8"
-          />
+
+        <view v-if="form.student_ids.length" class="picked">
+          <view class="avatars">
+            <view v-for="student in pickedPreview" :key="student.student_id" class="ava">
+              {{ String(student.name || "?").slice(0, 1) }}
+            </view>
+            <view v-if="pickedStudents.length > 3" class="ava ava-more">+{{ pickedStudents.length - 3 }}</view>
+          </view>
+          <text class="picked-text">{{ pickedText }}</text>
+          <view class="link-btn" @click="openPickSheet">编辑</view>
         </view>
-        <view class="student-picker">
-          <view
-            v-for="s in filteredStudents"
-            :key="s.student_id"
-            class="student-chip"
-            :class="{ selected: form.student_ids.includes(s.student_id) }"
-            @click="toggleStudent(s.student_id)"
-          >
-            <text>{{ s.name }}</text>
+
+        <view v-else class="pick-empty">
+          <view class="pick-empty-art">
+            <view class="pick-orb orb-a" />
+            <view class="pick-orb orb-b" />
+            <view class="pick-arc" />
           </view>
-          <view v-if="!students.length" class="student-empty">
-            <text>班级暂无学生</text>
-          </view>
-          <view v-else-if="!filteredStudents.length" class="student-empty">
-            <text>未找到匹配的学生</text>
+          <text class="pick-empty-title">还没有选择幼儿</text>
+          <text class="pick-empty-hint">{{ className || "本班" }}共 {{ childCount || 0 }} 位孩子，从名单里挑一位或几位</text>
+          <view class="btn-soft" @click="openPickSheet">选择幼儿</view>
+        </view>
+
+        <view class="tags-wrap">
+          <text class="sub-label">表现标签</text>
+          <view class="tags">
+            <view
+              v-for="tag in performanceOptions"
+              :key="tag"
+              class="tag"
+              :class="{ 'is-on': form.performance_tags.includes(tag) }"
+              @click="toggleTag(tag)"
+            >{{ tag }}</view>
           </view>
         </view>
 
-        <text class="section-title" style="margin-top: 32rpx">表现标签</text>
-        <view class="tag-cloud">
-          <view
-            v-for="t in performanceOptions" :key="t"
-            class="tag"
-            :class="{ active: form.performance_tags.includes(t) }"
-            @click="toggleTag(t)"
-          >{{ t }}</view>
+        <view class="fineprint">
+          <text class="fineprint-icon icon">&#xee0f;</text>
+          <text>这条记录只会推给所选幼儿的家长，不出现在班级动态</text>
         </view>
       </view>
 
-      <!-- 照片/视频上传 -->
-      <view class="section">
-        <text class="section-title">照片/视频上传</text>
-        <view class="upload-card">
-          <!-- 点名工具条：批量多选 / 单张在照片角标进入 -->
-          <view v-if="form.media.length" class="naming-bar">
-            <template v-if="!batchMode">
-              <text class="naming-bar-hint">已点名 {{ form.media.filter(m => namedCount(m)).length }} 张</text>
-              <view class="naming-bar-btn" @click="startBatch">批量点名</view>
-            </template>
-            <template v-else>
-              <text class="naming-bar-hint">已选 {{ batchSelected.size }} 张照片</text>
-              <view class="naming-bar-btn" @click="toggleSelectAll">
-                {{ allPhotosSelected ? '取消全选' : '全选' }}
-              </view>
-              <view class="naming-bar-btn primary" @click="openBatchNaming">选择学生</view>
-              <view class="naming-bar-btn" @click="cancelBatch">取消</view>
-            </template>
-          </view>
-          <!-- 拍照与点名规范（D11 SOP）：单人照是 AI 点名的好输入；合影走「全班」一键 -->
-          <text v-if="form.media.length" class="naming-sop-hint">
-            拍照建议：尽量拍单人照（AI 自动点名更准）；集体照用「全班」一键点名
-          </text>
-          <view class="media-grid">
-            <view class="media-item add-btn" @click="addMedia">
-              <text class="add-icon">＋</text>
-              <text class="add-text">添加</text>
+      <!-- 照片（仅照片，不做视频） -->
+      <view class="card">
+        <view class="card-head">
+          <text class="card-title">照片</text>
+          <text class="card-note">{{ form.media.length }} / {{ MAX_PHOTOS }}</text>
+        </view>
+
+        <view class="media-bar">
+          <template v-if="batchMode">
+            <text class="media-tip">已选 {{ batchSelected.size }} 张照片</text>
+            <view class="batch-tools">
+              <view class="mini-btn" @click="toggleSelectAllPhotos">{{ allPhotosSelected ? "取消全选" : "全选" }}</view>
+              <view class="mini-btn primary" @click="openBatchNaming">选择学生</view>
+              <view class="mini-btn" @click="cancelBatch">取消</view>
+            </view>
+          </template>
+          <template v-else>
+            <text class="media-tip">已点名 {{ namedPhotoCount }} 张</text>
+            <view class="mini-btn" @click="startBatch">批量点名</view>
+          </template>
+        </view>
+
+        <view class="media-grid">
+          <view
+            v-for="(media, index) in form.media"
+            :key="index"
+            class="tile"
+            :class="{ 'is-picked': batchMode && batchSelected.has(index) }"
+            @click="batchMode ? toggleBatchSelect(index) : openSingleNaming(index)"
+          >
+            <image
+              v-if="mediaDisplayUrl(media)"
+              class="tile-img"
+              :src="mediaDisplayUrl(media)"
+              mode="aspectFill"
+            />
+            <view
+              v-if="media.status === 'uploading'"
+              class="tile-mask"
+            >
+              <view class="tile-spinner" />
+              <text>{{ media.progress || 0 }}%</text>
             </view>
             <view
-              v-for="(m, i) in form.media" :key="i"
-              class="media-item"
-              :class="{ picking: batchMode, picked: batchSelected.has(i) }"
-              @click="batchMode && toggleBatchSelect(i)"
+              v-else-if="media.status === 'failed'"
+              class="tile-mask is-failed"
+              @click.stop="retryMedia(index)"
             >
-              <image :src="mediaDisplayUrl(m)" mode="aspectFill" class="media-img" />
-              <view v-if="m.status === 'uploading'" class="media-mask">
-                <text class="media-mask-text">上传中</text>
+              <text>上传失败</text>
+              <text class="tile-retry">点击重试</text>
+            </view>
+
+            <template v-if="!batchMode">
+              <view v-if="media.status === 'done'" class="tile-badge" @click.stop="openSingleNaming(index)">
+                <text>{{ mediaBadgeText(media) }}</text>
               </view>
-              <view v-else-if="m.status === 'failed'" class="media-mask media-mask-failed" @click.stop="retryMedia(i)">
-                <text class="media-mask-text">上传失败 · 重试</text>
+              <view class="tile-remove" @click.stop="removeMedia(index)">
+                <text class="icon">&#xeb99;</text>
               </view>
-              <view v-if="batchMode" class="media-check">
-                <text>{{ batchSelected.has(i) ? '☑' : '☐' }}</text>
-              </view>
-              <template v-else>
-                <view v-if="m.status === 'done'" class="media-naming-badge" @click.stop="openSingleNaming(i)">
-                  <text>{{ namedCount(m) ? '点名 ' + namedCount(m) : '点名' }}</text>
-                </view>
-                <view v-if="m.status === 'done' && mediaSuggestionCount(m)" class="media-ai-tag" @click.stop="openSingleNaming(i)">
-                  <text>AI建议 {{ mediaSuggestionCount(m) }}</text>
-                </view>
-                <view class="media-remove" @click.stop="removeMedia(i)">✕</view>
-              </template>
+            </template>
+            <view v-else class="tile-check" :class="{ 'is-on': batchSelected.has(index) }">
+              <text class="icon">&#xeb7b;</text>
             </view>
           </view>
-          <!-- 每张照片的引用层描述（这次为什么用这张） -->
-          <view v-if="form.media.length" class="media-desc-list">
-            <view v-for="(m, i) in form.media" :key="'d' + i" class="media-desc-row">
-              <image :src="mediaDisplayUrl(m)" mode="aspectFill" class="media-desc-thumb" />
-              <input v-model="m.ref_desc" class="media-desc-input" placeholder="为这张照片写句说明（可选）" placeholder-style="color: #94A3B8" />
+
+          <view class="tile tile-add" @click="pickPhotos">
+            <text class="tile-add-icon icon">&#xea13;</text>
+            <text class="tile-add-text">添加</text>
+          </view>
+        </view>
+
+        <view v-if="form.media.length" class="desc-list">
+          <view v-for="(media, index) in form.media" :key="'desc-' + index" class="desc-row">
+            <view class="desc-thumb">
+              <image
+                v-if="mediaDisplayUrl(media)"
+                class="desc-thumb-img"
+                :src="mediaDisplayUrl(media)"
+                mode="aspectFill"
+              />
             </view>
+            <input
+              v-model="media.ref_desc"
+              class="desc-input"
+              type="text"
+              placeholder="为这张照片写句说明（可选）"
+              placeholder-style="color: #94A3B8"
+            />
           </view>
-          <view class="upload-hint">
-            <text>ℹ️</text>
-            <text>最多可上传20张照片（每张不超过20MB）</text>
-          </view>
+        </view>
+
+        <view class="fineprint">
+          <text class="fineprint-dot" />
+          <text>拍照建议：尽量拍单人照（AI 自动点名更准）；集体照用「全班」一键点名</text>
+        </view>
+        <view class="fineprint">
+          <text class="fineprint-dot" />
+          <text>最多 {{ MAX_PHOTOS }} 张，单张不超过 20MB</text>
         </view>
       </view>
 
       <!-- 记录内容 -->
-      <view class="section">
-        <text class="section-title">记录内容</text>
-        <view class="content-card">
-          <textarea
-            v-model="form.content"
-            class="content-area"
-            placeholder="请输入记录内容，描述今天孩子们的活动和表现..."
-          />
+      <view class="card">
+        <view class="card-head">
+          <text class="card-title">记录内容<text class="req-mark">*</text></text>
+          <text class="card-note">{{ form.content.length }} 字</text>
         </view>
+        <textarea
+          v-model="form.content"
+          class="textarea"
+          :maxlength="-1"
+          placeholder="写写今天孩子们做了什么、说了什么"
+          placeholder-style="color: #94A3B8"
+        />
       </view>
 
-      <!-- 底部留白 -->
-      <view style="height:140rpx"></view>
-      <!-- 授予徽章（可选）：仅新建时提供，发布成功后授予，本条记录可作为获奖见证 -->
-      <view class="section" v-if="!isEdit && achievements.length">
-        <text class="section-title">授予徽章（可选）</text>
-        <view class="badge-pick-row">
+      <!-- 授予徽章（编辑态隐藏） -->
+      <view v-if="!isEdit && achievements.length" class="card">
+        <view class="card-head">
+          <text class="card-title">授予徽章</text>
+          <text class="card-note">可选</text>
+        </view>
+        <view class="badges">
           <view
-            v-for="a in achievements" :key="a.id"
-            class="badge-pick"
-            :class="{ active: grant.achievement_id === a.id }"
-            @click="selectAchievement(a.id)"
+            v-for="achievement in achievements"
+            :key="achievement.id"
+            class="badge-chip"
+            :class="{ 'is-on': grant.achievement_id === achievement.id }"
+            @click="selectAchievement(achievement.id)"
           >
-            <image v-if="a.icon" :src="a.icon" class="badge-pick-icon" mode="aspectFit" />
-            <text class="badge-pick-name">{{ a.name }}</text>
+            <image v-if="achievement.icon" class="badge-icon" :src="achievement.icon" mode="aspectFit" />
+            <text>{{ achievement.name }}</text>
           </view>
         </view>
 
         <template v-if="grant.achievement_id">
-          <text class="section-title" style="margin-top: 24rpx">授予给</text>
-          <view class="student-row" v-if="students.length">
-            <view
-              v-for="s in students" :key="s.student_id"
-              class="student-chip"
-              :class="{ selected: grant.student_ids.includes(s.student_id) }"
-              @click="toggleGrantStudent(s.student_id)"
-            >
-              {{ s.name }}
+          <view class="grant">
+            <text class="sub-label">授予给</text>
+            <view v-if="students.length" class="chips">
+              <view
+                v-for="student in students"
+                :key="student.student_id"
+                class="chip"
+                :class="{ 'is-on': grant.student_ids.includes(student.student_id) }"
+                @click="toggleGrantStudent(student.student_id)"
+              >{{ student.name }}</view>
             </view>
-          </view>
-          <view class="option-hint" v-else>
-            <text>不选则默认授予给本记录的目标学生</text>
-          </view>
-
-          <view class="option-row" @click="grant.as_witness = !grant.as_witness" style="margin-top: 16rpx">
-            <text class="option-check">{{ grant.as_witness ? '☑' : '☐' }}</text>
-            <text class="option-label" :class="{ active: grant.as_witness }">本记录作为获奖见证（家长将在该记录看到徽章）</text>
+            <text v-else class="grant-hint">不选则默认授予给本记录的目标学生</text>
+            <view class="check-row" @click="grant.as_witness = !grant.as_witness">
+              <view class="box" :class="{ 'is-on': grant.as_witness }">
+                <text class="icon">&#xeb7b;</text>
+              </view>
+              <text>本记录作为获奖见证（家长将在该记录看到徽章）</text>
+            </view>
           </view>
         </template>
       </view>
-    </scroll-view>
+    </view>
 
-    <!-- 照片点名面板（底部弹层）：单张 = 编辑完整名单；批量 = 追加勾选的学生 -->
-    <view v-if="namingOpen" class="naming-mask" @click="closeNaming">
-      <view class="naming-sheet" @click.stop>
-        <view class="naming-head">
-          <text class="naming-title">
-            {{ namingTargets.length === 1 ? '照片点名' : `批量点名 · ${namingTargets.length} 张照片` }}
-          </text>
-          <text class="naming-close" @click="closeNaming">✕</text>
+    <!-- 幼儿多选弹层 -->
+    <view v-if="sheetOpen" class="layer">
+      <view class="scrim" @click="closeSheet" />
+      <view class="sheet">
+        <view class="sheet-head">
+          <view class="sheet-cancel" @click="closeSheet">取消</view>
+          <text class="sheet-title">{{ sheetTitle }}</text>
+          <view class="sheet-all" @click="toggleSelectAllSheet">{{ allSheetSelected ? "取消全选" : "全选" }}</view>
         </view>
-        <text class="naming-tip">
-          {{ namingIsBatch
-            ? `勾选的孩子将追加到这批照片；已有名单已标出（确定后每张共 ${namingTotalCount()} 人）`
-            : '勾选这张照片里的孩子（AI 建议可一并确认）' }}
-        </text>
-        <!-- D11：全班一键 = 当日到场学生（服务端口径），填入后仍可逐人增减。
-             个体记录的候选本来就只有目标孩子，「全班」语义不成立，不呈现。 -->
-        <view v-if="form.target_type !== 2" class="naming-roster-row">
-          <view class="naming-roster-btn" :class="{ busy: rosterLoading }" @click="pickWholeClass">
-            {{ rosterLoading ? '获取到场名单…' : '全班（当日到场）' }}
-          </view>
-          <text class="naming-roster-hint">合影/集体照用这个：自动填入当天到场的孩子，再按画面增减</text>
+        <text class="sheet-desc">{{ sheetDesc }}</text>
+        <view
+          v-if="form.target_type === 1"
+          class="roster-row"
+          :class="{ 'is-busy': rosterLoading }"
+          @click="pickWholeClass"
+        >
+          <text>{{ rosterLoading ? "获取到场名单…" : "全班（当日到场）" }}</text>
+          <text class="roster-hint">按当日到场填入，可再增减</text>
         </view>
-        <scroll-view scroll-y class="naming-scroll">
-          <view class="student-picker">
-            <view
-              v-for="s in namingCandidates" :key="s.student_id"
-              class="student-chip"
-              :class="{
-                selected: namingStudents.has(s.student_id) || batchExisting.has(s.student_id),
-                existing: batchExisting.has(s.student_id),
-              }"
-              @click="toggleNamingStudent(s.student_id)"
-            >
-              <text>{{ s.name }}</text>
-              <text v-if="batchExisting.has(s.student_id)" class="naming-existing-mark">已有</text>
-              <text v-else-if="suggestionOf(s.student_id)" class="naming-ai-mark">
-                {{ suggestionOf(s.student_id).tier === 'high' ? 'AI·高' : 'AI' }}
-              </text>
-            </view>
-            <view v-if="!namingCandidates.length" class="student-empty">
-              <text>{{ form.target_type === 2 ? '请先选择本记录的目标学生' : '班级暂无学生' }}</text>
+        <view class="search">
+          <text class="search-icon icon">&#xf0d1;</text>
+          <input v-model="sheetQuery" class="search-input" type="text" placeholder="搜索幼儿姓名" placeholder-style="color: #94A3B8" />
+        </view>
+        <scroll-view scroll-y class="sheet-list">
+          <view
+            v-for="student in sheetCandidates"
+            :key="student.student_id"
+            class="srow"
+            :class="{ 'is-on': sheetPicked.has(student.student_id) || sheetBatchExisting.has(student.student_id) }"
+            @click="toggleSheetStudent(student.student_id)"
+          >
+            <view class="savatar">{{ String(student.name || "?").slice(0, 1) }}</view>
+            <text class="sname">{{ student.name }}</text>
+            <view class="scheck">
+              <text class="icon">&#xeb7b;</text>
             </view>
           </view>
+          <view v-if="!sheetCandidates.length" class="sheet-empty">没有找到匹配的幼儿</view>
         </scroll-view>
-        <view class="naming-footer">
-          <view class="naming-btn" @click="closeNaming">取消</view>
-          <view class="naming-btn primary" @click="confirmNaming">
-            确定{{ namingTotalCount() ? `（共 ${namingTotalCount()} 人）` : '' }}
-          </view>
+        <view class="sheet-foot">
+          <view class="publish" @click="confirmSheet">确定（已选 {{ sheetSelectedCount }} 人）</view>
         </view>
       </view>
     </view>
 
-    <!-- 底部操作栏（编辑态锁定可见性设置，仅允许改内容） -->
-    <view class="bottom-bar">
-      <view class="bottom-options">
-        <template v-if="isEdit">
-          <view class="option-hint">
-            <text>{{ form.target_type === 2 ? '该记录仅被选中的学生家长可见' : '该记录对全班家长可见' }}</text>
+    <template #bottom>
+      <view class="dock">
+        <view v-if="submitError" class="err-strip">
+          <text class="err-icon">!</text>
+          <text class="err-text">{{ isEdit ? "保存失败" : "发布失败" }}：{{ submitError }}</text>
+          <view class="err-retry" @click="submit">重试</view>
+        </view>
+        <view class="dock-meta">
+          <text class="scope">{{ scopeText }}</text>
+          <view v-if="!isEdit && form.target_type === 1" class="switch-row">
+            <text>同步到班级动态</text>
+            <view class="sw" :class="{ 'is-on': form.sync_to_feed }" @click="form.sync_to_feed = !form.sync_to_feed">
+              <view class="sw-knob" />
+            </view>
           </view>
-        </template>
-        <template v-else>
-          <view v-if="form.target_type === 1" class="option-row" @click="form.sync_to_feed = !form.sync_to_feed">
-            <text class="option-check">{{ form.sync_to_feed ? '☑' : '☐' }}</text>
-            <text class="option-label active">同步发送到班级动态</text>
-          </view>
-          <view v-if="form.target_type === 2" class="option-hint">
-            <text>该记录仅被选中的学生家长可见</text>
-          </view>
-          <view class="option-row" @click="switchTargetType">
-            <text class="option-check">{{ form.target_type === 2 ? '☑' : '☐' }}</text>
-            <text class="option-label" :class="{ active: form.target_type === 2 }">仅发送给指定家长</text>
-          </view>
-        </template>
+        </view>
+        <text v-if="blockReasons.length" class="dock-reason">{{ blockReasons.join(" · ") }}</text>
+        <view class="publish" :class="{ 'is-disabled': !canSubmit }" @click="submit">{{ publishLabel }}</view>
       </view>
-      <button class="publish-btn" :loading="submitting" @click="publish">
-        {{ submitting ? (isEdit ? "保存中..." : "发布中...") : (isEdit ? "保存修改" : (form.target_type === 2 ? "发布个体记录" : "发布班级记录")) }}
-      </button>
-    </view>
-  </view>
+    </template>
+  </PageShell>
 </template>
 
 <style scoped lang="scss">
+.icon {
+  font-family: remixicon;
+  font-style: normal;
+  line-height: 1;
+}
 
 .page {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: $color-bg-card;
+  padding-bottom: $spacing-xl;
 }
 
-.body { flex: 1; padding-top: 16rpx; }
+/* ---------- 日期 ---------- */
+.day {
+  display: grid;
+  grid-template-columns: 88rpx minmax(0, 1fr) 88rpx;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 2rpx 0 $spacing-md;
+}
 
-/* 日期栏 */
-.date-bar {
+.day-arrow {
+  width: 88rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: $spacing-xl 48rpx;
-  background: $color-bg-card;
-}
-.date-arrow { padding: $spacing-xs; }
-.date-arrow.disabled { opacity: 0.3; }
-.date-text { font-size: $typography-font-size-xl; font-weight: 700; color: $color-text-primary; }
-
-/* 通用 section */
-.section { padding: $spacing-xl 48rpx; }
-.section-title {
-  display: block;
-  margin-bottom: 24rpx;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  color: $color-text-body;
   font-size: $typography-font-size-xl;
-  font-weight: 700;
-  color: $color-text-primary;
+
+  &:active {
+    background: $color-brand-primary-bg;
+  }
 }
 
-/* 模板卡片 */
-.template-row {
-  display: flex;
-  gap: $spacing-lg;
-  margin-bottom: 24rpx;
+.day-arrow.is-disabled {
+  color: $color-text-hint;
+  opacity: 0.45;
+
+  &:active {
+    background: transparent;
+  }
 }
-.template-card {
-  flex: 1;
-  padding: $spacing-xl;
+
+.day-main {
+  min-width: 0;
+  text-align: center;
+}
+
+.day-date {
+  display: block;
+  color: $color-text-primary;
+  font-size: $typography-font-size-xl;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1.3;
+}
+
+.day-sub {
+  display: block;
+  margin-top: 2rpx;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+/* ---------- 记录对象分段 ---------- */
+.mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  margin-bottom: $spacing-md;
   background: $color-bg-card;
-  border: 1rpx solid $color-bg-page;
-  border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
 }
-.card-header {
+
+.mode-btn {
+  height: 80rpx;
   display: flex;
   align-items: center;
-  gap: $spacing-md;
-  margin-bottom: 16rpx;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  color: $color-text-muted;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-medium;
 }
-.card-icon {
+
+.mode-btn.is-on {
+  background: $color-bg-page;
+  color: $color-text-primary;
+  font-weight: $typography-font-weight-semibold;
+  box-shadow: $shadow-sm;
+}
+
+.mode-btn.is-disabled {
+  opacity: 0.55;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  margin-bottom: $spacing-md;
+  padding: $spacing-lg;
+  background: $color-bg-card;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $component-card-radius;
+  box-shadow: $shadow-md;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.card-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1.4;
+}
+
+.card-note {
+  flex: none;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.req-mark {
+  color: $color-semantic-danger;
+  font-weight: $typography-font-weight-semibold;
+}
+
+/* ---------- 快速记录 ---------- */
+.obs-row {
+  display: grid;
+  grid-template-columns: 80rpx minmax(0, 1fr);
+  gap: $spacing-sm;
+  padding: $spacing-md 0;
+  border-top: 1rpx solid $color-border-subtle;
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 2rpx;
+  }
+
+  &:last-child {
+    padding-bottom: 2rpx;
+  }
+}
+
+.obs-label {
+  padding-top: $spacing-md;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+  line-height: 1.4;
+}
+
+.obs-main {
+  min-width: 0;
+}
+
+.meal {
+  display: grid;
+  grid-template-columns: 72rpx minmax(0, 1fr);
+  align-items: center;
+  gap: $spacing-xs;
+
+  & + .meal {
+    margin-top: $spacing-xs;
+  }
+}
+
+.meal-name {
+  color: $color-text-muted;
+  font-size: $typography-font-size-base;
+}
+
+.rates {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.rate {
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38rpx;
+  line-height: 1;
+  border-radius: $border-radius-lg;
+  background: $color-bg-page;
+  border: 1rpx solid transparent;
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.rate.is-on {
+  background: $color-brand-primary-bg;
+  border-color: $color-brand-primary;
+  box-shadow: $shadow-sm;
+}
+
+.sub-label {
+  display: block;
+  margin: 2rpx 0 $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.obs-row .sub-label + .sub-label {
+  margin-top: $spacing-sm;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.chip {
+  min-height: 72rpx;
+  padding: 0 $spacing-sm;
+  display: inline-flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  border: 1rpx solid transparent;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+}
+
+.chip.is-on {
+  background: $color-brand-primary-bg;
+  border-color: $color-brand-primary;
+  color: $color-brand-primary-dark;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.tag {
+  min-height: 68rpx;
+  padding: 0 $spacing-sm;
+  display: inline-flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  border: 1rpx solid transparent;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.tag.is-on {
+  background: $color-brand-primary-bg;
+  border-color: $color-brand-primary;
+  color: $color-brand-primary-dark;
+}
+
+/* ---------- 指定幼儿 ---------- */
+.picked {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs 0 2rpx;
+}
+
+.avatars {
+  display: flex;
+  flex: none;
+}
+
+.ava {
   width: 64rpx;
   height: 64rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: $border-radius-lg;
-  font-size: $typography-font-size-2xl;
-}
-.card-title { font-size: $typography-font-size-md; font-weight: 700; color: $color-text-primary; }
-.card-body { display: flex; flex-direction: column; gap: $spacing-xs; }
-.meal-row { display: flex; align-items: center; justify-content: space-between; }
-.meal-label { font-size: $typography-font-size-base; color: $color-text-muted; width: 54rpx; }
-.emoji-row { display: flex; gap: $spacing-xs; }
-.emoji-btn {
-  width: 48rpx;
-  height: 48rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $border-radius-sm;
-  font-size: $typography-font-size-md;
-}
-.field-label { font-size: $typography-font-size-base; color: $color-text-muted; }
-.chip-row { display: flex; gap: $spacing-md; flex-wrap: wrap; }
-.chip {
-  padding: $spacing-sm 24rpx;
-  background: $color-bg-page;
-  border-radius: $border-radius-lg;
-  font-size: $typography-font-size-base;
-  color: $color-text-muted;
-  &.active { background: #eff6ff; color: $color-semantic-info; font-weight: 600; }
-}
-.tag-cloud { display: flex; flex-wrap: wrap; gap: $spacing-sm; }
-.tag {
-  padding: $spacing-xs 16rpx;
-  background: $color-bg-page;
-  border-radius: $border-radius-sm;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  border: 4rpx solid $color-bg-card;
+  color: $color-brand-primary-dark;
   font-size: $typography-font-size-sm;
-  color: $color-text-muted;
-  &.active { background: #eff6ff; color: $color-semantic-info; font-weight: 600; }
+  font-weight: $typography-font-weight-semibold;
+
+  & + .ava {
+    margin-left: -20rpx;
+  }
 }
 
-/* 上传 */
-.upload-card {
-  padding: $spacing-xl;
-  background: $color-bg-card;
-  border: 1rpx solid $color-bg-page;
-  border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
+.ava-more {
+  background: $color-bg-page;
+  color: $color-text-muted;
 }
-.media-grid {
+
+.picked-text {
+  min-width: 0;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+  overflow-wrap: anywhere;
+}
+
+.link-btn {
+  min-height: 88rpx;
+  padding: 0 2rpx;
   display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-lg;
+  align-items: center;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-semibold;
 }
-.media-item {
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: $border-radius-xl;
-  overflow: hidden;
-  position: relative;
-}
-.add-btn {
-  border: 1rpx dashed #cbd5e1;
-  background: $color-bg-card;
+
+.pick-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: $spacing-xs;
-}
-.add-icon { font-size: 48rpx; color: $color-text-hint; }
-.add-text { font-size: $typography-font-size-sm; color: $color-text-hint; }
-.media-img { width: 100%; height: 100%; }
-.media-remove {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 40rpx;
-  height: 40rpx;
-  background: rgba(0,0,0,0.5);
-  color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $typography-font-size-sm;
-}
-/* 上传中/失败遮罩：对位在缩略图上，失败可点重试 */
-.media-mask {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.media-mask-failed { background: rgba(180, 30, 30, 0.55); }
-.media-mask-text {
-  color: #fff;
-  font-size: $typography-font-size-sm;
+  padding: $spacing-lg $spacing-md $spacing-lg;
+  border: 2rpx dashed $color-border-hairline;
+  border-radius: $border-radius-xl;
+  background: $color-bg-page;
   text-align: center;
-  padding: 0 12rpx;
 }
-/* ── 照片点名（D8）────────────────────────────────────────────── */
-.naming-bar {
+
+.pick-empty-art {
+  position: relative;
+  width: 120rpx;
+  height: 120rpx;
+  margin-bottom: $spacing-xs;
+}
+
+.pick-orb {
+  position: absolute;
+  border-radius: $border-radius-full;
+}
+
+.orb-a {
+  top: 18rpx;
+  left: 14rpx;
+  width: 64rpx;
+  height: 64rpx;
+  background: $color-semantic-warning-bg;
+  border: 2rpx solid $color-brand-primary-light;
+}
+
+.orb-b {
+  top: 40rpx;
+  left: 48rpx;
+  width: 56rpx;
+  height: 56rpx;
+  background: $color-semantic-success-bg;
+  border: 2rpx solid $color-semantic-success;
+}
+
+.pick-arc {
+  position: absolute;
+  right: 8rpx;
+  bottom: 4rpx;
+  left: 8rpx;
+  height: 28rpx;
+  border-bottom: 2rpx solid $color-brand-primary-light;
+  border-radius: $border-radius-full;
+}
+
+.pick-empty-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.pick-empty-hint {
+  margin-bottom: $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.6;
+}
+
+.btn-soft {
+  min-height: 88rpx;
+  padding: 0 $spacing-xl;
+  display: inline-flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  border: 1rpx solid $color-brand-primary;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.tags-wrap {
+  margin-top: $spacing-md;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-border-subtle;
+}
+
+/* ---------- 照片 ---------- */
+.media-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: $spacing-md;
-  margin-bottom: $spacing-md;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  min-height: 72rpx;
+  margin-bottom: $spacing-xs;
 }
-.naming-bar-hint {
-  margin-right: auto;
-  font-size: $typography-font-size-sm;
+
+.media-tip {
   color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
 }
-/* D11 拍照与点名规范提示（纯文案，不占操作位） */
-.naming-sop-hint {
-  display: block;
-  margin-bottom: $spacing-md;
-  font-size: $typography-font-size-xs;
-  color: $color-text-hint;
-}
-.naming-bar-btn {
-  padding: $spacing-xs $spacing-lg;
+
+.mini-btn {
+  flex: none;
+  min-height: 64rpx;
+  padding: 0 $spacing-sm;
+  display: inline-flex;
+  align-items: center;
   border-radius: $border-radius-full;
   border: 1rpx solid $color-border-hairline;
   background: $color-bg-card;
-  font-size: $typography-font-size-sm;
   color: $color-text-body;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
 }
-.naming-bar-btn.primary {
-  background: $color-brand-primary;
+
+.mini-btn.primary {
   border-color: $color-brand-primary;
-  color: \$color-text-on-brand;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
 }
-/* 批量模式：照片可勾选 */
-.media-item.picking { opacity: 0.92; }
-.media-item.picked { border: 4rpx solid $color-brand-primary; border-radius: $border-radius-xl; }
-.media-check {
+
+.batch-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $spacing-xs;
+}
+
+.tile {
+  position: relative;
+  height: 208rpx;
+  overflow: hidden;
+  border-radius: $border-radius-lg;
+  background: $color-bg-page;
+  border: 1rpx solid $color-border-hairline;
+}
+
+.tile.is-picked {
+  border-color: $color-brand-primary;
+}
+
+.tile-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.tile-mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  background: $color-text-primary;
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-xs;
+  font-weight: $typography-font-weight-medium;
+}
+
+.tile-mask.is-failed {
+  background: $color-semantic-danger;
+}
+
+.tile-spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid $color-text-on-brand;
+  border-top-color: $color-brand-primary;
+  border-radius: $border-radius-full;
+  animation: spin 900ms linear infinite;
+}
+
+.tile-retry {
+  color: $color-text-on-brand;
+  text-decoration: underline;
+}
+
+.tile-badge {
   position: absolute;
   left: $spacing-xs;
   bottom: $spacing-xs;
-  font-size: $typography-font-size-2xl;
-  color: #fff;
-  text-shadow: 0 0 6rpx rgba(0,0,0,0.6);
-}
-.media-naming-badge {
-  position: absolute;
-  left: 8rpx;
-  bottom: 8rpx;
-  padding: 4rpx 12rpx;
+  max-width: calc(100% - #{$spacing-md});
+  min-height: 40rpx;
+  padding: 0 $spacing-xs;
+  display: inline-flex;
+  align-items: center;
   border-radius: $border-radius-full;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: $typography-font-size-xs;
-}
-.media-ai-tag {
-  position: absolute;
-  left: 8rpx;
-  top: 8rpx;
-  padding: 4rpx 10rpx;
-  border-radius: $border-radius-full;
-  background: $color-semantic-info-bg;
-  color: $color-semantic-info;
-  font-size: $typography-font-size-xs;
-}
-/* 点名弹层 */
-.naming-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 100;
-  display: flex;
-  align-items: flex-end;
-}
-.naming-sheet {
-  width: 100%;
-  max-height: 75vh;
   background: $color-bg-card;
-  border-radius: $border-radius-2xl $border-radius-2xl 0 0;
-  padding: $spacing-xl;
-  padding-bottom: calc(#{$spacing-xl} + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-}
-.naming-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.naming-title {
-  font-size: $typography-font-size-lg;
-  font-weight: $typography-font-weight-semibold;
-  color: $color-text-primary;
-}
-.naming-close {
-  font-size: $typography-font-size-lg;
-  color: $color-text-hint;
-  padding: 0 $spacing-sm;
-}
-.naming-tip {
-  margin-top: $spacing-sm;
-  font-size: $typography-font-size-sm;
-  color: $color-text-muted;
-}
-.naming-scroll {
-  margin-top: $spacing-lg;
-  max-height: 48vh;
-}
-/* D11 全班一键：默认名单 = 当日到场学生 */
-.naming-roster-row {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  margin-top: $spacing-md;
-}
-.naming-roster-btn {
-  flex-shrink: 0;
-  padding: $spacing-xs $spacing-lg;
-  border-radius: $border-radius-full;
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
-  font-size: $typography-font-size-sm;
-}
-.naming-roster-btn.busy { opacity: 0.6; }
-.naming-roster-hint {
+  color: $color-text-body;
   font-size: $typography-font-size-xs;
-  color: $color-text-hint;
+  font-weight: $typography-font-weight-medium;
 }
-.naming-ai-mark {
-  margin-left: 8rpx;
-  font-size: $typography-font-size-xs;
-  color: $color-semantic-info;
-}
-/* 「已有」标记：批量面板里显性呈现照片上已点名的孩子（不可取消） */
-.naming-existing-mark {
-  margin-left: 8rpx;
-  font-size: $typography-font-size-xs;
-  color: $color-text-muted;
-}
-.student-chip.existing {
-  opacity: 0.85;
-}
-.naming-footer {
-  display: flex;
-  gap: $spacing-lg;
-  margin-top: $spacing-lg;
-}
-.naming-btn {
-  flex: 1;
-  height: 88rpx;
-  border-radius: $border-radius-full;
+
+.tile-remove {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 56rpx;
+  height: 56rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: $typography-font-size-base;
-  background: $color-bg-page;
-  color: $color-text-body;
+  border-radius: $border-radius-full;
+  background: $color-text-primary;
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-xs;
 }
-.naming-btn.primary {
-  background: $color-brand-primary;
-  color: \$color-text-on-brand;
+
+.tile-check {
+  position: absolute;
+  top: $spacing-xs;
+  right: $spacing-xs;
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  border: 2rpx solid $color-bg-card;
+  background: $color-text-body;
+  color: transparent;
+  font-size: $typography-font-size-xs;
 }
-/* 每张照片的引用层描述（L2） */
-.media-desc-list {
-  margin-top: 20rpx;
+
+.tile-check.is-on {
+  background: $color-brand-primary-dark;
+  border-color: $color-brand-primary;
+  color: $color-text-on-brand;
+}
+
+.tile-add {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
-}
-.media-desc-row {
-  display: flex;
   align-items: center;
-  gap: $spacing-md;
-}
-.media-desc-thumb {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: $border-radius-md;
-  flex-shrink: 0;
-}
-.media-desc-input {
-  flex: 1;
-  min-width: 0;
-  height: 64rpx;
-  padding: 0 20rpx;
+  justify-content: center;
+  gap: 2rpx;
+  border-style: dashed;
   background: $color-bg-page;
-  border-radius: $border-radius-md;
-  font-size: $typography-font-size-base;
-  color: $color-text-primary;
-}
-.upload-hint {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  margin-top: 24rpx;
-  font-size: $typography-font-size-sm;
-  color: $color-text-hint;
-}
-
-/* 记录内容 */
-.content-card {
-  padding: $spacing-xl;
-  background: $color-bg-card;
-  border: 1rpx solid $color-bg-page;
-  border-radius: $border-radius-xl;
-  box-shadow: 0 2rpx 4rpx rgba(120, 53, 15, 0.05);
-}
-.content-area {
-  width: 100%;
-  height: 240rpx;
-  font-size: $typography-font-size-lg;
-  color: $color-text-primary;
-  box-sizing: border-box;
-}
-
-/* 底部操作栏 */
-.bottom-bar {
-  padding: $spacing-xl 48rpx 48rpx 48rpx;
-  background: $color-bg-card;
-}
-.bottom-options {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  margin-bottom: 24rpx;
-}
-.option-row { display: flex; align-items: center; gap: $spacing-md; }
-.option-check { font-size: $typography-font-size-md; color: $color-semantic-info; width: 40rpx; }
-.option-label { font-size: $typography-font-size-md; color: $color-text-hint; &.active { color: $color-semantic-info; } }
-.publish-btn {
-  width: 100%;
-  height: 96rpx;
-  background: linear-gradient(135deg, $color-semantic-info, $color-semantic-info);
-  color: #fff;
-  font-size: $typography-font-size-xl;
-  font-weight: 700;
-  border-radius: $border-radius-xl;
-  border: 0;
-  line-height: 96rpx;
-}
-
-/* 学生选择器 */
-.student-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.student-count {
-  font-size: $typography-font-size-sm;
-  color: $color-semantic-info;
-}
-
-.student-search {
-  margin-bottom: $spacing-md;
-}
-
-.search-input {
-  height: 72rpx;
-  padding: 0 28rpx;
-  border-radius: $border-radius-lg;
-  background: $color-bg-page;
-  font-size: $typography-font-size-md;
-  color: $color-text-primary;
-}
-
-.student-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-}
-
-.student-chip {
-  padding: 14rpx 32rpx;
-  border-radius: 999rpx;
-  background: $color-bg-page;
-  font-size: $typography-font-size-md;
   color: $color-text-muted;
-  transition: all 0.2s;
 
-  &.selected {
-    background: #eff6ff;
-    color: $color-semantic-info;
-    font-weight: 600;
+  &:active {
+    background: $color-brand-primary-bg;
   }
 }
 
-.student-empty {
-  width: 100%;
-  text-align: center;
-  padding: $spacing-xl;
-  font-size: $typography-font-size-base;
-  color: $color-text-hint;
+.tile-add-icon {
+  font-size: $typography-font-size-3xl;
 }
 
-.option-hint {
-  padding: $spacing-sm 24rpx;
-  margin-bottom: 8rpx;
-  border-radius: $border-radius-md;
-  background: #eff6ff;
-  font-size: $typography-font-size-sm;
-  color: $color-semantic-info;
+.tile-add-text {
+  font-size: $typography-font-size-xs;
+  font-weight: $typography-font-weight-medium;
 }
 
-// 授予徽章选择器
-.badge-pick-row {
+.desc-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
 }
 
-.badge-pick {
-  display: flex;
+.desc-row {
+  display: grid;
+  grid-template-columns: 56rpx minmax(0, 1fr);
   align-items: center;
   gap: $spacing-xs;
-  padding: 14rpx 28rpx;
-  border-radius: $border-radius-lg;
-  background: $color-bg-page;
-  transition: all 0.2s;
-
-  &.selected,
-  &.active {
-    background: $color-semantic-info-bg;
-    box-shadow: inset 0 0 0 2rpx $color-semantic-info;
-  }
 }
 
-.badge-pick-icon {
+.desc-thumb {
+  width: 56rpx;
+  height: 56rpx;
+  overflow: hidden;
+  border-radius: $border-radius-md;
+  background: $color-bg-page;
+}
+
+.desc-thumb-img {
+  width: 100%;
+  height: 100%;
+}
+
+.desc-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 72rpx;
+  padding: 0 $spacing-sm;
+  border-radius: $border-radius-md;
+  background: $color-bg-page;
+  border: 1rpx solid transparent;
+  color: $color-text-primary;
+  font-size: $typography-font-size-sm;
+}
+
+.fineprint {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+  color: $color-text-hint;
+  font-size: $typography-font-size-xs;
+  line-height: 1.55;
+}
+
+.fineprint-icon {
+  flex: none;
+  margin-top: 2rpx;
+  font-size: $typography-font-size-sm;
+}
+
+.fineprint-dot {
+  flex: none;
+  width: 8rpx;
+  height: 8rpx;
+  margin-top: 10rpx;
+  border-radius: $border-radius-full;
+  background: $color-text-hint;
+}
+
+/* ---------- 正文 ---------- */
+.textarea {
+  display: block;
+  width: 100%;
+  height: 216rpx;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-lg;
+  background: $color-bg-page;
+  border: 1rpx solid transparent;
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+  line-height: 1.7;
+}
+
+/* ---------- 徽章 ---------- */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.badge-chip {
+  min-height: 76rpx;
+  padding: 0 $spacing-sm;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  border: 1rpx solid transparent;
+  color: $color-text-body;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.badge-chip.is-on {
+  background: $color-brand-primary-bg;
+  border-color: $color-brand-primary;
+  color: $color-brand-primary-dark;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.badge-icon {
   width: 40rpx;
   height: 40rpx;
   border-radius: $border-radius-sm;
 }
 
-.badge-pick-name {
-  font-size: $typography-font-size-md;
-  color: $color-text-primary;
-  font-weight: 500;
+.grant {
+  margin-top: $spacing-md;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-border-subtle;
 }
 
-.student-row {
+.grant-hint {
+  display: block;
+  color: $color-text-hint;
+  font-size: $typography-font-size-sm;
+  line-height: 1.6;
+}
+
+.check-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  min-height: 88rpx;
+  margin-top: $spacing-xs;
+  padding-top: $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.5;
+}
+
+.check-row .box {
+  flex: none;
+  width: 36rpx;
+  height: 36rpx;
+  margin-top: 2rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-sm;
+  border: 2rpx solid $color-border-hairline;
+  color: transparent;
+  font-size: $typography-font-size-xs;
+}
+
+.check-row .box.is-on {
+  background: $color-brand-primary-dark;
+  border-color: $color-brand-primary;
+  color: $color-text-on-brand;
+}
+
+/* ---------- 幼儿弹层 ---------- */
+.layer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.scrim {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: $color-text-primary;
+  opacity: 0.45;
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-height: 82%;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-xs $component-page-padding-x calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: $color-bg-card;
+  border-radius: $border-radius-2xl $border-radius-2xl 0 0;
+  box-shadow: $shadow-lg;
+}
+
+.sheet-head {
+  display: grid;
+  grid-template-columns: 128rpx minmax(0, 1fr) 128rpx;
+  align-items: center;
+  min-height: 96rpx;
+}
+
+.sheet-cancel,
+.sheet-all {
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  font-size: $typography-font-size-md;
+}
+
+.sheet-cancel {
+  color: $color-text-muted;
+}
+
+.sheet-all {
+  justify-content: flex-end;
+  color: $color-brand-primary-dark;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.sheet-title {
+  text-align: center;
+  color: $color-text-primary;
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.sheet-desc {
+  padding: 0 2rpx $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.6;
+}
+
+.roster-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-lg;
+  background: $color-semantic-success-bg;
+  color: $color-semantic-success-strong;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.roster-row.is-busy {
+  opacity: 0.6;
+}
+
+.roster-hint {
+  color: $color-semantic-success;
+  font-size: $typography-font-size-xs;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  height: 80rpx;
+  padding: 0 $spacing-sm;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  border: 1rpx solid $color-border-hairline;
+  color: $color-text-hint;
+}
+
+.search-icon {
+  flex: none;
+  font-size: $typography-font-size-md;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+}
+
+.sheet-list {
+  flex: 1;
+  min-height: 0;
+  height: 520rpx;
+  margin-top: $spacing-xs;
+}
+
+.srow {
+  display: grid;
+  grid-template-columns: 72rpx minmax(0, 1fr) 44rpx;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 104rpx;
+  padding: $spacing-xs 2rpx;
+  border-radius: $border-radius-lg;
+
+  & + .srow {
+    border-top: 1rpx solid $color-border-subtle;
+  }
+}
+
+.savatar {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.sname {
+  min-width: 0;
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+}
+
+.scheck {
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  border: 2rpx solid $color-border-hairline;
+  color: transparent;
+  font-size: $typography-font-size-xs;
+}
+
+.srow.is-on .savatar {
+  background: $color-brand-primary-dark;
+  color: $color-text-on-brand;
+}
+
+.srow.is-on .scheck {
+  background: $color-brand-primary-dark;
+  border-color: $color-brand-primary;
+  color: $color-text-on-brand;
+}
+
+.sheet-empty {
+  padding: $spacing-xl $spacing-xs;
+  text-align: center;
+  color: $color-text-hint;
+  font-size: $typography-font-size-base;
+}
+
+.sheet-foot {
+  padding-top: $spacing-sm;
+}
+
+/* ---------- 底栏 ---------- */
+.dock {
+  padding: $spacing-xs $component-page-padding-x calc(#{$spacing-sm} + env(safe-area-inset-bottom));
+  background: $color-bg-card;
+  border-top: 1rpx solid $color-border-hairline;
+  box-shadow: $shadow-lg;
+}
+
+.err-strip {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-lg;
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.err-icon {
+  flex: none;
+  width: 28rpx;
+  height: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  border: 2rpx solid $color-semantic-danger;
+  font-size: $typography-font-size-xs;
+  font-weight: $typography-font-weight-bold;
+  line-height: 1;
+}
+
+.err-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.err-retry {
+  flex: none;
+  min-height: 60rpx;
+  padding: 0 $spacing-xs;
+  display: flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  border: 1rpx solid $color-semantic-danger;
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.dock-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-xs;
+  min-height: 56rpx;
+  margin-bottom: $spacing-xs;
+}
+
+.scope {
+  min-width: 0;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.switch-row {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+}
+
+.sw {
+  position: relative;
+  width: 80rpx;
+  height: 48rpx;
+  border-radius: $border-radius-full;
+  background: $color-border-hairline;
+}
+
+.sw.is-on {
+  background: $color-brand-primary;
+}
+
+.sw-knob {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+}
+
+.sw.is-on .sw-knob {
+  left: 36rpx;
+}
+
+.dock-reason {
+  margin-bottom: $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.45;
+}
+
+.publish {
+  width: 100%;
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $gradient-brand;
+  color: $color-text-primary;
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+  box-shadow: $shadow-md;
+
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+.publish.is-disabled {
+  background: $color-bg-page;
+  border: 1rpx solid $color-border-hairline;
+  color: $color-text-hint;
+  box-shadow: none;
+
+  &:active {
+    transform: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

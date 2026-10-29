@@ -1,133 +1,174 @@
 <script setup>
-import { ref, computed } from "vue"
-import { onLoad, onUnload } from "@dcloudio/uni-app"
-import { fetchTeacherGrowthLog, fetchTeacherGrowthComments, createTeacherGrowthComment, fetchGrowthTaggingStatus, reviewMediaSuggestion, confirmHighSuggestions, fetchPresentStudents, applyClassRoster } from "@/api/teacher-growth"
+import { computed, ref } from "vue"
+import { onLoad, onShow, onUnload } from "@dcloudio/uni-app"
+import {
+  fetchTeacherGrowthLog,
+  fetchTeacherGrowthComments,
+  createTeacherGrowthComment,
+  fetchGrowthTaggingStatus,
+  reviewMediaSuggestion,
+  confirmHighSuggestions,
+  fetchPresentStudents,
+  applyClassRoster,
+  likeTeacherGrowthComment,
+  unlikeTeacherGrowthComment
+} from "@/api/teacher-growth"
 import { fetchTeacherClassStudents } from "@/api/teacher-class"
 import { fetchTeacherAchievements, grantAchievement } from "@/api/teacher-achievements"
 import { ensureLogin } from "@/utils/login"
+import { formatCommentTime, formatRecordTime } from "@/utils/time"
+import PageShell from "@/components/PageShell.vue"
+
+// 关系码由服务端按 StudentParent.relation 返回（9 值）；未知码回退为不显示。
+const RELATION_LABEL = {
+  father: "爸爸",
+  mother: "妈妈",
+  grandfather: "爷爷",
+  grandmother: "奶奶",
+  maternal_grandfather: "外公",
+  maternal_grandmother: "外婆",
+  uncle: "叔叔",
+  aunt: "阿姨",
+  other: "其他"
+}
 
 const record = ref({})
 const comments = ref([])
+const commentTotal = ref(0)
 const commentText = ref("")
+const replyTo = ref(null)
+const inputFocused = ref(false)
 const loading = ref(true)
+const hasLoaded = ref(false)
 const loadError = ref("")
 const submitting = ref(false)
 
-// ---- 补授徽章（已发布记录可后挂，本记录作为见证）----
-const achievements = ref([])
-const grant = ref({ achievement_id: null, student_ids: [], as_witness: true, granting: false })
-const grantOpen = ref(false)
-// 授予选择器用「班级学生」：全班/个体记录都适用（个体记录的关联学生是班级学生的子集）。
+const isInitialLoading = computed(() => loading.value && !hasLoaded.value)
+const showError = computed(() => Boolean(loadError.value) && !hasLoaded.value)
+const locked = computed(() => isInitialLoading.value || showError.value)
+
+const creatorName = computed(() => record.value.creator?.nickname || "老师")
+const creatorInitial = computed(() => String(creatorName.value).slice(0, 1) || "师")
+const recordTime = computed(() => formatRecordTime(record.value.date, record.value.created_at))
+
+const tags = computed(() =>
+  Array.isArray(record.value.performance_tags)
+    ? record.value.performance_tags.filter(Boolean)
+    : []
+)
+
+const paragraphs = computed(() =>
+  String(record.value.content || "")
+    .split(/\n+/)
+    .map(text => text.trim())
+    .filter(Boolean)
+)
+
+const media = computed(() => (Array.isArray(record.value.media) ? record.value.media : []))
+const isClassRecord = computed(() => record.value.target_type !== 2)
+
+const relatedStudents = computed(() =>
+  Array.isArray(record.value.related_students) ? record.value.related_students : []
+)
+const relatedCount = computed(() => record.value.related_students_count || relatedStudents.value.length)
+const relatedShown = computed(() => relatedStudents.value.slice(0, 6))
+const relatedMore = computed(() => Math.max(0, relatedCount.value - relatedShown.value.length))
+
+function initialOf(user) {
+  const name = String(user?.nickname || "")
+  return name ? name.slice(0, 1) : "家"
+}
+
+function relationText(user) {
+  return RELATION_LABEL[user?.relation] || ""
+}
+
+// ---- 照片点名 / AI 建议 ----
 const students = ref([])
-
-async function loadStudents() {
-  try {
-    // 必须先登录：onLoad 里 loadStudents 与 loadDetail 并行，
-    // 不等 ensureLogin 会带着空 token 发请求 → 401 → 静默吞成空列表
-    await ensureLogin()
-    const res = await fetchTeacherClassStudents()
-    students.value = res.data?.list || []
-  } catch (e) {
-    // 学生列表失败不影响详情浏览，授予时会提示无可授予学生
-  }
-}
-
-async function loadAchievements() {
-  try {
-    const res = await fetchTeacherAchievements()
-    achievements.value = res.data?.list || []
-  } catch (e) {
-    // 徽章列表失败不影响详情浏览
-  }
-}
-
-function toggleGrantStudent(sid) {
-  const i = grant.value.student_ids.indexOf(sid)
-  if (i >= 0) grant.value.student_ids.splice(i, 1)
-  else grant.value.student_ids.push(sid)
-}
-
-function selectAchievement(id) {
-  grant.value.achievement_id = grant.value.achievement_id === id ? null : id
-}
-
-async function doGrant() {
-  const g = grant.value
-  if (!g.achievement_id) {
-    uni.showToast({ title: "请先选一枚徽章", icon: "none" })
-    return
-  }
-  // 未勾选时授予给全班学生（详情页补授的合理默认）
-  const target = g.student_ids.length ? g.student_ids : students.value.map((s) => s.student_id)
-  if (!target.length) {
-    uni.showToast({ title: "无可授予的学生", icon: "none" })
-    return
-  }
-  g.granting = true
-  try {
-    await grantAchievement(g.achievement_id, {
-      student_ids: target,
-      log_id: g.as_witness ? record.value.id : undefined,
-    })
-    uni.showToast({ title: "已授予徽章", icon: "success" })
-    grantOpen.value = false
-    loadDetail(record.value.id)
-  } catch (e) {
-    uni.showToast({ title: e?.message || "授予失败", icon: "none" })
-  } finally {
-    g.granting = false
-  }
-}
-
-async function loadDetail(id) {
-  loading.value = true
-  loadError.value = ""
-  try {
-    await ensureLogin()
-    const [logRes, commentRes] = await Promise.all([
-      fetchTeacherGrowthLog(id),
-      fetchTeacherGrowthComments(id)
-    ])
-    record.value = logRes.data || {}
-    comments.value = commentRes.data?.list || commentRes.data || []
-    // 识别是发布后的异步过程：有未完成任务时轮询刷新建议（无任务则一次都不轮询）
-    refreshTaggingStatus()
-  } catch (err) {
-    loadError.value = err?.message || "加载失败"
-  } finally {
-    loading.value = false
-  }
-}
-
-// ---- 照片点名与识别建议（design D6/D8）----
-// 点名呈现：student_ids → 姓名（班级学生表映射）；建议态：高置信带「高置信」标记（可一键确认），低置信仅提示。
 const studentNameById = computed(() => {
   const map = {}
-  students.value.forEach((s) => { map[s.student_id] = s.name })
+  students.value.forEach(student => {
+    map[student.student_id] = student.name
+  })
   return map
 })
 
-function namedNames(m) {
-  return (m.student_ids || []).map((id) => studentNameById.value[id] || `#${id}`)
+function namedNames(mediaItem) {
+  return (mediaItem.student_ids || []).map(id => studentNameById.value[id] || `#${id}`)
 }
 
-function suggestionsOf(m) {
-  return Array.isArray(m.student_suggestions) ? m.student_suggestions : []
+function suggestionsOf(mediaItem) {
+  return Array.isArray(mediaItem.student_suggestions) ? mediaItem.student_suggestions : []
 }
 
-function previewPhoto(idx) {
-  const urls = (record.value.media || []).map((m) => m.thumb_url || m.url || m.file_url)
-  uni.previewImage({ current: idx, urls })
-}
-
-// 一键采纳：高置信建议数量 >0 时出现「全部确认」——一次活动的合影可达数十条建议，
-// 逐条点击会把 AI 加速变成负担（design D10）
 const highSuggestionCount = computed(() =>
-  (record.value.media || []).reduce(
-    (acc, m) => acc + suggestionsOf(m).filter((s) => s.tier === "high").length,
-    0,
-  ),
+  media.value.reduce(
+    (total, mediaItem) => total + suggestionsOf(mediaItem).filter(s => s.tier === "high").length,
+    0
+  )
 )
+
+const aiTouched = ref(false)
+const aiGroups = computed(() =>
+  media.value
+    .map((mediaItem, index) => ({ media: mediaItem, index, items: suggestionsOf(mediaItem) }))
+    .filter(group => group.items.length > 0)
+)
+const aiDoneVisible = computed(() => aiTouched.value && aiGroups.value.length === 0)
+
+const groupPhotos = computed(() =>
+  isClassRecord.value
+    ? media.value
+        .map((mediaItem, index) => ({ media: mediaItem, index }))
+        .filter(group => group.media.is_group_photo)
+    : []
+)
+
+const failedMedia = ref(new Set())
+
+function markMediaFailed(index) {
+  const next = new Set(failedMedia.value)
+  next.add(index)
+  failedMedia.value = next
+}
+
+function retryMedia(index) {
+  const next = new Set(failedMedia.value)
+  next.delete(index)
+  failedMedia.value = next
+}
+
+// ---- 照片预览 ----
+const previewOpen = ref(false)
+const previewIndex = ref(0)
+const previewMeta = computed(() => {
+  const total = media.value.length
+  if (!total) return ""
+  return `第 ${previewIndex.value + 1} 张 / 共 ${total} 张`
+})
+
+function openPreview(index) {
+  if (locked.value || !media.value.length) return
+  previewIndex.value = index
+  previewOpen.value = true
+}
+
+function closePreview() {
+  previewOpen.value = false
+}
+
+function onPreviewChange(event) {
+  const current = Number(event?.detail?.current)
+  if (Number.isInteger(current)) previewIndex.value = current
+}
+
+function stepPreview(delta) {
+  const total = media.value.length
+  if (total < 2) return
+  previewIndex.value = (previewIndex.value + delta + total) % total
+}
+
+// ---- AI 建议处理 ----
 const confirmingHigh = ref(false)
 
 async function confirmAllHigh() {
@@ -135,43 +176,43 @@ async function confirmAllHigh() {
   confirmingHigh.value = true
   try {
     const res = await confirmHighSuggestions(record.value.id)
-    const n = res.data?.confirmed ?? 0
-    ;(record.value.media || []).forEach((m) => {
-      const highs = suggestionsOf(m).filter((s) => s.tier === "high")
+    const count = res.data?.confirmed ?? 0
+    media.value.forEach(mediaItem => {
+      const highs = suggestionsOf(mediaItem).filter(s => s.tier === "high")
       if (!highs.length) return
-      m.student_suggestions = suggestionsOf(m).filter((s) => s.tier !== "high")
-      m.student_ids = [...(m.student_ids || []), ...highs.map((s) => s.student_id)]
+      mediaItem.student_suggestions = suggestionsOf(mediaItem).filter(s => s.tier !== "high")
+      mediaItem.student_ids = [...(mediaItem.student_ids || []), ...highs.map(s => s.student_id)]
     })
-    uni.showToast({ title: `已确认 ${n} 条高置信建议`, icon: "none" })
-  } catch (e) {
-    uni.showToast({ title: e?.message || "批量确认失败", icon: "none" })
+    aiTouched.value = true
+    uni.showToast({ title: `已确认 ${count} 条高置信建议`, icon: "none" })
+  } catch (err) {
+    uni.showToast({ title: err?.message || "批量确认失败", icon: "none" })
     refreshTaggingStatus()
   } finally {
     confirmingHigh.value = false
   }
 }
 
-// 本地即时反馈 + 后台落库：确认 → 移入点名；拒绝 → 移除建议。失败则回滚重取。
-async function reviewSuggestion(m, s, action) {
+// 本地即时反馈 + 后台落库：确认 → 移入点名；拒绝 → 移除建议。失败则重取。
+async function reviewSuggestion(mediaItem, suggestion, action) {
   try {
-    await reviewMediaSuggestion(m.id, s.student_id, action)
-    const media = record.value.media || []
-    const target = media.find((x) => x.id === m.id)
+    await reviewMediaSuggestion(mediaItem.id, suggestion.student_id, action)
+    const target = media.value.find(item => item.id === mediaItem.id)
     if (target) {
-      target.student_suggestions = suggestionsOf(target).filter((x) => x.student_id !== s.student_id)
+      target.student_suggestions = suggestionsOf(target).filter(s => s.student_id !== suggestion.student_id)
       if (action === "confirm") {
-        target.student_ids = [...(target.student_ids || []), s.student_id]
+        target.student_ids = [...(target.student_ids || []), suggestion.student_id]
       }
     }
+    aiTouched.value = true
     uni.showToast({ title: action === "confirm" ? "已确认点名" : "已忽略", icon: "none" })
-  } catch (e) {
-    uni.showToast({ title: e?.message || "操作失败", icon: "none" })
+  } catch (err) {
+    uni.showToast({ title: err?.message || "操作失败", icon: "none" })
     refreshTaggingStatus()
   }
 }
 
-// 大合影「一键全班」（D11）：名单 = 记录当日的到场学生（服务端口径），点击即落为确认点名。
-// 到场名单惰性加载：仅在对全班记录的大合影上需要（「当日到场 N 人」的预告数）。
+// 大合影「一键全班」：名单口径由服务端定（记录当日到场），客户端只消费回读结果。
 const presentIds = ref([])
 const presentLoaded = ref(false)
 const rosterBusyId = ref(0)
@@ -183,33 +224,29 @@ async function ensurePresent() {
     const date = String(record.value.date || "").slice(0, 10)
     const res = await fetchPresentStudents(date)
     presentIds.value = res.data?.list || []
-  } catch (e) {
-    // 名单失败不阻断浏览；点击「全班」由服务端兜底（回读最终名单下发）
+  } catch (err) {
+    // 名单失败不阻断浏览；点击「全班」仍由服务端兜底
     presentLoaded.value = false
   }
 }
 
-async function applyRoster(m) {
+async function applyRoster(mediaItem) {
   if (rosterBusyId.value) return
-  rosterBusyId.value = m.id
+  rosterBusyId.value = mediaItem.id
   try {
-    const res = await applyClassRoster(m.id)
-    const n = res.data?.present ?? 0
-    // 以服务端回读的最终名单为准（含「已拒绝不复活」与点名/到场名单的时序差——
-    // 本地并集算不出这两者）
-    if (Array.isArray(res.data?.named)) m.student_ids = res.data.named
-    uni.showToast({ title: `已点名 ${n} 人（当日到场）`, icon: "none" })
-  } catch (e) {
-    uni.showToast({ title: e?.message || "全班点名失败", icon: "none" })
+    const res = await applyClassRoster(mediaItem.id)
+    const count = res.data?.present ?? 0
+    // 以服务端回读的最终名单为准（含「已拒绝不复活」）
+    if (Array.isArray(res.data?.named)) mediaItem.student_ids = res.data.named
+    uni.showToast({ title: `已点名 ${count} 人（当日到场）`, icon: "none" })
+  } catch (err) {
+    uni.showToast({ title: err?.message || "全班点名失败", icon: "none" })
   } finally {
     rosterBusyId.value = 0
   }
 }
 
-// 轮询：仅当识别仍有未完成任务时进行（间隔 4s），完成后自动停止。
-// 失败**不终止**轮询：退避重试（4s→8s→…→30s 封顶）——一次网络抖动不应让
-// 建议永远到不了（旧行为遇错即停，要重进页面才恢复）。自愈由服务端兜底：
-// 只要识别最终完成，下一次成功的轮询就会把建议/分型带上。
+// ---- 识别状态轮询：4s 间隔；失败退避（4s→8s…→30s 封顶）；onUnload 停止 ----
 const TAGGING_POLL_MS = 4000
 const TAGGING_RETRY_MAX_MS = 30000
 let taggingTimer = null
@@ -218,17 +255,19 @@ let taggingFailures = 0
 
 function applyTaggingStatus(data) {
   const byId = {}
-  ;(data.media || []).forEach((x) => { byId[x.id] = x })
-  let hasGroupPhoto = false
-  ;(record.value.media || []).forEach((m) => {
-    const x = byId[m.id]
-    if (!x) return
-    m.student_suggestions = x.suggestions || []
-    m.is_group_photo = !!x.is_group_photo
-    if (m.is_group_photo) hasGroupPhoto = true
+  ;(data.media || []).forEach(item => {
+    byId[item.id] = item
   })
-  // 分型由服务端判定（阈值不下发到端）；个体记录不做全班，无需取名单
-  if (hasGroupPhoto && record.value.target_type !== 2) ensurePresent()
+  let hasGroupPhoto = false
+  media.value.forEach(mediaItem => {
+    const status = byId[mediaItem.id]
+    if (!status) return
+    mediaItem.student_suggestions = status.suggestions || []
+    mediaItem.is_group_photo = !!status.is_group_photo
+    if (mediaItem.is_group_photo) hasGroupPhoto = true
+    if ((status.suggestions || []).length) aiTouched.value = true
+  })
+  if (hasGroupPhoto && isClassRecord.value) ensurePresent()
 }
 
 function scheduleTaggingPoll(delayMs) {
@@ -246,8 +285,7 @@ async function refreshTaggingStatus() {
     taggingFailures = 0
     applyTaggingStatus(data)
     if (data.pending) scheduleTaggingPoll(TAGGING_POLL_MS)
-  } catch (e) {
-    // 静默退避重试：识别状态不是浏览详情的关键路径，但也不该因单次失败永久停摆
+  } catch (err) {
     taggingFailures += 1
     const backoff = Math.min(TAGGING_POLL_MS * 2 ** (taggingFailures - 1), TAGGING_RETRY_MAX_MS)
     scheduleTaggingPoll(backoff)
@@ -265,8 +303,201 @@ function stopTaggingPoll() {
 
 onUnload(stopTaggingPoll)
 
-function goBack() {
-  uni.navigateBack()
+// ---- 授徽章 ----
+const achievements = ref([])
+const grant = ref({ achievement_id: null, student_ids: [], as_witness: true, granting: false })
+const grantOpen = ref(false)
+
+const awardHint = computed(() => {
+  if (grant.value.student_ids.length) {
+    const names = grant.value.student_ids
+      .map(id => students.value.find(s => s.student_id === id)?.name)
+      .filter(Boolean)
+    return `将授予 ${grant.value.student_ids.length} 位小朋友${names.length ? `：${names.join("、")}` : ""}`
+  }
+  return `未选择孩子，将默认授予本班全部 ${students.value.length} 人`
+})
+
+function selectAchievement(id) {
+  grant.value.achievement_id = grant.value.achievement_id === id ? null : id
+}
+
+function toggleGrantStudent(id) {
+  const list = grant.value.student_ids
+  const index = list.indexOf(id)
+  if (index >= 0) list.splice(index, 1)
+  else list.push(id)
+}
+
+async function doGrant() {
+  const current = grant.value
+  if (!current.achievement_id) {
+    uni.showToast({ title: "请先选一枚徽章", icon: "none" })
+    return
+  }
+  const target = current.student_ids.length
+    ? current.student_ids
+    : students.value.map(student => student.student_id)
+  if (!target.length) {
+    uni.showToast({ title: "无可授予的学生", icon: "none" })
+    return
+  }
+  current.granting = true
+  try {
+    await grantAchievement(current.achievement_id, {
+      student_ids: target,
+      log_id: current.as_witness ? record.value.id : undefined
+    })
+    uni.showToast({ title: "已授予徽章", icon: "success" })
+    grantOpen.value = false
+  } catch (err) {
+    uni.showToast({ title: err?.message || "授予失败", icon: "none" })
+  } finally {
+    current.granting = false
+  }
+}
+
+// ---- 评论 ----
+const sendDisabled = computed(
+  () => locked.value || submitting.value || !commentText.value.trim()
+)
+
+// 回复条出现时底栏会变高，页面预留高度同步增加，避免遮住最后一条评论
+const bottomSpace = computed(() => (replyTo.value ? "240rpx" : "180rpx"))
+
+// 空评论态必须与计数同口径：列表为空时标题与互动条都显示 0，
+// 否则会出现「还没有家长评论」旁边写着「5 条评论」的矛盾。
+const displayCommentTotal = computed(() => (comments.value.length ? commentTotal.value : 0))
+
+const likePending = new Set()
+
+function findComment(id) {
+  for (const comment of comments.value) {
+    if (comment.id === id) return comment
+    const reply = (comment.replies || []).find(item => item.id === id)
+    if (reply) return reply
+  }
+  return null
+}
+
+// 评论赞：不做乐观翻转，以服务端返回的 liked / likes_count 为准。
+// 同一条评论在途时忽略后续点击（快速双击会并发两个请求，先返回的提示会误导）。
+async function toggleCommentLike(comment) {
+  if (locked.value || likePending.has(comment.id)) return
+  likePending.add(comment.id)
+  try {
+    const res = comment.liked
+      ? await unlikeTeacherGrowthComment(comment.id)
+      : await likeTeacherGrowthComment(comment.id)
+    const next = res?.data?.liked
+    if (typeof next !== "boolean") throw new Error("点赞状态未更新")
+    const target = findComment(comment.id)
+    if (target) {
+      target.liked = next
+      if (typeof res.data.likes_count === "number") target.likes_count = res.data.likes_count
+    }
+  } catch (err) {
+    uni.showToast({ title: err?.message || "操作失败", icon: "none" })
+  } finally {
+    likePending.delete(comment.id)
+  }
+}
+
+function startReply(comment) {
+  if (locked.value) return
+  replyTo.value = { id: comment.id, name: comment.user?.nickname || "这条评论" }
+}
+
+function cancelReply() {
+  replyTo.value = null
+}
+
+function focusComment() {
+  if (locked.value) return
+  inputFocused.value = true
+}
+
+function applyComments(res) {
+  comments.value = res.data?.list || []
+  const total = res.data?.total
+  commentTotal.value = typeof total === "number" ? total : comments.value.length
+  if (aiGroups.value.length) aiTouched.value = true
+}
+
+async function refreshComments() {
+  try {
+    const res = await fetchTeacherGrowthComments(record.value.id)
+    applyComments(res)
+  } catch (err) {
+    console.warn("[growth-detail] refresh comments failed:", err?.message || err)
+  }
+}
+
+async function submitComment() {
+  if (sendDisabled.value) return
+  const text = commentText.value.trim()
+  if (!text) return
+  submitting.value = true
+  try {
+    await createTeacherGrowthComment(record.value.id, text, replyTo.value ? replyTo.value.id : null)
+    commentText.value = ""
+    replyTo.value = null
+    uni.showToast({ title: "评论成功", icon: "success" })
+    await refreshComments()
+  } catch (err) {
+    // 失败保留输入内容；http.js 已提示错误
+    console.warn("[growth-detail] post comment failed:", err?.message || err)
+  } finally {
+    submitting.value = false
+  }
+}
+
+// ---- 加载 ----
+async function loadStudents() {
+  try {
+    await ensureLogin()
+    const res = await fetchTeacherClassStudents()
+    students.value = res.data?.list || []
+  } catch (err) {
+    console.warn("[growth-detail] load students failed:", err?.message || err)
+  }
+}
+
+async function loadAchievements() {
+  try {
+    const res = await fetchTeacherAchievements()
+    achievements.value = res.data?.list || []
+  } catch (err) {
+    console.warn("[growth-detail] load achievements failed:", err?.message || err)
+  }
+}
+
+async function loadDetail(id) {
+  loading.value = true
+  loadError.value = ""
+  try {
+    await ensureLogin()
+    const [logRes, commentRes] = await Promise.all([
+      fetchTeacherGrowthLog(id),
+      fetchTeacherGrowthComments(id)
+    ])
+    record.value = logRes.data || {}
+    applyComments(commentRes)
+    hasLoaded.value = true
+    failedMedia.value = new Set()
+    refreshTaggingStatus()
+  } catch (err) {
+    console.warn("[growth-detail] load failed:", err?.message || err)
+    loadError.value = "加载失败，请重试"
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleRetry() {
+  if (loading.value) return
+  await loadDetail(record.value.id)
+  if (!loadError.value) uni.showToast({ title: "已重新加载", icon: "none" })
 }
 
 function goEdit() {
@@ -274,688 +505,1076 @@ function goEdit() {
 }
 
 function handleShare() {
-  // uni.shareAppMessage 由微信小程序 onShareAppMessage 钩子接管
   uni.showToast({ title: "点击右上角分享", icon: "none" })
 }
 
-function replyTo(parentId) {
-  uni.showToast({ title: "回复功能开发中", icon: "none" })
-}
-
-async function submitComment() {
-  const text = commentText.value.trim()
-  if (!text) return
-
-  submitting.value = true
-  try {
-    const res = await createTeacherGrowthComment(record.value.id, text)
-    commentText.value = ""
-    uni.showToast({ title: "评论成功", icon: "none" })
-    // Reload comments
-    const commentRes = await fetchTeacherGrowthComments(record.value.id)
-    comments.value = commentRes.data?.list || commentRes.data || []
-  } catch (err) {
-    uni.showToast({ title: err?.message || "评论失败", icon: "none" })
-  } finally {
-    submitting.value = false
+onLoad(options => {
+  const id = Number(options?.id)
+  if (!id) {
+    loading.value = false
+    loadError.value = "加载失败，请重试"
+    return
   }
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return ""
-  return dateStr.slice(0, 16)
-}
-
-function formatFullDate(dateStr) {
-  if (!dateStr) return ""
-  const d = new Date(dateStr)
-  const y = d.getFullYear()
-  const m = d.getMonth() + 1
-  const day = d.getDate()
-  const time = dateStr.slice(11, 16)
-  return `${y}年${m}月${day}日 ${time}`
-}
-
-function formatTime(dateStr) {
-  if (!dateStr) return ""
-  return dateStr.slice(11, 16)
-}
-
-onLoad((options) => {
-  const id = options?.id
-  if (id) loadDetail(id)
-  loadAchievements()
+  record.value = { id }
+  loadDetail(id)
   loadStudents()
+  loadAchievements()
+})
+
+// 从编辑页保存后返回时刷新正文/评论；首次 onShow 在 onLoad 之后触发，
+// hasLoaded=false 时不重复请求。
+onShow(() => {
+  if (hasLoaded.value && record.value.id) loadDetail(record.value.id)
 })
 </script>
 
 <template>
-  <view class="page">
-    <!-- 加载/错误状态 -->
-    <view v-if="loading" class="state-wrap">
-      <text class="state-text">加载中...</text>
-    </view>
-    <view v-else-if="loadError" class="state-wrap">
-      <text class="state-text">{{ loadError }}</text>
-      <button class="retry-btn" @click="loadDetail(record.id || '')">重试</button>
-    </view>
-
-    <template v-else>
-      <!-- 记录头部 -->
-      <view class="header-section">
-        <view class="author-row">
-          <view class="author-avatar">
-            <text class="avatar-icon">{{ (record.creator?.nickname || "老师")[0] }}</text>
+  <PageShell :bottom-space="bottomSpace">
+    <view class="detail-page">
+      <!-- 加载：整页骨架 -->
+      <view v-if="isInitialLoading" class="skeleton">
+        <view class="sk-card">
+          <view class="sk-author">
+            <view class="sk sk-avatar" />
+            <view class="sk-lines">
+              <view class="sk sk-line sk-line-short" />
+              <view class="sk sk-line sk-line-mid" />
+            </view>
           </view>
-          <view class="author-info">
-            <text class="author-name">{{ record.creator?.nickname || "老师" }}</text>
-            <text class="author-date">发布于 {{ formatFullDate(record.date || record.created_at) }}</text>
+          <view class="sk sk-title" />
+          <view class="sk sk-line" />
+          <view class="sk sk-line" />
+          <view class="sk-grid">
+            <view v-for="i in 9" :key="i" class="sk sk-tile" />
           </view>
         </view>
-        <text v-if="record.performance_tags?.length" class="record-title">
-          {{ record.performance_tags.join(" · ") }}
-        </text>
-        <text class="record-content">{{ record.content }}</text>
+        <view class="sk-card">
+          <view class="sk sk-line sk-line-short" />
+          <view v-for="i in 2" :key="i" class="sk-comment">
+            <view class="sk sk-avatar" />
+            <view class="sk-lines">
+              <view class="sk sk-line sk-line-mid" />
+              <view class="sk sk-line" />
+            </view>
+          </view>
+        </view>
       </view>
 
-      <!-- 照片区域：点名呈现 + AI 建议确认（高置信预勾标记 / 低置信提示） -->
-      <view v-if="record.media?.length" class="photo-section">
-        <!-- 省力路径（D10）：高置信建议一次性采纳，低置信仍逐条处理 -->
-        <view v-if="highSuggestionCount" class="bulk-confirm">
-          <text class="bulk-confirm-text">{{ highSuggestionCount }} 条高置信建议</text>
-          <view class="bulk-confirm-btn" :class="{ busy: confirmingHigh }" @click="confirmAllHigh">
-            {{ confirmingHigh ? '确认中…' : '全部确认' }}
+      <!-- 失败：整页错误 + 重试 -->
+      <view v-else-if="showError" class="error-view">
+        <view class="error-icon"><text>!</text></view>
+        <text class="error-text">加载失败，请重试</text>
+        <view class="retry-load-btn" @click="handleRetry">重试</view>
+      </view>
+
+      <template v-else>
+        <view class="record-card">
+          <!-- 作者行 -->
+          <view class="record-author">
+            <view class="avatar">
+              <image
+                v-if="record.creator?.avatar"
+                class="avatar-img"
+                :src="record.creator.avatar"
+                mode="aspectFill"
+              />
+              <text v-else>{{ creatorInitial }}</text>
+            </view>
+            <view class="author-info">
+              <text class="author-name">{{ creatorName }}</text>
+              <text class="author-time">发布于 {{ recordTime }}</text>
+            </view>
           </view>
-        </view>
-        <view class="photo-grid">
-          <view v-for="(m, idx) in record.media" :key="idx" class="photo-card">
-            <image
-              :src="m.thumb_url || m.url || m.file_url"
-              mode="aspectFill"
-              class="photo-item"
-              @click="previewPhoto(idx)"
-            />
-            <view v-if="namedNames(m).length" class="photo-tags">
-              <text class="photo-tags-label">点名</text>
-              <text v-for="n in namedNames(m)" :key="n" class="photo-tag">{{ n }}</text>
+
+          <!-- 表现标签标题 -->
+          <text v-if="tags.length" class="record-title">{{ tags.join(" · ") }}</text>
+
+          <!-- 正文多段 -->
+          <view v-if="paragraphs.length" class="record-body">
+            <text v-for="(paragraph, index) in paragraphs" :key="index" class="record-paragraph">{{ paragraph }}</text>
+          </view>
+
+          <!-- 照片 -->
+          <view v-if="media.length" class="media-section">
+            <view class="media-head">
+              <text class="section-title">照片</text>
+              <text class="section-count">{{ media.length }} 张</text>
             </view>
-            <!-- 大合影（服务端分型）：一键全班（当日到场）——逐人确认一张合影注定不完整（D11）。
-                 个体记录不做全班（服务端会拒绝），故不呈现入口；名单未取到时先不显示人数。 -->
-            <view
-              v-if="m.is_group_photo && record.target_type !== 2"
-              class="photo-roster"
-              :class="{ busy: rosterBusyId === m.id }"
-              @click.stop="applyRoster(m)"
-            >
-              <text class="photo-roster-text">
-                {{ rosterBusyId === m.id
-                  ? '点名中…'
-                  : presentLoaded
-                    ? `大合影 · 一键全班（当日到场 ${presentIds.length} 人）`
-                    : '大合影 · 一键全班' }}
-              </text>
+
+            <view v-if="highSuggestionCount" class="ai-banner">
+              <text class="ai-banner-text"><text class="ai-banner-strong">{{ highSuggestionCount }}</text> 条高置信建议</text>
+              <view class="ai-banner-btn" @click="confirmAllHigh">{{ confirmingHigh ? "确认中…" : "全部确认" }}</view>
             </view>
-            <view v-if="suggestionsOf(m).length" class="photo-sugs">
-              <text class="photo-sugs-title">AI 识别建议</text>
-              <view v-for="s in suggestionsOf(m)" :key="s.student_id" class="photo-sug-row">
-                <view class="photo-sug-info">
-                  <text class="photo-sug-name">{{ s.name }}</text>
-                  <text class="photo-sug-tier" :class="s.tier === 'high' ? 'high' : 'low'">
-                    {{ s.tier === 'high' ? '高置信' : '待确认' }}
-                  </text>
+
+            <view class="media-grid">
+              <view v-for="(mediaItem, index) in media" :key="mediaItem.id || index" class="photo-cell">
+                <view v-if="!failedMedia.has(index)" class="photo-open" @click="openPreview(index)">
+                  <image
+                    class="photo-img"
+                    :src="mediaItem.thumb_url || mediaItem.file_url"
+                    mode="aspectFill"
+                    @error="markMediaFailed(index)"
+                  />
+                  <text v-if="mediaItem.is_group_photo" class="photo-flag">大合影</text>
+                  <text v-else-if="suggestionsOf(mediaItem).length" class="photo-flag is-ai">AI 建议</text>
+                  <view v-if="namedNames(mediaItem).length" class="photo-caption">
+                    <text class="photo-caption-label">点名</text>
+                    <text
+                      v-for="name in namedNames(mediaItem)"
+                      :key="name"
+                      class="photo-kid"
+                    >{{ name }}</text>
+                  </view>
                 </view>
-                <view class="sug-btn confirm" @click.stop="reviewSuggestion(m, s, 'confirm')">确认</view>
-                <view class="sug-btn reject" @click.stop="reviewSuggestion(m, s, 'reject')">拒绝</view>
+                <view v-else class="photo-fail" @click="retryMedia(index)">
+                  <text class="photo-fail-text">加载失败</text>
+                  <text class="photo-fail-retry">重试</text>
+                </view>
               </view>
             </view>
-          </view>
-        </view>
-      </view>
 
-      <!-- 相关孩子（详情响应字段 related_students，仅个体记录有值） -->
-      <view v-if="record.related_students?.length" class="student-section">
-        <text class="section-label">相关孩子（{{ record.related_students_count || record.related_students.length }}人）</text>
-        <view class="student-chips">
-          <view
-            v-for="(student, idx) in record.related_students.slice(0, 6)"
-            :key="student.id || idx"
-            class="student-chip"
-            :class="{ primary: idx === 0 }"
-          >
-            <image
-              v-if="student.avatar"
-              :src="student.avatar"
-              mode="aspectFill"
-              class="chip-avatar"
-            />
-            <view v-else class="chip-avatar-placeholder" />
-            <text class="chip-name">{{ student.name }}</text>
-          </view>
-          <view v-if="record.related_students.length > 6" class="student-chip more">
-            <text>+{{ record.related_students.length - 6 }}人</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 互动统计 & 操作 -->
-      <view class="stats-bar">
-        <view class="stats-left">
-          <view class="stat-item">
-            <text class="stat-icon">赞</text>
-            <text class="stat-text">{{ record.likes_count || 0 }}个点赞</text>
-          </view>
-          <view class="stat-item">
-            <text class="stat-icon">评</text>
-            <text class="stat-text">{{ record.comments_count || comments.length }}条评论</text>
-          </view>
-        </view>
-        <view class="stats-right">
-          <view class="action-btn edit-btn" @click="goEdit">
-            <text>编辑</text>
-          </view>
-          <view class="action-btn share-btn" @click="handleShare">
-            <text>分享</text>
-          </view>
-          <view v-if="achievements.length" class="action-btn grant-btn" @click="grantOpen = !grantOpen">
-            <text>{{ grantOpen ? '收起' : '授徽章' }}</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 补授徽章：本记录可作为获奖见证 -->
-      <view v-if="grantOpen" class="grant-panel">
-        <text class="grant-title">选择徽章</text>
-        <view class="badge-pick-row">
-          <view
-            v-for="a in achievements" :key="a.id"
-            class="badge-pick"
-            :class="{ selected: grant.achievement_id === a.id }"
-            @click="selectAchievement(a.id)"
-          >
-            <image v-if="a.icon" :src="a.icon" class="badge-pick-icon" mode="aspectFit" />
-            <text class="badge-pick-name">{{ a.name }}</text>
-          </view>
-        </view>
-
-        <template v-if="grant.achievement_id">
-          <text class="grant-title">授予给</text>
-          <view class="badge-pick-row" v-if="students.length">
+            <!-- 大合影 · 一键全班（仅全班记录；名单口径由服务端定） -->
             <view
-              v-for="s in students" :key="s.student_id"
-              class="badge-pick"
-              :class="{ selected: grant.student_ids.includes(s.student_id) }"
-              @click="toggleGrantStudent(s.student_id)"
+              v-for="group in groupPhotos"
+              :key="'group-' + group.media.id"
+              class="group-photo-btn"
+              :class="{ 'is-busy': rosterBusyId === group.media.id }"
+              @click="applyRoster(group.media)"
             >
-              <text class="badge-pick-name">{{ s.name }}</text>
+              <view class="group-photo-copy">
+                <text class="group-photo-title">大合影 · 一键全班</text>
+                <text class="group-photo-sub">
+                  {{ presentLoaded ? `当日到场 ${presentIds.length} 人` : "当日到场名单待取" }}
+                </text>
+              </view>
+            </view>
+
+            <!-- AI 识别建议：按张分组 -->
+            <view v-for="group in aiGroups" :key="'ai-' + group.media.id" class="ai-card">
+              <view class="ai-card-head">
+                <text class="ai-card-title">AI 识别建议</text>
+                <text class="ai-card-ref">第 {{ group.index + 1 }} 张</text>
+              </view>
+              <view v-for="suggestion in group.items" :key="suggestion.student_id" class="ai-row">
+                <view class="ai-avatar">{{ String(suggestion.name || "?").slice(0, 1) }}</view>
+                <view class="ai-person">
+                  <text class="ai-name">{{ suggestion.name }}</text>
+                  <text
+                    class="status"
+                    :class="suggestion.tier === 'high' ? 'status-ok' : 'status-pending'"
+                  >{{ suggestion.tier === "high" ? "高置信" : "待确认" }}</text>
+                </view>
+                <view class="ai-actions">
+                  <view class="mini-btn yes" @click="reviewSuggestion(group.media, suggestion, 'confirm')">确认</view>
+                  <view class="mini-btn" @click="reviewSuggestion(group.media, suggestion, 'reject')">拒绝</view>
+                </view>
+              </view>
+            </view>
+            <text v-if="aiDoneVisible" class="ai-done">识别建议已处理完</text>
+          </view>
+
+          <!-- 相关孩子（仅个体记录有值） -->
+          <view v-if="relatedStudents.length" class="related-section">
+            <text class="section-title">相关孩子<span class="section-count">（{{ relatedCount }}人）</span></text>
+            <view class="kid-list">
+              <view v-for="student in relatedShown" :key="student.id" class="kid-pill">
+                <image
+                  v-if="student.avatar"
+                  class="kid-avatar-img"
+                  :src="student.avatar"
+                  mode="aspectFill"
+                />
+                <view v-else class="kid-avatar">{{ String(student.name || "?").slice(0, 1) }}</view>
+                <text class="kid-name">{{ student.name }}</text>
+              </view>
+              <view v-if="relatedMore" class="kid-pill kid-more">+{{ relatedMore }}</view>
             </view>
           </view>
-          <view v-else class="grant-hint"><text>不选则默认授予本班全部学生</text></view>
 
-          <view class="grant-witness" @click="grant.as_witness = !grant.as_witness">
-            <text>{{ grant.as_witness ? '☑' : '☐' }}</text>
-            <text>本记录作为获奖见证</text>
+          <!-- 互动条 -->
+          <view class="record-bar">
+            <view class="record-stats">
+              <text class="stat">{{ record.likes_count || 0 }} 个点赞</text>
+              <text class="stat">{{ displayCommentTotal }} 条评论</text>
+            </view>
+            <view class="record-actions">
+              <view class="action-btn" @click="goEdit">编辑</view>
+              <view class="action-btn" @click="handleShare">分享</view>
+              <view
+                v-if="achievements.length"
+                class="action-btn award-trigger"
+                @click="grantOpen = !grantOpen"
+              >{{ grantOpen ? "收起" : "授徽章" }}</view>
+            </view>
           </view>
-
-          <button class="grant-submit" :loading="grant.granting" @click="doGrant">
-            {{ grant.granting ? '授予中...' : '确认授予' }}
-          </button>
-        </template>
-      </view>
-
-      <!-- 评论区域 -->
-      <view v-if="comments.length" class="comment-section">
-        <view class="comment-head">
-          <text class="section-label">家长评论（{{ comments.length }}条）</text>
         </view>
 
-        <view class="comment-list">
-          <view
-            v-for="comment in comments"
-            :key="comment.id"
-            class="comment-card"
-          >
-            <!-- 主评论 -->
-            <view class="comment-main">
+        <!-- 授徽章面板 -->
+        <view v-if="grantOpen" class="award-panel">
+          <view class="award-head">
+            <view class="award-head-copy">
+              <text class="award-title">授徽章</text>
+              <text class="award-sub">选一枚徽章，授予参与活动的小朋友</text>
+            </view>
+            <view class="panel-close" @click="grantOpen = false">
+              <text class="icon">&#xeb99;</text>
+            </view>
+          </view>
+
+          <view class="badge-row">
+            <view
+              v-for="achievement in achievements"
+              :key="achievement.id"
+              class="badge-choice"
+              :class="{ 'is-selected': grant.achievement_id === achievement.id }"
+              @click="selectAchievement(achievement.id)"
+            >
+              <image v-if="achievement.icon" class="badge-choice-icon" :src="achievement.icon" mode="aspectFit" />
+              <text class="badge-choice-label">{{ achievement.name }}</text>
+            </view>
+          </view>
+
+          <template v-if="grant.achievement_id">
+            <text class="field-label">授予给</text>
+            <view v-if="students.length" class="kid-choices">
+              <view
+                v-for="student in students"
+                :key="student.student_id"
+                class="kid-choice"
+                :class="{ 'is-on': grant.student_ids.includes(student.student_id) }"
+                @click="toggleGrantStudent(student.student_id)"
+              >{{ student.name }}</view>
+            </view>
+            <text class="award-hint">{{ awardHint }}</text>
+
+            <view class="witness-row" @click="grant.as_witness = !grant.as_witness">
+              <view class="witness-box" :class="{ 'is-on': grant.as_witness }">
+                <text class="icon">&#xeb7b;</text>
+              </view>
+              <text>本记录作为获奖见证</text>
+            </view>
+
+            <view class="award-submit" @click="doGrant">{{ grant.granting ? "授予中..." : "确认授予" }}</view>
+          </template>
+        </view>
+
+        <!-- 家长评论 -->
+        <view class="comments-card">
+          <view class="comments-head">
+            <text class="section-title">家长评论<span class="section-count">（{{ displayCommentTotal }}条）</span></text>
+          </view>
+
+          <view v-if="!comments.length" class="comment-empty">
+            <view class="comment-empty-icon">
+              <text class="icon">&#xeb51;</text>
+            </view>
+            <text class="comment-empty-text">还没有家长评论</text>
+            <view class="empty-cta" @click="focusComment">写第一条评论</view>
+          </view>
+
+          <view v-else class="comment-list">
+            <view v-for="comment in comments" :key="comment.id" class="comment">
               <image
                 v-if="comment.user?.avatar"
+                class="comment-avatar-img"
                 :src="comment.user.avatar"
                 mode="aspectFill"
-                class="comment-avatar"
               />
-              <view v-else class="comment-avatar-placeholder">
-                <text>{{ (comment.user?.nickname || "家")[0] }}</text>
-              </view>
-              <view class="comment-body">
-                <view class="comment-meta">
-                  <text class="comment-author">{{ comment.user?.nickname || "家长" }}</text>
-                  <view v-if="comment.user?.role_tag" class="comment-role-tag">
-                    <text>{{ comment.user.role_tag }}</text>
-                  </view>
-                  <text class="comment-time">{{ formatTime(comment.created_at) }}</text>
+              <view v-else class="comment-avatar">{{ initialOf(comment.user) }}</view>
+              <view class="comment-main">
+                <view class="comment-top">
+                  <text class="comment-name">{{ comment.user?.nickname || "家长" }}</text>
+                  <text v-if="relationText(comment.user)" class="role-tag">{{ relationText(comment.user) }}</text>
+                  <text class="comment-time">{{ formatCommentTime(comment.created_at) }}</text>
                 </view>
                 <text class="comment-text">{{ comment.content }}</text>
                 <view class="comment-actions">
-                  <view class="comment-act" @click="replyTo(comment.id)">
-                    <text class="comment-act-icon">赞</text>
-                    <text class="comment-act-num">{{ comment.likes_count || 0 }}</text>
-                  </view>
-                  <view class="comment-act" @click="replyTo(comment.id)">
-                    <text class="comment-act-icon">回</text>
-                    <text>回复</text>
+                  <view
+                    class="link-btn"
+                    :class="{ 'is-on': comment.liked }"
+                    @click="toggleCommentLike(comment)"
+                  >赞 {{ comment.likes_count || 0 }}</view>
+                  <view class="link-btn" @click="startReply(comment)">回复</view>
+                </view>
+
+                <view v-if="comment.replies?.length" class="reply-thread">
+                  <view v-for="reply in comment.replies" :key="reply.id" class="reply-card">
+                    <view class="reply-head">
+                      <text class="reply-name">{{ reply.user?.nickname || "老师" }}</text>
+                      <text v-if="relationText(reply.user)" class="role-tag">{{ relationText(reply.user) }}</text>
+                      <text class="comment-time">{{ formatCommentTime(reply.created_at) }}</text>
+                    </view>
+                    <text class="reply-text">{{ reply.content }}</text>
+                    <view class="comment-actions">
+                      <view
+                        class="link-btn"
+                        :class="{ 'is-on': reply.liked }"
+                        @click="toggleCommentLike(reply)"
+                      >赞 {{ reply.likes_count || 0 }}</view>
+                    </view>
                   </view>
                 </view>
               </view>
             </view>
-
-            <!-- 老师回复 -->
-            <view v-if="comment.replies?.length" class="teacher-reply">
-              <view v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                <text class="reply-author">{{ reply.user?.nickname || "老师" }}</text>
-                <text class="reply-time">{{ formatTime(reply.created_at) }}</text>
-                <text class="reply-text">{{ reply.content }}</text>
-              </view>
-            </view>
           </view>
+        </view>
+      </template>
+    </view>
 
+    <!-- 固定评论栏 -->
+    <template #bottom>
+      <view class="comment-bar" :class="{ 'is-locked': locked }">
+        <view v-if="replyTo" class="reply-strip">
+          <text class="reply-context">回复 {{ replyTo.name }}</text>
+          <view class="cancel-reply" @click="cancelReply">取消</view>
+        </view>
+        <view class="composer">
+          <input
+            v-model="commentText"
+            class="comment-input"
+            type="text"
+            :disabled="locked"
+            :focus="inputFocused"
+            :maxlength="200"
+            placeholder="请输入评论..."
+            placeholder-style="color: #94A3B8"
+            confirm-type="send"
+            @blur="inputFocused = false"
+            @confirm="submitComment"
+          />
+          <view
+            class="send-btn"
+            :class="{ 'is-disabled': sendDisabled }"
+            @click="submitComment"
+          >
+            <text class="icon">&#xf0d9;</text>
+          </view>
         </view>
       </view>
-
-      <!-- 底部留白 -->
-      <view class="bottom-safe" />
     </template>
 
-    <!-- 底部评论输入栏 -->
-    <view class="bottom-bar">
-      <view class="input-box">
-        <input
-          v-model="commentText"
-          class="comment-input"
-          placeholder="请输入评论..."
-          placeholder-style="color: #94A3B8; font-size: $typography-font-size-md"
-          :disabled="submitting"
-          confirm-type="send"
-          @confirm="submitComment"
-        />
-      </view>
-      <view class="bottom-btn" @click="submitComment">
-        <text class="bottom-btn-icon">发</text>
+    <!-- 照片预览（底部弹层） -->
+    <view v-if="previewOpen" class="preview-layer">
+      <view class="preview-backdrop" @click="closePreview" />
+      <view class="preview-sheet">
+        <view class="preview-head">
+          <text class="preview-title">照片预览</text>
+          <view class="preview-close" @click="closePreview">
+            <text class="icon">&#xeb99;</text>
+          </view>
+        </view>
+        <swiper class="preview-swiper" :current="previewIndex" @change="onPreviewChange">
+          <swiper-item v-for="(mediaItem, index) in media" :key="mediaItem.id || index">
+            <image class="preview-img" :src="mediaItem.file_url || mediaItem.thumb_url" mode="aspectFit" />
+          </swiper-item>
+        </swiper>
+        <text class="preview-meta">{{ previewMeta }}</text>
+        <view v-if="media.length > 1" class="preview-nav">
+          <view class="preview-nav-btn" :class="{ 'is-disabled': previewIndex === 0 }" @click="stepPreview(-1)">上一张</view>
+          <view class="preview-nav-btn" :class="{ 'is-disabled': previewIndex === media.length - 1 }" @click="stepPreview(1)">下一张</view>
+        </view>
       </view>
     </view>
-  </view>
+  </PageShell>
 </template>
 
 <style scoped lang="scss">
-$slate-200: #E2E8F0;
-$slate-300: #CBD5E1;
-$slate-600: #475569;
-
-.page {
-  min-height: 100vh;
-  box-sizing: border-box;
-  background: #fff;
+.icon {
+  font-family: remixicon;
+  font-style: normal;
+  line-height: 1;
 }
 
-// ===== 状态 =====
-.state-wrap {
+.detail-page {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
+  gap: $spacing-lg;
+  padding-bottom: $spacing-xl;
 }
 
-.state-text {
-  font-size: $typography-font-size-md;
-  color: $color-text-hint;
+/* ---------- 记录主卡 ---------- */
+.record-card {
+  padding: $spacing-xl;
+  border-radius: $component-card-radius;
+  background: $color-bg-card;
+  box-shadow: $shadow-md;
 }
 
-.retry-btn {
-  width: 180rpx;
-  height: 72rpx;
-  margin-top: 28rpx;
-  border-radius: 999rpx;
-  background: $color-semantic-info;
-  color: #fff;
-  font-size: $typography-font-size-base;
-}
-
-// ===== 记录头部 =====
-.header-section {
-  padding: $spacing-xl 48rpx 32rpx;
-  border-bottom: 2rpx solid $slate-200;
-}
-
-.author-row {
+.record-author {
   display: flex;
   align-items: center;
   gap: $spacing-lg;
 }
 
-.author-avatar {
+.avatar {
+  flex: none;
+  width: $component-avatar-md;
+  height: $component-avatar-md;
   display: flex;
-  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 999rpx;
-  background: #DBEAFE;
+  overflow: hidden;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-xl;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1;
 }
 
-.avatar-icon {
-  font-size: $typography-font-size-2xl;
-  font-weight: 700;
-  color: $color-semantic-info;
+.avatar-img {
+  width: 100%;
+  height: 100%;
 }
 
 .author-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4rpx;
+  min-width: 0;
 }
 
 .author-name {
-  font-size: $typography-font-size-xl;
-  font-weight: 600;
+  display: block;
   color: $color-text-primary;
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1.4;
 }
 
-.author-date {
-  font-size: $typography-font-size-base;
+.author-time {
+  display: block;
+  margin-top: 4rpx;
   color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.4;
 }
 
 .record-title {
   display: block;
-  margin-top: 32rpx;
-  font-size: $typography-font-size-xl;
-  font-weight: 700;
+  margin-top: $spacing-lg;
   color: $color-text-primary;
+  font-size: $typography-font-size-2xl;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1.4;
 }
 
-.record-content {
+.record-body {
+  margin-top: $spacing-md;
+}
+
+.record-paragraph {
   display: block;
-  margin-top: 16rpx;
-  font-size: $typography-font-size-lg;
   color: $color-text-body;
-  line-height: 1.7;
+  font-size: $typography-font-size-md;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+
+  & + .record-paragraph {
+    margin-top: $spacing-xs;
+  }
 }
 
-// ===== 照片区域 =====
-.photo-section {
-  padding: $spacing-xl 48rpx;
+/* ---------- 区块标题 ---------- */
+.section-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1.4;
 }
 
-.photo-grid {
-  display: grid;
-  /* minmax(0, 1fr)：允许列被压缩——照片下的建议行内容较宽，
-     纯 1fr 会按 min-content 把列撑到 240px+ 导致整块溢出屏幕 */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
-  gap: $spacing-lg;
+.section-count {
+  color: $color-text-hint;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-normal;
 }
 
-.photo-card {
+/* ---------- 照片 ---------- */
+.media-section {
+  margin-top: $spacing-xl;
+}
+
+.media-head {
   display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-}
-
-.photo-item {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: $border-radius-xl;
-}
-
-/* 一键采纳高置信建议（D10） */
-.bulk-confirm {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
   gap: $spacing-md;
   margin-bottom: $spacing-md;
-  padding: $spacing-sm $spacing-md;
-  background: $color-semantic-info-bg;
-  border-radius: $border-radius-lg;
 }
-.bulk-confirm-text {
-  font-size: $typography-font-size-sm;
+
+.ai-banner {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $border-radius-lg;
+  background: $color-semantic-info-bg;
+}
+
+.ai-banner-text {
+  flex: 1;
+  min-width: 0;
+  color: $color-semantic-info;
+  font-size: $typography-font-size-base;
+  line-height: 1.4;
+}
+
+.ai-banner-strong {
+  color: $color-semantic-info;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.ai-banner-btn {
+  flex: none;
+  min-height: 72rpx;
+  padding: 0 $spacing-lg;
+  display: flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-semantic-info;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.photo-cell {
+  min-width: 0;
+}
+
+.photo-open {
+  position: relative;
+  width: 100%;
+  height: 202rpx;
+  overflow: hidden;
+  border-radius: $border-radius-xl;
+  background: $color-bg-page;
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.photo-flag {
+  position: absolute;
+  top: $spacing-xs;
+  left: $spacing-xs;
+  z-index: 2;
+  padding: 2rpx $spacing-xs;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-xs;
+  font-weight: $typography-font-weight-medium;
+  line-height: 1.6;
+}
+
+.photo-flag.is-ai {
   color: $color-semantic-info;
 }
-.bulk-confirm-btn {
-  padding: $spacing-xs $spacing-lg;
-  border-radius: $border-radius-full;
-  background: $color-brand-primary;
-  color: $color-text-on-brand;
-  font-size: $typography-font-size-sm;
-}
-.bulk-confirm-btn.busy { opacity: 0.6; }
 
-/* 大合影一键全班（D11）：一张合影的默认名单 = 记录当日的到场学生 */
-.photo-roster {
-  padding: $spacing-xs $spacing-sm;
-  border-radius: $border-radius-lg;
-  background: $color-semantic-success-bg;
-  border: 1rpx solid $color-semantic-success;
-}
-.photo-roster.busy { opacity: 0.6; }
-.photo-roster-text {
-  font-size: $typography-font-size-xs;
-  color: $color-semantic-success;
-}
-
-/* 点名呈现：这张照片关联的孩子 */
-.photo-tags {
+.photo-caption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: $spacing-xs;
+  gap: 2rpx;
+  padding: $spacing-xs;
+  background: $color-bg-card;
 }
-.photo-tags-label {
-  font-size: $typography-font-size-xs;
+
+.photo-caption-label {
   color: $color-text-muted;
+  font-size: $typography-font-size-xs;
 }
-.photo-tag {
-  padding: 2rpx $spacing-sm;
+
+.photo-kid {
+  max-width: 100%;
+  padding: 0 $spacing-xs;
   border-radius: $border-radius-full;
   background: $color-brand-primary-bg;
   color: $color-brand-primary-dark;
   font-size: $typography-font-size-xs;
-}
-
-/* AI 识别建议：确认后才对家长生效 */
-.photo-sugs {
-  background: $color-semantic-info-bg;
-  border-radius: $border-radius-lg;
-  padding: $spacing-sm;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-}
-.photo-sugs-title {
-  font-size: $typography-font-size-xs;
-  color: $color-semantic-info;
-}
-.photo-sug-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap; /* 窄列时按钮换行，避免挤出屏幕 */
-  gap: $spacing-xs;
-}
-.photo-sug-info {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  min-width: 0;
-}
-.photo-sug-name {
-  font-size: $typography-font-size-sm;
-  color: $color-text-primary;
+  line-height: 1.6;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.photo-sug-tier {
-  font-size: $typography-font-size-xs;
-}
-.photo-sug-tier.high { color: $color-semantic-success; }
-.photo-sug-tier.low { color: $color-text-hint; }
-.sug-btn {
-  padding: 2rpx $spacing-sm;
-  border-radius: $border-radius-full;
-  font-size: $typography-font-size-xs;
-}
-.sug-btn.confirm {
-  background: $color-brand-primary;
-  color: $color-text-on-brand;
-}
-.sug-btn.reject {
-  border: 1rpx solid $color-border-hairline;
-  color: $color-text-muted;
-}
 
-// ===== 相关孩子 =====
-.student-section {
-  padding: 0 48rpx 32rpx;
-}
-
-.section-label {
-  font-size: $typography-font-size-lg;
-  font-weight: 700;
-  color: $color-text-primary;
-  margin-bottom: 24rpx;
-}
-
-.student-chips {
+.photo-fail {
   display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-  margin-top: 24rpx;
-}
-
-.student-chip {
-  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm 24rpx;
-  border-radius: 999rpx;
-  background: #F1F5F9;
-}
-
-.student-chip.primary {
-  background: $color-semantic-info-bg;
-}
-
-.chip-avatar {
-  width: 40rpx;
-  height: 40rpx;
-  border-radius: 999rpx;
-}
-
-.chip-avatar-placeholder {
-  width: 40rpx;
-  height: 40rpx;
-  border-radius: 999rpx;
-  background: $slate-300;
-}
-
-.chip-name {
-  font-size: $typography-font-size-sm;
-  font-weight: 500;
-
-  .primary & {
-    color: $color-semantic-info;
-  }
-
-  .student-chip:not(.primary):not(.more) & {
-    color: $color-text-muted;
-  }
-}
-
-.student-chip.more {
-  background: #F1F5F9;
-
-  text {
-    font-size: $typography-font-size-sm;
-    color: $color-text-muted;
-  }
-}
-
-// ===== 互动统计 & 操作 =====
-.stats-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-xl 48rpx;
-  border-top: 2rpx solid $slate-200;
-  border-bottom: 2rpx solid $slate-200;
-}
-
-.stats-left {
-  display: flex;
-  gap: 48rpx;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-}
-
-.stat-icon {
-  font-size: $typography-font-size-2xl;
-  font-weight: 700;
+  justify-content: center;
+  gap: 2rpx;
+  width: 100%;
+  height: 202rpx;
+  padding: $spacing-xs;
+  border: 2rpx dashed $color-border-hairline;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
   color: $color-text-hint;
 }
 
-.stat-text {
-  font-size: $typography-font-size-md;
-  color: $color-text-muted;
+.photo-fail-text {
+  font-size: $typography-font-size-xs;
 }
 
-.stats-right {
+.photo-fail-retry {
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-xs;
+  font-weight: $typography-font-weight-medium;
+}
+
+.group-photo-btn {
   display: flex;
-  gap: $spacing-xl;
+  align-items: center;
+  width: 100%;
+  min-height: 112rpx;
+  margin-top: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $border-radius-xl;
+  background: $color-semantic-success-bg;
+  color: $color-semantic-success-strong;
 }
 
-.action-btn {
-  padding: $spacing-sm 24rpx;
-  border-radius: $border-radius-lg;
+.group-photo-btn.is-busy {
+  opacity: 0.6;
+}
 
-  text {
-    font-size: $typography-font-size-base;
-    font-weight: 500;
+.group-photo-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.group-photo-title {
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+}
+
+.group-photo-sub {
+  color: $color-semantic-success;
+  font-size: $typography-font-size-xs;
+}
+
+/* AI 识别建议 */
+.ai-card {
+  margin-top: $spacing-md;
+  padding: $spacing-lg;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-xl;
+  background: $color-bg-card;
+}
+
+.ai-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-xs;
+}
+
+.ai-card-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.ai-card-ref {
+  color: $color-text-hint;
+  font-size: $typography-font-size-xs;
+}
+
+.ai-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  min-width: 0;
+  padding: $spacing-xs 0;
+
+  & + .ai-row {
+    border-top: 1rpx solid $color-border-subtle;
   }
 }
 
-.edit-btn {
-  background: #F1F5F9;
-
-  text { color: $color-text-muted; }
-}
-
-.share-btn {
-  background: $color-semantic-info-bg;
-
-  text { color: $color-semantic-info; }
-}
-
-// ===== 评论区域 =====
-.comment-section {
-  padding: $spacing-xl 48rpx;
-}
-
-.comment-head {
+.ai-avatar {
+  flex: none;
+  width: 64rpx;
+  height: 64rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 32rpx;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  color: $color-text-body;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
 }
 
-.view-all {
-  font-size: $typography-font-size-md;
-  color: $color-semantic-info;
+.ai-person {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.ai-name {
+  color: $color-text-primary;
+  font-size: $typography-font-size-base;
+}
+
+.status {
+  padding: 0 $spacing-xs;
+  border-radius: $border-radius-full;
+  font-size: $typography-font-size-xs;
+  line-height: 1.6;
+}
+
+.status-ok {
+  background: $color-semantic-success-bg;
+  color: $color-semantic-success;
+}
+
+.status-pending {
+  background: $color-bg-page;
+  color: $color-text-muted;
+}
+
+.ai-actions {
+  flex: none;
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.mini-btn {
+  min-height: 72rpx;
+  min-width: 96rpx;
+  padding: 0 $spacing-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-text-muted;
+  font-size: $typography-font-size-base;
+}
+
+.mini-btn.yes {
+  border-color: transparent;
+  background: $color-brand-primary-dark;
+  color: $color-text-on-brand;
+}
+
+.ai-done {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-hint;
+  font-size: $typography-font-size-sm;
+}
+
+/* ---------- 相关孩子 ---------- */
+.related-section {
+  margin-top: $spacing-xl;
+}
+
+.kid-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  margin-top: $spacing-md;
+}
+
+.kid-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  max-width: 100%;
+  min-height: 80rpx;
+  padding: 0 $spacing-md 0 $spacing-xs;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+}
+
+.kid-avatar {
+  flex: none;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-xs;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.kid-avatar-img {
+  flex: none;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $border-radius-full;
+}
+
+.kid-name {
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kid-more {
+  color: $color-text-muted;
+  font-size: $typography-font-size-base;
+}
+
+/* ---------- 互动条 ---------- */
+.record-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-top: $spacing-xl;
+  padding-top: $spacing-lg;
+  border-top: 1rpx solid $color-border-hairline;
+}
+
+.record-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-lg;
+  min-width: 0;
+}
+
+.stat {
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+}
+
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.action-btn {
+  min-height: 88rpx;
+  padding: 0 $spacing-lg;
+  display: flex;
+  align-items: center;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+}
+
+.award-trigger {
+  border-color: transparent;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+}
+
+/* ---------- 授徽章面板 ---------- */
+.award-panel {
+  padding: $spacing-xl;
+  border-radius: $component-card-radius;
+  background: $color-bg-card;
+  box-shadow: $shadow-md;
+}
+
+.award-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.award-head-copy {
+  min-width: 0;
+}
+
+.award-title {
+  display: block;
+  color: $color-text-primary;
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.award-sub {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.6;
+}
+
+.panel-close {
+  flex: none;
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  color: $color-text-muted;
+  font-size: $typography-font-size-lg;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  margin-top: $spacing-lg;
+}
+
+.badge-choice {
+  min-height: 88rpx;
+  max-width: 100%;
+  padding: 0 $spacing-lg;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+}
+
+.badge-choice.is-selected {
+  border-color: $color-brand-primary;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+}
+
+.badge-choice-icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $border-radius-sm;
+}
+
+.badge-choice-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-label {
+  display: block;
+  margin: $spacing-xl 0 $spacing-xs;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+}
+
+.kid-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.kid-choice {
+  min-height: 88rpx;
+  padding: 0 $spacing-xl;
+  display: inline-flex;
+  align-items: center;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+}
+
+.kid-choice.is-on {
+  border-color: $color-brand-primary;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-weight: $typography-font-weight-medium;
+}
+
+.award-hint {
+  display: block;
+  margin-top: $spacing-md;
+  color: $color-text-hint;
+  font-size: $typography-font-size-sm;
+}
+
+.witness-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  min-height: 88rpx;
+  margin-top: $spacing-xs;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+}
+
+.witness-box {
+  flex: none;
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid $color-border-hairline;
+  border-radius: $border-radius-sm;
+  background: $color-bg-card;
+  color: transparent;
+  font-size: $typography-font-size-xs;
+}
+
+.witness-box.is-on {
+  border-color: $color-brand-primary;
+  background: $color-brand-primary-dark;
+  color: $color-text-on-brand;
+}
+
+.award-submit {
+  width: 100%;
+  min-height: 96rpx;
+  margin-top: $spacing-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $gradient-brand;
+  color: $color-text-primary;
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-medium;
+}
+
+/* ---------- 评论 ---------- */
+.comments-card {
+  padding: $spacing-xl;
+  border-radius: $component-card-radius;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+}
+
+.comments-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
 }
 
 .comment-list {
@@ -964,285 +1583,464 @@ $slate-600: #475569;
   gap: $spacing-xl;
 }
 
-.comment-card {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-}
-
-.comment-main {
+.comment {
   display: flex;
   gap: $spacing-lg;
+  min-width: 0;
 }
 
 .comment-avatar {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 999rpx;
-  flex-shrink: 0;
-}
-
-.comment-avatar-placeholder {
+  flex: none;
+  width: $component-avatar-sm;
+  height: $component-avatar-sm;
   display: flex;
-  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 999rpx;
-  background: #DBEAFE;
-
-  text {
-    font-size: $typography-font-size-xl;
-    font-weight: 700;
-    color: $color-semantic-info;
-  }
+  border-radius: $border-radius-full;
+  background: $color-semantic-info-bg;
+  color: $color-semantic-info;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
 }
 
-.comment-body {
+.comment-avatar-img {
+  flex: none;
+  width: $component-avatar-sm;
+  height: $component-avatar-sm;
+  border-radius: $border-radius-full;
+}
+
+.comment-main {
   flex: 1;
   min-width: 0;
 }
 
-.comment-meta {
+.comment-top {
   display: flex;
-  align-items: center;
-  gap: $spacing-md;
   flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
 }
 
-.comment-author {
-  font-size: $typography-font-size-md;
-  font-weight: 600;
+.comment-name {
+  max-width: 100%;
   color: $color-text-primary;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.comment-role-tag {
-  padding: 4rpx 16rpx;
-  border-radius: $border-radius-sm;
+.role-tag {
+  padding: 0 $spacing-xs;
+  border-radius: $border-radius-full;
   background: $color-semantic-info-bg;
-
-  text {
-    font-size: $typography-font-size-xs;
-    font-weight: 500;
-    color: $color-semantic-info;
-  }
+  color: $color-semantic-info;
+  font-size: $typography-font-size-xs;
+  line-height: 1.6;
 }
 
 .comment-time {
-  font-size: $typography-font-size-sm;
   color: $color-text-hint;
+  font-size: $typography-font-size-xs;
 }
 
 .comment-text {
   display: block;
-  margin-top: 8rpx;
-  font-size: $typography-font-size-md;
+  margin-top: $spacing-xs;
   color: $color-text-body;
-  line-height: 1.5;
+  font-size: $typography-font-size-md;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .comment-actions {
   display: flex;
-  gap: $spacing-xl;
-  margin-top: 4rpx;
+  gap: $spacing-lg;
+  margin-top: $spacing-xs;
 }
 
-.comment-act {
+.link-btn {
+  min-height: 72rpx;
+  display: inline-flex;
+  align-items: center;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+}
+
+.link-btn.is-on {
+  color: $color-brand-primary-dark;
+}
+
+.reply-thread {
+  margin-top: $spacing-xs;
+}
+
+.reply-card {
+  padding: $spacing-md $spacing-lg;
+  border-radius: $border-radius-lg;
+  background: $color-bg-page;
+
+  & + .reply-card {
+    margin-top: $spacing-xs;
+  }
+}
+
+.reply-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: $spacing-xs;
 }
 
-.comment-act-icon {
-  font-size: $typography-font-size-md;
-  font-weight: 700;
-  color: $color-text-hint;
-}
-
-.comment-act-num,
-.comment-act text:last-child {
+.reply-name {
+  color: $color-brand-primary-dark;
   font-size: $typography-font-size-sm;
-  color: $color-text-muted;
-}
-
-// 老师回复
-.teacher-reply {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  margin-left: 104rpx;
-}
-
-.reply-item {
-  padding: $spacing-lg;
-  border-radius: $border-radius-xl;
-  background: $color-bg-card;
-}
-
-.reply-author {
-  font-size: $typography-font-size-base;
-  font-weight: 600;
-  color: $color-semantic-info;
-}
-
-.reply-time {
-  display: inline;
-  margin-left: 16rpx;
-  font-size: $typography-font-size-xs;
-  color: $color-text-hint;
+  font-weight: $typography-font-weight-medium;
 }
 
 .reply-text {
   display: block;
-  margin-top: 8rpx;
-  font-size: $typography-font-size-base;
+  margin-top: $spacing-xs;
   color: $color-text-body;
-  line-height: 1.5;
+  font-size: $typography-font-size-base;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
-.show-more {
-  padding: $spacing-lg 0;
+.comment-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xl $spacing-md;
   text-align: center;
-
-  text {
-    font-size: $typography-font-size-md;
-    color: $color-text-hint;
-  }
 }
 
-// ===== 底部留白 =====
-.bottom-safe {
-  height: calc(160rpx + env(safe-area-inset-bottom));
+.comment-empty-icon {
+  color: $color-border-hairline;
+  font-size: $typography-font-size-3xl;
 }
 
-// ===== 底部评论输入栏 =====
-.bottom-bar {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 20;
+.comment-empty-text {
+  color: $color-text-muted;
+  font-size: $typography-font-size-base;
+}
+
+.empty-cta {
+  min-height: 88rpx;
+  margin-top: $spacing-xs;
+  padding: 0 $spacing-xl;
+  display: inline-flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+}
+
+/* ---------- 骨架 ---------- */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.sk-card {
+  padding: $spacing-xl;
+  border-radius: $component-card-radius;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+}
+
+.sk {
+  display: block;
+  background: $color-bg-page;
+  border-radius: $border-radius-md;
+  animation: sk-pulse 1500ms $animation-easing-default infinite;
+}
+
+.sk-author {
   display: flex;
   align-items: center;
   gap: $spacing-lg;
-  padding: $spacing-md 48rpx calc(16rpx + env(safe-area-inset-bottom));
-  background: #fff;
-  box-shadow: 0 -2rpx 20rpx rgba(120, 53, 15, 0.04);
+  margin-bottom: $spacing-lg;
 }
 
-.input-box {
+.sk-avatar {
+  flex: none;
+  width: $component-avatar-md;
+  height: $component-avatar-md;
+  border-radius: $border-radius-full;
+}
+
+.sk-lines {
   flex: 1;
   min-width: 0;
-  height: 80rpx;
-  border-radius: 999rpx;
-  background: #F1F5F9;
-  padding: 0 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.sk-title {
+  width: 62%;
+  height: 36rpx;
+  margin-bottom: $spacing-md;
+}
+
+.sk-line {
+  width: 100%;
+  height: 22rpx;
+  margin-bottom: $spacing-xs;
+}
+
+.sk-line-short {
+  width: 40%;
+}
+
+.sk-line-mid {
+  width: 72%;
+}
+
+.sk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $spacing-sm;
+  margin-top: $spacing-lg;
+}
+
+.sk-tile {
+  width: 100%;
+  height: 202rpx;
+  border-radius: $border-radius-xl;
+}
+
+.sk-comment {
+  display: flex;
+  gap: $spacing-lg;
+  margin-top: $spacing-lg;
+}
+
+/* ---------- 失败态 ---------- */
+.error-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: 160rpx $spacing-xl;
+  text-align: center;
+}
+
+.error-icon {
+  width: 128rpx;
+  height: 128rpx;
   display: flex;
   align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-3xl;
+  font-weight: $typography-font-weight-bold;
+}
+
+.error-text {
+  color: $color-text-muted;
+  font-size: $typography-font-size-md;
+}
+
+.retry-load-btn {
+  min-height: 88rpx;
+  padding: 0 $spacing-xl;
+  display: inline-flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $gradient-brand;
+  color: $color-text-primary;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+}
+
+/* ---------- 固定评论栏 ---------- */
+.comment-bar {
+  padding: $spacing-md $component-page-padding-x calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: $color-bg-card;
+  border-top: 1rpx solid $color-border-hairline;
+  box-shadow: $shadow-lg;
+}
+
+.comment-bar.is-locked {
+  opacity: 0.5;
+}
+
+.reply-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-lg;
+  background: $color-bg-page;
+}
+
+.reply-context {
+  min-width: 0;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+}
+
+.cancel-reply {
+  flex: none;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
 }
 
 .comment-input {
-  width: 100%;
-  font-size: $typography-font-size-md;
+  flex: 1;
+  min-width: 0;
+  height: 88rpx;
+  padding: 0 $spacing-lg;
+  border: 1rpx solid $color-border-hairline;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
   color: $color-text-primary;
+  font-size: $typography-font-size-md;
 }
 
-.bottom-btn {
+.send-btn {
+  flex: none;
+  width: 88rpx;
+  height: 88rpx;
   display: flex;
-  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 999rpx;
-  background: $color-semantic-info;
-}
-
-.bottom-btn-icon {
-  font-size: $typography-font-size-2xl;
-  font-weight: 700;
-  color: #fff;
-}
-
-// 补授徽章面板
-.grant-btn {
-  background: $color-semantic-info-bg;
-  color: $color-semantic-info;
-}
-
-.grant-panel {
-  margin-top: $spacing-lg;
-  padding: $spacing-lg;
-  border-radius: $border-radius-lg;
-  background: $color-bg-card;
-}
-
-.grant-title {
-  display: block;
-  margin-bottom: $spacing-sm;
-  font-size: $typography-font-size-md;
-  font-weight: 600;
+  border-radius: $border-radius-full;
+  background: $gradient-brand;
   color: $color-text-primary;
+  font-size: $typography-font-size-xl;
 }
 
-.badge-pick-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-  margin-bottom: $spacing-md;
-}
-
-.badge-pick {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-lg;
-  border-radius: $border-radius-lg;
+.send-btn.is-disabled {
   background: $color-bg-page;
-
-  &.selected {
-    background: $color-semantic-info-bg;
-    box-shadow: inset 0 0 0 2rpx $color-semantic-info;
-  }
-}
-
-.badge-pick-icon {
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: $border-radius-sm;
-}
-
-.badge-pick-name {
-  font-size: $typography-font-size-md;
-  color: $color-text-primary;
-}
-
-.grant-hint {
-  margin-bottom: $spacing-md;
-  font-size: $typography-font-size-sm;
   color: $color-text-hint;
 }
 
-.grant-witness {
+/* ---------- 预览弹层 ---------- */
+.preview-layer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 120;
   display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   align-items: center;
-  gap: $spacing-sm;
-  margin: $spacing-md 0;
-  font-size: $typography-font-size-md;
-  color: $color-text-primary;
 }
 
-.grant-submit {
-  margin-top: $spacing-md;
-  background: $color-semantic-info;
-  color: #fff;
-  font-size: $typography-font-size-lg;
-  border-radius: $border-radius-lg;
-  // 必须给足内边距：无 padding 时按钮只有 21px 高，
-  // 低于 44px 最小可点击目标，tap 落不准、真机上也难点。
-  padding: $spacing-lg $spacing-xl;
-  line-height: 1.4;
-  border: none;
+.preview-backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: $color-text-primary;
+  opacity: 0.45;
+}
+
+.preview-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: $spacing-sm $spacing-xl calc(#{$spacing-xl} + env(safe-area-inset-bottom));
+  background: $color-bg-card;
+  border-radius: $border-radius-2xl $border-radius-2xl 0 0;
+  box-shadow: $shadow-lg;
+}
+
+.preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.preview-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.preview-close {
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  color: $color-text-muted;
+}
+
+.preview-swiper {
+  width: 100%;
+  height: 480rpx;
+  margin-top: $spacing-sm;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-meta {
+  display: block;
+  margin-top: $spacing-sm;
+  color: $color-text-hint;
+  font-size: $typography-font-size-sm;
+  text-align: center;
+}
+
+.preview-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-top: $spacing-sm;
+}
+
+.preview-nav-btn {
+  min-height: 88rpx;
+  padding: 0 $spacing-lg;
+  display: flex;
+  align-items: center;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+}
+
+.preview-nav-btn.is-disabled {
+  color: $color-text-hint;
+}
+
+@keyframes sk-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 </style>
