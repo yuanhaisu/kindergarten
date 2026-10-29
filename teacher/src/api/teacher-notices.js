@@ -1,4 +1,16 @@
-import { requestWithAuth } from "@/api/http"
+import { requestWithAuth, uploadFile } from "@/api/http"
+
+// 上传通知附件，走统一上传通道（biz_type=notice）。
+// 返回体 data：{ id, file_url, file_type, file_name, file_size }，与创建/编辑入参 attachments 同形。
+// onProgressUpdate 可选：上传进度百分比（0–100），创建页用于展示真实进度。
+export function uploadNoticeAttachment(filePath, onProgressUpdate = null) {
+  return uploadFile({
+    url: "/common/upload",
+    filePath,
+    formData: { biz_type: "notice" },
+    onProgressUpdate
+  })
+}
 
 export function fetchTeacherNotices(params = {}) {
   return requestWithAuth({ url: "/teacher/notices", method: "GET", data: params })

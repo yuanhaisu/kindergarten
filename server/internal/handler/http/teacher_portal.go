@@ -48,6 +48,8 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 		response.ErrNotFound(c, "数据不存在或无权访问")
 	case errors.Is(err, service.ErrTeacherInvalidParams):
 		response.ErrValidation(c, "请求参数无效")
+	case errors.Is(err, service.ErrTeacherNoticeState):
+		response.ErrBadRequest(c, 40012, "当前通知状态不允许此操作")
 	// 与管理端 writeTaskError 同一句：三个创建入口（teacher/admin/activity）
 	// 未配置班级罐时必须给同一条引导，不能一端一句。
 	case errors.Is(err, service.ErrTaskStarJarMissing):
@@ -101,6 +103,18 @@ func teacherPortalErr(c *gin.Context, err error, fallback string) {
 	default:
 		response.ErrInternal(c, fallback)
 	}
+}
+
+// teacherNoticeErr 通知模块的错误出口。契约 api-teacher/04-notices.md 明确要求
+// 「定时时间非法 / 发布不完整 / 附件超限 / 删除非草稿 / 撤回非已发布」返回 400，
+// 而成长、任务等其它老师端契约写 422——所以只在这里把参数错误改成 400，
+// 共用的 teacherPortalErr 保持 422，避免把别的接口带崩。
+func teacherNoticeErr(c *gin.Context, err error, fallback string) {
+	if errors.Is(err, service.ErrTeacherInvalidParams) {
+		response.ErrBadRequest(c, 40014, "请求参数无效")
+		return
+	}
+	teacherPortalErr(c, err, fallback)
 }
 
 func (h *Handler) TeacherSupplementResponse(c *gin.Context) {
@@ -237,7 +251,7 @@ func (h *Handler) TeacherListNotices(c *gin.Context) {
 	page, pageSize := teacherPortalPage(c)
 	data, err := h.teacherPortalSvc.ListNotices(c.Request.Context(), tc, status, c.Query("category"), page, pageSize)
 	if err != nil {
-		teacherPortalErr(c, err, "获取通知列表失败")
+		teacherNoticeErr(c, err, "获取通知列表失败")
 		return
 	}
 	response.OK(c, data)
@@ -255,7 +269,7 @@ func (h *Handler) TeacherCreateNotice(c *gin.Context) {
 	}
 	data, err := h.teacherPortalSvc.CreateNotice(c.Request.Context(), tc, req)
 	if err != nil {
-		teacherPortalErr(c, err, "发布通知失败")
+		teacherNoticeErr(c, err, "发布通知失败")
 		return
 	}
 	response.Created(c, data)
@@ -272,7 +286,7 @@ func (h *Handler) TeacherGetNotice(c *gin.Context) {
 	}
 	data, err := h.teacherPortalSvc.GetNotice(c.Request.Context(), tc, id)
 	if err != nil {
-		teacherPortalErr(c, err, "获取通知详情失败")
+		teacherNoticeErr(c, err, "获取通知详情失败")
 		return
 	}
 	response.OK(c, data)
@@ -292,11 +306,12 @@ func (h *Handler) TeacherUpdateNotice(c *gin.Context) {
 		response.ErrValidation(c, err.Error())
 		return
 	}
-	if err := h.teacherPortalSvc.UpdateNotice(c.Request.Context(), tc, id, req); err != nil {
-		teacherPortalErr(c, err, "更新通知失败")
+	data, err := h.teacherPortalSvc.UpdateNotice(c.Request.Context(), tc, id, req)
+	if err != nil {
+		teacherNoticeErr(c, err, "更新通知失败")
 		return
 	}
-	response.OK(c, map[string]any{"id": id})
+	response.OK(c, data)
 }
 
 func (h *Handler) TeacherDeleteNotice(c *gin.Context) {
@@ -309,7 +324,7 @@ func (h *Handler) TeacherDeleteNotice(c *gin.Context) {
 		return
 	}
 	if err := h.teacherPortalSvc.DeleteNotice(c.Request.Context(), tc, id); err != nil {
-		teacherPortalErr(c, err, "删除通知失败")
+		teacherNoticeErr(c, err, "删除通知失败")
 		return
 	}
 	response.OK(c, map[string]any{"id": id})
@@ -325,7 +340,7 @@ func (h *Handler) TeacherRevokeNotice(c *gin.Context) {
 		return
 	}
 	if err := h.teacherPortalSvc.RevokeNotice(c.Request.Context(), tc, id); err != nil {
-		teacherPortalErr(c, err, "撤回通知失败")
+		teacherNoticeErr(c, err, "撤回通知失败")
 		return
 	}
 	response.OK(c, map[string]any{"id": id, "status": domain.NoticeStatusRevoked})
@@ -342,7 +357,7 @@ func (h *Handler) TeacherNoticeReadStatus(c *gin.Context) {
 	}
 	data, err := h.teacherPortalSvc.NoticeReadStatus(c.Request.Context(), tc, id)
 	if err != nil {
-		teacherPortalErr(c, err, "获取通知已读状态失败")
+		teacherNoticeErr(c, err, "获取通知已读状态失败")
 		return
 	}
 	response.OK(c, data)

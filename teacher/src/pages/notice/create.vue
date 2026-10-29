@@ -1,8 +1,24 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
-import { createTeacherNotice, fetchTeacherNotice, fetchTeacherNoticeTemplates, updateTeacherNotice } from "@/api/teacher-notices"
+import { createTeacherNotice, fetchTeacherNotice, fetchTeacherNoticeTemplates, updateTeacherNotice, uploadNoticeAttachment } from "@/api/teacher-notices"
 import { requestWithAuth } from "@/api/http"
+
+const MAX_ATTACHMENTS = 9
+// 与契约「单张 ≤20MB」同口径；上传通道也会拦，这里先拦一次避免白传。
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
+// 定时时间统一按东八区提交（后端只认带时区的 RFC3339）。
+const SCHEDULE_TIMEZONE = "+08:00"
+
+type NoticeAttachment = {
+  file_url: string
+  file_type: string
+  file_name: string
+  file_size: number
+  local_path?: string
+  status?: "uploading" | "done" | "failed"
+  progress?: number
+}
 
 const categories = [
   { key: "homework", label: "作业" },
@@ -13,6 +29,7 @@ const categories = [
 ]
 
 const submitting = ref(false)
+const submitMode = ref<"draft" | "publish">("publish")
 const editingId = ref(0)
 const loadingNotice = ref(false)
 const isEditing = computed(() => editingId.value > 0)
@@ -31,7 +48,7 @@ const form = ref({
   need_confirm: true,
   scheduled_enabled: false,
   scheduled_at: "",
-  attachments: [] as string[],
+  attachments: [] as NoticeAttachment[],
   class_ids: [] as number[], // 接收范围：任教班级多选（notice-multitarget）
 })
 
@@ -85,27 +102,43 @@ const classFoot = computed(() => {
   if (count !== null) return `${form.value.class_ids.length} 个班级 · ${count} 位家长`
   return `${form.value.class_ids.length} 个班级 · 发布后家长会收到微信提醒`
 })
+const uploadingCount = computed(() => form.value.attachments.filter((a) => a.status === "uploading").length)
+const failedCount = computed(() => form.value.attachments.filter((a) => a.status === "failed").length)
+const attachmentBlocked = computed(() => uploadingCount.value > 0 || failedCount.value > 0)
 const canSubmit = computed(() => {
-  if (loadingNotice.value || classLoading.value || classError.value) return false
+  if (loadingNotice.value || classLoading.value || classError.value || attachmentBlocked.value) return false
   if (!form.value.title.trim() || !form.value.content.trim()) return false
   if (form.value.class_ids.length === 0) return false
   if (form.value.scheduled_enabled && !form.value.scheduled_at) return false
   return true
 })
+// 草稿允许缺标题、缺正文、缺班级：只要标题或正文其一非空即可保存。
+const canSaveDraft = computed(() => {
+  if (loadingNotice.value || attachmentBlocked.value) return false
+  return Boolean(form.value.title.trim() || form.value.content.trim())
+})
 const dockSummary = computed(() => {
   if (loadingNotice.value) return "通知加载中，请稍候"
   if (classLoading.value) return "正在加载班级信息…"
   if (classError.value) return "班级信息未加载，暂不能发布"
-  if (!form.value.title.trim() && !form.value.content.trim()) return "还差标题和正文"
+  if (uploadingCount.value > 0) return "图片上传中，完成后可发布"
+  if (failedCount.value > 0) return "有图片上传失败，请重试或删除"
+  if (!form.value.title.trim() && !form.value.content.trim()) return "填写标题或正文后可存草稿"
   if (!form.value.title.trim()) return "还差标题"
   if (!form.value.content.trim()) return "还差正文"
   if (form.value.class_ids.length === 0) return "还差接收班级"
   if (form.value.scheduled_enabled && !form.value.scheduled_at) return "还差发送时间"
   return `${currentClassLabel.value} · ${scheduleLabel.value} · ${form.value.need_confirm ? "需家长确认" : "无需确认"}`
 })
-const confirmDesc = computed(() => isEditing.value
-  ? "修改会保存到这条草稿，不会立即发送。"
-  : `发布后${currentClassLabel.value}会收到微信提醒。`)
+const publishLabel = computed(() => {
+  if (loadingNotice.value) return "加载中..."
+  if (submitting.value && submitMode.value === "publish") return form.value.scheduled_enabled ? "定时中..." : "发布中..."
+  return form.value.scheduled_enabled ? "定时发送" : "发布"
+})
+const confirmDesc = computed(() => {
+  if (form.value.scheduled_enabled) return `将于 ${scheduleLabel.value} 自动发送给${currentClassLabel.value}。`
+  return `发布后${currentClassLabel.value}会收到微信提醒。`
+})
 
 function toggleClass(classId: number) {
   const i = form.value.class_ids.indexOf(classId)
@@ -138,8 +171,10 @@ async function loadNotice(id: number) {
   try {
     const res: any = await fetchTeacherNotice(id)
     const notice = res.data || res
-    if (Number(notice?.status) !== 0) {
-      uni.showToast({ title: "仅草稿可编辑", icon: "none" })
+    const noticeStatus = Number(notice?.status)
+    // 只有草稿（0）与定时（1）可编辑；已发布/已撤回必须走撤回
+    if (noticeStatus !== 0 && noticeStatus !== 1) {
+      uni.showToast({ title: "仅草稿或定时通知可编辑", icon: "none" })
       setTimeout(() => uni.navigateBack(), 600)
       return
     }
@@ -148,11 +183,19 @@ async function loadNotice(id: number) {
     form.value.title = notice.title || ""
     form.value.content = notice.content || ""
     form.value.need_confirm = notice.need_confirm !== false
-    form.value.scheduled_enabled = false
-    form.value.scheduled_at = ""
+    form.value.scheduled_enabled = noticeStatus === 1 && Boolean(notice.scheduled_at)
+    form.value.scheduled_at = noticeStatus === 1 ? fromRFC3339ToDisplay(notice.scheduled_at) : ""
+    // 详情返回的附件与提交入参同形；回填后编辑可增删（整体替换）。
     form.value.attachments = (notice.attachments || [])
-      .map((item) => item?.file_url || item)
-      .filter(Boolean)
+      .map((item) => ({
+        file_url: item?.file_url || "",
+        file_type: item?.file_type || "image",
+        file_name: item?.file_name || "",
+        file_size: Number(item?.file_size || 0),
+        status: "done" as const,
+        progress: 100,
+      }))
+      .filter((item) => item.file_url)
 
     // 详情契约只回 class_names，没有 class_ids；按名称映射回任教班级。
     const names = Array.isArray(notice.class_names) ? notice.class_names : []
@@ -178,13 +221,85 @@ function selectCategory(key) {
   form.value.category = key
 }
 
+function fileNameOf(filePath: string) {
+  const parts = String(filePath || "").split(/[\\/]/)
+  return parts[parts.length - 1] || "图片"
+}
+
+function enqueueUpload(filePath: string, size: number) {
+  if (form.value.attachments.length >= MAX_ATTACHMENTS) return
+  const item: NoticeAttachment = {
+    file_url: "",
+    file_type: "image",
+    file_name: fileNameOf(filePath),
+    file_size: size || 0,
+    local_path: filePath,
+    status: "uploading",
+    progress: 0,
+  }
+  form.value.attachments.push(item)
+  // 取回数组中的响应式代理再改状态：直接改原始 item 不会触发视图更新。
+  const target = form.value.attachments[form.value.attachments.length - 1]
+  startUpload(target)
+}
+
+function startUpload(item: NoticeAttachment) {
+  if (!item.local_path) return
+  item.status = "uploading"
+  item.progress = 0
+  uploadNoticeAttachment(item.local_path, (progress) => {
+    // http.js 的进度回调透传的是 0–100 的数值，不是 UploadTask 的事件对象
+    if (typeof progress === "number") {
+      item.progress = Math.max(0, Math.min(100, progress))
+    }
+  })
+    .then((res) => {
+      const data = res?.data || res || {}
+      if (!data.file_url) throw new Error("上传返回缺少地址")
+      item.file_url = data.file_url
+      item.file_type = data.file_type || "image"
+      item.file_name = data.file_name || item.file_name
+      item.file_size = Number(data.file_size || item.file_size || 0)
+      item.progress = 100
+      item.status = "done"
+    })
+    .catch(() => {
+      // 失败保留占位图，用户可重试或删除；不让它静默消失。
+      item.status = "failed"
+    })
+}
+
 function addAttachment() {
+  const remain = MAX_ATTACHMENTS - form.value.attachments.length
+  if (remain <= 0) {
+    uni.showToast({ title: `最多上传 ${MAX_ATTACHMENTS} 张图片`, icon: "none" })
+    return
+  }
   uni.chooseImage({
-    count: 9 - form.value.attachments.length,
-    success(res) { form.value.attachments.push(...res.tempFilePaths) }
+    count: remain,
+    success(res) {
+      const picked = (res.tempFiles || []).map((f) => ({ path: f.path, size: Number(f.size || 0) }))
+      const files = picked.length
+        ? picked
+        : (res.tempFilePaths || []).map((path) => ({ path, size: 0 }))
+      files.forEach((file) => {
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+          uni.showToast({ title: "单张图片不能超过 20MB", icon: "none" })
+          return
+        }
+        enqueueUpload(file.path, file.size)
+      })
+    },
   })
 }
-function removeAttachment(i) { form.value.attachments.splice(i, 1) }
+function retryUpload(i: number) {
+  const item = form.value.attachments[i]
+  if (!item || item.status !== "failed") return
+  startUpload(item)
+}
+function removeAttachment(i: number) {
+  form.value.attachments.splice(i, 1)
+}
 
 function todayString() {
   const now = new Date()
@@ -205,6 +320,30 @@ function onScheduleDateChange(e) {
 }
 function onScheduleTimeChange(e) {
   form.value.scheduled_at = `${scheduledDate.value || todayString()} ${e.detail.value}`
+}
+
+// 后端只认带时区的 RFC3339；把本地展示用的 `YYYY-MM-DD HH:mm` 补成 `+08:00`。
+function toRFC3339(dateTimeText: string) {
+  const [date, time = "09:00"] = String(dateTimeText || "").split(" ")
+  if (!date || !time) return ""
+  return `${date}T${time.length === 5 ? `${time}:00` : time}${SCHEDULE_TIMEZONE}`
+}
+function scheduleInFuture(dateTimeText: string) {
+  const iso = toRFC3339(dateTimeText)
+  if (!iso) return false
+  const ts = new Date(iso).getTime()
+  return Number.isFinite(ts) && ts > Date.now()
+}
+
+// 后端回传带时区的 RFC3339，编辑定时时按东八区还原成 picker 用的 `YYYY-MM-DD HH:mm`，
+// 不依赖设备本地时区（与 toRFC3339 的 +08:00 口径对称）。
+function fromRFC3339ToDisplay(iso: string) {
+  if (!iso) return ""
+  const date = new Date(String(iso))
+  if (Number.isNaN(date.getTime())) return ""
+  const cst = new Date(date.getTime() + (8 * 60 + date.getTimezoneOffset()) * 60000)
+  const pad = (v: number) => String(v).padStart(2, "0")
+  return `${cst.getFullYear()}-${pad(cst.getMonth() + 1)}-${pad(cst.getDate())} ${pad(cst.getHours())}:${pad(cst.getMinutes())}`
 }
 
 function openClassSheet() {
@@ -261,12 +400,40 @@ onMounted(async () => {
   if (editingId.value) await loadNotice(editingId.value)
 })
 
-function validate() {
+// 发布/定时：标题、正文、接收班级齐全；定时还需未来时间。
+function validatePublish() {
+  if (loadingNotice.value) return "通知加载中，请稍候"
+  if (classError.value) return "班级信息未加载，请先重试"
+  if (uploadingCount.value > 0) return "图片上传中，请稍候"
+  if (failedCount.value > 0) return "有图片上传失败，请重试或删除"
   if (!form.value.title.trim()) return "请输入通知标题"
   if (!form.value.content.trim()) return "请输入通知内容"
   if (form.value.class_ids.length === 0) return "请选择接收班级"
-  if (form.value.scheduled_enabled && !form.value.scheduled_at) return "请选择发送时间"
+  if (form.value.scheduled_enabled) {
+    if (!form.value.scheduled_at) return "请选择发送时间"
+    if (!scheduleInFuture(form.value.scheduled_at)) return "发送时间需晚于当前时间"
+  }
   return ""
+}
+
+// 存草稿：标题或正文其一即可，班级可空。
+function validateDraft() {
+  if (loadingNotice.value) return "通知加载中，请稍候"
+  if (uploadingCount.value > 0) return "图片上传中，请稍候"
+  if (failedCount.value > 0) return "有图片上传失败，请重试或删除"
+  if (!form.value.title.trim() && !form.value.content.trim()) return "请至少填写标题或正文"
+  return ""
+}
+
+function attachmentPayload() {
+  return form.value.attachments
+    .filter((a) => a.status !== "failed" && a.file_url)
+    .map((a) => ({
+      file_url: a.file_url,
+      file_type: a.file_type || "image",
+      file_name: a.file_name || "",
+      file_size: Number(a.file_size || 0),
+    }))
 }
 
 function onPublishClick() {
@@ -279,42 +446,63 @@ function onPublishClick() {
     uni.showToast({ title: "班级信息未加载，请先重试", icon: "none" })
     return
   }
-  const msg = validate()
+  const msg = validatePublish()
   if (msg) {
     uni.showToast({ title: msg, icon: "none" })
     return
   }
+  submitMode.value = "publish"
   showConfirm.value = true
+}
+
+function onSaveDraft() {
+  if (submitting.value) return
+  const msg = validateDraft()
+  if (msg) {
+    uni.showToast({ title: msg, icon: "none" })
+    return
+  }
+  submit("draft")
 }
 
 async function doSubmit() {
   showConfirm.value = false
-  await submit()
+  await submit("publish")
 }
 
-async function submit() {
+// mode=draft → status 0；mode=publish → 开了定时 status 1，否则 status 2。
+async function submit(mode: "draft" | "publish") {
   if (loadingNotice.value || submitting.value) {
     return
   }
-  const msg = validate()
+  const msg = mode === "draft" ? validateDraft() : validatePublish()
   if (msg) { uni.showToast({ title: msg, icon: "none" }); return }
+  const status = mode === "draft" ? 0 : (form.value.scheduled_enabled ? 1 : 2)
+  const payload = {
+    ...form.value,
+    status,
+    // 只有定时才带时间；其余状态由后端清空，避免草稿残留旧定时
+    scheduled_at: status === 1 ? toRFC3339(form.value.scheduled_at) : null,
+    attachments: attachmentPayload(),
+  }
+  submitMode.value = mode
   submitting.value = true
   let succeeded = false
   try {
     if (isEditing.value) {
-      await updateTeacherNotice(editingId.value, form.value)
-      uni.showToast({ title: "已保存", icon: "success" })
+      await updateTeacherNotice(editingId.value, payload)
     } else {
-      await createTeacherNotice(form.value)
-      uni.showToast({ title: "已发布", icon: "success" })
+      await createTeacherNotice(payload)
     }
+    const doneText = status === 0 ? "草稿已保存" : (status === 1 ? "已设置定时发送" : "已发布")
+    uni.showToast({ title: doneText, icon: "success" })
     succeeded = true
     setTimeout(() => {
         const pages = getCurrentPages()
         pages.length > 1 ? uni.navigateBack() : uni.reLaunch({ url: "/pages/index/index" })
       }, 600)
   } catch (e) {
-    uni.showToast({ title: e?.message || (isEditing.value ? "保存失败" : "发布失败"), icon: "none" })
+    uni.showToast({ title: e?.message || (status === 0 ? "草稿保存失败" : "发布失败"), icon: "none" })
   } finally {
     // 成功后保持“发布中/保存中”直到 600ms 后的返回，避免这段时间内重复提交。
     if (!succeeded) submitting.value = false
@@ -393,20 +581,35 @@ async function submit() {
 
             <view class="cell attach-cell">
               <view class="attach-head">
-                <text class="cell-label">图片 / 视频</text>
+                <text class="cell-label">图片</text>
                 <text class="attach-count">{{ form.attachments.length }}/9</text>
               </view>
               <view class="thumbs">
-                <view v-for="(img, i) in form.attachments" :key="img + i" class="thumb">
-                  <image :src="img" mode="aspectFill" class="thumb-img" />
-                  <view v-if="!isEditing" class="thumb-del" @click="removeAttachment(i)">×</view>
+                <view
+                  v-for="(img, i) in form.attachments"
+                  :key="img.file_url || img.local_path || i"
+                  class="thumb"
+                >
+                  <image :src="img.local_path || img.file_url" mode="aspectFill" class="thumb-img" />
+                  <view v-if="img.status === 'uploading'" class="thumb-mask">
+                    <text>{{ img.progress || 0 }}%</text>
+                  </view>
+                  <view
+                    v-else-if="img.status === 'failed'"
+                    class="thumb-mask thumb-mask--error"
+                    @click="retryUpload(i)"
+                  >
+                    <text>上传失败</text>
+                    <text class="thumb-retry">点击重试</text>
+                  </view>
+                  <view class="thumb-del" @click="removeAttachment(i)">×</view>
                 </view>
-                <view v-if="!isEditing && form.attachments.length < 9" class="add-thumb" @click="addAttachment">
+                <view v-if="form.attachments.length < 9" class="add-thumb" @click="addAttachment">
                   <text class="plus">＋</text>
                   <text>添加</text>
                 </view>
               </view>
-              <text v-if="isEditing" class="edit-hint">编辑草稿暂不支持修改附件</text>
+              <text class="edit-hint">仅支持图片，最多 9 张，单张不超过 20MB</text>
             </view>
           </view>
         </view>
@@ -445,7 +648,7 @@ async function submit() {
               </view>
             </view>
 
-            <view v-if="!isEditing" class="cell switch-cell">
+            <view class="cell switch-cell">
               <view class="cell-text">
                 <text class="cell-label">定时发送</text>
                 <text class="cell-hint">{{ scheduleLabel }}</text>
@@ -455,7 +658,7 @@ async function submit() {
               </view>
             </view>
 
-            <view v-if="!isEditing && form.scheduled_enabled" class="schedule">
+            <view v-if="form.scheduled_enabled" class="schedule">
               <picker mode="date" :value="scheduledDate" @change="onScheduleDateChange">
                 <view class="cell cell-tap">
                   <text class="cell-label">发送日期</text>
@@ -481,17 +684,27 @@ async function submit() {
       </view>
     </scroll-view>
 
-    <!-- 底部固定提交栏 -->
+    <!-- 底部固定提交栏：主按钮发布/定时，次按钮存草稿 -->
     <view class="dock">
       <text class="dock-summary">{{ dockSummary }}</text>
-      <button
-        class="publish-btn"
-        :class="{ 'is-disabled': !canSubmit || submitting || loadingNotice }"
-        :disabled="submitting || loadingNotice"
-        @click="onPublishClick"
-      >
-        {{ loadingNotice ? "加载中..." : submitting ? (isEditing ? "保存中..." : "发布中...") : (isEditing ? "保存修改" : "发布") }}
-      </button>
+      <view class="dock-actions">
+        <button
+          class="draft-btn"
+          :class="{ 'is-disabled': !canSaveDraft || submitting || loadingNotice }"
+          :disabled="submitting || loadingNotice"
+          @click="onSaveDraft"
+        >
+          {{ submitting && submitMode === "draft" ? "保存中..." : "存草稿" }}
+        </button>
+        <button
+          class="publish-btn"
+          :class="{ 'is-disabled': !canSubmit || submitting || loadingNotice }"
+          :disabled="submitting || loadingNotice"
+          @click="onPublishClick"
+        >
+          {{ publishLabel }}
+        </button>
+      </view>
     </view>
 
     <!-- 接收班级弹层 -->
@@ -552,7 +765,7 @@ async function submit() {
       <view class="scrim" @click="showConfirm = false" />
       <view class="dialog">
         <view class="dialog-body">
-          <text class="dialog-title">{{ isEditing ? "确认保存修改？" : "确认发布这条通知？" }}</text>
+          <text class="dialog-title">{{ form.scheduled_enabled ? "确认定时发送？" : "确认发布这条通知？" }}</text>
           <text class="dialog-desc">{{ confirmDesc }}</text>
           <view class="dialog-meta">
             <view class="dialog-row">
@@ -568,7 +781,7 @@ async function submit() {
         <view class="dialog-actions">
           <button class="dialog-btn" @click="showConfirm = false">取消</button>
           <button class="dialog-btn dialog-btn--primary" :disabled="submitting" @click="doSubmit">
-            {{ submitting ? "处理中..." : (isEditing ? "确认保存" : "确认发布") }}
+            {{ submitting ? "处理中..." : (form.scheduled_enabled ? "确认定时" : "确认发布") }}
           </button>
         </view>
       </view>
@@ -862,6 +1075,33 @@ async function submit() {
   display: block;
 }
 
+.thumb-mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  // 上传中/失败遮罩：token 无 overlay 色，单点特殊值（同 .thumb-del 的压暗层）
+  background: rgba(30, 41, 59, 0.55);
+  color: $color-text-on-brand;
+  font-size: $typography-font-size-sm;
+  font-weight: 600;
+}
+
+.thumb-mask--error {
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.thumb-retry {
+  font-size: $typography-font-size-xs;
+  font-weight: 500;
+}
+
 .thumb-del {
   position: absolute;
   top: 0;
@@ -994,8 +1234,30 @@ async function submit() {
   overflow-wrap: anywhere;
 }
 
+.dock-actions {
+  display: flex;
+  align-items: stretch;
+  gap: $spacing-md;
+}
+
+.draft-btn {
+  flex: 0 0 216rpx;
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid $color-brand-primary-light;
+  border-radius: $border-radius-full;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-lg;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .publish-btn {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: 96rpx;
   display: flex;
   align-items: center;
@@ -1008,6 +1270,13 @@ async function submit() {
   font-weight: 600;
   letter-spacing: 0.02em;
   box-shadow: $shadow-md;
+}
+
+.draft-btn.is-disabled,
+.draft-btn[disabled] {
+  background: $color-bg-page;
+  border-color: $color-border-hairline;
+  color: $color-text-muted;
 }
 
 .publish-btn.is-disabled,

@@ -219,6 +219,8 @@ const showDetailStats = computed(() => {
 })
 const canReadStatus = computed(() => Number(detail.value?.status) === 2)
 const canRemind = computed(() => Number(detail.value?.status) === 2)
+const isDraft = computed(() => Number(detail.value?.status) === 0)
+const isScheduled = computed(() => Number(detail.value?.status) === 1)
 
 const unreadVisible = ref(false)
 const unreadLoading = ref(false)
@@ -255,6 +257,13 @@ function closeDetail() {
   unreadVisible.value = false
   unreadList.value = []
   unreadError.value = ""
+}
+
+function editNotice() {
+  const id = detail.value?.id
+  if (!id) return
+  closeDetail()
+  uni.navigateTo({ url: `/pages/notice/create?id=${id}` })
 }
 
 async function reloadDetail() {
@@ -528,7 +537,13 @@ onReachBottom(loadMore)
               </view>
             </view>
 
-            <view v-if="canReadStatus || canRemind" class="sheet-actions">
+            <view v-if="isDraft || isScheduled || canReadStatus || canRemind" class="sheet-actions">
+              <view v-if="isDraft" class="sheet-btn is-primary" @click="editNotice">
+                <text>继续编辑</text>
+              </view>
+              <view v-if="isScheduled" class="sheet-btn is-primary" @click="editNotice">
+                <text>编辑定时</text>
+              </view>
               <view v-if="canReadStatus" class="sheet-btn is-soft" @click="toggleUnread">
                 <text>{{ unreadVisible ? "收起未读家长" : "查看未读家长" }}</text>
               </view>

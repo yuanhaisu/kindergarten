@@ -206,14 +206,25 @@ func (h *Handler) ParentConfirmNotice(c *gin.Context) {
 	}
 	data, err := h.parentPortalSvc.ConfirmNotice(c.Request.Context(), pc, id)
 	if err != nil {
-		if errors.Is(err, service.ErrParentNotFound) {
-			response.ErrNotFound(c, "通知不存在")
-			return
-		}
-		response.ErrInternal(c, "确认通知失败")
+		writeParentConfirmNoticeError(c, err)
 		return
 	}
 	response.OK(c, data)
+}
+
+// writeParentConfirmNoticeError 确认通知的唯一错误出口。
+// 草稿/定时/已撤回不可确认属于状态不合法，必须 400——落到 default 的 500 会让客户端
+// 把「点早了」当成服务端故障重试。
+func writeParentConfirmNoticeError(c *gin.Context, err error) {
+	if errors.Is(err, service.ErrParentNotFound) {
+		response.ErrNotFound(c, "通知不存在")
+		return
+	}
+	if errors.Is(err, service.ErrParentInvalidParams) {
+		response.ErrBadRequest(c, 40013, "该通知当前不可确认")
+		return
+	}
+	response.ErrInternal(c, "确认通知失败")
 }
 
 // ========== Leaves ==========

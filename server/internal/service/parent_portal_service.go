@@ -1264,6 +1264,10 @@ func (s *ParentPortalService) ConfirmNotice(ctx context.Context, pc *ParentPorta
 		}
 		return nil, err
 	}
+	// 只有已发布（status=2）的通知可确认：草稿、定时未发、已撤回都不该产生确认记录。
+	if n.Status != domain.NoticeStatusPublished {
+		return nil, ErrParentInvalidParams
+	}
 	now := time.Now()
 	var log domain.NoticeReadLog
 	result := s.db.WithContext(ctx).Where("notice_id = ? AND user_id = ?", id, pc.UserID).First(&log)

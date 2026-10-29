@@ -52,6 +52,20 @@ func (r *NoticeRepo) FilterByTargetHit(q *gorm.DB, classIDs []uint64) *gorm.DB {
 		WHERE t.notice_id = notices.id AND t.deleted_at IS NULL AND t.class_id IN ?)`, classIDs)
 }
 
+// FilterByTargetHitOrOwnDraft 「目标集命中且非他人草稿」或「本人草稿」。
+// 草稿允许没有目标班（D2），只按 EXISTS 过滤会把作者自己的空目标草稿藏掉；
+// 有目标班的草稿也不能因此对同班其他老师可见。
+func (r *NoticeRepo) FilterByTargetHitOrOwnDraft(q *gorm.DB, classIDs []uint64, userID uint64) *gorm.DB {
+	if len(classIDs) == 0 {
+		return q.Where("status = ? AND creator_id = ?", domain.NoticeStatusDraft, userID)
+	}
+	return q.Where(`((EXISTS (SELECT 1 FROM notice_targets t
+		WHERE t.notice_id = notices.id AND t.deleted_at IS NULL AND t.class_id IN ?)
+		AND (status <> ? OR creator_id = ?))
+		OR (status = ? AND creator_id = ?))`,
+		classIDs, domain.NoticeStatusDraft, userID, domain.NoticeStatusDraft, userID)
+}
+
 // ExistsNoticeTargetHit 单条通知的目标集是否命中任一给定班级。
 func (r *NoticeRepo) ExistsNoticeTargetHit(ctx context.Context, noticeID uint64, classIDs []uint64) (bool, error) {
 	if len(classIDs) == 0 {
@@ -129,6 +143,13 @@ func (r *NoticeRepo) ReplaceNoticeTargets(ctx context.Context, kindergartenID, n
 		}
 		return tx.Create(&rows).Error
 	})
+}
+
+// ClearNoticeTargets 清空通知目标集：草稿允许没有接收范围（D2），发布前必须重新选择。
+func (r *NoticeRepo) ClearNoticeTargets(ctx context.Context, noticeID uint64) error {
+	return r.db.WithContext(ctx).Unscoped().
+		Where("notice_id = ?", noticeID).
+		Delete(&domain.NoticeTarget{}).Error
 }
 
 func (r *NoticeRepo) baseNoticeListQuery(
@@ -227,6 +248,31 @@ func (r *NoticeRepo) ListAttachmentsByNoticeID(ctx context.Context, noticeID uin
 		Order("sort_num ASC, id ASC").
 		Find(&list).Error
 	return list, err
+}
+
+// AttachmentCountsByNoticeIDs 批量统计附件数，老师端列表 attachments_count 的唯一来源。
+// 一次聚合而不是逐条 N+1；没有附件的通知不出现在 map 中，调用方按 0 处理。
+func (r *NoticeRepo) AttachmentCountsByNoticeIDs(ctx context.Context, noticeIDs []uint64) (map[uint64]int, error) {
+	out := make(map[uint64]int, len(noticeIDs))
+	if len(noticeIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		NoticeID uint64 `gorm:"column:notice_id"`
+		Cnt      int    `gorm:"column:cnt"`
+	}
+	err := r.db.WithContext(ctx).Model(&domain.NoticeAttachment{}).
+		Select("notice_id, COUNT(*) AS cnt").
+		Where("notice_id IN ?", noticeIDs).
+		Group("notice_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.NoticeID] = row.Cnt
+	}
+	return out, nil
 }
 
 func (r *NoticeRepo) FindLatestAudit(ctx context.Context, kindergartenID, noticeID uint64) (*domain.ContentAudit, error) {

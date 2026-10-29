@@ -85,6 +85,8 @@ var (
 	ErrTeacherAuthorizationInvalid = errors.New("PICKUP_AUTHORIZATION_INVALID")
 	// ErrTeacherOverrideNameRequired 标记授权例外时必须填写来接者姓名
 	ErrTeacherOverrideNameRequired = errors.New("PICKUP_OVERRIDE_NAME_REQUIRED")
+	// ErrTeacherNoticeState 通知当前状态不允许该操作（编辑已发布、删除非草稿、撤回非已发布）
+	ErrTeacherNoticeState = errors.New("NOTICE_STATE_INVALID")
 )
 
 func (s *TeacherPortalService) ResolveContext(ctx context.Context, userID, kindergartenID uint64) (*TeacherPortalContext, error) {
@@ -357,16 +359,89 @@ func (s *TeacherPortalService) TodoAction(ctx context.Context, tc *TeacherPortal
 	}
 }
 
-type TeacherNoticeInput struct {
-	Category        string   `json:"category"`
-	Title           string   `json:"title"`
-	Content         string   `json:"content"`
-	NeedConfirm     bool     `json:"need_confirm"`
-	ScheduleEnabled bool     `json:"schedule_enabled"`
-	ScheduledAt     string   `json:"scheduled_at"`
-	Attachments     []string `json:"attachments"`
-	ClassIDs        []uint64 `json:"class_ids"`
+// TeacherNoticeAttachmentInput 通知附件入参。字段与 notice_attachments 一一对应，
+// 由前端上传通道（biz_type=notice）返回体原样回传。
+type TeacherNoticeAttachmentInput struct {
+	FileURL  string `json:"file_url"`
+	FileType string `json:"file_type"`
+	FileName string `json:"file_name"`
+	FileSize int64  `json:"file_size"`
 }
+
+type TeacherNoticeInput struct {
+	Category        string                         `json:"category"`
+	Title           string                         `json:"title"`
+	Content         string                         `json:"content"`
+	NeedConfirm     bool                           `json:"need_confirm"`
+	ScheduleEnabled bool                           `json:"schedule_enabled"` // 旧客户端的定时开关；显式 status 优先
+	ScheduledAt     string                         `json:"scheduled_at"`
+	Status          *int8                          `json:"status"` // 可选：0 草稿 / 1 定时 / 2 发布
+	Attachments     []TeacherNoticeAttachmentInput `json:"attachments"`
+	ClassIDs        []uint64                       `json:"class_ids"`
+}
+
+// noticeStatus 入参状态：显式 status 优先；未传时兼容旧客户端的 schedule_enabled。
+// 返回 nil 表示「未指定」——创建默认发布、编辑保持当前状态。
+func (req TeacherNoticeInput) noticeStatus() *int8 {
+	if req.Status != nil {
+		return req.Status
+	}
+	if req.ScheduleEnabled {
+		s := int8(domain.NoticeStatusScheduled)
+		return &s
+	}
+	return nil
+}
+
+// normalizeNoticeAttachments 附件入参校验 + 归一：仅图片、最多 9 张、单张 ≤20MB。
+// 任一条不合法整单拒绝（不跳过、不截断），避免用户以为传了 10 张实际只存 9 张。
+func normalizeNoticeAttachments(list []TeacherNoticeAttachmentInput) ([]domain.NoticeAttachment, error) {
+	if len(list) > maxNoticeAttachments {
+		return nil, ErrTeacherInvalidParams
+	}
+	out := make([]domain.NoticeAttachment, 0, len(list))
+	for i, a := range list {
+		url := strings.TrimSpace(a.FileURL)
+		ft := strings.TrimSpace(a.FileType)
+		if ft == "" {
+			ft = "image"
+		}
+		if url == "" || ft != "image" || a.FileSize > maxSingleFileSize {
+			return nil, ErrTeacherInvalidParams
+		}
+		out = append(out, domain.NoticeAttachment{
+			FileURL: url, FileType: ft, FileName: strings.TrimSpace(a.FileName), FileSize: a.FileSize, SortNum: i,
+		})
+	}
+	return out, nil
+}
+
+// parseNoticeSchedule 只接受带时区的 RFC3339；过去时间拒绝（留 1 分钟时钟误差）。
+// 统一转 UTC 落库，与管理端创建路径同一口径。
+func parseNoticeSchedule(raw string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339, strings.TrimSpace(raw))
+	if err != nil {
+		return time.Time{}, ErrTeacherInvalidParams
+	}
+	if t.Before(time.Now().Add(-time.Minute)) {
+		return time.Time{}, ErrTeacherInvalidParams
+	}
+	return t.UTC(), nil
+}
+
+func noticeAttachmentViews(list []domain.NoticeAttachment) []map[string]any {
+	out := make([]map[string]any, 0, len(list))
+	for _, a := range list {
+		out = append(out, map[string]any{
+			"id": a.ID, "file_url": a.FileURL, "file_type": a.FileType,
+			"file_name": a.FileName, "file_size": a.FileSize,
+		})
+	}
+	return out
+}
+
+// maxNoticeAttachments 单条通知附件上限，契约「最多 9 张」的唯一实现。
+const maxNoticeAttachments = 9
 
 // taughtClassIDs 老师的任教班级集（ClassTeacher 多行并存）。无任教行时退回上下文当前班。
 func (s *TeacherPortalService) taughtClassIDs(ctx context.Context, tc *TeacherPortalContext) ([]uint64, error) {
@@ -416,11 +491,21 @@ func (s *TeacherPortalService) ListNotices(ctx context.Context, tc *TeacherPorta
 	if err != nil {
 		return nil, err
 	}
-	// 可见性 = 目标集命中任一任教班级（EXISTS），多班通知不再碎在「当前班」过滤里
-	db := s.notices.FilterByTargetHit(s.db.WithContext(ctx).Model(&domain.Notice{}).
-		Where("kindergarten_id = ?", tc.KindergartenID), taught)
+	// 可见性 = 目标集命中任一任教班级（EXISTS）；草稿再叠加「仅创建者可见」。
+	// 草稿允许没有目标班，所以草稿相关查询用「目标命中 OR 本人草稿」，不能只靠 EXISTS。
+	db := s.db.WithContext(ctx).Model(&domain.Notice{}).
+		Where("kindergarten_id = ?", tc.KindergartenID)
 	if status != nil {
 		db = db.Where("status = ?", *status)
+	}
+	switch {
+	case status != nil && domain.NoticeStatus(*status) == domain.NoticeStatusDraft:
+		// 传 0 只返回自己的草稿（D3），不做目标过滤
+		db = db.Where("creator_id = ?", tc.UserID)
+	case status == nil:
+		db = s.notices.FilterByTargetHitOrOwnDraft(db, taught, tc.UserID)
+	default:
+		db = s.notices.FilterByTargetHit(db, taught)
 	}
 	if strings.TrimSpace(category) != "" {
 		db = db.Where("category = ?", category)
@@ -441,6 +526,10 @@ func (s *TeacherPortalService) ListNotices(ctx context.Context, tc *TeacherPorta
 	if err != nil {
 		return nil, err
 	}
+	attachmentCounts, err := s.notices.AttachmentCountsByNoticeIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
 	list := make([]map[string]any, 0, len(rows))
 	for _, n := range rows {
 		readUsers, _, parentTotal, err := s.notices.NoticeReadStats(ctx, tc.KindergartenID, n.ID)
@@ -456,7 +545,7 @@ func (s *TeacherPortalService) ListNotices(ctx context.Context, tc *TeacherPorta
 			"title": n.Title, "content": n.Content, "class_names": namesByNotice[n.ID], "need_confirm": n.NeedConfirm,
 			"status": n.Status, "status_label": teacherPortalNoticeStatusLabel(n.Status),
 			"read_count": readUsers, "total_count": parentTotal, "read_rate": readRate,
-			"attachments_count": 0, "published_at": formatOptionalTime(n.PublishedAt), "created_at": n.CreatedAt.UTC().Format(time.RFC3339),
+			"attachments_count": attachmentCounts[n.ID], "published_at": formatOptionalTime(n.PublishedAt), "created_at": n.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return map[string]any{"list": list, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
@@ -478,28 +567,54 @@ func formatOptionalTime(t *time.Time) any {
 }
 
 func (s *TeacherPortalService) CreateNotice(ctx context.Context, tc *TeacherPortalContext, req TeacherNoticeInput) (map[string]any, error) {
-	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Content) == "" {
-		return nil, ErrTeacherInvalidParams
-	}
-	if err := s.validateNoticeTargets(ctx, tc, req.ClassIDs); err != nil {
+	title := strings.TrimSpace(req.Title)
+	content := strings.TrimSpace(req.Content)
+	attachments, err := normalizeNoticeAttachments(req.Attachments)
+	if err != nil {
 		return nil, err
 	}
+
 	status := domain.NoticeStatusPublished
-	now := time.Now()
-	var scheduledAt *time.Time
-	publishedAt := &now
-	if req.ScheduleEnabled {
-		t, err := time.Parse(time.RFC3339, req.ScheduledAt)
-		if err != nil || !t.After(now) {
+	if override := req.noticeStatus(); override != nil {
+		status = domain.NoticeStatus(*override)
+	}
+	// 完整性分档（D2）：草稿只要标题或正文其一；定时/发布必须三项齐全。
+	// 定时时间另行校验，放在 status 分支内，避免草稿误报「时间不合法」。
+	switch status {
+	case domain.NoticeStatusDraft:
+		if title == "" && content == "" {
 			return nil, ErrTeacherInvalidParams
 		}
-		status = domain.NoticeStatusScheduled
-		scheduledAt = &t
-		publishedAt = nil
+	case domain.NoticeStatusScheduled, domain.NoticeStatusPublished:
+		if title == "" || content == "" || len(req.ClassIDs) == 0 {
+			return nil, ErrTeacherInvalidParams
+		}
+	default:
+		return nil, ErrTeacherInvalidParams
 	}
+	// 草稿允许没有接收范围；给了目标就必须是任教班级。
+	if len(req.ClassIDs) > 0 {
+		if err := s.validateNoticeTargets(ctx, tc, req.ClassIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	now := time.Now()
+	var scheduledAt, publishedAt *time.Time
+	switch status {
+	case domain.NoticeStatusScheduled:
+		t, err := parseNoticeSchedule(req.ScheduledAt)
+		if err != nil {
+			return nil, err
+		}
+		scheduledAt = &t
+	case domain.NoticeStatusPublished:
+		publishedAt = &now
+	}
+
 	notice := &domain.Notice{
-		KindergartenID: tc.KindergartenID, ClassID: req.ClassIDs[0], CreatorID: tc.UserID,
-		Category: domain.NoticeCategory(req.Category), Title: strings.TrimSpace(req.Title), Content: strings.TrimSpace(req.Content),
+		KindergartenID: tc.KindergartenID, ClassID: legacyClassID(tc, req.ClassIDs), CreatorID: tc.UserID,
+		Category: domain.NoticeCategory(req.Category), Title: title, Content: content,
 		NeedConfirm: req.NeedConfirm, ScheduledAt: scheduledAt, PublishedAt: publishedAt, Status: status,
 	}
 	if notice.Category == "" {
@@ -508,13 +623,32 @@ func (s *TeacherPortalService) CreateNotice(ctx context.Context, tc *TeacherPort
 	if err := s.db.WithContext(ctx).Create(notice).Error; err != nil {
 		return nil, err
 	}
-	if err := s.notices.ReplaceNoticeTargets(ctx, tc.KindergartenID, notice.ID, req.ClassIDs); err != nil {
+	if len(req.ClassIDs) > 0 {
+		if err := s.notices.ReplaceNoticeTargets(ctx, tc.KindergartenID, notice.ID, req.ClassIDs); err != nil {
+			return nil, err
+		}
+	}
+	for i := range attachments {
+		attachments[i].NoticeID = notice.ID
+	}
+	if err := s.notices.CreateAttachments(ctx, attachments); err != nil {
 		return nil, err
 	}
 	return map[string]any{"id": notice.ID, "status": notice.Status, "status_label": teacherPortalNoticeStatusLabel(notice.Status), "created_at": notice.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
-// getVisibleNotice 取通知，可见性 = 目标集命中任一任教班级。
+// legacyClassID 已弃用的 notices.class_id 仍有 FK 指向 classes（不可写 0），
+// 草稿没有目标班时退到老师当前班；新代码不读这一列，只为回滚降级保留。
+func legacyClassID(tc *TeacherPortalContext, classIDs []uint64) uint64 {
+	if len(classIDs) > 0 {
+		return classIDs[0]
+	}
+	return tc.ClassID
+}
+
+// getVisibleNotice 取通知：可见 = 目标集命中任一任教班级，或本人创建的草稿。
+// 草稿可能没有目标集（D2 允许先不选班），所以目标查询落空时按「本人草稿」补查一次；
+// 他人草稿一律当作不存在，不泄漏内容（D3）。
 func (s *TeacherPortalService) getVisibleNotice(ctx context.Context, tc *TeacherPortalContext, id uint64) (*domain.Notice, error) {
 	taught, err := s.taughtClassIDs(ctx, tc)
 	if err != nil {
@@ -524,10 +658,24 @@ func (s *TeacherPortalService) getVisibleNotice(ctx context.Context, tc *Teacher
 	q := s.notices.FilterByTargetHit(s.db.WithContext(ctx).
 		Where("id = ? AND kindergarten_id = ?", id, tc.KindergartenID), taught)
 	if err := q.First(&n).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTeacherNotFound
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
 		}
-		return nil, err
+		var own domain.Notice
+		err := s.db.WithContext(ctx).
+			Where("id = ? AND kindergarten_id = ? AND creator_id = ? AND status = ?",
+				id, tc.KindergartenID, tc.UserID, domain.NoticeStatusDraft).
+			First(&own).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, ErrTeacherNotFound
+			}
+			return nil, err
+		}
+		return &own, nil
+	}
+	if n.Status == domain.NoticeStatusDraft && n.CreatorID != tc.UserID {
+		return nil, ErrTeacherNotFound
 	}
 	return &n, nil
 }
@@ -549,6 +697,10 @@ func (s *TeacherPortalService) GetNotice(ctx context.Context, tc *TeacherPortalC
 	if err != nil {
 		return nil, err
 	}
+	attachments, err := s.notices.ListAttachmentsByNoticeID(ctx, n.ID)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"id": n.ID, "category": n.Category, "category_label": teacherPortalNoticeCategoryLabel(n.Category),
 		"title": n.Title, "content": n.Content, "class_names": namesByNotice[n.ID], "need_confirm": n.NeedConfirm,
@@ -558,6 +710,8 @@ func (s *TeacherPortalService) GetNotice(ctx context.Context, tc *TeacherPortalC
 			"total_count": parentTotal, "read_rate": noticePercent(readUsers, parentTotal),
 		},
 		"read_count": readUsers, "total_count": parentTotal, "unread_count": unread,
+		"attachments":  noticeAttachmentViews(attachments),
+		"scheduled_at": formatOptionalTime(n.ScheduledAt),
 		"published_at": formatOptionalTime(n.PublishedAt), "created_at": n.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
 }
@@ -569,36 +723,112 @@ func noticePercent(readUsers, parentTotal int64) string {
 	return fmt.Sprintf("%d%%", readUsers*100/parentTotal)
 }
 
-func (s *TeacherPortalService) UpdateNotice(ctx context.Context, tc *TeacherPortalContext, id uint64, req TeacherNoticeInput) error {
-	if _, err := s.getVisibleNotice(ctx, tc, id); err != nil {
-		return err
+func (s *TeacherPortalService) UpdateNotice(ctx context.Context, tc *TeacherPortalContext, id uint64, req TeacherNoticeInput) (map[string]any, error) {
+	n, err := s.getVisibleNotice(ctx, tc, id)
+	if err != nil {
+		return nil, err
 	}
-	if err := s.validateNoticeTargets(ctx, tc, req.ClassIDs); err != nil {
-		return err
+	// 状态机 D6：已发布/已撤回不可再改，必须走撤回。
+	if n.Status != domain.NoticeStatusDraft && n.Status != domain.NoticeStatusScheduled {
+		return nil, ErrTeacherNoticeState
 	}
-	updates := map[string]any{}
-	if strings.TrimSpace(req.Title) != "" {
-		updates["title"] = strings.TrimSpace(req.Title)
+	title := strings.TrimSpace(req.Title)
+	content := strings.TrimSpace(req.Content)
+	attachments, err := normalizeNoticeAttachments(req.Attachments)
+	if err != nil {
+		return nil, err
 	}
-	if strings.TrimSpace(req.Content) != "" {
-		updates["content"] = strings.TrimSpace(req.Content)
+
+	status := n.Status
+	override := req.noticeStatus()
+	if override != nil {
+		status = domain.NoticeStatus(*override)
 	}
-	if strings.TrimSpace(req.Category) != "" {
-		updates["category"] = req.Category
+	// 完整性按目标状态校验：草稿可以只有标题或正文；发布/定时必须三项齐全。
+	switch status {
+	case domain.NoticeStatusDraft:
+		if title == "" && content == "" {
+			return nil, ErrTeacherInvalidParams
+		}
+	case domain.NoticeStatusScheduled, domain.NoticeStatusPublished:
+		if title == "" || content == "" || len(req.ClassIDs) == 0 {
+			return nil, ErrTeacherInvalidParams
+		}
+	default:
+		return nil, ErrTeacherInvalidParams
 	}
-	updates["need_confirm"] = req.NeedConfirm
-	res := s.db.WithContext(ctx).Model(&domain.Notice{}).
-		Where("id = ? AND kindergarten_id = ?", id, tc.KindergartenID).Updates(updates)
-	if res.Error != nil {
-		return res.Error
+	if len(req.ClassIDs) > 0 {
+		if err := s.validateNoticeTargets(ctx, tc, req.ClassIDs); err != nil {
+			return nil, err
+		}
 	}
-	// 编辑目标集是显式重选（整体替换，不做增量）
-	return s.notices.ReplaceNoticeTargets(ctx, tc.KindergartenID, id, req.ClassIDs)
+
+	updates := map[string]any{
+		"title":        title,
+		"content":      content,
+		"need_confirm": req.NeedConfirm,
+		"status":       status,
+	}
+	// 已弃用的 class_id 冗余首个目标班，保存时同步，回滚降级读到的才是真实班级。
+	if len(req.ClassIDs) > 0 {
+		updates["class_id"] = req.ClassIDs[0]
+	}
+	if category := strings.TrimSpace(req.Category); category != "" {
+		updates["category"] = category
+	}
+	now := time.Now()
+	switch status {
+	case domain.NoticeStatusDraft:
+		// 回到草稿时清空发送时间与发布时间，避免列表显示旧的定时/发布时间
+		updates["scheduled_at"] = nil
+		updates["published_at"] = nil
+	case domain.NoticeStatusScheduled:
+		// 未显式改状态的旧调用（只改标题）保留原定时时间，不因缺 scheduled_at 报错
+		if override != nil || strings.TrimSpace(req.ScheduledAt) != "" {
+			t, err := parseNoticeSchedule(req.ScheduledAt)
+			if err != nil {
+				return nil, err
+			}
+			updates["scheduled_at"] = t
+		}
+		updates["published_at"] = nil
+	case domain.NoticeStatusPublished:
+		// 发布草稿要落发布时间，否则列表排序与已读统计口径都不对
+		updates["published_at"] = now
+		updates["scheduled_at"] = nil
+	}
+	if _, err := s.notices.UpdateNoticeFields(ctx, tc.KindergartenID, id, updates); err != nil {
+		return nil, err
+	}
+	// 目标集与附件都是「以提交列表为准」的整体替换；草稿允许清空目标。
+	if len(req.ClassIDs) > 0 {
+		if err := s.notices.ReplaceNoticeTargets(ctx, tc.KindergartenID, id, req.ClassIDs); err != nil {
+			return nil, err
+		}
+	} else if err := s.notices.ClearNoticeTargets(ctx, id); err != nil {
+		return nil, err
+	}
+	if err := s.notices.DeleteAttachmentsByNoticeID(ctx, id); err != nil {
+		return nil, err
+	}
+	for i := range attachments {
+		attachments[i].NoticeID = id
+	}
+	if err := s.notices.CreateAttachments(ctx, attachments); err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"id": id, "status": status, "updated_at": now.UTC().Format(time.RFC3339),
+	}, nil
 }
 
 func (s *TeacherPortalService) DeleteNotice(ctx context.Context, tc *TeacherPortalContext, id uint64) error {
-	if _, err := s.getVisibleNotice(ctx, tc, id); err != nil {
+	n, err := s.getVisibleNotice(ctx, tc, id)
+	if err != nil {
 		return err
+	}
+	if n.Status != domain.NoticeStatusDraft {
+		return ErrTeacherNoticeState
 	}
 	res := s.db.WithContext(ctx).Where("id = ? AND kindergarten_id = ?", id, tc.KindergartenID).Delete(&domain.Notice{})
 	if res.Error != nil {
@@ -607,12 +837,20 @@ func (s *TeacherPortalService) DeleteNotice(ctx context.Context, tc *TeacherPort
 	if res.RowsAffected == 0 {
 		return ErrTeacherNotFound
 	}
-	return nil
+	// 通知是软删，附件表与目标表都没有软删列，不清理会留下永远读不到的孤儿行
+	if err := s.notices.DeleteAttachmentsByNoticeID(ctx, id); err != nil {
+		return err
+	}
+	return s.notices.ClearNoticeTargets(ctx, id)
 }
 
 func (s *TeacherPortalService) RevokeNotice(ctx context.Context, tc *TeacherPortalContext, id uint64) error {
-	if _, err := s.getVisibleNotice(ctx, tc, id); err != nil {
+	n, err := s.getVisibleNotice(ctx, tc, id)
+	if err != nil {
 		return err
+	}
+	if n.Status != domain.NoticeStatusPublished {
+		return ErrTeacherNoticeState
 	}
 	res := s.db.WithContext(ctx).Model(&domain.Notice{}).
 		Where("id = ? AND kindergarten_id = ?", id, tc.KindergartenID).Update("status", domain.NoticeStatusRevoked)

@@ -213,6 +213,26 @@
 | TC-NEW-NTC-0012 | 已读率-两端数值一致 | P0 | Unit | ✅ |
 | TC-NEW-NTC-0013 | 迁移-存量单班通知行为等价 | P0 | Unit | ✅ |
 
+### 通知草稿 / 定时 / 附件（对应 OpenSpec 变更 `notice-drafts-attachments`）
+
+> 覆盖 `openspec/changes/notice-drafts-attachments/specs/notice-authoring/spec.md` 的 12 个 Scenario，
+> 实现见 `server/internal/service/notice_drafts_test.go`（真实 MySQL，夹具 990201，附件硬删）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-NOT-0001 | 存草稿-仅标题/仅正文均可，班级可空 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0002 | 存草稿-标题正文都为空拒绝 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0003 | 草稿可见性-其他老师列表不含他人草稿 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0004 | 草稿可见性-其他老师打开详情 404 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0005 | 定时发送-过去时间/无时区时间拒绝 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0006 | 定时发送-带 +08:00 的 RFC3339 按同一时刻落库 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0007 | 状态机-编辑已发布通知被拒且内容不变 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0008 | 发布草稿-不完整拒绝并保留草稿，完整则写发布时间 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0009 | 附件-3 张落库，详情/列表一致，编辑整体替换 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0010 | 附件-超 9 张/非图片/单张超 20MB 整单拒绝，9 张边界通过 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0011 | 删除撤回-仅草稿可删、仅已发布可撤回 | P0 | Unit | ✅ |
+| TC-NEW-NOT-0012 | 家长确认-仅已发布可确认，草稿/定时/撤回不产生记录 | P0 | Unit | ✅ |
+
 ## 成长 (GRW)
 
 ### 数据模型（8 张表）
