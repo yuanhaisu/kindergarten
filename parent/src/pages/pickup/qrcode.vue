@@ -4,6 +4,7 @@ import { onLoad, onShow, onHide } from "@dcloudio/uni-app"
 import qrcode from "qrcode-generator"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId } from "@/utils/currentStudent"
+import { relationLabel } from "@/utils/relation"
 import { fetchPickupQRCode } from "@/api/parent-pickup"
 
 const instance = getCurrentInstance()
@@ -21,28 +22,14 @@ const QR_INK = "#1E293B"
 let firstShow = true
 let expiryTimer = 0
 
-const relationLabels = {
-  father: "爸爸",
-  mother: "妈妈",
-  grandfather: "爷爷",
-  grandmother: "奶奶",
-  maternal_grandfather: "外公",
-  maternal_grandmother: "外婆",
-  uncle: "叔叔",
-  aunt: "阿姨",
-  other: "其他"
-}
-
 const isExpired = computed(() => expireAtMs.value > 0 && nowTick.value >= expireAtMs.value)
 const noCredential = computed(() => error.value.includes("请先指定") || error.value === "未获取到接送凭证")
 const statusLabel = computed(() => (refreshing.value ? "刷新中" : isExpired.value ? "已过期" : "有效"))
 const statusClass = computed(() => (refreshing.value ? "is-info" : isExpired.value ? "is-danger" : "is-success"))
 const studentName = computed(() => qrData.value.student?.name || "孩子")
 const personName = computed(() => qrData.value.person?.name || "待指定")
-const personRelation = computed(() => {
-  const relation = qrData.value.person?.relation || "接走人"
-  return relationLabels[relation] || relation
-})
+// 关系统一走 utils/relation.js：兼容 9 个 code 与存量中文，未知值兜底「接走人」
+const personRelation = computed(() => relationLabel(qrData.value.person?.relation, "接走人"))
 const studentInitial = computed(() => (studentName.value || "孩")[0])
 const personInitial = computed(() => (personName.value || "人")[0])
 const expireLabel = computed(() => {
