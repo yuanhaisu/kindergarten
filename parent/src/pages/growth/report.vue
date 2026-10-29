@@ -18,7 +18,17 @@ const types = [
 const DIM_ORDER = ["语言", "认知", "社交", "运动", "艺术", "自理", "情绪"]
 
 const typeLabel = computed(() => types.find((t) => t.key === reportType.value)?.label || "报告")
-const hasReport = computed(() => Boolean(report.value.id || report.value.report_type || report.value.student?.name))
+// 正文行与四格统计分属两层：即使没有报告正文，后端也会返回学生、周期与四格，
+// 此时应展示纸面（四格有值、正文区块按空数组隐藏），而不是落回「这个周期还没有报告」。
+const hasReport = computed(() =>
+  Boolean(
+    report.value.id ||
+    report.value.report_type ||
+    report.value.student?.name ||
+    report.value.period?.start_date ||
+    report.value.attendance
+  )
+)
 const dimensions = computed(() => report.value.dimensions || [])
 const highlights = computed(() => report.value.highlights || [])
 const concerns = computed(() => report.value.concerns || [])
@@ -31,14 +41,11 @@ const periodLabel = computed(() => {
 })
 const stats = computed(() => {
   const r = report.value
-  const tasks = r.tasks_completed != null && r.tasks_total != null
-    ? `${r.tasks_completed}/${r.tasks_total}`
-    : "—"
   return [
     { value: formatRate(r.attendance?.rate), label: "出勤率" },
-    { value: r.points_earned ?? "—", label: "获得积分" },
-    { value: tasks, label: "完成任务" },
-    { value: r.growth_media_count ?? "—", label: "成长记录" }
+    { value: numOrZero(r.points_earned), label: "获得积分" },
+    { value: `${numOrZero(r.tasks_completed)}/${numOrZero(r.tasks_total)}`, label: "完成任务" },
+    { value: numOrZero(r.growth_record_count), label: "成长记录" }
   ]
 })
 const emptyCta = computed(() => {
@@ -48,8 +55,21 @@ const emptyCta = computed(() => {
 })
 
 function formatRate(value) {
-  if (value === null || value === undefined || value === "") return "—"
+  if (value === null || value === undefined || value === "") return "0%"
   return typeof value === "number" ? `${value}%` : value
+}
+
+// 四格统计缺失/null 一律显示 0：后端无数据时返回 0，旧版本接口缺字段也不能留下空白或「—」。
+function numOrZero(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+// 报告周期由 date 决定；页面没有日期选择器，传今天即当前周/月/学期。
+function todayParam() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 function formatDate(value) {
@@ -78,14 +98,17 @@ function toList(value) {
 
 function normalize(data) {
   const raw = data || {}
-  const r = raw.report || raw
-  const period = r.period || {
+  // 后端把报告正文放在 report 里；四格统计、student、period 在顶层（契约 04-growth.md）。
+  // 先铺顶层再铺正文：有正文时以正文为准，无正文时四格统计仍然可读。
+  const r = raw.report || {}
+  const period = raw.period || r.period || {
     type: r.report_type,
     start_date: r.period_start,
     end_date: r.period_end
   }
   const dims = raw.dimensions || r.dimensions || []
   return {
+    ...raw,
     ...r,
     student: r.student || raw.student || {},
     period,
@@ -110,7 +133,7 @@ async function loadData() {
   error.value = ""
   try {
     await ensureLogin()
-    const res = await fetchGrowthReport({ type: reportType.value })
+    const res = await fetchGrowthReport({ type: reportType.value, date: todayParam() })
     report.value = normalize(res.data)
   } catch (e) {
     report.value = {}

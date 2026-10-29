@@ -24,6 +24,10 @@ var (
 	ErrParentNotFound      = errors.New("PARENT_NOT_FOUND")
 	ErrParentInvalidParams = errors.New("PARENT_INVALID_PARAMS")
 	ErrParentForbidden     = errors.New("PARENT_FORBIDDEN")
+	// ErrParentReportPeriod 专指成长报告的周期参数不可用（非法 type/date，或 term 没有
+	// 覆盖该日期的学年配置）。与 ErrParentInvalidParams 分开，是为了避免 handler 把
+	// 「报告周期不正确」误报成「请指定学生」。
+	ErrParentReportPeriod = errors.New("PARENT_REPORT_PERIOD")
 )
 
 type ParentPortalContext struct {
@@ -1701,7 +1705,168 @@ func (s *ParentPortalService) ListGrowthMedia(ctx context.Context, pc *ParentPor
 	return map[string]any{"year": year, "month": month, "groups": groups, "total": len(rows)}, nil
 }
 
-func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPortalContext, studentID uint64, reportType string) (map[string]any, error) {
+// reportPeriod 是报告统计周期的半开区间 [Start, EndExcl)，按 time.Local 计算。
+type reportPeriod struct {
+	Type    string
+	Start   time.Time
+	EndExcl time.Time
+}
+
+func (p reportPeriod) endDate() time.Time { return p.EndExcl.AddDate(0, 0, -1) }
+
+func (p reportPeriod) toMap() map[string]any {
+	return map[string]any{
+		"type":       p.Type,
+		"start_date": p.Start.Format("2006-01-02"),
+		"end_date":   p.endDate().Format("2006-01-02"),
+	}
+}
+
+// resolveGrowthReportPeriod 把 type + date 解析成报告周期。
+// date 缺省为今天；term 必须命中 academic_years 的学期区间——没有配置就报参数错误，
+// 不臆造「整学年」之类的日期范围。
+func (s *ParentPortalService) resolveGrowthReportPeriod(ctx context.Context, kgID uint64, reportType, dateStr string) (reportPeriod, error) {
+	reportType = strings.TrimSpace(reportType)
+	if reportType != "weekly" && reportType != "monthly" && reportType != "term" {
+		return reportPeriod{}, ErrParentReportPeriod
+	}
+
+	day := time.Now().In(time.Local)
+	if dateStr = strings.TrimSpace(dateStr); dateStr != "" {
+		parsed, err := time.ParseInLocation("2006-01-02", dateStr, time.Local)
+		if err != nil {
+			return reportPeriod{}, ErrParentReportPeriod
+		}
+		day = parsed
+	}
+	day = time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.Local)
+
+	switch reportType {
+	case "weekly":
+		offset := (int(day.Weekday()) + 6) % 7 // 周一作为一周起点
+		start := day.AddDate(0, 0, -offset)
+		return reportPeriod{Type: "weekly", Start: start, EndExcl: start.AddDate(0, 0, 7)}, nil
+	case "monthly":
+		start := time.Date(day.Year(), day.Month(), 1, 0, 0, 0, 0, time.Local)
+		return reportPeriod{Type: "monthly", Start: start, EndExcl: start.AddDate(0, 1, 0)}, nil
+	default:
+		return s.resolveTermPeriod(ctx, kgID, day)
+	}
+}
+
+func (s *ParentPortalService) resolveTermPeriod(ctx context.Context, kgID uint64, day time.Time) (reportPeriod, error) {
+	// 同一天可能被多个学年覆盖（历史配置残留）：当前学年优先，避免旧配置抢先命中。
+	var years []domain.AcademicYear
+	if err := s.db.WithContext(ctx).
+		Where("kindergarten_id = ?", kgID).
+		Order("is_current DESC, id DESC").
+		Find(&years).Error; err != nil {
+		return reportPeriod{}, err
+	}
+	for _, y := range years {
+		for _, span := range [][2]string{
+			{y.SemesterSpringStart, y.SemesterSpringEnd},
+			{y.SemesterFallStart, y.SemesterFallEnd},
+		} {
+			start, errStart := time.ParseInLocation("2006-01-02", strings.TrimSpace(span[0]), time.Local)
+			end, errEnd := time.ParseInLocation("2006-01-02", strings.TrimSpace(span[1]), time.Local)
+			if errStart != nil || errEnd != nil || end.Before(start) {
+				continue
+			}
+			if !day.Before(start) && !day.After(end) {
+				return reportPeriod{Type: "term", Start: start, EndExcl: end.AddDate(0, 0, 1)}, nil
+			}
+		}
+	}
+	return reportPeriod{}, ErrParentReportPeriod
+}
+
+type growthReportStats struct {
+	PresentDays       int64
+	LeaveDays         int64
+	TotalDays         int64
+	PointsEarned      int64
+	TasksCompleted    int64
+	TasksTotal        int64
+	GrowthRecordCount int64
+}
+
+// growthReportStats 按周期实时聚合四格。口径见 openspec/changes/growth-report-stats/design.md D2。
+func (s *ParentPortalService) growthReportStats(ctx context.Context, pc *ParentPortalContext, target *domain.Student, period reportPeriod) (growthReportStats, error) {
+	var out growthReportStats
+	db := s.db.WithContext(ctx)
+
+	classAttendance := func() *gorm.DB {
+		return db.Model(&domain.Attendance{}).
+			Where("kindergarten_id = ?", pc.KindergartenID).
+			Where("date >= ? AND date < ?", period.Start, period.EndExcl)
+	}
+	// 分母是班级实际产生考勤记录的天数，不是校历应到天数：老师没记考勤的日子无从
+	// 判断孩子是否到园，计入分母会把正常出勤统计成缺勤。
+	if err := classAttendance().Where("class_id = ?", target.ClassID).
+		Distinct("date").Count(&out.TotalDays).Error; err != nil {
+		return out, err
+	}
+	if err := classAttendance().
+		Where("student_id = ? AND status IN ?", target.ID,
+			[]domain.AttendanceStatus{domain.AttendancePresent, domain.AttendanceLate}).
+		Distinct("date").Count(&out.PresentDays).Error; err != nil {
+		return out, err
+	}
+	if err := classAttendance().
+		Where("student_id = ? AND status = ?", target.ID, domain.AttendanceLeave).
+		Distinct("date").Count(&out.LeaveDays).Error; err != nil {
+		return out, err
+	}
+
+	// 「获得积分」只算正向流水；扣减流水不改写这一格的语义。
+	if err := db.Model(&domain.PointTransaction{}).
+		Where("student_id = ? AND points > 0", target.ID).
+		Where("created_at >= ? AND created_at < ?", period.Start, period.EndExcl).
+		Select("COALESCE(SUM(points), 0)").Scan(&out.PointsEarned).Error; err != nil {
+		return out, err
+	}
+
+	// 任务口径与家长端任务列表一致：班级任务 + 只发给这个孩子的个体任务。
+	// 分子限定在这个任务集合内，避免周期前发布、本周期打卡的任务把完成数顶到分母之上。
+	taskScope := db.Model(&domain.ParentTask{}).
+		Where("kindergarten_id = ? AND ((target_student_id = 0 AND class_id = ?) OR target_student_id = ?)",
+			pc.KindergartenID, target.ClassID, target.ID).
+		Where("start_date >= ? AND start_date < ?", period.Start, period.EndExcl)
+	if err := taskScope.Count(&out.TasksTotal).Error; err != nil {
+		return out, err
+	}
+	if err := db.Model(&domain.TaskCheckIn{}).
+		Where("student_id = ?", target.ID).
+		Where("task_id IN (?)", db.Model(&domain.ParentTask{}).Select("id").
+			Where("kindergarten_id = ? AND ((target_student_id = 0 AND class_id = ?) OR target_student_id = ?)",
+				pc.KindergartenID, target.ClassID, target.ID).
+			Where("start_date >= ? AND start_date < ?", period.Start, period.EndExcl)).
+		Distinct("task_id").Count(&out.TasksCompleted).Error; err != nil {
+		return out, err
+	}
+
+	// 可见性必须复用 growthLogVisibilityWhere，不能在这里另写一套规则。
+	visWhere, visArgs := growthLogVisibilityWhere(pc.KindergartenID, nil, target)
+	if err := db.Model(&domain.GrowthDailyLog{}).
+		Where(visWhere, visArgs...).
+		Where("growth_daily_logs.date >= ? AND growth_daily_logs.date < ?", period.Start, period.EndExcl).
+		Count(&out.GrowthRecordCount).Error; err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+// attendanceRate 返回整数百分比；契约规定分母为 0 时是 "0%"。
+func attendanceRate(present, total int64) string {
+	if total <= 0 {
+		return "0%"
+	}
+	pct := (present*100 + total/2) / total
+	return fmt.Sprintf("%d%%", pct)
+}
+
+func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPortalContext, studentID uint64, reportType, reportDate string) (map[string]any, error) {
 	// 归属校验：请求的孩子必须在家长的孩子名单内（白名单前置，越权请求不触碰数据）
 	var target *domain.Student
 	if studentID == 0 {
@@ -1720,22 +1885,54 @@ func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPor
 			return nil, ErrParentForbidden
 		}
 	}
-	db := s.db.WithContext(ctx).Model(&domain.GrowthReport{}).
-		Preload("Student").
-		Where("student_id = ? AND kindergarten_id = ? AND status = ?", target.ID, pc.KindergartenID, 1)
-	if reportType != "" {
-		db = db.Where("report_type = ?", reportType)
+
+	period, err := s.resolveGrowthReportPeriod(ctx, pc.KindergartenID, reportType, reportDate)
+	if err != nil {
+		return nil, err
 	}
+	stats, err := s.growthReportStats(ctx, pc, target, period)
+	if err != nil {
+		return nil, err
+	}
+
+	// 报告正文与四格统计分属两层：正文没有写入方时四格仍然成立，因此先组装统计，
+	// 再把可选的正文行补进来（保持既有 {report, dimensions} 结构）。
+	data := map[string]any{
+		"student": map[string]any{"id": target.ID, "name": target.Name, "avatar": target.Avatar},
+		"period":  period.toMap(),
+		"attendance": map[string]any{
+			"present_days": stats.PresentDays,
+			"leave_days":   stats.LeaveDays,
+			"total_days":   stats.TotalDays,
+			"rate":         attendanceRate(stats.PresentDays, stats.TotalDays),
+		},
+		"points_earned":       stats.PointsEarned,
+		"tasks_completed":     stats.TasksCompleted,
+		"tasks_total":         stats.TasksTotal,
+		"growth_record_count": stats.GrowthRecordCount,
+	}
+
 	var report domain.GrowthReport
-	if err := db.Order("created_at DESC").First(&report).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return map[string]any{}, nil
-		}
+	err = s.db.WithContext(ctx).Model(&domain.GrowthReport{}).
+		Preload("Student").
+		Where("student_id = ? AND kindergarten_id = ? AND status = ? AND report_type = ?",
+			target.ID, pc.KindergartenID, 1, period.Type).
+		Order("created_at DESC").
+		First(&report).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		data["dimensions"] = []domain.GrowthReportDimension{}
+		return data, nil
+	}
+	if err != nil {
 		return nil, err
 	}
 	var dims []domain.GrowthReportDimension
-	s.db.WithContext(ctx).Where("report_id = ?", report.ID).Find(&dims)
-	return map[string]any{"report": report, "dimensions": dims}, nil
+	if err := s.db.WithContext(ctx).Where("report_id = ?", report.ID).Find(&dims).Error; err != nil {
+		return nil, err
+	}
+	data["report"] = report
+	data["dimensions"] = dims
+	return data, nil
 }
 
 // ==================== Tasks ====================

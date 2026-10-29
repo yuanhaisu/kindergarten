@@ -486,11 +486,15 @@ func (h *Handler) ParentGrowthReport(c *gin.Context) {
 	if sidStr != "" {
 		sid, _ = strconv.ParseUint(sidStr, 10, 64)
 	}
-	data, err := h.parentPortalSvc.GetGrowthReport(c.Request.Context(), pc, sid, c.Query("type"))
+	data, err := h.parentPortalSvc.GetGrowthReport(c.Request.Context(), pc, sid, c.Query("type"), c.Query("date"))
 	if err != nil {
 		// 越权请求与参数缺失都是客户端可纠正的错误，不能打成「服务器错误」
 		if errors.Is(err, service.ErrParentForbidden) {
 			response.ErrNotFound(c, "成长报告不存在")
+			return
+		}
+		if errors.Is(err, service.ErrParentReportPeriod) {
+			response.ErrBadRequest(c, 40047, "报告周期参数不正确")
 			return
 		}
 		if errors.Is(err, service.ErrParentInvalidParams) {

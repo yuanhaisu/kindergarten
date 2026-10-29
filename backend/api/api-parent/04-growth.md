@@ -263,66 +263,64 @@
 
 ### GET `/parent/growth/report`
 
-> 成长报告（周报 / 月报 / 学期报告）
+> 成长报告（周报 / 月报 / 学期报告）。四格统计为**实时聚合**：即使周期的 `growth_reports` 尚无正文行，也照常返回，此时 `report` 缺省、`dimensions` 为 `[]`。
+>
+> 周期口径：`weekly` = `date` 所在周（周一 00:00 – 周日 23:59，本地时区）；`monthly` = `date` 所在自然月；`term` = `academic_years` 中覆盖 `date` 的春季/秋季学期区间。`date` 缺省为今天；`type` 只接受 `weekly` / `monthly` / `term`，非法值或 `term` 无学年配置返回参数错误，不静默回退。
 
 ```json
 // Query: ?student_id=1&type=weekly&date=2026-03-17
-// type: weekly / monthly / term
+// type: weekly / monthly / term（必填）
+// date: YYYY-MM-DD，可落在周期内任意一天；缺省今天
 
 // Response
 {
   "student": { "id": 1, "name": "王小明", "avatar": "..." },
   "period": {
     "type": "weekly",
-    "start_date": "2026-03-17",
-    "end_date": "2026-03-23"
+    "start_date": "2026-03-16",
+    "end_date": "2026-03-22"
   },
   "attendance": {
-    "present_days": 4,
+    "present_days": 2,
     "leave_days": 1,
-    "total_days": 5,
-    "rate": "80%"
+    "total_days": 3,
+    "rate": "67%"
   },
-  "meals": {
-    "breakfast_avg": 2.8,
-    "lunch_avg": 2.5,
-    "dinner_avg": 3.0
-  },
-  "sleep": {
-    "avg_nap_duration": 108,
-    "avg_sleep_quality": 2.6
-  },
-  "mood": {
-    "morning_avg": 2.7,
-    "afternoon_avg": 2.5
-  },
-  "top_performance_tags": [
-    { "tag": "乐于助人", "count": 3 },
-    { "tag": "积极发言", "count": 2 },
-    { "tag": "遵守纪律", "count": 4 }
-  ],
-  "growth_media_count": 15,
   "points_earned": 45,
   "tasks_completed": 8,
   "tasks_total": 12,
+  "growth_record_count": 15,
+  "report": {
+    "id": 1,
+    "report_type": "weekly",
+    "period_start": "2026-03-16T00:00:00+08:00",
+    "period_end": "2026-03-22T00:00:00+08:00",
+    "content": "...",
+    "highlights": "...",
+    "concerns": "...",
+    "student": { "id": 1, "name": "王小明", "avatar": "..." }
+  },
   "dimensions": [
-    { "name": "语言", "score": 85, "max_score": 100, "comment": "表达能力强，词汇量丰富" },
-    { "name": "认知", "score": 78, "max_score": 100, "comment": "逻辑思维良好" },
-    { "name": "社交", "score": 90, "max_score": 100, "comment": "与同伴相处融洽" },
-    { "name": "运动", "score": 72, "max_score": 100, "comment": "大运动发展良好" },
-    { "name": "艺术", "score": 95, "max_score": 100, "comment": "绘画色彩感强" },
-    { "name": "自理", "score": 68, "max_score": 100, "comment": "独立穿衣待加强" },
-    { "name": "情绪", "score": 82, "max_score": 100, "comment": "情绪稳定，善于表达" }
-  ],
-  "highlights": [
-    "美术作品《春天的树》被选为班级展示作品",
-    "本周全勤，并获得全勤之星",
-    "主动帮助同学收拾玩具"
-  ],
-  "concerns": [
-    "午睡时间偏短，建议关注晚间睡眠",
-    "蔬菜摄入量偏少，鼓励尝试新种类"
-  ],
-  "teacher_comment": "王小明本周整体表现优秀，在美术课上表现特别积极，希望继续保持！"
+    { "name": "语言", "score": 85, "max_score": 100, "comment": "表达能力强，词汇量丰富" }
+  ]
 }
 ```
+
+**字段说明**
+
+| 字段 | 说明 |
+| --- | --- |
+| `student` | 当前孩子 `{id, name, avatar}` |
+| `period` | 实际统计周期 `{type, start_date, end_date}`，日期为 `YYYY-MM-DD` |
+| `attendance.total_days` | 周期内**孩子所在班级**实际产生考勤记录的去重天数；老师未记考勤的日子不计入分母 |
+| `attendance.present_days` | 孩子 status ∈ {1 出勤, 4 迟到} 的去重天数 |
+| `attendance.leave_days` | 孩子 status = 3 请假的去重天数 |
+| `attendance.rate` | `present_days / total_days` 的整数百分比字符串；分母为 0 时为 `"0%"` |
+| `points_earned` | 周期内该孩子正向积分流水（`points > 0`）合计，扣减流水不计 |
+| `tasks_total` | 周期内发布给该孩子的任务条数（班级任务 + 只发给该孩子的个体任务，按 `start_date` 落在周期内） |
+| `tasks_completed` | 该孩子在上方任务集合中已打卡的去重任务条数 |
+| `growth_record_count` | 周期内该孩子可见的成长记录条数（`growth_daily_logs` 条数，不是媒体数） |
+| `report` | 报告正文行，保持既有结构；周期内无正文行时**不返回该键** |
+| `dimensions` | 报告维度数组，保持既有结构；无正文行时为 `[]` |
+
+> ⚠️ **2026-10 契约变更**：`growth_media_count` 更名 `growth_record_count`（该字段从未实现，语义是可见记录条数）；四格统计由「已声明未实现」变为真实返回；`date` 参数生效，`term` 增加取值校验。字段溯源见 `openspec/changes/growth-report-stats/design.md`。

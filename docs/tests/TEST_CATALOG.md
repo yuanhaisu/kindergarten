@@ -594,6 +594,23 @@
 | TC-GRW-103 | 全班记录只显示孩子相关照片并提示 | P0 | UI | ✅ |
 | TC-GRW-104 | 全班记录无孩子照片时只看孩子隐藏、看全部可见 | P1 | UI | ✅ |
 
+### 成长报告四格统计（家长端，对应 OpenSpec 变更 `growth-report-stats`）
+
+> 规则见 `openspec/changes/growth-report-stats/specs/growth-report/spec.md`。
+> 四格为 `GetGrowthReport` 的实时聚合（不写 `growth_reports`），由 `server/internal/service/parent_growth_report_test.go` 覆盖；夹具用 `Unscoped()` 硬删。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-GRP-0001 | 无报告行仍返回四格统计 | P0 | Integration | ✅ |
+| TC-NEW-GRP-0002 | 有报告行返回正文、维度与四格 | P0 | Integration | ✅ |
+| TC-NEW-GRP-0003 | 出勤率按班级考勤天数计算（迟到算出席、请假进分母不进分子） | P0 | Integration | ✅ |
+| TC-NEW-GRP-0004 | 获得积分只计正向流水 | P0 | Integration | ✅ |
+| TC-NEW-GRP-0005 | 完成任务按已打卡/周期内任务条数计算 | P0 | Integration | ✅ |
+| TC-NEW-GRP-0006 | 成长记录只计可见记录 | P0 | Integration | ✅ |
+| TC-NEW-GRP-0007 | 非法周期/日期与 term 无学年配置返回参数错误 | P1 | Integration | ✅ |
+| TC-NEW-GRP-0008 | 统计按当前孩子隔离 | P0 | Integration | ✅ |
+| TC-NEW-GRP-0009 | 无数据周期返回零值 | P1 | Integration | ✅ |
+
 ## 管理端权限强制（PERM）— 角色权限端到端生效
 
 > 对应 OpenSpec 变更 `wire-admin-permissions`。行为规格见 `openspec/changes/wire-admin-permissions/specs/admin-rbac/spec.md`。
