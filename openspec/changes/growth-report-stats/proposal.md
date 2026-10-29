@@ -35,6 +35,6 @@
 
 - 契约：`backend/api/api-parent/04-growth.md`（四格字段从「已声明未实现」变为真实返回；`growth_media_count` 更名 `growth_record_count`；`date` 生效、`term` 校验）。
 - 后端：`server/internal/service/parent_portal_service.go`（report 聚合）、`server/internal/handler/http/parent_portal.go`（参数）、定向测试。
-- 家长端：`parent/src/pages/growth/report.vue` 兼容 stats（四格取数改为 stats 优先、旧字段回退），无路由/样式改动。
+- 家长端：`parent/src/pages/growth/report.vue` 四格改读既有字段（含 `growth_record_count`），无路由/样式改动。
 - 其它端：teacher / admin 不受影响。
 - 数据：只读现有 `attendances`、`point_transactions`、`parent_tasks`/`task_check_ins`、`growth_daily_logs`/`growth_media`，无新表。

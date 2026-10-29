@@ -9,7 +9,7 @@
 
 - [ ] 2.1 `parent_portal_service.go`：报告读取增加四格聚合（出勤率分母=周期内班级有考勤记录天数、迟到算出席；积分正向合计；任务条数口径；成长记录复用现有可见性谓词）
 - [ ] 2.2 `parent_portal.go` handler：读取 `date`，校验 `type`/`date`，非法返回参数错误
-- [ ] 2.3 保持 `{report, dimensions}` 兼容；无报告行时 `stats` 仍返回
+- [ ] 2.3 保持 `{report, dimensions}` 兼容；无报告行时四格仍返回
 - [ ] 2.4 [P] 确认未改其它端点、无表结构变化、Casbin/router 不变
 
 ## 3. 家长端页面
@@ -20,14 +20,14 @@
 
 ## 4. 测试
 
-- [ ] 4.1 service 测试：无报告行返回 stats、有报告行兼容、四格口径（迟到、负积分、任务条数、可见性）、孩子隔离、零值
+- [ ] 4.1 service 测试：无报告行返回四格、有报告行兼容、四格口径（迟到、负积分、任务条数、可见性）、孩子隔离、零值
 - [ ] 4.2 handler 测试：非法 type/date 返回参数错误
 - [ ] 4.3 在 `docs/tests/TEST_CATALOG.md` 登记 `TC-NEW-GRP-0001`–`0009`（若已有近似用例则改为引用）
 
 ## 5. 验证
 
 - [ ] 5.1 `cd server && go build ./...` exit 0；定向 `go test ./internal/service/ ./internal/handler/http/ -run 'Report'` exit 0
-- [ ] 5.2 真实 HTTP：无报告行孩子返回 stats；有报告行孩子返回 report+stats；非法参数 400；两个孩子互不混入
+- [ ] 5.2 真实 HTTP：无报告行孩子返回四格；有报告行孩子返回 report+四格；非法参数 400；两个孩子互不混入
 - [ ] 5.3 家长端 DevTools：真实点击切换周期，四格数字与接口一致；空数据零值；Console 0 error
 - [ ] 5.4 `node scripts/check-tokens.mjs parent` 不高于基线；`node scripts/check-secrets.mjs --files <manifest>` 0 findings
 - [ ] 5.5 逐条对照 `specs/growth-report/spec.md` 验收，未验证不得宣布完成

@@ -66,7 +66,7 @@
 | --- | --- | --- |
 | Go domain | 不改 | 四格为计算值，无新表/字段；`GrowthReport` 结构不变 |
 | repository | 不改 | 聚合走 service 现有 `s.db` 模式，与周边 report 读取一致 |
-| service | 会改 | `parent_portal_service.go` 报告读取增加 stats 聚合与可见性复用 |
+| service | 会改 | `parent_portal_service.go` 报告读取增加四格聚合与可见性复用 |
 | handler | 会改 | `parent_portal.go` report handler 读取 `date`、校验 `type`/`date` |
 | Casbin policy | 不改 | `/parent/growth/report` 已在现有策略内 |
 | router.go | 不改 | 路由已存在 |
