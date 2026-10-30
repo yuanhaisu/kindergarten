@@ -720,7 +720,7 @@ onLoad(() => {
 .child-context {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin: 4rpx 4rpx 36rpx;
   min-width: 0;
 }
@@ -747,7 +747,7 @@ onLoad(() => {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 8rpx;
+  gap: $spacing-xs;
   color: $color-text-primary;
   font-size: $typography-font-size-md;
   font-weight: $typography-font-weight-medium;
@@ -834,7 +834,7 @@ onLoad(() => {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
   min-width: 0;
   min-height: 192rpx;
   padding: $spacing-xl 20rpx 26rpx;
@@ -914,7 +914,7 @@ onLoad(() => {
 .date-row {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
   width: 100%;
   min-height: 112rpx;
   padding: 20rpx 32rpx;
@@ -937,7 +937,7 @@ onLoad(() => {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8rpx;
+  gap: $spacing-xs;
   min-width: 0;
   margin-left: auto;
 }
@@ -950,7 +950,7 @@ onLoad(() => {
 }
 
 .date-value.is-set {
-  padding: 8rpx 18rpx;
+  padding: $spacing-xs 18rpx;
   border-radius: $border-radius-full;
   background: $color-brand-primary-bg;
   color: $color-text-primary;
@@ -975,7 +975,7 @@ onLoad(() => {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 24rpx;
+  gap: $spacing-lg;
   padding: 22rpx 32rpx 24rpx;
   border-top: 1rpx solid $color-border-subtle;
 }
@@ -999,7 +999,7 @@ onLoad(() => {
 .field-error {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
+  gap: $spacing-sm;
   margin: 0 32rpx 20rpx;
   // 深一档的红：白底上 $color-semantic-danger 只有 3.76:1（审查 P2-4）。
   color: $color-semantic-danger-strong;
@@ -1019,7 +1019,7 @@ onLoad(() => {
 }
 
 .field-error--reason {
-  margin: 12rpx 0 0;
+  margin: $spacing-sm 0 0;
 }
 
 // ---- 请假原因 -------------------------------------------------
@@ -1060,9 +1060,9 @@ onLoad(() => {
 .stack-field {
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+  gap: $spacing-sm;
   min-width: 0;
-  padding: 24rpx 32rpx;
+  padding: $spacing-lg $spacing-xl;
 
   & + & {
     border-top: 1rpx solid $color-border-subtle;
@@ -1153,7 +1153,7 @@ onLoad(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12rpx;
+  padding: $spacing-sm;
   // 单处半透明遮罩，无对应 token，按规范局部硬编码。
   background: rgba(30, 41, 59, 0.62);
 }
@@ -1178,7 +1178,7 @@ onLoad(() => {
   justify-content: flex-end;
   width: 88rpx;
   height: 88rpx;
-  padding: 8rpx;
+  padding: $spacing-xs;
 }
 
 .remove-dot {
@@ -1207,7 +1207,7 @@ onLoad(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
   padding: $spacing-md;
   border: 2rpx dashed $color-border-hairline;
   border-radius: $border-radius-lg;
@@ -1330,8 +1330,8 @@ onLoad(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24rpx;
-  padding: 24rpx 32rpx;
+  gap: $spacing-lg;
+  padding: $spacing-lg $spacing-xl;
   border-top: 1rpx solid $color-border-subtle;
 }
 
@@ -1363,7 +1363,7 @@ onLoad(() => {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
-  padding: 24rpx 32rpx;
+  padding: $spacing-lg $spacing-xl;
 
   & + & {
     border-top: 1rpx solid $color-border-subtle;
@@ -1478,7 +1478,7 @@ onLoad(() => {
   align-items: center;
   gap: $spacing-md;
   margin-bottom: $spacing-md;
-  padding: 12rpx 12rpx 12rpx 24rpx;
+  padding: $spacing-sm $spacing-sm $spacing-sm $spacing-lg;
   border-radius: $border-radius-xl;
   background: $color-semantic-danger-bg;
 }
@@ -1619,7 +1619,7 @@ onLoad(() => {
   z-index: 1;
   width: 100%;
   max-height: 92vh;
-  padding: 16rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: $spacing-md $spacing-xl calc(24rpx + env(safe-area-inset-bottom));
   overflow-y: auto;
   border-radius: $border-radius-2xl $border-radius-2xl 0 0;
   background: $color-bg-card;
@@ -1650,7 +1650,7 @@ onLoad(() => {
   display: grid;
   grid-template-columns: 88rpx minmax(0, 1fr) 88rpx;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .month-btn {
@@ -1691,7 +1691,7 @@ onLoad(() => {
 }
 
 .weekday-grid {
-  padding: 8rpx 0 4rpx;
+  padding: $spacing-xs 0 4rpx;
 }
 
 .weekday-cell {

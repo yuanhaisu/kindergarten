@@ -649,7 +649,7 @@ onLoad(opts => {
 .note-label {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
   margin-bottom: 8rpx;
   color: $color-text-body;
   font-size: $typography-font-size-xs;
@@ -726,7 +726,7 @@ onLoad(opts => {
 .terminal-note {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
+  gap: $spacing-sm;
   margin: 0 4rpx;
   color: $color-text-muted;
   font-size: $typography-font-size-sm;

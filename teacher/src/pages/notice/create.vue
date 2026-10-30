@@ -838,13 +838,13 @@ async function submit(mode: "draft" | "publish") {
 
 /* 类型 */
 .type-card {
-  padding: 24rpx 28rpx;
+  padding: $spacing-lg 28rpx;
 }
 
 .chips {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12rpx;
+  gap: $spacing-sm;
 }
 
 .chip {
@@ -923,7 +923,7 @@ async function submit(mode: "draft" | "publish") {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8rpx;
+  gap: $spacing-xs;
 }
 
 .cell-value {
@@ -982,7 +982,7 @@ async function submit(mode: "draft" | "publish") {
 
 .field-cell--stack {
   display: block;
-  padding: 24rpx 28rpx 28rpx;
+  padding: $spacing-lg 28rpx 28rpx;
   min-height: 0;
 }
 
@@ -1019,7 +1019,7 @@ async function submit(mode: "draft" | "publish") {
 .field-error {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
   padding: 18rpx 28rpx;
   background: $color-semantic-danger-bg;
   color: $color-semantic-danger;
@@ -1038,7 +1038,7 @@ async function submit(mode: "draft" | "publish") {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8rpx;
+  gap: $spacing-xs;
   margin-bottom: 18rpx;
 }
 
@@ -1051,7 +1051,7 @@ async function submit(mode: "draft" | "publish") {
 .thumbs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .thumb {
@@ -1107,7 +1107,7 @@ async function submit(mode: "draft" | "publish") {
   align-items: center;
   justify-content: center;
   color: $color-text-on-brand;
-  font-size: 36rpx;
+  font-size: $typography-font-size-2xl;
   line-height: 1;
   // 图片右上角的半透明压暗层；token 中没有 overlay 色，按 DESIGN.md 允许单点特殊值。
   background: rgba(30, 41, 59, 0.55);
@@ -1329,7 +1329,7 @@ async function submit(mode: "draft" | "publish") {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
   min-height: 108rpx;
   padding: 0 16rpx;
   border-bottom: 1rpx solid $color-border-hairline;
@@ -1382,7 +1382,7 @@ async function submit(mode: "draft" | "publish") {
   display: flex;
   align-items: center;
   gap: 20rpx;
-  padding: 16rpx 32rpx;
+  padding: $spacing-md $spacing-xl;
   border-top: 1rpx solid $color-border-hairline;
   box-sizing: border-box;
 }
@@ -1435,7 +1435,7 @@ async function submit(mode: "draft" | "publish") {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
   padding: 28rpx 32rpx;
   border-top: 1rpx solid $color-border-hairline;
   box-sizing: border-box;
@@ -1522,7 +1522,7 @@ async function submit(mode: "draft" | "publish") {
   margin-top: 28rpx;
   padding: 20rpx 24rpx;
   display: grid;
-  gap: 12rpx;
+  gap: $spacing-sm;
   background: $color-bg-page;
   border-radius: $border-radius-lg;
   text-align: left;
@@ -1532,7 +1532,7 @@ async function submit(mode: "draft" | "publish") {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 24rpx;
+  gap: $spacing-lg;
 }
 
 .dialog-key {

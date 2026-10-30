@@ -505,7 +505,7 @@ onPullDownRefresh(handleRefresh)
   flex: none;
   display: inline-flex;
   align-items: center;
-  padding: 8rpx $component-badge-padding-x;
+  padding: $spacing-xs $component-badge-padding-x;
   border-radius: $component-badge-radius;
   font-size: $typography-font-size-xs;
   font-weight: $typography-font-weight-medium;

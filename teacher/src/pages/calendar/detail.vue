@@ -317,7 +317,7 @@ onShow(() => {
   font-size: $typography-font-size-xs;
   font-weight: 600;
   line-height: 1;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba($color-text-on-brand, 0.55);
 }
 .type-label {
   padding-right: 2rpx;

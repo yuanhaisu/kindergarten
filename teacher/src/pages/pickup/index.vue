@@ -113,6 +113,14 @@ const isPageEmpty = computed(
     students.value.length === 0
 )
 
+// 默认筛选（已入园未接走）为空有两种原因：今天还没人入园，或已入园的都接走了。
+// 只按计数区分，避免把「无人入园」误述成「全部孩子已完成接送」。
+const emptyKind = computed(() =>
+  Number(overview.value.picked_up || 0) === 0 && Number(overview.value.not_picked_up || 0) === 0
+    ? "no_arrival"
+    : "all_picked"
+)
+
 const showOverview = computed(() => !loadError.value && !isPageEmpty.value)
 const showListHead = computed(() => showOverview.value && !loading.value)
 
@@ -583,11 +591,13 @@ onPullDownRefresh(loadPickup)
         <view class="state-btn" @click="loadPickup">重试</view>
       </view>
 
-      <!-- 默认筛选为空 = 全班都接走了 -->
+      <!-- 默认筛选为空有两种原因，不能一律说成「都接走了」 -->
       <view v-else-if="isPageEmpty" class="state-view">
         <view class="state-icon"><text class="icon">&#xeb81;</text></view>
-        <text class="state-title">今天没有待接的孩子</text>
-        <text class="state-desc">全部孩子已完成接送，下拉可刷新</text>
+        <text v-if="emptyKind === 'no_arrival'" class="state-title">今天还没有孩子入园</text>
+        <text v-else class="state-title">今天没有待接的孩子</text>
+        <text v-if="emptyKind === 'no_arrival'" class="state-desc">登记入园后，待接走的孩子会显示在这里</text>
+        <text v-else class="state-desc">全部孩子已完成接送，下拉可刷新</text>
         <view class="state-btn" @click="goRecords">查看今日记录</view>
       </view>
 

@@ -85,7 +85,7 @@ defineEmits(["retry"])
   padding: $spacing-sm $spacing-xl;
   border-radius: $border-radius-full;
   background: $color-semantic-info;
-  color: #fff;
+  color: $color-text-on-accent;
   font-size: $typography-font-size-base;
 }
 

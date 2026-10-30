@@ -294,7 +294,7 @@ onHide(() => {
 /* 凭证卡 */
 .pass-card {
   position: relative;
-  padding: 32rpx;
+  padding: $spacing-xl;
   border: 1rpx solid $color-border-hairline;
   border-radius: $component-card-radius;
   background: $color-bg-card;
@@ -361,7 +361,7 @@ onHide(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: $spacing-xs;
   min-width: 0;
 }
 
@@ -479,7 +479,7 @@ onHide(() => {
 }
 
 .qr-mask-text {
-  padding: 12rpx 24rpx;
+  padding: $spacing-sm $spacing-lg;
   border-radius: $border-radius-full;
   background: $color-bg-card;
   color: $color-semantic-danger;
@@ -595,7 +595,7 @@ onHide(() => {
 .usage-row {
   display: flex;
   align-items: flex-start;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-top: 16rpx;
 }
 
@@ -658,7 +658,7 @@ onHide(() => {
 
 .state-copy {
   max-width: 560rpx;
-  margin: 16rpx 0 40rpx;
+  margin: $spacing-md 0 40rpx;
   color: $color-text-muted;
   font-size: $typography-font-size-base;
   line-height: 1.6;
@@ -672,14 +672,14 @@ onHide(() => {
 
 /* 骨架 */
 .skeleton {
-  padding: 32rpx;
+  padding: $spacing-xl;
 }
 
 .sk-pass-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
+  gap: $spacing-md;
 }
 
 .sk {
@@ -710,7 +710,7 @@ onHide(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-top: 32rpx;
 }
 
@@ -728,7 +728,7 @@ onHide(() => {
 .sk-qr {
   width: 464rpx;
   height: 464rpx;
-  margin: 32rpx auto 24rpx;
+  margin: $spacing-xl auto $spacing-lg;
   border-radius: $border-radius-xl;
 }
 

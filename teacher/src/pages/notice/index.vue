@@ -625,7 +625,7 @@ onReachBottom(loadMore)
   margin-top: 4rpx;
   font-size: $typography-font-size-sm;
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba($color-text-on-brand, 0.82);
 }
 
 .publish-btn {
@@ -650,7 +650,7 @@ onReachBottom(loadMore)
   display: flex;
   margin-top: 24rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.24);
+  border-top: 1rpx solid rgba($color-text-on-brand, 0.24);
 }
 
 .hero-stat {
@@ -671,7 +671,7 @@ onReachBottom(loadMore)
 .hero-label {
   margin-top: 2rpx;
   font-size: $typography-font-size-xs;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba($color-text-on-brand, 0.78);
 }
 
 /* ===== 筛选 ===== */
@@ -770,7 +770,7 @@ onReachBottom(loadMore)
 }
 
 .notice-card {
-  padding: 24rpx;
+  padding: $spacing-lg;
   border: 1rpx solid $color-border-hairline;
   border-radius: $border-radius-xl;
   background: $color-bg-card;
@@ -971,7 +971,7 @@ onReachBottom(loadMore)
 .sheet {
   width: 100%;
   max-height: 86vh;
-  padding: 12rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: $spacing-sm $spacing-xl calc(24rpx + env(safe-area-inset-bottom));
   border-radius: 32rpx 32rpx 0 0;
   background: $color-bg-card;
   box-sizing: border-box;
@@ -1230,7 +1230,7 @@ onReachBottom(loadMore)
 }
 
 .sheet-retry {
-  padding: 12rpx 28rpx;
+  padding: $spacing-sm 28rpx;
   border-radius: $border-radius-full;
   background: $color-brand-primary-bg;
 

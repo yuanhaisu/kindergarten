@@ -10,17 +10,13 @@
 // @import "@/static/fonts/remixicon.css";
 
 // ============================================================
-// 端特有变量（模块主题色，暂不进入 shared tokens）
+// 端特有变量
 // 注意：值等于 shared token 的别名已移除（green/blue/yellow/red/gray 及其浅底），
 // 直接使用 $color-semantic-* / $color-text-muted —— 那是「token 重定义」，会被
-// scripts/check-tokens.mjs 判违规。下面的紫/粉/青暂未进 tokens，保留。
+// scripts/check-tokens.mjs 判违规。
+// 2026-10-31：紫/粉/青 6 个 $parent-* 模块色零引用，一并移除。紫对应 shared 的
+// $color-accent-purple(-bg)；粉/青暂未进 tokens，需要时先补 tokens.json。
 // ============================================================
-$parent-purple:        #9333EA;
-$parent-purple-bg:     #F3E8FF;
-$parent-pink:          #EC4899;
-$parent-pink-bg:       #FCE7F3;
-$parent-cyan:          #06B6D4;
-$parent-cyan-bg:        #CFFAFE;
 
 // 导航栏尺寸
 $parent-nav-height:    88rpx;

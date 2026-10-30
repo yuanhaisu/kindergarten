@@ -764,7 +764,7 @@ onLoad(() => loadData(false))
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
 }
 
 .skel-stat + .skel-stat {
@@ -782,7 +782,7 @@ onLoad(() => loadData(false))
 }
 
 .skeleton-body {
-  padding: 32rpx;
+  padding: $spacing-xl;
 }
 
 .skel-title {
@@ -795,7 +795,7 @@ onLoad(() => loadData(false))
   height: 192rpx;
   display: flex;
   align-items: flex-end;
-  gap: 8rpx;
+  gap: $spacing-xs;
   margin-bottom: 32rpx;
 }
 

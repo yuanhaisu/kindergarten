@@ -341,7 +341,7 @@ onUnload(() => {
   display: flex;
   align-items: center;
   gap: 28rpx;
-  padding: 12rpx 4rpx 36rpx;
+  padding: $spacing-sm 4rpx 36rpx;
 }
 
 .hero-copy {
@@ -524,7 +524,7 @@ onUnload(() => {
 }
 
 .field-report.is-error {
-  padding: 12rpx 18rpx;
+  padding: $spacing-sm 18rpx;
   border-radius: $border-radius-lg;
   background: $color-semantic-danger-bg;
   color: $color-text-primary;

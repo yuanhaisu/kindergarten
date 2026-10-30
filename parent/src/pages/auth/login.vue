@@ -282,7 +282,7 @@ onLoad(() => {
   flex: none;
   width: 30rpx;
   height: 30rpx;
-  border: 4rpx solid rgba(255, 255, 255, 0.34);
+  border: 4rpx solid rgba($color-text-on-brand, 0.34);
   border-top-color: $color-text-on-brand;
   border-radius: $border-radius-full;
   animation: spin 0.8s linear infinite;

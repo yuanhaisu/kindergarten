@@ -359,7 +359,7 @@ onShareAppMessage((res) => {
   align-items: center;
   gap: 2rpx;
   margin-top: 4rpx;
-  padding: 8rpx 0;
+  padding: $spacing-xs 0;
 }
 
 .greet-sub {
@@ -504,7 +504,7 @@ onShareAppMessage((res) => {
 .entries {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24rpx 20rpx;
+  gap: $spacing-lg 20rpx;
   margin: $spacing-xl 0 $spacing-md;
 }
 

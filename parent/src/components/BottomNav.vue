@@ -41,7 +41,7 @@ function onTab(tab, index) {
   display: flex;
   justify-content: space-around;
   padding: $spacing-lg 48rpx calc(24rpx + env(safe-area-inset-bottom));
-  background: #fff;
+  background: $color-bg-card;
   box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.06);
 }
 
@@ -54,12 +54,12 @@ function onTab(tab, index) {
 
 .nav-icon {
   font-size: 48rpx;
-  color: #94A3B8;
+  color: $color-text-hint;
 }
 
 .nav-label {
   font-size: $typography-font-size-xs;
-  color: #94A3B8;
+  color: $color-text-hint;
 }
 
 .nav-item.active {

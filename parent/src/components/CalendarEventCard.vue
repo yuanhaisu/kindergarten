@@ -1,3 +1,8 @@
+<!--
+  本组件有 3 处家长端表面色字面量（#FFFFFF / #FFF7ED / #EA580C，见 .is-parent-surface）：
+  非 token 违规，属家长端表面复制。「预览家长视角」必须与家长端日历像素一致，
+  不能换成老师端 token；改 tokens.json 的 parent 分支时需同步这 3 个值。
+-->
 <template>
   <view
     class="event-card"
