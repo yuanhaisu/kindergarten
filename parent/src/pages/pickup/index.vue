@@ -23,6 +23,8 @@ const ICON = {
   sprout: "", // seedling-line
   check: "", // check-line
   qr: "", // qr-code-line
+  refresh: "\u{f064}", // refresh-line
+  chevron: "\u{ea6e}", // arrow-right-s-line
   error: "" // error-warning-line
 }
 
@@ -31,6 +33,7 @@ const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "�
 const records = ref([])
 const loading = ref(false)
 const retrying = ref(false)
+const refreshingDay = ref("")
 const hasLoaded = ref(false)
 const loadError = ref("")
 const student = ref({ name: "", class_name: "" })
@@ -159,10 +162,12 @@ async function loadData() {
     console.warn("[pickup-index] load failed:", err?.message || err)
     // 已加载过内容时保留旧数据，只有一次都没拿到才切整页错误态。
     if (records.value.length === 0) loadError.value = "接送记录加载失败"
+    return false
   } finally {
     loading.value = false
     uni.stopPullDownRefresh()
   }
+  return true
 }
 
 async function handleRetry() {
@@ -175,6 +180,16 @@ async function handleRetry() {
   } else {
     uni.showToast({ title: "已重新加载", icon: "none" })
   }
+}
+
+// 接口只有整页 GET：组级刷新实际重拉整页，只让被点的那一组图标转圈，
+// 避免所有日期组同时转起来造成「各刷各的」的错觉。
+async function handleDayRefresh(group) {
+  if (loading.value) return
+  refreshingDay.value = group.key
+  const ok = await loadData()
+  refreshingDay.value = ""
+  uni.showToast({ title: ok ? "已刷新接送记录" : "刷新失败，请稍后再试", icon: "none" })
 }
 
 function goQRCode() {
@@ -337,6 +352,13 @@ onPullDownRefresh(loadData)
             <view class="day-head">
               <text class="day-title">{{ group.label }}</text>
               <text v-if="group.weekday" class="day-week">{{ group.weekday }}</text>
+              <view
+                class="day-refresh"
+                :class="{ 'is-spinning': refreshingDay === group.key }"
+                @click="handleDayRefresh(group)"
+              >
+                <text class="day-refresh-glyph">{{ ICON.refresh }}</text>
+              </view>
             </view>
             <view v-for="row in group.rows" :key="row.id" class="rec-row">
               <text class="rec-type" :class="row.isOut ? 'rec-type--out' : 'rec-type--in'">{{ row.typeLabel }}</text>
@@ -347,7 +369,10 @@ onPullDownRefresh(loadData)
                 </view>
                 <text class="rec-rel">{{ row.relation }}</text>
               </view>
-              <text class="rec-time">{{ row.time }}</text>
+              <view class="rec-end">
+                <text class="rec-time">{{ row.time }}</text>
+                <text class="rec-chev">{{ ICON.chevron }}</text>
+              </view>
             </view>
           </view>
         </view>
@@ -735,6 +760,41 @@ onPullDownRefresh(loadData)
   line-height: 1.35;
 }
 
+.day-refresh {
+  flex: none;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: $border-radius-full;
+  color: $color-text-muted;
+}
+
+.day-refresh:active {
+  background: $color-bg-page;
+}
+
+.day-refresh-glyph {
+  font-family: remixicon;
+  font-size: $typography-font-size-2xl;
+  line-height: 1;
+}
+
+.day-refresh.is-spinning .day-refresh-glyph {
+  animation: pickup-spin 600ms $animation-easing-default;
+}
+
+@keyframes pickup-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .day-week {
   padding: 4rpx 14rpx;
   border-radius: $border-radius-full;
@@ -820,11 +880,25 @@ onPullDownRefresh(loadData)
   line-height: 1.5;
 }
 
+.rec-end {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  flex: none;
+}
+
 .rec-time {
   color: $color-text-body;
   font-size: $typography-font-size-base;
   font-weight: $typography-font-weight-medium;
   line-height: 1.35;
+}
+
+.rec-chev {
+  color: $color-text-muted;
+  font-family: remixicon;
+  font-size: $typography-font-size-xl;
+  line-height: 1;
 }
 
 // ---- 空态 / 错误态 ------------------------------------------
@@ -1092,6 +1166,10 @@ onPullDownRefresh(loadData)
   .sk {
     animation: none;
     opacity: 0.7;
+  }
+
+  .day-refresh.is-spinning .day-refresh-glyph {
+    animation: none;
   }
 }
 </style>

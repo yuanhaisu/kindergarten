@@ -112,12 +112,17 @@ function creatorName(item) {
   return item.creator?.nickname || "园所通知"
 }
 
+// 只有时间行的正文（「时间：2026-10-24 09:00」）在列表里读起来像残句；
+// 它不含任何通知内容，预览按无正文处理，完整正文仍在详情页。
+const TIME_ONLY_PREVIEW =
+  /^时间\s*[:：]?\s*(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}(?:\s+\d{1,2}:\d{2}(?:\s*[-–~至]\s*\d{1,2}:\d{2})?)?|\d{1,2}:\d{2}(?:\s*[-–~至]\s*\d{1,2}:\d{2})?)$/
+
 function previewOf(item) {
-  if (item.content_preview) return item.content_preview
-  const text = String(item.content || "").replace(/\s+/g, " ").trim()
-  if (!text) return ""
-  const chars = Array.from(text)
-  return chars.length > 80 ? `${chars.slice(0, 80).join("")}…` : text
+  // 列表只认后端给出的 content_preview：它为空说明正文为空，不再回退原文，
+  // 否则空正文会退化成一行孤立的「时间：」。
+  const text = String(item.content_preview || "").replace(/\s+/g, " ").trim()
+  if (!text || TIME_ONLY_PREVIEW.test(text)) return ""
+  return text
 }
 
 function metaLine(item) {
@@ -281,7 +286,9 @@ onPullDownRefresh(() => {
             <text class="notice-title" :class="{ 'is-unread': !item.is_read }">{{ item.title }}</text>
             <view v-if="!item.is_read" class="unread-dot" />
           </view>
-          <text class="notice-preview">{{ previewOf(item) }}</text>
+          <text class="notice-preview" :class="{ 'is-placeholder': !previewOf(item) }">
+            {{ previewOf(item) || "暂无正文预览" }}
+          </text>
           <text class="notice-meta">{{ metaLine(item) }}</text>
         </view>
         <text class="notice-arrow">{{ ICON.chevron }}</text>
@@ -554,6 +561,11 @@ onPullDownRefresh(() => {
   overflow-wrap: break-word;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+// 两行预览的高度：无正文时卡片不会突然塌成单行。
+.notice-preview.is-placeholder {
+  min-height: 3.1em;
 }
 
 .notice-meta {
