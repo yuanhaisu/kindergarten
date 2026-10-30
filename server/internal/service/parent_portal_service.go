@@ -1172,12 +1172,81 @@ func (s *ParentPortalService) CancelLeave(ctx context.Context, pc *ParentPortalC
 
 // ==================== Notices ====================
 
+// parentNoticePreviewRunes 列表预览长度（字符数）。契约要求「一行预览」，
+// 60 字约等于手机端两行；再长由前端省略号收尾。
+const parentNoticePreviewRunes = 60
+
+// parentNoticeCategoryLabel 家长端通知类型中文标签。
+// noticeCategoryLabel 没有 task 分支（老师/管理端列表不展示该类型），
+// 而家长端契约与设计稿都要求「任务」，这里只补这一条，其余复用同一张映射表。
+func parentNoticeCategoryLabel(c domain.NoticeCategory) string {
+	if c == domain.NoticeCategoryTask {
+		return "任务"
+	}
+	return noticeCategoryLabel(c)
+}
+
+// parentNoticeContentPreview 把正文压成单行预览：所有空白（含换行）折叠成一个空格，
+// 超过 maxRunes 个字符截断并加省略号。通知正文按自然段书写，直接截原串会把换行带进列表。
+func parentNoticeContentPreview(s string, maxRunes int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if s == "" {
+		return ""
+	}
+	r := []rune(s)
+	if len(r) <= maxRunes {
+		return s
+	}
+	return string(r[:maxRunes]) + "…"
+}
+
+// parentNoticeCreators 批量取通知创建者展示字段（昵称/头像），已删用户不出现。
+// 列表与详情共用，避免逐条查作者。
+func (s *ParentPortalService) parentNoticeCreators(ctx context.Context, ids []uint64) (map[uint64]map[string]any, error) {
+	out := make(map[uint64]map[string]any, len(ids))
+	uniq := make([]uint64, 0, len(ids))
+	seen := make(map[uint64]struct{}, len(ids))
+	for _, id := range ids {
+		if id == 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+	if len(uniq) == 0 {
+		return out, nil
+	}
+	var users []domain.User
+	if err := s.db.WithContext(ctx).Select("id", "nickname", "avatar").Where("id IN ?", uniq).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	for _, u := range users {
+		out[u.ID] = map[string]any{"nickname": u.Nickname, "avatar": u.Avatar}
+	}
+	return out, nil
+}
+
+// ParentNoticeListFilter 家长端通知列表过滤条件。
+// IsRead 三态：nil 不过滤；true 只看有读记录的；false 只看无读记录的。
+type ParentNoticeListFilter struct {
+	Category string
+	IsRead   *bool
+}
+
 // MarkNoticeRead 标记通知已读。
 func (s *ParentPortalService) MarkNoticeRead(ctx context.Context, pc *ParentPortalContext, noticeID uint64) error {
 	return s.notice.RecordReadLog(ctx, noticeID, pc.UserID)
 }
 
+// ListNotices 保留原签名，等价于不带 is_read 过滤（既有调用方无需改动）。
 func (s *ParentPortalService) ListNotices(ctx context.Context, pc *ParentPortalContext, category string, page, pageSize int) (map[string]any, error) {
+	return s.ListNoticesFiltered(ctx, pc, ParentNoticeListFilter{Category: category}, page, pageSize)
+}
+
+func (s *ParentPortalService) ListNoticesFiltered(ctx context.Context, pc *ParentPortalContext, filter ParentNoticeListFilter, page, pageSize int) (map[string]any, error) {
 	classIDs := make([]uint64, len(pc.Students))
 	for i, st := range pc.Students {
 		classIDs[i] = st.ClassID
@@ -1189,8 +1258,16 @@ func (s *ParentPortalService) ListNotices(ctx context.Context, pc *ParentPortalC
 	// EXISTS 命中判定：任一孩子班级命中目标集即可见，一条通知只出一行（多孩合并）
 	db := s.notice.FilterByTargetHit(s.db.WithContext(ctx).Model(&domain.Notice{}).
 		Where("kindergarten_id = ? AND status = ?", pc.KindergartenID, domain.NoticeStatusPublished), classIDs)
-	if category != "" {
-		db = db.Where("category = ?", category)
+	if filter.Category != "" {
+		db = db.Where("category = ?", filter.Category)
+	}
+	// is_read 按「该家长在这条通知上有没有读记录」判定，与列表返回的 is_read 同源。
+	if filter.IsRead != nil {
+		if *filter.IsRead {
+			db = db.Where("EXISTS (SELECT 1 FROM notice_read_logs rl WHERE rl.notice_id = notices.id AND rl.user_id = ? AND rl.deleted_at IS NULL)", pc.UserID)
+		} else {
+			db = db.Where("NOT EXISTS (SELECT 1 FROM notice_read_logs rl WHERE rl.notice_id = notices.id AND rl.user_id = ? AND rl.deleted_at IS NULL)", pc.UserID)
+		}
 	}
 
 	var total int64
@@ -1204,19 +1281,45 @@ func (s *ParentPortalService) ListNotices(ctx context.Context, pc *ParentPortalC
 		return nil, err
 	}
 
+	noticeIDs := make([]uint64, 0, len(rows))
+	creatorIDs := make([]uint64, 0, len(rows))
+	for _, n := range rows {
+		noticeIDs = append(noticeIDs, n.ID)
+		creatorIDs = append(creatorIDs, n.CreatorID)
+	}
+	// 作者、附件数、当前家长的读记录各一次批量查询：一页 20 条不能退化成 60 次查询。
+	creators, err := s.parentNoticeCreators(ctx, creatorIDs)
+	if err != nil {
+		return nil, err
+	}
+	attachmentCounts, err := s.notice.AttachmentCountsByNoticeIDs(ctx, noticeIDs)
+	if err != nil {
+		return nil, err
+	}
+	readLogs, err := s.notice.FindReadLogsByUserAndNoticeIDs(ctx, pc.UserID, noticeIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	list := make([]map[string]any, len(rows))
 	for i, n := range rows {
-		var readLog domain.NoticeReadLog
-		_ = s.db.WithContext(ctx).Where("notice_id = ? AND user_id = ?", n.ID, pc.UserID).First(&readLog).Error
-		isRead := !readLog.ReadAt.IsZero()
-		isConfirmed := readLog.ConfirmedAt != nil
-		catLabel := string(n.Category)
+		readLog := readLogs[n.ID]
+		creator := map[string]any{"nickname": "", "avatar": ""}
+		if c, ok := creators[n.CreatorID]; ok {
+			creator = c
+		}
 		list[i] = map[string]any{
-			"id": n.ID, "category": n.Category, "category_label": catLabel,
-			"title": n.Title, "content": n.Content, "need_confirm": n.NeedConfirm,
-			"status": n.Status, "published_at": formatOptionalTime(n.PublishedAt),
+			"id": n.ID, "category": n.Category, "category_label": parentNoticeCategoryLabel(n.Category),
+			"title": n.Title,
+			// 列表只承载预览；content 保留给沿用旧字段的调用方，不在此改动其语义。
+			"content_preview": parentNoticeContentPreview(n.Content, parentNoticePreviewRunes),
+			"content":         n.Content,
+			"need_confirm":    n.NeedConfirm,
+			"status":          n.Status, "published_at": formatOptionalTime(n.PublishedAt),
 			"created_at": n.CreatedAt.UTC().Format(time.RFC3339),
-			"is_read":    isRead, "is_confirmed": isConfirmed,
+			"is_read":    !readLog.ReadAt.IsZero(), "is_confirmed": readLog.ConfirmedAt != nil,
+			"attachments_count": attachmentCounts[n.ID],
+			"creator":           creator,
 		}
 	}
 	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
@@ -1236,16 +1339,55 @@ func (s *ParentPortalService) GetNotice(ctx context.Context, pc *ParentPortalCon
 		}
 		return nil, err
 	}
+
+	atts, err := s.notice.ListAttachmentsByNoticeID(ctx, n.ID)
+	if err != nil {
+		return nil, err
+	}
+	attachments := make([]map[string]any, 0, len(atts))
+	for _, a := range atts {
+		attachments = append(attachments, map[string]any{
+			"id": a.ID, "file_url": a.FileURL, "file_type": a.FileType,
+			"file_name": a.FileName, "file_size": a.FileSize,
+		})
+	}
+
+	// 读记录只影响展示；查不到表示未读。其它错误必须上抛，否则数据库故障会被伪装成「未读」。
 	var readLog domain.NoticeReadLog
-	_ = s.db.WithContext(ctx).Where("notice_id = ? AND user_id = ?", n.ID, pc.UserID).First(&readLog).Error
-	isRead := !readLog.ReadAt.IsZero()
-	isConfirmed := readLog.ConfirmedAt != nil
+	err = s.db.WithContext(ctx).Where("notice_id = ? AND user_id = ?", n.ID, pc.UserID).First(&readLog).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	hasReadLog := err == nil
+	isRead := hasReadLog && !readLog.ReadAt.IsZero()
+	isConfirmed := hasReadLog && readLog.ConfirmedAt != nil
+	var readAt, confirmedAt any
+	if isRead {
+		readAt = readLog.ReadAt.UTC().Format(time.RFC3339)
+	}
+	if isConfirmed {
+		confirmedAt = readLog.ConfirmedAt.UTC().Format(time.RFC3339)
+	}
+
+	creators, err := s.parentNoticeCreators(ctx, []uint64{n.CreatorID})
+	if err != nil {
+		return nil, err
+	}
+	creator := map[string]any{"id": n.CreatorID, "nickname": "", "avatar": ""}
+	if c, ok := creators[n.CreatorID]; ok {
+		creator["nickname"] = c["nickname"]
+		creator["avatar"] = c["avatar"]
+	}
+
 	return map[string]any{
-		"id": n.ID, "category": n.Category, "title": n.Title, "content": n.Content,
+		"id": n.ID, "category": n.Category, "category_label": parentNoticeCategoryLabel(n.Category),
+		"title": n.Title, "content": n.Content,
 		"need_confirm": n.NeedConfirm, "status": n.Status,
 		"published_at": formatOptionalTime(n.PublishedAt),
 		"created_at":   n.CreatedAt.UTC().Format(time.RFC3339),
 		"is_read":      isRead, "is_confirmed": isConfirmed,
+		"read_at": readAt, "confirmed_at": confirmedAt,
+		"attachments": attachments, "creator": creator,
 	}, nil
 }
 

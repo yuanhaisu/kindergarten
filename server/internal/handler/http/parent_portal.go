@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -168,12 +169,30 @@ func (h *Handler) ParentListNotices(c *gin.Context) {
 		return
 	}
 	page, ps := ppPage(c)
-	result, err := h.parentPortalSvc.ListNotices(c.Request.Context(), pc, c.Query("category"), page, ps)
+	result, err := h.parentPortalSvc.ListNoticesFiltered(c.Request.Context(), pc, service.ParentNoticeListFilter{
+		Category: c.Query("category"),
+		IsRead:   parseNoticeIsReadQuery(c.Query("is_read")),
+	}, page, ps)
 	if err != nil {
 		response.ErrInternal(c, "获取通知列表失败")
 		return
 	}
 	response.OK(c, result)
+}
+
+// parseNoticeIsReadQuery 解析 is_read 三态：true=只看已读、false=只看未读、缺省/其它=不过滤。
+// 契约只定义 true/false；拼错的值按「不过滤」处理，避免前端参数失误让整页 400。
+func parseNoticeIsReadQuery(raw string) *bool {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "true":
+		v := true
+		return &v
+	case "false":
+		v := false
+		return &v
+	default:
+		return nil
+	}
 }
 func (h *Handler) ParentGetNotice(c *gin.Context) {
 	pc, ok := h.parentCtx(c)

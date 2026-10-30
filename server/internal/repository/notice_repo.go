@@ -470,3 +470,23 @@ func (r *NoticeRepo) CheckReadStatus(ctx context.Context, userID uint64, noticeI
 	}
 	return result, nil
 }
+
+// FindReadLogsByUserAndNoticeIDs 批量取某用户对一批通知的已读/确认记录（按 notice_id 索引）。
+// 家长端列表的 is_read/is_confirmed 与详情的 read_at/confirmed_at 共用这一处：
+// 逐条查会把一页 20 条退化成 20 次查询。没有记录的通知不出现在 map 中。
+func (r *NoticeRepo) FindReadLogsByUserAndNoticeIDs(ctx context.Context, userID uint64, noticeIDs []uint64) (map[uint64]domain.NoticeReadLog, error) {
+	out := make(map[uint64]domain.NoticeReadLog, len(noticeIDs))
+	if len(noticeIDs) == 0 {
+		return out, nil
+	}
+	var rows []domain.NoticeReadLog
+	if err := r.db.WithContext(ctx).
+		Where("user_id = ? AND notice_id IN ?", userID, noticeIDs).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.NoticeID] = row
+	}
+	return out, nil
+}
