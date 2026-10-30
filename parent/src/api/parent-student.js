@@ -31,7 +31,10 @@ export function bindStudent(inviteCode) {
   return requestWithAuth({
     url: "/parent/students/bind",
     method: "POST",
-    data: { invite_code: inviteCode }
+    data: { invite_code: inviteCode },
+    // 绑定页在输入区原位播报三种失败文案；让 http 层再弹一次全局 toast
+    // 会盖掉更准确的分档提示（与 fetchStudents 同一约定）。
+    silent: true
   })
 }
 
