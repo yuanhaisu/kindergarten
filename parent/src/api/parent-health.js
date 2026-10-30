@@ -1,10 +1,12 @@
 import { requestWithAuth } from "@/api/http"
 
 // 最近 7 天已完成的晨检记录；只允许查询本人绑定孩子。
+// silent：晨检失败由页面内联错误块承接，不再叠加全局 toast。
 export function fetchHealthRecords(studentId) {
   return requestWithAuth({
     url: "/parent/health/records",
     method: "GET",
-    data: { student_id: studentId }
+    data: { student_id: studentId },
+    silent: true
   })
 }

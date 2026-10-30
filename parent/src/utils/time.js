@@ -27,6 +27,17 @@ export function formatDateLabel(date) {
 }
 
 /**
+ * 纯日期 → "2022-05-18"；格式不符（含后端零值下发的空串）返回空串，
+ * 由调用方用「—」占位。不经过 Date，避免时区把日期推前一天。
+ */
+export function formatDateOnly(date) {
+  const m = String(date || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
+  // Go 零值 time.Time 若漏过服务端过滤会下发 0001-01-01，它不是真实日期。
+  if (!m || m[1] === "0001") return ""
+  return `${m[1]}-${m[2]}-${m[3]}`
+}
+
+/**
  * 日期分组标题：今天是「今天」、昨天是「昨天」，其余「10月24日」。
  * 按设备本地日期比较，避免把 UTC 的 created_at 直接 slice 后跨零点错一天。
  */
