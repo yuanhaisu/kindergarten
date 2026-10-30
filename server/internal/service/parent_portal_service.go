@@ -28,6 +28,8 @@ var (
 	// 覆盖该日期的学年配置）。与 ErrParentInvalidParams 分开，是为了避免 handler 把
 	// 「报告周期不正确」误报成「请指定学生」。
 	ErrParentReportPeriod = errors.New("PARENT_REPORT_PERIOD")
+	// ErrParentLeaveNotCancelable 只有待审批请假可撤销；其余状态一律返回该业务错误。
+	ErrParentLeaveNotCancelable = errors.New("PARENT_LEAVE_NOT_CANCELABLE")
 )
 
 type ParentPortalContext struct {
@@ -51,6 +53,9 @@ type ParentPortalService struct {
 	pickup   *repository.PickupRepo
 	calendar *repository.CalendarRepo
 	notice   *repository.NoticeRepo
+	// leave 在构造函数内部创建，不增加构造参数——wire_gen 与既有 14 处测试调用点
+	// 都按当前签名构造该服务。
+	leave *repository.LeaveRepo
 }
 
 func NewParentPortalService(
@@ -63,7 +68,7 @@ func NewParentPortalService(
 	calendar *repository.CalendarRepo,
 	notice *repository.NoticeRepo,
 ) *ParentPortalService {
-	return &ParentPortalService{db: db, parents: parents, roles: roles, students: students, classes: classes, pickup: pickup, calendar: calendar, notice: notice}
+	return &ParentPortalService{db: db, parents: parents, roles: roles, students: students, classes: classes, pickup: pickup, calendar: calendar, notice: notice, leave: repository.NewLeaveRepo(db)}
 }
 
 func (s *ParentPortalService) ResolveContext(ctx context.Context, userID, kindergartenID uint64, studentID *uint64) (*ParentPortalContext, error) {
@@ -997,13 +1002,136 @@ func generateQRCodeToken() string {
 
 // ==================== Leaves ====================
 
+const (
+	parentLeaveMaxAttachments = 3
+	// 单张附件上限 20MB，与契约一致。
+	parentLeaveMaxAttachmentBytes = 20 << 20
+)
+
+// ParentLeaveAttachmentInput 请假凭证图片入参。字段与 leave_attachments 一一对应，
+// 由前端上传通道返回体原样回传。
+type ParentLeaveAttachmentInput struct {
+	FileURL  string `json:"file_url"`
+	FileType string `json:"file_type"`
+	FileName string `json:"file_name"`
+	FileSize int64  `json:"file_size"`
+}
+
+// ParentLeaveContactInput 接送人（选填）。
+type ParentLeaveContactInput struct {
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
+}
+
 // ParentLeaveInput 家长请假输入
 type ParentLeaveInput struct {
-	StudentID uint64 `json:"student_id"`
-	Reason    string `json:"reason"`
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
-	Days      int    `json:"days"`
+	StudentID        uint64                       `json:"student_id"`
+	LeaveType        string                       `json:"leave_type"`
+	Reason           string                       `json:"reason"`
+	StartDate        string                       `json:"start_date"`
+	EndDate          string                       `json:"end_date"`
+	Days             int                          `json:"days"`
+	EmergencyContact *ParentLeaveContactInput     `json:"emergency_contact"`
+	Attachments      []ParentLeaveAttachmentInput `json:"attachments"`
+}
+
+// parentLeaveStatusLabel 契约统一标签，列表与详情同源。
+func parentLeaveStatusLabel(status domain.LeaveStatus) string {
+	switch status {
+	case domain.LeaveStatusPending:
+		return "待审批"
+	case domain.LeaveStatusApproved:
+		return "已同意"
+	case domain.LeaveStatusRejected:
+		return "已拒绝"
+	case domain.LeaveStatusCanceled:
+		return "已取消"
+	default:
+		return "未知"
+	}
+}
+
+func parentLeaveTypeLabel(leaveType string) string {
+	switch leaveType {
+	case domain.LeaveTypeSick:
+		return "病假"
+	case domain.LeaveTypePersonal:
+		return "事假"
+	default:
+		return "其他"
+	}
+}
+
+// normalizeParentLeaveType 只接受契约里的三种代码；未选择（空串）按 other 落库。
+func normalizeParentLeaveType(raw string) (string, bool) {
+	t := strings.ToLower(strings.TrimSpace(raw))
+	switch t {
+	case "":
+		return domain.LeaveTypeOther, true
+	case domain.LeaveTypeSick, domain.LeaveTypePersonal, domain.LeaveTypeOther:
+		return t, true
+	default:
+		return "", false
+	}
+}
+
+// encodeParentLeaveContact 把接送人序列化进单值列（列宽 100 字符）。
+// 空输入落空串；超长直接按参数错误拒绝，避免到 MySQL 严格模式才报 500。
+func encodeParentLeaveContact(input *ParentLeaveContactInput) (string, error) {
+	if input == nil {
+		return "", nil
+	}
+	name := strings.TrimSpace(input.Name)
+	phone := strings.TrimSpace(input.Phone)
+	if name == "" && phone == "" {
+		return "", nil
+	}
+	b, err := json.Marshal(ParentLeaveContactInput{Name: name, Phone: phone})
+	if err != nil {
+		return "", err
+	}
+	if len([]rune(string(b))) > 100 {
+		return "", ErrParentInvalidParams
+	}
+	return string(b), nil
+}
+
+// decodeParentLeaveContact 解析接送人列；空值或历史脏值返回 nil，不阻断详情。
+func decodeParentLeaveContact(ctx context.Context, raw string) map[string]any {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var c ParentLeaveContactInput
+	if err := json.Unmarshal([]byte(raw), &c); err != nil {
+		log.L(ctx).Warn("请假接送人存储值无法解析", "error", err)
+		return nil
+	}
+	return map[string]any{"name": c.Name, "phone": c.Phone}
+}
+
+// parentLeaveAttachments 校验并构造附件行：仅图片、最多 3 张、单张 ≤20MB。
+// 任一非法整单拒绝，不写半套。
+func parentLeaveAttachments(inputs []ParentLeaveAttachmentInput) ([]domain.LeaveAttachment, error) {
+	if len(inputs) > parentLeaveMaxAttachments {
+		return nil, ErrParentInvalidParams
+	}
+	list := make([]domain.LeaveAttachment, 0, len(inputs))
+	for i, in := range inputs {
+		url := strings.TrimSpace(in.FileURL)
+		fileType := strings.ToLower(strings.TrimSpace(in.FileType))
+		if url == "" || fileType != "image" {
+			return nil, ErrParentInvalidParams
+		}
+		if in.FileSize < 0 || in.FileSize > parentLeaveMaxAttachmentBytes {
+			return nil, ErrParentInvalidParams
+		}
+		list = append(list, domain.LeaveAttachment{
+			FileURL: url, FileType: fileType,
+			FileName: strings.TrimSpace(in.FileName), FileSize: in.FileSize, SortNum: i,
+		})
+	}
+	return list, nil
 }
 
 func parentLeaveMap(lr domain.LeaveRequest) map[string]any {
@@ -1016,24 +1144,35 @@ func parentLeaveMap(lr domain.LeaveRequest) map[string]any {
 	if lr.Applicant != nil && lr.Applicant.Nickname != "" {
 		applicant["nickname"] = lr.Applicant.Nickname
 	}
-	statusLabel := "待审批"
-	switch lr.Status {
-	case domain.LeaveStatusApproved:
-		statusLabel = "已同意"
-	case domain.LeaveStatusRejected:
-		statusLabel = "已拒绝"
-	case domain.LeaveStatusCanceled:
-		statusLabel = "已取消"
-	}
 	return map[string]any{
 		"id": lr.ID, "student": student, "applicant": applicant,
+		"leave_type": lr.LeaveType, "leave_type_label": parentLeaveTypeLabel(lr.LeaveType),
 		"reason": lr.Reason, "start_date": lr.StartDate.Format("2006-01-02"),
 		"end_date": lr.EndDate.Format("2006-01-02"), "days": lr.Days,
-		"status": lr.Status, "status_label": statusLabel,
+		"status": lr.Status, "status_label": parentLeaveStatusLabel(lr.Status),
 		"review_remark": lr.ReviewRemark,
 		"created_at":    lr.CreatedAt.UTC().Format(time.RFC3339),
 		"reviewed_at":   formatOptionalTime(lr.ReviewedAt),
 	}
+}
+
+// parentLeaveStats 家长全量统计（不受列表 status 筛选影响）。
+func (s *ParentPortalService) parentLeaveStats(ctx context.Context, pc *ParentPortalContext) (map[string]int64, error) {
+	rows, err := s.leave.CountByStatusForApplicant(ctx, pc.KindergartenID, pc.UserID)
+	if err != nil {
+		return nil, err
+	}
+	stats := map[string]int64{"all": 0, "pending": 0, "approved": 0}
+	for _, row := range rows {
+		stats["all"] += row.Cnt
+		switch row.Status {
+		case domain.LeaveStatusPending:
+			stats["pending"] += row.Cnt
+		case domain.LeaveStatusApproved:
+			stats["approved"] += row.Cnt
+		}
+	}
+	return stats, nil
 }
 
 func (s *ParentPortalService) ListLeaves(ctx context.Context, pc *ParentPortalContext, status string, page, pageSize int) (map[string]any, error) {
@@ -1055,19 +1194,57 @@ func (s *ParentPortalService) ListLeaves(ctx context.Context, pc *ParentPortalCo
 		return nil, err
 	}
 	var rows []domain.LeaveRequest
-	if err := db.Preload("Student").Preload("Applicant").Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+	if err := db.Preload("Student").Preload("Applicant").Order("created_at DESC, id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
 		return nil, err
 	}
+
+	stats, err := s.parentLeaveStats(ctx, pc)
+	if err != nil {
+		return nil, err
+	}
+	reviewerIDs := make([]uint64, 0, len(rows))
+	for _, r := range rows {
+		if r.ReviewerID != nil {
+			reviewerIDs = append(reviewerIDs, *r.ReviewerID)
+		}
+	}
+	nicknames, err := s.leave.FindReviewerNicknames(ctx, reviewerIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	list := make([]map[string]any, len(rows))
 	for i, r := range rows {
-		list[i] = parentLeaveMap(r)
+		item := parentLeaveMap(r)
+		var reviewer any
+		if r.ReviewerID != nil && *r.ReviewerID != 0 {
+			reviewer = map[string]any{"nickname": nicknames[*r.ReviewerID]}
+		}
+		item["reviewer"] = reviewer
+		list[i] = item
 	}
-	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
+	return map[string]any{"list": list, "stats": stats, "total": total, "page": page, "page_size": pageSize}, nil
+}
+
+// parentLeaveClassName 详情里的学生当前班级名；查不到时返回空串，不阻断详情。
+func (s *ParentPortalService) parentLeaveClassName(ctx context.Context, kindergartenID, classID uint64) string {
+	if classID == 0 {
+		return ""
+	}
+	class, err := s.classes.FindByID(ctx, kindergartenID, classID)
+	if err != nil {
+		log.L(ctx).Warn("请假详情查班级失败", "class_id", classID, "error", err)
+		return ""
+	}
+	if class == nil {
+		return ""
+	}
+	return class.Name
 }
 
 func (s *ParentPortalService) GetLeave(ctx context.Context, pc *ParentPortalContext, id uint64) (map[string]any, error) {
 	var lr domain.LeaveRequest
-	if err := s.db.WithContext(ctx).Preload("Student").Preload("Applicant").
+	if err := s.db.WithContext(ctx).Preload("Student").Preload("Applicant").Preload("Reviewer").
 		Where("id = ? AND kindergarten_id = ? AND applicant_id = ?", id, pc.KindergartenID, pc.UserID).
 		First(&lr).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -1075,11 +1252,44 @@ func (s *ParentPortalService) GetLeave(ctx context.Context, pc *ParentPortalCont
 		}
 		return nil, err
 	}
-	return parentLeaveMap(lr), nil
+
+	detail := parentLeaveMap(lr)
+	detail["emergency_contact"] = decodeParentLeaveContact(ctx, lr.EmergencyContact)
+	var reviewer any
+	if lr.Reviewer != nil {
+		reviewer = map[string]any{"id": lr.Reviewer.ID, "nickname": lr.Reviewer.Nickname, "avatar": lr.Reviewer.Avatar}
+	}
+	detail["reviewer"] = reviewer
+
+	var classID uint64
+	if lr.Student != nil {
+		classID = lr.Student.ClassID
+	}
+	if student, ok := detail["student"].(map[string]any); ok {
+		student["class_name"] = s.parentLeaveClassName(ctx, pc.KindergartenID, classID)
+	}
+
+	atts, err := s.leave.ListAttachmentsByLeaveID(ctx, lr.ID)
+	if err != nil {
+		return nil, err
+	}
+	attachments := make([]map[string]any, 0, len(atts))
+	for _, a := range atts {
+		attachments = append(attachments, map[string]any{
+			"id": a.ID, "file_url": a.FileURL, "file_type": a.FileType,
+			"file_name": a.FileName, "file_size": a.FileSize,
+		})
+	}
+	detail["attachments"] = attachments
+	return detail, nil
 }
 
 func (s *ParentPortalService) CreateLeave(ctx context.Context, pc *ParentPortalContext, req ParentLeaveInput) (map[string]any, error) {
 	if req.StudentID == 0 || strings.TrimSpace(req.Reason) == "" || req.StartDate == "" || req.EndDate == "" {
+		return nil, ErrParentInvalidParams
+	}
+	leaveType, ok := normalizeParentLeaveType(req.LeaveType)
+	if !ok {
 		return nil, ErrParentInvalidParams
 	}
 	startDate, err := time.ParseInLocation("2006-01-02", req.StartDate, time.Local)
@@ -1092,6 +1302,14 @@ func (s *ParentPortalService) CreateLeave(ctx context.Context, pc *ParentPortalC
 	}
 	if endDate.Before(startDate) {
 		return nil, ErrParentInvalidParams
+	}
+	emergencyContact, err := encodeParentLeaveContact(req.EmergencyContact)
+	if err != nil {
+		return nil, err
+	}
+	attachments, err := parentLeaveAttachments(req.Attachments)
+	if err != nil {
+		return nil, err
 	}
 
 	// Verify student belongs to this parent
@@ -1116,13 +1334,23 @@ func (s *ParentPortalService) CreateLeave(ctx context.Context, pc *ParentPortalC
 	lr := &domain.LeaveRequest{
 		KindergartenID: pc.KindergartenID, ClassID: studentClassID,
 		StudentID: req.StudentID, ApplicantID: pc.UserID,
+		LeaveType: leaveType, EmergencyContact: emergencyContact,
 		Reason: strings.TrimSpace(req.Reason), StartDate: startDate, EndDate: endDate,
 		Days: days, Status: domain.LeaveStatusPending,
 	}
-	if err := s.db.WithContext(ctx).Create(lr).Error; err != nil {
+	// 请假与附件同一事务：附件非法已在上方整单拒绝，这里只保证写入原子性。
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(lr).Error; err != nil {
+			return err
+		}
+		for i := range attachments {
+			attachments[i].LeaveID = lr.ID
+		}
+		return repository.NewLeaveRepo(tx).CreateAttachments(ctx, attachments)
+	}); err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": lr.ID, "status": int8(lr.Status), "status_label": "待审批", "created_at": lr.CreatedAt.UTC().Format(time.RFC3339)}, nil
+	return map[string]any{"id": lr.ID, "status": int8(lr.Status), "status_label": parentLeaveStatusLabel(lr.Status), "created_at": lr.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 func (s *ParentPortalService) UpdateLeave(ctx context.Context, pc *ParentPortalContext, id uint64, req ParentLeaveInput) error {
@@ -1156,18 +1384,33 @@ func (s *ParentPortalService) UpdateLeave(ctx context.Context, pc *ParentPortalC
 	if len(updates) == 0 {
 		return nil
 	}
-	s.db.WithContext(ctx).Model(&lr).Updates(updates)
-	return nil
+	return s.db.WithContext(ctx).Model(&lr).Updates(updates).Error
 }
 
 func (s *ParentPortalService) CancelLeave(ctx context.Context, pc *ParentPortalContext, id uint64) error {
+	// 条件更新一次完成鉴权 + 归属 + 状态守卫，避免先读后写被并发审批插队。
 	res := s.db.WithContext(ctx).Model(&domain.LeaveRequest{}).
-		Where("id = ? AND kindergarten_id = ? AND applicant_id = ?", id, pc.KindergartenID, pc.UserID).
+		Where("id = ? AND kindergarten_id = ? AND applicant_id = ? AND status = ?",
+			id, pc.KindergartenID, pc.UserID, domain.LeaveStatusPending).
 		Update("status", domain.LeaveStatusCanceled)
-	if res.RowsAffected == 0 {
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected > 0 {
+		return nil
+	}
+	// 没改到：区分「不存在/不属于我」与「状态不允许」，后者是业务错误且不落库。
+	var existing domain.LeaveRequest
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND kindergarten_id = ? AND applicant_id = ?", id, pc.KindergartenID, pc.UserID).
+		First(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrParentNotFound
 	}
-	return nil
+	if err != nil {
+		return err
+	}
+	return ErrParentLeaveNotCancelable
 }
 
 // ==================== Notices ====================
@@ -2189,7 +2432,7 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 			"star_scope": r.StarScope, "star_goal": r.StarGoal,
 			"start_date": r.StartDate.Format("2006-01-02"), "end_date": r.EndDate.Format("2006-01-02"),
 			"status": r.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
-			"responded": responded,
+			"responded":     responded,
 			"checkin_count": childCount, "has_unread_supplement": unread[r.ID],
 			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 		})
@@ -2725,6 +2968,7 @@ type publicWallRow struct {
 //   - 孩子转班后，原班级墙不得继续展示他的内容；
 //   - 管理员把任务改派到别的班（7.1 的结构字段锁定落地前可达）时，
 //     原班孩子的照片/文字不得出现在新班家长面前。
+//
 // 左连接下学生缺失或已软删会得到 NULL，条件自然不成立。
 func (s *ParentPortalService) publicWallQuery(ctx context.Context, pc *ParentPortalContext, today string) *gorm.DB {
 	return s.db.WithContext(ctx).Table("task_check_ins AS c").

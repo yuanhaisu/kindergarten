@@ -247,6 +247,23 @@
 | TC-NEW-SCH-0005 | 失败隔离-单条失败其余仍发布，失败条目下一轮重试 | P0 | Unit | ✅ |
 | TC-NEW-SCH-0006 | 状态跳过-草稿/已发布/已撤回/软删均不发布 | P0 | Unit | ✅ |
 
+## 家长请假（对应 OpenSpec 变更 `parent-leave-details`）
+
+> 覆盖 `openspec/changes/parent-leave-details/specs/parent-leave/spec.md` 的 9 个 Scenario，
+> 实现见 `server/internal/service/parent_leave_fields_test.go`（真实 MySQL，夹具 990201，附件与请假硬删）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-LV-0001 | 请假类型-提交病假，列表与详情显示「病假」 | P0 | Unit | ✅ |
+| TC-NEW-LV-0002 | 请假类型-未选择类型按 other 保存并显示「其他」 | P0 | Unit | ✅ |
+| TC-NEW-LV-0003 | 请假附件-2 张合法图片按上传顺序返回 | P0 | Unit | ✅ |
+| TC-NEW-LV-0004 | 请假附件-4 张整单拒绝，请假不创建 | P0 | Unit | ✅ |
+| TC-NEW-LV-0005 | 审批人/班级-已审批详情返回 reviewer.nickname 与 class_name | P0 | Unit | ✅ |
+| TC-NEW-LV-0006 | 全量统计-切换 status 筛选后 stats 不变 | P0 | Unit | ✅ |
+| TC-NEW-LV-0007 | 撤销守卫-已同意请假撤销返回业务错误且状态不变 | P0 | Unit | ✅ |
+| TC-NEW-LV-0008 | 状态标签-已拒绝在列表与详情代码一致、标签为「已拒绝」 | P0 | Unit | ✅ |
+| TC-NEW-LV-0009 | 接送人-创建后详情可回显 | P0 | Unit | ✅ |
+
 ## 成长 (GRW)
 
 ### 数据模型（8 张表）

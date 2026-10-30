@@ -239,3 +239,75 @@ func (r *LeaveRepo) CreateBatch(ctx context.Context, leaves []domain.LeaveReques
 		Clauses(clause.OnConflict{DoNothing: true}).
 		CreateInBatches(leaves, 100).Error
 }
+
+// LeaveStatusCount 按状态聚合的计数行。
+type LeaveStatusCount struct {
+	Status domain.LeaveStatus `gorm:"column:status"`
+	Cnt    int64              `gorm:"column:cnt"`
+}
+
+// CountByStatusForApplicant 家长提交的全部请假按状态计数。
+// 统计口径与列表的 status 筛选解耦：调用方只按园所+申请人取数。
+func (r *LeaveRepo) CountByStatusForApplicant(ctx context.Context, kindergartenID, applicantID uint64) ([]LeaveStatusCount, error) {
+	var rows []LeaveStatusCount
+	err := r.db.WithContext(ctx).Model(&domain.LeaveRequest{}).
+		Select("status, COUNT(*) AS cnt").
+		Where("kindergarten_id = ? AND applicant_id = ?", kindergartenID, applicantID).
+		Group("status").
+		Scan(&rows).Error
+	return rows, err
+}
+
+// FindReviewerNicknames 批量取审批老师昵称，避免列表逐条查询。
+func (r *LeaveRepo) FindReviewerNicknames(ctx context.Context, ids []uint64) (map[uint64]string, error) {
+	out := make(map[uint64]string, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	uniq := make([]uint64, 0, len(ids))
+	seen := make(map[uint64]struct{}, len(ids))
+	for _, id := range ids {
+		if id == 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+	if len(uniq) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		ID       uint64 `gorm:"column:id"`
+		Nickname string `gorm:"column:nickname"`
+	}
+	if err := r.db.WithContext(ctx).Model(&domain.User{}).
+		Select("id, nickname").
+		Where("id IN ?", uniq).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.ID] = row.Nickname
+	}
+	return out, nil
+}
+
+// ListAttachmentsByLeaveID 按上传顺序返回请假附件。
+func (r *LeaveRepo) ListAttachmentsByLeaveID(ctx context.Context, leaveID uint64) ([]domain.LeaveAttachment, error) {
+	var list []domain.LeaveAttachment
+	err := r.db.WithContext(ctx).
+		Where("leave_id = ?", leaveID).
+		Order("sort_num ASC, id ASC").
+		Find(&list).Error
+	return list, err
+}
+
+func (r *LeaveRepo) CreateAttachments(ctx context.Context, list []domain.LeaveAttachment) error {
+	if len(list) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Create(&list).Error
+}

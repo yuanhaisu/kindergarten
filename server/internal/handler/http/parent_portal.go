@@ -348,10 +348,14 @@ func (h *Handler) ParentCancelLeave(c *gin.Context) {
 			response.ErrNotFound(c, "请假记录不存在")
 			return
 		}
+		if errors.Is(err, service.ErrParentLeaveNotCancelable) {
+			response.ErrBadRequest(c, 40048, "仅待审批的请假可以撤销")
+			return
+		}
 		response.ErrInternal(c, "取消请假失败")
 		return
 	}
-	response.OK(c, gin.H{"id": id, "status": 3, "status_label": "已撤销"})
+	response.OK(c, gin.H{"id": id, "status": 3, "status_label": "已取消"})
 }
 
 // ========== Growth ==========

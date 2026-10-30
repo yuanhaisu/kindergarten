@@ -93,6 +93,7 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.NoticeTarget{},
 		&domain.NoticeTemplate{},
 		&domain.LeaveRequest{},
+		&domain.LeaveAttachment{},
 		&domain.Attendance{},
 		&domain.PickupRecord{},
 		&domain.PickupAuthorization{},
