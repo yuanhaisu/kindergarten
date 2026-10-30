@@ -4050,12 +4050,20 @@ func (s *ParentPortalService) GetStudentProfile(ctx context.Context, pc *ParentP
 
 	return map[string]any{
 		"id": pc.CurrentStudent.ID, "name": pc.CurrentStudent.Name, "avatar": pc.CurrentStudent.Avatar,
-		"gender": pc.CurrentStudent.Gender, "birthday": pc.CurrentStudent.Birthday, "age": age,
+		"gender": pc.CurrentStudent.Gender, "birthday": parentDateOnly(pc.CurrentStudent.Birthday), "age": age,
 		"student_no": pc.CurrentStudent.StudentNo, "health_note": pc.CurrentStudent.HealthNote,
 		"class_name": cn, "class_id": pc.CurrentStudent.ClassID,
-		"address": pc.CurrentStudent.Address, "enroll_date": pc.CurrentStudent.EnrollDate,
+		"address": pc.CurrentStudent.Address, "enroll_date": parentDateOnly(pc.CurrentStudent.EnrollDate),
 		"parents": parents,
 	}, nil
+}
+
+// parentDateOnly 输出 YYYY-MM-DD；零值返回空串，避免把 0001-01-01 当成真实日期下发给家长。
+func parentDateOnly(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format("2006-01-02")
 }
 
 // ==================== Home / Announcements / Feeds ====================
@@ -4201,19 +4209,53 @@ func (s *ParentPortalService) ClassInfo(ctx context.Context, pc *ParentPortalCon
 		return nil, ErrParentInvalidParams
 	}
 	var studentCount int64
-	s.db.WithContext(ctx).Model(&domain.Student{}).Where("kindergarten_id = ? AND class_id = ? AND status = ?", pc.KindergartenID, pc.Class.ID, 1).Count(&studentCount)
-	var teachers []map[string]any
+	if err := s.db.WithContext(ctx).Model(&domain.Student{}).
+		Where("kindergarten_id = ? AND class_id = ? AND status = ?", pc.KindergartenID, pc.Class.ID, 1).
+		Count(&studentCount).Error; err != nil {
+		return nil, err
+	}
 	var cts []domain.ClassTeacher
-	s.db.WithContext(ctx).Preload("User").Where("class_id = ? AND status = ?", pc.Class.ID, 1).Find(&cts)
+	if err := s.db.WithContext(ctx).Preload("User").
+		Where("class_id = ? AND status = ?", pc.Class.ID, 1).Find(&cts).Error; err != nil {
+		return nil, err
+	}
+	// 主班→副班→生活→其余，同职务按 id；家长端不关心插入顺序。
+	sort.Slice(cts, func(i, j int) bool {
+		ri, rj := parentTeacherTitleRank(cts[i].Title), parentTeacherTitleRank(cts[j].Title)
+		if ri != rj {
+			return ri < rj
+		}
+		return cts[i].UserID < cts[j].UserID
+	})
+	// 必须是非 nil 空切片：空班要下发 [] 而不是 null。
+	teachers := make([]map[string]any, 0, len(cts))
 	for _, ct := range cts {
-		t := map[string]any{"id": ct.UserID, "title": string(ct.Title)}
+		t := map[string]any{
+			"id": ct.UserID, "title": string(ct.Title), "title_label": titleLabel(ct.Title),
+			"nickname": "", "avatar": "", "phone": "",
+		}
 		if ct.User != nil {
 			t["nickname"] = ct.User.Nickname
 			t["avatar"] = ct.User.Avatar
+			t["phone"] = maskPhone(ct.User.Phone)
 		}
 		teachers = append(teachers, t)
 	}
 	return map[string]any{"id": pc.Class.ID, "name": pc.Class.Name, "grade": pc.Class.Grade, "academic_year": pc.Class.AcademicYear, "student_count": studentCount, "teachers": teachers}, nil
+}
+
+// parentTeacherTitleRank 是家长端老师展示顺序：主班 0、副班 1、生活 2、其余 3。
+func parentTeacherTitleRank(title domain.TeacherTitle) int {
+	switch title {
+	case domain.TeacherTitleHead:
+		return 0
+	case domain.TeacherTitleAssistant:
+		return 1
+	case domain.TeacherTitleNursery:
+		return 2
+	default:
+		return 3
+	}
 }
 
 // ==================== Student Profile ====================
