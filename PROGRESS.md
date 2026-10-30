@@ -93,7 +93,9 @@
 | P12 | W5 | 家长登录 + 绑定 02/03 | passed | b35c96c | - | impl-reviews/P12.md | 0 P1 / 7 P2；登录态恢复；token 53 |
 | X01X02 | W6 | 两端 webview 边界页 | passed | 068774f | - | impl-reviews/X01X02.md | 0 P1 / 2 P2；两端实测；已收口 |
 | D01 | W7 | 共享逻辑收口（4 项） | passed | dd9a3cc | - | impl-reviews/D01.md | 0 P1 / 4 P2；两端回归；token 22/53 |
-| V01a | W7 | 老师端 23 页遍历回归 | in_progress | - | - | - | 依赖全部页面片 |
+| V01a | W7 | 老师端 23 页遍历回归 | passed | - | - | _shared/impl-reviews/V01.md | 0 P0 / 0 P1 / 2 P2；23/23 页 |
+| V01b | W7 | 家长端 28 页遍历回归 | passed | - | - | _shared/impl-reviews/V01.md | 0 P0 / 0 P1 / 1 P2；28/28 页 |
+| D02 | W7 | token/样式债终检 | in_progress | 5b57000 | - | - | 零视觉清债 + 接送文案 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
