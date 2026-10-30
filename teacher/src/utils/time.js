@@ -55,6 +55,12 @@ export function formatClock(ts) {
   return d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : ""
 }
 
+/** ISO 时刻 → "10-24"（本地时区，月日补零）；用于通知卡等只给月日的场景 */
+export function formatMonthDay(ts) {
+  const d = toDate(ts)
+  return d ? `${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : ""
+}
+
 /** 相对今天的日差：0 今天 / 1 昨天 / 2 前天 / 其他 null */
 function relativeDay(date) {
   const target = fromYmd(date)
