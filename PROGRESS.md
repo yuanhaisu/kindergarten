@@ -74,7 +74,7 @@
 | B16 | W3* | 积分概览/排行/流水 + 反馈标签 | passed | 8505a52 | 5dc57e4 | impl-reviews/B16.md | 0 P1 / 5 P2；HTTP 68；等级进度降级 |
 | P08 | W3 | 家长积分 + 反馈 20/24 | passed | 5dc57e4 | 05f409a | impl-reviews/P08.md | 0 P1 / 8 P2；DevTools 实测；token 55 |
 | B17 | W3* | 班级老师 label/phone/排序 + 档案日期格式 | passed | 9e98536 | e956b5f | impl-reviews/B17.md | 0 P1 / 5 P2；HTTP 验证通过 |
-| P09 | W3 | 家长班级 + 幼儿档案 21/23 | passed | e956b5f | - | impl-reviews/P09.md | 0 P1 / 8 P2；多孩串修修复后复审通过；token 53 |
+| P09 | W3 | 家长班级 + 幼儿档案 21/23 | passed | e956b5f | fd260ed | impl-reviews/P09.md | 0 P1 / 8 P2；多孩串修修复后复审通过；token 53 |
 | P10 | W3 | 家长班级日历 22 | in_progress | - | - | - | 依赖 F0 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
