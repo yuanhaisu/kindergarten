@@ -98,12 +98,17 @@ export function formatRecordTime(date, createdAt) {
   return [formatDateLabel(date), formatClock(createdAt)].filter(Boolean).join(" ")
 }
 
-/** 评论时间："10月22日 10:26"；不是今年时带上年份 */
-export function formatCommentTime(ts) {
+/** ISO 时刻 → "10月25日 20:30"（本地时区）；不是今年时带上年份 */
+export function formatDateTimeLabel(ts) {
   const d = toDate(ts)
   if (!d) return ""
   const prefix = d.getFullYear() === new Date().getFullYear() ? "" : `${d.getFullYear()}年`
   return `${prefix}${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** 评论时间："10月22日 10:26"；不是今年时带上年份 */
+export function formatCommentTime(ts) {
+  return formatDateTimeLabel(ts)
 }
 
 /** "2026-10" → "2026年10月"；用于月分组标题与相册月份条 */
