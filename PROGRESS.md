@@ -97,7 +97,8 @@
 | V01b | W7 | 家长端 28 页遍历回归 | passed | - | - | _shared/impl-reviews/V01.md | 0 P0 / 0 P1 / 1 P2；28/28 页 |
 | D02 | W7 | token/样式债终检 | passed | 5b57000 | - | impl-reviews/D02.md | 0 P1 / 3 P2；token 3/3；像素等价 |
 | V02 | W7 | 截图视觉比对 | passed | - | - | .claude/runs/V02/report.md | 24/24 截图；0 P1 / 5 类 P2 |
-| V03 | W7 | V02 视觉差异小修 | in_progress | 89cf31b | - | - | 接送/通知/学年数据 |
+| V03 | W7 | V02 视觉差异小修 | passed | 89cf31b | - | impl-reviews/V03.md | 0 P1 / 6 P2；接送/通知修复 |
+| V04 | W7 | 班级学年数据修正 | in_progress | cecd705 | - | - | 班级+星星罐+学年配置 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
