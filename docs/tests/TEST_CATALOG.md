@@ -21,6 +21,7 @@
 | PNT | 积分 | NTC | 通知 |
 | ACH | 成就 | ANN | 公告 |
 | PERM | 权限强制 | TBL | 课表 |
+| ALB | 班级相册 | | |
 
 ---
 
@@ -807,6 +808,29 @@
 | TC-NEW-TSK-0144 | 跨班公开墙不可见 | P0 | FUNC | ⚠️ 后端已验证（`task_public_test.go`：两个班互相看不到对方公开内容；任务结束/关闭/软删后不展示）；家长端 UI 待 10.x |
 | TC-NEW-TSK-0145 | 更新为个体任务强制关闭公开 | P0 | FUNC | ⚠️ 部分验证：有提交后 `assertTaskEditable` 会直接拒绝改 `target_student_id`，所以「班级任务→个体任务」的转换路径当前**不可达**；已验证的是公开墙侧排除个体任务（即使残留 `allow_public=true` 也不展示，`TestPublicWallNeverShowsIndividualTask`） |
 | TC-NEW-TSK-0146 | 更新个体任务目标跨班被拒 | P0 | FUNC | ✅ |
+
+## 班级相册（ALB）— 老师端班级相册
+
+> 对应 OpenSpec 变更 `class-album`。规格见 `openspec/changes/class-album/specs/class-album/spec.md`；
+> 契约见 `backend/api/api-teacher/10-album.md`。B20（2026-10-30）落地后端，页面由 T06b 消费。
+> 状态：✅ = 服务层用真实 MySQL 夹具验证（`server/internal/service/teacher_album_test.go`，9960xx 夹具，硬删 0 残留）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-ALB-0001 | 创建含 3 张照片的相册且照片按提交顺序保存 | P0 | Unit | ✅ `TestTeacherAlbumCreateThreePhotos` |
+| TC-NEW-ALB-0002 | 没有照片时拒绝创建 | P0 | Unit | ✅ `TestTeacherAlbumCreateRejectsNoPhotos` |
+| TC-NEW-ALB-0003 | 统计跨月：本月新增只算本月 album_date，软删/别班不计 | P0 | Unit | ✅ `TestTeacherAlbumStatsAcrossMonths` |
+| TC-NEW-ALB-0004 | 分类筛选只返回该分类，日期倒序；非法筛选值 422 | P0 | Unit | ✅ `TestTeacherAlbumListFilterByCategory` |
+| TC-NEW-ALB-0005 | 详情返回全部照片且顺序与创建时一致 | P0 | Unit | ✅ `TestTeacherAlbumDetailPhotoOrder` |
+| TC-NEW-ALB-0006 | 跨班/跨园读取 404，创建只能落在当前班 | P0 | Unit | ✅ `TestTeacherAlbumIsolation` |
+| TC-NEW-ALB-0007 | 非法分类拒绝创建 | P0 | Unit | ✅ `TestTeacherAlbumCreateRejectsInvalidCategory` |
+
+### B20 执行记录（2026-10-30）
+
+- 契约先行：新建 `backend/api/api-teacher/10-album.md`（stats/list/detail/create 四端点、分类四值、校验规则）。
+- 迁移：`app/provider.go` 登记 `Album` / `AlbumPhoto` AutoMigrate；`go run ./cmd/dbcheck albums` 与 `dbcheck album_photos` 均输出索引且行数 0。
+- 测试：`go test ./internal/service/ -run 'TestTeacherAlbum' -count=1` → ok（9 个用例 / 10 个校验子用例）。
+- 说明：本切片不改老师端页面；家长端相册复用、编辑/删除、视频、管理端相册均不在本期范围。
 
 ### A 切片执行记录（2026-10-21）
 

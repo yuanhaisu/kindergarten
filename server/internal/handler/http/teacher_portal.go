@@ -1517,3 +1517,69 @@ func (h *Handler) TeacherPickupStudentAuthPersons(c *gin.Context) {
 	}
 	response.OK(c, data)
 }
+
+// TeacherAlbumStats GET /teacher/albums/stats 相册统计卡
+func (h *Handler) TeacherAlbumStats(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.AlbumStats(c.Request.Context(), tc)
+	if err != nil {
+		teacherPortalErr(c, err, "获取相册统计失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherListAlbums GET /teacher/albums?category&page&page_size
+func (h *Handler) TeacherListAlbums(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	page, pageSize := teacherPortalPage(c)
+	data, err := h.teacherPortalSvc.ListAlbums(c.Request.Context(), tc, c.Query("category"), page, pageSize)
+	if err != nil {
+		teacherPortalErr(c, err, "获取相册列表失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherGetAlbum GET /teacher/albums/:id 相册详情（含照片列表）
+func (h *Handler) TeacherGetAlbum(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.GetAlbum(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "获取相册详情失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherCreateAlbum POST /teacher/albums 创建相册（关联已上传照片）
+func (h *Handler) TeacherCreateAlbum(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	var req service.TeacherAlbumInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.teacherPortalSvc.CreateAlbum(c.Request.Context(), tc, req)
+	if err != nil {
+		teacherPortalErr(c, err, "创建相册失败")
+		return
+	}
+	response.Created(c, data)
+}

@@ -127,6 +127,10 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.Achievement{},
 		&domain.StudentAchievement{},
 
+		// 班级相册（openspec class-album）
+		&domain.Album{},
+		&domain.AlbumPhoto{},
+
 		// 老师邀请
 		&domain.TeacherInvitation{},
 
