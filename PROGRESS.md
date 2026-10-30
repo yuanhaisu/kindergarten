@@ -79,7 +79,8 @@
 | P11 | W3 | 家长消息 26 | passed | 114675b | - | impl-reviews/P11.md | 0 P1 / 8 P2；DevTools 61 条/分页；token 53 |
 | B18 | W3* | 老师任务列表 stats/筛选 + 参与人数 | passed | e986835 | a5795bb | impl-reviews/B18.md | 0 P1 / 4 P2；HTTP 62/62 |
 | T03 | W3 | 老师任务列表/详情 09/10 | passed | a5795bb | - | impl-reviews/T03.md | 0 P1 / 10 P2；DevTools 全交互；token 164 |
-| T04 | W3 | 老师请假 14 | in_progress | - | - | - | 依赖 F0 |
+| B19 | W3* | 修复老师请假统计条件累积 | in_progress | 6820b2d | - | - | T04 阻断；预存 bug |
+| T04 | W3 | 老师请假 14 | in_progress | - | - | impl-reviews/T04.md | 1 P1 后端（B19）+ 1 P1 前端修复中 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
