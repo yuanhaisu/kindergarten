@@ -26,6 +26,58 @@ export function formatDateLabel(date) {
   return m ? `${Number(m[2])}月${Number(m[3])}日` : ""
 }
 
+/**
+ * 纯日期 → 本地零点 Date；格式不符返回 null。
+ * 不能用 new Date("2026-10-20")：它按 UTC 解析，负时区会倒退一天。
+ */
+export function parseDateOnly(date) {
+  const m = String(date || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return null
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+}
+
+const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+
+/** 纯日期 → "周三"；格式不符返回空串 */
+export function formatWeekday(date) {
+  const d = parseDateOnly(date)
+  return d ? WEEKDAY_NAMES[d.getDay()] : ""
+}
+
+/** 纯日期 → "2026-10-28 周三"；格式不符返回空串 */
+export function formatDateWithWeekday(date) {
+  const d = parseDateOnly(date)
+  if (!d) return ""
+  return `${String(date).slice(0, 10)} ${WEEKDAY_NAMES[d.getDay()]}`
+}
+
+/** 纯日期 → "10月27日 周二" */
+export function formatMonthDayWeekday(date) {
+  const label = formatDateLabel(date)
+  const weekday = formatWeekday(date)
+  return label && weekday ? `${label} ${weekday}` : label
+}
+
+/** 纯日期区间含首尾的天数；任一缺失或结束早于开始返回 0 */
+export function inclusiveDays(start, end) {
+  const a = parseDateOnly(start)
+  const b = parseDateOnly(end)
+  if (!a || !b || b < a) return 0
+  return Math.round((b - a) / 86400000) + 1
+}
+
+/** ISO 时刻 → 本地日期 "2026-10-26"；空值/非法返回空串（审批时间按本地日期显示） */
+export function localDateKey(ts) {
+  const d = toDate(ts)
+  if (!d) return ""
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** 年月（month 为 0 起）→ "2026年10月" */
+export function formatMonthTitle(year, month) {
+  return `${year}年${month + 1}月`
+}
+
 /** 记录卡头部："10月24日 15:20"（日期取服务端 date，时刻取本地 created_at） */
 export function formatRecordTime(date, createdAt) {
   return [formatDateLabel(date), formatClock(createdAt)].filter(Boolean).join(" ")
