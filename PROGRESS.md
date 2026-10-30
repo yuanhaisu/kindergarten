@@ -6,10 +6,10 @@
 > 检查表：`docs/design-previews/2026-10-25-full-redesign/_shared/VALIDATORS.md`
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
-- 当前波次：**W0**
-- 下一动作：**T01（新会话接手）**
-- 后端：`bcxw6cwn2` 已因系统低内存停止；supervisor 验证前由用户确认重启
-- 最后更新：2026-10-28
+- 当前波次：**W7 完成 —— 全部页面切片与终验已交付**
+- 下一动作：无（剩余人工项见文末 handoff）
+- 后端：8080 当前源码运行；若被低内存守卫停止，由用户确认后再重启
+- 最后更新：2026-10-31
 
 ## X00 零入边决策（2026-10-28）
 
@@ -98,7 +98,7 @@
 | D02 | W7 | token/样式债终检 | passed | 5b57000 | - | impl-reviews/D02.md | 0 P1 / 3 P2；token 3/3；像素等价 |
 | V02 | W7 | 截图视觉比对 | passed | - | - | .claude/runs/V02/report.md | 24/24 截图；0 P1 / 5 类 P2 |
 | V03 | W7 | V02 视觉差异小修 | passed | 89cf31b | - | impl-reviews/V03.md | 0 P1 / 6 P2；接送/通知修复 |
-| V04 | W7 | 班级学年数据修正 | in_progress | cecd705 | - | - | 班级+星星罐+学年配置 |
+| V04 | W7 | 班级学年数据修正 | passed | cecd705 | - | impl-reviews/V04.md | 0 P1 / 3 P2；6 班+罐+学年对齐 2026-2027 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
@@ -123,34 +123,28 @@
 
 ```json
 {
-  "slice_id": "B02",
+  "slice_id": "V04",
   "phase": "committed",
-  "commit_sha": "f846bf3",
-  "next_action": "P05 brief or B03 decision",
-  "updated_at": "2026-10-29T22:45:00+08:00"
+  "commit_sha": "af311a0",
+  "next_action": "none — all slices delivered",
+  "updated_at": "2026-10-31T07:05:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-29T22:45+08:00
+### Handoff 2026-10-31T07:05+08:00 — 全部完成
 
-- 当前切片：**W2 后端片完成**（B01、B02 均已提交并归档）；**W1 全部完成**（F0/X00/B04–B12/S01/P01–P04/T01–T02）
-- 下一步：**W3 页面片 P05**（家长通知列表/详情 04/05），或先做可选 B03（草稿编辑定时/附件，需产品确认）
-- 必须读：
-  - `PROGRESS.md`、`_shared/IMPLEMENTATION-PLAN.md` P05 行
-  - `_shared/IMPLEMENTATION-WORKFLOW.md`、`_shared/VALIDATORS.md`
-  - `parent/04-notice-index/`、`05-notice-detail/`
-  - `_shared/reviews/parent-04-*.md`、`parent-05-*.md`
-  - `_shared/impl-reviews/T01.md`（四态/时间工具先例）、`P02.md`（家长端列表先例）
-  - 活基线规格：`openspec/specs/growth-report/`、`openspec/specs/class-roster/`
-- 家长端有 tabBar（4 项），tab 页跳转用 `switchTab`；老师端无 tabBar。
-- 已知阻塞：无。后端 `8080` 运行中（B02 新码）；DevTools 锁已释放。
-- B01 带入 P2：报告正文未按周期过滤、term 未配置时页面显示通用网络错误、任务可见性 SQL 内联重复、测试数记 10 实为 11。
-- B02 带入 P2：TC 映射与 spec 漂移、弹层文案含职务前缀、null 失败分支无单测。
-- T02 带入 P2：授权人未过滤 expire_at、token 15 分钟无 refresh。
-- T01 带入 P2：详情小节计数被 WXML 丢弃、创建同步开关无效、表现标签空字典不回退、授徽章守卫不可达、大合影多按钮、视觉 1–2px。
-- B09 带入的 P2：每请求 Redis EXISTS、Redis 故障 503、旧无 jti token 过期前不可吊销、teacher/admin 不调用 logout、refresh 归属未校验、E2E 绕过 Casbin。
+- 状态：**W0–W7 全部切片完成**；51 页设计全部落地并通过逐片对抗性审查 + V01 全量遍历（51/51，0 P0/0 P1）。
+- 终验：V01a 老师 23/23、V01b 家长 28/28；V02 截图 24/24；V03 修视觉差异；V04 修正班级学年数据；D01 共享逻辑收口；D02 token 债 teacher 22→3、parent 53→3。
+- 仍需人工（不阻塞交付）：
+  1. 阿里云 RDS 凭据轮换 + git 历史清理（仓库必须保持 private）。
+  2. 品牌素材：登录 logo 仍是蓝色位图、入口图标仍是彩色 PNG，设计为橙色/线性体系，属品牌决策。
+  3. 对比度：主按钮白字压橙 1.9–2.8:1、hint/muted、语义色压浅底；属 tokens 品牌级决策（会同时影响 admin）。
+  4. 真机补验：原生选图对话框、语音播放、滚动锁等 CDP 无法稳定自动化的交互。
+  5. 15 分钟 access token 无静默续期（401 直接跳登录），既有债务。
+- 已知 P2 汇总见各 `_shared/impl-reviews/*.md` 末尾。
+- 后端：8080 当前源码运行；如被低内存守卫停止，由用户确认后再重启。
 
 ## 最近完成
 
