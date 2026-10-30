@@ -69,8 +69,8 @@
 | P05 | W3 | 家长通知列表/详情 04/05 | passed | 2de7b6d | a7bd080 | impl-reviews/P05.md | 0 P1 / 6 P2；UI 延后 V01；token 74 |
 | B14 | W3* | 家长请假：类型/附件/审批人/统计/撤销守卫 | passed | 2b8c2c5 | 726eb44 | impl-reviews/B14.md | 0 P1 / 5 P2；HTTP 47/47；已归档 |
 | P06 | W3 | 家长请假列表/创建/详情 06/07/08 | passed | 4ea5153 | db0d03c | impl-reviews/P06.md | 0 P1 / 8 P2；DevTools 实测；token 71 |
-| B15 | W3* | 家长任务：scope/已结束详情/current_checkin/老师昵称 | in_progress | d0d2039 | - | - | P07 阻断 |
-| P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0、B15 |
+| B15 | W3* | 家长任务：scope/已结束详情/current_checkin/老师昵称 | passed | d0d2039 | 10d169c | impl-reviews/B15.md | 0 P1 / 4 P2；HTTP 34/34 |
+| P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | in_progress | 10d169c | - | - | 依赖 F0、B15 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
