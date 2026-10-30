@@ -65,8 +65,8 @@
 | B03b | W2 | 定时发布 worker 扫表 | passed | 96fc2fc | 1fa2128 | impl-reviews/B03b.md | 0 P1 / 4 P2；并发仅 1 次成功；已归档 |
 | B04 | W1* | 点赞落库复核 + 两端防连点 | passed | e3b39cc | 8011f8d | impl-reviews/B04.md | 0 P1 / 5 P2；原症状已由 97f4dd8f 修复，本次修并发 1062 |
 | B05 | W1* | 首页 feed 按 student_id + relation + 契约键名 | passed | 0c63e14 | ee5dcb5 | impl-reviews/B05.md | 0 P1 / 6 P2 |
-| B13 | W3* | 家长通知接口补齐契约字段 | in_progress | 3ce9efc | - | - | P05 阻断；契约已有实现无 |
-| P05 | W3 | 家长通知列表/详情 04/05 | pending | - | - | - | 依赖 F0、B13 |
+| B13 | W3* | 家长通知接口补齐契约字段 | passed | 3ce9efc | 2de7b6d | impl-reviews/B13.md | 0 P1 / 3 P2；HTTP 47 项；无 N+1 |
+| P05 | W3 | 家长通知列表/详情 04/05 | in_progress | 2de7b6d | - | - | 依赖 F0、B13 |
 | P06 | W3 | 家长请假列表/创建/详情 06/07/08 | pending | - | - | - | 依赖 F0 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
