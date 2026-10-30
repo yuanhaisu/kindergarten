@@ -72,7 +72,8 @@
 | B15 | W3* | 家长任务：scope/已结束详情/current_checkin/老师昵称 | passed | d0d2039 | 10d169c | impl-reviews/B15.md | 0 P1 / 4 P2；HTTP 34/34 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | passed | 10d169c | 091342a | impl-reviews/P07.md | 0 P1 / 8 P2；DevTools 全交互；token 71 |
 | B16 | W3* | 积分概览/排行/流水 + 反馈标签 | passed | 8505a52 | 5dc57e4 | impl-reviews/B16.md | 0 P1 / 5 P2；HTTP 68；等级进度降级 |
-| P08 | W3 | 家长积分 + 反馈 20/24 | in_progress | 5dc57e4 | - | - | 依赖 F0、B16 |
+| P08 | W3 | 家长积分 + 反馈 20/24 | passed | 5dc57e4 | 05f409a | impl-reviews/P08.md | 0 P1 / 8 P2；DevTools 实测；token 55 |
+| P09 | W3 | 家长班级 + 幼儿档案 21/23 | in_progress | 05f409a | - | - | 依赖 F0 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
