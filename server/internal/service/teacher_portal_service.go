@@ -982,15 +982,30 @@ func teacherPortalLeaveMap(lr domain.LeaveRequest) map[string]any {
 }
 
 func (s *TeacherPortalService) LeaveStats(ctx context.Context, tc *TeacherPortalContext) (map[string]any, error) {
+	// GORM 的链式 Where 在同一个 Statement 上原地追加条件：复用一条已带 status 的链，
+	// 后一个计数会继承前一个 status（approved/rejected/monthly 恒 0）。每次计数都新建查询。
+	query := func() *gorm.DB {
+		return s.db.WithContext(ctx).Model(&domain.LeaveRequest{}).
+			Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
+	}
+	count := func(dest *int64, cond string, args ...any) error {
+		return query().Where(cond, args...).Count(dest).Error
+	}
+
 	var pending, approved, rejected, monthly int64
-	monthStart := teacherPortalDay(time.Now()).AddDate(0, 0, -time.Now().Day()+1)
-	db := s.db.WithContext(ctx).Model(&domain.LeaveRequest{}).Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
-	if err := db.Where("status = ?", domain.LeaveStatusPending).Count(&pending).Error; err != nil {
+	if err := count(&pending, "status = ?", domain.LeaveStatusPending); err != nil {
 		return nil, err
 	}
-	_ = db.Where("status = ?", domain.LeaveStatusApproved).Count(&approved).Error
-	_ = db.Where("status = ?", domain.LeaveStatusRejected).Count(&rejected).Error
-	_ = db.Where("created_at >= ?", monthStart).Count(&monthly).Error
+	if err := count(&approved, "status = ?", domain.LeaveStatusApproved); err != nil {
+		return nil, err
+	}
+	if err := count(&rejected, "status = ?", domain.LeaveStatusRejected); err != nil {
+		return nil, err
+	}
+	monthStart := teacherPortalDay(time.Now()).AddDate(0, 0, -time.Now().Day()+1)
+	if err := count(&monthly, "created_at >= ?", monthStart); err != nil {
+		return nil, err
+	}
 	return map[string]any{"pending": pending, "approved": approved, "rejected": rejected, "monthly_total": monthly}, nil
 }
 
