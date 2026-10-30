@@ -559,6 +559,20 @@ func (s *TeacherPortalService) classStudentCount(ctx context.Context, tc *Teache
 	return n
 }
 
+// classStudentCountStrict 与 classStudentCount 同口径，但把查询失败上报。
+// 只在任务统计里用：total_students 是「已参与 N/M」的分母，
+// 静默 0 会把整班显示成「没有孩子」，比整个请求失败更误导。
+func (s *TeacherPortalService) classStudentCountStrict(ctx context.Context, tc *TeacherPortalContext) (int64, error) {
+	var n int64
+	if err := s.db.WithContext(ctx).Model(&domain.Student{}).
+		Where("kindergarten_id = ? AND class_id = ? AND status = ?", tc.KindergartenID, tc.ClassID, 1).
+		Count(&n).Error; err != nil {
+		log.L(ctx).Error("class student count failed", "kindergarten", tc.KindergartenID, "class", tc.ClassID, "err", err)
+		return 0, err
+	}
+	return n, nil
+}
+
 func formatOptionalTime(t *time.Time) any {
 	if t == nil {
 		return nil
@@ -3386,9 +3400,53 @@ type TeacherTaskInput struct {
 	Status            int8             `json:"status"`
 }
 
+// 任务列表的状态视图。active = status=1 且未过 end_date；ended 是其余全部。
+// 按实时日期判定而不是只看 status：后台把任务标成进行中但日期已过时，
+// 「进行中」页签不应再收它。
+const (
+	teacherTaskScopeAll    = ""
+	teacherTaskScopeActive = "active"
+	teacherTaskScopeEnded  = "ended"
+)
+
+// normalizeTeacherTaskScope 收敛 status 查询参数。未知值按「全部」处理：
+// 前端一次参数拼错不应让整个任务列表不可用（契约：缺省即全部）。
+func normalizeTeacherTaskScope(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case teacherTaskScopeActive:
+		return teacherTaskScopeActive
+	case teacherTaskScopeEnded:
+		return teacherTaskScopeEnded
+	default:
+		return teacherTaskScopeAll
+	}
+}
+
+// teacherTaskActiveSQL 是「进行中」的唯一谓词，列表筛选与 stats 分类共用，
+// 避免两处口径漂移。参数顺序：status, 今天（YYYY-MM-DD）。
+func teacherTaskActiveSQL() string {
+	return "(status = ? AND end_date >= ?)"
+}
+
+// ListTasks 保持「全部状态」的既有入口；需要筛选时用 ListTasksFiltered。
 func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalContext, page, pageSize int) (map[string]any, error) {
+	return s.ListTasksFiltered(ctx, tc, page, pageSize, "")
+}
+
+// ListTasksFiltered 老师端任务列表。status 只接受 active/ended，其余按全部。
+//
+// stats（all/active/ended）与每项 participant_count 都是列表级批量聚合：
+// 任务页签的计数不能随分页跳变，已参与人数也不能逐任务查询。
+func (s *TeacherPortalService) ListTasksFiltered(ctx context.Context, tc *TeacherPortalContext, page, pageSize int, status string) (map[string]any, error) {
 	q := parseTeacherPortalPage(page, pageSize)
+	today := teacherPortalDateString(time.Now())
 	db := s.db.WithContext(ctx).Model(&domain.ParentTask{}).Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID)
+	switch normalizeTeacherTaskScope(status) {
+	case teacherTaskScopeActive:
+		db = db.Where(teacherTaskActiveSQL(), int8(1), today)
+	case teacherTaskScopeEnded:
+		db = db.Where("NOT "+teacherTaskActiveSQL(), int8(1), today)
+	}
 	var total int64
 	// 计数失败必须上报：静默返回 0 会让老师看到「没有待回应」，而实际上只是查询失败。
 	// 上报前先落日志——handler 层只回「获取亲子任务失败」，ctx 里的原始错误若不在这里打，
@@ -3414,6 +3472,18 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 		// 但也不能给 0（假的「没有星星」）。整页字段置 null，客户端隐藏进度。
 		log.L(ctx).Error("list tasks star count failed", "err", err)
 		starCounts = nil
+	}
+	// 已参与人数是任务卡片的主信息（「已参与 N/M」），读失败必须上报；
+	// 返回 null/0 会把「查询失败」伪装成「没人参与」。
+	participantCounts, err := taskParticipantCounts(ctx, s.db, taskIDs)
+	if err != nil {
+		log.L(ctx).Error("list tasks participant count failed", "err", err)
+		return nil, err
+	}
+	stats, err := s.taskListStats(ctx, tc, today)
+	if err != nil {
+		log.L(ctx).Error("list tasks stats failed", "err", err)
+		return nil, err
 	}
 	list := make([]map[string]any, 0, len(rows))
 	for _, r := range rows {
@@ -3449,13 +3519,64 @@ func (s *TeacherPortalService) ListTasks(ctx context.Context, tc *TeacherPortalC
 			"end_date": r.EndDate.Format("2006-01-02"), "status": r.Status,
 			"allow_public": r.AllowPublic, "recognition_ritual": r.RecognitionRitual,
 			"star_scope": r.StarScope, "star_goal": r.StarGoal, "star_count": starCount,
+			"participant_count": participantCounts[r.ID],
 			"pending_responses": pending, "pending_period": periodPending,
 			"period_start": periodStart.Format("2006-01-02"),
 			"period_end":   periodEnd.Format("2006-01-02"),
 			"created_at":   r.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
-	return map[string]any{"list": list, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
+	return map[string]any{
+		"list": list, "stats": stats, "total": total, "page": q.Page, "page_size": q.PageSize,
+	}, nil
+}
+
+// taskListStats 一次聚合算当前班级全部任务的 all/active/ended。
+// 不受分页与 status 筛选影响：页签上的计数必须是全量，否则翻页后会跳变。
+func (s *TeacherPortalService) taskListStats(ctx context.Context, tc *TeacherPortalContext, today string) (map[string]int64, error) {
+	type bucketRow struct {
+		Bucket string `gorm:"column:bucket"`
+		Cnt    int64  `gorm:"column:cnt"`
+	}
+	var rows []bucketRow
+	if err := s.db.WithContext(ctx).Model(&domain.ParentTask{}).
+		Select("CASE WHEN "+teacherTaskActiveSQL()+" THEN 'active' ELSE 'ended' END AS bucket, COUNT(*) AS cnt", int8(1), today).
+		Where("kindergarten_id = ? AND class_id = ?", tc.KindergartenID, tc.ClassID).
+		Group("bucket").Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	stats := map[string]int64{"all": 0, "active": 0, "ended": 0}
+	for _, r := range rows {
+		stats[r.Bucket] = r.Cnt
+		stats["all"] += r.Cnt
+	}
+	return stats, nil
+}
+
+// taskParticipantCounts 一次 GROUP BY 取每个任务已提交过的去重学生数。
+// 同一学生多次打卡只算 1 人；软删提交不计（Model 自动加 deleted_at IS NULL）。
+func taskParticipantCounts(ctx context.Context, db *gorm.DB, taskIDs []uint64) (map[uint64]int64, error) {
+	out := make(map[uint64]int64, len(taskIDs))
+	for _, id := range taskIDs {
+		out[id] = 0
+	}
+	if len(taskIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		TaskID           uint64 `gorm:"column:task_id"`
+		ParticipantCount int64  `gorm:"column:participant_count"`
+	}
+	if err := db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+		Select("task_id, COUNT(DISTINCT student_id) AS participant_count").
+		Where("task_id IN ?", taskIDs).
+		Group("task_id").Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		out[r.TaskID] = r.ParticipantCount
+	}
+	return out, nil
 }
 
 func (s *TeacherPortalService) GetTask(ctx context.Context, tc *TeacherPortalContext, id uint64) (map[string]any, error) {
@@ -3789,8 +3910,21 @@ func (s *TeacherPortalService) TaskStats(ctx context.Context, tc *TeacherPortalC
 		return nil, err
 	}
 	pending = total - responded
-	return map[string]any{"task_id": id, "total_students": s.classStudentCount(ctx, tc),
-		"submission_count": total, "responded_count": responded, "pending_count": pending}, nil
+	// 参与人数与打卡行数必须分开：submission_count 是行数（同一孩子跨天多次提交会多计），
+	// participant_count 是去重人数——「已参与 N/M」只能用它当分子。
+	var participant int64
+	if err := s.db.WithContext(ctx).Model(&domain.TaskCheckIn{}).
+		Where("task_id = ?", id).Distinct("student_id").Count(&participant).Error; err != nil {
+		log.L(ctx).Error("task stats count failed", "scope", "participant", "task", id, "err", err)
+		return nil, err
+	}
+	totalStudents, err := s.classStudentCountStrict(ctx, tc)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"task_id": id, "total_students": totalStudents,
+		"submission_count": total, "participant_count": participant,
+		"responded_count": responded, "pending_count": pending}, nil
 }
 
 // TaskFeedbackSummary 老师端任务反馈汇总（tasks 3.11）。

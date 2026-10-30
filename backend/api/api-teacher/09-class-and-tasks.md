@@ -205,7 +205,7 @@
 ### GET `/teacher/tasks`
 
 ```json
-// Query: ?page=1&page_size=20
+// Query: ?page=1&page_size=20&status=active|ended   // status 可选（大小写不敏感）；缺省/其它值 = 全部
 
 // Response
 {
@@ -226,6 +226,7 @@
       "star_scope": "task",
       "star_goal": 20,
       "star_count": 12,
+      "participant_count": 18,
       "pending_responses": 3,
       "pending_period": 3,
       "period_start": "2026-03-25",
@@ -233,12 +234,22 @@
       "created_at": "2026-03-18T10:00:00Z"
     }
   ],
+  "stats": { "all": 8, "active": 5, "ended": 3 },
   "total": 8,
   "page": 1,
   "page_size": 20
 }
 ```
 
+- `status`（query，可选）：任务状态视图筛选，**在 SQL 中过滤**，分页语义不变（`total` 随筛选结果）。
+  - `active` = `status=1` 且未过 `end_date`（`end_date >= 今天`，Asia/Shanghai）；
+  - `ended` = 其余全部（`status=0` 或已过 `end_date`）；
+  - 缺省及其它值 = 全部（`active` / `ended` 大小写不敏感、首尾空白忽略）。按实时日期判定，不只看 `status`：后台把任务标成进行中但日期已过时，不算「进行中」。
+- `stats`：当前老师**当前班级全部任务**的计数，**不受 `status` 筛选与分页影响**（页签计数必须稳定）：
+  `all` = 全部任务数，`active` / `ended` 口径同上，三者满足 `all = active + ended`。一次聚合查询。
+- `participant_count`：该任务**已提交过的去重学生数**（`COUNT(DISTINCT student_id)`，软删提交不计）。
+  与详情 stats 的 `submission_count`（打卡行数）不同：同一学生多次打卡只算 1 人。
+  列表级一次 `GROUP BY task_id` 聚合，不逐任务查询；查询失败时整个列表失败（不返回 `null` 或 0）。
 - `pending_responses` 是当前任务下全部 `response_id=0` 的提交数（含旧周期遗留）。
 - `pending_period` 是**本周期内**待回应的条数，与批量回应接口的筛选条件逐字一致
   （`task_id=? AND response_id=0 AND date BETWEEN period_start AND period_end`）：
@@ -359,11 +370,18 @@
   "task_id": 1,
   "total_students": 30,
   "submission_count": 21,
+  "participant_count": 18,
   "responded_count": 12,
   "pending_count": 9
 }
 ```
 
+- `submission_count`：打卡**行数**（同一孩子跨天多次提交会多次计），用于待回应/回应进度。
+- `participant_count`：**已提交过的去重学生数**（`COUNT(DISTINCT student_id)`），用于「已参与 N/M」。
+  与 `submission_count` 语义不同：同一学生多次打卡只算 1 人，客户端不要把行数当人数。
+- `total_students`：当前班**在读**学生数（`students.status=1` 且未删除）。
+  **查询失败返回 500，不得静默返回 0**——那会把整班显示成「没有孩子」。
+- 计数限定当前老师当前班级；任务不属于当前班级/园所 → 404。
 - 不再返回 `checkin_count` / `not_checkin_count` / `total_points_awarded`。
 
 ### GET `/teacher/tasks/:id/feedback-summary`

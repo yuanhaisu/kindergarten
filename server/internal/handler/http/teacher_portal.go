@@ -1123,7 +1123,8 @@ func (h *Handler) TeacherListTasks(c *gin.Context) {
 		return
 	}
 	page, pageSize := teacherPortalPage(c)
-	data, err := h.teacherPortalSvc.ListTasks(c.Request.Context(), tc, page, pageSize)
+	// status=active|ended；缺省或其它值 = 全部（服务层收敛，Handler 不做 422）。
+	data, err := h.teacherPortalSvc.ListTasksFiltered(c.Request.Context(), tc, page, pageSize, c.Query("status"))
 	if err != nil {
 		teacherPortalErr(c, err, "获取亲子任务失败")
 		return
