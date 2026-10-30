@@ -82,7 +82,7 @@
 | B19 | W3* | 修复老师请假统计条件累积 | passed | 6820b2d | f121fc4 | impl-reviews/B19.md | 0 P1 / 3 P2；统计与列表一致 |
 | T04 | W3 | 老师请假 14 | passed | - | - | impl-reviews/T04.md | 0 P1 / 3 P2；复审 92 分；token 144 |
 | T06a | W4 | 老师我的班级 15 | in_progress | 6412f47 | - | - | 依赖 F0 |
-| B20 | W4* | 班级相册后端（表/契约/接口/上传） | proposed | - | - | - | T06b 阻断；OpenSpec `class-album` |
+| B20 | W4* | 班级相册后端（表/契约/接口/上传） | in_progress | a1653ec | - | - | T06b 阻断；OpenSpec `class-album` |
 | T06b | W4 | 老师班级相册 16 | pending | - | - | - | 依赖 B20 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
