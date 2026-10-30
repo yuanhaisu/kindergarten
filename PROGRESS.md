@@ -83,7 +83,8 @@
 | T04 | W3 | 老师请假 14 | passed | - | - | impl-reviews/T04.md | 0 P1 / 3 P2；复审 92 分；token 144 |
 | T06a | W4 | 老师我的班级 15 | passed | 6412f47 | c1a0758 | impl-reviews/T06a.md | 0 P1 / 8 P2；DevTools 实测；token 118 |
 | B20 | W4* | 班级相册后端 | passed | a1653ec | 78026d4 | impl-reviews/B20.md | 0 P1 / 5 P2；HTTP 全过；已归档 |
-| T06b | W4 | 老师班级相册 16 | in_progress | c1a0758 | - | - | 依赖 B20 |
+| B21 | W4* | 相册列表返回前三张封面 | in_progress | f53b09b | - | - | T06b 保真补片 |
+| T06b | W4 | 老师班级相册 16 | in_progress | c1a0758 | - | - | 依赖 B20/B21 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
