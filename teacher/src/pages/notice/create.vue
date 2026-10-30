@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { createTeacherNotice, fetchTeacherNotice, fetchTeacherNoticeTemplates, updateTeacherNotice, uploadNoticeAttachment } from "@/api/teacher-notices"
 import { requestWithAuth } from "@/api/http"
+import { NOTICE_CATEGORIES, noticeCategoryLabel } from "@/utils/notice"
 
 const MAX_ATTACHMENTS = 9
 // 与契约「单张 ≤20MB」同口径；上传通道也会拦，这里先拦一次避免白传。
@@ -20,13 +21,7 @@ type NoticeAttachment = {
   progress?: number
 }
 
-const categories = [
-  { key: "homework", label: "作业" },
-  { key: "bring", label: "带物" },
-  { key: "activity", label: "活动" },
-  { key: "health", label: "健康" },
-  { key: "other", label: "其他" },
-]
+const categories = NOTICE_CATEGORIES
 
 const submitting = ref(false)
 const submitMode = ref<"draft" | "publish">("publish")
@@ -73,7 +68,7 @@ const currentClassLabel = computed(() => {
     .map((c) => c.class_name)
   return names.length ? `${names.join("、")}全体家长` : "请选择班级"
 })
-const categoryLabel = computed(() => categories.find((c) => c.key === form.value.category)?.label || "其他")
+const categoryLabel = computed(() => noticeCategoryLabel(form.value.category) || "其他")
 const scheduledDate = computed(() => (form.value.scheduled_at || "").split(" ")[0] || "")
 const scheduledTime = computed(() => (form.value.scheduled_at || "").split(" ")[1] || "")
 const scheduledDateLabel = computed(() => {

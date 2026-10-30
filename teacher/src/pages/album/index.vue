@@ -10,6 +10,7 @@ import {
 } from "@/api/teacher-albums"
 import { ALBUM_CATEGORIES, ALBUM_FILTERS, albumCategoryLabel, albumTagClass } from "@/utils/albums"
 import { formatDateAnchor, formatDateLabel, formatMonthLabel, monthKeyOf, todayKey } from "@/utils/time"
+import { pickImages } from "@/utils/media"
 import PageShell from "@/components/PageShell.vue"
 
 const PAGE_SIZE = 20
@@ -396,38 +397,24 @@ function uploadOne(tempPath) {
     })
 }
 
-function pickPhotos() {
+async function pickPhotos() {
   const remain = MAX_PHOTOS - mediaList.value.length
   if (remain <= 0) {
     uni.showToast({ title: `最多 ${MAX_PHOTOS} 张照片`, icon: "none" })
     return
   }
-  uni.chooseImage({
-    count: remain,
-    sizeType: ["compressed", "original"],
-    sourceType: ["album", "camera"],
-    success(res) {
-      const paths = res.tempFilePaths || []
-      const files = res.tempFiles || []
-      let rejected = 0
-      paths.forEach((path, index) => {
-        const size = Number(files[index]?.size || 0)
-        if (size > MAX_PHOTO_BYTES) {
-          rejected += 1
-          return
-        }
-        uploadOne(path)
-      })
-      if (rejected) {
-        uni.showToast({ title: `有 ${rejected} 张超过 20MB，未添加`, icon: "none" })
-      }
-    },
-    fail(err) {
-      // 用户取消选择不提示；其它失败给出可感知反馈
-      const msg = String(err?.errMsg || "")
-      if (!/cancel/i.test(msg)) uni.showToast({ title: "选择照片失败", icon: "none" })
+  const files = await pickImages({ count: remain })
+  let rejected = 0
+  files.forEach(file => {
+    if (file.size > MAX_PHOTO_BYTES) {
+      rejected += 1
+      return
     }
+    uploadOne(file.path)
   })
+  if (rejected) {
+    uni.showToast({ title: `有 ${rejected} 张超过 20MB，未添加`, icon: "none" })
+  }
 }
 
 function retryPhoto(index) {

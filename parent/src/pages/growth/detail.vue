@@ -11,6 +11,7 @@ import {
 import { fetchParentHomeOverview } from "@/api/parent-home"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { formatCommentTime, formatRecordTime } from "@/utils/time"
+import { relationLabel } from "@/utils/relation"
 import PageShell from "@/components/PageShell.vue"
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
@@ -22,16 +23,6 @@ const ICON = {
   left: "", // arrow-left-s-line
   right: "", // arrow-right-s-line
   close: "" // close-line
-}
-
-// 关系码由服务端按 StudentParent.relation 返回，页面只做文案映射，
-// 与 server 的 RelationLabel 保持同一组取值。
-const RELATION_LABEL = {
-  father: "爸爸",
-  mother: "妈妈",
-  grandfather: "爷爷",
-  grandmother: "奶奶",
-  other: "其他"
 }
 
 const logId = ref(0)
@@ -233,9 +224,10 @@ async function submitComment() {
   }
 }
 
-// 关系标签：nickname 里已含孩子名（如「乐乐妈妈」）时不再重复拼 student_name
+// 关系标签：nickname 里已含孩子名（如「乐乐妈妈」）时不再重复拼 student_name。
+// 共享枚举覆盖 9 码（含外公/外婆/叔叔/阿姨）；未知码 fallback 为空串，保持不渲染。
 function relationText(user) {
-  const label = RELATION_LABEL[user?.relation] || ""
+  const label = relationLabel(user?.relation, "")
   if (!label) return ""
   const nickname = String(user?.nickname || "")
   const studentName = String(user?.student_name || "")

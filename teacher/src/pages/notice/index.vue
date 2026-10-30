@@ -8,6 +8,8 @@ import {
   fetchTeacherNoticeReadStatus,
   remindTeacherNotice
 } from "@/api/teacher-notices"
+import { relationLabel as baseRelationLabel } from "@/utils/relation"
+import { NOTICE_CATEGORIES, noticeCategoryLabel } from "@/utils/notice"
 
 const statusTabs = [
   { key: "all", label: "全部" },
@@ -17,37 +19,13 @@ const statusTabs = [
   { key: "3", label: "已撤回" }
 ]
 
-const categories = [
-  { key: "all", label: "全部" },
-  { key: "homework", label: "作业" },
-  { key: "bring", label: "带物" },
-  { key: "activity", label: "活动" },
-  { key: "health", label: "健康" },
-  { key: "other", label: "其他" }
-]
-
-const CATEGORY_LABELS = {
-  homework: "作业",
-  bring: "带物",
-  activity: "活动",
-  health: "健康",
-  other: "其他"
-}
+const categories = [{ key: "all", label: "全部" }, ...NOTICE_CATEGORIES]
 
 const STATUS_META = {
   0: { label: "草稿", tone: "draft" },
   1: { label: "定时待发", tone: "scheduled" },
   2: { label: "已发布", tone: "published" },
   3: { label: "已撤回", tone: "revoked" }
-}
-
-const RELATION_LABELS = {
-  mother: "妈妈",
-  father: "爸爸",
-  grandfather: "爷爷",
-  grandmother: "奶奶",
-  guardian: "监护人",
-  other: "其他"
 }
 
 const activeStatus = ref("all")
@@ -90,7 +68,7 @@ function statusTone(item) {
 }
 
 function categoryLabel(item) {
-  return item?.category_label || CATEGORY_LABELS[item?.category] || "通知"
+  return item?.category_label || noticeCategoryLabel(item?.category) || "通知"
 }
 
 function classNameList(item) {
@@ -322,8 +300,14 @@ async function remind() {
   }
 }
 
+// 未读名单的家长关系：guardian 是旧版遗留码（共享枚举没有它），映射为「监护人」；
+// 其余未知码若仍是英文 code 就不上屏，避免把内部值直接展示给老师。
 function relationLabel(value) {
-  return RELATION_LABELS[value] || value || ""
+  const raw = String(value ?? "").trim()
+  if (!raw) return ""
+  if (raw === "guardian") return "监护人"
+  const label = baseRelationLabel(raw)
+  return /^[A-Za-z_]+$/.test(label) ? "" : label
 }
 
 let firstShow = true

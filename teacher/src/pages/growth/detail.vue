@@ -17,20 +17,8 @@ import { fetchTeacherClassStudents } from "@/api/teacher-class"
 import { fetchTeacherAchievements, grantAchievement } from "@/api/teacher-achievements"
 import { ensureLogin } from "@/utils/login"
 import { formatCommentTime, formatRecordTime } from "@/utils/time"
+import { relationLabel } from "@/utils/relation"
 import PageShell from "@/components/PageShell.vue"
-
-// 关系码由服务端按 StudentParent.relation 返回（9 值）；未知码回退为不显示。
-const RELATION_LABEL = {
-  father: "爸爸",
-  mother: "妈妈",
-  grandfather: "爷爷",
-  grandmother: "奶奶",
-  maternal_grandfather: "外公",
-  maternal_grandmother: "外婆",
-  uncle: "叔叔",
-  aunt: "阿姨",
-  other: "其他"
-}
 
 const record = ref({})
 const comments = ref([])
@@ -80,7 +68,8 @@ function initialOf(user) {
 }
 
 function relationText(user) {
-  return RELATION_LABEL[user?.relation] || ""
+  // 9 码由共享枚举映射；未知值原样展示（与接送页同一口径，不猜测、不吞成「其他」）。
+  return relationLabel(user?.relation)
 }
 
 // ---- 照片点名 / AI 建议 ----

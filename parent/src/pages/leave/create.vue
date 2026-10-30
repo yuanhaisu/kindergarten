@@ -17,8 +17,10 @@ import config from "@/config/env"
 import {
   formatMonthTitle,
   formatWeekday,
+  formatYmd,
   inclusiveDays,
-  parseDateOnly
+  parseDateOnly,
+  todayKey
 } from "@/utils/time"
 import { LEAVE_TYPES } from "@/utils/leave"
 import PageShell from "@/components/PageShell.vue"
@@ -36,15 +38,6 @@ const ICON = {
 const WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 const MAX_PHOTOS = 3
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024
-
-function pad2(n) {
-  return String(n).padStart(2, "0")
-}
-
-function todayKey() {
-  const d = new Date()
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
 
 const todayStr = todayKey()
 
@@ -150,7 +143,7 @@ const calendarCells = computed(() => {
   for (let i = 0; i < leading; i += 1) cells.push({ key: `blank-${i}`, blank: true })
   const minDate = sheetMinDate.value
   for (let day = 1; day <= total; day += 1) {
-    const dateStr = `${year}-${pad2(month + 1)}-${pad2(day)}`
+    const dateStr = formatYmd(new Date(year, month, day))
     cells.push({
       key: dateStr,
       blank: false,

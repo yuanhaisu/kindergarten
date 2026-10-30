@@ -5,7 +5,7 @@ import { ensureLogin } from "@/utils/login"
 import { fetchGrowthAlbum } from "@/api/parent-growth"
 import { fetchParentHomeOverview } from "@/api/parent-home"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
-import { formatDateLabel, formatDateRange, formatMonthLabel } from "@/utils/time"
+import { formatDateLabel, formatDateRange, formatMonthLabel, formatYmd, monthKeyOf, todayKey } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
@@ -16,19 +16,6 @@ const ICON = {
   calendar: "", // calendar-line
   play: "", // play-circle-line
   error: "" // error-warning-line
-}
-
-function pad(n) {
-  return String(n).padStart(2, "0")
-}
-
-function keyOf(y, m) {
-  return `${y}-${pad(m)}`
-}
-
-function currentMonthKey() {
-  const now = new Date()
-  return keyOf(now.getFullYear(), now.getMonth() + 1)
 }
 
 const now = new Date()
@@ -46,7 +33,7 @@ const studentId = ref(getCurrentStudentId())
 // 每次 loadData 自增，快速连点换月时只让最后一次请求写数据。
 let loadSeq = 0
 
-const key = computed(() => keyOf(year.value, month.value))
+const key = computed(() => monthKeyOf(formatYmd(new Date(year.value, month.value - 1, 1))))
 const monthLabel = computed(() => formatMonthLabel(key.value))
 
 // 只有「这个月份的数据已经回来」才渲染内容，否则换月失败会把上个月的照片
@@ -64,7 +51,7 @@ const showList = computed(
 
 const locked = computed(() => loading.value || showError.value)
 const prevDisabled = computed(() => locked.value)
-const nextDisabled = computed(() => locked.value || key.value >= currentMonthKey())
+const nextDisabled = computed(() => locked.value || key.value >= monthKeyOf(todayKey()))
 
 const dates = computed(() => groups.value.map(g => g.date).filter(Boolean))
 // groups 由服务端按日期倒序返回；范围文案要升序，翻转后求首尾

@@ -7,6 +7,7 @@ import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, setCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { bindParentPhone } from "@/api/auth"
 import { parseSceneTaskId } from "@/utils/taskScene"
+import { formatYmd } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
 import AppIcon from "@/components/AppIcon.vue"
 
@@ -313,9 +314,7 @@ function formatTime(ts) {
   if (diff >= 0 && diff < 3600000) return Math.max(1, Math.floor(diff / 60000)) + "分钟前"
   if (diff >= 0 && diff < 86400000) return Math.floor(diff / 3600000) + "小时前"
   // 早于 24 小时按本地日期显示；直接用 ISO 串切片会取到 UTC 日期。
-  const m = String(d.getMonth() + 1).padStart(2, "0")
-  const day = String(d.getDate()).padStart(2, "0")
-  return `${d.getFullYear()}-${m}-${day}`
+  return formatYmd(d)
 }
 
 // onShow：tabBar 页 switchTab 切回来不会重跑 onLoad，从详情返回也要刷新。

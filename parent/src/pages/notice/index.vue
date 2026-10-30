@@ -11,7 +11,7 @@ import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { fetchNotices, markNoticeRead } from "@/api/parent-notice"
-import { formatClock, formatDateLabel } from "@/utils/time"
+import { formatClock, formatDateLabel, localDateKey, todayKey } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
 
 // remixicon 字形（App.vue 已全局注册字体）；小程序 WXML 不允许内联 SVG。
@@ -68,20 +68,6 @@ const showList = computed(
   () => hasLoaded.value && !showSkeleton.value && !showError.value && notices.value.length > 0
 )
 
-function pad2(n) {
-  return String(n).padStart(2, "0")
-}
-
-// 按设备本地时区取日期 key：published_at 是 UTC，直接截前 10 位会跨零点错一天。
-function localDateKey(date) {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
-}
-
-function dateKeyOf(ts) {
-  const d = new Date(ts)
-  return Number.isNaN(d.getTime()) ? "" : localDateKey(d)
-}
-
 function noticeTime(ts) {
   const d = new Date(ts)
   if (Number.isNaN(d.getTime())) return ""
@@ -94,12 +80,12 @@ function noticeTime(ts) {
 }
 
 const statValues = computed(() => {
-  const todayKey = localDateKey(new Date())
+  const today = todayKey()
   const list = notices.value
   return {
     total: String(list.length),
     unread: String(list.filter(item => !item.is_read).length),
-    today: String(list.filter(item => dateKeyOf(item.published_at) === todayKey).length)
+    today: String(list.filter(item => localDateKey(item.published_at) === today).length)
   }
 })
 

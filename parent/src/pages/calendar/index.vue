@@ -20,7 +20,9 @@ import {
   formatDateLabel,
   formatMonthDayWeekday,
   formatMonthTitle,
+  formatYmd,
   localDateKey,
+  monthKeyOf,
   parseDateOnly,
   shiftDateKey
 } from "@/utils/time"
@@ -55,8 +57,6 @@ const WEEK_DAYS = ["日", "一", "二", "三", "四", "五", "六"]
 const HIGHLIGHT_MS = 2400
 const CHANGE_PREVIEW = 3
 
-const pad2 = n => String(n).padStart(2, "0")
-const keyOf = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`
 const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate()
 const dateKeyOf = e => String(e?.event_date || "").slice(0, 10)
 
@@ -91,7 +91,7 @@ function compareEvents(a, b) {
 }
 
 const sortedEvents = computed(() => [...events.value].sort(compareEvents))
-const monthPrefix = computed(() => `${view.value.y}-${pad2(view.value.m + 1)}`)
+const monthPrefix = computed(() => monthKeyOf(formatYmd(new Date(view.value.y, view.value.m, 1))))
 const monthEvents = computed(() =>
   sortedEvents.value.filter(e => dateKeyOf(e).slice(0, 7) === monthPrefix.value)
 )
@@ -164,7 +164,7 @@ const gridCells = computed(() => {
     const cy = d.getFullYear()
     const cm = d.getMonth()
     const cd = d.getDate()
-    const iso = keyOf(cy, cm, cd)
+    const iso = formatYmd(d)
     const inMonth = cy === y && cm === m
     cells.push({
       key: iso,
@@ -212,8 +212,8 @@ function isExpanded(id) {
 
 function requestRange() {
   const { y, m } = view.value
-  const monthStart = keyOf(y, m, 1)
-  const monthEnd = keyOf(y, m, daysInMonth(y, m))
+  const monthStart = formatYmd(new Date(y, m, 1))
+  const monthEnd = formatYmd(new Date(y, m, daysInMonth(y, m)))
   const todayPlusWeek = shiftDateKey(todayKey, 7) || todayKey
   return {
     start: monthStart < todayKey ? monthStart : todayKey,
@@ -278,7 +278,7 @@ function shiftMonth(delta) {
   view.value = { y, m }
   const current = y === todayView.y && m === todayView.m
   // 翻回当月自动落到今天；否则保留同号日，目标月没有该号就收敛到月末。
-  selected.value = current ? todayKey : keyOf(y, m, Math.min(previousDay, daysInMonth(y, m)))
+  selected.value = current ? todayKey : formatYmd(new Date(y, m, Math.min(previousDay, daysInMonth(y, m))))
   resetTransient()
   loadEvents()
 }

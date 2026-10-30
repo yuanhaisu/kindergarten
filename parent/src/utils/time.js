@@ -45,9 +45,9 @@ export function formatDayGroupLabel(date) {
   const key = String(date || "").slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return formatDateLabel(date)
   const now = new Date()
-  const todayKey = localDateKey(now)
+  const todayDateKey = localDateKey(now)
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
-  if (key === todayKey) return "今天"
+  if (key === todayDateKey) return "今天"
   if (key === localDateKey(yesterday)) return "昨天"
   return formatDateLabel(key)
 }
@@ -108,6 +108,20 @@ export function localDateKey(ts) {
   const d = toDate(ts)
   if (!d) return ""
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/**
+ * 日期对象/时间戳 → 本地日期 "2026-10-31"；空值/非法返回空串。
+ * 语义是「把一个时间点格式化成 Y-M-D」，与 localDateKey 同一实现，避免各页
+ * 自己拼 pad 串时把 UTC 日期当成本地日期。
+ */
+export function formatYmd(date) {
+  return localDateKey(date)
+}
+
+/** 今天（本地时区）的 "2026-10-31" */
+export function todayKey() {
+  return formatYmd(new Date())
 }
 
 /** 年月（month 为 0 起）→ "2026年10月" */

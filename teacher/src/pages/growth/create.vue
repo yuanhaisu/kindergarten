@@ -12,6 +12,7 @@ import { fetchTeacherClassStudents, fetchTeacherClassInfo } from "@/api/teacher-
 import { fetchDict } from "@/api/dict"
 import { fetchTeacherAchievements, grantAchievement } from "@/api/teacher-achievements"
 import { addDays, formatDateAnchor, todayKey } from "@/utils/time"
+import { pickImages } from "@/utils/media"
 import PageShell from "@/components/PageShell.vue"
 
 const MAX_PHOTOS = 20
@@ -379,33 +380,24 @@ async function uploadOne(tempPath) {
   }
 }
 
-function pickPhotos() {
+async function pickPhotos() {
   const remain = MAX_PHOTOS - form.value.media.length
   if (remain <= 0) {
     uni.showToast({ title: `最多 ${MAX_PHOTOS} 张照片`, icon: "none" })
     return
   }
-  uni.chooseImage({
-    count: remain,
-    sizeType: ["compressed", "original"],
-    sourceType: ["album", "camera"],
-    success(res) {
-      const paths = res.tempFilePaths || []
-      const files = res.tempFiles || []
-      let rejected = 0
-      paths.forEach((path, index) => {
-        const size = Number(files[index]?.size || 0)
-        if (size > MAX_PHOTO_BYTES) {
-          rejected += 1
-          return
-        }
-        uploadOne(path)
-      })
-      if (rejected) {
-        uni.showToast({ title: `有 ${rejected} 张照片超过 20MB，未添加`, icon: "none" })
-      }
+  const files = await pickImages({ count: remain })
+  let rejected = 0
+  files.forEach(file => {
+    if (file.size > MAX_PHOTO_BYTES) {
+      rejected += 1
+      return
     }
+    uploadOne(file.path)
   })
+  if (rejected) {
+    uni.showToast({ title: `有 ${rejected} 张照片超过 20MB，未添加`, icon: "none" })
+  }
 }
 
 function retryMedia(index) {
