@@ -27,6 +27,21 @@ export function formatDateLabel(date) {
 }
 
 /**
+ * 日期分组标题：今天是「今天」、昨天是「昨天」，其余「10月24日」。
+ * 按设备本地日期比较，避免把 UTC 的 created_at 直接 slice 后跨零点错一天。
+ */
+export function formatDayGroupLabel(date) {
+  const key = String(date || "").slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return formatDateLabel(date)
+  const now = new Date()
+  const todayKey = localDateKey(now)
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+  if (key === todayKey) return "今天"
+  if (key === localDateKey(yesterday)) return "昨天"
+  return formatDateLabel(key)
+}
+
+/**
  * 纯日期 → 本地零点 Date；格式不符返回 null。
  * 不能用 new Date("2026-10-20")：它按 UTC 解析，负时区会倒退一天。
  */
