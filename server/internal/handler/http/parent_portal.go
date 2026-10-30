@@ -667,7 +667,9 @@ func (h *Handler) ParentListTasks(c *gin.Context) {
 		return
 	}
 	page, ps := ppPage(c)
-	result, err := h.parentPortalSvc.ListTasks(c.Request.Context(), pc, page, ps)
+	result, err := h.parentPortalSvc.ListTasksFiltered(c.Request.Context(), pc, service.ParentTaskListFilter{
+		Scope: c.Query("scope"),
+	}, page, ps)
 	if err != nil {
 		response.ErrInternal(c, "获取任务列表失败")
 		return

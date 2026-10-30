@@ -2378,31 +2378,119 @@ func taskSubmittedInPeriod(ctx context.Context, db *gorm.DB, t *domain.ParentTas
 	return found, err
 }
 
+// ParentTaskListFilter 家长端任务列表过滤条件。
+// Scope: active（默认，进行中）/ checked（本孩子已打卡）/ all（全部，含已结束）。
+type ParentTaskListFilter struct {
+	Scope string
+}
+
+// normalizeParentTaskScope 归一化任务分段。契约只有 active/checked/all，
+// 拼错按 active 处理——与通知 is_read 同策略，参数失误不该让整页 400。
+func normalizeParentTaskScope(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "checked":
+		return "checked"
+	case "all":
+		return "all"
+	default:
+		return "active"
+	}
+}
+
+// taskDisplayStatus 列表/详情展示用状态：老师手动结束（status=0）或已过 end_date
+// 都是 0。未开始的任务仍是 1，前端用 start_date 自己区分「未开始」。
+func taskDisplayStatus(t *domain.ParentTask, now time.Time) int8 {
+	if t.Status == 1 && !taskDayOf(t.EndDate).Before(taskDayOf(now)) {
+		return 1
+	}
+	return 0
+}
+
+// taskResponseTeacherNicknames 批量取回应老师昵称，一次 IN 查询。
+// 老师账号已删除时不出现该 id，调用方按空昵称回退「老师的回应」。
+func (s *ParentPortalService) taskResponseTeacherNicknames(ctx context.Context, ids []uint64) (map[uint64]string, error) {
+	out := make(map[uint64]string, len(ids))
+	uniq := make([]uint64, 0, len(ids))
+	seen := make(map[uint64]struct{}, len(ids))
+	for _, id := range ids {
+		if id == 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+	if len(uniq) == 0 {
+		return out, nil
+	}
+	var users []domain.User
+	if err := s.db.WithContext(ctx).Select("id", "nickname").Where("id IN ?", uniq).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	for _, u := range users {
+		out[u.ID] = u.Nickname
+	}
+	return out, nil
+}
+
 func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
+	return s.ListTasksFiltered(ctx, pc, ParentTaskListFilter{}, page, pageSize)
+}
+
+// ListTasksFiltered 按 scope 读取当前孩子的任务列表：
+//   - active：进行中（status=1 且 start<=今天<=end），创建时间倒序（既有行为）；
+//   - checked：当前孩子已打卡过的任务（不限日期/状态），最近打卡时间倒序；
+//   - all：该班全部任务（含已结束与未开始），end_date 倒序，再按 id 倒序。
+//
+// 三种分段共用 taskScopeQuery 的班级/个体/园所/软删收敛，分段只决定日期与排序。
+func (s *ParentPortalService) ListTasksFiltered(
+	ctx context.Context, pc *ParentPortalContext, filter ParentTaskListFilter, page, pageSize int,
+) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
 	}
 	now := time.Now().In(shanghaiLoc())
 	today := now.Format("2006-01-02")
-	q := taskScopeQuery(s.db.WithContext(ctx).Model(&domain.ParentTask{}), pc).
-		Where("status = 1 AND start_date <= ? AND end_date >= ?", today, today)
+	scope := normalizeParentTaskScope(filter.Scope)
+	q := taskScopeQuery(s.db.WithContext(ctx).Model(&domain.ParentTask{}), pc)
+	switch scope {
+	case "all":
+		// 全部：不加日期/状态过滤，已结束与未开始都返回。
+	case "checked":
+		// EXISTS 保证一任务一行：同一任务每日可多次提交，join 会把任务重复列出。
+		q = q.Where(
+			"EXISTS (SELECT 1 FROM task_check_ins AS ck WHERE ck.task_id = parent_tasks.id AND ck.student_id = ? AND ck.deleted_at IS NULL)",
+			pc.CurrentStudent.ID,
+		)
+	default:
+		q = q.Where("status = 1 AND start_date <= ? AND end_date >= ?", today, today)
+	}
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 	offset := (page - 1) * pageSize
+	rowsQ := q.Session(&gorm.Session{})
+	switch scope {
+	case "all":
+		rowsQ = rowsQ.Order("end_date DESC, parent_tasks.id DESC")
+	case "checked":
+		rowsQ = rowsQ.Order(clause.OrderBy{Expression: clause.Expr{
+			SQL:  "(SELECT MAX(ck.created_at) FROM task_check_ins AS ck WHERE ck.task_id = parent_tasks.id AND ck.student_id = ? AND ck.deleted_at IS NULL) DESC, parent_tasks.id DESC",
+			Vars: []interface{}{pc.CurrentStudent.ID},
+		}})
+	default:
+		rowsQ = rowsQ.Order("created_at DESC")
+	}
 	var rows []domain.ParentTask
-	if err := q.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+	if err := rowsQ.Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	list := make([]map[string]any, 0, len(rows))
-	activeRows := make([]domain.ParentTask, 0, len(rows))
 	taskIDs := make([]uint64, 0, len(rows))
 	for _, r := range rows {
-		if !taskIsActive(&r, now) {
-			continue
-		}
-		activeRows = append(activeRows, r)
 		taskIDs = append(taskIDs, r.ID)
 	}
 	// 一次查完本页的未读状态，避免每个任务各查一次。
@@ -2411,7 +2499,7 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 		log.L(ctx).Error("parent list tasks count failed", "scope", "unread", "err", err)
 		return nil, err
 	}
-	for _, r := range activeRows {
+	for _, r := range rows {
 		periodCheckin, submitted, err := taskPeriodCheckin(ctx, s.db, &r, pc.CurrentStudent.ID, now)
 		if err != nil {
 			log.L(ctx).Error("parent list tasks count failed", "scope", "submitted", "task", r.ID, "err", err)
@@ -2431,7 +2519,7 @@ func (s *ParentPortalService) ListTasks(ctx context.Context, pc *ParentPortalCon
 			"allow_public": r.AllowPublic, "recognition_ritual": r.RecognitionRitual,
 			"star_scope": r.StarScope, "star_goal": r.StarGoal,
 			"start_date": r.StartDate.Format("2006-01-02"), "end_date": r.EndDate.Format("2006-01-02"),
-			"status": r.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
+			"status": taskDisplayStatus(&r, now), "checked_in_today": submitted, "submitted_current_period": submitted,
 			"responded":     responded,
 			"checkin_count": childCount, "has_unread_supplement": unread[r.ID],
 			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
@@ -2452,13 +2540,36 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 		return nil, err
 	}
 	now := time.Now().In(shanghaiLoc())
-	if !taskIsActive(&t, now) {
-		return nil, ErrParentNotFound
-	}
+	// 已结束/未开始的任务同样要能打开详情：家长在「全部」里回看老师和自己的记录。
+	// 可见范围（班级/个体孩子/园所/软删）已由 taskScopeQuery 收敛，不再按日期拒绝。
 	submitted, err := taskSubmittedInPeriod(ctx, s.db, &t, pc.CurrentStudent.ID, now)
 	if err != nil {
 		log.L(ctx).Error("parent get task count failed", "scope", "submitted", "task", id, "err", err)
 		return nil, err
+	}
+
+	// 最近一条提交（「我的提交」卡）：按提交时间倒序取一条。
+	var cur domain.TaskCheckIn
+	hasCurrent := true
+	if err := s.db.WithContext(ctx).
+		Where("task_id = ? AND student_id = ?", id, pc.CurrentStudent.ID).
+		Order("created_at DESC, id DESC").First(&cur).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			hasCurrent = false
+		} else {
+			log.L(ctx).Error("parent get task current checkin failed", "task", id, "err", err)
+			return nil, err
+		}
+	}
+	var currentCheckin any
+	if hasCurrent {
+		currentCheckin = map[string]any{
+			"id": cur.ID, "date": cur.Date.Format("2006-01-02"), "content": cur.Content,
+			"media_url":      cur.MediaURL,
+			"public_status":  publicCheckinStatus(&cur),
+			"public_visible": publicCheckinVisible(&t, &cur, pc.CurrentStudent.ClassID, now),
+			"created_at":     cur.CreatedAt.UTC().Format(time.RFC3339),
+		}
 	}
 
 	var responses []domain.TaskResponse
@@ -2502,6 +2613,21 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 			reactions[r.ResponseID] = r.Reaction
 		}
 	}
+	// 老师昵称与回应一起批量取：一页详情里的主回应 + 补充回应一次 IN 查询。
+	teacherIDs := make([]uint64, 0, len(responses))
+	for _, r := range responses {
+		teacherIDs = append(teacherIDs, r.TeacherID)
+	}
+	for _, items := range supplements {
+		for _, sp := range items {
+			teacherIDs = append(teacherIDs, sp.TeacherID)
+		}
+	}
+	teachers, err := s.taskResponseTeacherNicknames(ctx, teacherIDs)
+	if err != nil {
+		log.L(ctx).Error("parent get task teachers failed", "task", id, "err", err)
+		return nil, err
+	}
 	respOut := make([]map[string]any, 0, len(responses))
 	for _, r := range responses {
 		spOut := make([]map[string]any, 0, len(supplements[r.ID]))
@@ -2509,6 +2635,7 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 			spOut = append(spOut, map[string]any{
 				"id": sp.ResponseID, "checkin_id": sp.CheckInID, "ritual": sp.Ritual,
 				"sticker_key": sp.StickerKey, "content": sp.Content, "media_url": sp.MediaURL,
+				"teacher":     map[string]any{"nickname": teachers[sp.TeacherID]},
 				"created_at":  sp.CreatedAt.UTC().Format(time.RFC3339),
 				"my_reaction": reactions[sp.ResponseID],
 			})
@@ -2516,6 +2643,7 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 		respOut = append(respOut, map[string]any{
 			"id": r.ID, "ritual": r.Ritual, "sticker_key": r.StickerKey, "content": r.Content,
 			"media_url": r.MediaURL, "response_type": r.ResponseType,
+			"teacher":     map[string]any{"nickname": teachers[r.TeacherID]},
 			"created_at":  r.CreatedAt.UTC().Format(time.RFC3339),
 			"my_reaction": reactions[r.ID],
 			"supplements": spOut,
@@ -2537,8 +2665,9 @@ func (s *ParentPortalService) GetTask(ctx context.Context, pc *ParentPortalConte
 		"target_student_id": t.TargetStudentID, "allow_public": t.AllowPublic,
 		"recognition_ritual": t.RecognitionRitual, "star_scope": t.StarScope, "star_goal": t.StarGoal,
 		"start_date": t.StartDate.Format("2006-01-02"), "end_date": t.EndDate.Format("2006-01-02"),
-		"status": t.Status, "checked_in_today": submitted, "submitted_current_period": submitted,
-		"has_unread_supplement": unread[t.ID], "responses": respOut, "created_at": t.CreatedAt.UTC().Format(time.RFC3339),
+		"status": taskDisplayStatus(&t, now), "checked_in_today": submitted, "submitted_current_period": submitted,
+		"has_unread_supplement": unread[t.ID], "current_checkin": currentCheckin,
+		"responses": respOut, "created_at": t.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
 }
 
@@ -2560,7 +2689,8 @@ func (s *ParentPortalService) MarkTaskRead(ctx context.Context, pc *ParentPortal
 	// 截断到毫秒：列是 datetime(3)，MySQL 会把不足毫秒的部分四舍五入。
 	// 不截断时，读发生在 .0007s 会存成下一秒的 .001，把同毫秒的补充回应误判成已读。
 	now := time.Now().In(shanghaiLoc()).Truncate(time.Millisecond)
-	// 与任务详情同口径：未开始/已结束的任务对家长不可见，也不该写读标记。
+	// 读标记仍只对进行中任务开放：task_notify_test.go 的 TestReadMarkRejectsInvisibleTask
+	// 钉住了「已结束 → 404」，B15 不改该行为（详情可读，但读标记不写已结束任务）。
 	if !taskIsActive(&t, now) {
 		return nil, ErrParentNotFound
 	}
@@ -2624,6 +2754,7 @@ type taskSupplementRow struct {
 	ResponseID uint64    `gorm:"column:response_id"`
 	CheckInID  uint64    `gorm:"column:check_in_id"`
 	MainID     uint64    `gorm:"column:main_id"`
+	TeacherID  uint64    `gorm:"column:teacher_id"`
 	Ritual     string    `gorm:"column:ritual"`
 	StickerKey string    `gorm:"column:sticker_key"`
 	Content    string    `gorm:"column:content"`
@@ -2637,7 +2768,7 @@ type taskSupplementRow struct {
 func (s *ParentPortalService) taskSupplementsForStudent(ctx context.Context, taskID, studentID uint64) (map[uint64][]taskSupplementRow, error) {
 	var rows []taskSupplementRow
 	if err := s.db.WithContext(ctx).Table("task_response_supplements AS s").
-		Select("s.response_id, s.check_in_id, c.response_id AS main_id, r.ritual, r.sticker_key, r.content, r.media_url, r.created_at").
+		Select("s.response_id, s.check_in_id, c.response_id AS main_id, r.teacher_id, r.ritual, r.sticker_key, r.content, r.media_url, r.created_at").
 		Joins("INNER JOIN task_check_ins AS c ON c.id = s.check_in_id AND c.deleted_at IS NULL").
 		Joins("INNER JOIN task_responses AS r ON r.id = s.response_id AND r.deleted_at IS NULL").
 		Where("c.task_id = ? AND c.student_id = ? AND c.response_id <> 0", taskID, studentID).

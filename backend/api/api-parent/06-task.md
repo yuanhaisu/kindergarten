@@ -13,7 +13,7 @@
 > 当前孩子的任务列表
 
 ```json
-// Query: ?student_id=27&page=1&page_size=20
+// Query: ?student_id=27&page=1&page_size=20&scope=active
 
 // Response
 {
@@ -48,6 +48,11 @@
 ```
 
 - `target_student_id=0` 表示班级任务；`>0` 表示个体任务。
+- `scope`：分段筛选，缺省 `active`；未知取值按 `active` 处理（参数拼错不报 400）。
+  - `active`：进行中（`status=1` 且 `start_date <= 今天 <= end_date`），按创建时间倒序（默认行为，与旧版一致）。
+  - `checked`：当前孩子**已打卡过**的任务（不限日期/状态），按最近一次打卡时间倒序。
+  - `all`：该班全部任务（含已结束与未开始），按 `end_date DESC, id DESC`。
+- `status`：`1` 进行中（未结束）；`0` 已结束（`end_date` 早于今天，或老师已手动结束 `status=0`）。未开始的任务仍为 `1`，前端用 `start_date` 自行判断。
 - `checkin_count` 是**当前孩子**的提交次数，不是全班累计。
 - `submitted_current_period`：每日=今天、每周=滚动 7 天、一次性=周期内是否已提交；前端用它显示「已提交/待完成」。
 - `responded`：本周期那条提交已被主回应关闭（`response_id > 0`）。补充回应不改变 `response_id`，不影响该值；
@@ -83,6 +88,15 @@
   "status": 1,
   "checked_in_today": false,
   "has_unread_supplement": false,
+  "current_checkin": {
+    "id": 1,
+    "date": "2026-03-19",
+    "content": "今天和爸爸一起读了《小王子》第三章",
+    "media_url": "https://cdn.example.com/task/checkin/1.jpg",
+    "public_status": "pending",
+    "public_visible": false,
+    "created_at": "2026-03-19T20:30:00Z"
+  },
   "responses": [
     {
       "id": 10,
@@ -91,6 +105,7 @@
       "content": "今天读得真认真",
       "media_url": "https://cdn.example.com/task/voice/10.mp3",
       "response_type": "single",
+      "teacher": { "nickname": "王老师" },
       "my_reaction": "",
       "supplements": [
         {
@@ -100,6 +115,7 @@
           "sticker_key": "flower",
           "content": "单独夸一句",
           "media_url": "",
+          "teacher": { "nickname": "李老师" },
           "my_reaction": "received",
           "created_at": "2026-03-19T20:40:00Z"
         }
@@ -112,6 +128,13 @@
 ```
 
 - `requirements` 是数组，不再返回 JSON 字符串。
+- `status`：与列表同口径，`0` 表示已结束（`end_date` 早于今天或老师已手动结束），`1` 表示未结束。
+- **已结束/未开始的任务详情同样返回 200**：家长要在「全部」里回看老师和自己的记录。可见范围仍按班级/个体孩子归属、园所与软删收敛；跨班、别人的个体任务、已删除任务仍是 **404**。
+- `current_checkin`：当前孩子在该任务下**最近一次**提交（按提交时间倒序，最近一条）；没有提交时为 `null`。
+  - `public_status` / `public_visible` 与 `checkin-history` 同口径，由服务端计算，客户端不要自己拼条件。
+  - `created_at` 是该条提交的时间（无日期以外的时刻）；详情页「我的提交」显示它。
+  - 不返回 `public_requested_at`：`task_check_ins` 只存 `is_public_requested` 布尔值，没有申请时间列；是否申请过由 `public_status` 表达。
+- `teacher`：回应老师的展示信息，与本条回应同批返回（一次批量查询，无 N+1）。老师账号已删除时 `nickname` 为空串，前端回退「老师的回应」。
 - `responses` 返回当前孩子提交关联的**主回应**；`supplements` 是老师在主回应之后对**本孩子的这条提交**追加的个别补充，按创建时间升序，条数不限。
 - 补充回应只包含当前孩子提交上的那些：一条周期汇总回应可能给多个孩子各补一条，跨孩子的补充不会出现在这里。
 - `response_type`：`single`（逐条回应，只覆盖一条提交）/ `period`（周期汇总回应，一次覆盖一个周期内多条提交）。
@@ -135,7 +158,7 @@
 
 - 未读判定：该孩子在该任务下存在补充回应，且 `last_read_at IS NULL OR 补充回应.created_at >= last_read_at`；用 `>=` 避免「同一秒内补充又打开」漏判。
 - 读标记按 `(task_id, user_id, student_id)` 唯一：同一孩子的父母各自一行，多孩各自一行，互不影响；用 upsert 写入，并发读不会 500。
-- `student_id` 必带且必须属于当前家长 → 缺失/非法 **422**，未绑定 **403**；任务不可见或已删除 **404**。
+- `student_id` 必带且必须属于当前家长 → 缺失/非法 **422**，未绑定 **403**；任务不存在、已删除或不属于该孩子 **404**。读标记只对**进行中**任务开放：已结束/未开始的任务即使详情可读，本接口仍返回 **404**（不写已结束任务的读标记）。
 - 打开任务详情时调用；不改变消息的已读状态（消息红点仍由 `/common/messages/*` 维护）。
 
 ---
