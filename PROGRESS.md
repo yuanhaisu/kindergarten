@@ -88,7 +88,8 @@
 | T07 | W4 | 老师日历三页 11/12/13 | passed | 37d9502 | - | impl-reviews/T07.md | 0 P1 / 7 P2；DevTools 全交互；token 93 |
 | B22 | W4* | 老师消息未读态/已读接口 | passed | f7dc14a | cea2639 | impl-reviews/B22.md | 0 P1 / 4 P2；未读 11→10→0 |
 | T08 | W4 | 老师更多/我的/消息 17/19/18 | passed | cea2639 | - | impl-reviews/T08.md | 0 P1 / 6 P2；多角色修复后复审；token 73 |
-| T09 | W5 | 老师登录 02 | in_progress | - | - | - | 依赖 F0 |
+| T09 | W5 | 老师登录 02 | passed | 25111c2 | - | impl-reviews/T09.md | 0 P1 / 7 P2；登录全链路实测；token 73 |
+| T10 | W5 | 老师晨检 + 保健日历 20/21 | in_progress | - | - | - | 依赖 F0 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
