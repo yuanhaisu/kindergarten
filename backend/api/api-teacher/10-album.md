@@ -79,7 +79,12 @@
       "category_label": "活动",
       "album_date": "2026-10-24",
       "photo_count": 12,
-      "cover_url": "https://cdn.example.com/album/cover.jpg"
+      "cover_url": "https://cdn.example.com/album/cover.jpg",
+      "cover_urls": [
+        "https://cdn.example.com/album/1.jpg",
+        "https://cdn.example.com/album/2.jpg",
+        "https://cdn.example.com/album/3.jpg"
+      ]
     }
   ],
   "total": 12,
@@ -97,6 +102,7 @@
 | `album_date` | string | 相册日期，`YYYY-MM-DD` |
 | `photo_count` | int | 照片数（创建时冗余写入） |
 | `cover_url` | string | 封面，创建时取第一张照片的 `file_url` |
+| `cover_urls` | string[] | 封面候选，最多 3 张，按 `sort_num` 升序；无照片时为空数组 `[]`（不是 `null`） |
 
 ---
 
@@ -190,6 +196,7 @@
 
 ## 实现约束
 
-- 封面 `cover_url` 与 `photo_count` 在创建时一次写入（列表免 join）；本期无编辑/删除接口，没有漂移来源。
+- 封面 `cover_url` 与 `photo_count` 在创建时一次写入；本期无编辑/删除接口，没有漂移来源。
+- 列表的 `cover_urls` 由一次 `album_photos` 批量查询（`album_id IN (...)`，按 `sort_num` 升序）后按相册取前 3 张，不做逐相册查询（禁止 N+1）。
 - 写路径一律带 `kindergarten_id` 与 `class_id = 当前老师班级`；读路径同样收敛，跨班/跨园返回 404。
 - 本期不支持：编辑/删除相册、家长端浏览、视频、跨班级相册、管理端相册管理。

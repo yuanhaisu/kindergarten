@@ -17,6 +17,8 @@ const (
 	teacherAlbumPhotosMax     = 50
 	teacherAlbumPageSizeMax   = 50
 	teacherAlbumDateLayout    = "2006-01-02"
+	// teacherAlbumCoverMax 设计稿相册卡是 3 格封面，列表只返回前 3 张。
+	teacherAlbumCoverMax = 3
 )
 
 // teacherAlbumCategoryLabels 分类四值的中文标签（设计稿第五个胶囊「全部」是筛选值，不入库）。
@@ -120,9 +122,20 @@ func (s *TeacherPortalService) ListAlbums(
 		return nil, err
 	}
 
+	albumIDs := make([]uint64, 0, len(albums))
+	for i := range albums {
+		albumIDs = append(albumIDs, albums[i].ID)
+	}
+	covers, err := s.albumRepo().ListFirstPhotos(ctx, albumIDs, teacherAlbumCoverMax)
+	if err != nil {
+		return nil, err
+	}
+
 	list := make([]map[string]any, 0, len(albums))
 	for i := range albums {
-		list = append(list, teacherAlbumListItem(&albums[i]))
+		item := teacherAlbumListItem(&albums[i])
+		item["cover_urls"] = teacherAlbumCoverURLs(covers[albums[i].ID])
+		list = append(list, item)
 	}
 	return map[string]any{"list": list, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
 }
@@ -183,6 +196,16 @@ func teacherAlbumListItem(a *domain.Album) map[string]any {
 		"photo_count":    a.PhotoCount,
 		"cover_url":      a.CoverURL,
 	}
+}
+
+// teacherAlbumCoverURLs 只取 file_url 与 cover_url 同源；空切片而非 nil，
+// 保证 JSON 序列化为 [] 而不是 null，端上可直接 length 判断。
+func teacherAlbumCoverURLs(photos []domain.AlbumPhoto) []string {
+	urls := make([]string, 0, len(photos))
+	for _, p := range photos {
+		urls = append(urls, p.FileURL)
+	}
+	return urls
 }
 
 func buildTeacherAlbum(

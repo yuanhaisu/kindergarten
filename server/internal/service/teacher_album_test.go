@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -10,12 +11,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 )
 
 // B20：老师端班级相册（openspec class-album）。
+// B21：列表 cover_urls 前 3 张 + 单条批量查询守卫。
 // 打真实 MySQL（本地 configs/app.ini），固定 9960xx 夹具，t.Cleanup 硬删 0 残留。
 // 覆盖 TC-NEW-ALB-0001–0007：创建顺序、无照片/超 50/非法分类拒绝、统计跨月、
 // 分类筛选、详情顺序、跨班/跨园隔离。
@@ -355,6 +358,57 @@ func TestTeacherAlbumListFilterByCategory(t *testing.T) {
 
 	_, err = f.svc.ListAlbums(context.Background(), f.tcA, "other", 1, 20)
 	require.ErrorIs(t, err, ErrTeacherInvalidParams)
+}
+
+// B21：列表每项带 cover_urls（最多 3 张，sort_num 升序），cover_url 保留兼容；
+// 无照片（生产不应出现）必须是空数组而不是 null。
+func TestTeacherAlbumListCoverURLs(t *testing.T) {
+	f := newTALFixture(t)
+
+	seedTALAlbum(t, f.db, 996151, testTALKG, testTALClassA, domain.AlbumCategoryActivity, talThisMonthDate(2), 4, false)
+	seedTALAlbum(t, f.db, 996152, testTALKG, testTALClassA, domain.AlbumCategoryDaily, talThisMonthDate(1), 1, false)
+	seedTALAlbum(t, f.db, 996153, testTALKG, testTALClassA, domain.AlbumCategoryWork, talThisMonthDate(0), 0, false)
+
+	data, err := f.svc.ListAlbums(context.Background(), f.tcA, "", 1, 20)
+	require.NoError(t, err)
+	list := data["list"].([]map[string]any)
+	require.Len(t, list, 3)
+
+	assert.Equal(t, []string{
+		"https://cdn.example.com/seed/996151/0.jpg",
+		"https://cdn.example.com/seed/996151/1.jpg",
+		"https://cdn.example.com/seed/996151/2.jpg",
+	}, list[0]["cover_urls"], "4 张只取前 3 张且按 sort_num 升序")
+	assert.Equal(t, "https://cdn.example.com/seed/996151/0.jpg", list[0]["cover_url"], "cover_url 保留兼容")
+	assert.Equal(t, []string{"https://cdn.example.com/seed/996152/0.jpg"}, list[1]["cover_urls"], "1 张就返回 1 张")
+	assert.Equal(t, []string{}, list[2]["cover_urls"], "无照片是空数组，不是 nil")
+
+	// HTTP 形状：null 与 [] 在端上不等价，空相册必须序列化成 []。
+	raw, err := json.Marshal(data)
+	require.NoError(t, err)
+	var shape struct {
+		List []map[string]json.RawMessage `json:"list"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &shape))
+	require.Len(t, shape.List, 3)
+	assert.JSONEq(t, `["https://cdn.example.com/seed/996151/0.jpg","https://cdn.example.com/seed/996151/1.jpg","https://cdn.example.com/seed/996151/2.jpg"]`,
+		string(shape.List[0]["cover_urls"]))
+	assert.Equal(t, "[]", string(shape.List[2]["cover_urls"]), "空相册的 cover_urls 必须是 []，不能是 null")
+}
+
+// 性能守卫：整页相册只发一条 album_photos 批量查询，禁止逐相册取封面（N+1）。
+func TestTeacherAlbumListCoverURLsSingleQuery(t *testing.T) {
+	f := newTALFixture(t)
+	seedTALAlbum(t, f.db, 996161, testTALKG, testTALClassA, domain.AlbumCategoryActivity, talThisMonthDate(2), 4, false)
+	seedTALAlbum(t, f.db, 996162, testTALKG, testTALClassA, domain.AlbumCategoryDaily, talThisMonthDate(1), 4, false)
+	seedTALAlbum(t, f.db, 996163, testTALKG, testTALClassA, domain.AlbumCategoryWork, talThisMonthDate(0), 4, false)
+
+	counter := &clpSQLLogger{Interface: gormlogger.Default.LogMode(gormlogger.Silent)}
+	svc := NewTeacherPortalService(f.db.Session(&gorm.Session{Logger: counter}), nil, nil, nil, nil, nil, config.FaceConfig{})
+	_, err := svc.ListAlbums(context.Background(), f.tcA, "", 1, 20)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, counter.countContaining("album_photos"), "3 个相册只能有一条批量查询")
 }
 
 // TC-NEW-ALB-0005：详情返回全部照片，顺序与创建时一致。

@@ -97,6 +97,36 @@ func (r *AlbumRepo) ListPhotos(ctx context.Context, albumID uint64) ([]domain.Al
 	return list, err
 }
 
+// ListFirstPhotos 列表页批量取每个相册的前 perAlbum 张照片（sort_num 升序），
+// 一次查询覆盖整页相册，避免逐相册查询的 N+1。
+// 截断放在 Go 侧：MySQL 5.7 没有窗口函数，而每相册的 LIMIT 无法在单条 SQL 里表达。
+func (r *AlbumRepo) ListFirstPhotos(
+	ctx context.Context,
+	albumIDs []uint64,
+	perAlbum int,
+) (map[uint64][]domain.AlbumPhoto, error) {
+	out := make(map[uint64][]domain.AlbumPhoto, len(albumIDs))
+	if len(albumIDs) == 0 || perAlbum <= 0 {
+		return out, nil
+	}
+
+	var photos []domain.AlbumPhoto
+	err := r.db.WithContext(ctx).
+		Where("album_id IN ?", albumIDs).
+		Order("album_id ASC, sort_num ASC, id ASC").
+		Find(&photos).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range photos {
+		if len(out[p.AlbumID]) >= perAlbum {
+			continue
+		}
+		out[p.AlbumID] = append(out[p.AlbumID], p)
+	}
+	return out, nil
+}
+
 // Create 事务写入相册与照片：任一照片插入失败则整单回滚，不留半条相册。
 // sort_num 一律按切片下标重写，调用方传入的 SortNum 视为无效输入。
 func (r *AlbumRepo) Create(ctx context.Context, album *domain.Album, photos []domain.AlbumPhoto) error {
