@@ -56,6 +56,8 @@ type ParentPortalService struct {
 	// leave 在构造函数内部创建，不增加构造参数——wire_gen 与既有 14 处测试调用点
 	// 都按当前签名构造该服务。
 	leave *repository.LeaveRepo
+	// points 同理：积分查询统一走 PointRepo，与 admin 侧共用同一批聚合 SQL。
+	points *repository.PointRepo
 }
 
 func NewParentPortalService(
@@ -68,7 +70,7 @@ func NewParentPortalService(
 	calendar *repository.CalendarRepo,
 	notice *repository.NoticeRepo,
 ) *ParentPortalService {
-	return &ParentPortalService{db: db, parents: parents, roles: roles, students: students, classes: classes, pickup: pickup, calendar: calendar, notice: notice, leave: repository.NewLeaveRepo(db)}
+	return &ParentPortalService{db: db, parents: parents, roles: roles, students: students, classes: classes, pickup: pickup, calendar: calendar, notice: notice, leave: repository.NewLeaveRepo(db), points: repository.NewPointRepo(db)}
 }
 
 func (s *ParentPortalService) ResolveContext(ctx context.Context, userID, kindergartenID uint64, studentID *uint64) (*ParentPortalContext, error) {
@@ -3262,68 +3264,197 @@ func (s *ParentPortalService) reactionAllowed(ctx context.Context, tx *gorm.DB, 
 
 // ==================== Points & Achievements ====================
 
+// weekBoundsShanghai 返回本周一 00:00 到下周一 00:00（园所时区）。
+//
+// 与 monthBoundsShanghai 同口径：跨端「本周」按园所本地周计算，不能用服务器时区。
+// Go 的 Weekday 以周日=0 开头，园所周从周一算，周日归入前一个周一。
+func weekBoundsShanghai(now time.Time) (from, toExclusive time.Time) {
+	loc := shanghaiLoc()
+	n := now.In(loc)
+	offset := (int(n.Weekday()) + 6) % 7
+	y, m, d := n.Date()
+	from = time.Date(y, m, d, 0, 0, 0, 0, loc).AddDate(0, 0, -offset)
+	toExclusive = from.AddDate(0, 0, 7)
+	return
+}
+
+// parentPointsLevel 总分档位。仓库无等级表（无 Level 模型、无阈值来源），
+// 这里只是历史遗留的 1–3 档粗分；next_level_points / level_icon 固定降级（见 PointsOverview）。
+func parentPointsLevel(total int) (int, string) {
+	switch {
+	case total >= 500:
+		return 3, "积分达人"
+	case total >= 200:
+		return 2, "活跃家长"
+	default:
+		return 1, "新手上路"
+	}
+}
+
+// competitionRanks 给「已按积分降序、学生 id 升序」的行计算名次，并列取最小名次（1,2,2,4）。
+// 概览的 rank_in_class 与排行榜的 rank 共用这一份规则，避免两处口径漂移。
+func competitionRanks(rows []repository.ClassStudentPointsRow) []int {
+	ranks := make([]int, len(rows))
+	rank := 0
+	var lastPoints int64
+	for i, row := range rows {
+		if i == 0 || row.Points != lastPoints {
+			rank = i + 1
+			lastPoints = row.Points
+		}
+		ranks[i] = rank
+	}
+	return ranks
+}
+
+// rankInClass 返回学生在班级周积分榜中的名次；学生不在 rows 里（非在读 / 班级不符）返回 0。
+func rankInClass(rows []repository.ClassStudentPointsRow, studentID uint64) int {
+	ranks := competitionRanks(rows)
+	for i, row := range rows {
+		if row.StudentID == studentID {
+			return ranks[i]
+		}
+	}
+	return 0
+}
+
 func (s *ParentPortalService) PointsOverview(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
 	}
+	student := pc.CurrentStudent
+
+	// 没有账户是正常的（新生未产生积分），只有真正的库错误才上抛。
 	var account domain.PointAccount
-	s.db.WithContext(ctx).Where("student_id = ?", pc.CurrentStudent.ID).First(&account)
-	totalPoints := account.TotalPoints - account.UsedPoints
-	level := 1
-	levelName := "新手上路"
-	if totalPoints >= 500 {
-		level = 3
-		levelName = "积分达人"
-	} else if totalPoints >= 200 {
-		level = 2
-		levelName = "活跃家长"
+	if err := s.db.WithContext(ctx).Where("student_id = ?", student.ID).First(&account).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
 	}
-	thisWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday())+1)
-	var weekPoints int64
-	s.db.WithContext(ctx).Model(&domain.PointTransaction{}).
-		Where("student_id = ? AND created_at >= ? AND points > 0", pc.CurrentStudent.ID, thisWeek).Select("COALESCE(SUM(points), 0)").Scan(&weekPoints)
+	totalPoints := account.TotalPoints - account.UsedPoints
+	level, levelName := parentPointsLevel(totalPoints)
+
+	now := time.Now()
+	weekFrom, weekTo := weekBoundsShanghai(now)
+	monthFrom, monthTo := monthBoundsShanghai(now)
+	thisWeek, err := s.points.SumEarnedPointsInRange(ctx, student.ID, weekFrom, weekTo)
+	if err != nil {
+		return nil, err
+	}
+	thisMonth, err := s.points.SumEarnedPointsInRange(ctx, student.ID, monthFrom, monthTo)
+	if err != nil {
+		return nil, err
+	}
+
+	classTotal, rank := 0, 0
+	if pc.Class != nil {
+		rows, err := s.points.ClassStudentsEarnedPoints(ctx, pc.KindergartenID, pc.Class.ID, weekFrom, weekTo)
+		if err != nil {
+			return nil, err
+		}
+		classTotal = len(rows)
+		rank = rankInClass(rows, student.ID)
+	}
+
 	return map[string]any{
-		"total_points": totalPoints, "level": level, "level_name": levelName,
-		"this_week": weekPoints, "this_month": int64(0),
+		"student":      map[string]any{"id": student.ID, "name": student.Name, "avatar": student.Avatar},
+		"total_points": totalPoints,
+		"level":        level, "level_name": levelName,
+		// 等级进度暂未启用：仓库没有等级模型与阈值来源，不臆造规则（B16）。
+		// 前端据 next_level_points == 0 隐藏进度条。
+		"level_icon":        "",
+		"next_level_points": int64(0),
+		"rank_in_class":     rank,
+		"class_total":       classTotal,
+		"this_week":         thisWeek,
+		"this_month":        thisMonth,
 	}, nil
 }
 
-func (s *ParentPortalService) PointsHistory(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
+// PointsHistory 家长端积分流水。
+// typeFilter 支持 earn / spend / all（缺省或未知值都按全部处理，与 admin 列表一致）。
+func (s *ParentPortalService) PointsHistory(ctx context.Context, pc *ParentPortalContext, typeFilter string, page, pageSize int) (map[string]any, error) {
 	if pc.CurrentStudent == nil {
 		return nil, ErrParentInvalidParams
 	}
+	var typeEarn *bool
+	switch strings.ToLower(strings.TrimSpace(typeFilter)) {
+	case "earn":
+		v := true
+		typeEarn = &v
+	case "spend":
+		v := false
+		typeEarn = &v
+	}
+
 	offset := (page - 1) * pageSize
-	var total int64
-	s.db.WithContext(ctx).Model(&domain.PointTransaction{}).Where("student_id = ?", pc.CurrentStudent.ID).Count(&total)
-	var rows []domain.PointTransaction
-	s.db.WithContext(ctx).Where("student_id = ?", pc.CurrentStudent.ID).Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows)
-	return map[string]any{"list": rows, "total": total, "page": page, "page_size": pageSize}, nil
+	rows, total, err := s.points.ListStudentTransactions(ctx, pc.CurrentStudent.ID, typeEarn, offset, pageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// 恒返回非 nil 切片：空页是 [] 而不是 null，前端按 length 渲染空态。
+	list := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		typ, typeLabel := "earn", "获得"
+		if r.Points < 0 {
+			typ, typeLabel = "spend", "消耗"
+		}
+		// amount 带符号（获得为正、消耗为负），与 balance（该笔后余额）都由流水行直接给出。
+		list = append(list, map[string]any{
+			"id":           r.ID,
+			"type":         typ,
+			"type_label":   typeLabel,
+			"source":       r.Source,
+			"source_label": pointSourceLabel(r.Source),
+			"description":  r.Description,
+			"amount":       r.Points,
+			"balance":      r.Balance,
+			"reference_id": r.ReferenceID,
+			"created_at":   r.CreatedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
 }
 
+// Leaderboard 班级本周积分榜。period 固定 weekly——契约与设计均无月榜/总榜。
+// 榜单包含全体在读学生（零积分也在列），前 20 名进 list；
+// my_rank / my_points 按全班全量计算，自己排在 20 名开外也能拿到真实名次。
 func (s *ParentPortalService) Leaderboard(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
 	if pc.Class == nil {
-		return map[string]any{"list": []any{}, "my_rank": 0, "my_points": 0}, nil
+		return map[string]any{
+			"period": "weekly", "list": []any{},
+			"my_rank": 0, "my_points": int64(0), "class_total": 0,
+		}, nil
 	}
-	var rows []struct {
-		StudentID   uint64 `gorm:"column:student_id"`
-		TotalPoints int64  `gorm:"column:total_points"`
-		StudentName string `gorm:"column:student_name"`
+
+	weekFrom, weekTo := weekBoundsShanghai(time.Now())
+	rows, err := s.points.ClassStudentsEarnedPoints(ctx, pc.KindergartenID, pc.Class.ID, weekFrom, weekTo)
+	if err != nil {
+		return nil, err
 	}
-	s.db.WithContext(ctx).Raw(`
-		SELECT pa.student_id, COALESCE(pa.total_points - pa.used_points, 0) AS total_points, s.name AS student_name
-		FROM point_accounts pa INNER JOIN students s ON s.id = pa.student_id
-		WHERE s.class_id = ? AND s.status = 1
-		ORDER BY total_points DESC LIMIT 20`, pc.Class.ID).Scan(&rows)
-	list := make([]map[string]any, len(rows))
+
+	const leaderboardLimit = 20
+	list := make([]map[string]any, 0, leaderboardLimit)
+	ranks := competitionRanks(rows)
 	myRank, myPoints := 0, int64(0)
-	for i, r := range rows {
-		list[i] = map[string]any{"rank": i + 1, "student_id": r.StudentID, "student_name": r.StudentName, "total_points": r.TotalPoints}
-		if r.StudentID == pc.CurrentStudent.ID {
-			myRank = i + 1
-			myPoints = r.TotalPoints
+	for i, row := range rows {
+		rank := ranks[i]
+		isSelf := pc.CurrentStudent != nil && row.StudentID == pc.CurrentStudent.ID
+		if isSelf {
+			myRank, myPoints = rank, row.Points
+		}
+		if i < leaderboardLimit {
+			list = append(list, map[string]any{
+				"rank":    rank,
+				"student": map[string]any{"id": row.StudentID, "name": row.Name, "avatar": row.Avatar},
+				"points":  row.Points,
+				"is_self": isSelf,
+			})
 		}
 	}
-	return map[string]any{"period": "weekly", "list": list, "my_rank": myRank, "my_points": myPoints}, nil
+	return map[string]any{
+		"period": "weekly", "list": list,
+		"my_rank": myRank, "my_points": myPoints, "class_total": len(rows),
+	}, nil
 }
 
 func (s *ParentPortalService) ListAchievements(ctx context.Context, pc *ParentPortalContext) (map[string]any, error) {
@@ -3378,27 +3509,61 @@ type ParentFeedbackInput struct {
 	Images   string `json:"images"`
 }
 
+// feedbackCategoryLabel 反馈类型中文标签。未知值原样返回，而不是吞成空串——
+// 库里可能有历史/脏值，家长至少能看到自己选过的原值（B16）。
+func feedbackCategoryLabel(category string) string {
+	switch strings.ToLower(strings.TrimSpace(category)) {
+	case "suggestion":
+		return "建议"
+	case "complaint":
+		return "投诉"
+	case "bug":
+		return "问题"
+	default:
+		return category
+	}
+}
+
+// feedbackStatusLabel 与契约一致：0 已提交 / 1 已回复 / 2 已关闭。
+func feedbackStatusLabel(status int8) string {
+	switch status {
+	case 1:
+		return "已回复"
+	case 2:
+		return "已关闭"
+	default:
+		return "已提交"
+	}
+}
+
 func (s *ParentPortalService) ListFeedback(ctx context.Context, pc *ParentPortalContext, page, pageSize int) (map[string]any, error) {
 	offset := (page - 1) * pageSize
 	var total int64
-	s.db.WithContext(ctx).Model(&domain.Feedback{}).Where("kindergarten_id = ? AND user_id = ?", pc.KindergartenID, pc.UserID).Count(&total)
+	if err := s.db.WithContext(ctx).Model(&domain.Feedback{}).
+		Where("kindergarten_id = ? AND user_id = ?", pc.KindergartenID, pc.UserID).
+		Count(&total).Error; err != nil {
+		return nil, err
+	}
 	var rows []domain.Feedback
-	if err := s.db.WithContext(ctx).Where("kindergarten_id = ? AND user_id = ?", pc.KindergartenID, pc.UserID).Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("kindergarten_id = ? AND user_id = ?", pc.KindergartenID, pc.UserID).Order("created_at DESC, id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	list := make([]map[string]any, len(rows))
 	for i, r := range rows {
-		statusLabel := "已提交"
-		switch r.Status {
-		case 1:
-			statusLabel = "已回复"
-		case 2:
-			statusLabel = "已关闭"
+		// replied_at 落库是长文本（暂无生产回复入口，直接改库的演示数据也走这里）。
+		// 空串按「未回复」处理，避免前端渲染出一个空白时间。
+		var repliedAt any
+		if r.RepliedAt != nil {
+			if v := strings.TrimSpace(*r.RepliedAt); v != "" {
+				repliedAt = v
+			}
 		}
 		list[i] = map[string]any{
-			"id": r.ID, "category": r.Category, "content": r.Content,
-			"status": r.Status, "status_label": statusLabel,
-			"reply": r.Reply, "created_at": r.CreatedAt.UTC().Format(time.RFC3339),
+			"id": r.ID, "category": r.Category, "category_label": feedbackCategoryLabel(r.Category),
+			"content": r.Content,
+			"status":  r.Status, "status_label": feedbackStatusLabel(r.Status),
+			"reply": r.Reply, "replied_at": repliedAt,
+			"created_at": r.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}
 	return map[string]any{"list": list, "total": total, "page": page, "page_size": pageSize}, nil
@@ -3416,7 +3581,7 @@ func (s *ParentPortalService) CreateFeedback(ctx context.Context, pc *ParentPort
 	if err := s.db.WithContext(ctx).Create(fb).Error; err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": fb.ID, "status": 0, "status_label": "已提交", "created_at": fb.CreatedAt.UTC().Format(time.RFC3339)}, nil
+	return map[string]any{"id": fb.ID, "status": 0, "status_label": feedbackStatusLabel(0), "created_at": fb.CreatedAt.UTC().Format(time.RFC3339)}, nil
 }
 
 // ==================== Student Bind/Unbind ====================

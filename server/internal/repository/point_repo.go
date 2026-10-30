@@ -138,6 +138,80 @@ func (r *PointRepo) ListTransactions(
 	return rows, total, err
 }
 
+// ListStudentTransactions 单个学生的积分流水（家长端）。
+//
+// 不复用 ListTransactions：后者 INNER JOIN 班级，班级被软删时会把流水一起藏掉；
+// 家长的历史记录不应因为班级调整而消失。排序带 id 兜底，同一秒的多笔流水分页稳定。
+func (r *PointRepo) ListStudentTransactions(
+	ctx context.Context,
+	studentID uint64,
+	typeEarn *bool,
+	offset, limit int,
+) ([]domain.PointTransaction, int64, error) {
+	base := r.db.WithContext(ctx).Model(&domain.PointTransaction{}).Where("student_id = ?", studentID)
+	if typeEarn != nil {
+		if *typeEarn {
+			base = base.Where("points > 0")
+		} else {
+			base = base.Where("points < 0")
+		}
+	}
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var rows []domain.PointTransaction
+	err := base.Session(&gorm.Session{}).
+		Order("created_at DESC, id DESC").
+		Offset(offset).Limit(limit).
+		Find(&rows).Error
+	return rows, total, err
+}
+
+// SumEarnedPointsInRange 单个学生在区间内的正向积分合计（消耗不计入）。
+func (r *PointRepo) SumEarnedPointsInRange(ctx context.Context, studentID uint64, from, to time.Time) (int64, error) {
+	var sum int64
+	err := r.db.WithContext(ctx).Model(&domain.PointTransaction{}).
+		Where("student_id = ? AND points > 0 AND created_at >= ? AND created_at < ?", studentID, from, to).
+		Select("COALESCE(SUM(points), 0)").Scan(&sum).Error
+	return sum, err
+}
+
+// ClassStudentPointsRow 班级积分排行的行：学生展示字段 + 区间内正向积分。
+type ClassStudentPointsRow struct {
+	StudentID uint64 `gorm:"column:student_id"`
+	Name      string `gorm:"column:name"`
+	Avatar    string `gorm:"column:avatar"`
+	Points    int64  `gorm:"column:points"`
+}
+
+// ClassStudentsEarnedPoints 返回班级在读学生的区间正向积分。
+//
+// LEFT JOIN 保证零积分学生也在榜内——排名的分母与 class_total 都是「全体在读」，
+// 只列有流水的学生会把 0 分学生从榜单里抹掉。排序在这里定死（积分降序、id 升序），
+// 并列名次的规则由 service 统一计算，避免概览与排行榜两处口径漂移。
+func (r *PointRepo) ClassStudentsEarnedPoints(
+	ctx context.Context,
+	kindergartenID, classID uint64,
+	from, to time.Time,
+) ([]ClassStudentPointsRow, error) {
+	var rows []ClassStudentPointsRow
+	err := r.db.WithContext(ctx).Raw(`
+SELECT s.id AS student_id, s.name, s.avatar,
+       COALESCE(SUM(pt.points), 0) AS points
+FROM students s
+LEFT JOIN point_transactions pt
+       ON pt.student_id = s.id
+      AND pt.deleted_at IS NULL
+      AND pt.points > 0
+      AND pt.created_at >= ? AND pt.created_at < ?
+WHERE s.kindergarten_id = ? AND s.class_id = ?
+  AND s.status = 1 AND s.deleted_at IS NULL
+GROUP BY s.id, s.name, s.avatar
+ORDER BY points DESC, s.id ASC`, from, to, kindergartenID, classID).Scan(&rows).Error
+	return rows, err
+}
+
 func (r *PointRepo) StudentExistsInKindergarten(ctx context.Context, kindergartenID, studentID uint64) (bool, error) {
 	var n int64
 	err := r.db.WithContext(ctx).Model(&domain.Student{}).

@@ -57,3 +57,10 @@
   "total": 3
 }
 ```
+
+**字段口径（2026-10 B16 补齐）**
+
+- `category_label`：suggestion→建议 / complaint→投诉 / bug→问题；未知值原样返回（不吞成空串）。
+- `replied_at`：园所回复时间；无回复为 `null`（仓库暂无管理端回复入口，见 `parent/24-feedback` 设计 notes 遗留 2）。
+- `status_label`：0 已提交 / 1 已回复 / 2 已关闭。
+- 创建接口 `content` 必填；`category` 可空、未知值原样保存。

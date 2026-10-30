@@ -28,6 +28,18 @@
 }
 ```
 
+**字段口径（2026-10 B16 补齐）**
+
+| 字段 | 口径 |
+| --- | --- |
+| `rank_in_class` | 本班在读学生中按「本周获得积分」降序的名次，同分并列取最小名次；无班级或不在读时为 0 |
+| `class_total` | 本班在读学生数（`students.status = 1`） |
+| `this_week` | 本周（周一 00:00 起，园所时区）正向积分合计 |
+| `this_month` | 本月正向积分合计（B16 前恒 0，现为真实值） |
+| `next_level_points` | **暂未启用**：仓库无等级模型与阈值来源，固定返回 0；前端据 0 隐藏等级进度条 |
+| `level_icon` | **暂未启用**：固定空串 |
+| `level` / `level_name` | 历史遗留的总分粗分 1–3 档，不是等级表 |
+
 ---
 
 ### GET `/parent/points/history`
@@ -44,6 +56,7 @@
     {
       "id": 1,
       "type": "earn",
+      "type_label": "获得",
       "source": "task_checkin",
       "source_label": "任务打卡",
       "amount": 5,
@@ -58,6 +71,13 @@
   "page_size": 20
 }
 ```
+
+**字段口径（2026-10 B16 补齐）**
+
+- `type` 由 `amount` 符号推导：`earn` / `spend`；`type_label` 为 获得 / 消耗。
+- `amount` 带符号（获得为正、消耗为负），`balance` 为该笔发生后的余额。
+- `source_label` 复用管理端同一张映射（任务打卡 / 管理员调整 / 周全勤 / 月全勤 / 成长日志被推荐），未知 `source` 原样返回。
+- `type` 查询参数支持 `earn|spend|all`，缺省或未知值按全部处理；分页 `total` 为过滤后的总数。
 
 ---
 
@@ -74,6 +94,7 @@
   "period": "weekly",
   "my_rank": 3,
   "my_points": 45,
+  "class_total": 28,
   "list": [
     {
       "rank": 1,
@@ -96,6 +117,14 @@
   ]
 }
 ```
+
+**字段口径（2026-10 B16 补齐）**
+
+- `period` 固定 `weekly`（契约与设计均无月榜/总榜）。
+- 按本周获得积分降序、同分按学生 id 升序；并列取最小名次（1,2,2,4）。
+- 仅返回前 20 名；`my_rank` / `my_points` 按全班全量计算，自己排在 20 名外也有真实名次。
+- `class_total` 为本班在读学生数；零积分学生也在榜内。
+- `student` 为嵌套对象（id/name/avatar），`is_self` 标记当前家长所选孩子。
 
 ---
 

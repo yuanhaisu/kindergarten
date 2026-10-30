@@ -910,7 +910,7 @@ func (h *Handler) ParentPointsHistory(c *gin.Context) {
 		return
 	}
 	page, ps := ppPage(c)
-	result, err := h.parentPortalSvc.PointsHistory(c.Request.Context(), pc, page, ps)
+	result, err := h.parentPortalSvc.PointsHistory(c.Request.Context(), pc, c.Query("type"), page, ps)
 	if err != nil {
 		response.ErrInternal(c, "获取积分历史失败")
 		return
