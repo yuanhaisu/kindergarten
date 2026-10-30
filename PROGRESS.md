@@ -81,9 +81,9 @@
 | T03 | W3 | 老师任务列表/详情 09/10 | passed | a5795bb | - | impl-reviews/T03.md | 0 P1 / 10 P2；DevTools 全交互；token 164 |
 | B19 | W3* | 修复老师请假统计条件累积 | passed | 6820b2d | f121fc4 | impl-reviews/B19.md | 0 P1 / 3 P2；统计与列表一致 |
 | T04 | W3 | 老师请假 14 | passed | - | - | impl-reviews/T04.md | 0 P1 / 3 P2；复审 92 分；token 144 |
-| T06a | W4 | 老师我的班级 15 | in_progress | 6412f47 | - | - | 依赖 F0 |
-| B20 | W4* | 班级相册后端（表/契约/接口/上传） | in_progress | a1653ec | - | - | T06b 阻断；OpenSpec `class-album` |
-| T06b | W4 | 老师班级相册 16 | pending | - | - | - | 依赖 B20 |
+| T06a | W4 | 老师我的班级 15 | passed | 6412f47 | c1a0758 | impl-reviews/T06a.md | 0 P1 / 8 P2；DevTools 实测；token 118 |
+| B20 | W4* | 班级相册后端 | passed | a1653ec | 78026d4 | impl-reviews/B20.md | 0 P1 / 5 P2；HTTP 全过；已归档 |
+| T06b | W4 | 老师班级相册 16 | in_progress | c1a0758 | - | - | 依赖 B20 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
