@@ -86,8 +86,8 @@
 | B21 | W4* | 相册列表返回前三张封面 | passed | f53b09b | 2b51787 | impl-reviews/B21.md | 0 P1 / 4 P2；HTTP 实测 |
 | T06b | W4 | 老师班级相册 16 | passed | c1a0758 | - | impl-reviews/T06b.md | 0 P1 / 8 P2；上传真实落库；token 97 |
 | T07 | W4 | 老师日历三页 11/12/13 | passed | 37d9502 | - | impl-reviews/T07.md | 0 P1 / 7 P2；DevTools 全交互；token 93 |
-| B22 | W4* | 老师消息未读态/已读接口 | in_progress | f7dc14a | - | - | T08 阻断 |
-| T08 | W4 | 老师更多/我的/消息 17/19/18 | pending | - | - | - | 依赖 F0、B22 |
+| B22 | W4* | 老师消息未读态/已读接口 | passed | f7dc14a | cea2639 | impl-reviews/B22.md | 0 P1 / 4 P2；未读 11→10→0 |
+| T08 | W4 | 老师更多/我的/消息 17/19/18 | in_progress | cea2639 | - | - | 依赖 F0、B22 |
 | P07 | W3 | 家长任务列表/详情/任务墙 17/18/19 | pending | - | - | - | 依赖 F0 |
 | P08 | W3 | 家长积分+反馈 20/24 | pending | - | - | - | 依赖 F0 |
 | P09 | W3 | 家长班级+幼儿档案 21/23 | pending | - | - | - | 依赖 F0 |
