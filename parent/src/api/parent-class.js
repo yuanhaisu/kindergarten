@@ -10,10 +10,14 @@ export function fetchClassInfo(studentId) {
   })
 }
 
+// start/end 由调用页按「视图月份 ∪ 今天~今天+7天」算出后透传，缺了只能拿到
+// 服务端默认窗口，翻月会是空的。
+// silent：日历页自带整页错误态与重试，http 层再弹一次 toast 会与面板重复。
 export function fetchClassCalendar(params = {}) {
   return requestWithAuth({
     url: "/parent/class/calendar",
     method: "GET",
-    data: params
+    data: params,
+    silent: true
   })
 }

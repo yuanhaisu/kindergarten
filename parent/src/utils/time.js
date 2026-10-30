@@ -70,6 +70,17 @@ export function formatWeekday(date) {
   return d ? WEEKDAY_NAMES[d.getDay()] : ""
 }
 
+/**
+ * 纯日期 ± n 天 → "YYYY-MM-DD"；格式不符返回空串。
+ * 走本地 Date 构造而不是字符串加毫秒，跨月/跨年/夏令时都由 Date 处理。
+ */
+export function shiftDateKey(date, days) {
+  const d = parseDateOnly(date)
+  if (!d) return ""
+  d.setDate(d.getDate() + Number(days || 0))
+  return localDateKey(d)
+}
+
 /** 纯日期 → "2026-10-28 周三"；格式不符返回空串 */
 export function formatDateWithWeekday(date) {
   const d = parseDateOnly(date)
