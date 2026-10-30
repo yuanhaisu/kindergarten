@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -1400,6 +1401,45 @@ func (h *Handler) TeacherListMessages(c *gin.Context) {
 		return
 	}
 	response.OK(c, data)
+}
+
+// TeacherMarkMessageRead PUT /teacher/messages/:id/read?type=notice|leave|system
+// :id 的含义随 type 变化：notice/leave 用业务记录 id，system 用 messages.id（见契约）。
+func (h *Handler) TeacherMarkMessageRead(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	msgType := strings.TrimSpace(c.Query("type"))
+	if msgType == "" {
+		response.ErrValidation(c, "缺少消息类型")
+		return
+	}
+	data, err := h.teacherPortalSvc.MarkTeacherMessageRead(c.Request.Context(), tc, msgType, id)
+	if err != nil {
+		teacherPortalErr(c, err, "标记已读失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherMarkAllMessagesRead PUT /teacher/messages/read-all
+// 作用域是全量（不是当前分类），与设计稿「全部已读」一致。
+func (h *Handler) TeacherMarkAllMessagesRead(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	marked, err := h.teacherPortalSvc.MarkAllTeacherMessagesRead(c.Request.Context(), tc)
+	if err != nil {
+		teacherPortalErr(c, err, "全部标记已读失败")
+		return
+	}
+	response.OK(c, map[string]any{"marked_count": marked})
 }
 
 // TeacherGrowthLike 点赞成长记录

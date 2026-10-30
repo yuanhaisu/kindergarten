@@ -77,6 +77,8 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		&domain.UserRole{},
 		&domain.File{},
 		&domain.Message{},
+		// 老师端聚合消息的已读记录（B22）：与 messages.is_read / notice_read_logs 两套口径互不影响。
+		&domain.TeacherMessageRead{},
 
 		// 师生关系
 		&domain.ClassTeacher{},

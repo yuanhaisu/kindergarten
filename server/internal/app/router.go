@@ -195,6 +195,9 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 	messages := teacherG.Group("/messages")
 	{
 		messages.GET("", h.TeacherListMessages)
+		// read-all 是全局动作，先声明；与 /:id/read 段数不同，不冲突。
+		messages.PUT("/read-all", h.TeacherMarkAllMessagesRead)
+		messages.PUT("/:id/read", h.TeacherMarkMessageRead)
 	}
 
 	tasks := teacherG.Group("/tasks")

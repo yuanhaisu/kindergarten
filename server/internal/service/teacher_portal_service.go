@@ -28,6 +28,7 @@ type TeacherPortalService struct {
 	notices  *repository.NoticeRepo
 	queue    *RecognitionQueue // 照片识别入队（可为 nil：队列未配置时静默跳过）
 	faceCfg  config.FaceConfig // 建议分级阈值（读取端标注高/低置信，前端不硬编码阈值）
+	reads    *repository.TeacherMessageReadRepo
 }
 
 func NewTeacherPortalService(
@@ -39,7 +40,10 @@ func NewTeacherPortalService(
 	queue *RecognitionQueue,
 	faceCfg config.FaceConfig,
 ) *TeacherPortalService {
-	return &TeacherPortalService{db: db, calendar: calendar, pickup: pickup, msg: msg, notices: notices, queue: queue, faceCfg: faceCfg}
+	// 读记录是只服务本服务的叶子表，从 db 就地构造：不为此扩展 Wire 的构造签名
+	// （provider.go 只负责把表登记进 AutoMigrate）。
+	return &TeacherPortalService{db: db, calendar: calendar, pickup: pickup, msg: msg, notices: notices, queue: queue, faceCfg: faceCfg,
+		reads: repository.NewTeacherMessageReadRepo(db)}
 }
 
 // enqueueRecognition 为一批照片建识别任务（发布路径零等待：仅插入任务行）。
@@ -4701,9 +4705,9 @@ func (s *TeacherPortalService) ReviewPublicCheckin(ctx context.Context, tc *Teac
 	return out, nil
 }
 
-// ListTeacherMessages 聚合老师端消息列表（通知发布记录 + 请假审批 + 系统消息）。
-func (s *TeacherPortalService) ListTeacherMessages(ctx context.Context, tc *TeacherPortalContext, page, pageSize int) (map[string]any, error) {
-	q := parseTeacherPortalPage(page, pageSize)
+// collectTeacherMessages 汇总三类消息并按创建时间倒序。
+// 列表与「全部已读」共用同一可见范围，避免一处看得到、另一处漏掉。
+func (s *TeacherPortalService) collectTeacherMessages(ctx context.Context, tc *TeacherPortalContext) ([]domain.TeacherMessageItem, error) {
 	db := s.db.WithContext(ctx)
 	var items []domain.TeacherMessageItem
 
@@ -4801,10 +4805,12 @@ func (s *TeacherPortalService) ListTeacherMessages(ctx context.Context, tc *Teac
 				content = string([]rune(content)[:200]) + "..."
 			}
 			items = append(items, domain.TeacherMessageItem{
-				Type:        domain.TeacherMsgTypeSystem,
-				Title:       m.Title,
-				Content:     content,
-				ReferenceID: m.ReferenceID,
+				Type:    domain.TeacherMsgTypeSystem,
+				Title:   m.Title,
+				Content: content,
+				// 系统消息没有业务对象，用 messages.id 作聚合身份：
+				// messages.reference_id 常为 0，用它会让多条系统消息共享同一条已读状态。
+				ReferenceID: m.ID,
 				Extra:       map[string]any{},
 				CreatedAt:   m.CreatedAt,
 			})
@@ -4815,19 +4821,131 @@ func (s *TeacherPortalService) ListTeacherMessages(ctx context.Context, tc *Teac
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].CreatedAt.After(items[j].CreatedAt)
 	})
+	return items, nil
+}
 
+// teacherMessageKeys 聚合项 → 读记录键（去重；幂等写入不重复计数）。
+func teacherMessageKeys(items []domain.TeacherMessageItem) []repository.TeacherMessageKey {
+	keys := make([]repository.TeacherMessageKey, 0, len(items))
+	seen := make(map[repository.TeacherMessageKey]struct{}, len(items))
+	for _, it := range items {
+		key := repository.TeacherMessageKey{Type: it.Type, ReferenceID: it.ReferenceID}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+// teacherMessageView 聚合项 → 契约出参。is_read 来自老师读记录，
+// 不是通知已读率（notice_read_logs 统计的是家长读状态）。
+func teacherMessageView(it domain.TeacherMessageItem, readSet map[repository.TeacherMessageKey]struct{}) map[string]any {
+	key := repository.TeacherMessageKey{Type: it.Type, ReferenceID: it.ReferenceID}
+	_, read := readSet[key]
+	return map[string]any{
+		"type":         it.Type,
+		"title":        it.Title,
+		"content":      it.Content,
+		"reference_id": it.ReferenceID,
+		"extra":        it.Extra,
+		"is_read":      read,
+		"created_at":   it.CreatedAt,
+	}
+}
+
+// ListTeacherMessages 聚合老师端消息列表（通知发布记录 + 请假审批 + 系统消息）。
+func (s *TeacherPortalService) ListTeacherMessages(ctx context.Context, tc *TeacherPortalContext, page, pageSize int) (map[string]any, error) {
+	q := parseTeacherPortalPage(page, pageSize)
+	items, err := s.collectTeacherMessages(ctx, tc)
+	if err != nil {
+		return nil, err
+	}
+	readSet, err := s.reads.ReadSet(ctx, tc.UserID, teacherMessageKeys(items))
+	if err != nil {
+		return nil, err
+	}
+	// unread_count 是全量口径（总数减已读），不是当前页未读数：
+	// 页头「N 条未读」与底栏角标都依赖它。
 	total := int64(len(items))
-	offset := q.Offset()
-	if int64(offset) >= total {
-		return map[string]any{"list": []domain.TeacherMessageItem{}, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
-	}
-	end := int64(offset) + int64(q.PageSize)
-	if end > total {
-		end = total
-	}
-	paged := items[offset:end]
+	unread := total - int64(len(readSet))
 
-	return map[string]any{"list": paged, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
+	offset := q.Offset()
+	list := make([]map[string]any, 0, q.PageSize)
+	for i := offset; i < len(items) && len(list) < q.PageSize; i++ {
+		list = append(list, teacherMessageView(items[i], readSet))
+	}
+	return map[string]any{"list": list, "unread_count": unread, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
+}
+
+// isTeacherMessageType 聚合消息只接受三类；未知 type 一律参数错误。
+func isTeacherMessageType(t string) bool {
+	switch t {
+	case domain.TeacherMsgTypeNotice, domain.TeacherMsgTypeLeave, domain.TeacherMsgTypeSystem:
+		return true
+	}
+	return false
+}
+
+// teacherMessageExists 单条消息是否在当前老师的可见集合内。
+// 条件与 collectTeacherMessages 的三段来源一一对应，避免「列表看得到、点开 404」。
+func (s *TeacherPortalService) teacherMessageExists(ctx context.Context, tc *TeacherPortalContext, key repository.TeacherMessageKey) (bool, error) {
+	var n int64
+	db := s.db.WithContext(ctx)
+	switch key.Type {
+	case domain.TeacherMsgTypeNotice:
+		err := db.Model(&domain.Notice{}).Where(
+			"id = ? AND kindergarten_id = ? AND class_id = ? AND creator_id = ? AND status IN ?",
+			key.ReferenceID, tc.KindergartenID, tc.ClassID, tc.UserID,
+			[]domain.NoticeStatus{domain.NoticeStatusScheduled, domain.NoticeStatusPublished},
+		).Count(&n).Error
+		return n > 0, err
+	case domain.TeacherMsgTypeLeave:
+		err := db.Model(&domain.LeaveRequest{}).Where(
+			"id = ? AND kindergarten_id = ? AND class_id = ?",
+			key.ReferenceID, tc.KindergartenID, tc.ClassID,
+		).Count(&n).Error
+		return n > 0, err
+	case domain.TeacherMsgTypeSystem:
+		err := db.Model(&domain.Message{}).Where(
+			"id = ? AND user_id = ? AND type = ?",
+			key.ReferenceID, tc.UserID, string(domain.MessageTypeSystem),
+		).Count(&n).Error
+		return n > 0, err
+	}
+	return false, nil
+}
+
+// MarkTeacherMessageRead 标记单条聚合消息已读（幂等）。
+// 只写老师读记录：不改 messages.is_read，也不写 notice_read_logs——
+// 通知已读率统计的是家长读状态，不能被老师端动作污染。
+func (s *TeacherPortalService) MarkTeacherMessageRead(ctx context.Context, tc *TeacherPortalContext, msgType string, referenceID uint64) (map[string]any, error) {
+	key := repository.TeacherMessageKey{Type: strings.TrimSpace(msgType), ReferenceID: referenceID}
+	if referenceID == 0 || !isTeacherMessageType(key.Type) {
+		return nil, ErrTeacherInvalidParams
+	}
+	visible, err := s.teacherMessageExists(ctx, tc, key)
+	if err != nil {
+		return nil, err
+	}
+	if !visible {
+		return nil, ErrTeacherNotFound
+	}
+	if _, err := s.reads.MarkRead(ctx, tc.UserID, key); err != nil {
+		return nil, err
+	}
+	return map[string]any{"id": referenceID, "type": key.Type, "is_read": true}, nil
+}
+
+// MarkAllTeacherMessagesRead 把当前老师可见的全部聚合消息记为已读，返回本次新增条数。
+// 可见集合与列表同源；重复调用幂等（INSERT IGNORE 不计重复行）。
+func (s *TeacherPortalService) MarkAllTeacherMessagesRead(ctx context.Context, tc *TeacherPortalContext) (int64, error) {
+	items, err := s.collectTeacherMessages(ctx, tc)
+	if err != nil {
+		return 0, err
+	}
+	return s.reads.MarkAllRead(ctx, tc.UserID, teacherMessageKeys(items))
 }
 
 // NotifyOverdueParents 老师对本班滞留儿童一键通知家长。
