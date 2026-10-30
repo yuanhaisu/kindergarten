@@ -98,6 +98,42 @@ export function formatCardTime(date, createdAt) {
   return [day, clock].filter(Boolean).join(" ")
 }
 
+/** 时间戳所在本地日到今天的差：0 今天 / 1 昨天 / 其他整数（未来为负）/ null 无法解析 */
+function dayGapFromNow(ts) {
+  const d = toDate(ts)
+  if (!d) return null
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const today = fromYmd(todayKey())
+  if (!today) return null
+  return Math.round((today.getTime() - target.getTime()) / 86400000)
+}
+
+/**
+ * 列表时间戳：今天 09:12 / 昨天 20:15 / 10月24日 09:12；跨年只给年月日。
+ * 时刻走本地时区——后端 created_at 是 UTC，直接截字符串会差 8 小时。
+ */
+export function formatRelativeStamp(ts) {
+  const d = toDate(ts)
+  if (!d) return ""
+  const gap = dayGapFromNow(ts)
+  const clock = formatClock(ts)
+  if (gap === 0) return clock ? `今天 ${clock}` : "今天"
+  if (gap === 1) return clock ? `昨天 ${clock}` : "昨天"
+  const day = `${d.getMonth() + 1}月${d.getDate()}日`
+  if (d.getFullYear() !== new Date().getFullYear()) return `${d.getFullYear()}年${day}`
+  return clock ? `${day} ${clock}` : day
+}
+
+/** 列表日期（不带时刻）：今天 / 昨天 / 10月24日 */
+export function formatRelativeDay(ts) {
+  const d = toDate(ts)
+  if (!d) return ""
+  const gap = dayGapFromNow(ts)
+  if (gap === 0) return "今天"
+  if (gap === 1) return "昨天"
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
 /** 评论时间："10月24日 15:42"；不是今年时带上年份 */
 export function formatCommentTime(ts) {
   const d = toDate(ts)
