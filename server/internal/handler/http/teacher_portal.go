@@ -695,7 +695,8 @@ func (h *Handler) TeacherGrowthComments(c *gin.Context) {
 	if !ok {
 		return
 	}
-	page, pageSize := teacherPortalPage(c)
+	// 评论列表与家长端同口径：默认 1/20，page_size 上限 50。
+	page, pageSize := ppPage(c)
 	data, err := h.teacherPortalSvc.GrowthComments(c.Request.Context(), tc, id, page, pageSize)
 	if err != nil {
 		teacherPortalErr(c, err, "获取评论失败")

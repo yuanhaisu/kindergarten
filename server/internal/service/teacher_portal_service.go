@@ -2111,8 +2111,6 @@ func (s *TeacherPortalService) growthCommentLikeStats(
 }
 
 func (s *TeacherPortalService) GrowthComments(ctx context.Context, tc *TeacherPortalContext, id uint64, page, pageSize int) (map[string]any, error) {
-	q := pagination.Query{Page: page, PageSize: pageSize}
-	q.Normalize()
 	log, err := s.growthLogRow(ctx, tc, id)
 	if err != nil {
 		return nil, err
@@ -2164,14 +2162,7 @@ func (s *TeacherPortalService) GrowthComments(ctx context.Context, tc *TeacherPo
 	// 孤立回复已被 buildCommentTree 提升为顶层，同样计入 root_total 与分页。
 	all := buildCommentTree(rows, build)
 	rootTotal := len(all)
-	start := q.Offset()
-	if start > rootTotal {
-		start = rootTotal
-	}
-	end := start + q.PageSize
-	if end > rootTotal {
-		end = rootTotal
-	}
+	start, end := commentPageWindow(page, pageSize, rootTotal)
 	// total 含回复（契约）；list 只放顶层，回复在各自的 replies[] 里。
 	return map[string]any{
 		"list": all[start:end], "total": len(rows),

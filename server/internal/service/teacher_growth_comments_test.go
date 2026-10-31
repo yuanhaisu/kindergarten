@@ -9,6 +9,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -455,6 +456,16 @@ func TestTeacherGrowthComments_PaginatesRoots(t *testing.T) {
 	assert.Equal(t, 25, page99["root_total"])
 	assert.Equal(t, false, page99["has_more"])
 	assert.Equal(t, 27, page99["total"])
+
+	// 极大 page：先判越界再相乘，不得溢出成负索引而 panic。
+	pageMax, err := f.svc.GrowthComments(ctx, f.tcA, testTCPageLog, math.MaxInt, 10)
+	require.NoError(t, err, "极大 page 不得报错")
+	listMax := tcCommentList(t, pageMax)
+	assert.NotNil(t, listMax, "极大 page 也必须是 []")
+	assert.Empty(t, listMax)
+	assert.Equal(t, 25, pageMax["root_total"])
+	assert.Equal(t, false, pageMax["has_more"])
+	assert.Equal(t, 27, pageMax["total"])
 
 	// 清理并断言无残留。
 	cleanTeacherCommentsFixture(f.db)

@@ -17,7 +17,6 @@ import (
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/log"
-	"kindergarten-server/pkg/pagination"
 )
 
 var (
@@ -1976,9 +1975,36 @@ func buildCommentTree(rows []domain.GrowthComment, build func(domain.GrowthComme
 	return append(list, orphans...)
 }
 
+// commentPageWindow 计算顶层评论的分页窗口。page 极大时 (page-1)*pageSize 会溢出为负数，
+// 必须先做除法判断是否已越过最后一页，再相乘——这样乘法只会在页内发生，不会溢出。
+// 返回值始终落在 [0,total]，越界页得到空窗口（start==end==total）。
+func commentPageWindow(page, pageSize, total int) (start, end int) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if total < 0 {
+		total = 0
+	}
+	// 页数用整除向上取整，避免 total+pageSize-1 在极端 pageSize 下溢出。
+	pages := total / pageSize
+	if total%pageSize != 0 {
+		pages++
+	}
+	if page-1 >= pages {
+		return total, total
+	}
+	start = (page - 1) * pageSize
+	end = start + pageSize
+	if end > total {
+		end = total
+	}
+	return start, end
+}
+
 func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *ParentPortalContext, logID uint64, page, pageSize int) (map[string]any, error) {
-	q := pagination.Query{Page: page, PageSize: pageSize}
-	q.Normalize()
 	log, err := s.verifyGrowthAccess(ctx, pc, logID)
 	if err != nil {
 		return nil, err
@@ -2027,14 +2053,7 @@ func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *Parent
 	// 分页只切顶层：replies 随所属顶层返回；孤立回复已被提升为顶层，一并计入分页。
 	all := buildCommentTree(rows, build)
 	rootTotal := len(all)
-	start := q.Offset()
-	if start > rootTotal {
-		start = rootTotal
-	}
-	end := start + q.PageSize
-	if end > rootTotal {
-		end = rootTotal
-	}
+	start, end := commentPageWindow(page, pageSize, rootTotal)
 	return map[string]any{
 		"list": all[start:end], "total": len(rows),
 		"root_total": rootTotal, "has_more": end < rootTotal,

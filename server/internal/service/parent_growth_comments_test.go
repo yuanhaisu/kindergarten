@@ -9,6 +9,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -243,10 +244,45 @@ func TestParentGrowthComments_PaginatesRoots(t *testing.T) {
 	assert.Equal(t, false, page99["has_more"])
 	assert.Equal(t, 27, page99["total"])
 
+	// 极大 page：先判越界再相乘，不得溢出成负索引而 panic。
+	pageMax, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA, math.MaxInt, 10)
+	require.NoError(t, err, "极大 page 不得报错")
+	listMax := commentList(t, pageMax)
+	assert.NotNil(t, listMax, "极大 page 也必须是 []")
+	assert.Empty(t, listMax)
+	assert.Equal(t, 25, pageMax["root_total"])
+	assert.Equal(t, false, pageMax["has_more"])
+	assert.Equal(t, 27, pageMax["total"])
+
 	cleanAlbumFixture(db)
 	var residue int64
 	require.NoError(t, db.Unscoped().Model(&domain.GrowthComment{}).
 		Where("log_id IN ?", []uint64{testAlbumLogA, testAlbumLogB, testAlbumLogAInd, testAlbumLogBInd}).
 		Count(&residue).Error)
 	assert.Zero(t, residue, "硬删后分页夹具无残留")
+}
+
+// 分页窗口必须对任意 int 输入返回合法区间：极大 page 先判越界再相乘，不溢出。
+func TestCommentPageWindow_ClampsAndDoesNotOverflow(t *testing.T) {
+	cases := []struct {
+		name               string
+		page, size, total  int
+		wantStart, wantEnd int
+	}{
+		{"first page", 1, 10, 25, 0, 10},
+		{"middle page", 2, 10, 25, 10, 20},
+		{"last partial page", 3, 10, 25, 20, 25},
+		{"beyond last page", 99, 10, 25, 25, 25},
+		{"max int page", math.MaxInt, 10, 25, 25, 25},
+		{"max int page size", 1, math.MaxInt, 25, 0, 25},
+		{"zero page", 0, 10, 25, 0, 10},
+		{"zero page size defaults 20", 2, 0, 25, 20, 25},
+		{"no comments", 1, 20, 0, 0, 0},
+		{"exact last page boundary", 2, 10, 10, 10, 10},
+	}
+	for _, tc := range cases {
+		start, end := commentPageWindow(tc.page, tc.size, tc.total)
+		assert.Equal(t, tc.wantStart, start, tc.name)
+		assert.Equal(t, tc.wantEnd, end, tc.name)
+	}
 }
