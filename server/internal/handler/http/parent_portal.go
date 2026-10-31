@@ -634,6 +634,11 @@ func (h *Handler) ParentUpdateAuthorizedPerson(c *gin.Context) {
 			response.ErrNotFound(c, "授权记录不存在")
 			return
 		}
+		// 非法 relation 与创建接口同口径：422，不是服务端错误。
+		if errors.Is(err, service.ErrParentInvalidParams) {
+			response.ErrValidation(c, "参数无效")
+			return
+		}
 		response.ErrInternal(c, "编辑授权接送人失败")
 		return
 	}
@@ -1165,6 +1170,11 @@ func (h *Handler) ParentUpdateSettings(c *gin.Context) {
 		return
 	}
 	if err := h.parentPortalSvc.UpdateSettings(c.Request.Context(), pc, req); err != nil {
+		// 未知分组/键或非布尔值由 service 以 ErrParentInvalidParams 返回，属客户端错误。
+		if errors.Is(err, service.ErrParentInvalidParams) {
+			response.ErrValidation(c, "参数无效")
+			return
+		}
 		response.ErrInternal(c, "保存设置失败")
 		return
 	}

@@ -2262,12 +2262,14 @@ func (s *TeacherPortalService) LikeGrowth(ctx context.Context, tc *TeacherPortal
 	// 与家长端同因同解：growth_likes 软删除，而唯一索引 idx_log_user 不含
 	// deleted_at —— 软删行会占住唯一键，直接 Create 撞键。先 Unscoped 查，
 	// 软删的复活，查不到才插入；写入错误必须向上抛（不能静默返回 is_liked:true）。
+	// 并发双击时两个请求都会查不到行，DoNothing 让撞键的一侧静默成功（点赞本身幂等）。
 	var existing domain.GrowthLike
 	err := s.db.WithContext(ctx).Unscoped().
 		Where("log_id = ? AND user_id = ?", id, tc.UserID).First(&existing).Error
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound):
-		if e := s.db.WithContext(ctx).Create(&domain.GrowthLike{LogID: id, UserID: tc.UserID}).Error; e != nil {
+		if e := s.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).
+			Create(&domain.GrowthLike{LogID: id, UserID: tc.UserID}).Error; e != nil {
 			return nil, e
 		}
 	case err != nil:
