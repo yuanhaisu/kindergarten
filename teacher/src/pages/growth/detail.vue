@@ -823,7 +823,7 @@ onShow(() => {
         <!-- 家长评论 -->
         <view class="comments-card">
           <view class="comments-head">
-            <text class="section-title">家长评论<span class="section-count">（{{ displayCommentTotal }}条）</span></text>
+            <text class="section-title">家长评论<text class="section-count">（{{ displayCommentTotal }}条）</text></text>
           </view>
 
           <view v-if="!comments.length" class="comment-empty">
@@ -1658,7 +1658,7 @@ onShow(() => {
   align-items: center;
   justify-content: center;
   color: $color-brand-primary-dark;
-  font-size: $typography-font-size-base;
+  font-size: $typography-font-size-sm;
   font-weight: $typography-font-weight-medium;
 }
 

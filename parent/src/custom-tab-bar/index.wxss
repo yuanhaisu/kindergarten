@@ -7,8 +7,8 @@
  *   #FFFFFF = $color-bg-card
  *   #94A3B8 = $color-text-muted
  *   #F97316 = $color-brand-primary（家长端）
- * 24rpx = $spacing-lg，48rpx = 图标字号（同 BottomNav），22rpx = $typography-font-size-xs。
- * 改动这些数值时请同步 tokens 与 shared-ui/BottomNav，保持两端底栏一致。
+ * 24rpx = $spacing-lg，48rpx = 图标字号，22rpx = $typography-font-size-xs。
+ * 改动这些数值时请同步 tokens，保持底栏与设计一致。
  */
 .ctb {
   position: fixed;

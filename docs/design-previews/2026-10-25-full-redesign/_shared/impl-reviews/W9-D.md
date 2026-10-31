@@ -36,3 +36,17 @@
 
 - 分页运行时证据基于 mock（旧二进制无 `root_total`/`has_more`，团队明示）；后端分页由 W9-C Go 测试覆盖。
 - worker-result 的 `base_sha 3f16d74` 是 W9-C 提交前的父提交；对 `300dd15` 的 diff 已复核，范围无越界。
+
+
+## W9-D2 追加审查（HEAD `8a0d2cf` + 未提交 delta）
+
+- verdict: **PASS**（无 P1）
+- delta: `teacher/src/pages/growth/detail.vue`（header `<span>`→嵌套 `<text>`；加载更多字号 base→sm）、`parent/src/pages/growth/detail.vue`（移除未用 `commentTotal`）、`parent/src/custom-tab-bar/index.wxss`（仅注释）。
+- 构建: teacher/parent `npm run dev:mp-weixin` → `DONE  Build complete`（6572ms/6627ms），watcher 已杀；dist 14:00:33/14:00:47 晚于源码 13:59:13。
+- Token: 3/3 既有 `CalendarEventCard.vue` 违规，基线不变；Secret: 0 findings。
+- 教师 header: `.section-count` 已渲染，titleContent `家长评论（22条）`；计数矩形 l=86 r=136.08 落在 title 30..136.08 内（内联，未右推）；加载更多后仍 22，发根评论后变为 `家长评论（23条）`。
+- 字号: 教师 `.comment-more` computed `12px`（=24rpx），与家长一致。
+- 家长: 编译 JS 中 `commentTotal` 引用 0；已加载 20 条时标题 `评论 (21)`，加载更多后仍 21，发根评论后 `评论 (22)`；无运行时报错。
+- Console: 家长 40s 采集 0 error；教师交互路径无异常。
+- 清理: mock 已 restore，项目关闭；真实 API log 28 评论 `listLen 0 / total 0`，无残留。
+- 备注: token build scss 仅多一行构建时间戳；13:36 修改的 `PRODUCT.md` / `assets/logo-design-philosophy.md` 与本 delta 无关。

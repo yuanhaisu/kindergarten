@@ -42,7 +42,6 @@ const COMMENT_PAGE_SIZE = 20
 const commentPage = ref(1)
 const hasMoreComments = ref(false)
 const rootCommentTotal = ref(0)
-const commentTotal = ref(0)
 const loadingMore = ref(false)
 
 // ---- 照片点名筛选（design D7）：默认「只看我的孩子」 ----
@@ -162,8 +161,6 @@ async function handleRetry() {
 // list 只含当前页顶层；total 含回复，root_total 是顶层数（标题计数口径）。
 function applyCommentPage(data) {
   const list = Array.isArray(data?.list) ? data.list : []
-  const total = data?.total
-  commentTotal.value = typeof total === "number" ? total : list.length
   const rootTotal = data?.root_total
   rootCommentTotal.value = typeof rootTotal === "number" ? rootTotal : list.length
   hasMoreComments.value = data?.has_more === true
