@@ -33,6 +33,9 @@ const (
 	testReportRow      uint64 = 990510
 	testReportDim1     uint64 = 990511
 	testReportDim2     uint64 = 990512
+	testReportRowPrev  uint64 = 990513 // 上一周期的同类型正文
+	testReportDim3     uint64 = 990514
+	testReportDim4     uint64 = 990515
 	testReportLogBase  uint64 = 990520 // 22 条 log：17 可见 + 5 不可见/周期外
 	testReportTaskBase uint64 = 990560 // 12 条周期内任务，后接 2 条周期外、2 条他人任务
 )
@@ -48,8 +51,9 @@ func reportMoment(y int, m time.Month, day, hour int) time.Time {
 // cleanGrowthReportFixture 按 ID/园所硬删。软删行会占住唯一索引并污染重跑，一律 Unscoped。
 func cleanGrowthReportFixture(db *gorm.DB) {
 	studentIDs := []uint64{testReportStudentA, testReportStudentB, testReportStudentC}
-	db.Unscoped().Where("report_id = ?", testReportRow).Delete(&domain.GrowthReportDimension{})
-	db.Unscoped().Where("id = ?", testReportRow).Delete(&domain.GrowthReport{})
+	reportIDs := []uint64{testReportRow, testReportRowPrev}
+	db.Unscoped().Where("report_id IN ?", reportIDs).Delete(&domain.GrowthReportDimension{})
+	db.Unscoped().Where("id IN ?", reportIDs).Delete(&domain.GrowthReport{})
 	db.Unscoped().Where("student_id IN ?", studentIDs).Delete(&domain.GrowthReport{})
 	db.Unscoped().Where("kindergarten_id = ?", testReportKG).Delete(&domain.GrowthDailyLog{})
 	db.Unscoped().Where("kindergarten_id = ?", testReportKG).Delete(&domain.Attendance{})
@@ -333,6 +337,100 @@ func TestParentGrowthReport_WithReportRowKeepsReportAndDimensions(t *testing.T) 
 	assert.Equal(t, int64(15), reportIntField(t, data, "growth_record_count"))
 }
 
+// TC-NEW-GRP-0010：同类型正文分属两个周期时，正文必须与请求周期严格对应。
+// 上周报告的 created_at 刻意更新：旧实现只按 report_type + created_at DESC 取最新，
+// 会把上周正文返回给本周请求。
+func TestParentGrowthReport_BodyMatchesRequestedPeriod(t *testing.T) {
+	db, svc := setupGrowthReportFixture(t)
+
+	require.NoError(t, db.Create(&domain.GrowthReport{
+		SoftDeleteModel: domain.SoftDeleteModel{BaseModel: domain.BaseModel{
+			ID: testReportRowPrev, CreatedAt: reportMoment(2026, 3, 23, 9),
+		}},
+		KindergartenID: testReportKG, StudentID: testReportStudentA, ReportType: "weekly",
+		PeriodStart: reportDay(2026, 3, 9), PeriodEnd: reportDay(2026, 3, 15),
+		Content: "上周正文", GeneratedAt: reportMoment(2026, 3, 23, 9), Status: 1,
+	}).Error)
+	require.NoError(t, db.Create(&domain.GrowthReport{
+		SoftDeleteModel: domain.SoftDeleteModel{BaseModel: domain.BaseModel{
+			ID: testReportRow, CreatedAt: reportMoment(2026, 3, 22, 9),
+		}},
+		KindergartenID: testReportKG, StudentID: testReportStudentA, ReportType: "weekly",
+		PeriodStart: reportDay(2026, 3, 16), PeriodEnd: reportDay(2026, 3, 22),
+		Content: "本周正文", GeneratedAt: reportMoment(2026, 3, 22, 9), Status: 1,
+	}).Error)
+	require.NoError(t, db.Create(&domain.GrowthReportDimension{
+		BaseModel: domain.BaseModel{ID: testReportDim3}, ReportID: testReportRow, DimName: "语言", Score: 85, MaxScore: 100,
+	}).Error)
+	require.NoError(t, db.Create(&domain.GrowthReportDimension{
+		BaseModel: domain.BaseModel{ID: testReportDim4}, ReportID: testReportRowPrev, DimName: "运动", Score: 70, MaxScore: 100,
+	}).Error)
+
+	pc := resolveReportPC(t, svc, testReportStudentA)
+	ctx := context.Background()
+
+	cur, err := svc.GetGrowthReport(ctx, pc, 0, "weekly", "2026-03-18")
+	require.NoError(t, err)
+	curReport, ok := cur["report"].(domain.GrowthReport)
+	require.True(t, ok, "本周请求必须返回正文")
+	assert.Equal(t, testReportRow, curReport.ID, "即使上周正文更新，也只能返回本周正文")
+	assert.Equal(t, "本周正文", curReport.Content)
+	assert.True(t, curReport.PeriodStart.Equal(reportDay(2026, 3, 16)))
+	curPeriod := reportPeriodMap(t, cur)
+	assert.Equal(t, "2026-03-16", curPeriod["start_date"])
+	assert.Equal(t, "2026-03-22", curPeriod["end_date"])
+	assert.Equal(t, curPeriod["start_date"], curReport.PeriodStart.Format("2006-01-02"), "正文周期必须与四格 period 一致")
+	curDims, ok := cur["dimensions"].([]domain.GrowthReportDimension)
+	require.True(t, ok)
+	require.Len(t, curDims, 1)
+	assert.Equal(t, "语言", curDims[0].DimName, "维度必须跟随正文所属报告")
+
+	prev, err := svc.GetGrowthReport(ctx, pc, 0, "weekly", "2026-03-11")
+	require.NoError(t, err)
+	prevReport, ok := prev["report"].(domain.GrowthReport)
+	require.True(t, ok, "上周请求必须返回正文")
+	assert.Equal(t, testReportRowPrev, prevReport.ID)
+	assert.Equal(t, "上周正文", prevReport.Content)
+	assert.True(t, prevReport.PeriodStart.Equal(reportDay(2026, 3, 9)))
+	prevPeriod := reportPeriodMap(t, prev)
+	assert.Equal(t, "2026-03-09", prevPeriod["start_date"])
+	assert.Equal(t, "2026-03-15", prevPeriod["end_date"])
+	assert.Equal(t, prevPeriod["start_date"], prevReport.PeriodStart.Format("2006-01-02"))
+	prevDims, ok := prev["dimensions"].([]domain.GrowthReportDimension)
+	require.True(t, ok)
+	require.Len(t, prevDims, 1)
+	assert.Equal(t, "运动", prevDims[0].DimName)
+}
+
+// TC-NEW-GRP-0011：请求的周期没有正文（其它周期有）时不得跨周期取正文；
+// dimensions 为空数组，四格统计照常返回。
+func TestParentGrowthReport_PeriodWithoutBodyKeepsStats(t *testing.T) {
+	db, svc := setupGrowthReportFixture(t)
+	require.NoError(t, db.Create(&domain.GrowthReport{
+		SoftDeleteModel: domain.SoftDeleteModel{BaseModel: domain.BaseModel{ID: testReportRow}},
+		KindergartenID:  testReportKG, StudentID: testReportStudentA, ReportType: "weekly",
+		PeriodStart: reportDay(2026, 3, 16), PeriodEnd: reportDay(2026, 3, 22),
+		Content: "本周正文", GeneratedAt: reportMoment(2026, 3, 22, 18), Status: 1,
+	}).Error)
+
+	pc := resolveReportPC(t, svc, testReportStudentA)
+	// 2-23 周：夹具里只有一条 A 的缺勤考勤；正文只存在于 3-16 周。
+	data, err := svc.GetGrowthReport(context.Background(), pc, 0, "weekly", "2026-02-23")
+	require.NoError(t, err)
+
+	_, hasReport := data["report"]
+	assert.False(t, hasReport, "无正文的周期不得返回其它周期的正文")
+	dims, ok := data["dimensions"].([]domain.GrowthReportDimension)
+	require.True(t, ok, "dimensions 应为数组而不是 null")
+	assert.Empty(t, dims)
+
+	period := reportPeriodMap(t, data)
+	assert.Equal(t, "2026-02-23", period["start_date"])
+	assert.Equal(t, "2026-03-01", period["end_date"])
+	assert.Equal(t, int64(0), reportAttendanceField(t, data, "present_days"))
+	assert.Equal(t, int64(1), reportAttendanceField(t, data, "total_days"), "四格不依赖正文，仍要返回")
+}
+
 // TC-NEW-GRP-0003：出勤率分母 = 班级有考勤记录的天数；迟到算出勤；请假进分母不进分子。
 func TestParentGrowthReport_AttendanceUsesClassDays(t *testing.T) {
 	_, svc := setupGrowthReportFixture(t)
@@ -498,7 +596,7 @@ func TestParentGrowthReportFixture_CleanupLeavesNoResidue(t *testing.T) {
 		"task_check_ins":           db.Unscoped().Model(&domain.TaskCheckIn{}).Where("student_id IN ?", studentIDs),
 		"growth_daily_logs":        db.Unscoped().Model(&domain.GrowthDailyLog{}).Where("kindergarten_id = ?", testReportKG),
 		"growth_reports":           db.Unscoped().Model(&domain.GrowthReport{}).Where("student_id IN ?", studentIDs),
-		"growth_report_dimensions": db.Unscoped().Model(&domain.GrowthReportDimension{}).Where("report_id = ?", testReportRow),
+		"growth_report_dimensions": db.Unscoped().Model(&domain.GrowthReportDimension{}).Where("report_id IN ?", []uint64{testReportRow, testReportRowPrev}),
 		"academic_years":           db.Unscoped().Model(&domain.AcademicYear{}).Where("kindergarten_id = ?", testReportKG),
 	} {
 		var n int64

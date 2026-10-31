@@ -2303,11 +2303,14 @@ func (s *ParentPortalService) GetGrowthReport(ctx context.Context, pc *ParentPor
 		"growth_record_count": stats.GrowthRecordCount,
 	}
 
+	// 正文必须落在请求周期内：只按 report_type 取最新会让「上周」请求拿到另一周期的正文，
+	// 与四格统计错配。周期内有多条时仍取最新一条。
 	var report domain.GrowthReport
 	err = s.db.WithContext(ctx).Model(&domain.GrowthReport{}).
 		Preload("Student").
 		Where("student_id = ? AND kindergarten_id = ? AND status = ? AND report_type = ?",
 			target.ID, pc.KindergartenID, 1, period.Type).
+		Where("period_start >= ? AND period_start < ?", period.Start, period.EndExcl).
 		Order("created_at DESC").
 		First(&report).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {

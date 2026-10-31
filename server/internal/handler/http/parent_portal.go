@@ -1219,6 +1219,11 @@ func (h *Handler) ParentPickupDesignation(c *gin.Context) {
 	}
 	data, err := h.parentPortalSvc.GetDailyDesignation(c.Request.Context(), pc)
 	if err != nil {
+		// 未指定孩子是客户端可纠正的参数问题；落到 500 会被家长端当成服务端故障。
+		if errors.Is(err, service.ErrParentInvalidParams) {
+			response.ErrValidation(c, "参数无效")
+			return
+		}
 		response.ErrInternal(c, "获取今日接走人失败")
 		return
 	}
