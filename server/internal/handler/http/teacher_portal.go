@@ -695,7 +695,8 @@ func (h *Handler) TeacherGrowthComments(c *gin.Context) {
 	if !ok {
 		return
 	}
-	data, err := h.teacherPortalSvc.GrowthComments(c.Request.Context(), tc, id)
+	page, pageSize := teacherPortalPage(c)
+	data, err := h.teacherPortalSvc.GrowthComments(c.Request.Context(), tc, id, page, pageSize)
 	if err != nil {
 		teacherPortalErr(c, err, "获取评论失败")
 		return

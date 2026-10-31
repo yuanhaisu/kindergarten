@@ -171,7 +171,9 @@
 
 > 评论列表
 >
-> `replies` 只嵌一层：更深的回复归属到其最近的顶层评论，`parent_id` 仍指向直接父级。`user.relation` / `user.student_name` 仅在作者是本园家长时返回，教师/员工省略这两个字段。`total` 为该记录下的评论总数（含回复）。
+> `replies` 只嵌一层：更深的回复归属到其最近的顶层评论，`parent_id` 仍指向直接父级。`user.relation` / `user.student_name` 仅在作者是本园家长时返回，教师/员工省略这两个字段。
+>
+> **分页作用于顶层**：`page` / `page_size` 约束 `list[]`（顶层，含被提升的孤立回复），回复始终随所属顶层一起返回，不单独分页。`root_total` 是顶层条数；`has_more` 表示当前页之后是否还有顶层；越界页返回空 `list` 且 `has_more=false`。`total` 为该记录下的评论总数（含回复），不随分页变化。
 
 ```json
 // Query: ?page=1&page_size=20
@@ -202,7 +204,9 @@
       "created_at": "2026-03-19T13:05:00Z"
     }
   ],
-  "total": 12
+  "total": 12,
+  "root_total": 9,
+  "has_more": true
 }
 ```
 

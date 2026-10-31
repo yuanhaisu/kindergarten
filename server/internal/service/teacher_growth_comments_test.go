@@ -8,6 +8,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,16 +32,20 @@ const (
 	testTCTeacherB  uint64 = 990408
 	testTCLogA      uint64 = 990409
 	testTCLogB      uint64 = 990410
+	testTCPageLog   uint64 = 990411
 
 	testTCCommentTop1   uint64 = 990420
 	testTCCommentReply1 uint64 = 990421
 	testTCCommentTop2   uint64 = 990422
 	testTCCommentOnLogB uint64 = 990423
 	testTCCommentOrphan uint64 = 990424
+
+	// 分页回归的 25 条顶层 + 2 条回复，独立 ID 段。
+	testTCPageCommentBase uint64 = 990500
 )
 
 var (
-	teacherTestLogIDs     = []uint64{testTCLogA, testTCLogB}
+	teacherTestLogIDs     = []uint64{testTCLogA, testTCLogB, testTCPageLog}
 	teacherTestUserIDs    = []uint64{testTCParent, testTCTeacherA, testTCTeacherA2, testTCTeacherB}
 	teacherTestCommentIDs = []uint64{
 		testTCCommentTop1, testTCCommentReply1, testTCCommentTop2,
@@ -167,7 +172,7 @@ func TestTeacherGrowthComments_NestsRepliesAndRelation(t *testing.T) {
 	f := setupTeacherCommentsFixture(t)
 	ctx := context.Background()
 
-	data, err := f.svc.GrowthComments(ctx, f.tcA, testTCLogA)
+	data, err := f.svc.GrowthComments(ctx, f.tcA, testTCLogA, 1, 20)
 	require.NoError(t, err)
 
 	list := tcCommentList(t, data)
@@ -223,7 +228,7 @@ func TestTeacherGrowthComments_OrphanReplyIsNotLost(t *testing.T) {
 		LogID:           testTCLogA, UserID: testTCParent, Content: "父评论已不存在的回复", ParentID: &missingParent,
 	}).Error)
 
-	data, err := f.svc.GrowthComments(context.Background(), f.tcA, testTCLogA)
+	data, err := f.svc.GrowthComments(context.Background(), f.tcA, testTCLogA, 1, 20)
 	require.NoError(t, err)
 
 	list := tcCommentList(t, data)
@@ -298,7 +303,7 @@ func TestTeacherGrowthCommentLikes_IdempotentAndScoped(t *testing.T) {
 	assert.Equal(t, int64(1), data["likes_count"])
 
 	// GET 必须反映真实计数与「当前老师是否赞过」。
-	data, err = f.svc.GrowthComments(ctx, f.tcA, testTCLogA)
+	data, err = f.svc.GrowthComments(ctx, f.tcA, testTCLogA, 1, 20)
 	require.NoError(t, err)
 	list := tcCommentList(t, data)
 	require.Len(t, list, 2)
@@ -307,7 +312,7 @@ func TestTeacherGrowthCommentLikes_IdempotentAndScoped(t *testing.T) {
 	assert.Equal(t, int64(0), list[1]["likes_count"], "不得影响同记录其他评论")
 	assert.Equal(t, false, list[1]["liked"])
 
-	data, err = f.svc.GrowthComments(ctx, tcA2, testTCLogA)
+	data, err = f.svc.GrowthComments(ctx, tcA2, testTCLogA, 1, 20)
 	require.NoError(t, err)
 	list = tcCommentList(t, data)
 	assert.Equal(t, true, list[0]["liked"], "老师A2赞过，按当前登录用户返回 liked")
@@ -324,7 +329,7 @@ func TestTeacherGrowthComments_ClassScope(t *testing.T) {
 	f := setupTeacherCommentsFixture(t)
 	ctx := context.Background()
 
-	_, err := f.svc.GrowthComments(ctx, f.tcB, testTCLogA)
+	_, err := f.svc.GrowthComments(ctx, f.tcB, testTCLogA, 1, 20)
 	assert.ErrorIs(t, err, ErrTeacherNotFound, "别班老师不得列出该记录评论")
 
 	_, err = f.svc.LikeGrowthComment(ctx, f.tcB, testTCCommentTop1)
@@ -361,4 +366,100 @@ func TestTeacherGrowthComments_FixtureCleanupLeavesNoResidue(t *testing.T) {
 	assert.Zero(t, count(&domain.Class{}, "id IN ?", []uint64{testTCClassA, testTCClassB}))
 	assert.Zero(t, count(&domain.User{}, "id IN ?", teacherTestUserIDs))
 	assert.Zero(t, count(&domain.Kindergarten{}, "id = ?", testTCKG))
+}
+
+// 分页只作用于顶层：每页返回 page_size 条顶层，回复随所属顶层一起返回；
+// root_total 是顶层条数（含被提升的孤立回复），total 仍是含回复的总数。
+func TestTeacherGrowthComments_PaginatesRoots(t *testing.T) {
+	f := setupTeacherCommentsFixture(t)
+	ctx := context.Background()
+
+	require.NoError(t, f.db.Create(&domain.GrowthDailyLog{
+		SoftDeleteModel: domain.SoftDeleteModel{BaseModel: domain.BaseModel{ID: testTCPageLog}},
+		KindergartenID:  testTCKG, ClassID: testTCClassA, CreatorID: testTCTeacherA,
+		Date: time.Date(2026, 3, 20, 0, 0, 0, 0, time.Local), TargetType: 1, Content: "分页回归记录",
+	}).Error)
+
+	const roots = 25
+	base := time.Date(2026, 3, 20, 10, 0, 0, 0, time.Local)
+	rootIDs := make([]uint64, 0, roots)
+	for i := 0; i < roots; i++ {
+		id := testTCPageCommentBase + uint64(i)
+		rootIDs = append(rootIDs, id)
+		require.NoError(t, f.db.Create(&domain.GrowthComment{
+			SoftDeleteModel: domain.SoftDeleteModel{
+				BaseModel: domain.BaseModel{ID: id, CreatedAt: base.Add(time.Duration(i) * time.Minute)},
+			},
+			LogID: testTCPageLog, UserID: testTCParent, Content: fmt.Sprintf("顶层评论 %d", i+1),
+		}).Error)
+	}
+	// 一条回复挂第 1 页的顶层（第 1 条），一条挂第 2 页的顶层（第 11 条）。
+	replyOnPage1 := testTCPageCommentBase + 25
+	replyOnPage2 := testTCPageCommentBase + 26
+	for i, row := range []struct {
+		id     uint64
+		parent uint64
+		at     time.Time
+	}{
+		{replyOnPage1, rootIDs[0], base.Add(60 * time.Minute)},
+		{replyOnPage2, rootIDs[10], base.Add(61 * time.Minute)},
+	} {
+		p := row.parent
+		require.NoError(t, f.db.Create(&domain.GrowthComment{
+			SoftDeleteModel: domain.SoftDeleteModel{BaseModel: domain.BaseModel{ID: row.id, CreatedAt: row.at}},
+			LogID:           testTCPageLog, UserID: testTCTeacherA, Content: fmt.Sprintf("回复 %d", i+1), ParentID: &p,
+		}).Error)
+	}
+
+	page1, err := f.svc.GrowthComments(ctx, f.tcA, testTCPageLog, 1, 10)
+	require.NoError(t, err)
+	list1 := tcCommentList(t, page1)
+	require.Len(t, list1, 10, "page1 取前 10 条顶层")
+	assert.Equal(t, 25, page1["root_total"], "root_total 是顶层条数")
+	assert.Equal(t, true, page1["has_more"])
+	assert.Equal(t, 27, page1["total"], "total 含回复，不随分页变化")
+	assert.Equal(t, rootIDs[0], list1[0]["id"], "顶层按 created_at,id 正序")
+	replies1 := tcCommentReplies(t, list1[0])
+	require.Len(t, replies1, 1, "第 1 页顶层的回复随顶层返回")
+	assert.Equal(t, replyOnPage1, replies1[0]["id"])
+	for _, c := range list1 {
+		assert.NotEqual(t, rootIDs[10], c["id"], "第 2 页的顶层不得出现在第 1 页")
+		assert.NotEqual(t, replyOnPage2, c["id"], "第 2 页顶层的回复不得出现在第 1 页")
+	}
+
+	page2, err := f.svc.GrowthComments(ctx, f.tcA, testTCPageLog, 2, 10)
+	require.NoError(t, err)
+	list2 := tcCommentList(t, page2)
+	require.Len(t, list2, 10)
+	assert.Equal(t, true, page2["has_more"])
+	assert.Equal(t, 27, page2["total"])
+	assert.Equal(t, rootIDs[10], list2[0]["id"], "第 2 页从第 11 条顶层开始")
+	replies2 := tcCommentReplies(t, list2[0])
+	require.Len(t, replies2, 1, "第 2 页顶层的回复必须随所属顶层返回")
+	assert.Equal(t, replyOnPage2, replies2[0]["id"])
+
+	page3, err := f.svc.GrowthComments(ctx, f.tcA, testTCPageLog, 3, 10)
+	require.NoError(t, err)
+	list3 := tcCommentList(t, page3)
+	require.Len(t, list3, 5, "最后一页只剩 5 条顶层")
+	assert.Equal(t, false, page3["has_more"])
+	assert.Equal(t, 25, page3["root_total"])
+	assert.Equal(t, rootIDs[24], list3[4]["id"])
+
+	// 越界页：空 list、has_more=false，不报错。
+	page99, err := f.svc.GrowthComments(ctx, f.tcA, testTCPageLog, 99, 10)
+	require.NoError(t, err)
+	list99 := tcCommentList(t, page99)
+	assert.NotNil(t, list99, "越界也必须是 []，不能是 null")
+	assert.Empty(t, list99)
+	assert.Equal(t, 25, page99["root_total"])
+	assert.Equal(t, false, page99["has_more"])
+	assert.Equal(t, 27, page99["total"])
+
+	// 清理并断言无残留。
+	cleanTeacherCommentsFixture(f.db)
+	var residue int64
+	require.NoError(t, f.db.Unscoped().Model(&domain.GrowthComment{}).
+		Where("log_id = ?", testTCPageLog).Count(&residue).Error)
+	assert.Zero(t, residue, "硬删后分页夹具无残留")
 }

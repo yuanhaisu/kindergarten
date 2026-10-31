@@ -453,7 +453,8 @@ func (h *Handler) ParentGrowthComments(c *gin.Context) {
 	if !ok2 {
 		return
 	}
-	data, err := h.parentPortalSvc.ListGrowthComments(c.Request.Context(), pc, id)
+	page, ps := ppPage(c)
+	data, err := h.parentPortalSvc.ListGrowthComments(c.Request.Context(), pc, id, page, ps)
 	if err != nil {
 		if errors.Is(err, service.ErrParentNotFound) || errors.Is(err, service.ErrParentForbidden) {
 			response.ErrNotFound(c, "成长记录不存在")

@@ -17,6 +17,7 @@ import (
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/log"
+	"kindergarten-server/pkg/pagination"
 )
 
 var (
@@ -1975,7 +1976,9 @@ func buildCommentTree(rows []domain.GrowthComment, build func(domain.GrowthComme
 	return append(list, orphans...)
 }
 
-func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *ParentPortalContext, logID uint64) (map[string]any, error) {
+func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *ParentPortalContext, logID uint64, page, pageSize int) (map[string]any, error) {
+	q := pagination.Query{Page: page, PageSize: pageSize}
+	q.Normalize()
 	log, err := s.verifyGrowthAccess(ctx, pc, logID)
 	if err != nil {
 		return nil, err
@@ -2021,8 +2024,21 @@ func (s *ParentPortalService) ListGrowthComments(ctx context.Context, pc *Parent
 
 	// 顶层 + 一层 replies（契约如此）。多级回复归属到最近的顶层祖先，
 	// 否则只渲染一层的家长端会把它当孤儿丢掉。
-	list := buildCommentTree(rows, build)
-	return map[string]any{"list": list, "total": len(rows)}, nil
+	// 分页只切顶层：replies 随所属顶层返回；孤立回复已被提升为顶层，一并计入分页。
+	all := buildCommentTree(rows, build)
+	rootTotal := len(all)
+	start := q.Offset()
+	if start > rootTotal {
+		start = rootTotal
+	}
+	end := start + q.PageSize
+	if end > rootTotal {
+		end = rootTotal
+	}
+	return map[string]any{
+		"list": all[start:end], "total": len(rows),
+		"root_total": rootTotal, "has_more": end < rootTotal,
+	}, nil
 }
 
 func (s *ParentPortalService) CreateGrowthComment(ctx context.Context, pc *ParentPortalContext, logID uint64, content string, parentID *uint64) (map[string]any, error) {

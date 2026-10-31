@@ -290,7 +290,9 @@
       "created_at": "2026-03-19T13:12:00Z"
     }
   ],
-  "total": 12
+  "total": 12,
+  "root_total": 9,
+  "has_more": true
 }
 ```
 
@@ -302,7 +304,12 @@
 > `user.relation` / `user.student_name` 只有**家长作者**才有（取与这条记录相关的那个孩子）：
 > 个体记录优先记录点名到的孩子，全班记录优先同班孩子。老师/员工作者**不含这两个字段**。
 >
-> **`total` 是该记录下的评论总数，含 `replies`**（不是 `list` 的长度）。
+> **分页作用于顶层**：`page` / `page_size` 约束 `list[]`（顶层，含被提升的孤立回复），
+> 回复始终随所属顶层一起返回，不单独分页。`root_total` 是顶层条数（`all` 的长度，
+> 不是当前页长度）；`has_more` 表示当前页之后是否还有顶层；越界页返回空 `list` 且
+> `has_more=false`。
+>
+> **`total` 是该记录下的评论总数，含 `replies`**（不是 `list` 的长度，也不是 `root_total`）。
 >
 > `likes_count` 为该条评论的点赞数；`liked` 为**当前登录老师**是否已点赞该条评论。
 > 顶层的 `replies[]` 与顶层评论同形（同样带 `likes_count` / `liked`）。

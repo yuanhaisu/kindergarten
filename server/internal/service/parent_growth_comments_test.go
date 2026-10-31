@@ -8,6 +8,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -80,7 +81,7 @@ func TestParentGrowthComments_NestsRepliesAndRelation(t *testing.T) {
 
 	pc, err := svc.ResolveContext(ctx, testAlbumParent, testAlbumKG, ptrU64(testAlbumStudentA))
 	require.NoError(t, err)
-	data, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA)
+	data, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA, 1, 20)
 	require.NoError(t, err)
 
 	list := commentList(t, data)
@@ -132,7 +133,7 @@ func TestParentGrowthComments_EmptyListIsArray(t *testing.T) {
 
 	pc, err := svc.ResolveContext(ctx, testAlbumParent, testAlbumKG, ptrU64(testAlbumStudentB))
 	require.NoError(t, err)
-	data, err := svc.ListGrowthComments(ctx, pc, testAlbumLogB)
+	data, err := svc.ListGrowthComments(ctx, pc, testAlbumLogB, 1, 20)
 	require.NoError(t, err)
 
 	list := commentList(t, data)
@@ -153,10 +154,99 @@ func TestParentGrowthComments_OrphanReplyIsNotLost(t *testing.T) {
 	ctx := context.Background()
 	pc, err := svc.ResolveContext(ctx, testAlbumParent, testAlbumKG, ptrU64(testAlbumStudentA))
 	require.NoError(t, err)
-	data, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA)
+	data, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA, 1, 20)
 	require.NoError(t, err)
 
 	list := commentList(t, data)
 	require.Len(t, list, 1)
 	assert.Equal(t, testCommentOrphan, list[0]["id"])
+}
+
+// 家长端分页同样只切顶层：回复随所属顶层返回，root_total/has_more 与 total 语义分工明确。
+func TestParentGrowthComments_PaginatesRoots(t *testing.T) {
+	db, svc := setupAlbumFixture(t)
+	ctx := context.Background()
+
+	const baseID uint64 = 990340
+	const roots = 25
+	base := time.Date(2026, 3, 19, 10, 0, 0, 0, time.Local)
+	rootIDs := make([]uint64, 0, roots)
+	for i := 0; i < roots; i++ {
+		id := baseID + uint64(i)
+		rootIDs = append(rootIDs, id)
+		require.NoError(t, db.Create(&domain.GrowthComment{
+			SoftDeleteModel: domain.SoftDeleteModel{
+				BaseModel: domain.BaseModel{ID: id, CreatedAt: base.Add(time.Duration(i) * time.Minute)},
+			},
+			LogID: testAlbumLogA, UserID: testAlbumParent, Content: fmt.Sprintf("顶层评论 %d", i+1),
+		}).Error)
+	}
+	replyOnPage1 := baseID + 25
+	replyOnPage2 := baseID + 26
+	for i, row := range []struct {
+		id     uint64
+		parent uint64
+		at     time.Time
+	}{
+		{replyOnPage1, rootIDs[0], base.Add(60 * time.Minute)},
+		{replyOnPage2, rootIDs[10], base.Add(61 * time.Minute)},
+	} {
+		p := row.parent
+		require.NoError(t, db.Create(&domain.GrowthComment{
+			SoftDeleteModel: domain.SoftDeleteModel{BaseModel: domain.BaseModel{ID: row.id, CreatedAt: row.at}},
+			LogID:           testAlbumLogA, UserID: testAlbumParent, Content: fmt.Sprintf("回复 %d", i+1), ParentID: &p,
+		}).Error)
+	}
+
+	pc, err := svc.ResolveContext(ctx, testAlbumParent, testAlbumKG, ptrU64(testAlbumStudentA))
+	require.NoError(t, err)
+
+	page1, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA, 1, 10)
+	require.NoError(t, err)
+	list1 := commentList(t, page1)
+	require.Len(t, list1, 10, "page1 取前 10 条顶层")
+	assert.Equal(t, 25, page1["root_total"])
+	assert.Equal(t, true, page1["has_more"])
+	assert.Equal(t, 27, page1["total"], "total 含回复，不随分页变化")
+	assert.Equal(t, rootIDs[0], list1[0]["id"])
+	replies1 := commentReplies(t, list1[0])
+	require.Len(t, replies1, 1)
+	assert.Equal(t, replyOnPage1, replies1[0]["id"])
+	for _, c := range list1 {
+		assert.NotEqual(t, rootIDs[10], c["id"], "第 2 页的顶层不得出现在第 1 页")
+		assert.NotEqual(t, replyOnPage2, c["id"], "第 2 页顶层的回复不得出现在第 1 页")
+	}
+
+	page2, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA, 2, 10)
+	require.NoError(t, err)
+	list2 := commentList(t, page2)
+	require.Len(t, list2, 10)
+	assert.Equal(t, true, page2["has_more"])
+	assert.Equal(t, rootIDs[10], list2[0]["id"])
+	replies2 := commentReplies(t, list2[0])
+	require.Len(t, replies2, 1, "第 2 页顶层的回复必须随所属顶层返回")
+	assert.Equal(t, replyOnPage2, replies2[0]["id"])
+
+	page3, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA, 3, 10)
+	require.NoError(t, err)
+	list3 := commentList(t, page3)
+	require.Len(t, list3, 5)
+	assert.Equal(t, false, page3["has_more"])
+	assert.Equal(t, rootIDs[24], list3[4]["id"])
+
+	page99, err := svc.ListGrowthComments(ctx, pc, testAlbumLogA, 99, 10)
+	require.NoError(t, err)
+	list99 := commentList(t, page99)
+	assert.NotNil(t, list99, "越界也必须是 []，不能是 null")
+	assert.Empty(t, list99)
+	assert.Equal(t, 25, page99["root_total"])
+	assert.Equal(t, false, page99["has_more"])
+	assert.Equal(t, 27, page99["total"])
+
+	cleanAlbumFixture(db)
+	var residue int64
+	require.NoError(t, db.Unscoped().Model(&domain.GrowthComment{}).
+		Where("log_id IN ?", []uint64{testAlbumLogA, testAlbumLogB, testAlbumLogAInd, testAlbumLogBInd}).
+		Count(&residue).Error)
+	assert.Zero(t, residue, "硬删后分页夹具无残留")
 }
