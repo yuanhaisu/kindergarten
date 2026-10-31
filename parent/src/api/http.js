@@ -174,7 +174,9 @@ function request({ url, method = "GET", data, header = {}, auth = false, silent 
             return
           }
           clearAuth()
-          rememberPendingRoute(currentRoutePath())
+          // 与 failToLogin 同一条规则：登录页自己不能成为回跳目标。
+          const path = currentRoutePath()
+          if (path !== LOGIN_URL) rememberPendingRoute(path)
           redirectToLogin()
           reject(body)
           return
