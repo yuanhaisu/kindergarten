@@ -6,8 +6,8 @@
 > 检查表：`docs/design-previews/2026-10-25-full-redesign/_shared/VALIDATORS.md`
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
-- 当前波次：**W8 完成 —— 交付后遗留收口（不依赖真机项已处理）**
-- 下一动作：无自动项（剩余人工/产品/真机项见文末 handoff）
+- 当前波次：**W9 完成 —— 技术债收口（评论分页 / 401 续期 / 422 / 报告周期）**
+- 下一动作：无自动项（剩余产品/人工/真机项见文末 handoff）
 - 后端：8080 当前源码运行；若被低内存守卫停止，由用户确认后再重启
 - 最后更新：2026-10-31
 
@@ -103,21 +103,44 @@
 | W8-A2 | W8 | 静默续期收口：迟到 401 + 家长上传 | passed | 7a4e843 | 6076d56 | impl-reviews/W8-A2.md | 0 P1 / 2 P2；真实上传 401→刷新→重放 200 |
 | W8-B | W8 | 后端 P2：422 映射 + 老师点赞幂等 | passed | 9bd9d9d | 38f8169 | impl-reviews/W8-B.md | 0 P1 / 2 P2；4/4 并发用例，反事实验证 1062 |
 | W8-C | W8 | 家长二维码空态 + 相册文案 | passed | 6076d56 | 2b5a4c0 | impl-reviews/W8-C.md | 0 P1 / 4 P2；qrcode 请求 0；文案对齐契约 |
+| W9-A | W9 | 前端债：登录页回跳守卫/死组件/设计文案 | passed | e9dc87b | 6863a95 | impl-reviews/W9-A.md | 0 P1 / 2 P2；mock 401 实测 |
+| W9-B | W9 | 后端债：报告正文周期过滤 + 指定接走人 422 | passed | e9dc87b | 2658de4 | impl-reviews/W9-B.md | 0 P1 / 3 P2；反事实验证取错周期 |
+| W9-C | W9 | 成长评论分页（后端） | passed | 2658de4 | 3f16d74,300dd15 | impl-reviews/W9-C.md | 0 P1 / 0 P2；MaxInt 溢出修复 |
+| W9-D | W9 | 成长评论分页（前端 + D2 小修） | passed | 300dd15 | 8a0d2cf,f307227 | impl-reviews/W9-D.md | 0 P1 / 3 P2；mock 分页 20→21 |
 ## 当前检查点
 
 ```json
 {
-  "slice_id": "W8-C",
+  "slice_id": "W9-D2",
   "phase": "committed",
-  "commit_sha": "2b5a4c0",
-  "next_action": "none — W8 leftovers closed; human/product/real-device items remain",
-  "updated_at": "2026-10-31T11:05:00+08:00"
+  "commit_sha": "f307227",
+  "next_action": "none — W9 tech debt closed; product/human/real-device items remain",
+  "updated_at": "2026-10-31T14:10:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-31T11:05+08:00 — W8 遗留收口（不依赖真机）
+### Handoff 2026-10-31T14:10+08:00 — W9 技术债收口
+
+- 状态：W0–W8 交付不变；W9 完成 4 片（A/B/C/D + C2/D2 小修），**0 P1**。
+- W9-A：家长端 rawRequest 401 不再把登录页写进 `pending_route`；删除无引用的
+  家长端 BottomNav；老师相册设计工件文案与实现/契约同步。
+- W9-B：成长报告正文按请求周期过滤（不再跨周期取最新）；指定接走人非法参数 422。
+- W9-C/C2：成长评论按顶层分页（page/page_size、root_total/has_more，total 仍含回复）；
+  极端 page 溢出修复；老师/家长 page_size 上限统一 50。
+- W9-D/D2：两端成长详情接入分页——首屏 20 条、加载更多追加、发评论/回复保留已加载页、
+  点赞不重拉；家长计数用 root_total；老师「家长评论（N条）」内联渲染修复。
+- 验证：Go 定向 12/12 PASS（含 MaxInt 用例）；DevTools 以「仅评论接口 mock」验证
+  前端分页交互（首屏 20 → 加载更多 21、发评论 22/23、错误重试）。**8080 仍是旧二进制**。
+- 仍需处理：
+  1. 重启后端加载 W9-C，再做一次真实评论分页 E2E（当前仅 mock + Go 测试覆盖）。
+  2. 数据/产品：`current_semester=spring` 与秋季窗口不一致；班级 2–6 无星星罐行。
+  3. 低影响后端：定时通知 worker 的 `Stop()` 未接进程关闭；请假附件无删除路径（不可达）。
+  4. 人工：RDS 凭据轮换 + 历史清理；品牌素材；对比度 tokens；真机补验。
+- 后端：8080 仍运行 03:49 旧二进制；如被低内存守卫停止，由用户确认后再重启。
+
+### Handoff 2026-10-31T11:05+08:00 — W8 遗留收口（历史；评论分页/rawRequest/死组件/设计文案已由 W9 处理）
 
 - 状态：W0–W7 交付不变；W8 完成 4 片（A/A2/B/C），**0 P1**。
 - W8-A/A2：两端 401 静默续期——单飞刷新（refresh 一次性轮换）、落盘新对并重放一次；
