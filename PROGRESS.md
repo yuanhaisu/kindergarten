@@ -6,8 +6,8 @@
 > 检查表：`docs/design-previews/2026-10-25-full-redesign/_shared/VALIDATORS.md`
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
-- 当前波次：**W7 完成 —— 全部页面切片与终验已交付**
-- 下一动作：无（剩余人工项见文末 handoff）
+- 当前波次：**W8 完成 —— 交付后遗留收口（不依赖真机项已处理）**
+- 下一动作：无自动项（剩余人工/产品/真机项见文末 handoff）
 - 后端：8080 当前源码运行；若被低内存守卫停止，由用户确认后再重启
 - 最后更新：2026-10-31
 
@@ -99,21 +99,41 @@
 | V02 | W7 | 截图视觉比对 | passed | - | - | .claude/runs/V02/report.md | 24/24 截图；0 P1 / 5 类 P2 |
 | V03 | W7 | V02 视觉差异小修 | passed | 89cf31b | - | impl-reviews/V03.md | 0 P1 / 6 P2；接送/通知修复 |
 | V04 | W7 | 班级学年数据修正 | passed | cecd705 | - | impl-reviews/V04.md | 0 P1 / 3 P2；6 班+罐+学年对齐 2026-2027 |
+| W8-A | W8 | 双端 access token 静默续期 | passed | 9bd9d9d | 7a4e843 | impl-reviews/W8-A.md | 0 P1 / 2 P2；单飞刷新/轮换/重放；DevTools 双端实测 |
+| W8-A2 | W8 | 静默续期收口：迟到 401 + 家长上传 | passed | 7a4e843 | 6076d56 | impl-reviews/W8-A2.md | 0 P1 / 2 P2；真实上传 401→刷新→重放 200 |
+| W8-B | W8 | 后端 P2：422 映射 + 老师点赞幂等 | passed | 9bd9d9d | 38f8169 | impl-reviews/W8-B.md | 0 P1 / 2 P2；4/4 并发用例，反事实验证 1062 |
+| W8-C | W8 | 家长二维码空态 + 相册文案 | passed | 6076d56 | 2b5a4c0 | impl-reviews/W8-C.md | 0 P1 / 4 P2；qrcode 请求 0；文案对齐契约 |
 ## 当前检查点
 
 ```json
 {
-  "slice_id": "V04",
+  "slice_id": "W8-C",
   "phase": "committed",
-  "commit_sha": "af311a0",
-  "next_action": "none — all slices delivered",
-  "updated_at": "2026-10-31T07:05:00+08:00"
+  "commit_sha": "2b5a4c0",
+  "next_action": "none — W8 leftovers closed; human/product/real-device items remain",
+  "updated_at": "2026-10-31T11:05:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-10-31T07:05+08:00 — 全部完成
+### Handoff 2026-10-31T11:05+08:00 — W8 遗留收口（不依赖真机）
+
+- 状态：W0–W7 交付不变；W8 完成 4 片（A/A2/B/C），**0 P1**。
+- W8-A/A2：两端 401 静默续期——单飞刷新（refresh 一次性轮换）、落盘新对并重放一次；
+  仅刷新失败才清会话回登录；迟到 401 不再清新会话；家长请假附件/任务照片走同一续期链路。
+  DevTools 实测真实上传 401 → 1 次刷新 → 重放 200。
+- W8-B：家长接送授权人/设置非法参数 → 422（原 500）；老师 LikeGrowth 并发 1062 幂等。
+- W8-C：未指定今日接走人时不再请求 `/parent/pickup/qrcode`（消除设计内 422 红字）；
+  老师相册空态文案对齐「本期不支持家长端浏览」契约。
+- 仍需人工/产品（不阻塞）：RDS 凭据轮换 + 历史清理；品牌素材决策；对比度 tokens；
+  真机补验（原生选图、语音、滚动锁）。15 分钟 token 续期已由 W8-A 解决。
+- 剩余技术债（不阻塞）：评论分页未实现；`rawRequest` 401 仍无条件写 pending_route；
+  班级 2–6 无星星罐行；`current_semester=spring` 与秋季窗口不一致；死组件 BottomNav；
+  `custom-tab-bar` 字面量颜色；设计工件相册旧文案。
+- 后端：8080 当前源码运行；如被低内存守卫停止，由用户确认后再重启。
+
+### Handoff 2026-10-31T07:05+08:00 — 全部完成（历史；第 5 项 token 续期已由 W8-A 解决）
 
 - 状态：**W0–W7 全部切片完成**；51 页设计全部落地并通过逐片对抗性审查 + V01 全量遍历（51/51，0 P0/0 P1）。
 - 终验：V01a 老师 23/23、V01b 家长 28/28；V02 截图 24/24；V03 修视觉差异；V04 修正班级学年数据；D01 共享逻辑收口；D02 token 债 teacher 22→3、parent 53→3。
