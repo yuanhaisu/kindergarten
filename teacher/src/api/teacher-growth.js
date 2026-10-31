@@ -17,7 +17,7 @@ export function updateTeacherGrowthLog(id, data, options = {}) {
   return requestWithAuth({ url: `/teacher/growth/logs/${id}`, method: "PUT", data, silent: options.silent })
 }
 
-export function fetchTeacherGrowthComments(id, params = { page: 1, page_size: 50 }) {
+export function fetchTeacherGrowthComments(id, params = { page: 1, page_size: 20 }) {
   return requestWithAuth({ url: `/teacher/growth/logs/${id}/comments`, method: "GET", data: params })
 }
 

@@ -347,6 +347,13 @@ async function doGrant() {
 }
 
 // ---- 评论 ----
+// 服务端分页只切顶层（回复随所属顶层返回）：首屏 20 条，加载更多只追加下一页顶层。
+const COMMENT_PAGE_SIZE = 20
+const commentPage = ref(1)
+const hasMoreComments = ref(false)
+const rootCommentTotal = ref(0)
+const loadingMore = ref(false)
+
 const sendDisabled = computed(
   () => locked.value || submitting.value || !commentText.value.trim()
 )
@@ -406,17 +413,78 @@ function focusComment() {
   inputFocused.value = true
 }
 
+// list 只含当前页顶层；total 含回复（互动条计数口径），root_total 是顶层数（分页口径）。
+function applyCommentPage(data) {
+  const list = Array.isArray(data?.list) ? data.list : []
+  const total = data?.total
+  commentTotal.value = typeof total === "number" ? total : list.length
+  const rootTotal = data?.root_total
+  rootCommentTotal.value = typeof rootTotal === "number" ? rootTotal : list.length
+  hasMoreComments.value = data?.has_more === true
+  return list
+}
+
 function applyComments(res) {
-  comments.value = res.data?.list || []
-  const total = res.data?.total
-  commentTotal.value = typeof total === "number" ? total : comments.value.length
+  comments.value = applyCommentPage(res.data)
+  commentPage.value = 1
   if (aiGroups.value.length) aiTouched.value = true
 }
 
-async function refreshComments() {
+async function loadMoreComments() {
+  if (locked.value || loadingMore.value || !hasMoreComments.value) return
+  loadingMore.value = true
   try {
-    const res = await fetchTeacherGrowthComments(record.value.id)
-    applyComments(res)
+    const nextPage = commentPage.value + 1
+    const res = await fetchTeacherGrowthComments(record.value.id, {
+      page: nextPage,
+      page_size: COMMENT_PAGE_SIZE
+    })
+    // 追加而非替换：已加载的顶层评论不能因为翻页被丢弃。
+    comments.value = comments.value.concat(applyCommentPage(res.data))
+    commentPage.value = nextPage
+  } catch (err) {
+    // http.js 已提示；保留已加载内容与游标，用户可再次点击重试。
+    console.warn("[growth-detail] load more comments failed:", err?.message || err)
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+// 发评论/回复后重取已加载的每一页再拼接，不能只重置到第 1 页丢掉后续页。
+// 新顶层评论按 created_at ASC 排在末尾：先补到它应落的页，再兜底轮询直到看见。
+async function refreshComments(focusId, focusIsRoot = false) {
+  try {
+    const pageCount = Math.max(
+      1,
+      commentPage.value,
+      focusIsRoot && focusId ? Math.ceil((rootCommentTotal.value + 1) / COMMENT_PAGE_SIZE) : 1
+    )
+    const responses = await Promise.all(
+      Array.from({ length: pageCount }, (_, index) =>
+        fetchTeacherGrowthComments(record.value.id, { page: index + 1, page_size: COMMENT_PAGE_SIZE })
+      )
+    )
+    let list = []
+    responses.forEach(res => {
+      list = list.concat(applyCommentPage(res.data))
+    })
+    comments.value = list
+    // 本轮实际取了 1..pageCount（可能为了新评论多取一页），游标必须跟上，否则下次加载会重取该页。
+    commentPage.value = pageCount
+
+    let page = pageCount
+    while (focusId && !findComment(focusId) && hasMoreComments.value) {
+      page += 1
+      const res = await fetchTeacherGrowthComments(record.value.id, {
+        page,
+        page_size: COMMENT_PAGE_SIZE
+      })
+      const next = applyCommentPage(res.data)
+      if (!next.length) break
+      comments.value = comments.value.concat(next)
+      commentPage.value = page
+    }
+    if (aiGroups.value.length) aiTouched.value = true
   } catch (err) {
     console.warn("[growth-detail] refresh comments failed:", err?.message || err)
   }
@@ -428,11 +496,16 @@ async function submitComment() {
   if (!text) return
   submitting.value = true
   try {
-    await createTeacherGrowthComment(record.value.id, text, replyTo.value ? replyTo.value.id : null)
+    const isRootComment = !replyTo.value
+    const created = await createTeacherGrowthComment(
+      record.value.id,
+      text,
+      replyTo.value ? replyTo.value.id : null
+    )
     commentText.value = ""
     replyTo.value = null
     uni.showToast({ title: "评论成功", icon: "success" })
-    await refreshComments()
+    await refreshComments(created?.data?.id, isRootComment)
   } catch (err) {
     // 失败保留输入内容；http.js 已提示错误
     console.warn("[growth-detail] post comment failed:", err?.message || err)
@@ -468,7 +541,7 @@ async function loadDetail(id) {
     await ensureLogin()
     const [logRes, commentRes] = await Promise.all([
       fetchTeacherGrowthLog(id),
-      fetchTeacherGrowthComments(id)
+      fetchTeacherGrowthComments(id, { page: 1, page_size: COMMENT_PAGE_SIZE })
     ])
     record.value = logRes.data || {}
     applyComments(commentRes)
@@ -805,6 +878,12 @@ onShow(() => {
                 </view>
               </view>
             </view>
+            <view
+              v-if="hasMoreComments"
+              class="comment-more"
+              :class="{ 'is-busy': loadingMore }"
+              @click="loadMoreComments"
+            >{{ loadingMore ? "加载中…" : "加载更多评论" }}</view>
           </view>
         </view>
       </template>
@@ -1570,6 +1649,21 @@ onShow(() => {
   display: flex;
   flex-direction: column;
   gap: $spacing-xl;
+}
+
+// 文本按钮：沿用评论区字号与品牌色，不新增底色，避免把翻页做成第二个主操作。
+.comment-more {
+  min-height: $component-input-height;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+}
+
+.comment-more.is-busy {
+  color: $color-text-hint;
 }
 
 .comment {

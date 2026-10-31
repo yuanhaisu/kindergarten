@@ -37,6 +37,14 @@ const commentText = ref("")
 const replyTo = ref(null)
 const inputFocused = ref(false)
 
+// 服务端分页只切顶层（回复随所属顶层返回）：首屏 20 条，加载更多只追加下一页顶层。
+const COMMENT_PAGE_SIZE = 20
+const commentPage = ref(1)
+const hasMoreComments = ref(false)
+const rootCommentTotal = ref(0)
+const commentTotal = ref(0)
+const loadingMore = ref(false)
+
 // ---- 照片点名筛选（design D7）：默认「只看我的孩子」 ----
 const myStudentId = ref(getCurrentStudentId())
 const onlyMine = ref(true)
@@ -98,9 +106,9 @@ const mediaEmpty = computed(
   () => allMedia.value.length > 0 && photos.value.length === 0 && videos.value.length === 0
 )
 
-// 与设计稿一致：评论数与评论标题都用「顶层评论条数」一个口径，
-// 否则服务端 comments_count 含回复，会和页面上能数出来的条数对不上。
-const commentCount = computed(() => comments.value.length)
+// 标题与互动栏统一用服务端顶层评论数（root_total），不再数已加载数组；
+// 否则分页后「评论 (20)」会把「其实有 36 条」说成 20 条。
+const commentCount = computed(() => rootCommentTotal.value)
 
 const sendDisabled = computed(() => locked.value || posting.value || !commentText.value.trim())
 
@@ -124,10 +132,11 @@ async function loadData(id) {
     await ensureCurrentStudent()
     const [d, c] = await Promise.all([
       fetchGrowthDetail(id, myStudentId.value || undefined),
-      fetchGrowthComments(id, { page: 1, page_size: 50 })
+      fetchGrowthComments(id, { page: 1, page_size: COMMENT_PAGE_SIZE })
     ])
     detail.value = d.data || {}
-    comments.value = c.data?.list || []
+    comments.value = applyCommentPage(c.data)
+    commentPage.value = 1
     hasLoaded.value = true
   } catch (err) {
     // http.js 已弹过全局 toast，这里只负责页面级错误态，不重复提示
@@ -150,10 +159,77 @@ async function handleRetry() {
   }
 }
 
-async function refreshComments() {
+// list 只含当前页顶层；total 含回复，root_total 是顶层数（标题计数口径）。
+function applyCommentPage(data) {
+  const list = Array.isArray(data?.list) ? data.list : []
+  const total = data?.total
+  commentTotal.value = typeof total === "number" ? total : list.length
+  const rootTotal = data?.root_total
+  rootCommentTotal.value = typeof rootTotal === "number" ? rootTotal : list.length
+  hasMoreComments.value = data?.has_more === true
+  return list
+}
+
+async function loadMoreComments() {
+  if (locked.value || loadingMore.value || !hasMoreComments.value) return
+  loadingMore.value = true
   try {
-    const c = await fetchGrowthComments(logId.value, { page: 1, page_size: 50 })
-    comments.value = c.data?.list || []
+    const nextPage = commentPage.value + 1
+    const res = await fetchGrowthComments(logId.value, {
+      page: nextPage,
+      page_size: COMMENT_PAGE_SIZE
+    })
+    // 追加而非替换：已加载的顶层评论不能因为翻页被丢弃。
+    comments.value = comments.value.concat(applyCommentPage(res.data))
+    commentPage.value = nextPage
+  } catch (err) {
+    // http.js 已提示；保留已加载内容与游标，用户可再次点击重试。
+    console.warn("[growth-detail] load more comments failed:", err?.message || err)
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+function hasComment(id) {
+  return comments.value.some(
+    comment => comment.id === id || (comment.replies || []).some(reply => reply.id === id)
+  )
+}
+
+// 发评论/回复后重取已加载的每一页再拼接，不能只重置到第 1 页丢掉后续页。
+// 新顶层评论按 created_at ASC 排在末尾：先补到它应落的页，再兜底轮询直到看见。
+async function refreshComments(focusId, focusIsRoot = false) {
+  try {
+    const pageCount = Math.max(
+      1,
+      commentPage.value,
+      focusIsRoot && focusId ? Math.ceil((rootCommentTotal.value + 1) / COMMENT_PAGE_SIZE) : 1
+    )
+    const responses = await Promise.all(
+      Array.from({ length: pageCount }, (_, index) =>
+        fetchGrowthComments(logId.value, { page: index + 1, page_size: COMMENT_PAGE_SIZE })
+      )
+    )
+    let list = []
+    responses.forEach(res => {
+      list = list.concat(applyCommentPage(res.data))
+    })
+    comments.value = list
+    // 本轮实际取了 1..pageCount（可能为了新评论多取一页），游标必须跟上，否则下次加载会重取该页。
+    commentPage.value = pageCount
+
+    let page = pageCount
+    while (focusId && !hasComment(focusId) && hasMoreComments.value) {
+      page += 1
+      const res = await fetchGrowthComments(logId.value, {
+        page,
+        page_size: COMMENT_PAGE_SIZE
+      })
+      const next = applyCommentPage(res.data)
+      if (!next.length) break
+      comments.value = comments.value.concat(next)
+      commentPage.value = page
+    }
   } catch (err) {
     console.warn("[growth-detail] refresh comments failed:", err?.message || err)
   }
@@ -207,15 +283,16 @@ async function submitComment() {
   if (!text) return
   posting.value = true
   try {
-    await postGrowthComment(logId.value, {
+    const isRootComment = !replyTo.value
+    const created = await postGrowthComment(logId.value, {
       content: text,
       parent_id: replyTo.value ? replyTo.value.id : null
     })
     commentText.value = ""
     replyTo.value = null
     uni.showToast({ title: "评论成功", icon: "success" })
-    // 与服务端同口径：重新拉取（created_at ASC），新评论落在末尾
-    await refreshComments()
+    // 与服务端同口径：重取已加载页（created_at ASC），新评论落在末尾
+    await refreshComments(created?.data?.id, isRootComment)
   } catch (err) {
     // 失败保留输入内容，http.js 已提示错误
     console.warn("[growth-detail] post comment failed:", err?.message || err)
@@ -482,6 +559,14 @@ onLoad((opts) => {
                 <text class="comment-text">{{ r.content }}</text>
               </view>
             </view>
+          </view>
+          <view
+            v-if="hasMoreComments"
+            class="comment-more"
+            :class="{ 'is-busy': loadingMore }"
+            @click="loadMoreComments"
+          >
+            <text>{{ loadingMore ? "加载中…" : "加载更多评论" }}</text>
           </view>
         </view>
       </view>
@@ -999,6 +1084,21 @@ onLoad((opts) => {
 
 .comment-list {
   margin-top: $spacing-md;
+}
+
+// 文本按钮：沿用评论区字号与品牌色，不新增底色，避免把翻页做成第二个主操作。
+.comment-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $component-input-height;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+}
+
+.comment-more.is-busy {
+  color: $color-text-hint;
 }
 
 .comment {
