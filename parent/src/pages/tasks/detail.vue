@@ -13,7 +13,7 @@ import { getCurrentStudentId, setCurrentStudentId } from "@/utils/currentStudent
 import { parseSceneTaskId } from "@/utils/taskScene"
 import { fetchParentHomeOverview, switchStudent } from "@/api/parent-home"
 import { ensureLogin } from "@/utils/login"
-import { getToken } from "@/utils/auth"
+import { uploadFile } from "@/api/http"
 import config from "@/config/env"
 import {
   formatCommentTime,
@@ -306,6 +306,36 @@ async function switchToMessageChild() {
   }
 }
 
+async function uploadMedia(path) {
+  try {
+    // 上传走 http.js：401 会静默续期并重放一次，不再手工拼 Authorization / 解包络。
+    const res = await uploadFile({
+      url: config.uploadURL,
+      filePath: path,
+      formData: { biz_type: "task" },
+      silent: true
+    })
+    // 上传期间草稿被移除或换了孩子：丢弃这次结果，别把照片记到新草稿上。
+    if (mediaPreview.value !== path) return
+    if (res.data?.id) {
+      mediaFileID.value = res.data.id
+      uni.showToast({ title: "上传成功", icon: "success" })
+    } else {
+      mediaPreview.value = ""
+      uni.showToast({ title: "上传失败", icon: "none" })
+    }
+  } catch (err) {
+    // 预览仍停在这张图才清掉；提示照旧给出（上传已失败，与草稿是否被换无关）。
+    if (mediaPreview.value === path) mediaPreview.value = ""
+    // 服务端包络的 message 更具体；网络/本地失败沿用页面原文案。
+    const message = typeof err?.code === "number" && err.code !== 0 && err.message ? err.message : "上传失败"
+    uni.showToast({ title: message, icon: "none" })
+  } finally {
+    uploading.value = false
+    uni.hideLoading()
+  }
+}
+
 function chooseMedia() {
   if (uploading.value || submitting.value) return
   ensureLogin().then(() => {
@@ -317,38 +347,7 @@ function chooseMedia() {
         mediaPreview.value = path
         uploading.value = true
         uni.showLoading({ title: "上传中" })
-        uni.uploadFile({
-          url: config.uploadURL,
-          filePath: path,
-          name: "file",
-          formData: { biz_type: "task" },
-          header: { Authorization: `Bearer ${getToken()}` },
-          success: (up) => {
-            // 上传期间草稿被移除或换了孩子：丢弃这次结果，别把照片记到新草稿上。
-            if (mediaPreview.value !== path) return
-            try {
-              const body = JSON.parse(up.data || "{}")
-              if (body.code === 0 && body.data?.id) {
-                mediaFileID.value = body.data.id
-                uni.showToast({ title: "上传成功", icon: "success" })
-              } else {
-                mediaPreview.value = ""
-                uni.showToast({ title: body.message || "上传失败", icon: "none" })
-              }
-            } catch (e) {
-              mediaPreview.value = ""
-              uni.showToast({ title: "上传失败", icon: "none" })
-            }
-          },
-          fail: () => {
-            if (mediaPreview.value === path) mediaPreview.value = ""
-            uni.showToast({ title: "上传失败", icon: "none" })
-          },
-          complete: () => {
-            uploading.value = false
-            uni.hideLoading()
-          }
-        })
+        uploadMedia(path)
       }
     })
   }).catch((err) => {

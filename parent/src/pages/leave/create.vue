@@ -12,7 +12,7 @@ import { ensureLogin } from "@/utils/login"
 import { fetchParentHomeOverview } from "@/api/parent-home"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { createLeave } from "@/api/parent-leave"
-import { getToken } from "@/utils/auth"
+import { uploadFile } from "@/api/http"
 import config from "@/config/env"
 import {
   formatMonthTitle,
@@ -244,49 +244,40 @@ async function runUpload(key) {
   if (!photo || !photo.localPath) return
   photos.value = photos.value.map(p => (p.key === key ? { ...p, status: "uploading" } : p))
   uni.showLoading({ title: "上传中", mask: true })
-  await new Promise(resolve => {
-    uni.uploadFile({
+  try {
+    // 上传走 http.js：401 会静默续期并重放一次，不再手工拼 Authorization / 解包络。
+    const res = await uploadFile({
       url: config.uploadURL,
       filePath: photo.localPath,
-      name: "file",
       formData: { biz_type: "leave" },
-      header: { Authorization: `Bearer ${getToken()}` },
-      success: up => {
-        let body = {}
-        try {
-          body = JSON.parse(up.data || "{}")
-        } catch (e) {
-          body = {}
-        }
-        if (up.statusCode >= 200 && up.statusCode < 300 && body.code === 0 && body.data?.file_url) {
-          const data = body.data
-          photos.value = photos.value.map(p =>
-            p.key === key
-              ? {
-                  ...p,
-                  status: "done",
-                  file_url: data.file_url,
-                  file_name: data.file_name || p.file_name,
-                  file_size: Number(data.file_size) || p.file_size
-                }
-              : p
-          )
-          uni.showToast({ title: "照片已上传", icon: "success" })
-        } else {
-          photos.value = photos.value.map(p => (p.key === key ? { ...p, status: "failed" } : p))
-          uni.showToast({ title: body.message || "照片上传失败", icon: "none" })
-        }
-      },
-      fail: () => {
-        photos.value = photos.value.map(p => (p.key === key ? { ...p, status: "failed" } : p))
-        uni.showToast({ title: "照片上传失败", icon: "none" })
-      },
-      complete: () => {
-        uni.hideLoading()
-        resolve()
-      }
+      silent: true
     })
-  })
+    const data = res.data || {}
+    if (!data.file_url) {
+      photos.value = photos.value.map(p => (p.key === key ? { ...p, status: "failed" } : p))
+      uni.showToast({ title: "照片上传失败", icon: "none" })
+      return
+    }
+    photos.value = photos.value.map(p =>
+      p.key === key
+        ? {
+            ...p,
+            status: "done",
+            file_url: data.file_url,
+            file_name: data.file_name || p.file_name,
+            file_size: Number(data.file_size) || p.file_size
+          }
+        : p
+    )
+    uni.showToast({ title: "照片已上传", icon: "success" })
+  } catch (err) {
+    photos.value = photos.value.map(p => (p.key === key ? { ...p, status: "failed" } : p))
+    // 服务端包络的 message 更具体；网络/本地失败沿用页面原文案。
+    const message = typeof err?.code === "number" && err.code !== 0 && err.message ? err.message : "照片上传失败"
+    uni.showToast({ title: message, icon: "none" })
+  } finally {
+    uni.hideLoading()
+  }
 }
 
 function addPhotos() {

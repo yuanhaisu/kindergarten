@@ -51,7 +51,11 @@ function authError(err) {
 }
 
 // 续期失败：清会话、跳登录（并发只跳一次），返回归一化错误供调用方 reject。
-function failToLogin(err) {
+// tokenUsed 是触发 401 的那次请求实际带的 token。迟到的 401 可能在别处刷新/重新登录
+// 之后才回来，此时 storage 里已是更新的会话，不能把它清掉，也不该再跳登录。
+function failToLogin(err, tokenUsed) {
+  const current = getToken()
+  if (current && current !== tokenUsed) return authError(err)
   clearAuth()
   redirectToLogin()
   return authError(err)
@@ -112,7 +116,7 @@ function recoverSession(tokenUsed) {
       setRefreshToken(data.refresh_token)
     })
     .catch((err) => {
-      throw failToLogin(err)
+      throw failToLogin(err, tokenUsed)
     })
 }
 
@@ -141,7 +145,7 @@ function request({ url, method = "GET", data, header = {}, auth = false, silent 
           // 只有带 token 的请求才续期；rawRequest（登录/刷新）保持原行为：立即回登录页。
           if (auth) {
             if (replay) {
-              reject(failToLogin(body))
+              reject(failToLogin(body, token))
               return
             }
             recoverSession(token).then(
@@ -227,7 +231,7 @@ function sendUpload({
 
         if (res.statusCode === 401) {
           if (replay) {
-            reject(failToLogin(body))
+            reject(failToLogin(body, token))
             return
           }
           recoverSession(token).then(

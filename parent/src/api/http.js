@@ -67,9 +67,15 @@ function authError(err) {
 }
 
 // 续期失败：清会话、记录回跳路由、跳登录（并发只跳一次），返回归一化错误供调用方 reject。
-function failToLogin(err) {
+// tokenUsed 是触发 401 的那次请求实际带的 token。迟到的 401 可能在别处刷新/重新登录
+// 之后才回来，此时 storage 里已是更新的会话，不能把它清掉，也不该再跳登录。
+function failToLogin(err, tokenUsed) {
+  const current = getToken()
+  if (current && current !== tokenUsed) return authError(err)
   clearAuth()
-  rememberPendingRoute(currentRoutePath())
+  // 登录页自己不能成为回跳目标，否则登录成功后又被送回登录页。
+  const path = currentRoutePath()
+  if (path !== LOGIN_URL) rememberPendingRoute(path)
   redirectToLogin()
   return authError(err)
 }
@@ -129,7 +135,7 @@ function recoverSession(tokenUsed) {
       setRefreshToken(data.refresh_token)
     })
     .catch((err) => {
-      throw failToLogin(err)
+      throw failToLogin(err, tokenUsed)
     })
 }
 
@@ -158,7 +164,7 @@ function request({ url, method = "GET", data, header = {}, auth = false, silent 
           // 只有带 token 的请求才续期；rawRequest（登录/刷新）保持原行为：立即回登录页。
           if (auth) {
             if (replay) {
-              reject(failToLogin(body))
+              reject(failToLogin(body, token))
               return
             }
             recoverSession(token).then(
@@ -202,4 +208,80 @@ export function rawRequest(options) {
 
 export function requestWithAuth(options) {
   return request({ ...options, auth: true })
+}
+
+// 文件上传（multipart）：与 request() 共用 token 注入、单飞续期与错误归一化。
+// url 可传完整地址（config.uploadURL）或相对 /common/upload；成功判定同为 2xx + code===0。
+// silent 默认 true：上传点的 loading 与文案由调用方自己渲染。
+export function uploadFile(options) {
+  return sendUpload(options, false)
+}
+
+// replay 语义与 request() 相同：续期后重放一次，重放再 401 直接失败。
+function sendUpload({
+  url,
+  filePath,
+  name = "file",
+  formData = {},
+  header = {},
+  silent = true,
+  onProgressUpdate = null
+}, replay) {
+  return new Promise((resolve, reject) => {
+    const token = getToken()
+    const target = /^https?:\/\//i.test(url || "") ? url : `${config.baseURL}${url}`
+    const task = uni.uploadFile({
+      url: target,
+      filePath,
+      name,
+      formData,
+      header: {
+        platform: "mp-weixin",
+        terminal_from: "parent",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...header
+      },
+      success(res) {
+        let body = res.data
+        if (typeof body === "string") {
+          try { body = JSON.parse(body) } catch { body = null }
+        }
+        body = normalizeResponse(body)
+
+        if (res.statusCode === 401) {
+          if (replay) {
+            reject(failToLogin(body, token))
+            return
+          }
+          recoverSession(token).then(
+            () =>
+              sendUpload({ url, filePath, name, formData, header, silent, onProgressUpdate }, true).then(
+                resolve,
+                reject
+              ),
+            reject
+          )
+          return
+        }
+        if (res.statusCode >= 200 && res.statusCode < 300 && body.code === SUCCESS_CODE) {
+          resolve(body)
+          return
+        }
+        if (!silent) {
+          uni.showToast({ title: body.message || "上传失败", icon: "none" })
+        }
+        reject(body)
+      },
+      fail(err) {
+        if (!silent) {
+          uni.showToast({ title: "网络异常", icon: "none" })
+        }
+        reject({ ...err, message: err?.message || "上传失败" })
+      }
+    })
+    // 老基础库 / 非上传环境可能不返回 UploadTask，此时静默跳过进度，不影响上传本身
+    if (typeof onProgressUpdate === "function" && task && typeof task.onProgressUpdate === "function") {
+      task.onProgressUpdate(({ progress }) => onProgressUpdate(progress))
+    }
+  })
 }
