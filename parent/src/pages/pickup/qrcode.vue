@@ -5,7 +5,7 @@ import qrcode from "qrcode-generator"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId } from "@/utils/currentStudent"
 import { relationLabel } from "@/utils/relation"
-import { fetchPickupQRCode } from "@/api/parent-pickup"
+import { fetchDesignatedPerson, fetchPickupQRCode } from "@/api/parent-pickup"
 
 const instance = getCurrentInstance()
 const qrData = ref({})
@@ -57,7 +57,21 @@ async function loadData(isRefresh = false) {
   error.value = ""
   try {
     await ensureLogin()
-    const res = await fetchPickupQRCode(getCurrentStudentId())
+    const studentId = getCurrentStudentId()
+    // 先查「今日接走人」：未指定时后端 qrcode 直接返回 422，会在 console 留下红色请求错误。
+    // 指定查询自身失败（网络/401/业务错）时不新增拦截，回退到原二维码流程，
+    // 否则一次临时故障就会被放大成「无法查看」。
+    const designation = await fetchDesignatedPerson(studentId).catch((err) => {
+      console.warn("[pickup-qrcode] designation query failed, falling back:", err?.message || err)
+      return null
+    })
+    if (designation && designation.data?.designated !== true) {
+      qrData.value = {}
+      expireAtMs.value = 0
+      error.value = "请先指定「今日接走人」"
+      return
+    }
+    const res = await fetchPickupQRCode(studentId)
     const data = res.data || {}
     if (!data.qr_code) {
       qrData.value = {}

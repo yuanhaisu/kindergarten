@@ -526,7 +526,7 @@ onLoad(() => {
       <view v-else-if="viewState === 'empty'" class="state-panel">
         <view class="state-icon"><text class="icon state-glyph">&#xEE4B;</text></view>
         <text class="state-title">还没有照片</text>
-        <text class="state-copy">上传后家长可在成长时光里看到</text>
+        <text class="state-copy">上传后可在这里按分类查看</text>
         <view class="btn-soft state-action" @click="openUpload">上传照片</view>
       </view>
 
