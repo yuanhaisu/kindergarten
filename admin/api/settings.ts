@@ -1,10 +1,21 @@
 import type { SystemSettings } from '~/types/api'
 
-export function getSettings() {
-  return useHttp().get<SystemSettings>('/admin/settings')
+/** 班级相册全班视图开关（园所级，默认关闭） */
+export interface AlbumSettings {
+  classwide_enabled: boolean
 }
 
-export function updateSettings(body: Partial<SystemSettings>) {
+/**
+ * `SystemSettings` 之上的 album 块。
+ * 声明为必填与 health 同一口径：旧后端未下发时由设置页补默认值，避免 v-model 绑到 undefined。
+ */
+export type SystemSettingsWithAlbum = SystemSettings & { album: AlbumSettings }
+
+export function getSettings() {
+  return useHttp().get<SystemSettingsWithAlbum>('/admin/settings')
+}
+
+export function updateSettings(body: Partial<SystemSettingsWithAlbum>) {
   return useHttp().put<{ updated_at: string }>('/admin/settings', body)
 }
 

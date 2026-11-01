@@ -2,9 +2,9 @@
 /**
  * 班级相册详情 · 照片网格 + 大图预览 + 逐张保存原图
  *
- * 照片列表由服务端按「当前孩子 + 班内共享」过滤后返回，顺序仍是老师创建时的
- * sort_num、id；端上只做渲染，不重新筛选。Phase 1 的「导出」= 逐张保存原图
- * （design D8），不做打包下载。
+ * 照片列表由服务端按 scope（mine=当前孩子 / all=全班，仍含 opt-out 过滤）过滤后
+ * 返回，顺序仍是老师创建时的 sort_num、id；端上只做渲染，不重新筛选。
+ * Phase 1 的「导出」= 逐张保存原图（design D8），不做打包下载。
  */
 import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
@@ -41,6 +41,8 @@ const CATEGORY_TONES = {
 
 const albumId = ref(0)
 const studentId = ref(null)
+// 列表页切到「全班」时带过来；缺省/非法值按 mine，不猜其它 scope。
+const scope = ref("mine")
 const album = ref(null)
 const loading = ref(true)
 const retrying = ref(false)
@@ -91,7 +93,8 @@ async function loadData() {
     await ensureLogin()
     await ensureStudent()
     const res = await fetchParentClassAlbum(albumId.value, {
-      student_id: studentId.value || undefined
+      student_id: studentId.value || undefined,
+      scope: scope.value
     })
     album.value = res.data || {}
     hasLoaded.value = true
@@ -286,6 +289,7 @@ async function saveCurrent() {
 onLoad(query => {
   albumId.value = Number(query?.id) || 0
   studentId.value = Number(query?.student_id) || getCurrentStudentId()
+  scope.value = query?.scope === "all" ? "all" : "mine"
   loadData()
 })
 </script>

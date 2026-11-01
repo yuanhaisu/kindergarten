@@ -49,6 +49,10 @@ const loadError = ref("")
 const exhausted = ref(false)
 const retrying = ref(false)
 const studentId = ref(getCurrentStudentId())
+// 全班视图开关只认列表响应的 classwide_enabled；地址/本地配置都不能替代它。
+// 开关默认关闭，因此首次响应前不渲染切换。
+const classwideEnabled = ref(false)
+const scope = ref("mine")
 // 下一次「加载更多」的页码：只在成功追加后自增，删除相册导致页大小变化时
 // 不会因为按条数反推页码而漏页。
 const nextPage = ref(2)
@@ -62,6 +66,17 @@ const viewState = computed(() => {
   if (hasLoaded.value && albums.value.length === 0) return "empty"
   return "normal"
 })
+
+// 全班视图下「空」意味着本班没有可共享给其他家长的照片，不是「老师还没发布」。
+const emptyTitle = computed(() =>
+  scope.value === "all" ? "本班暂无可见照片" : "还没有班级相册"
+)
+
+const emptyDesc = computed(() =>
+  scope.value === "all"
+    ? "老师发布新照片后会出现在这里"
+    : "老师发布班级相册后会出现在这里"
+)
 
 const hasMore = computed(
   () => hasLoaded.value && !exhausted.value && albums.value.length < total.value
@@ -115,7 +130,8 @@ function fetchPage(page) {
   return fetchParentClassAlbums({
     page,
     page_size: PAGE_SIZE,
-    student_id: studentId.value || undefined
+    student_id: studentId.value || undefined,
+    scope: scope.value
   })
 }
 
@@ -131,6 +147,14 @@ async function loadAlbums({ skeleton = true } = {}) {
     const res = await fetchPage(1)
     if (seq !== loadSeq) return
     const data = res.data || {}
+    // 缺字段（旧后端）按关闭处理：只有明确的 true 才放出全班入口。
+    const enabled = data.classwide_enabled === true
+    classwideEnabled.value = enabled
+    if (!enabled && scope.value === "all") {
+      // 园所中途关闭全班视图：静默退回「我的孩子」，不停在不可用的视图上。
+      scope.value = "mine"
+      return loadAlbums({ skeleton })
+    }
     albums.value = (Array.isArray(data.list) ? data.list : []).map(normalizeAlbum)
     total.value = normalizeCount(data.total)
     exhausted.value = false
@@ -184,6 +208,24 @@ async function refreshEmpty() {
   }
 }
 
+// 切换等于换一份数据集：先清空列表/分页/错误态再按新 scope 拉第一页，
+// 否则 all 会沿用 mine 的 total 与「加载更多」页码。
+function switchScope(next) {
+  if (next === scope.value) return
+  if (next === "all" && !classwideEnabled.value) return
+  scope.value = next
+  // 丢弃在途的「加载更多」：它拿的是旧 scope 的页码。
+  loadSeq += 1
+  albums.value = []
+  total.value = 0
+  exhausted.value = false
+  nextPage.value = 2
+  hasLoaded.value = false
+  loadError.value = ""
+  loadingMore.value = false
+  loadAlbums()
+}
+
 async function loadMore() {
   if (loadingMore.value || loading.value || !hasMore.value) return
   loadingMore.value = true
@@ -212,7 +254,8 @@ async function loadMore() {
 function openAlbum(album) {
   if (!album?.id) return
   const sid = studentId.value ? `&student_id=${studentId.value}` : ""
-  uni.navigateTo({ url: `/pages/album/detail?id=${album.id}${sid}` })
+  // 详情必须按同一 scope 取照片，否则全班列表点进去只剩自己孩子的几张。
+  uni.navigateTo({ url: `/pages/album/detail?id=${album.id}${sid}&scope=${scope.value}` })
 }
 
 onLoad(() => {
@@ -226,6 +269,27 @@ onPullDownRefresh(() => {
 
 <template>
   <PageShell max-width="430px" bottom-space="48rpx">
+    <!-- 全班视图切换：只有服务端明确下发 classwide_enabled=true 才出现；
+         关闭时整个入口不渲染，避免点了才 403。 -->
+    <view v-if="classwideEnabled" class="scope-switch">
+      <view class="scope-seg">
+        <view
+          class="scope-btn"
+          :class="{ 'is-active': scope === 'mine' }"
+          @click="switchScope('mine')"
+        >
+          <text class="scope-label">我的孩子</text>
+        </view>
+        <view
+          class="scope-btn"
+          :class="{ 'is-active': scope === 'all' }"
+          @click="switchScope('all')"
+        >
+          <text class="scope-label">全班</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 加载：与卡片同形状的骨架，不跳动 -->
     <view v-if="viewState === 'loading'" class="skeleton">
       <view v-for="i in 3" :key="i" class="sk-card">
@@ -261,8 +325,8 @@ onPullDownRefresh(() => {
       <view class="empty-art">
         <text class="empty-glyph">{{ ICON.gallery }}</text>
       </view>
-      <text class="empty-title">还没有班级相册</text>
-      <text class="empty-desc">老师发布班级相册后会出现在这里</text>
+      <text class="empty-title">{{ emptyTitle }}</text>
+      <text class="empty-desc">{{ emptyDesc }}</text>
       <view class="link-btn" @click="refreshEmpty">
         <text>{{ retrying ? "刷新中…" : "刷新看看" }}</text>
       </view>
@@ -325,6 +389,55 @@ onPullDownRefresh(() => {
 // 班级相册 · 可扫读的卡片列表
 // 封面承担主要识别；标题、可见张数、日期与分类依次降级。
 // ============================================================
+
+// ---- 全班视图切换 --------------------------------------------
+// 复用成长页的胶囊分段：选中态用品牌浅底，不引入新色值。
+.scope-switch {
+  margin-bottom: $spacing-lg;
+}
+
+.scope-seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  border: 1rpx solid $color-border-subtle;
+  border-radius: $border-radius-full;
+  background: $color-bg-card;
+}
+
+.scope-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $component-input-height;
+  padding: $spacing-sm $spacing-xs;
+  border: 1rpx solid $color-bg-card;
+  border-radius: $border-radius-full;
+  text-align: center;
+  transition: transform $animation-duration-fast $animation-easing-default;
+
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+.scope-btn.is-active {
+  border-color: $color-brand-primary-light;
+  background: $color-brand-primary-bg;
+  box-shadow: $shadow-sm;
+}
+
+.scope-label {
+  color: $color-text-body;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1.4;
+}
+
+.scope-btn.is-active .scope-label {
+  color: $color-text-primary;
+}
 
 .album-list {
   padding-bottom: $spacing-lg;

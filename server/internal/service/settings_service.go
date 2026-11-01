@@ -104,6 +104,13 @@ type settingsHealth struct {
 	FeverThreshold      float64 `json:"fever_threshold"`
 }
 
+// settingsAlbum 园所级班级相册配置。ClasswideEnabled 存独立列而不是 ExtraConfig：
+// 家长相册服务读的是同一列，保证管理端开关与家长端行为同源（openspec design D1）。
+// 零值为 false，即新园所默认关闭。
+type settingsAlbum struct {
+	ClasswideEnabled bool `json:"classwide_enabled"`
+}
+
 type settingsPayload struct {
 	Attendance settingsAttendance `json:"attendance"`
 	Notice     settingsNotice     `json:"notice"`
@@ -209,6 +216,7 @@ type SystemSettingsResp struct {
 	Pickup     settingsPickup     `json:"pickup"`
 	Points     settingsPoints     `json:"points"`
 	Health     settingsHealth     `json:"health"`
+	Album      settingsAlbum      `json:"album"`
 }
 
 func (s *SettingsService) GetSettings(ctx context.Context, kindergartenID uint64) (*SystemSettingsResp, error) {
@@ -250,6 +258,7 @@ func (s *SettingsService) GetSettings(ctx context.Context, kindergartenID uint64
 	out.Pickup = payload.Pickup
 	out.Points = payload.Points
 	out.Health = payload.Health
+	out.Album = settingsAlbum{ClasswideEnabled: appRow.ClassAlbumClasswideEnabled}
 	return &out, nil
 }
 
@@ -279,6 +288,7 @@ type UpdateSettingsReq struct {
 	Pickup       *settingsPickup     `json:"pickup"`
 	Points       *settingsPoints     `json:"points"`
 	Health       *settingsHealth     `json:"health"`
+	Album        *settingsAlbum      `json:"album"`
 }
 
 type UpdateSettingsResp struct {
@@ -315,6 +325,9 @@ func (s *SettingsService) UpdateSettings(ctx context.Context, kindergartenID, us
 		}
 		cur.Health = *req.Health
 	}
+	if req.Album != nil {
+		appRow.ClassAlbumClasswideEnabled = req.Album.ClasswideEnabled
+	}
 	b, err := json.Marshal(cur)
 	if err != nil {
 		return nil, err
@@ -330,8 +343,17 @@ func (s *SettingsService) UpdateSettings(ctx context.Context, kindergartenID, us
 	if refreshed == nil {
 		return nil, fmt.Errorf("NOT_FOUND")
 	}
+	// 审计同时记录 ExtraConfig 与独立列开关：只写 ExtraConfig 会让「仅改开关」
+	// 的变更在日志里没有痕迹。
+	detail, err := json.Marshal(struct {
+		ExtraConfig json.RawMessage `json:"extra_config"`
+		Album       settingsAlbum   `json:"album"`
+	}{ExtraConfig: b, Album: settingsAlbum{ClasswideEnabled: appRow.ClassAlbumClasswideEnabled}})
+	if err != nil {
+		return nil, err
+	}
 	s.logOp(ctx, kindergartenID, userID, "settings", "update_settings", "kindergarten", kindergartenID,
-		string(b), ip, ua)
+		string(detail), ip, ua)
 	return &UpdateSettingsResp{UpdatedAt: refreshed.UpdatedAt.UTC().Format(time.RFC3339)}, nil
 }
 

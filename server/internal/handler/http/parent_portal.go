@@ -985,15 +985,28 @@ func (h *Handler) ParentClassCalendar(c *gin.Context) {
 
 // ParentListClassAlbums 家长端班级相册列表（openspec class-album-parent-sharing 5.1/5.2）。
 // 只返回当前孩子班级的已发布相册；visible_photo_count/cover_urls 已按该家长可见范围算好。
+// scope 缺省 mine；all 需要园所开关开启，关闭时 403（openspec class-album-classwide 1.3/1.4）。
 func (h *Handler) ParentListClassAlbums(c *gin.Context) {
 	pc, ok := h.parentCtx(c)
 	if !ok {
 		return
 	}
+	scope, ok := service.ParseParentAlbumScope(c.Query("scope"))
+	if !ok {
+		response.ErrValidation(c, "scope 仅支持 mine 或 all")
+		return
+	}
 	page, ps := ppPage(c)
-	result, err := h.parentPortalSvc.ListClassAlbums(c.Request.Context(), pc, page, ps)
+	result, err := h.parentPortalSvc.ListClassAlbums(c.Request.Context(), pc, page, ps, scope)
 	if err != nil {
-		response.ErrInternal(c, "获取班级相册失败")
+		switch {
+		case errors.Is(err, service.ErrParentForbidden):
+			response.ErrForbidden(c, "无权查看班级相册")
+		case errors.Is(err, service.ErrParentInvalidParams):
+			response.ErrValidation(c, "scope 仅支持 mine 或 all")
+		default:
+			response.ErrInternal(c, "获取班级相册失败")
+		}
 		return
 	}
 	response.OK(c, result)
@@ -1010,7 +1023,12 @@ func (h *Handler) ParentGetClassAlbum(c *gin.Context) {
 	if !ok2 {
 		return
 	}
-	data, err := h.parentPortalSvc.GetClassAlbum(c.Request.Context(), pc, id)
+	scope, ok3 := service.ParseParentAlbumScope(c.Query("scope"))
+	if !ok3 {
+		response.ErrValidation(c, "scope 仅支持 mine 或 all")
+		return
+	}
+	data, err := h.parentPortalSvc.GetClassAlbum(c.Request.Context(), pc, id, scope)
 	if err != nil {
 		writeParentClassAlbumError(c, err)
 		return
@@ -1020,13 +1038,16 @@ func (h *Handler) ParentGetClassAlbum(c *gin.Context) {
 
 // writeParentClassAlbumError 家长相册详情的唯一错误出口。
 // 不存在、草稿/下架/软删、跨班跨园、留存过期统一 404——不泄露相册存在性；
-// 只有「未绑定孩子」是 403。落到 default 的 500 会被端上当成服务端故障。
+// 「未绑定孩子」与「scope=all 但园所开关关闭」都是 403。落到 default 的 500
+// 会被端上当成服务端故障。
 func writeParentClassAlbumError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrParentNotFound):
 		response.ErrNotFound(c, "相册不存在")
 	case errors.Is(err, service.ErrParentForbidden):
 		response.ErrForbidden(c, "无权查看该相册")
+	case errors.Is(err, service.ErrParentInvalidParams):
+		response.ErrValidation(c, "scope 仅支持 mine 或 all")
 	default:
 		response.ErrInternal(c, "获取相册详情失败")
 	}

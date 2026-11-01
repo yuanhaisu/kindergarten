@@ -938,6 +938,33 @@
 - 反事实验证：`testPCALAlbumOptOut` 三张照片都把查看者 A 直接关联——`{A,C}`（C 单监护人关闭）、`{A,E}`（E 多监护人中 E2 关闭）、对照 `{A}`。关闭 opt-out 过滤或把「任一关闭」误实现成「全部关闭」，`TestParentClassAlbumOptOutHidesPhotoForOtherFamily` 与 `TestParentClassAlbumMultiGuardianAnyOptOut` 均失败（两次变异均已还原）。
 - 错误映射：`parent_portal.go` 抽出 `writeParentClassAlbumError`，`TestWriteParentClassAlbumErrorMapsSentinels` 覆盖 404/403/500；401 属统一鉴权中间件，不在 handler 层重复测。
 - 测试：`cd server && go test ./internal/service/ -run 'TestParentClassAlbum' -count=1 -timeout 600s` → ok（16 个 Test 函数 = TC 0001–0010 含 TC-0005 双用例 + 5 个守卫）；夹具 9971xx 全部硬删，0 残留。
+
+## 班级相册全班视图（CAW）— Phase 2-A
+
+> 对应 OpenSpec 变更 `class-album-classwide` 的任务 1.1–3.4。
+> 规格见 `openspec/changes/class-album-classwide/specs/class-album-classwide/spec.md`；
+> 契约见 `backend/api/api-parent/13-class-albums.md`（`scope` / `classwide_enabled`）与
+> `backend/api/api-admin/18-settings.md`（`album.classwide_enabled`）。
+> 服务层用例打真实 MySQL（9912xx / 9971xx 夹具，硬删 0 残留）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-CAW-0001 | 未配置园所读取 `album.classwide_enabled=false`，默认行列值 false | P0 | Unit | ✅ `TestSettingsClasswideDefaultsFalse` |
+| TC-NEW-CAW-0002 | 管理员开启/关闭落库并写审计；只改其它块时开关保持 | P0 | Unit | ✅ `TestSettingsClasswideUpdateAndAudit` |
+| TC-NEW-CAW-0003 | 不传 scope 与显式 `mine` 等价；开关关闭时列表返回 false | P0 | Unit | ✅ `TestParentClassAlbumScopeDefaultsToMine` |
+| TC-NEW-CAW-0004 | 开启后 `scope=all` 不做 my-child 过滤，opt-out 仍整张隐藏；mine 不回归 | P0 | Unit | ✅ `TestParentClassAlbumClasswideAll` |
+| TC-NEW-CAW-0005 | 无设置行 / 显式关闭时 `scope=all` 403，`mine` 不受影响 | P0 | Unit | ✅ `TestParentClassAlbumClasswideDisabledForbidden` |
+| TC-NEW-CAW-0006 | 全班视图仍隐藏含 opt-out 幼儿的合影，同相册其他照片可见 | P0 | Unit | ✅ `TestParentClassAlbumClasswideHidesOptOutGroupPhoto` |
+| TC-NEW-CAW-0007 | 自己的孩子关闭共享时，全班视图仍对其家长可见 | P0 | Unit | ✅ `TestParentClassAlbumClasswideOwnChildVisible` |
+| TC-NEW-CAW-0008 | 有权限管理员读取/更新开关，家长端行为随之变化 | P0 | E2E | ✅ 后端 + 管理端构建；⏳ 真实管理端交互（无管理员凭据） |
+| TC-NEW-CAW-0009 | 无设置权限的管理员不能修改开关 | P1 | Integration | ⏳ 复用现有 RBAC（`PUT /admin/settings` → `system:kindergarten`），无独立自动化 |
+| TC-NEW-CAW-0010 | 开关关闭时家长端不渲染全班切换 | P0 | DevTools | ⏳ 待 DevTools 真实点击（当前后端二进制未更新） |
+| TC-NEW-CAW-0011 | 开关开启时家长端可切换并按 `scope=all` 重取 | P0 | DevTools + Unit | ✅ 列表 flag 单测 `TestParentClassAlbumListClasswideFlag`；⏳ 端上切换待真实后端 E2E |
+
+> 守卫用例（不单列 TC）：非法 scope 拒绝与跨班隔离
+> （`TestParentClassAlbumScopeValidationAndIsolation`）、handler 错误映射
+> （`TestWriteParentClassAlbumErrorMapsSentinels`，含 422）、清理后 0 残留
+> （`TestParentClassAlbum_CleanupLeavesNoResidue`）。
 - 未覆盖（留给后续切片）：家长端页面与入口（8.x）、DevTools 双端真实点击（11.3）、留存清理命令（10.1）。
 
 ### B20 执行记录（2026-10-30）

@@ -53,11 +53,17 @@
   "health": {
     "temperature_required": false,
     "fever_threshold": 37.3
+  },
+  "album": {
+    "classwide_enabled": false
   }
 }
 ```
 
 > `health.temperature_required` 默认 `false`（按需测温）；`health.fever_threshold` 默认 `37.3`，允许范围 `35.0–42.0`。
+>
+> `album.classwide_enabled` 是园所级「全班视图」开关，默认 `false`；它与家长端
+> `GET /parent/class-albums?scope=all` 的放行判断同源（`kindergarten_app_settings.class_album_classwide_enabled`）。
 
 ---
 
@@ -80,6 +86,9 @@
   "health": {
     "temperature_required": true,
     "fever_threshold": 37.5
+  },
+  "album": {
+    "classwide_enabled": true
   }
 }
 
@@ -89,7 +98,9 @@
 }
 ```
 
-> `health` 块为整块替换；`fever_threshold` 越界（<35.0 或 >42.0）返回 422，原策略不变。
+> `health` / `album` 块为整块替换；`fever_threshold` 越界（<35.0 或 >42.0）返回 422，原策略不变。
+> 更新 `album` 会写 `update_settings` 审计（detail 同时包含 `extra_config` 与 `album`）；
+> 无 `system:kindergarten` 权限的管理员由现有 RBAC 拒绝，开关值不变。
 
 ---
 

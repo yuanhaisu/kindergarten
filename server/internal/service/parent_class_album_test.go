@@ -111,7 +111,23 @@ func cleanupPCALData(t *testing.T, db *gorm.DB) {
 	del("DELETE FROM users WHERE id BETWEEN ? AND ?", testPCALParentA, uint64(997129))
 	del("DELETE FROM students WHERE id BETWEEN ? AND ?", testPCALStudentA, uint64(997149))
 	del("DELETE FROM classes WHERE id BETWEEN ? AND ?", uint64(997110), uint64(997119))
+	del("DELETE FROM kindergarten_app_settings WHERE kindergarten_id IN (?, ?)",
+		testPCALKg, testPCALKgOther)
 	del("DELETE FROM kindergartens WHERE id IN (?, ?)", testPCALKg, testPCALKgOther)
+}
+
+// pcalSetClasswide 写入/覆盖园所全班视图开关。先硬删再插：软删行仍占
+// kindergarten_id 唯一索引，直接 Create 会撞键（Phase 1 踩过的坑）。
+func pcalSetClasswide(t *testing.T, db *gorm.DB, kgID uint64, enabled bool) {
+	t.Helper()
+	require.NoError(t, db.Unscoped().
+		Where("kindergarten_id = ?", kgID).Delete(&domain.KindergartenAppSetting{}).Error)
+	require.NoError(t, db.Create(&domain.KindergartenAppSetting{
+		KindergartenID:             kgID,
+		CurrentSemester:            "spring",
+		ClassAlbumClasswideEnabled: enabled,
+		ExtraConfig:                defaultExtraConfigJSON(),
+	}).Error)
 }
 
 type pcalFixture struct {
@@ -143,6 +159,7 @@ func newPCALFixture(t *testing.T) *pcalFixture {
 			&domain.Kindergarten{}, &domain.Class{}, &domain.User{},
 			&domain.Student{}, &domain.StudentParent{}, &domain.ParentSetting{},
 			&domain.Album{}, &domain.AlbumPhoto{}, &domain.AlbumStudent{}, &domain.AlbumPhotoStudent{},
+			&domain.KindergartenAppSetting{},
 		))
 	})
 	cleanupPCALData(t, db)
@@ -445,7 +462,7 @@ func TestParentClassAlbumPublishedVisible(t *testing.T) {
 	f := newPCALFixture(t)
 	ctx := context.Background()
 
-	data, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20)
+	data, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	require.EqualValues(t, 3, data["total"], "本班已发布相册：主相册 + 空相册 + opt-out 专辑")
 
@@ -460,7 +477,7 @@ func TestParentClassAlbumPublishedVisible(t *testing.T) {
 	assert.Equal(t, "活动", item["category_label"])
 	assert.NotContains(t, item, "status", "家长端不暴露运营状态")
 
-	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain)
+	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.EqualValues(t, testPCALAlbumMain, detail["id"])
 	assert.Equal(t, 5, detail["visible_photo_count"])
@@ -472,14 +489,14 @@ func TestParentClassAlbumOnlyPublishedVisible(t *testing.T) {
 	f := newPCALFixture(t)
 	ctx := context.Background()
 
-	data, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20)
+	data, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.ElementsMatch(t,
 		[]uint64{testPCALAlbumMain, testPCALAlbumEmpty, testPCALAlbumOptOut},
 		pcalAlbumIDs(t, data))
 
 	for _, hidden := range []uint64{testPCALAlbumDraft, testPCALAlbumUnpub, testPCALAlbumDeleted} {
-		_, err := f.svc.GetClassAlbum(ctx, f.pcA, hidden)
+		_, err := f.svc.GetClassAlbum(ctx, f.pcA, hidden, ParentAlbumScopeMine)
 		require.ErrorIs(t, err, ErrParentNotFound, "相册 %d 不可见", hidden)
 	}
 
@@ -493,7 +510,7 @@ func TestParentClassAlbumFiltersByMyChild(t *testing.T) {
 	f := newPCALFixture(t)
 	ctx := context.Background()
 
-	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain)
+	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	ids := pcalDetailPhotoIDs(t, detail)
 	assert.Equal(t, []uint64{
@@ -510,7 +527,7 @@ func TestParentClassAlbumAlbumLevelFallback(t *testing.T) {
 	f := newPCALFixture(t)
 	ctx := context.Background()
 
-	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain)
+	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	ids := pcalDetailPhotoIDs(t, detail)
 	for _, idx := range []int{5, 8} {
@@ -530,7 +547,7 @@ func TestParentClassAlbumOptOutHidesWholePhoto(t *testing.T) {
 	assert.NotContains(t, idsA, pcalMainPhoto(4), "含 C 的合影对 A 整张隐藏")
 	assert.Contains(t, idsA, pcalMainPhoto(0), "同相册其他照片仍可见——不能整本隐藏")
 
-	detailB, err := f.svc.GetClassAlbum(ctx, f.pcB, testPCALAlbumMain)
+	detailB, err := f.svc.GetClassAlbum(ctx, f.pcB, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	idsB := pcalDetailPhotoIDs(t, detailB)
 	assert.Len(t, idsB, 8)
@@ -551,7 +568,7 @@ func TestParentClassAlbumOptOutHidesWholePhoto(t *testing.T) {
 func TestParentClassAlbumOptOutOwnParentStillSees(t *testing.T) {
 	f := newPCALFixture(t)
 
-	detailC, err := f.svc.GetClassAlbum(context.Background(), f.pcC, testPCALAlbumMain)
+	detailC, err := f.svc.GetClassAlbum(context.Background(), f.pcC, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.Equal(t, []uint64{pcalMainPhoto(4)}, pcalDetailPhotoIDs(t, detailC),
 		"C 只出现在第 4 张；即使关闭共享，自己的孩子照片仍可见")
@@ -571,12 +588,12 @@ func TestParentClassAlbumOptOutHidesPhotoForOtherFamily(t *testing.T) {
 	f := newPCALFixture(t)
 	ctx := context.Background()
 
-	detailA, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumOptOut)
+	detailA, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumOptOut, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.Equal(t, []uint64{testPCALPhotoAOwnOnly}, pcalDetailPhotoIDs(t, detailA),
 		"{A,C} 合影因 C 关闭共享对 A 的家长整张隐藏；只关联 A 的对照照片仍可见")
 
-	detailC, err := f.svc.GetClassAlbum(ctx, f.pcC, testPCALAlbumOptOut)
+	detailC, err := f.svc.GetClassAlbum(ctx, f.pcC, testPCALAlbumOptOut, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.Equal(t, []uint64{testPCALPhotoOptOutPair}, pcalDetailPhotoIDs(t, detailC),
 		"C 自己的孩子始终可见，即使关闭了共享")
@@ -597,7 +614,7 @@ func TestParentClassAlbumIsolation(t *testing.T) {
 		{"他园家长读本园", f.pcO, testPCALAlbumMain},
 		{"本园家长读他园", f.pcA, testPCALAlbumOtherKg},
 	} {
-		_, err := f.svc.GetClassAlbum(ctx, tc.pc, tc.album)
+		_, err := f.svc.GetClassAlbum(ctx, tc.pc, tc.album, ParentAlbumScopeMine)
 		require.ErrorIs(t, err, ErrParentNotFound, tc.name)
 	}
 
@@ -626,7 +643,7 @@ func TestParentClassAlbumGraduationWindow(t *testing.T) {
 	item := pcalListItem(t, mustList(t, f, f.pcG), testPCALAlbumMain)
 	assert.Equal(t, 3, item["visible_photo_count"], "G 在参与者与第 0 张关联里：0/5/8")
 
-	detailG, err := f.svc.GetClassAlbum(ctx, f.pcG, testPCALAlbumMain)
+	detailG, err := f.svc.GetClassAlbum(ctx, f.pcG, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.Contains(t, pcalDetailPhotoIDs(t, detailG), pcalMainPhoto(0))
 
@@ -653,11 +670,11 @@ func TestParentClassAlbumRetentionDenied(t *testing.T) {
 		{"退学/转园", f.pcJ},
 		{"毕业但无时间戳", f.pcK},
 	} {
-		data, err := f.svc.ListClassAlbums(ctx, tc.pc, 1, 20)
+		data, err := f.svc.ListClassAlbums(ctx, tc.pc, 1, 20, ParentAlbumScopeMine)
 		require.NoError(t, err, tc.name)
 		assert.Zero(t, data["total"], tc.name)
 		assert.Empty(t, pcalListItems(t, data), tc.name)
-		_, err = f.svc.GetClassAlbum(ctx, tc.pc, testPCALAlbumMain)
+		_, err = f.svc.GetClassAlbum(ctx, tc.pc, testPCALAlbumMain, ParentAlbumScopeMine)
 		require.ErrorIs(t, err, ErrParentNotFound, tc.name)
 	}
 
@@ -678,7 +695,7 @@ func TestParentClassAlbumMultiGuardianAnyOptOut(t *testing.T) {
 	f := newPCALFixture(t)
 	ctx := context.Background()
 
-	detailA, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumOptOut)
+	detailA, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumOptOut, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	idsA := pcalDetailPhotoIDs(t, detailA)
 	assert.NotContains(t, idsA, testPCALPhotoMultiGuard, "{A,E} 因 E 的一位监护人关闭而整张隐藏")
@@ -686,7 +703,7 @@ func TestParentClassAlbumMultiGuardianAnyOptOut(t *testing.T) {
 	assert.Equal(t, []uint64{testPCALPhotoAOwnOnly}, idsA, "对照照片仍可见，相册本身未被整本隐藏")
 
 	for _, pc := range []*ParentPortalContext{f.pcE1, f.pcE2} {
-		detailE, err := f.svc.GetClassAlbum(ctx, pc, testPCALAlbumOptOut)
+		detailE, err := f.svc.GetClassAlbum(ctx, pc, testPCALAlbumOptOut, ParentAlbumScopeMine)
 		require.NoError(t, err)
 		assert.Equal(t, []uint64{testPCALPhotoMultiGuard}, pcalDetailPhotoIDs(t, detailE),
 			"E 自己的孩子始终可见，即使一位监护人关闭共享")
@@ -720,11 +737,11 @@ func TestParentClassAlbumMultiChildUsesCurrentChild(t *testing.T) {
 		pcalAlbumIDs(t, mustList(t, f, f.pcA)))
 	assert.Equal(t, []uint64{testPCALAlbumClassB}, pcalAlbumIDs(t, mustList(t, f, f.pcF)))
 
-	detailF, err := f.svc.GetClassAlbum(ctx, f.pcF, testPCALAlbumClassB)
+	detailF, err := f.svc.GetClassAlbum(ctx, f.pcF, testPCALAlbumClassB, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.Equal(t, []uint64{testPCALPhotoClassB}, pcalDetailPhotoIDs(t, detailF))
 
-	_, err = f.svc.GetClassAlbum(ctx, f.pcF, testPCALAlbumMain)
+	_, err = f.svc.GetClassAlbum(ctx, f.pcF, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.ErrorIs(t, err, ErrParentNotFound)
 }
 
@@ -736,15 +753,15 @@ func TestParentClassAlbumList_NoNPlusOne(t *testing.T) {
 	counter := &noticeQueryCounter{} // SQL 计数器在 parent_notice_fields_test.go 中定义，同包复用
 	svc := newParentPortalServiceWithDB(f.db.Session(&gorm.Session{Logger: counter}))
 
-	_, err := svc.ListClassAlbums(ctx, f.pcA, 1, 20)
+	_, err := svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	fullPage := counter.value()
 	t.Logf("整页查询数：%d", fullPage)
-	assert.LessOrEqual(t, fullPage, int64(6),
-		"Count/相册/照片/照片级关联/相册级参与者/opt-out 各一次")
+	assert.LessOrEqual(t, fullPage, int64(7),
+		"Count/相册/照片/照片级关联/相册级参与者/opt-out/园所开关 各一次")
 
 	counter.reset()
-	_, err = svc.ListClassAlbums(ctx, f.pcA, 1, 1)
+	_, err = svc.ListClassAlbums(ctx, f.pcA, 1, 1, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	assert.Equal(t, fullPage, counter.value(), "整页与单条查询数相同 —— 没有逐相册查询")
 }
@@ -754,9 +771,9 @@ func TestParentClassAlbum_CleanupLeavesNoResidue(t *testing.T) {
 	f := newPCALFixture(t)
 	ctx := context.Background()
 
-	_, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20)
+	_, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeMine)
 	require.NoError(t, err)
-	_, err = f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain)
+	_, err = f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 
 	cleanupPCALData(t, f.db)
@@ -783,16 +800,179 @@ func TestParentClassAlbum_CleanupLeavesNoResidue(t *testing.T) {
 		testPCALKg, testPCALKgOther), "园所残留")
 }
 
+// ===== openspec class-album-classwide（Phase 2-A）=====
+//
+// 全班视图复用同一批 Phase 1 夹具：主相册 12 张里 {A,C} 与 {E} 两张因 opt-out 隐藏，
+// 其余 10 张在全班视图可见；opt-out 专辑三张里 {A,C}/{A,E} 隐藏、{A} 可见。
+// 无设置行按关闭处理，需要开启的用例显式写 kindergarten_app_settings。
+
+// TC-NEW-CAW-0003：不传 scope 与显式 mine 完全等价；开关关闭时不渲染全班入口。
+func TestParentClassAlbumScopeDefaultsToMine(t *testing.T) {
+	f := newPCALFixture(t)
+	ctx := context.Background()
+
+	implicit, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, "")
+	require.NoError(t, err)
+	assert.Equal(t, false, implicit["classwide_enabled"], "无设置行按关闭处理")
+	assert.ElementsMatch(t,
+		[]uint64{testPCALAlbumMain, testPCALAlbumEmpty, testPCALAlbumOptOut},
+		pcalAlbumIDs(t, implicit))
+	assert.Equal(t, 5, pcalListItem(t, implicit, testPCALAlbumMain)["visible_photo_count"])
+
+	mine, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeMine)
+	require.NoError(t, err)
+	assert.Equal(t, pcalAlbumIDs(t, mine), pcalAlbumIDs(t, implicit), "缺省 scope 必须与显式 mine 一致")
+
+	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, "")
+	require.NoError(t, err)
+	assert.Equal(t, []uint64{
+		pcalMainPhoto(0), pcalMainPhoto(2), pcalMainPhoto(5), pcalMainPhoto(8), pcalMainPhoto(10),
+	}, pcalDetailPhotoIDs(t, detail), "缺省详情仍是 Phase 1 的我的孩子视图")
+}
+
+// TC-NEW-CAW-0004：开启后 scope=all 返回全班照片，不做 my-child 过滤；
+// 列表 visible_photo_count/cover_urls 按全班口径计算，mine 不回退。
+func TestParentClassAlbumClasswideAll(t *testing.T) {
+	f := newPCALFixture(t)
+	ctx := context.Background()
+	pcalSetClasswide(t, f.db, testPCALKg, true)
+
+	data, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeAll)
+	require.NoError(t, err)
+	assert.Equal(t, true, data["classwide_enabled"])
+
+	item := pcalListItem(t, data, testPCALAlbumMain)
+	assert.Equal(t, 10, item["visible_photo_count"], "12 张里 {A,C} 与 {E} 因对方 opt-out 隐藏")
+	assert.Equal(t, []string{
+		"https://cdn.example.com/pcal/997160.jpg",
+		"https://cdn.example.com/pcal/997161.jpg",
+		"https://cdn.example.com/pcal/997162.jpg",
+	}, item["cover_urls"], "封面按全班可见照片的前 3 张")
+
+	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeAll)
+	require.NoError(t, err)
+	ids := pcalDetailPhotoIDs(t, detail)
+	assert.Len(t, ids, 10)
+	assert.Contains(t, ids, pcalMainPhoto(1), "只含 B 的照片在全班视图可见——不做 my-child 过滤")
+	assert.NotContains(t, ids, pcalMainPhoto(4), "含关闭班内共享的 C")
+	assert.NotContains(t, ids, pcalMainPhoto(7), "含关闭班内共享的 E")
+
+	mine, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeMine)
+	require.NoError(t, err)
+	assert.Len(t, pcalDetailPhotoIDs(t, mine), 5, "全班视图不影响 mine 的过滤")
+}
+
+// TC-NEW-CAW-0005：无设置行 / 显式关闭时 scope=all 一律 403，mine 不受影响。
+func TestParentClassAlbumClasswideDisabledForbidden(t *testing.T) {
+	f := newPCALFixture(t)
+	ctx := context.Background()
+
+	_, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeAll)
+	require.ErrorIs(t, err, ErrParentForbidden, "无设置行按关闭处理")
+	_, err = f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeAll)
+	require.ErrorIs(t, err, ErrParentForbidden)
+
+	pcalSetClasswide(t, f.db, testPCALKg, false)
+	_, err = f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeAll)
+	require.ErrorIs(t, err, ErrParentForbidden, "显式关闭同样拒绝")
+	_, err = f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeAll)
+	require.ErrorIs(t, err, ErrParentForbidden)
+
+	_, err = f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeMine)
+	require.NoError(t, err, "关闭开关不影响我的孩子视图")
+}
+
+// TC-NEW-CAW-0006：全班视图仍整张隐藏含 opt-out 幼儿的合影，同相册其他照片可见。
+func TestParentClassAlbumClasswideHidesOptOutGroupPhoto(t *testing.T) {
+	f := newPCALFixture(t)
+	ctx := context.Background()
+	pcalSetClasswide(t, f.db, testPCALKg, true)
+
+	detail, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumOptOut, ParentAlbumScopeAll)
+	require.NoError(t, err)
+	assert.Equal(t, []uint64{testPCALPhotoAOwnOnly}, pcalDetailPhotoIDs(t, detail),
+		"{A,C} 与 {A,E} 都因对方孩子 opt-out 整张隐藏；只关联 A 的对照照片仍可见")
+
+	main, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScopeAll)
+	require.NoError(t, err)
+	assert.Contains(t, pcalDetailPhotoIDs(t, main), pcalMainPhoto(1),
+		"同相册其他照片仍可见，不能整本隐藏")
+}
+
+// TC-NEW-CAW-0007：自己的孩子关闭班内共享时，全班视图仍能看到含自己孩子的照片。
+func TestParentClassAlbumClasswideOwnChildVisible(t *testing.T) {
+	f := newPCALFixture(t)
+	ctx := context.Background()
+	pcalSetClasswide(t, f.db, testPCALKg, true)
+
+	optOut, err := f.svc.GetClassAlbum(ctx, f.pcC, testPCALAlbumOptOut, ParentAlbumScopeAll)
+	require.NoError(t, err)
+	ids := pcalDetailPhotoIDs(t, optOut)
+	assert.Equal(t, []uint64{testPCALPhotoOptOutPair, testPCALPhotoAOwnOnly}, ids,
+		"{A,C} 对 C 的家长可见；{A,E} 含非自家的 opt-out 幼儿 E 仍隐藏")
+
+	main, err := f.svc.GetClassAlbum(ctx, f.pcC, testPCALAlbumMain, ParentAlbumScopeAll)
+	require.NoError(t, err)
+	mainIDs := pcalDetailPhotoIDs(t, main)
+	assert.Contains(t, mainIDs, pcalMainPhoto(4), "含 C 的合影对自己家长始终可见")
+	assert.NotContains(t, mainIDs, pcalMainPhoto(7), "含 opt-out 的 E 仍对其他家长整张隐藏")
+}
+
+// TC-NEW-CAW-0011 的后端部分：列表 classwide_enabled 与园所开关同源，改动立即生效。
+func TestParentClassAlbumListClasswideFlag(t *testing.T) {
+	f := newPCALFixture(t)
+	ctx := context.Background()
+
+	flag := func() any {
+		data, err := f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScopeMine)
+		require.NoError(t, err)
+		return data["classwide_enabled"]
+	}
+	assert.Equal(t, false, flag(), "无设置行")
+
+	pcalSetClasswide(t, f.db, testPCALKg, true)
+	assert.Equal(t, true, flag(), "开启后立即为 true")
+
+	pcalSetClasswide(t, f.db, testPCALKg, false)
+	assert.Equal(t, false, flag(), "关闭后立即为 false，无缓存")
+}
+
+// 非法 scope 由解析层拒绝（handler 回 422）；all 模式不突破班级隔离（404）。
+func TestParentClassAlbumScopeValidationAndIsolation(t *testing.T) {
+	f := newPCALFixture(t)
+	ctx := context.Background()
+	pcalSetClasswide(t, f.db, testPCALKg, true)
+
+	for _, raw := range []string{"ALL", "Mine", "class", "0"} {
+		_, ok := ParseParentAlbumScope(raw)
+		assert.False(t, ok, "scope=%q 应被拒绝", raw)
+	}
+	scope, ok := ParseParentAlbumScope("")
+	require.True(t, ok)
+	assert.Equal(t, ParentAlbumScopeMine, scope)
+	scope, ok = ParseParentAlbumScope(" all ")
+	require.True(t, ok)
+	assert.Equal(t, ParentAlbumScopeAll, scope)
+
+	_, err := f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumClassB, ParentAlbumScopeAll)
+	require.ErrorIs(t, err, ErrParentNotFound, "全班视图仍按当前孩子班级收敛")
+
+	_, err = f.svc.ListClassAlbums(ctx, f.pcA, 1, 20, ParentAlbumScope("week"))
+	require.ErrorIs(t, err, ErrParentInvalidParams)
+	_, err = f.svc.GetClassAlbum(ctx, f.pcA, testPCALAlbumMain, ParentAlbumScope("week"))
+	require.ErrorIs(t, err, ErrParentInvalidParams)
+}
+
 func mustList(t *testing.T, f *pcalFixture, pc *ParentPortalContext) map[string]any {
 	t.Helper()
-	data, err := f.svc.ListClassAlbums(context.Background(), pc, 1, 20)
+	data, err := f.svc.ListClassAlbums(context.Background(), pc, 1, 20, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	return data
 }
 
 func requireDetail(t *testing.T, f *pcalFixture, pc *ParentPortalContext) map[string]any {
 	t.Helper()
-	detail, err := f.svc.GetClassAlbum(context.Background(), pc, testPCALAlbumMain)
+	detail, err := f.svc.GetClassAlbum(context.Background(), pc, testPCALAlbumMain, ParentAlbumScopeMine)
 	require.NoError(t, err)
 	return detail
 }

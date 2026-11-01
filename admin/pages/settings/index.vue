@@ -24,6 +24,17 @@
         <el-form-item label="通知需审核"><el-switch v-model="form.notice.need_audit" /></el-form-item>
         <el-form-item label="成长需审核"><el-switch v-model="form.growth.need_audit" /></el-form-item>
         <el-form-item label="接送授权需审核"><el-switch v-model="form.pickup.need_authorization_audit" /></el-form-item>
+        <template v-if="canEditAlbum">
+          <el-divider content-position="left">班级相册</el-divider>
+          <el-form-item label="允许家长浏览全班相册">
+            <div class="flex flex-col gap-1">
+              <el-switch v-model="form.album.classwide_enabled" />
+              <span class="text-xs leading-5 text-slate-500">
+                开启后家长可在班级相册切换查看全班照片；默认关闭，仍尊重每位家长的班内共享设置
+              </span>
+            </div>
+          </el-form-item>
+        </template>
         <el-divider content-position="left">晨检</el-divider>
         <el-form-item label="要求全员测温"><el-switch v-model="form.health.temperature_required" /></el-form-item>
         <el-form-item label="发烧阈值(°C)">
@@ -109,14 +120,18 @@
 </template>
 
 <script setup lang="ts">
-import type { SystemSettings, KindergartenInfo } from '~/types/api'
+import type { KindergartenInfo } from '~/types/api'
 import { getSettings, updateSettings, getAcademicYears, createAcademicYear } from '~/api/settings'
 import { getKindergartenInfo, updateKindergartenInfo } from '~/api/kindergarten'
-import type { CreateAcademicYearBody } from '~/api/settings'
+import type { CreateAcademicYearBody, SystemSettingsWithAlbum } from '~/api/settings'
 
 const loading = ref(true)
 const saving = ref(false)
-const form = ref<SystemSettings | null>(null)
+const form = ref<SystemSettingsWithAlbum | null>(null)
+
+// 与菜单/路由守卫同源的既有权限码，不新增
+const perm = usePermissionStore()
+const canEditAlbum = computed(() => perm.can('system:kindergarten'))
 
 const kgLoading = ref(true)
 const kgSaving = ref(false)
@@ -143,9 +158,12 @@ async function loadSettings() {
   loading.value = true
   try {
     form.value = await getSettings()
-    // 兼容尚未下发 health 块的旧后端，避免 v-model 绑到 undefined
+    // 兼容尚未下发 health / album 块的旧后端，避免 v-model 绑到 undefined
     if (!form.value.health) {
       form.value.health = { temperature_required: false, fever_threshold: 37.3 }
+    }
+    if (!form.value.album) {
+      form.value.album = { classwide_enabled: false }
     }
   } catch (e: unknown) {
     ElMessage.error(e instanceof Error ? e.message : '加载失败')
@@ -181,7 +199,9 @@ async function save() {
   if (!form.value) return
   saving.value = true
   try {
-    await updateSettings(form.value)
+    // PUT 按块整体替换：只下发契约内的块，其余块携带的是加载值，改 album 不会重置它们
+    const { attendance, notice, growth, pickup, points, health, album } = form.value
+    await updateSettings({ attendance, notice, growth, pickup, points, health, album })
     ElMessage.success('已保存')
   } catch (e: unknown) {
     ElMessage.error(e instanceof Error ? e.message : '保存失败')

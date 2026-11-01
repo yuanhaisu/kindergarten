@@ -2,11 +2,68 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 )
+
+// ParentAlbumScope 家长端班级相册的可见范围。
+type ParentAlbumScope string
+
+const (
+	// ParentAlbumScopeMine 只返回包含当前孩子的照片，是 Phase 1 的默认行为。
+	ParentAlbumScopeMine ParentAlbumScope = "mine"
+	// ParentAlbumScopeAll 全班视图：不做我的孩子过滤，仅在园所开关开启时可用。
+	ParentAlbumScopeAll ParentAlbumScope = "all"
+)
+
+// ParseParentAlbumScope 解析 query 中的 scope：缺省（含空白）为 mine，只接受 mine|all。
+// 其它值返回 false 由 handler 回 422——把拼错的 scope 静默当 mine 会让端上以为
+// 已切到全班视图，实际看到的还是自己的照片。
+func ParseParentAlbumScope(raw string) (ParentAlbumScope, bool) {
+	switch strings.TrimSpace(raw) {
+	case "", string(ParentAlbumScopeMine):
+		return ParentAlbumScopeMine, true
+	case string(ParentAlbumScopeAll):
+		return ParentAlbumScopeAll, true
+	default:
+		return "", false
+	}
+}
+
+// parentAlbumScopeArg 解析可选 scope 参数：不传按 Phase 1 的 mine，
+// 保留既有调用点（3 参详情 / 4 参列表）不改；非法值返回 ErrParentInvalidParams。
+func parentAlbumScopeArg(args []ParentAlbumScope) (ParentAlbumScope, error) {
+	if len(args) > 1 {
+		return "", ErrParentInvalidParams
+	}
+	scope := ParentAlbumScopeMine
+	if len(args) == 1 {
+		scope = args[0]
+		if scope == "" {
+			scope = ParentAlbumScopeMine
+		}
+	}
+	if scope != ParentAlbumScopeMine && scope != ParentAlbumScopeAll {
+		return "", ErrParentInvalidParams
+	}
+	return scope, nil
+}
+
+// parentClasswideEnabled 读园所级「全班视图」开关。没有配置行按关闭处理，
+// 且不在读取路径写库（家长打开一次相册不应创建园所设置行）。
+func (s *ParentPortalService) parentClasswideEnabled(ctx context.Context, kindergartenID uint64) (bool, error) {
+	row, err := repository.NewKindergartenAppSettingRepo(s.db).FindByKindergartenID(ctx, kindergartenID)
+	if err != nil {
+		return false, err
+	}
+	if row == nil {
+		return false, nil
+	}
+	return row.ClassAlbumClasswideEnabled, nil
+}
 
 // albumRepo 与老师端同一做法：AlbumRepo 只是 db 的薄封装，按调用构造，
 // 不改 ParentPortalService 的构造签名（wire_gen 与既有测试调用点都按现签名）。
@@ -47,16 +104,24 @@ func parentAlbumAccessAllowed(st *domain.Student, now time.Time) bool {
 
 // ListClassAlbums 家长端班级相册列表：只返回当前孩子所在班级、同园、已发布的相册。
 //
-// 列表只给相册元信息 + visible_photo_count + cover_urls，不返回全量照片。
-// 查询次数最多 6（Count / 相册 / 照片 / 照片级关联 / 相册级参与者 / opt-out），
+// scope 缺省 mine；all 用于全班视图，要求园所开关开启（否则 ErrParentForbidden），
+// 且不做 my-child 过滤。两种 scope 都遵守 opt-out 整张隐藏与自己的孩子例外。
+//
+// 列表只给相册元信息 + visible_photo_count + cover_urls + classwide_enabled，不返回全量照片。
+// 查询次数最多 7（Count / 相册 / 照片 / 照片级关联 / 相册级参与者 / opt-out / 园所开关），
 // 与相册数量无关；「逐相册查详情再数照片」会退化成 N+1（design D4）。
 func (s *ParentPortalService) ListClassAlbums(
 	ctx context.Context,
 	pc *ParentPortalContext,
 	page, pageSize int,
+	scopeArgs ...ParentAlbumScope,
 ) (map[string]any, error) {
 	if pc == nil || pc.CurrentStudent == nil {
 		return nil, ErrParentForbidden
+	}
+	scope, err := parentAlbumScopeArg(scopeArgs)
+	if err != nil {
+		return nil, err
 	}
 	q := parseTeacherPortalPage(page, pageSize)
 	if q.PageSize > teacherAlbumPageSizeMax {
@@ -65,6 +130,15 @@ func (s *ParentPortalService) ListClassAlbums(
 	// 留存窗口外与班级缺失都返回空列表：相册是按班的资产，没有班级就没有可看的相册。
 	if pc.CurrentStudent.ClassID == 0 || !parentAlbumAccessAllowed(pc.CurrentStudent, time.Now()) {
 		return parentAlbumEmptyPage(q.Page, q.PageSize), nil
+	}
+
+	// classwide_enabled 决定家长端是否渲染切换入口；即使当前是 mine 也必须返回。
+	classwide, err := s.parentClasswideEnabled(ctx, pc.KindergartenID)
+	if err != nil {
+		return nil, err
+	}
+	if scope == ParentAlbumScopeAll && !classwide {
+		return nil, ErrParentForbidden
 	}
 
 	repo := s.albumRepo()
@@ -88,29 +162,54 @@ func (s *ParentPortalService) ListClassAlbums(
 	list := make([]map[string]any, 0, len(albums))
 	for i := range albums {
 		album := &albums[i]
-		visible := parentVisibleAlbumPhotos(
-			photosByAlbum[album.ID], linksByPhoto, participantsByAlbum[album.ID],
-			pc.CurrentStudent.ID, ownChildIDs, optOut)
+		var visible []domain.AlbumPhoto
+		if scope == ParentAlbumScopeAll {
+			visible = parentVisibleAlbumClasswidePhotos(
+				photosByAlbum[album.ID], linksByPhoto, participantsByAlbum[album.ID],
+				ownChildIDs, optOut)
+		} else {
+			visible = parentVisibleAlbumPhotos(
+				photosByAlbum[album.ID], linksByPhoto, participantsByAlbum[album.ID],
+				pc.CurrentStudent.ID, ownChildIDs, optOut)
+		}
 		item := parentAlbumListItem(album)
 		item["visible_photo_count"] = len(visible)
 		item["cover_urls"] = parentAlbumCoverURLs(visible)
 		list = append(list, item)
 	}
-	return map[string]any{"list": list, "total": total, "page": q.Page, "page_size": q.PageSize}, nil
+	return map[string]any{
+		"list": list, "total": total, "page": q.Page, "page_size": q.PageSize,
+		"classwide_enabled": classwide,
+	}, nil
 }
 
 // GetClassAlbum 家长端班级相册详情：只返回可见照片，顺序仍按 sort_num、id。
 // 草稿/下架/软删与跨班、跨园、留存过期一律 ErrParentNotFound（404），不泄露存在性。
+// scope=all 在园所开关关闭时返回 ErrParentForbidden（403），与「相册不存在」区分开。
 func (s *ParentPortalService) GetClassAlbum(
 	ctx context.Context,
 	pc *ParentPortalContext,
 	id uint64,
+	scopeArgs ...ParentAlbumScope,
 ) (map[string]any, error) {
 	if pc == nil || pc.CurrentStudent == nil {
 		return nil, ErrParentForbidden
 	}
+	scope, err := parentAlbumScopeArg(scopeArgs)
+	if err != nil {
+		return nil, err
+	}
 	if pc.CurrentStudent.ClassID == 0 || !parentAlbumAccessAllowed(pc.CurrentStudent, time.Now()) {
 		return nil, ErrParentNotFound
+	}
+	if scope == ParentAlbumScopeAll {
+		classwide, err := s.parentClasswideEnabled(ctx, pc.KindergartenID)
+		if err != nil {
+			return nil, err
+		}
+		if !classwide {
+			return nil, ErrParentForbidden
+		}
 	}
 
 	repo := s.albumRepo()
@@ -144,8 +243,14 @@ func (s *ParentPortalService) GetClassAlbum(
 		return nil, err
 	}
 
-	visible := parentVisibleAlbumPhotos(
-		photos, linksByPhoto, participants, pc.CurrentStudent.ID, parentOwnChildIDs(pc), optOut)
+	ownChildIDs := parentOwnChildIDs(pc)
+	var visible []domain.AlbumPhoto
+	if scope == ParentAlbumScopeAll {
+		visible = parentVisibleAlbumClasswidePhotos(photos, linksByPhoto, participants, ownChildIDs, optOut)
+	} else {
+		visible = parentVisibleAlbumPhotos(
+			photos, linksByPhoto, participants, pc.CurrentStudent.ID, ownChildIDs, optOut)
+	}
 	out := parentAlbumListItem(album)
 	out["visible_photo_count"] = len(visible)
 	out["photos"] = parentAlbumPhotoList(visible)
@@ -258,6 +363,36 @@ func parentVisibleAlbumPhotos(
 	ownChildIDs map[uint64]bool,
 	optOut map[uint64]bool,
 ) []domain.AlbumPhoto {
+	return parentFilterAlbumPhotos(
+		photos, linksByPhoto, participants, currentChildID, ownChildIDs, optOut, true)
+}
+
+// parentVisibleAlbumClasswidePhotos 全班视图的过滤：去掉「必须含当前孩子」这一步，
+// opt-out 整张隐藏与自己的孩子例外保持不变（openspec design D2/D4）。
+// 照片没有任何逐张关联时仍按相册级参与者兜底；两者都为空时无法判断照片里有谁，
+// 只能依赖 Phase 1 已记录的「未逐张标记的合影」残余风险，不做额外猜测。
+func parentVisibleAlbumClasswidePhotos(
+	photos []domain.AlbumPhoto,
+	linksByPhoto map[uint64][]uint64,
+	participants []uint64,
+	ownChildIDs map[uint64]bool,
+	optOut map[uint64]bool,
+) []domain.AlbumPhoto {
+	return parentFilterAlbumPhotos(
+		photos, linksByPhoto, participants, 0, ownChildIDs, optOut, false)
+}
+
+// parentFilterAlbumPhotos 是两种 scope 共用的过滤核心，只由 requireCurrentChild 区分：
+// true = mine（当前孩子必须在照片的有效关联里），false = all（不按孩子裁剪）。
+func parentFilterAlbumPhotos(
+	photos []domain.AlbumPhoto,
+	linksByPhoto map[uint64][]uint64,
+	participants []uint64,
+	currentChildID uint64,
+	ownChildIDs map[uint64]bool,
+	optOut map[uint64]bool,
+	requireCurrentChild bool,
+) []domain.AlbumPhoto {
 	out := make([]domain.AlbumPhoto, 0, len(photos))
 	for _, p := range photos {
 		linked := linksByPhoto[p.ID]
@@ -265,7 +400,7 @@ func parentVisibleAlbumPhotos(
 		if len(linked) == 0 {
 			effective = participants
 		}
-		if !parentAlbumContainsID(effective, currentChildID) {
+		if requireCurrentChild && !parentAlbumContainsID(effective, currentChildID) {
 			continue
 		}
 		hidden := false

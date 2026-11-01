@@ -6,9 +6,9 @@
 > 检查表：`docs/design-previews/2026-10-25-full-redesign/_shared/VALIDATORS.md`
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
-- 当前波次：**OpenSpec `class-album-parent-sharing` Phase 1 已完成并归档（真实 E2E PASS）**
-- 下一动作：无自动项；Phase 2 待产品启动
-- 后端：8080 运行中（PID 11076，当前源码；可用内存 ~2GB，低内存守卫可能再次停止）
+- 当前波次：**Phase 2-A 全班视图已完成（真实后端 + DevTools + 管理端真实渲染验证）**
+- 下一动作：Phase 2-B 发布通知（`PHASE2-PLAN.md`）
+- 后端：8080 运行中（PID 41380，含 Phase 2-A 新列与 scope；可用内存 ~2.7GB）
 - 最后更新：2026-11-01
 
 ## X00 零入边决策（2026-10-28）
@@ -121,15 +121,42 @@
 
 ```json
 {
-  "slice_id": "OS-ALB-E2E",
-  "phase": "archived",
-  "commit_sha": "d9bfe96",
-  "next_action": "none — Phase 1 archived; Phase 2 not started",
-  "updated_at": "2026-11-01T19:35:00+08:00"
+  "slice_id": "P2-A",
+  "phase": "verified",
+  "commit_sha": null,
+  "next_action": "commit + archive class-album-classwide; then Phase 2-B",
+  "updated_at": "2026-11-01T22:50:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
+
+### Handoff 2026-11-01T22:50+08:00 — Phase 2-A 全班视图完成（验证通过）
+
+- OpenSpec change `class-album-classwide` 的后端/管理端/家长端全部落地，**0 P1**。
+  - 后端：`kindergarten_app_settings.class_album_classwide_enabled`（默认 false）+
+    幂等迁移 SQL；`GET/PUT /admin/settings` 增 `album.classwide_enabled`（审计同时记录
+    `extra_config` 与 `album`）；家长相册列表/详情支持 `scope=mine|all`，关闭时 403、
+    非法 422、跨班 404；列表返回 `classwide_enabled`。
+  - 管理端：设置页「班级相册」区块 + 开关，复用 `system:kindergarten` 权限。
+  - 家长端：`classwide_enabled=true` 时显示「我的孩子 / 全班」胶囊，切换重置分页；
+    详情链接携带 scope；关闭/缺字段时不渲染入口。
+- 验证：
+  1. `go test ./internal/service/ -run 'TestParentClassAlbum|TestSettings.*Classwide|TestClasswide'`
+     → ok（150s，CAW-0001–0007/0011 + Phase 1 回归）。
+  2. 真实后端 E2E：老师创建 3 照片相册（A/B）→ B 关闭班内共享 → 家长 mine 1 张；
+     B 恢复后 mine 2 张 → 管理员开启 → 家长切全班 3 张（真实 DevTools 点击，
+     列表计数 2→3，详情「共 3 张照片」）→ 切回 mine 2 张 → 管理员关闭 → 入口消失。
+     测试相册/照片/关联/审计/设置零残留。
+  3. 管理员 API：GET/PUT 读写、家长端同源生效、教学主任（无 `system:kindergarten`）PUT 403、
+     审计 detail 含 album；测试审计行已按 id 清理。
+  4. 管理端 `npm run build` exit 0；无头 Chrome 渲染设置页确认「班级相册」区块与开关。
+  5. `check-tokens`：parent 3 / admin 8（基线不变）；secret scan 0。
+- 残余：
+  1. 管理端未做「点击保存」的真实浏览器提交（已用真实 API PUT 覆盖同一路径）。
+  2. 本轮 subagent 因 API 402 余额中断，复核由主会话直接完成（非独立 supervisor）。
+  3. Phase 2-B–F 未做。
+- 后端：8080 运行中（PID 41380，`GOGC=50 GOMEMLIMIT=768MiB`）。
 
 ### Handoff 2026-11-01T19:35+08:00 — 班级相册 Phase 1 完成并归档
 
