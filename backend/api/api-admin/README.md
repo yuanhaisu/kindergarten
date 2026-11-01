@@ -58,6 +58,7 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 19 | [`19-logs.md`](./19-logs.md) | 操作日志 | `admin/pages/logs/index.vue` | 1 | ✅ |
 | 20 | [`20-export.md`](./20-export.md) | 数据导出 | `admin/pages/export/index.vue` | 4 | ✅ |
 | 21 | [`21-calendar.md`](./21-calendar.md) | 园级日历与课表 | `admin/pages/calendar/index.vue`、`admin/pages/timetable/index.vue` | 11 | 🔲 未实现（变更 `align-class-calendar`） |
+| 22 | [`22-albums.md`](./22-albums.md) | 班级相册（只读/下架） | `admin/pages/albums/index.vue` | 3 | 🔲 未实现（变更 `class-album-parent-sharing`） |
 
 **合计：** `PROGRESS.md` 表内共 **95** 行 Admin API；完成数以该文件顶部「总体进度」为准。
 

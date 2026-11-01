@@ -112,6 +112,7 @@ Phase 1 用结构化 slog 事件（不建分析表）：`album_publish`、`album
 | service | 会改 | 老师相册生命周期与参与者；家长班级相册与过滤；设置迁移；家长联系方式过滤；留存窗口 |
 | handler | 会改 | 老师相册新端点；家长相册；admin 相册；设置；班级学生联系方式 |
 | Casbin policy | 不改 | 现有 `teacher/*`、`parent/*`、`admin/*` 通配已覆盖；新增路由仅需 router 注册与契约登记 |
+| middleware 权限注册 | 会改 | `middleware/admin_perm.go` 必须为 3 条 admin 相册路由登记权限码（复用 `growth:view` / `growth:manage`，不新增 album 权限码）；缺失会被启动自检拒绝 |
 | router.go | 会改 | 新增老师发布/下架/编辑/删除；家长班级相册；admin 相册只读/下架 |
 | backend/api/ | 会改 | `api-teacher/10-album.md`、`09-class-and-tasks.md`、`api-parent/11-settings.md`、新增家长端班级相册契约；本次属于契约变更 |
 | 老师端页面 | 会改 | `teacher/src/pages/album/index.vue`（状态/发布/参与者/预览）、`teacher/src/pages/class/index.vue`（家长联系方式） |

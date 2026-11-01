@@ -356,6 +356,14 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		gr.PUT("/logs/:id/audit", h.AuditGrowthLog)
 	}
 
+	// 班级相册：园长只读 + 下架。刻意不注册创建/编辑/删除端点（design D3）。
+	alb := adminG.Group("/albums")
+	{
+		alb.GET("", h.AdminListAlbums)
+		alb.GET("/:id", h.AdminGetAlbum)
+		alb.POST("/:id/unpublish", h.AdminUnpublishAlbum)
+	}
+
 	tk := adminG.Group("/tasks")
 	{
 		tk.GET("/stats", h.GetTaskStats)

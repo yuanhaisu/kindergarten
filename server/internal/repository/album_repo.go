@@ -447,6 +447,86 @@ func (r *AlbumRepo) SoftDelete(ctx context.Context, kindergartenID, classID, id 
 	return res.RowsAffected > 0, nil
 }
 
+// AdminAlbumRow 管理端列表/详情行：相册元信息 + 班级名 + 创建人昵称。
+// 管理端按园所收敛而不限定班级，因此不能复用老师端的 class-scoped 方法。
+type AdminAlbumRow struct {
+	ID              uint64     `gorm:"column:id"`
+	ClassID         uint64     `gorm:"column:class_id"`
+	ClassName       string     `gorm:"column:class_name"`
+	Title           string     `gorm:"column:title"`
+	Category        string     `gorm:"column:category"`
+	AlbumDate       time.Time  `gorm:"column:album_date"`
+	PhotoCount      int        `gorm:"column:photo_count"`
+	Status          string     `gorm:"column:status"`
+	PublishedAt     *time.Time `gorm:"column:published_at"`
+	CreatorID       uint64     `gorm:"column:creator_id"`
+	CreatorNickname string     `gorm:"column:creator_nickname"`
+}
+
+const adminAlbumSelect = `a.id, a.class_id, COALESCE(c.name, '') AS class_name,
+	a.title, a.category, a.album_date, a.photo_count, a.status, a.published_at,
+	a.creator_id, COALESCE(u.nickname, '') AS creator_nickname`
+
+// adminAlbums 管理端共享查询骨架：园所收敛 + 未软删 + 班级/创建人展示字段。
+// classes/users 都是 BaseModel（无软删），LEFT JOIN 只为不因脏数据丢相册行。
+func (r *AlbumRepo) adminAlbums(ctx context.Context, kindergartenID uint64) *gorm.DB {
+	return r.db.WithContext(ctx).Table("albums AS a").
+		Joins("LEFT JOIN classes c ON c.id = a.class_id").
+		Joins("LEFT JOIN users u ON u.id = a.creator_id").
+		Where("a.kindergarten_id = ? AND a.deleted_at IS NULL", kindergartenID)
+}
+
+// AdminList 管理端相册分页：本园全部班级，可选班级/分类/状态筛选。
+// 排序与老师端一致：相册日期倒序，同日按 id 倒序保证顺序稳定。
+func (r *AlbumRepo) AdminList(
+	ctx context.Context,
+	kindergartenID, classID uint64,
+	category domain.AlbumCategory,
+	status string,
+	offset, limit int,
+) ([]AdminAlbumRow, int64, error) {
+	base := r.adminAlbums(ctx, kindergartenID)
+	if classID > 0 {
+		base = base.Where("a.class_id = ?", classID)
+	}
+	if category != "" {
+		base = base.Where("a.category = ?", category)
+	}
+	if status != "" {
+		base = base.Where("a.status = ?", status)
+	}
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var rows []AdminAlbumRow
+	err := base.Session(&gorm.Session{}).
+		Select(adminAlbumSelect).
+		Order("a.album_date DESC, a.id DESC").
+		Offset(offset).Limit(limit).
+		Scan(&rows).Error
+	return rows, total, err
+}
+
+// AdminFindByID 管理端详情：只按园所收敛。跨园、软删与不存在同样返回 (nil, nil)，
+// 由 service 统一映射 404，不泄露其它园所数据是否存在。
+func (r *AlbumRepo) AdminFindByID(ctx context.Context, kindergartenID, id uint64) (*AdminAlbumRow, error) {
+	var row AdminAlbumRow
+	err := r.adminAlbums(ctx, kindergartenID).
+		Select(adminAlbumSelect).
+		Where("a.id = ?", id).
+		Take(&row).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &row, nil
+}
+
 // FindFilesUnderKindergartenTeachers 校验 file_id 的园所归属：
 // files 表本身没有 kindergarten_id，只能经上传者的老师角色判断「属于本园」。
 // 只认识本园 teacher 角色的上传者；管理员/家长上传的文件不能挂进班级相册。

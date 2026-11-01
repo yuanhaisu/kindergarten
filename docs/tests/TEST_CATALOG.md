@@ -836,6 +836,8 @@
 | TC-NEW-ALB-0015 | 软删后老师详情 404、家长视图不可见、统计清零；重复删除 404 | P0 | Unit | ✅ `TestTeacherAlbumSoftDeleteHidesEverywhere` |
 | TC-NEW-ALB-0016 | 从成长记录选图自动带出关联幼儿并回填 file_id | P0 | Unit | ✅ `TestTeacherAlbumGrowthMediaAutoLinksStudents` |
 | TC-NEW-ALB-0017 | 显式 student_ids 覆盖自动值；关联回读；越权 file_id/媒体/跨班幼儿拒绝 | P0 | Unit | ✅ `TestTeacherAlbumExplicitStudentsOverrideAndRejectForeignInputs` |
+| TC-NEW-ALB-0018 | 园长只读查看本园相册并下架：列表园所隔离/筛选/分页、详情照片与参与者、下架后状态与审计、重复下架幂等、草稿 422、跨园/软删 404 | P0 | Unit | ✅ `TestAdminAlbumListIsolationAndFilters`、`TestAdminAlbumListPaginationAndOrder`、`TestAdminAlbumDetailPhotosAndParticipants`、`TestAdminAlbumUnpublishWritesAuditAndHidesFromParent`、`TestAdminAlbumUnpublishIdempotentAndRejectsDraft` |
+| TC-NEW-ALB-0019 | 园长不能编辑相册：真实路由表无创建/编辑/删除端点 | P0 | Unit | ✅ `TestAdminAlbumRoutesHaveNoEditEndpoint` |
 
 ### OS-ALB-2 执行记录（2026-11-01）
 
@@ -845,6 +847,15 @@
 - 审计：`operation_logs` 写 `module=albums`、`action=publish|unpublish|edit|delete`、`target_type=album`，detail 含标题与状态。
 - 测试：`cd server && go test ./internal/service/ -run 'TestTeacherAlbum' -count=1 -timeout 600s` → ok（22 个 Test 函数 = TC 0001–0017 + 5 个守卫用例）；夹具 9960xx 全部硬删，0 残留。
 - 未覆盖（留给后续切片）：家长端班级相册与照片级隐私过滤（5.x）、管理端只读/下架（6.x）、老师端页面（7.x）、`albumretention` 清理命令（10.1）。
+
+### OS-ALB-5 执行记录（2026-11-01）
+
+- 端点：`GET /admin/albums`、`GET /admin/albums/:id`、`POST /admin/albums/:id/unpublish`；契约 `backend/api/api-admin/22-albums.md`。
+- 只读与下架：列表按当前管理员园所收敛（`middleware.GetKindergartenID`，0 → 403），可按 `class_id/status/category` 筛选，`album_date DESC, id DESC`；详情返回照片 + 照片级幼儿 + 相册级参与者；草稿/已下架园长可读，跨园/软删/不存在 404。
+- 下架：仅 `published` 可迁移；重复下架幂等成功（`changed=false`，不重复写审计）；草稿 422；审计写 `module=albums`、`action=unpublish`、`target_type=album`，detail 含标题/班级/状态迁移 + 操作人/时间/IP/UA。家长端只查 `status=published`，下架后立即不可见。
+- 禁止编辑：albums 组只注册上述 3 条路由，无 `POST /admin/albums`、无 `PUT/PATCH/DELETE`；`TestAdminAlbumRoutesHaveNoEditEndpoint` 对真实路由表断言。
+- 权限登记：新增 admin 路由必须在 `server/internal/middleware/admin_perm.go` 登记权限码（`NewRouter` 启动自检）。经主会话批准补 3 条：列表/详情 → `growth:view`，下架 → `growth:manage`（相册内容归成长记录权限域，不新增 `album:*` 码；与 `leaves → attendance:view` 的近似处理一致）。
+- 测试：`cd server && go test ./internal/service/ -run 'TestAdminAlbum' -count=1 -timeout 600s` → ok（7 个 Test 函数）；`go test ./internal/app/ -run TestAdminPermissionRegistryCoversAllRoutes` → ok；夹具 9981xx 全部硬删，0 残留。
 
 ## 家长隐私设置（PPS）— 班内共享 / 园外分享 / 老师端联系方式
 

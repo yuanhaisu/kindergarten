@@ -43,9 +43,9 @@
 
 ## 6. 后端：管理端相册只读/下架
 
-- [ ] 6.1 新增 admin 相册列表/详情/下架 service/handler/router；只读 + 下架，写审计；验证单测覆盖跨园隔离、不能编辑、下架后家长不可见
-- [ ] 6.2 新建 `backend/api/api-admin/21-albums.md`；验证契约字段与 handler 一致
-- [ ] 6.3 在 `TEST_CATALOG.md` 登记 `TC-NEW-ALB-0018..0019`；验证对应用例存在且通过
+- [x] 6.1 新增 admin 相册列表/详情/下架 service/handler/router；只读 + 下架，写审计；验证单测覆盖跨园隔离、不能编辑、下架后家长不可见
+- [x] 6.2 新建 `backend/api/api-admin/22-albums.md`（21 已被 21-calendar.md 占用）；验证契约字段与 handler 一致
+- [x] 6.3 在 `TEST_CATALOG.md` 登记 `TC-NEW-ALB-0018..0019`；验证对应用例存在且通过
 
 ## 7. 老师端页面
 

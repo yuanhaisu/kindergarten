@@ -124,6 +124,11 @@ var adminRoutePermission = map[string]string{
 	"DELETE /api/v1/admin/growth/logs/:id":    "growth:manage",
 	"PUT /api/v1/admin/growth/logs/:id/audit": "growth:audit",
 
+	// albums —— 园长只读与下架；相册内容归在成长记录权限域，不新增 album:* 码。
+	"GET /api/v1/admin/albums":                "growth:view",
+	"GET /api/v1/admin/albums/:id":            "growth:view",
+	"POST /api/v1/admin/albums/:id/unpublish": "growth:manage",
+
 	// tasks
 	"GET /api/v1/admin/tasks":        "task:view",
 	"GET /api/v1/admin/tasks/stats":  "task:view",
