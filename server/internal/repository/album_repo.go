@@ -212,6 +212,89 @@ func (r *AlbumRepo) ListFirstPhotos(
 	return out, nil
 }
 
+// ListPhotosByAlbumIDs 家长端列表批量取整页相册的全部照片：一次查询覆盖整页，
+// 服务层用它聚合「当前家长可见张数」与封面，避免逐相册再查一次（design D4）。
+// 顺序按 album_id + sort_num + id，与详情口径一致，过滤后相对顺序不变。
+func (r *AlbumRepo) ListPhotosByAlbumIDs(
+	ctx context.Context,
+	albumIDs []uint64,
+) (map[uint64][]domain.AlbumPhoto, error) {
+	out := make(map[uint64][]domain.AlbumPhoto, len(albumIDs))
+	if len(albumIDs) == 0 {
+		return out, nil
+	}
+	var photos []domain.AlbumPhoto
+	err := r.db.WithContext(ctx).
+		Where("album_id IN ?", albumIDs).
+		Order("album_id ASC, sort_num ASC, id ASC").
+		Find(&photos).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range photos {
+		out[p.AlbumID] = append(out[p.AlbumID], p)
+	}
+	return out, nil
+}
+
+// ListPhotoStudentIDsByPhotoIDs 批量取照片级幼儿关联，只返回 ID 集合：
+// 家长端只用它做可见性判断，不展示其他幼儿的姓名/头像（那会泄露班里其他孩子）。
+func (r *AlbumRepo) ListPhotoStudentIDsByPhotoIDs(
+	ctx context.Context,
+	photoIDs []uint64,
+) (map[uint64][]uint64, error) {
+	out := make(map[uint64][]uint64, len(photoIDs))
+	if len(photoIDs) == 0 {
+		return out, nil
+	}
+	type row struct {
+		PhotoID   uint64 `gorm:"column:photo_id"`
+		StudentID uint64 `gorm:"column:student_id"`
+	}
+	var rows []row
+	err := r.db.WithContext(ctx).Table("album_photo_students").
+		Select("photo_id, student_id").
+		Where("photo_id IN ? AND deleted_at IS NULL", photoIDs).
+		Order("id ASC").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.PhotoID] = append(out[row.PhotoID], row.StudentID)
+	}
+	return out, nil
+}
+
+// ListAlbumStudentIDsByAlbumIDs 批量取相册级参与幼儿 ID：整页一次查询，
+// 作为照片未逐张标记时的可见性兜底（design D4 第 3 步）。
+func (r *AlbumRepo) ListAlbumStudentIDsByAlbumIDs(
+	ctx context.Context,
+	albumIDs []uint64,
+) (map[uint64][]uint64, error) {
+	out := make(map[uint64][]uint64, len(albumIDs))
+	if len(albumIDs) == 0 {
+		return out, nil
+	}
+	type row struct {
+		AlbumID   uint64 `gorm:"column:album_id"`
+		StudentID uint64 `gorm:"column:student_id"`
+	}
+	var rows []row
+	err := r.db.WithContext(ctx).Table("album_students").
+		Select("album_id, student_id").
+		Where("album_id IN ? AND deleted_at IS NULL", albumIDs).
+		Order("id ASC").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.AlbumID] = append(out[row.AlbumID], row.StudentID)
+	}
+	return out, nil
+}
+
 // Create 事务写入相册、照片、相册级参与者与照片级幼儿：
 // 任一环节失败整单回滚，不留半条相册或孤立关联。
 // sort_num 一律按切片下标重写，调用方传入的 SortNum 视为无效输入。

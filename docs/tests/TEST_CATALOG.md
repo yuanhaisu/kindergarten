@@ -857,8 +857,8 @@
 |-------|------|--------|------|------|
 | TC-NEW-PPS-0001 | 无设置行时班内共享开、园外分享关、向老师展示手机号开 | P0 | Unit | ✅ `TestParentSettings_DefaultBeforeAnyWrite` |
 | TC-NEW-PPS-0002 | 已有设置保留旧 `allow_growth_share` 的值作为班内共享，园外分享不被改成开启 | P0 | Unit | ✅ `TestParentSettings_MigratedLegacyValuePreserved` |
-| TC-NEW-PPS-0003 | 关闭班内共享后，其他家长立即看不到含该幼儿的历史与未来照片 | P0 | Unit | ⏸ 待家长班级相册（5.1/8.3） |
-| TC-NEW-PPS-0004 | 重新开启班内共享后，含该幼儿的照片恢复可见 | P0 | Unit | ⏸ 待家长班级相册（5.1/8.3） |
+| TC-NEW-PPS-0003 | 关闭班内共享后，其他家长立即看不到含该幼儿的历史与未来照片 | P0 | Unit | ✅ 后端已验证（`TestParentClassAlbumOptOutHidesWholePhoto`：整张隐藏、同相册其他照片仍可见）；家长端 UI 待 8.3 |
+| TC-NEW-PPS-0004 | 重新开启班内共享后，含该幼儿的照片恢复可见 | P0 | Unit | ✅ 后端已验证（同上用例：重新开启后再查立即恢复可见）；家长端 UI 待 8.3 |
 | TC-NEW-PPS-0005 | Phase 1 设置页只展示班内共享，不出现可用的园外分享开关 | P1 | FUNC | ⏸ 待家长端设置页（8.4） |
 | TC-NEW-PPS-0006 | 家长关闭 `show_phone_to_teacher` 时，老师端详情不返回该家长手机号（键缺省） | P0 | Unit | ✅ `TestTeacherClassStudentParentsPhoneFiltering` |
 | TC-NEW-PPS-0007 | 家长开启时，老师端详情返回脱敏手机号 | P0 | Unit | ✅ `TestTeacherClassStudentParentsPhoneFiltering` |
@@ -875,6 +875,44 @@
 - 旧键兼容：`privacy.allow_growth_share` 仅在写入边界映射到 `allow_class_share`；新旧键同传时新键优先，结果与 map 遍历顺序无关。
 - 老师端联系方式：`GET /teacher/class/students/:id` 返回 `student` + `parents[]`；手机号按每个家长在当前园所的 `show_phone_to_teacher` 逐个过滤，关闭时键缺省；无 User 行的绑定跳过；手机号复用 `maskPhone` 脱敏。
 - 测试：`cd server && go test ./internal/service/ -run 'TestParentSettings|TestTeacherClassStudentParents' -count=1 -timeout 600s` → ok；夹具 99200000x / 9930xx 全部硬删，0 残留。
+
+## 家长端班级相册（PCA）— 已发布可见 / 我的孩子 / 班内共享 / 留存
+
+> 对应 OpenSpec 变更 `class-album-parent-sharing` 的任务 5.1–5.6。
+> 规格见 `openspec/changes/class-album-parent-sharing/specs/parent-class-album/spec.md`；
+> 契约见 `backend/api/api-parent/13-class-albums.md`（`12` 已被 `12-health.md` 占用，
+> 按任务 5.5「或项目现有编号的下一个」落为 13）。
+> 状态：✅ = 服务层用真实 MySQL 夹具验证（`server/internal/service/parent_class_album_test.go`，9971xx 夹具，硬删 0 残留）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-PCA-0001 | 已发布相册在列表与详情可见，列表只给元信息与 `visible_photo_count` | P0 | Unit | ✅ `TestParentClassAlbumPublishedVisible` |
+| TC-NEW-PCA-0002 | 草稿/下架/软删相册不在列表、详情 404；空相册只给元信息 | P0 | Unit | ✅ `TestParentClassAlbumOnlyPublishedVisible` |
+| TC-NEW-PCA-0003 | 「我的孩子」照片级过滤：不含自己孩子的照片不可见 | P0 | Unit | ✅ `TestParentClassAlbumFiltersByMyChild` |
+| TC-NEW-PCA-0004 | 未逐张标记的照片按相册级参与者兜底 | P0 | Unit | ✅ `TestParentClassAlbumAlbumLevelFallback` |
+| TC-NEW-PCA-0005 | 关闭班内共享后其他家长看不到含该幼儿的合影，同相册其他照片仍可见 | P0 | Unit | ✅ `TestParentClassAlbumOptOutHidesWholePhoto`、`TestParentClassAlbumOptOutHidesPhotoForOtherFamily`（反事实：查看者孩子与照片有直接关联） |
+| TC-NEW-PCA-0006 | 关闭共享的幼儿自己的家长仍能看到这些照片 | P0 | Unit | ✅ `TestParentClassAlbumOptOutOwnParentStillSees` |
+| TC-NEW-PCA-0007 | 跨班/跨园相册 404，列表按当前孩子班级收敛 | P0 | Unit | ✅ `TestParentClassAlbumIsolation` |
+| TC-NEW-PCA-0008 | 12 张里 5 张可见，过滤后保持老师创建顺序 | P0 | Unit | ✅ `TestParentClassAlbumDetailKeepsOrder` |
+| TC-NEW-PCA-0009 | 毕业 90 天内只读可访问；90 天整在窗口内、超过 1ns 立即拒绝 | P0 | Unit | ✅ `TestParentClassAlbumGraduationWindow` |
+| TC-NEW-PCA-0010 | 毕业 >90 天、退学/转园、无 `status_changed_at`：列表空、详情 404 | P0 | Unit | ✅ `TestParentClassAlbumRetentionDenied` |
+
+> 守卫用例（不单列 TC）：多监护人任一关闭（`TestParentClassAlbumMultiGuardianAnyOptOut`）、
+> 自己的孩子始终可见含同胞场景（`TestParentClassAlbumOwnChildAlwaysVisible`）、
+> 多孩按当前孩子（`TestParentClassAlbumMultiChildUsesCurrentChild`）、
+> 列表查询次数最多 6、无 N+1（`TestParentClassAlbumList_NoNPlusOne`）、
+> 清理后 0 残留（`TestParentClassAlbum_CleanupLeavesNoResidue`）。
+
+### OS-ALB-4 执行记录（2026-11-01）
+
+- 端点：`GET /parent/class-albums`、`GET /parent/class-albums/:id`；契约 `backend/api/api-parent/13-class-albums.md`。
+- 可见性：只查 `status=published` 且未软删的相册；照片级关联优先、相册级参与者兜底；opt-out 整张照片隐藏、自己的孩子始终可见；多监护人任一关闭由 `ListOptOutStudentIDs` 的 join 表达。`cover_urls` 只取**可见照片**前 3 张，避免列表泄露不可见照片。
+- 留存：毕业按 `status_changed_at` 起算 90 天（`<= 90d` 放行）；无时间戳按已过期（不用 `updated_at` 猜）；`status=3` 立即拒绝。
+- 性能：列表最多 6 条查询、详情最多 5 条；`TestParentClassAlbumList_NoNPlusOne` 实测整页与单条均为 6。
+- 反事实验证：`testPCALAlbumOptOut` 三张照片都把查看者 A 直接关联——`{A,C}`（C 单监护人关闭）、`{A,E}`（E 多监护人中 E2 关闭）、对照 `{A}`。关闭 opt-out 过滤或把「任一关闭」误实现成「全部关闭」，`TestParentClassAlbumOptOutHidesPhotoForOtherFamily` 与 `TestParentClassAlbumMultiGuardianAnyOptOut` 均失败（两次变异均已还原）。
+- 错误映射：`parent_portal.go` 抽出 `writeParentClassAlbumError`，`TestWriteParentClassAlbumErrorMapsSentinels` 覆盖 404/403/500；401 属统一鉴权中间件，不在 handler 层重复测。
+- 测试：`cd server && go test ./internal/service/ -run 'TestParentClassAlbum' -count=1 -timeout 600s` → ok（16 个 Test 函数 = TC 0001–0010 含 TC-0005 双用例 + 5 个守卫）；夹具 9971xx 全部硬删，0 残留。
+- 未覆盖（留给后续切片）：家长端页面与入口（8.x）、DevTools 双端真实点击（11.3）、留存清理命令（10.1）。
 
 ### B20 执行记录（2026-10-30）
 

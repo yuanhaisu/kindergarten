@@ -548,6 +548,13 @@ func registerParentRoutes(pg *gin.RouterGroup, h *handler.Handler) {
 		class.GET("/calendar", h.ParentClassCalendar)
 	}
 
+	// 班级相册（openspec class-album-parent-sharing 5.4）：只读、已发布、按当前孩子过滤。
+	classAlbums := pg.Group("/class-albums")
+	{
+		classAlbums.GET("", h.ParentListClassAlbums)
+		classAlbums.GET("/:id", h.ParentGetClassAlbum)
+	}
+
 	student := pg.Group("/student")
 	{
 		student.GET("/profile", h.ParentStudentProfile)

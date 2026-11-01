@@ -34,12 +34,12 @@
 
 ## 5. 后端：家长端班级相册
 
-- [ ] 5.1 新增家长班级相册查询：仅已发布、同园同班、未软删；按孩子与 `allow_class_share` 过滤照片、整张隐藏 opt-out 合影、自己孩子始终可见；验证单测覆盖多孩、opt-out、草稿/下架/删除
-- [ ] 5.2 列表返回 `visible_photo_count` 且不返回全量照片，详情返回可见照片并按 `sort_num,id` 排序；验证单测与查询次数（无 N+1）
-- [ ] 5.3 毕业后 90 天只读、退学/转园立即拒绝；`status_changed_at` 为空的历史 2/3 状态按已过期；验证单测覆盖边界日期
-- [ ] 5.4 新增 `GET /parent/class-albums`、`GET /parent/class-albums/:id` handler/router；验证 `go test ./internal/handler/http/` 与 401/403/404 分支
-- [ ] 5.5 新建 `backend/api/api-parent/12-class-albums.md`（或项目现有编号的下一个），写清发布状态、我的孩子过滤、opt-out、留存；验证契约示例与 handler 一致
-- [ ] 5.6 在 `TEST_CATALOG.md` 登记 `TC-NEW-PCA-0001..0010`；验证对应用例存在且通过
+- [x] 5.1 新增家长班级相册查询：仅已发布、同园同班、未软删；按孩子与 `allow_class_share` 过滤照片、整张隐藏 opt-out 合影、自己孩子始终可见；验证单测覆盖多孩、opt-out、草稿/下架/删除
+- [x] 5.2 列表返回 `visible_photo_count` 且不返回全量照片，详情返回可见照片并按 `sort_num,id` 排序；验证单测与查询次数（无 N+1）
+- [x] 5.3 毕业后 90 天只读、退学/转园立即拒绝；`status_changed_at` 为空的历史 2/3 状态按已过期；验证单测覆盖边界日期
+- [x] 5.4 新增 `GET /parent/class-albums`、`GET /parent/class-albums/:id` handler/router；验证 `go test ./internal/handler/http/` 与 401/403/404 分支
+- [x] 5.5 新建 `backend/api/api-parent/12-class-albums.md`（或项目现有编号的下一个），写清发布状态、我的孩子过滤、opt-out、留存；验证契约示例与 handler 一致
+- [x] 5.6 在 `TEST_CATALOG.md` 登记 `TC-NEW-PCA-0001..0010`；验证对应用例存在且通过
 
 ## 6. 后端：管理端相册只读/下架
 

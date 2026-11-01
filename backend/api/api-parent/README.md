@@ -20,6 +20,7 @@
 | 10 | [10-feedback.md](10-feedback.md) | 意见反馈 | 2 |
 | 11 | [11-settings.md](11-settings.md) | 设置 | 2 |
 | 12 | [12-health.md](12-health.md) | 晨检记录 | 1 |
+| 13 | [13-class-albums.md](13-class-albums.md) | 班级相册（家长端只读） | 2 |
 
 ## 设计稿对照
 
