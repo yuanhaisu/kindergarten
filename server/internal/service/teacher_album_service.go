@@ -581,6 +581,21 @@ func (s *TeacherPortalService) buildTeacherAlbum(
 	explicitStudents := make([]uint64, 0, len(participants))
 	explicitStudents = append(explicitStudents, participants...)
 
+	// file_id 归属一次批量校验：最多 50 张照片，逐张查会退化成 50 条 SQL。
+	fileIDs := make([]uint64, 0, len(req.Photos))
+	for _, in := range req.Photos {
+		if in.SourceMediaID == 0 && in.FileID > 0 {
+			fileIDs = append(fileIDs, in.FileID)
+		}
+	}
+	filesByID := map[uint64]domain.File{}
+	if len(fileIDs) > 0 {
+		filesByID, err = repo.FindFilesUnderKindergartenTeachers(ctx, tc.KindergartenID, dedupeAlbumIDs(fileIDs))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	photos := make([]domain.AlbumPhoto, 0, len(req.Photos))
 	photoStudents := make([][]uint64, len(req.Photos))
 	// 从成长选图的两类批处理：file_id 反查与自动带出幼儿，都在循环后统一查询，避免 N+1。
@@ -619,11 +634,7 @@ func (s *TeacherPortalService) buildTeacherAlbum(
 				pendingLogID[i] = *media.LogID
 			}
 		case in.FileID > 0:
-			files, err := repo.FindFilesUnderKindergartenTeachers(ctx, tc.KindergartenID, []uint64{in.FileID})
-			if err != nil {
-				return nil, err
-			}
-			f, ok := files[in.FileID]
+			f, ok := filesByID[in.FileID]
 			if !ok || f.FileType != "image" {
 				return nil, ErrTeacherInvalidParams
 			}

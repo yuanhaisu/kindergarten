@@ -225,6 +225,21 @@ function saveToAlbum(filePath) {
   })
 }
 
+// 保存原图是纯客户端行为，Phase 1 用微信分析事件，不新增后端端点。
+// 埋点失败不能影响“已保存”的结果，因此单独 try/catch。
+function reportPhotoSave(photo) {
+  if (typeof uni.reportAnalytics !== "function") return
+  try {
+    uni.reportAnalytics("album_photo_save", {
+      album_id: albumId.value,
+      photo_id: photo?.id || 0,
+      student_id: studentId.value || 0
+    })
+  } catch (e) {
+    // 忽略埋点异常
+  }
+}
+
 async function saveCurrent() {
   const photo = currentPhoto.value
   if (!photo || saving.value) return
@@ -253,6 +268,7 @@ async function saveCurrent() {
     await saveToAlbum(filePath)
     stopLoading()
     uni.showToast({ title: "已保存到相册", icon: "success" })
+    reportPhotoSave(photo)
   } catch (err) {
     stopLoading()
     if (err?.code === "auth") promptOpenSetting()
