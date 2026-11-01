@@ -15,6 +15,7 @@ const ICON = {
   close: "", // close-line
   calendar: "", // calendar-line
   play: "", // play-circle-line
+  gallery: "\u{eda5}", // gallery-line
   error: "" // error-warning-line
 }
 
@@ -130,6 +131,12 @@ async function handleRetry() {
   }
 }
 
+// 班级相册不是 tabBar 页（tabBar 只有首页/成长/接送/我的），用 navigateTo。
+// 与「成长相册」区分：那是我的孩子的成长记录媒体，班级相册是老师发布的班级照片。
+function goClassAlbum() {
+  uni.navigateTo({ url: "/pages/album/index" })
+}
+
 // ---- 预览弹层：作用域是「当天这一组」，与源码的 previewImage 一致 ----
 const preview = ref({ open: false, date: "", items: [], index: 0 })
 let touchStartX = null
@@ -203,6 +210,18 @@ onPullDownRefresh(loadData)
         <text v-if="rangeText" class="mb-dot">·</text>
         <text v-if="rangeText" class="mb-range">{{ rangeText }}</text>
       </view>
+    </view>
+
+    <!-- 班级相册入口：与成长相册同屏但不混淆（班级范围 / 我的孩子） -->
+    <view class="class-entry" hover-class="class-entry--active" @click="goClassAlbum">
+      <view class="class-entry-icon">
+        <text class="class-entry-glyph">{{ ICON.gallery }}</text>
+      </view>
+      <view class="class-entry-copy">
+        <text class="class-entry-title">班级相册</text>
+        <text class="class-entry-desc">老师发布的班级照片，可保存原图</text>
+      </view>
+      <text class="class-entry-arrow">{{ ICON.right }}</text>
     </view>
 
     <!-- 加载：骨架屏保持网格形状，不跳动 -->
@@ -407,6 +426,69 @@ onPullDownRefresh(loadData)
   color: $color-text-muted;
   font-weight: $typography-font-weight-medium;
   font-variant-numeric: tabular-nums;
+}
+
+// ---- 班级相册入口 ----------------------------------------------
+.class-entry {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  margin-top: $spacing-xs;
+  padding: $spacing-lg $spacing-xl;
+  border-radius: $component-card-radius;
+  background: $color-bg-card;
+  box-shadow: $shadow-sm;
+}
+
+.class-entry--active {
+  background: $color-bg-page;
+}
+
+.class-entry-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $border-radius-lg;
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+}
+
+.class-entry-glyph {
+  font-family: remixicon;
+  font-size: $typography-font-size-2xl;
+  line-height: 1;
+}
+
+.class-entry-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-width: 0;
+}
+
+.class-entry-title {
+  color: $color-text-primary;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
+  line-height: 1.35;
+}
+
+.class-entry-desc {
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  line-height: 1.4;
+}
+
+.class-entry-arrow {
+  flex: none;
+  color: $color-brand-primary-dark;
+  font-family: remixicon;
+  font-size: $typography-font-size-xl;
+  line-height: 1;
 }
 
 // ---- 日期分组 --------------------------------------------------

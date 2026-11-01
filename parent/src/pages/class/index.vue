@@ -18,6 +18,7 @@ import PageShell from "@/components/PageShell.vue"
 const ICON = {
   user: "\u{f264}", // user-line
   album: "\u{ee4b}", // image-line
+  gallery: "\u{eda5}", // gallery-line
   notice: "\u{ef94}", // notification-3-line
   chevron: "\u{ea6e}", // arrow-right-s-line
   alert: "\u{eca1}" // error-warning-line
@@ -89,9 +90,15 @@ async function handleRetry() {
   })
 }
 
-// 两个入口都不是 tabBar 页（tabBar 只有首页/成长/接送/我的），用 navigateTo。
-function goAlbum() {
+// 三个入口都不是 tabBar 页（tabBar 只有首页/成长/接送/我的），用 navigateTo。
+function goGrowthAlbum() {
   uni.navigateTo({ url: "/pages/growth/album" })
+}
+
+// 班级相册是班级范围的已发布相册；成长相册是「我的孩子」的成长记录派生视图，
+// 两者数据源与可见范围不同，入口文案必须能区分。
+function goClassAlbum() {
+  uni.navigateTo({ url: "/pages/album/index" })
 }
 
 function goNotice() {
@@ -225,7 +232,14 @@ onLoad(() => {
           <text class="section-title">班级相关</text>
         </view>
         <view class="group-card">
-          <view class="entry-cell" @click="goAlbum">
+          <view class="entry-cell" @click="goClassAlbum">
+            <view class="entry-icon">
+              <text class="entry-glyph">{{ ICON.gallery }}</text>
+            </view>
+            <text class="entry-title">班级相册</text>
+            <text class="entry-arrow">{{ ICON.chevron }}</text>
+          </view>
+          <view class="entry-cell" @click="goGrowthAlbum">
             <view class="entry-icon">
               <text class="entry-glyph">{{ ICON.album }}</text>
             </view>

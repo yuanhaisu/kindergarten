@@ -77,6 +77,19 @@
       }
     },
     {
+      "path": "pages/album/index",
+      "style": {
+        "navigationBarTitleText": "班级相册",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/album/detail",
+      "style": {
+        "navigationBarTitleText": "相册详情"
+      }
+    },
+    {
       "path": "pages/pickup/index",
       "style": {
         "navigationBarTitleText": "接送记录",

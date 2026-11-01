@@ -56,11 +56,11 @@
 
 ## 8. 家长端页面
 
-- [ ] 8.1 新增 `parent/src/pages/album/index.vue` 与 `detail.vue`，在 `pages.json` 注册；列表仅已发布，详情网格 + 预览 + 逐张保存原图；验证 `npm run build:mp-weixin` exit 0
-- [ ] 8.2 入口：`parent/src/pages/class/index.vue` 与 `growth/album.vue` 增加班级相册入口，使用 `navigateTo`（非 tabBar 页）；验证 DevTools 真实点击可达
-- [ ] 8.3 默认「我的孩子」过滤与 opt-out 整张隐藏在前端正确呈现（后端已过滤，前端不二次猜测）；验证 DevTools：自己孩子可见、其他孩子照片不出现、关闭共享后合影消失且自己仍可见
-- [ ] 8.4 `parent/src/pages/settings/index.vue` 将「允许展示成长记录」改为「班内共享」，不展示园外分享；验证 DevTools 开关保存后重新进入保持
-- [ ] 8.5 token 基线 3 无新增；`check-secrets` 0；验证两端 `build:mp-weixin` 均 exit 0
+- [x] 8.1 新增 `parent/src/pages/album/index.vue` 与 `detail.vue`，在 `pages.json` 注册；列表仅已发布，详情网格 + 预览 + 逐张保存原图；验证 `npm run build:mp-weixin` exit 0
+- [x] 8.2 入口：`parent/src/pages/class/index.vue` 与 `growth/album.vue` 增加班级相册入口，使用 `navigateTo`（非 tabBar 页）；验证 DevTools 真实点击可达
+- [x] 8.3 默认「我的孩子」过滤与 opt-out 整张隐藏在前端正确呈现（后端已过滤，前端不二次猜测）；验证 DevTools：自己孩子可见、其他孩子照片不出现、关闭共享后合影消失且自己仍可见
+- [x] 8.4 `parent/src/pages/settings/index.vue` 将「允许展示成长记录」改为「班内共享」，不展示园外分享；验证 DevTools 开关保存后重新进入保持
+- [x] 8.5 token 基线 3 无新增；`check-secrets` 0；验证两端 `build:mp-weixin` 均 exit 0
 
 ## 9. 管理端页面
 

@@ -5,6 +5,9 @@
  * 8 个开关（6 通知 + 2 隐私）真实读写 GET/PUT /parent/settings；切换采用乐观更新，
  * 行内「同步中…」期间禁点，PUT 失败回滚并 toast。退出登录只在本页：先调
  * POST /auth/logout，再清本地并 reLaunch 登录页，失败也清本地并提示。
+ *
+ * 隐私区 Phase 1 只呈现「班内共享」：园外分享（allow_external_share）尚未接入
+ * 展示路径，契约里有值但页面不渲染，避免家长误以为已经生效（design D6）。
  */
 import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
@@ -33,9 +36,15 @@ const NOTIFICATION_ROWS = [
 
 const PRIVACY_ROWS = [
   { key: "show_phone_to_teacher", label: "向老师展示手机号" },
-  { key: "allow_growth_share", label: "允许展示成长记录" }
+  {
+    key: "allow_class_share",
+    label: "班内共享",
+    desc: "允许孩子的照片出现在本班其他家长可见的班级相册；可随时关闭"
+  }
 ]
 
+// 归一化由 parent-settings.js 的 SETTINGS_DEFAULTS 统一负责：缺键按契约默认值
+// 回落（班内共享默认开），旧键 allow_growth_share 不再读取。
 const settings = ref(normalizeSettings(null))
 const syncing = ref({})
 const loading = ref(true)
@@ -202,9 +211,11 @@ onLoad(loadData)
               hover-class="switch-row--active"
               @click="toggleRow('notification', row.key)"
             >
-              <text class="row-label" :class="{ 'is-muted': isSyncing(row.key) }">
-                {{ row.label }}
-              </text>
+              <view class="row-copy">
+                <text class="row-label" :class="{ 'is-muted': isSyncing(row.key) }">
+                  {{ row.label }}
+                </text>
+              </view>
               <!-- 开关自己处理 tap：阻止冒泡到整行，避免一次点击翻转两次 -->
               <view class="row-tail" @click.stop>
                 <text v-if="isSyncing(row.key)" class="row-sync">同步中…</text>
@@ -231,9 +242,12 @@ onLoad(loadData)
               hover-class="switch-row--active"
               @click="toggleRow('privacy', row.key)"
             >
-              <text class="row-label" :class="{ 'is-muted': isSyncing(row.key) }">
-                {{ row.label }}
-              </text>
+              <view class="row-copy">
+                <text class="row-label" :class="{ 'is-muted': isSyncing(row.key) }">
+                  {{ row.label }}
+                </text>
+                <text v-if="row.desc" class="row-desc">{{ row.desc }}</text>
+              </view>
               <view class="row-tail" @click.stop>
                 <text v-if="isSyncing(row.key)" class="row-sync">同步中…</text>
                 <switch
@@ -314,13 +328,27 @@ onLoad(loadData)
   padding: $spacing-md $spacing-xl;
 }
 
-.row-label {
+.row-copy {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-width: 0;
+}
+
+.row-label {
   min-width: 0;
   color: $color-text-primary;
   font-size: $typography-font-size-md;
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+// 说明性正文不低于 13px（设计审查 P2-3）
+.row-desc {
+  color: $color-text-muted;
+  font-size: $typography-font-size-base;
+  line-height: 1.6;
 }
 
 .row-label.is-muted {
