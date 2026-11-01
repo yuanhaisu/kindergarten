@@ -846,6 +846,36 @@
 - 测试：`cd server && go test ./internal/service/ -run 'TestTeacherAlbum' -count=1 -timeout 600s` → ok（22 个 Test 函数 = TC 0001–0017 + 5 个守卫用例）；夹具 9960xx 全部硬删，0 残留。
 - 未覆盖（留给后续切片）：家长端班级相册与照片级隐私过滤（5.x）、管理端只读/下架（6.x）、老师端页面（7.x）、`albumretention` 清理命令（10.1）。
 
+## 家长隐私设置（PPS）— 班内共享 / 园外分享 / 老师端联系方式
+
+> 对应 OpenSpec 变更 `class-album-parent-sharing` 的任务 4.1–4.4。
+> 规格见 `openspec/changes/class-album-parent-sharing/specs/parent-privacy-settings/spec.md`；
+> 契约见 `backend/api/api-parent/11-settings.md` 与 `backend/api/api-teacher/09-class-and-tasks.md`。
+> 状态：✅ = 服务层用真实 MySQL 夹具验证；⏸ = 依赖后续切片（家长相册 / 设置页 UI）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-PPS-0001 | 无设置行时班内共享开、园外分享关、向老师展示手机号开 | P0 | Unit | ✅ `TestParentSettings_DefaultBeforeAnyWrite` |
+| TC-NEW-PPS-0002 | 已有设置保留旧 `allow_growth_share` 的值作为班内共享，园外分享不被改成开启 | P0 | Unit | ✅ `TestParentSettings_MigratedLegacyValuePreserved` |
+| TC-NEW-PPS-0003 | 关闭班内共享后，其他家长立即看不到含该幼儿的历史与未来照片 | P0 | Unit | ⏸ 待家长班级相册（5.1/8.3） |
+| TC-NEW-PPS-0004 | 重新开启班内共享后，含该幼儿的照片恢复可见 | P0 | Unit | ⏸ 待家长班级相册（5.1/8.3） |
+| TC-NEW-PPS-0005 | Phase 1 设置页只展示班内共享，不出现可用的园外分享开关 | P1 | FUNC | ⏸ 待家长端设置页（8.4） |
+| TC-NEW-PPS-0006 | 家长关闭 `show_phone_to_teacher` 时，老师端详情不返回该家长手机号（键缺省） | P0 | Unit | ✅ `TestTeacherClassStudentParentsPhoneFiltering` |
+| TC-NEW-PPS-0007 | 家长开启时，老师端详情返回脱敏手机号 | P0 | Unit | ✅ `TestTeacherClassStudentParentsPhoneFiltering` |
+| TC-NEW-PPS-0008 | 多家长逐个过滤：只隐藏关闭者的手机号；无设置行默认展示 | P0 | Unit | ✅ `TestTeacherClassStudentParentsPhoneFiltering` |
+
+> 旧键入参兼容（`allow_growth_share` 映射到班内共享、新旧同传以新键为准、旧列镜像）
+> 由守卫用例 `TestParentSettings_LegacyKeyMapsToClassShare` 覆盖，不单列 TC。
+> 老师端无绑定幼儿返回 `[]`、跨班/跨园 404 由 `TestTeacherClassStudentParentsEmptyWhenNoBindings`
+> 与 `TestTeacherClassStudentParentsIsolation` 守卫。
+
+### OS-ALB-3 执行记录（2026-11-01）
+
+- 设置读写：`parentSettings` 改用 `AllowClassShare` / `AllowExternalShare`；`asResponse` 不再返回旧键；upsert 列含两个新列，并把班内共享值镜像写入旧列 `allow_growth_share`（回滚一致性）。
+- 旧键兼容：`privacy.allow_growth_share` 仅在写入边界映射到 `allow_class_share`；新旧键同传时新键优先，结果与 map 遍历顺序无关。
+- 老师端联系方式：`GET /teacher/class/students/:id` 返回 `student` + `parents[]`；手机号按每个家长在当前园所的 `show_phone_to_teacher` 逐个过滤，关闭时键缺省；无 User 行的绑定跳过；手机号复用 `maskPhone` 脱敏。
+- 测试：`cd server && go test ./internal/service/ -run 'TestParentSettings|TestTeacherClassStudentParents' -count=1 -timeout 600s` → ok；夹具 99200000x / 9930xx 全部硬删，0 残留。
+
 ### B20 执行记录（2026-10-30）
 
 - 契约先行：新建 `backend/api/api-teacher/10-album.md`（stats/list/detail/create 四端点、分类四值、校验规则）。

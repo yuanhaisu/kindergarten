@@ -45,7 +45,8 @@ func cleanupParentSettings(t *testing.T, db *gorm.DB) {
 	users := []uint64{
 		parentSettingsTestBase + 1, parentSettingsTestBase + 2, parentSettingsTestBase + 3,
 		parentSettingsTestBase + 4, parentSettingsTestBase + 5, parentSettingsTestBase + 6,
-		parentSettingsTestBase + 7,
+		parentSettingsTestBase + 7, parentSettingsTestBase + 8, parentSettingsTestBase + 9,
+		parentSettingsTestBase + 10,
 	}
 	res := db.Unscoped().Where("user_id IN ?", users).Delete(&domain.ParentSetting{})
 	require.NoError(t, res.Error)
@@ -81,8 +82,11 @@ func TestParentSettings_DefaultBeforeAnyWrite(t *testing.T) {
 	assert.True(t, parentSettingBool(t, res, "notification", "pickup_push"))
 	assert.True(t, parentSettingBool(t, res, "notification", "growth_push"))
 	assert.True(t, parentSettingBool(t, res, "notification", "announcement_push"))
-	assert.False(t, parentSettingBool(t, res, "privacy", "allow_growth_share"), "允许展示成长记录默认关（原型）")
+	assert.True(t, parentSettingBool(t, res, "privacy", "allow_class_share"), "班内共享默认开")
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_external_share"), "园外分享默认关")
 	assert.True(t, parentSettingBool(t, res, "privacy", "show_phone_to_teacher"))
+	_, legacyReturned := res["privacy"].(map[string]any)["allow_growth_share"]
+	assert.False(t, legacyReturned, "旧键 allow_growth_share 不再返回")
 
 	var rows int64
 	require.NoError(t, db.Model(&domain.ParentSetting{}).Where("user_id = ?", pc.UserID).Count(&rows).Error)
@@ -110,7 +114,8 @@ func TestParentSettings_UpdatePersists(t *testing.T) {
 		},
 		"privacy": map[string]any{
 			"show_phone_to_teacher": false,
-			"allow_growth_share":    true,
+			"allow_class_share":     true,
+			"allow_external_share":  true,
 		},
 	})
 	require.NoError(t, err)
@@ -125,11 +130,76 @@ func TestParentSettings_UpdatePersists(t *testing.T) {
 	assert.False(t, parentSettingBool(t, res, "notification", "announcement_push"))
 	assert.True(t, parentSettingBool(t, res, "notification", "task_push"))
 	assert.False(t, parentSettingBool(t, res, "privacy", "show_phone_to_teacher"))
-	assert.True(t, parentSettingBool(t, res, "privacy", "allow_growth_share"))
+	assert.True(t, parentSettingBool(t, res, "privacy", "allow_class_share"))
+	assert.True(t, parentSettingBool(t, res, "privacy", "allow_external_share"))
 
 	var rows int64
 	require.NoError(t, db.Model(&domain.ParentSetting{}).Where("user_id = ?", pc.UserID).Count(&rows).Error)
 	assert.EqualValues(t, 1, rows)
+
+	// 旧列同步写入班内共享值，保证回滚到旧代码时看到同一口径。
+	var row domain.ParentSetting
+	require.NoError(t, db.Where("user_id = ?", pc.UserID).First(&row).Error)
+	assert.True(t, row.AllowGrowthShare, "allow_growth_share 应镜像 allow_class_share")
+}
+
+// TC-NEW-PPS-0002：迁移后已有行保留旧 allow_growth_share 的值，不被默认值重置。
+func TestParentSettings_MigratedLegacyValuePreserved(t *testing.T) {
+	svc, db := newParentSettingsFixture(t)
+	ctx := context.Background()
+
+	// 旧 false：迁移 SQL 把 allow_growth_share 抄进 allow_class_share。
+	pc := parentSettingsCtx(parentSettingsTestBase+8, parentSettingsTestBase+1)
+	require.NoError(t, db.Create(&domain.ParentSetting{
+		UserID: pc.UserID, KindergartenID: pc.KindergartenID,
+		NoticePush: true, LeavePush: true, PickupPush: true, GrowthPush: true,
+		AnnouncementPush: true, ShowPhoneToTeacher: true,
+		AllowGrowthShare: false, AllowClassShare: false, AllowExternalShare: false,
+	}).Error)
+	res, err := svc.GetSettings(ctx, pc)
+	require.NoError(t, err)
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_class_share"), "旧 false 迁移后仍是关闭")
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_external_share"))
+
+	// 旧 true：迁移后班内共享保持开启，园外分享仍默认关闭。
+	pc2 := parentSettingsCtx(parentSettingsTestBase+9, parentSettingsTestBase+1)
+	require.NoError(t, db.Create(&domain.ParentSetting{
+		UserID: pc2.UserID, KindergartenID: pc2.KindergartenID,
+		NoticePush: true, LeavePush: true, PickupPush: true, GrowthPush: true,
+		AnnouncementPush: true, ShowPhoneToTeacher: true,
+		AllowGrowthShare: true, AllowClassShare: true, AllowExternalShare: false,
+	}).Error)
+	res2, err := svc.GetSettings(ctx, pc2)
+	require.NoError(t, err)
+	assert.True(t, parentSettingBool(t, res2, "privacy", "allow_class_share"), "旧 true 迁移后仍是开启")
+	assert.False(t, parentSettingBool(t, res2, "privacy", "allow_external_share"), "迁移不得把园外分享改成开启")
+}
+
+// 旧键 allow_growth_share 只在写入边界兼容；读回只用新键。
+func TestParentSettings_LegacyKeyMapsToClassShare(t *testing.T) {
+	svc, db := newParentSettingsFixture(t)
+	ctx := context.Background()
+	pc := parentSettingsCtx(parentSettingsTestBase+10, parentSettingsTestBase+1)
+
+	require.NoError(t, svc.UpdateSettings(ctx, pc, map[string]any{
+		"privacy": map[string]any{"allow_growth_share": false},
+	}))
+	res, err := svc.GetSettings(ctx, pc)
+	require.NoError(t, err)
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_class_share"), "旧键写入应落到班内共享")
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_external_share"), "旧键不得开启园外分享")
+
+	// 新旧键同时出现时以新键为准（map 迭代顺序随机，结果必须确定）。
+	require.NoError(t, svc.UpdateSettings(ctx, pc, map[string]any{
+		"privacy": map[string]any{"allow_growth_share": true, "allow_class_share": false},
+	}))
+	res, err = svc.GetSettings(ctx, pc)
+	require.NoError(t, err)
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_class_share"))
+
+	var row domain.ParentSetting
+	require.NoError(t, db.Where("user_id = ?", pc.UserID).First(&row).Error)
+	assert.False(t, row.AllowGrowthShare, "旧列镜像班内共享")
 }
 
 func TestParentSettings_PartialUpdateKeepsOtherKeys(t *testing.T) {
@@ -139,7 +209,7 @@ func TestParentSettings_PartialUpdateKeepsOtherKeys(t *testing.T) {
 
 	require.NoError(t, svc.UpdateSettings(ctx, pc, map[string]any{
 		"notification": map[string]any{"task_push": true},
-		"privacy":      map[string]any{"allow_growth_share": true},
+		"privacy":      map[string]any{"allow_class_share": false},
 	}))
 
 	// 只改两项，其余必须保持上一次写入的值
@@ -153,7 +223,8 @@ func TestParentSettings_PartialUpdateKeepsOtherKeys(t *testing.T) {
 	assert.True(t, parentSettingBool(t, res, "notification", "task_push"), "部分更新不得把 task_push 重置为默认")
 	assert.False(t, parentSettingBool(t, res, "notification", "growth_push"))
 	assert.True(t, parentSettingBool(t, res, "notification", "notice_push"))
-	assert.True(t, parentSettingBool(t, res, "privacy", "allow_growth_share"), "部分更新不得重置 privacy")
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_class_share"), "部分更新不得重置 privacy")
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_external_share"))
 	assert.False(t, parentSettingBool(t, res, "privacy", "show_phone_to_teacher"))
 }
 
@@ -206,9 +277,11 @@ func TestParentSettings_RejectsInvalidTypesAndUnknownKeys(t *testing.T) {
 		body map[string]any
 	}{
 		{"字符串当布尔", map[string]any{"notification": map[string]any{"task_push": "yes"}}},
-		{"数字当布尔", map[string]any{"privacy": map[string]any{"allow_growth_share": 1}}},
+		{"数字当布尔", map[string]any{"privacy": map[string]any{"allow_class_share": 1}}},
+		{"旧键非布尔", map[string]any{"privacy": map[string]any{"allow_growth_share": "true"}}},
 		{"空值当布尔", map[string]any{"notification": map[string]any{"task_push": nil}}},
 		{"未知设置项", map[string]any{"notification": map[string]any{"task_puhs": true}}},
+		{"未知隐私项", map[string]any{"privacy": map[string]any{"allow_share": true}}},
 		{"未知分组", map[string]any{"other": map[string]any{"x": true}}},
 		{"分组不是对象", map[string]any{"notification": []any{true}}},
 	}

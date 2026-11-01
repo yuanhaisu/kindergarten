@@ -11,7 +11,8 @@
 
 ### GET `/parent/settings`
 
-> 获取设置项。8 个键始终全部返回布尔值，不会返回 `null`。
+> 获取设置项。9 个键始终全部返回布尔值，不会返回 `null`。
+> 返回的是**新键**：`allow_class_share` / `allow_external_share`；旧键 `allow_growth_share` 不再返回。
 
 ```json
 // Response（默认值）
@@ -26,7 +27,8 @@
   },
   "privacy": {
     "show_phone_to_teacher": true,
-    "allow_growth_share": false
+    "allow_class_share": true,
+    "allow_external_share": false
   }
 }
 ```
@@ -42,10 +44,14 @@
 | `notification` | `task_push` | 任务提醒 | `false` |
 | `notification` | `announcement_push` | 公告通知 | `true` |
 | `privacy` | `show_phone_to_teacher` | 向老师展示手机号 | `true` |
-| `privacy` | `allow_growth_share` | 允许展示成长记录 | `false` |
+| `privacy` | `allow_class_share` | 班内共享（孩子的照片可出现在本班其他家长可见的班级相册中） | `true` |
+| `privacy` | `allow_external_share` | 园外分享（Phase 1 未接入展示路径） | `false` |
 
-> `task_push` / `allow_growth_share` 默认关，以原型 `parent/25-settings` 为准；
-> 其余默认开。原型是这两项默认值的唯一依据，契约此前写全 `true`，与原型冲突。
+> `task_push` 默认关，以原型 `parent/25-settings` 为准；其余默认开。
+> `allow_external_share` 只在数据模型/契约中存在，Phase 1 设置页**不呈现**该开关，
+> 避免家长以为已经生效。已有 `parent_settings` 行由迁移 SQL 把旧
+> `allow_growth_share` 的值写入 `allow_class_share`；读取端只看新键，不再运行时兜底，
+> 以免把迁移后显式关闭的班内共享翻回开启。
 
 ---
 
@@ -67,7 +73,8 @@
   },
   "privacy": {
     "show_phone_to_teacher": false,
-    "allow_growth_share": true
+    "allow_class_share": true,
+    "allow_external_share": false
   }
 }
 ```
@@ -85,6 +92,16 @@
   "updated_at": "2026-03-19T10:00:00Z"
 }
 ```
+
+#### 旧键兼容
+
+- 写入仍接受旧键 `privacy.allow_growth_share`（布尔），语义映射到 `allow_class_share`；
+  不接受它开启 `allow_external_share`。兼容保留一个版本用于回滚。
+- 同一请求里新旧键同时出现时**以新键为准**（`allow_class_share` 覆盖
+  `allow_growth_share`），不依赖对象键的遍历顺序。
+- 服务端仍把班内共享值同步写入旧列 `allow_growth_share`，回滚到旧代码时看到同一口径；
+  读取响应永远只给新键。
+- 旧键被删除一个版本后，再传 `allow_growth_share` 会按「未知设置项」拒绝。
 
 #### 校验
 

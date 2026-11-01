@@ -152,47 +152,59 @@
 
 ### GET `/teacher/class/students/:id`
 
-> 学生详情（含家长信息、健康备注）
+> 学生详情（含家长联系方式、健康备注）
+>
+> 跨班/跨园读取一律 **404**。`student` 为学生对象原样返回（字段以 `students` 表为准，
+> 与既有响应一致）；本次变更只在同层新增 `parents`。
 
 ```json
 // Response
 {
-  "id": 1,
-  "name": "王小明",
-  "avatar": "https://cdn.example.com/avatar/s1.jpg",
-  "gender": 1,
-  "birthday": "2021-09-15",
-  "age": "4岁半",
-  "student_no": "2025001",
-  "health_note": "对花生过敏",
-  "enroll_date": "2025-09-01",
-  "class_name": "小一班",
-  "status": 1,
+  "student": {
+    "id": 1,
+    "kindergarten_id": 4,
+    "class_id": 10,
+    "name": "王小明",
+    "gender": 1,
+    "birthday": "2021-09-15T00:00:00Z",
+    "avatar": "https://cdn.example.com/avatar/s1.jpg",
+    "student_no": "2025001",
+    "id_card_number": "",
+    "address": "",
+    "health_note": "对花生过敏",
+    "enroll_date": "2025-09-01T00:00:00Z",
+    "status": 1,
+    "status_changed_at": null,
+    "created_at": "2025-08-20T10:00:00+08:00",
+    "updated_at": "2025-08-20T10:00:00+08:00"
+  },
   "parents": [
     {
-      "user_id": 10,
       "name": "王明",
-      "phone": "138****8888",
       "relation": "father",
       "relation_label": "爸爸",
-      "is_primary": true,
-      "avatar": "https://cdn.example.com/avatar/10.jpg"
+      "phone": "138****8888"
     },
     {
-      "user_id": 11,
       "name": "李丽",
-      "phone": "139****6666",
       "relation": "mother",
-      "relation_label": "妈妈",
-      "is_primary": false,
-      "avatar": "https://cdn.example.com/avatar/11.jpg"
+      "relation_label": "妈妈"
     }
-  ],
-  "pickup_authorizations": [
-    { "id": 1, "name": "爷爷（王建国）", "relation": "grandfather", "phone": "136****5555", "status": 1 }
   ]
 }
 ```
+
+#### `parents[]` 规则
+
+- 每项字段：`name`（用户昵称）、`relation`（9 码闭集）、`relation_label`
+  （服务端按枚举映射的中文，未知 code 原样返回）、`phone`（**脱敏**，如 `138****8888`）。
+- **手机号逐家长过滤**：只有该家长在**当前园所**的 `show_phone_to_teacher=true` 时才返回
+  `phone`；关闭时该键**缺省**，不是空串。没有 `parent_settings` 行按默认 `true` 处理。
+- 同一幼儿有多个家长时逐个判断：一人关闭不影响另一人的手机号是否返回。
+- 只返回该幼儿未删除的 `student_parents` 绑定；其中 `users` 行缺失（账号已注销/数据缺失）
+  的绑定直接跳过，不出现在数组里。
+- 不会混入同班其他幼儿的家长；无任何绑定返回空数组 `[]`（不是 `null`）。
+- 该开关只影响手机号，不影响 `student` 中的姓名、班级与健康备注。
 
 ---
 

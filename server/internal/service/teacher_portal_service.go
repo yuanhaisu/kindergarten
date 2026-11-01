@@ -3326,7 +3326,73 @@ func (s *TeacherPortalService) ClassStudent(ctx context.Context, tc *TeacherPort
 		}
 		return nil, err
 	}
-	return map[string]any{"student": st}, nil
+	parents, err := s.classStudentParents(ctx, tc.KindergartenID, st.ID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"student": st, "parents": parents}, nil
+}
+
+// classStudentParents 返回幼儿的家长联系方式（姓名/关系/手机号）。
+//
+// 手机号按「每个家长在当前园所」的 show_phone_to_teacher 逐条过滤：关闭时键缺省
+// 而不是空串，避免页面把空值渲染成「已隐藏」以外的歧义。无设置行按默认开启。
+// 没有 User 行的绑定（账号已注销或数据缺失）无法给出姓名，直接跳过而不是返回空壳。
+func (s *TeacherPortalService) classStudentParents(ctx context.Context, kindergartenID, studentID uint64) ([]map[string]any, error) {
+	var binds []domain.StudentParent
+	if err := s.db.WithContext(ctx).
+		Where("student_id = ?", studentID).
+		Order("is_primary DESC, id ASC").
+		Find(&binds).Error; err != nil {
+		return nil, err
+	}
+	out := make([]map[string]any, 0, len(binds))
+	if len(binds) == 0 {
+		return out, nil
+	}
+	userIDs := make([]uint64, 0, len(binds))
+	for _, b := range binds {
+		userIDs = append(userIDs, b.UserID)
+	}
+
+	var users []domain.User
+	if err := s.db.WithContext(ctx).Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	userByID := make(map[uint64]domain.User, len(users))
+	for _, u := range users {
+		userByID[u.ID] = u
+	}
+
+	// 只取当前园所的设置：同一家长在其他园所的开关不影响本园所的老师端。
+	var rows []domain.ParentSetting
+	if err := s.db.WithContext(ctx).
+		Where("user_id IN ? AND kindergarten_id = ?", userIDs, kindergartenID).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	showPhone := make(map[uint64]bool, len(rows))
+	for _, row := range rows {
+		showPhone[row.UserID] = row.ShowPhoneToTeacher
+	}
+
+	for _, b := range binds {
+		u, ok := userByID[b.UserID]
+		if !ok {
+			continue
+		}
+		item := map[string]any{
+			"name":           u.Nickname,
+			"relation":       string(b.Relation),
+			"relation_label": RelationLabel(b.Relation),
+		}
+		// 无设置行时默认允许（与家长端设置的默认值一致）。
+		if allowed, hasRow := showPhone[b.UserID]; !hasRow || allowed {
+			item["phone"] = maskPhone(u.Phone)
+		}
+		out = append(out, item)
+	}
+	return out, nil
 }
 
 // ListTeacherClasses 返回当前老师在该园所的所有关联班级。

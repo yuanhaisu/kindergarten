@@ -27,10 +27,10 @@
 
 ## 4. 后端：隐私设置与老师端联系方式
 
-- [ ] 4.1 `ParentPortalService` 设置读写支持 `allow_class_share`/`allow_external_share`，兼容旧 `allow_growth_share` 入参，返回新键；验证单测覆盖新键、旧键、部分更新与迁移值
-- [ ] 4.2 老师端班级学生详情返回 `parents[]`（姓名/关系/手机号），手机号按每个家长的 `show_phone_to_teacher` 过滤；验证单测覆盖全开/全关/多家长部分关闭
-- [ ] 4.3 更新 `backend/api/api-parent/11-settings.md` 与 `backend/api/api-teacher/09-class-and-tasks.md`；验证契约字段与 handler 响应一致
-- [ ] 4.4 在 `TEST_CATALOG.md` 登记 `TC-NEW-PPS-0001..0008`；验证对应用例存在且通过
+- [x] 4.1 `ParentPortalService` 设置读写支持 `allow_class_share`/`allow_external_share`，兼容旧 `allow_growth_share` 入参，返回新键；验证单测覆盖新键、旧键、部分更新与迁移值
+- [x] 4.2 老师端班级学生详情返回 `parents[]`（姓名/关系/手机号），手机号按每个家长的 `show_phone_to_teacher` 过滤；验证单测覆盖全开/全关/多家长部分关闭
+- [x] 4.3 更新 `backend/api/api-parent/11-settings.md` 与 `backend/api/api-teacher/09-class-and-tasks.md`；验证契约字段与 handler 响应一致
+- [x] 4.4 在 `TEST_CATALOG.md` 登记 `TC-NEW-PPS-0001..0008`；验证对应用例存在且通过
 
 ## 5. 后端：家长端班级相册
 

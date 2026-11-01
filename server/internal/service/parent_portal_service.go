@@ -3660,8 +3660,11 @@ func (s *ParentPortalService) UnbindStudent(ctx context.Context, pc *ParentPorta
 // ==================== Settings ====================
 
 // parentSettings 是家长端 8 个开关的强类型形态。
-// 默认值与契约 11-settings、原型 parent/25-settings 一致：
-// 任务提醒、允许展示成长记录默认关，其余默认开。
+// 默认值与契约 11-settings 一致：任务提醒默认关，班内共享与向老师展示手机号默认开，
+// 园外分享默认关（Phase 1 不呈现，仅落数据）。
+//
+// 旧 allow_growth_share 只在写入边界兼容（映射到班内共享），读取一律看
+// AllowClassShare：迁移 SQL 已把旧值搬过去，运行时再兜底会把迁移后的显式关闭翻回开启。
 type parentSettings struct {
 	NoticePush         bool
 	LeavePush          bool
@@ -3670,7 +3673,8 @@ type parentSettings struct {
 	TaskPush           bool
 	AnnouncementPush   bool
 	ShowPhoneToTeacher bool
-	AllowGrowthShare   bool
+	AllowClassShare    bool
+	AllowExternalShare bool
 }
 
 func defaultParentSettings() parentSettings {
@@ -3682,7 +3686,8 @@ func defaultParentSettings() parentSettings {
 		TaskPush:           false,
 		AnnouncementPush:   true,
 		ShowPhoneToTeacher: true,
-		AllowGrowthShare:   false,
+		AllowClassShare:    true,
+		AllowExternalShare: false,
 	}
 }
 
@@ -3695,7 +3700,8 @@ func parentSettingsFromRow(row *domain.ParentSetting) parentSettings {
 		TaskPush:           row.TaskPush,
 		AnnouncementPush:   row.AnnouncementPush,
 		ShowPhoneToTeacher: row.ShowPhoneToTeacher,
-		AllowGrowthShare:   row.AllowGrowthShare,
+		AllowClassShare:    row.AllowClassShare,
+		AllowExternalShare: row.AllowExternalShare,
 	}
 }
 
@@ -3707,7 +3713,10 @@ func (ps parentSettings) applyTo(row *domain.ParentSetting) {
 	row.TaskPush = ps.TaskPush
 	row.AnnouncementPush = ps.AnnouncementPush
 	row.ShowPhoneToTeacher = ps.ShowPhoneToTeacher
-	row.AllowGrowthShare = ps.AllowGrowthShare
+	row.AllowClassShare = ps.AllowClassShare
+	row.AllowExternalShare = ps.AllowExternalShare
+	// 旧列同步写入一个版本：回滚到旧代码时读到的班内共享值与新口径一致。
+	row.AllowGrowthShare = ps.AllowClassShare
 }
 
 func (ps parentSettings) asResponse() map[string]any {
@@ -3722,12 +3731,13 @@ func (ps parentSettings) asResponse() map[string]any {
 		},
 		"privacy": map[string]any{
 			"show_phone_to_teacher": ps.ShowPhoneToTeacher,
-			"allow_growth_share":    ps.AllowGrowthShare,
+			"allow_class_share":     ps.AllowClassShare,
+			"allow_external_share":  ps.AllowExternalShare,
 		},
 	}
 }
 
-// apply 只接受契约里的两个分组和 8 个布尔项；其余一律报错而不是静默丢弃，
+// apply 只接受契约里的两个分组和布尔项；其余一律报错而不是静默丢弃，
 // 否则前端拼错字段名会「保存成功但值没变」。分组回传 null 视为不更新。
 func (ps *parentSettings) apply(settings map[string]any) error {
 	for group, raw := range settings {
@@ -3745,6 +3755,12 @@ func (ps *parentSettings) apply(settings map[string]any) error {
 			b, ok := val.(bool)
 			if !ok {
 				return fmt.Errorf("%w: %s.%s 必须是布尔", ErrParentInvalidParams, group, key)
+			}
+			// 新旧键同时出现时新键优先：map 迭代顺序随机，不能靠先后覆盖。
+			if group == "privacy" && key == "allow_growth_share" {
+				if _, hasNew := groupMap["allow_class_share"]; hasNew {
+					continue
+				}
 			}
 			if !ps.set(group, key, b) {
 				return fmt.Errorf("%w: 未知设置项 %s.%s", ErrParentInvalidParams, group, key)
@@ -3770,8 +3786,13 @@ func (ps *parentSettings) set(group, key string, v bool) bool {
 		ps.AnnouncementPush = v
 	case "privacy.show_phone_to_teacher":
 		ps.ShowPhoneToTeacher = v
+	case "privacy.allow_class_share":
+		ps.AllowClassShare = v
+	case "privacy.allow_external_share":
+		ps.AllowExternalShare = v
+	// 旧键兼容一个版本：映射到班内共享，不放宽成园外分享。
 	case "privacy.allow_growth_share":
-		ps.AllowGrowthShare = v
+		ps.AllowClassShare = v
 	default:
 		return false
 	}
@@ -3826,7 +3847,8 @@ func (s *ParentPortalService) UpdateSettings(ctx context.Context, pc *ParentPort
 		Columns: []clause.Column{{Name: "user_id"}, {Name: "kindergarten_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"notice_push", "leave_push", "pickup_push", "growth_push", "task_push",
-			"announcement_push", "show_phone_to_teacher", "allow_growth_share", "updated_at",
+			"announcement_push", "show_phone_to_teacher",
+			"allow_growth_share", "allow_class_share", "allow_external_share", "updated_at",
 		}),
 	}).Create(&row).Error
 }
