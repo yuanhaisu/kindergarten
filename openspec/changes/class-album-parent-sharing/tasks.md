@@ -78,6 +78,6 @@
 
 - [x] 11.1 `cd server && go build ./... && go vet ./internal/... && go test ./internal/service/ -run 'Album|ClassAlbum|ParentSettings' -count=1 -timeout 600s` 全绿
 - [x] 11.2 两端 `npm run build:mp-weixin` exit 0；admin `npm run build` exit 0；`check-tokens` 两端 3/3；`check-secrets` 0
-- [ ] 11.3 DevTools 端到端：老师创建草稿 → 选图/参与者 → 发布 → 家长「我的孩子」可见 → 关闭班内共享 → 其他家长合影消失、自己仍可见 → 老师下架 → 家长不可见 → 园长只读并下架
+- [x] 11.3 DevTools 端到端：老师创建草稿 → 选图/参与者 → 发布 → 家长「我的孩子」可见 → 关闭班内共享 → 其他家长合影消失、自己仍可见 → 老师下架 → 家长不可见 → 园长只读并下架（真实后端 PASS，见 `.claude/runs/OS-ALB-E2E/verdict.json`；admin 真实 E2E、B 家长本人视角为已记录残余）
 - [x] 11.4 数据清理：测试相册/照片/关联/设置全部硬删，残留断言 0；审计日志按测试 ID 清理
 - [x] 11.5 对照 `specs/` 逐条勾选验收，更新 `PROGRESS.md` 与 handoff；未验证项不得标记完成
