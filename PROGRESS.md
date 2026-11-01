@@ -6,9 +6,9 @@
 > 检查表：`docs/design-previews/2026-10-25-full-redesign/_shared/VALIDATORS.md`
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
-- 当前波次：**OpenSpec `class-album-parent-sharing` Phase 1 代码完成（待真实后端 E2E / archive）**
-- 下一动作：重启 8080 后做真实评论分页/相册发布 E2E，再 `/opsx:archive`
-- 后端：8080 当前未运行（低内存守卫停止）；未擅自重启，等用户确认
+- 当前波次：**OpenSpec `class-album-parent-sharing` Phase 1 已完成并归档（真实 E2E PASS）**
+- 下一动作：无自动项；Phase 2 待产品启动
+- 后端：8080 运行中（PID 11076，当前源码；可用内存 ~2GB，低内存守卫可能再次停止）
 - 最后更新：2026-11-01
 
 ## X00 零入边决策（2026-10-28）
@@ -121,36 +121,40 @@
 
 ```json
 {
-  "slice_id": "OS-ALB-9",
-  "phase": "committed",
-  "commit_sha": "7f3e72d",
-  "next_action": "restart 8080, run real backend E2E, then openspec archive class-album-parent-sharing",
-  "updated_at": "2026-11-01T14:00:00+08:00"
+  "slice_id": "OS-ALB-E2E",
+  "phase": "archived",
+  "commit_sha": "d9bfe96",
+  "next_action": "none — Phase 1 archived; Phase 2 not started",
+  "updated_at": "2026-11-01T19:35:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
 
-### Handoff 2026-11-01T14:00+08:00 — 班级相册 Phase 1 代码完成
+### Handoff 2026-11-01T19:35+08:00 — 班级相册 Phase 1 完成并归档
 
-- OpenSpec change `class-album-parent-sharing` Phase 1 的 10 个切片全部通过，
-  **0 P1**；规格 `openspec validate --strict` 通过，变更尚未 archive。
+- OpenSpec change `class-album-parent-sharing` Phase 1 的 10 个切片 + 真实 E2E
+  全部通过，**0 P1**；规格 `--strict` 通过，已归档为
+  `openspec/changes/archive/2026-11-01-class-album-parent-sharing/`，
+  活基线新增 `parent-class-album`、`parent-privacy-settings`，更新
+  `class-album`、`growth-visibility`。
 - 已交付：隐私设置拆分（班内共享默认开/园外分享默认关）、老师相册
   草稿→发布→下架/编辑/软删/审计、照片 file_id 与幼儿混合关联、
   家长端「我的孩子」照片级过滤 + opt-out 整张隐藏、管理端只读/下架、
   毕业后 90 天/软删 180 天留存、三项服务端指标。
-- 验证：Go 真实 DB 测试（教师 24、家长 16、管理 7、设置 9、留存/指标 10）；
-  老师/家长 DevTools 与 admin 无头 Chrome 均以 API mock 验证；三端构建通过；
-  token 基线 teacher 3 / parent 3 / admin 8；secret 变更文件 0。
-- 未完成/残余：
-  1. **真实后端 E2E 未做**：8080 未运行（低守卫停止，当前可用内存仅 ~2.8GB），
-     未擅自重启；重启后按 `.claude/runs/OS-ALB-E2E/checklist.md` 跑真实链路，
-     通过后 archive。file_id 批量校验与家长保存埋点已补（`12ee67e`）。
-  2. Phase 2 未做：全班视图开关、视频、园外分享/下载、发布通知/周报、打包导出、人脸模糊。
-  3. 残余 P2：历史相册 0 行导致回填未实测；`students:[]` 与显式空覆盖不可区分；
-     admin 列表无封面列（契约不返回）；`album_complaint` 无入口；真机保存原图。
-     file_id 逐张查询、审计静默、留存批次提前结束、保存埋点已在 `12ee67e`/`f4785d7` 收口。
-- 后端：8080 当前未运行；需用户确认后再重启。
+- 真实 E2E（`OS-ALB-E2E`）：老师创建草稿（3 张 file_id、A/B 参与者）→ 发布 →
+  家长 visible_photo_count=1（B-only 过滤、A+B opt-out 整张隐藏）→
+  下架 404 → 恢复/重发 → 编辑 → 软删 404；审计 publish/unpublish/edit/delete；
+  测试数据与设置零残留。Go 回归 265s 全绿。
+- 残余：
+  1. admin 真实 E2E（无管理员凭据）、B 家长本人视角、毕业 90 天真实边界、
+     真机保存原图未做；由服务层测试或 mock 覆盖。
+  2. 3 个测试 PNG 的 OSS 对象未删（仅测试资产）。
+  3. Phase 2 未做：全班视图开关、视频、园外分享/下载、发布通知/周报、打包导出、人脸模糊。
+  4. 残余 P2：历史相册 0 行导致回填未实测；`students:[]` 与显式空覆盖不可区分；
+     admin 列表无封面列；`album_complaint` 无入口。
+- 后端：8080 运行中（PID 11076，当前源码）；可用内存约 2GB，如被低内存守卫停止，
+  由用户确认后再重启。
 
 ### Handoff 2026-10-31T14:10+08:00 — W9 技术债收口
 
