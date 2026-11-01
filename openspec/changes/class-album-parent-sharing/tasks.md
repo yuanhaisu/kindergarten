@@ -70,9 +70,9 @@
 
 ## 10. 留存、清理与指标
 
-- [ ] 10.1 新增 `server/cmd/albumretention/main.go`：清理软删满 180 天的相册/照片/关联，保留审计；验证 `go run ./cmd/albumretention` 在测试数据上执行并核对残留
-- [ ] 10.2 学生状态变更为 2/3 时写 `status_changed_at`（admin 学生编辑路径）；验证单测覆盖状态变更与时间戳
-- [ ] 10.3 埋点 `album_publish`/`album_parent_view`/`album_photo_save`/`album_opt_out`/`album_complaint`；验证日志字段含 kg/class/album/role 且不含手机号/openid
+- [x] 10.1 新增 `server/cmd/albumretention/main.go`：清理软删满 180 天的相册/照片/关联，保留审计；验证 `go run ./cmd/albumretention` 在测试数据上执行并核对残留
+- [x] 10.2 学生状态变更为 2/3 时写 `status_changed_at`（admin 学生编辑路径）；验证单测覆盖状态变更与时间戳
+- [x] 10.3 埋点 `album_publish`/`album_parent_view`/`album_photo_save`/`album_opt_out`/`album_complaint`；验证日志字段含 kg/class/album/role 且不含手机号/openid
 
 ## 11. 集成验证与收尾
 

@@ -79,6 +79,25 @@ func statusLabel(st int8) string {
 	}
 }
 
+// applyStudentStatusChange 把状态迁移落到实体上，并维护 status_changed_at。
+//
+// 只有状态真的变化时才动时间戳：重复提交同一状态不能把毕业 90 天窗口往后推。
+// 改为 2 毕业 / 3 退学 时写 now（家长端留存窗口从这里起算）；改为 0/1 时清空。
+// 历史数据（迁移前毕业/退学，时间戳为空）不在这里回填，读取端按「已过期」处理。
+func applyStudentStatusChange(st *domain.Student, next int8, now time.Time) {
+	if st.Status == next {
+		return
+	}
+	st.Status = next
+	switch next {
+	case 2, 3:
+		t := now
+		st.StatusChangedAt = &t
+	default:
+		st.StatusChangedAt = nil
+	}
+}
+
 func relationLabel(rel domain.ParentRelation) string {
 	switch rel {
 	case domain.RelationFather:
@@ -598,6 +617,8 @@ func (s *StudentService) UpdateStudent(
 	st.Name = strings.TrimSpace(req.Name)
 	st.HealthNote = req.HealthNote
 	st.Address = req.Address
+	// 编辑不带状态：status_changed_at 只由 UpdateStudentStatus 维护，
+	// 这里整行 Save 会把它原样写回，不会把毕业/退学时间刷新成编辑时间。
 	if err := s.students.Save(ctx, st); err != nil {
 		return nil, err
 	}
@@ -668,7 +689,9 @@ func (s *StudentService) UpdateStudentStatus(
 	if req.Status < 0 || req.Status > 3 {
 		return nil, fmt.Errorf("INVALID_STATUS")
 	}
-	st.Status = req.Status
+	// 状态时间与状态在同一个实体上改，随 Save 一次落库；
+	// 状态没变时保留原时间戳（见 applyStudentStatusChange）。
+	applyStudentStatusChange(st, req.Status, time.Now())
 	if err := s.students.Save(ctx, st); err != nil {
 		return nil, err
 	}

@@ -149,6 +149,15 @@ func (s *ParentPortalService) GetClassAlbum(
 	out := parentAlbumListItem(album)
 	out["visible_photo_count"] = len(visible)
 	out["photos"] = parentAlbumPhotoList(visible)
+	// 成功返回详情才计一次查看：404/无权限路径不产生事件。
+	// 字段只有 ID 与可见张数，不记录手机号/openid（design D10）。
+	LogAlbumParentView(ctx, AlbumParentViewEvent{
+		KindergartenID:    pc.KindergartenID,
+		ClassID:           album.ClassID,
+		AlbumID:           album.ID,
+		StudentID:         pc.CurrentStudent.ID,
+		VisiblePhotoCount: len(visible),
+	})
 	return out, nil
 }
 

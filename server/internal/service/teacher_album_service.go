@@ -391,6 +391,14 @@ func (s *TeacherPortalService) PublishAlbum(
 	album.PublishedAt = &at
 	album.PublishedBy = tc.UserID
 	s.writeAlbumAudit(ctx, tc, "publish", album, from, album.Status)
+	// 指标事件只在发布成功、审计写入后发：字段仅 ID 与照片数（design D10）。
+	LogAlbumPublish(ctx, AlbumPublishEvent{
+		KindergartenID: tc.KindergartenID,
+		ClassID:        tc.ClassID,
+		AlbumID:        album.ID,
+		UserID:         tc.UserID,
+		PhotoCount:     len(photos),
+	})
 	return map[string]any{
 		"id":           album.ID,
 		"status":       album.Status,

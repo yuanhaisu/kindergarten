@@ -838,6 +838,9 @@
 | TC-NEW-ALB-0017 | 显式 student_ids 覆盖自动值；关联回读；越权 file_id/媒体/跨班幼儿拒绝 | P0 | Unit | ✅ `TestTeacherAlbumExplicitStudentsOverrideAndRejectForeignInputs` |
 | TC-NEW-ALB-0018 | 园长只读查看本园相册并下架：列表园所隔离/筛选/分页、详情照片与参与者、下架后状态与审计、重复下架幂等、草稿 422、跨园/软删 404 | P0 | Unit | ✅ `TestAdminAlbumListIsolationAndFilters`、`TestAdminAlbumListPaginationAndOrder`、`TestAdminAlbumDetailPhotosAndParticipants`、`TestAdminAlbumUnpublishWritesAuditAndHidesFromParent`、`TestAdminAlbumUnpublishIdempotentAndRejectsDraft` |
 | TC-NEW-ALB-0019 | 园长不能编辑相册：真实路由表无创建/编辑/删除端点 | P0 | Unit | ✅ `TestAdminAlbumRoutesHaveNoEditEndpoint` |
+| TC-NEW-ALB-0020 | 毕业后保留 90 天只读：90 天整在窗口内、超过 1ns 拒绝；窗口起点由状态变更写入 | P0 | Unit | ✅ 读取端 `TestParentClassAlbumGraduationWindow`（OS-ALB-4）；写入端 `TestStudentStatusChangedAtOnStatusUpdate`（1→2 写 now、2→1 清空、2→2 不刷新） |
+| TC-NEW-ALB-0021 | 毕业 >90 天 / 退学转园 / 历史无 `status_changed_at`：列表空、详情 404；退学写入时间 | P0 | Unit | ✅ 读取端 `TestParentClassAlbumRetentionDenied`（OS-ALB-4）；写入端 `TestStudentStatusChangedAtOnLeaveAndHistoricalRows` |
+| TC-NEW-ALB-0022 | 软删相册满 180 天清理：只删到期的，最近软删/未删除保留，关联全删、审计保留、幂等 | P0 | Unit | ✅ `TestAlbumRetentionCleanupExpiresAfter180Days`；守卫 `TestAlbumRetentionDryRunDeletesNothing`、`TestAlbumRetentionCleanupInBatches` |
 
 ### OS-ALB-2 执行记录（2026-11-01）
 
@@ -856,6 +859,18 @@
 - 禁止编辑：albums 组只注册上述 3 条路由，无 `POST /admin/albums`、无 `PUT/PATCH/DELETE`；`TestAdminAlbumRoutesHaveNoEditEndpoint` 对真实路由表断言。
 - 权限登记：新增 admin 路由必须在 `server/internal/middleware/admin_perm.go` 登记权限码（`NewRouter` 启动自检）。经主会话批准补 3 条：列表/详情 → `growth:view`，下架 → `growth:manage`（相册内容归成长记录权限域，不新增 `album:*` 码；与 `leaves → attendance:view` 的近似处理一致）。
 - 测试：`cd server && go test ./internal/service/ -run 'TestAdminAlbum' -count=1 -timeout 600s` → ok（7 个 Test 函数）；`go test ./internal/app/ -run TestAdminPermissionRegistryCoversAllRoutes` → ok；夹具 9981xx 全部硬删，0 残留。
+
+### OS-ALB-9 执行记录（2026-11-01）
+
+- 清理服务：`AlbumRetentionService.CleanupExpiredAlbums(ctx, now, batchSize)` 只处理 `deleted_at IS NOT NULL AND deleted_at <= now-180d`；每批一个事务，顺序为「照片级关联 → 照片 → 相册级关联 → 相册」，每条删除都重复到期条件（批内相册若被并发恢复，其内容不被连带硬删）；`batch-size<=0` 回落 100；失败向上返回，不静默跳过。
+- 审计保留：`operation_logs` 不在清理范围内，相册行删除后仍可按 `target_type=album,target_id` 追查。
+- 命令：`go run ./cmd/albumretention [-dry-run] [-batch-size 100]`；读 `configs/app.ini`（`CONFIG_PATH` 可覆盖），输出只有截止时间/计数/耗时，不打印 DSN；连接错误里的 DSN 也会被替换为 `<dsn>`。
+- 命令实测（测试夹具 9969xx，执行后已硬删）：插入 1 本软删 181 天、2 张照片的相册 → `-dry-run` 输出「相册 1、照片 2、照片级关联 2、相册级参与者 1，未删除任何数据」且库中行仍在 → `-batch-size 1` 输出「已清理 1 本」→ 复查 `albums=0 / album_photos=0 / album_students=0 / album_photo_students=0 / audit_logs=1`。验收前确认开发库无其它到期软删相册（`albums` 表为空），未触碰真实内容。
+- 学生状态时间：`UpdateStudentStatus` 在状态真实变化时写 `status_changed_at=now`（2/3）或清空（0/1），同状态不刷新窗口起点，历史 2/3 空值不回填；`UpdateStudent` 请求不含状态，整行 Save 原样保留已有时间戳（编辑不延长留存窗口）。
+- 指标：Phase 1 只写结构化 slog（`album_publish` / `album_parent_view` / `album_opt_out`），字段仅 ID/计数/role；`album_photo_save`、`album_complaint` 属客户端行为，Phase 1 由前端 `uni.reportAnalytics` 记录，本切片不新增后端端点。指标不是行为验收，不单列 TC。
+- 指标调用点（经主会话批准补 3 个文件）：发布成功写 `album_publish`（`teacher_album_service.go`，照片数取实际照片）；家长详情成功返回写 `album_parent_view`（`parent_album_service.go`，张数与响应 `visible_photo_count` 一致，404 不记）；设置真实「开 → 关」写 `album_opt_out`（`parent_portal_service.go`，落库成功后、重复关闭与重新开启都不记）。
+- 测试：`cd server && go test ./internal/service/ -run 'TestAlbumRetention|TestAlbumMetric|TestStudentStatusChangedAt|Test.*EmitsMetricEvent' -count=1 -timeout 600s` → ok（10 个 Test 函数，含 3 个调用点用例）；`go build ./...`、`go vet ./internal/... ./cmd/albumretention/`、`golangci-lint run` 通过；夹具 9962xx/9963xx 全部硬删，0 残留。
+- 未覆盖：`PUT /admin/students/:id` 契约不含 `status`，编辑路径不触发状态迁移（只保证不覆盖已有 `status_changed_at`）。
 
 ## 家长隐私设置（PPS）— 班内共享 / 园外分享 / 老师端联系方式
 

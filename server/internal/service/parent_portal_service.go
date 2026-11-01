@@ -3843,14 +3843,26 @@ func (s *ParentPortalService) UpdateSettings(ctx context.Context, pc *ParentPort
 	row := domain.ParentSetting{UserID: pc.UserID, KindergartenID: pc.KindergartenID}
 	next.applyTo(&row)
 	// 唯一索引 (user_id, kindergarten_id) 上的 upsert：并发首写与重复保存都不会多出一行。
-	return s.db.WithContext(ctx).Clauses(clause.OnConflict{
+	if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "user_id"}, {Name: "kindergarten_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"notice_push", "leave_push", "pickup_push", "growth_push", "task_push",
 			"announcement_push", "show_phone_to_teacher",
 			"allow_growth_share", "allow_class_share", "allow_external_share", "updated_at",
 		}),
-	}).Create(&row).Error
+	}).Create(&row).Error; err != nil {
+		return err
+	}
+	// 关闭班内共享是隐私相关动作（design D10）：只在落库成功且真实「开 → 关」时记，
+	// 重复保存成 false 不算新事件；字段只有 kg/user，不记录手机号。
+	if cur.AllowClassShare && !next.AllowClassShare {
+		LogAlbumOptOut(ctx, AlbumOptOutEvent{
+			KindergartenID:  pc.KindergartenID,
+			UserID:          pc.UserID,
+			AllowClassShare: false,
+		})
+	}
+	return nil
 }
 
 // ==================== Home Overview ====================
