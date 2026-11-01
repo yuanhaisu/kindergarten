@@ -17,6 +17,7 @@ import {
   Medal,
   Notebook,
   OfficeBuilding,
+  Picture,
   Setting,
   Stamp,
   Star,
@@ -72,6 +73,8 @@ export const ADMIN_MENU_GROUPS: MenuGroup[] = [
     label: '园所与人员',
     children: [
       { title: '班级管理', path: '/classes', icon: OfficeBuilding, permission: 'student:view' },
+      // 相册读写复用成长记录权限码（契约 22-albums.md），不新增 album:*
+      { title: '班级相册', path: '/albums', icon: Picture, permission: 'growth:view' },
       { title: '学生管理', path: '/students', icon: UserFilled, permission: 'student:view' },
       { title: '老师管理', path: '/teachers', icon: User, permission: 'teacher:view' },
       { title: '家长管理', path: '/parents', icon: Avatar, permission: 'parent:view' },

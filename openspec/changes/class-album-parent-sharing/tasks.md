@@ -64,9 +64,9 @@
 
 ## 9. 管理端页面
 
-- [ ] 9.1 新增 `admin/pages/albums/index.vue` 与详情抽屉（只读 + 下架），在菜单/路由注册；验证 `cd admin && npm run build` exit 0
-- [ ] 9.2 下架后家长端立即不可见；验证 admin 真实点击 + 家长端 DevTools 刷新
-- [ ] 9.3 无新 token；如使用状态色，只用语义 token；验证 `check-tokens` 无新增
+- [x] 9.1 新增 `admin/pages/albums/index.vue` 与详情抽屉（只读 + 下架），在菜单/路由注册；验证 `cd admin && npm run build` exit 0
+- [x] 9.2 下架后家长端立即不可见；验证 admin 真实点击 + 家长端 DevTools 刷新
+- [x] 9.3 无新 token；如使用状态色，只用语义 token；验证 `check-tokens` 无新增
 
 ## 10. 留存、清理与指标
 
