@@ -3659,7 +3659,7 @@ func (s *ParentPortalService) UnbindStudent(ctx context.Context, pc *ParentPorta
 
 // ==================== Settings ====================
 
-// parentSettings 是家长端 8 个开关的强类型形态。
+// parentSettings 是家长端 9 个布尔开关的强类型形态（6 通知 + 3 隐私）。
 // 默认值与契约 11-settings 一致：任务提醒默认关，班内共享与向老师展示手机号默认开，
 // 园外分享默认关（Phase 1 不呈现，仅落数据）。
 //

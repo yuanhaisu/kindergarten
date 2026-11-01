@@ -14,6 +14,7 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/pagination"
 )
 
@@ -38,7 +39,7 @@ func NewAdminService(
 }
 
 func (s *AdminService) logOp(ctx context.Context, kindergartenID, userID uint64, module, action, targetType string, targetID uint64, detail, ip, ua string) {
-	_ = s.oplog.Create(ctx, &domain.OperationLog{
+	if err := s.oplog.Create(ctx, &domain.OperationLog{
 		KindergartenID: kindergartenID,
 		UserID:         userID,
 		Module:         module,
@@ -48,7 +49,11 @@ func (s *AdminService) logOp(ctx context.Context, kindergartenID, userID uint64,
 		Detail:         detail,
 		IP:             ip,
 		UserAgent:      truncateUAAdmin(ua),
-	})
+	}); err != nil {
+		// 审计失败不回滚业务（与既有 admin 写操作一致），但必须留痕，不能静默。
+		log.L(ctx).Error("admin operation log write failed",
+			"module", module, "action", action, "target", targetType, "target_id", targetID, "err", err)
+	}
 }
 
 func truncateUAAdmin(ua string) string {
@@ -103,21 +108,21 @@ func adminTagLabel(tag string) string {
 }
 
 type adminRoleBrief struct {
-	ID                uint64 `json:"id"`
-	Name              string `json:"name"`
+	ID               uint64 `json:"id"`
+	Name             string `json:"name"`
 	PermissionsCount int64  `json:"permissions_count"`
 }
 
 type adminListItem struct {
-	ID           uint64          `json:"id"`
-	Nickname     string          `json:"nickname"`
-	Avatar       string          `json:"avatar"`
-	Phone        string          `json:"phone"`
-	AdminRole    adminRoleBrief  `json:"admin_role"`
-	Status       int8            `json:"status"`
-	StatusLabel  string          `json:"status_label"`
-	LastLoginAt  *string         `json:"last_login_at,omitempty"`
-	CreatedAt    string          `json:"created_at"`
+	ID          uint64         `json:"id"`
+	Nickname    string         `json:"nickname"`
+	Avatar      string         `json:"avatar"`
+	Phone       string         `json:"phone"`
+	AdminRole   adminRoleBrief `json:"admin_role"`
+	Status      int8           `json:"status"`
+	StatusLabel string         `json:"status_label"`
+	LastLoginAt *string        `json:"last_login_at,omitempty"`
+	CreatedAt   string         `json:"created_at"`
 }
 
 func (s *AdminService) ListAdmins(

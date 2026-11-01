@@ -86,26 +86,26 @@ func (s *AlbumRetentionService) CleanupExpiredAlbums(ctx context.Context, now ti
 	}
 	cutoff := now.Add(-AlbumSoftDeleteRetention)
 	deleted := 0
+	var lastID uint64
 	for {
 		var ids []uint64
 		if err := s.db.WithContext(ctx).Unscoped().Model(&domain.Album{}).
 			Where(expiredAlbumsWhere, cutoff).
+			Where("id > ?", lastID).
 			Order("id ASC").Limit(batchSize).Pluck("id", &ids).Error; err != nil {
 			return deleted, err
 		}
 		if len(ids) == 0 {
 			return deleted, nil
 		}
+		// 用游标推进而不是按 RowsAffected 提前结束：某一批在选批后被并发
+		// 恢复/清理时，后续批次仍要处理；游标保证不会重复选中同一批。
+		lastID = ids[len(ids)-1]
 		n, err := s.deleteAlbumBatch(ctx, ids, cutoff)
 		if err != nil {
 			return deleted, err
 		}
 		deleted += n
-		if n == 0 {
-			// 选批后这批行已被并发清理或恢复：不再重试，避免空转。
-			// 仍然到期的行留给下一次调度。
-			return deleted, nil
-		}
 	}
 }
 

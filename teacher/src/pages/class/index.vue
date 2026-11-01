@@ -282,7 +282,7 @@ async function loadStudentParents(studentId) {
   }
   parentsLoading.value = true
   try {
-    const res = await fetchTeacherClassStudent(studentId)
+    const res = await fetchTeacherClassStudent(studentId, { silent: true })
     if (seq !== parentsSeq) return
     const list = Array.isArray(res.data?.parents) ? res.data.parents : []
     sheetParents.value = list.map(normalizeParent).filter(Boolean)

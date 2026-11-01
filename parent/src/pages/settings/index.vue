@@ -2,7 +2,7 @@
 /**
  * 设置（家长端子页）
  *
- * 8 个开关（6 通知 + 2 隐私）真实读写 GET/PUT /parent/settings；切换采用乐观更新，
+ * 8 个可见开关（6 通知 + 2 隐私；allow_external_share 存储但不渲染）真实读写 GET/PUT /parent/settings；切换采用乐观更新，
  * 行内「同步中…」期间禁点，PUT 失败回滚并 toast。退出登录只在本页：先调
  * POST /auth/logout，再清本地并 reLaunch 登录页，失败也清本地并提示。
  *

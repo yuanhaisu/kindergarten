@@ -265,6 +265,9 @@ func TestParentSettings_IdempotentRepeatWrite(t *testing.T) {
 	res, err := svc.GetSettings(ctx, pc)
 	require.NoError(t, err)
 	assert.False(t, parentSettingBool(t, res, "notification", "pickup_push"))
+	// upsert 冲突路径也必须写全列：重复写通知键不能把新隐私列重置成零值。
+	assert.True(t, parentSettingBool(t, res, "privacy", "allow_class_share"))
+	assert.False(t, parentSettingBool(t, res, "privacy", "allow_external_share"))
 }
 
 func TestParentSettings_RejectsInvalidTypesAndUnknownKeys(t *testing.T) {

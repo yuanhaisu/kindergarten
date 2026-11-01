@@ -384,8 +384,8 @@ func (s *TeacherPortalService) PublishAlbum(
 		return nil, err
 	}
 	if !ok {
-		// 状态校验后被并发改走（或已发布）：按参数错误让端上刷新后重试。
-		return nil, ErrTeacherInvalidParams
+		// 状态校验后被并发改走：若相册已被软删，按 404；否则是状态冲突 422。
+		return nil, s.albumStatusConflict(ctx, tc, album.ID)
 	}
 	album.Status = domain.AlbumStatusPublished
 	album.PublishedAt = &at
@@ -427,13 +427,30 @@ func (s *TeacherPortalService) UnpublishAlbum(
 		return nil, err
 	}
 	if !ok {
-		return nil, ErrTeacherInvalidParams
+		return nil, s.albumStatusConflict(ctx, tc, album.ID)
 	}
 	album.Status = domain.AlbumStatusUnpublished
 	album.PublishedAt = nil
 	album.PublishedBy = 0
 	s.writeAlbumAudit(ctx, tc, "unpublish", album, from, album.Status)
 	return map[string]any{"id": album.ID, "status": album.Status}, nil
+}
+
+// albumStatusConflict 处理「状态迁移 0 行」：并发软删应返回 404，而不是把
+// 已不存在的相册误报成状态冲突 422。重新读一次当前状态，不在读路径写库。
+func (s *TeacherPortalService) albumStatusConflict(
+	ctx context.Context,
+	tc *TeacherPortalContext,
+	id uint64,
+) error {
+	album, err := s.albumRepo().FindByIDAnyStatus(ctx, tc.KindergartenID, tc.ClassID, id)
+	if err != nil {
+		return err
+	}
+	if album == nil {
+		return ErrTeacherNotFound
+	}
+	return ErrTeacherInvalidParams
 }
 
 // DeleteAlbum 软删除相册。软删后家长端不可见；相册行保留 180 天供审计。

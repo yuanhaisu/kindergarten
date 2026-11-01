@@ -10,6 +10,6 @@ export function fetchTeacherClassStudents(params = {}, options = {}) {
   return requestWithAuth({ url: "/teacher/class/students", method: "GET", data: params, ...options })
 }
 
-export function fetchTeacherClassStudent(id) {
-  return requestWithAuth({ url: `/teacher/class/students/${id}`, method: "GET" })
+export function fetchTeacherClassStudent(id, options = {}) {
+  return requestWithAuth({ url: `/teacher/class/students/${id}`, method: "GET", ...options })
 }
