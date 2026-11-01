@@ -17,6 +17,9 @@ type Student struct {
 	HealthNote     string    `json:"health_note" gorm:"size:500"`
 	EnrollDate     time.Time `json:"enroll_date"`
 	Status         int8      `json:"status" gorm:"default:1;comment:0待入学 1在读 2毕业 3退学"`
+	// StatusChangedAt 状态变更时间，用于计算毕业后 90 天只读窗口。
+	// 历史数据无值（迁移前毕业/退学的学生），读取端按「已过期」处理，不用 updated_at 猜。
+	StatusChangedAt *time.Time `json:"status_changed_at"`
 
 	Kindergarten *Kindergarten `json:"kindergarten,omitempty" gorm:"foreignKey:KindergartenID"`
 	Class        *Class        `json:"class,omitempty" gorm:"foreignKey:ClassID"`

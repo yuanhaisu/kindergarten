@@ -1,12 +1,15 @@
 package domain
 
-// ParentSetting 家长端个人设置：6 个通知开关 + 2 个隐私开关。
+// ParentSetting 家长端个人设置：6 个通知开关 + 隐私开关。
 //
 // 作用域是 (user_id, kindergarten_id)：同一家长在不同园所可以有不同口径，
 // 家长之间也互不可见。与 KindergartenAppSetting（一园一条的园所级配置）不是一回事。
 //
 // 列不写 DB default：GORM 会把「带 default 标签的零值字段」从 INSERT 中省略，
 // 显式保存的 false 因此会被库默认值翻回 true。默认值只在 service 层定义。
+// 迁移 SQL 里 allow_class_share/allow_external_share 仍带 DDL 默认值（ADD COLUMN
+// 需要给存量行落值），但模型标签刻意不带 —— 否则家长撤回「班内共享」时，
+// 首次 Create 会写入库默认的 true。AutoMigrate 后续把这两个默认值改回无默认即为预期。
 // 本表不提供删除接口；测试清理用 Unscoped 硬删，避免软删行占住唯一索引。
 type ParentSetting struct {
 	BaseModel
@@ -19,7 +22,11 @@ type ParentSetting struct {
 	TaskPush           bool   `gorm:"not null" json:"task_push"`
 	AnnouncementPush   bool   `gorm:"not null" json:"announcement_push"`
 	ShowPhoneToTeacher bool   `gorm:"not null" json:"show_phone_to_teacher"`
-	AllowGrowthShare   bool   `gorm:"not null" json:"allow_growth_share"`
+	// AllowGrowthShare 旧版单一共享开关，列保留一个版本用于迁移与回滚；
+	// API 不再返回这个键，读取方一律改看 AllowClassShare。
+	AllowGrowthShare   bool `gorm:"not null" json:"allow_growth_share"`
+	AllowClassShare    bool `gorm:"not null" json:"allow_class_share"`
+	AllowExternalShare bool `gorm:"not null" json:"allow_external_share"`
 }
 
 func (ParentSetting) TableName() string { return "parent_settings" }
