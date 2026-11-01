@@ -6,10 +6,10 @@
 > 检查表：`docs/design-previews/2026-10-25-full-redesign/_shared/VALIDATORS.md`
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
-- 当前波次：**W9 完成 —— 技术债收口（评论分页 / 401 续期 / 422 / 报告周期）**
-- 下一动作：无自动项（剩余产品/人工/真机项见文末 handoff）
-- 后端：8080 当前源码运行；若被低内存守卫停止，由用户确认后再重启
-- 最后更新：2026-10-31
+- 当前波次：**OpenSpec `class-album-parent-sharing` Phase 1 代码完成（待真实后端 E2E / archive）**
+- 下一动作：重启 8080 后做真实评论分页/相册发布 E2E，再 `/opsx:archive`
+- 后端：8080 当前未运行（低内存守卫停止）；未擅自重启，等用户确认
+- 最后更新：2026-11-01
 
 ## X00 零入边决策（2026-10-28）
 
@@ -107,19 +107,49 @@
 | W9-B | W9 | 后端债：报告正文周期过滤 + 指定接走人 422 | passed | e9dc87b | 2658de4 | impl-reviews/W9-B.md | 0 P1 / 3 P2；反事实验证取错周期 |
 | W9-C | W9 | 成长评论分页（后端） | passed | 2658de4 | 3f16d74,300dd15 | impl-reviews/W9-C.md | 0 P1 / 0 P2；MaxInt 溢出修复 |
 | W9-D | W9 | 成长评论分页（前端 + D2 小修） | passed | 300dd15 | 8a0d2cf,f307227 | impl-reviews/W9-D.md | 0 P1 / 3 P2；mock 分页 20→21 |
+| OS-ALB-1 | ALB-P1 | 数据模型与迁移 | passed | 703ca04 | 2759bc8 | impl-reviews/OS-ALB-1.md | 0 P1 / 4 P2；历史 0 行，回填未在真实数据验证 |
+| OS-ALB-2 | ALB-P1 | 老师相册生命周期 + 幼儿关联 | passed | 2759bc8 | 0a6e9bf | impl-reviews/OS-ALB-2.md | 0 P1 / 5 P2；24 用例、并发软删守卫 |
+| OS-ALB-3 | ALB-P1 | 隐私设置拆分 + 老师端联系方式 | passed | 0a6e9bf | d8dc567 | impl-reviews/OS-ALB-3.md | 0 P1 / 5 P2；默认/迁移/逐人过滤 |
+| OS-ALB-4 | ALB-P1 | 家长端班级相册后端 | passed | d8dc567 | 66e45c3 | impl-reviews/OS-ALB-4.md | 0 P1 / 3 P2；{A,E} any-off 反事实 |
+| OS-ALB-5 | ALB-P1 | 管理端相册后端 | passed | 66e45c3 | ebc2100 | impl-reviews/OS-ALB-5.md | 0 P1 / 3 P2；权限登记 + 审计 |
+| OS-ALB-6a | ALB-P1 | 老师端状态/发布/下架 UI | passed | ebc2100 | 19c2115 | impl-reviews/OS-ALB-6a.md | 0 P1 / 2 P2；DevTools mock |
+| OS-ALB-6b | ALB-P1 | 老师端编辑/参与者 UI | passed | 19c2115 | 35326bb | impl-reviews/OS-ALB-6b.md | 0 P1 / 2 P2；离班参与者阻断 |
+| OS-ALB-7 | ALB-P1 | 家长端相册页面 + 设置 | passed | 19c2115 | 753be99 | impl-reviews/OS-ALB-7.md | 0 P1 / 3 P2；DevTools mock |
+| OS-ALB-8 | ALB-P1 | 管理端相册页面 | passed | ebc2100 | 0bf01b2 | impl-reviews/OS-ALB-8.md | 0 P1 / 3 P2；无头 Chrome mock |
+| OS-ALB-9 | ALB-P1 | 留存清理 + 状态时间 + 指标 | passed | ebc2100 | 7f3e72d | impl-reviews/OS-ALB-9.md | 0 P1 / 4 P2；真实调用点验收 |
 ## 当前检查点
 
 ```json
 {
-  "slice_id": "W9-D2",
+  "slice_id": "OS-ALB-9",
   "phase": "committed",
-  "commit_sha": "f307227",
-  "next_action": "none — W9 tech debt closed; product/human/real-device items remain",
-  "updated_at": "2026-10-31T14:10:00+08:00"
+  "commit_sha": "7f3e72d",
+  "next_action": "restart 8080, run real backend E2E, then openspec archive class-album-parent-sharing",
+  "updated_at": "2026-11-01T14:00:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
+
+### Handoff 2026-11-01T14:00+08:00 — 班级相册 Phase 1 代码完成
+
+- OpenSpec change `class-album-parent-sharing` Phase 1 的 10 个切片全部通过，
+  **0 P1**；规格 `openspec validate --strict` 通过，变更尚未 archive。
+- 已交付：隐私设置拆分（班内共享默认开/园外分享默认关）、老师相册
+  草稿→发布→下架/编辑/软删/审计、照片 file_id 与幼儿混合关联、
+  家长端「我的孩子」照片级过滤 + opt-out 整张隐藏、管理端只读/下架、
+  毕业后 90 天/软删 180 天留存、三项服务端指标。
+- 验证：Go 真实 DB 测试（教师 24、家长 16、管理 7、设置 9、留存/指标 10）；
+  老师/家长 DevTools 与 admin 无头 Chrome 均以 API mock 验证；三端构建通过；
+  token 基线 teacher 3 / parent 3 / admin 8；secret 变更文件 0。
+- 未完成/残余：
+  1. **真实后端 E2E 未做**：8080 未运行（低守卫停止），未擅自重启；重启后需
+     跑老师创建→发布→家长可见→opt-out→下架的真实链路，再 archive。
+  2. Phase 2 未做：全班视图开关、视频、园外分享/下载、发布通知/周报、打包导出、人脸模糊。
+  3. P2：历史相册 0 行导致回填未实测；file_id 逐张校验有最多 50 次查询；
+     审计 best-effort；`students:[]` 与显式空覆盖不可区分；admin 列表无封面列；
+     留存批次 RowsAffected=0 时提前结束；客户端保存/投诉事件仅前端 analytics。
+- 后端：8080 当前未运行；需用户确认后再重启。
 
 ### Handoff 2026-10-31T14:10+08:00 — W9 技术债收口
 
