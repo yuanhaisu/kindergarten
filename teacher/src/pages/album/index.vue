@@ -3,9 +3,12 @@ import { computed, reactive, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import {
   createTeacherAlbum,
+  deleteTeacherAlbum,
   fetchTeacherAlbum,
   fetchTeacherAlbumStats,
   fetchTeacherAlbums,
+  publishTeacherAlbum,
+  unpublishTeacherAlbum,
   uploadAlbumPhoto
 } from "@/api/teacher-albums"
 import { ALBUM_CATEGORIES, ALBUM_FILTERS, albumCategoryLabel, albumTagClass } from "@/utils/albums"
@@ -26,10 +29,20 @@ const STAT_ITEMS = [
   { key: "album_count", label: "相册数", icon: "", tone: "info" }
 ]
 
+// 状态筛选与分类筛选正交：两者可叠加，状态默认「全部」不传 status。
+const STATUS_FILTERS = [
+  { value: "", label: "全部" },
+  { value: "draft", label: "草稿" },
+  { value: "published", label: "已发布" },
+  { value: "unpublished", label: "已下架" }
+]
+const STATUS_LABELS = { draft: "草稿", published: "已发布", unpublished: "已下架" }
+
 const stats = ref({ total_photos: 0, monthly_new: 0, album_count: 0 })
 const albums = ref([])
 const total = ref(0)
 const activeCategory = ref("")
+const activeStatus = ref("")
 const loading = ref(true)
 const loadingMore = ref(false)
 // 首次成功返回前不把空列表当「还没有照片」——错误态必须先于空态判定
@@ -43,9 +56,15 @@ const viewState = computed(() => {
   if (loading.value && !hasLoaded.value) return "loading"
   if (loadError.value && !hasLoaded.value) return "error"
   if (hasLoaded.value && total.value === 0) {
-    return activeCategory.value ? "filterEmpty" : "empty"
+    return activeCategory.value || activeStatus.value ? "filterEmpty" : "empty"
   }
   return "normal"
+})
+
+const filterEmptyTitle = computed(() => {
+  if (activeCategory.value && activeStatus.value) return "当前筛选下还没有相册"
+  if (activeStatus.value) return "这个状态下还没有相册"
+  return "这个分类下还没有相册"
 })
 
 const monthGroups = computed(() => {
@@ -67,6 +86,10 @@ function normalizeCount(value) {
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 
+function statusLabel(status) {
+  return STATUS_LABELS[status] || ""
+}
+
 function applyStats(data) {
   stats.value = {
     total_photos: normalizeCount(data?.total_photos),
@@ -78,6 +101,7 @@ function applyStats(data) {
 function listParams(page) {
   const params = { page, page_size: PAGE_SIZE }
   if (activeCategory.value) params.category = activeCategory.value
+  if (activeStatus.value) params.status = activeStatus.value
   return params
 }
 
@@ -148,6 +172,21 @@ function selectCategory(value) {
   loadAlbums({ skeleton: true })
 }
 
+function selectStatus(value) {
+  if (value === activeStatus.value || loading.value) return
+  activeStatus.value = value
+  loadAlbums({ skeleton: true })
+}
+
+// 「筛选无结果」的出口要同时清掉分类与状态，否则点了「查看全部」仍停在空列表。
+function resetFilters() {
+  if (loading.value) return
+  if (!activeCategory.value && !activeStatus.value) return
+  activeCategory.value = ""
+  activeStatus.value = ""
+  loadAlbums({ skeleton: true })
+}
+
 function isMonthOpen(group, index) {
   if (collapsedMonths.value.has(group.key)) return false
   if (expandedMonths.value.has(group.key)) return true
@@ -205,12 +244,25 @@ const viewerPhotos = ref([])
 const viewerIndex = ref(0)
 const viewerLoading = ref(false)
 const viewerError = ref("")
+const viewerDetail = ref(null)
+const actionBusy = ref(false)
 let viewerSeq = 0
 let touchStartX = 0
 let touchStartY = 0
 
 const viewerTitle = computed(() => viewerAlbum.value?.title || "相册")
 const viewerDateText = computed(() => formatDateLabel(viewerAlbum.value?.album_date))
+// 详情返回前先用列表行里的状态兜底，避免打开弹层时徽标空一拍。
+const viewerStatus = computed(
+  () => viewerDetail.value?.status || viewerAlbum.value?.status || ""
+)
+const viewerStatusLabel = computed(() => statusLabel(viewerStatus.value))
+const viewerUnauthorizedCount = computed(() =>
+  normalizeCount(viewerDetail.value?.unauthorized_photo_count)
+)
+const viewerUnauthText = computed(() =>
+  viewerDetail.value ? `未授权照片 ${viewerUnauthorizedCount.value} 张` : ""
+)
 const viewerTotal = computed(
   () => viewerPhotos.value.length || normalizeCount(viewerAlbum.value?.photo_count)
 )
@@ -235,6 +287,7 @@ async function openViewer(album, tileIndex = 0) {
   closeUpload()
   viewerAlbum.value = album
   viewerOpen.value = true
+  viewerDetail.value = null
   viewerPhotos.value = []
   viewerIndex.value = 0
   viewerLoading.value = true
@@ -243,6 +296,7 @@ async function openViewer(album, tileIndex = 0) {
   try {
     const res = await fetchTeacherAlbum(album.id, { silent: true })
     if (seq !== viewerSeq) return
+    viewerDetail.value = res.data || null
     const photos = Array.isArray(res.data?.photos)
       ? res.data.photos.filter(photo => photo?.file_url)
       : []
@@ -251,6 +305,7 @@ async function openViewer(album, tileIndex = 0) {
     viewerIndex.value = Math.min(Math.max(0, tileIndex), maxIndex)
   } catch (err) {
     if (seq !== viewerSeq) return
+    viewerDetail.value = null
     viewerPhotos.value = fallbackPhotos(album)
     viewerIndex.value = 0
     viewerError.value = "照片加载失败"
@@ -271,6 +326,7 @@ function closeViewer() {
   viewerLoading.value = false
   viewerError.value = ""
   viewerPhotos.value = []
+  viewerDetail.value = null
   viewerAlbum.value = null
   viewerIndex.value = 0
 }
@@ -280,6 +336,102 @@ function stepViewer(delta) {
   const next = viewerIndex.value + delta
   if (next < 0 || next > viewerTotal.value - 1) return
   viewerIndex.value = next
+}
+
+// ---------------- 发布 / 下架 / 删除 ----------------
+function confirmDialog({ title, content, confirmText = "确定" }) {
+  return new Promise(resolve => {
+    uni.showModal({
+      title,
+      content,
+      confirmText,
+      cancelText: "取消",
+      success: res => resolve(!!res.confirm),
+      fail: () => resolve(false)
+    })
+  })
+}
+
+function applyAlbumStatus(id, status) {
+  const index = albums.value.findIndex(item => item.id === id)
+  if (index >= 0) albums.value[index] = { ...albums.value[index], status }
+  if (viewerAlbum.value?.id === id) viewerAlbum.value = { ...viewerAlbum.value, status }
+  if (viewerDetail.value) viewerDetail.value = { ...viewerDetail.value, status }
+}
+
+async function requestAlbumAction(id, action) {
+  if (action === "publish") return publishTeacherAlbum(id, { silent: true })
+  if (action === "unpublish") return unpublishTeacherAlbum(id, { silent: true })
+  return deleteTeacherAlbum(id, { silent: true })
+}
+
+async function runViewerAction(action) {
+  if (actionBusy.value) return
+  const album = viewerAlbum.value
+  if (!album?.id) return
+  const id = album.id
+
+  if (action === "publish") {
+    const count = viewerUnauthorizedCount.value
+    if (count > 0) {
+      const ok = await confirmDialog({
+        title: "发布确认",
+        content: `${count} 张照片含未授权孩子，发布后其他家长不可见`,
+        confirmText: "仍要发布"
+      })
+      if (!ok) return
+    }
+  } else if (action === "unpublish") {
+    const ok = await confirmDialog({
+      title: "下架相册",
+      content: "下架后家长端立即不可见，之后可以重新发布。",
+      confirmText: "下架"
+    })
+    if (!ok) return
+  } else if (action === "delete") {
+    const ok = await confirmDialog({
+      title: "删除相册",
+      content: "删除后相册从列表移除、家长端不可见；相册保留 180 天供审计。",
+      confirmText: "删除"
+    })
+    if (!ok) return
+  }
+
+  actionBusy.value = true
+  try {
+    await requestAlbumAction(id, action)
+    if (action === "delete") {
+      // 先从列表移除，避免刷新失败时删掉的相册还留在眼前
+      albums.value = albums.value.filter(item => item.id !== id)
+      total.value = Math.max(0, total.value - 1)
+      closeViewer()
+      uni.showToast({ title: "已删除", icon: "success" })
+    } else {
+      const nextStatus = action === "publish" ? "published" : "unpublished"
+      applyAlbumStatus(id, nextStatus)
+      uni.showToast({ title: action === "publish" ? "已发布" : "已下架", icon: "success" })
+    }
+    // 统计只算已发布，列表可能因状态筛选变化；失败时 loadAlbums 保留当前视图并提示
+    await loadAlbums({ skeleton: false })
+  } catch (err) {
+    // 失败不改本地状态，弹层与列表停在操作前
+    uni.showToast({ title: err?.message || "操作失败，请重试", icon: "none" })
+    console.warn(`[album-index] ${action} album failed:`, err?.message || err)
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+function onViewerPublish() {
+  runViewerAction("publish")
+}
+
+function onViewerUnpublish() {
+  runViewerAction("unpublish")
+}
+
+function onViewerDelete() {
+  runViewerAction("delete")
 }
 
 function onViewerTouchStart(event) {
@@ -548,6 +700,18 @@ onLoad(() => {
           </view>
         </view>
 
+        <view class="status-filter">
+          <view
+            v-for="item in STATUS_FILTERS"
+            :key="'status-' + (item.value || 'all')"
+            class="status-chip"
+            :class="{ 'is-active': activeStatus === item.value }"
+            @click="selectStatus(item.value)"
+          >
+            <text>{{ item.label }}</text>
+          </view>
+        </view>
+
         <view class="filter-row">
           <view
             v-for="item in ALBUM_FILTERS"
@@ -560,11 +724,11 @@ onLoad(() => {
           </view>
         </view>
 
-        <!-- 分类筛选无结果：统计与筛选保留，列表区给提示 -->
+        <!-- 筛选无结果：统计与筛选保留，列表区给提示 -->
         <view v-if="viewState === 'filterEmpty'" class="filter-empty">
-          <text class="filter-empty-title">这个分类下还没有相册</text>
-          <text class="filter-empty-copy">换个分类看看，或查看全部照片</text>
-          <view class="btn-soft btn-soft--sm" @click="selectCategory('')">查看全部</view>
+          <text class="filter-empty-title">{{ filterEmptyTitle }}</text>
+          <text class="filter-empty-copy">换个筛选条件看看，或查看全部照片</text>
+          <view class="btn-soft btn-soft--sm" @click="resetFilters">查看全部</view>
         </view>
 
         <view v-else class="album-list">
@@ -602,8 +766,13 @@ onLoad(() => {
                   </view>
                   <view class="album-line album-meta">
                     <text class="album-date">{{ formatDateLabel(album.album_date) }}</text>
-                    <view class="tag" :class="albumTagClass(album.category)">
-                      <text>{{ album.category_label || albumCategoryLabel(album.category) }}</text>
+                    <view class="album-tags">
+                      <view v-if="statusLabel(album.status)" class="tag" :class="'tag--status-' + album.status">
+                        <text>{{ statusLabel(album.status) }}</text>
+                      </view>
+                      <view class="tag" :class="albumTagClass(album.category)">
+                        <text>{{ album.category_label || albumCategoryLabel(album.category) }}</text>
+                      </view>
                     </view>
                   </view>
                 </view>
@@ -652,6 +821,20 @@ onLoad(() => {
           </view>
         </view>
 
+        <!-- 状态与未授权计数：详情返回后才有；计数 > 0 时发布需二次确认 -->
+        <view v-if="viewerStatus" class="viewer-meta">
+          <view class="tag" :class="'tag--status-' + viewerStatus">
+            <text>{{ viewerStatusLabel }}</text>
+          </view>
+          <text
+            v-if="viewerUnauthText"
+            class="viewer-unauth"
+            :class="{ 'is-warning': viewerUnauthorizedCount > 0 }"
+          >
+            {{ viewerUnauthText }}
+          </text>
+        </view>
+
         <view class="viewer-photo">
           <image
             v-if="currentPhoto && !viewerLoading && !viewerError"
@@ -686,6 +869,33 @@ onLoad(() => {
             @click="stepViewer(1)"
           >
             <text class="icon">&#xEA6E;</text>
+          </view>
+        </view>
+
+        <!-- 详情加载成功后才给操作入口：未拿到 unauthorized_photo_count 时不能发布 -->
+        <view v-if="viewerDetail && !viewerLoading" class="viewer-actions">
+          <view
+            v-if="viewerStatus === 'published'"
+            class="viewer-action viewer-action--primary"
+            :class="{ 'is-busy': actionBusy }"
+            @click="onViewerUnpublish"
+          >
+            <text>下架</text>
+          </view>
+          <view
+            v-else
+            class="viewer-action viewer-action--primary"
+            :class="{ 'is-busy': actionBusy }"
+            @click="onViewerPublish"
+          >
+            <text>{{ viewerStatus === "unpublished" ? "重新发布" : "发布" }}</text>
+          </view>
+          <view
+            class="viewer-action viewer-action--danger"
+            :class="{ 'is-busy': actionBusy }"
+            @click="onViewerDelete"
+          >
+            <text>删除</text>
           </view>
         </view>
       </view>
@@ -886,6 +1096,47 @@ onLoad(() => {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- 状态分段控件（紧凑，与分类胶囊区分） ---------- */
+.status-filter {
+  display: flex;
+  margin-top: $spacing-lg;
+  padding: $spacing-xs;
+  border: 1rpx solid $color-border-subtle;
+  border-radius: $border-radius-full;
+  background: $color-bg-page;
+}
+
+.status-chip + .status-chip {
+  margin-left: $spacing-xs;
+}
+
+.status-chip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $component-input-height;
+  border: 1rpx solid transparent;
+  border-radius: $border-radius-full;
+  color: $color-text-muted;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-medium;
+  line-height: 1;
+}
+
+.status-chip.is-active {
+  border-color: $color-border-subtle;
+  background: $color-bg-card;
+  color: $color-brand-primary-dark;
+  font-weight: $typography-font-weight-semibold;
+  box-shadow: $shadow-sm;
+}
+
+.status-chip:active {
+  transform: scale(0.96);
+}
+
 /* ---------- 分类胶囊 ---------- */
 .filter-row {
   display: grid;
@@ -1074,6 +1325,16 @@ onLoad(() => {
   gap: $spacing-lg;
 }
 
+.album-tags {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.album-tags .tag + .tag {
+  margin-left: $spacing-xs;
+}
+
 .album-date {
   min-width: 0;
   font-size: $typography-font-size-sm;
@@ -1109,6 +1370,22 @@ onLoad(() => {
 }
 
 .tag--festival {
+  background: $color-semantic-warning-bg;
+  color: $color-semantic-warning-strong;
+}
+
+/* 发布状态：草稿中性、已发布成功色、已下架警告色 */
+.tag--status-draft {
+  background: $color-bg-page;
+  color: $color-text-muted;
+}
+
+.tag--status-published {
+  background: $color-semantic-success-bg;
+  color: $color-semantic-success-strong;
+}
+
+.tag--status-unpublished {
   background: $color-semantic-warning-bg;
   color: $color-semantic-warning-strong;
 }
@@ -1474,6 +1751,25 @@ onLoad(() => {
   color: $color-text-muted;
 }
 
+.viewer-meta {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.viewer-unauth {
+  min-width: 0;
+  margin-left: $spacing-sm;
+  font-size: $typography-font-size-xs;
+  line-height: 1.4;
+  color: $color-text-muted;
+}
+
+.viewer-unauth.is-warning {
+  color: $color-semantic-warning-strong;
+  font-weight: $typography-font-weight-semibold;
+}
+
 .viewer-close {
   display: flex;
   align-items: center;
@@ -1589,6 +1885,47 @@ onLoad(() => {
   line-height: 1.3;
   color: $color-text-muted;
   font-variant-numeric: tabular-nums;
+}
+
+.viewer-actions {
+  display: flex;
+  margin-top: $spacing-lg;
+}
+
+.viewer-action + .viewer-action {
+  margin-left: $spacing-md;
+}
+
+.viewer-action {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $component-input-height;
+  border-radius: $border-radius-full;
+  font-size: $typography-font-size-md;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.viewer-action--primary {
+  border: 1rpx solid rgba($color-brand-primary, 0.45);
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+}
+
+.viewer-action--danger {
+  border: 1rpx solid rgba($color-semantic-danger, 0.35);
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+}
+
+.viewer-action:active {
+  transform: scale(0.97);
+}
+
+.viewer-action.is-busy {
+  opacity: 0.6;
 }
 
 @keyframes album-spin {

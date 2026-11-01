@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
-import { fetchTeacherClassInfo, fetchTeacherClassStudents } from "@/api/teacher-class"
+import { fetchTeacherClassInfo, fetchTeacherClassStudent, fetchTeacherClassStudents } from "@/api/teacher-class"
 import { fetchTeacherPickupOverview } from "@/api/teacher-pickup"
 import { fetchTeacherNotices } from "@/api/teacher-notices"
 import { formatDateLabel, formatMonthDay, formatWeekdayShort, todayKey } from "@/utils/time"
@@ -31,6 +31,11 @@ const keyword = ref("")
 const filter = ref("all")
 const sheetOpen = ref(false)
 const sheetStudent = ref(null)
+// 家长联系方式只在打开信息卡时按学生详情拉取（列表接口不带 parents）
+const sheetParents = ref([])
+const parentsLoading = ref(false)
+const parentsError = ref("")
+let parentsSeq = 0
 
 const todayText = `${formatDateLabel(todayKey())} ${formatWeekdayShort(todayKey())}`
 
@@ -239,11 +244,55 @@ function openStudent(student) {
   if (typeof uni.hideKeyboard === "function") uni.hideKeyboard()
   sheetStudent.value = student
   sheetOpen.value = true
+  loadStudentParents(student?.student_id)
 }
 
 function closeSheet() {
   sheetOpen.value = false
   sheetStudent.value = null
+  resetParents()
+}
+
+function resetParents() {
+  parentsSeq += 1
+  sheetParents.value = []
+  parentsLoading.value = false
+  parentsError.value = ""
+}
+
+function normalizeParent(parent) {
+  if (!parent || typeof parent !== "object") return null
+  const name = String(parent.name || "").trim()
+  const relation = String(parent.relation_label || parent.relation || "").trim()
+  const phone = String(parent.phone || "").trim()
+  if (!name && !relation) return null
+  return { name: name || "未命名家长", relation, phone }
+}
+
+// 手机号是否返回由后端按每位家长的 show_phone_to_teacher 逐条过滤；
+// 端上只渲染缺省值，不推断开关状态。
+async function loadStudentParents(studentId) {
+  if (!sheetOpen.value) return
+  const seq = ++parentsSeq
+  sheetParents.value = []
+  parentsError.value = ""
+  if (!studentId) {
+    parentsLoading.value = false
+    return
+  }
+  parentsLoading.value = true
+  try {
+    const res = await fetchTeacherClassStudent(studentId)
+    if (seq !== parentsSeq) return
+    const list = Array.isArray(res.data?.parents) ? res.data.parents : []
+    sheetParents.value = list.map(normalizeParent).filter(Boolean)
+  } catch (err) {
+    if (seq !== parentsSeq) return
+    parentsError.value = "家长联系方式加载失败"
+    console.warn("[class-index] load student parents failed:", err?.message || err)
+  } finally {
+    if (seq === parentsSeq) parentsLoading.value = false
+  }
 }
 
 function onBell() {
@@ -462,6 +511,31 @@ onPullDownRefresh(loadClass)
           <view class="sheet-row">
             <text class="sheet-label">接送截止</text>
             <text class="sheet-value">{{ classDeadline }}</text>
+          </view>
+        </view>
+
+        <!-- 家长联系方式：无数据时整块隐藏；手机号按开关由后端逐条过滤 -->
+        <view v-if="parentsLoading || parentsError || sheetParents.length" class="parents">
+          <text class="parents-title">家长联系方式</text>
+          <view v-if="parentsLoading" class="parents-state">
+            <text>加载中…</text>
+          </view>
+          <view v-else-if="parentsError" class="parents-state parents-state--error">
+            <text>{{ parentsError }}</text>
+            <view class="parents-retry" @click="loadStudentParents(sheetStudent.student_id)">
+              <text>重试</text>
+            </view>
+          </view>
+          <view v-else class="parents-list">
+            <view v-for="(parent, index) in sheetParents" :key="index" class="parent-row">
+              <view class="parent-id">
+                <text class="parent-name">{{ parent.name }}</text>
+                <text v-if="parent.relation" class="parent-relation">{{ parent.relation }}</text>
+              </view>
+              <text class="parent-phone" :class="{ 'is-empty': !parent.phone }">
+                {{ parent.phone || "—" }}
+              </text>
+            </view>
           </view>
         </view>
         <view class="sheet-close" @click="closeSheet">关闭</view>
@@ -1284,6 +1358,112 @@ onPullDownRefresh(loadClass)
   text-align: right;
   color: $color-text-primary;
   word-break: break-all;
+}
+
+/* ---------- 家长联系方式 ---------- */
+.parents {
+  margin-bottom: $spacing-xl;
+}
+
+.parents-title {
+  display: block;
+  margin-bottom: $spacing-xs;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+  line-height: 1.4;
+  color: $color-text-body;
+}
+
+.parents-state {
+  display: flex;
+  align-items: center;
+  min-height: $component-input-height;
+  padding: 0 $spacing-lg;
+  border-radius: $component-card-radius;
+  background: $color-bg-page;
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+}
+
+.parents-state--error {
+  justify-content: space-between;
+  color: $color-semantic-danger;
+}
+
+.parents-state--error .parents-retry {
+  margin-left: $spacing-md;
+}
+
+.parents-retry {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: $component-input-height;
+  padding: 0 $spacing-md;
+  border-radius: $border-radius-full;
+  background: $color-semantic-danger-bg;
+  color: $color-semantic-danger;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.parents-list {
+  padding: 0 $spacing-lg;
+  border-radius: $component-card-radius;
+  background: $color-bg-page;
+}
+
+.parent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg 0;
+  border-bottom: 1rpx solid $color-border-subtle;
+}
+
+.parent-row:last-child {
+  border-bottom: 0;
+}
+
+.parent-id {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.parent-name {
+  min-width: 0;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+  line-height: 1.4;
+  color: $color-text-primary;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.parent-relation {
+  flex: none;
+  margin-left: $spacing-xs;
+  font-size: $typography-font-size-xs;
+  line-height: 1.4;
+  color: $color-text-muted;
+}
+
+.parent-phone {
+  flex: none;
+  margin-left: $spacing-md;
+  font-size: $typography-font-size-base;
+  font-weight: $typography-font-weight-medium;
+  line-height: 1.4;
+  color: $color-text-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+.parent-phone.is-empty {
+  font-weight: $typography-font-weight-normal;
+  color: $color-text-hint;
 }
 
 .sheet-close {
