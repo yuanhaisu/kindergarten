@@ -132,6 +132,14 @@ func adminPermissionModules() []permissionModuleResp {
 			},
 		},
 		{
+			Module: "diet", ModuleLabel: "膳食管理",
+			Items: []permissionItemResp{
+				{Key: "diet:view", Label: "查看膳食"},
+				{Key: "diet:manage", Label: "管理膳食"},
+				{Key: "diet:export", Label: "导出营养分析"},
+			},
+		},
+		{
 			Module: "admin", ModuleLabel: "管理员",
 			Items: []permissionItemResp{
 				{Key: "admin:view", Label: "查看管理员"},

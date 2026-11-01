@@ -464,6 +464,14 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		tt.POST("/sync", h.AdminSyncTimetable)
 	}
 
+	// 膳食管理：本切片刻意只注册供餐配置两条路由（契约 27 条中的其余路由
+	// 由 S3/S4/S6/S7 在实现对应功能时各自登记，不建空路由/stub）。
+	diet := adminG.Group("/diet")
+	{
+		diet.GET("/config", h.GetDietConfig)
+		diet.PUT("/config", h.PutDietConfig)
+	}
+
 	dict := adminG.Group("/dicts")
 	{
 		dict.GET("/types", h.ListDictTypes)

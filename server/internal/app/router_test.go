@@ -394,7 +394,7 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 	// NewHandler 只接位置参数；本测试只需要 authSvc，其余服务传 nil。
 	h := handler.NewHandler(svc,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil)
 	require.NoError(t, err)

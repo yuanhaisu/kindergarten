@@ -216,6 +216,11 @@ var adminRoutePermission = map[string]string{
 	"GET /api/v1/admin/timetable/setting":           "timetable:view",
 	"PUT /api/v1/admin/timetable/setting":           "timetable:manage",
 	"POST /api/v1/admin/timetable/sync":             "timetable:manage",
+
+	// diet —— 供餐配置（AQR-S1b）。其余 /admin/diet/** 路由由后续 slice 实现时逐条登记；
+	// 本表是 fail-closed，漏登记会让服务启动失败。
+	"GET /api/v1/admin/diet/config": "diet:view",
+	"PUT /api/v1/admin/diet/config": "diet:manage",
 }
 
 // RequirePermission 按登记表强制管理端接口权限，挂在 adminG 组上（AuthJWT/CasbinRBAC 之后）。
