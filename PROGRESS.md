@@ -143,8 +143,9 @@
   老师/家长 DevTools 与 admin 无头 Chrome 均以 API mock 验证；三端构建通过；
   token 基线 teacher 3 / parent 3 / admin 8；secret 变更文件 0。
 - 未完成/残余：
-  1. **真实后端 E2E 未做**：8080 未运行（低守卫停止），未擅自重启；重启后需
-     跑老师创建→发布→家长可见→opt-out→下架的真实链路，再 archive。
+  1. **真实后端 E2E 未做**：8080 未运行（低守卫停止，当前可用内存仅 ~2.8GB），
+     未擅自重启；重启后按 `.claude/runs/OS-ALB-E2E/checklist.md` 跑真实链路，
+     通过后 archive。file_id 批量校验与家长保存埋点已补（`12ee67e`）。
   2. Phase 2 未做：全班视图开关、视频、园外分享/下载、发布通知/周报、打包导出、人脸模糊。
   3. P2：历史相册 0 行导致回填未实测；file_id 逐张校验有最多 50 次查询；
      审计 best-effort；`students:[]` 与显式空覆盖不可区分；admin 列表无封面列；
