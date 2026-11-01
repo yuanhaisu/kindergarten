@@ -399,6 +399,8 @@ func (s *TeacherPortalService) PublishAlbum(
 		UserID:         tc.UserID,
 		PhotoCount:     len(photos),
 	})
+	// 通知在状态/审计/指标之后、请求返回之前投递；失败只记日志，不影响发布结果。
+	s.notifyAlbumPublished(ctx, tc, album, len(photos))
 	return map[string]any{
 		"id":           album.ID,
 		"status":       album.Status,

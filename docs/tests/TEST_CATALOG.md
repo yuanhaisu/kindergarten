@@ -965,6 +965,26 @@
 > （`TestParentClassAlbumScopeValidationAndIsolation`）、handler 错误映射
 > （`TestWriteParentClassAlbumErrorMapsSentinels`，含 422）、清理后 0 残留
 > （`TestParentClassAlbum_CleanupLeavesNoResidue`）。
+
+## 班级相册发布通知（ALBMSG）— Phase 2-B
+
+> 对应 OpenSpec 变更 `class-album-publish-notice` 的任务 1.1–3.3。
+> 规格见 `openspec/changes/class-album-publish-notice/specs/class-album-notify/spec.md`；
+> 契约见 `backend/api/api-common.md`（`type=album`）与 `backend/api/api-teacher/10-album.md`
+> （发布副作用）。服务层用例打真实 MySQL（9960xx 夹具，硬删 0 残留）。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-ALBMSG-0001 | 发布成功后参与者家长收到一条 `type=album` 消息，reference_id 为相册 ID | P0 | Unit + E2E | ✅ `TestAlbumPublishNotifiesEligibleGuardians` + 真实后端 |
+| TC-NEW-ALBMSG-0002 | 消息仓库未接线/写入失败时发布仍成功 | P0 | Unit | ✅ `TestAlbumPublishWithoutMessageRepoStillSucceeds` |
+| TC-NEW-ALBMSG-0003 | 本人关闭班内共享的监护人不收消息 | P0 | Unit + E2E | ✅ 单测 + 真实 opt-out 相册（user 28/61） |
+| TC-NEW-ALBMSG-0004 | 同一孩子另一位监护人照收；一个家长多个参与孩子只收一条 | P0 | Unit | ✅ `TestAlbumPublishNotifiesEligibleGuardians` |
+| TC-NEW-ALBMSG-0005 | 非参与者家庭不收 | P0 | Unit | ✅ `TestAlbumPublishNotifiesEligibleGuardians` |
+| TC-NEW-ALBMSG-0006 | 下架后重新发布不重复发 | P0 | Unit + E2E | ✅ `TestAlbumRepublishDoesNotDuplicateMessage` + 真实后端 |
+| TC-NEW-ALBMSG-0007 | 消息中心渲染「相册」并点击进入相册详情、标记已读 | P0 | DevTools | ✅ 真实点击（消息→详情 200，DB `is_read=1`） |
+
+> 守卫用例（不单列 TC）：action_path 必须为内部 `/pages/` 路径（由
+> `sendMessageToRecipients` 统一校验）、清理后 0 残留（`cleanupTALData`）。
 - 未覆盖（留给后续切片）：家长端页面与入口（8.x）、DevTools 双端真实点击（11.3）、留存清理命令（10.1）。
 
 ### B20 执行记录（2026-10-30）

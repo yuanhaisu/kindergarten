@@ -6,9 +6,9 @@
 > 检查表：`docs/design-previews/2026-10-25-full-redesign/_shared/VALIDATORS.md`
 
 - 工作流工件：**已就绪**（skill、两个 agent、check-secrets、validators、adapter）
-- 当前波次：**Phase 2-A 全班视图已完成（真实后端 + DevTools + 管理端真实渲染验证）**
-- 下一动作：Phase 2-B 发布通知（`PHASE2-PLAN.md`）
-- 后端：8080 运行中（PID 41380，含 Phase 2-A 新列与 scope；可用内存 ~2.7GB）
+- 当前波次：**Phase 2-A 全班视图 + Phase 2-B 发布通知已完成（真实后端 + DevTools 验证）**
+- 下一动作：Phase 2-C 视频（`PHASE2-PLAN.md`）
+- 后端：8080 运行中（PID 44216，含 Phase 2-A/B 代码；可用内存 ~2.7GB）
 - 最后更新：2026-11-01
 
 ## X00 零入边决策（2026-10-28）
@@ -121,15 +121,35 @@
 
 ```json
 {
-  "slice_id": "P2-A",
+  "slice_id": "P2-B",
   "phase": "verified",
-  "commit_sha": "44b248c",
-  "next_action": "commit + archive class-album-classwide; then Phase 2-B",
-  "updated_at": "2026-11-01T22:50:00+08:00"
+  "commit_sha": null,
+  "next_action": "commit + archive class-album-publish-notice; then Phase 2-C",
+  "updated_at": "2026-11-01T23:15:00+08:00"
 }
 ```
 
 ## 交接块（handoff）
+
+### Handoff 2026-11-01T23:15+08:00 — Phase 2-B 发布通知完成（验证通过）
+
+- OpenSpec change `class-album-publish-notice` 全部落地，**0 P1**。
+  - 新增站内消息类型 `album`；`PublishAlbum` 成功后在事务外通知参与者监护人，
+    逐人按 `allow_class_share` 过滤（无设置行默认允许），同一相册幂等，
+    `action_path=/pages/album/detail?id=<album>&student_id=<孩子>`；失败只记日志。
+  - 家长端消息中心识别 `album`（标签「相册」），点击沿用既有已读/跳转。
+- 验证：
+  1. Go 单测：`TestTeacherAlbum|TestAlbumPublish|TestAlbumRepublish` 130s 全绿；
+     覆盖发布发消息、opt-out 不收、共同监护人照收、非参与者不收、重复发布不重复、
+     msgRepo 未接线仍发布成功。
+  2. 真实后端：发布后允许的监护人各收 1 条；关闭班内共享的监护人 0 条；
+     下架重发仍 1 条；消息列表/未读数/标记已读/详情跳转全部 200。
+  3. DevTools 真实点击：消息中心显示「班级相册已更新 / 相册」→ 点击进入相册详情
+     （真实后端 1 张照片）→ 消息 `is_read=1`。
+  4. 测试相册/照片/消息/审计/文件零残留；测试期间临时开启的家长 61
+     班内共享已恢复为关闭。
+- 说明：本轮 subagent 仍受 API 402 余额限制，由主会话直接实现与验证。
+- 后端：8080 运行中（PID 44216）。
 
 ### Handoff 2026-11-01T22:50+08:00 — Phase 2-A 全班视图完成（验证通过）
 

@@ -63,8 +63,10 @@ const (
 	testTALGrowthMediaB     uint64 = 996061 // 别班成长照片
 	testTALGrowthMediaVideo uint64 = 996062 // 目标班成长视频（相册不收）
 
-	testTALParentA   uint64 = 996070 // A、B 的家长（无设置行 → 默认允许班内共享）
-	testTALParentOpt uint64 = 996071 // C 的家长（allow_class_share=false）
+	testTALParentA    uint64 = 996070 // A、B 的家长（无设置行 → 默认允许班内共享）
+	testTALParentOpt  uint64 = 996071 // C 的家长（allow_class_share=false）
+	testTALParentOpt2 uint64 = 996074 // C 的另一位监护人（无设置行 → 默认允许）
+	testTALParentOut  uint64 = 996075 // 非参与者（别班幼儿）家长
 
 	testTALAlbumDeleted uint64 = 996106 // 软删相册
 )
@@ -108,6 +110,7 @@ func cleanupTALData(t *testing.T, db *gorm.DB) {
 	del("DELETE FROM growth_media WHERE id BETWEEN ? AND ?", testTALGrowthMedia, uint64(996069))
 	del("DELETE FROM growth_daily_logs WHERE id BETWEEN ? AND ?", testTALGrowthLog, uint64(996059))
 	del("DELETE FROM parent_settings WHERE user_id BETWEEN ? AND ?", testTALUser, uint64(996079))
+	del("DELETE FROM messages WHERE user_id BETWEEN ? AND ?", testTALUser, uint64(996079))
 	del("DELETE FROM student_parents WHERE student_id BETWEEN ? AND ?", testTALStudentA, uint64(996039))
 	del("DELETE FROM files WHERE id BETWEEN ? AND ?", testTALFileA, uint64(996049))
 	del("DELETE FROM user_roles WHERE user_id BETWEEN ? AND ?", testTALUser, uint64(996029))
@@ -139,6 +142,7 @@ func newTALFixture(t *testing.T) *talFixture {
 			&domain.Student{}, &domain.StudentParent{}, &domain.ParentSetting{}, &domain.File{},
 			&domain.UserRole{}, &domain.GrowthDailyLog{}, &domain.GrowthLogStudent{}, &domain.GrowthMedia{},
 			&domain.OperationLog{},
+			&domain.Message{},
 		))
 	})
 	cleanupTALData(t, db)
@@ -172,6 +176,8 @@ func newTALFixture(t *testing.T) *talFixture {
 		{BaseModel: domain.BaseModel{ID: testTALUserNR}, Nickname: "无角色用户", Phone: "13900009964", PasswordHash: "x"},
 		{BaseModel: domain.BaseModel{ID: testTALParentA}, Nickname: "家长A", Phone: "13900009970", PasswordHash: "x"},
 		{BaseModel: domain.BaseModel{ID: testTALParentOpt}, Nickname: "家长C", Phone: "13900009971", PasswordHash: "x"},
+		{BaseModel: domain.BaseModel{ID: testTALParentOpt2}, Nickname: "家长C二", Phone: "13900009974", PasswordHash: "x"},
+		{BaseModel: domain.BaseModel{ID: testTALParentOut}, Nickname: "别班家长", Phone: "13900009975", PasswordHash: "x"},
 	}
 	for i := range users {
 		require.NoError(t, db.Create(&users[i]).Error)
@@ -216,6 +222,8 @@ func newTALFixture(t *testing.T) *talFixture {
 		{testTALStudentA, testTALParentA},
 		{testTALStudentB, testTALParentA},
 		{testTALStudentOpt, testTALParentOpt},
+		{testTALStudentOpt, testTALParentOpt2},
+		{testTALStudentOut, testTALParentOut},
 	} {
 		require.NoError(t, db.Create(&domain.StudentParent{
 			StudentID: sp.student, UserID: sp.parent, Relation: domain.RelationMother,
@@ -279,7 +287,7 @@ func newTALFixture(t *testing.T) *talFixture {
 
 	return &talFixture{
 		db:      db,
-		svc:     NewTeacherPortalService(db, nil, nil, nil, nil, nil, config.FaceConfig{}),
+		svc:     NewTeacherPortalService(db, nil, nil, repository.NewMessageRepo(db), nil, nil, config.FaceConfig{}),
 		tcA:     &TeacherPortalContext{UserID: testTALUser, KindergartenID: testTALKG, ClassID: testTALClassA},
 		tcB:     &TeacherPortalContext{UserID: testTALUser, KindergartenID: testTALKG, ClassID: testTALClassB},
 		tcOther: &TeacherPortalContext{UserID: testTALUser, KindergartenID: testTALKGOther, ClassID: testTALClassO},

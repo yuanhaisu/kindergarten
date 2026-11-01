@@ -10,6 +10,7 @@ const (
 	MessageTypePickup MessageType = "pickup"
 	MessageTypeGrowth MessageType = "growth"
 	MessageTypeTask   MessageType = "task"
+	MessageTypeAlbum  MessageType = "album"
 	MessageTypeSystem MessageType = "system"
 )
 

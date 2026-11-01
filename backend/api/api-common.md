@@ -388,7 +388,7 @@ Content-Type: multipart/form-data
 
 ```json
 // Query: ?type=notice&is_read=false&page=1&page_size=20
-// type 可选值: notice / leave / pickup / growth / task / system，不传则查全部
+// type 可选值: notice / leave / pickup / growth / album / task / system，不传则查全部
 
 // Response
 {
@@ -428,7 +428,11 @@ Content-Type: multipart/form-data
   任务发布与主回应消息形如 `/pages/tasks/detail?id=<task_id>&student_id=<student_id>`：
   `id` 定位任务，`student_id` 指定进入时应选中的孩子（多孩家庭必须带上，否则会落到默认孩子）。
   客户端必须先按下当前孩子与绑定关系校验再跳转；非 `/pages/` 开头的路径一律忽略，不得当外链打开。
-- `reference_id`：关联业务对象 id。任务发布消息为 `task_id`，主回应消息为 `response_id`。
+- `reference_id`：关联业务对象 id。任务发布消息为 `task_id`，主回应消息为 `response_id`，
+  班级相册发布消息为 `album_id`。
+- `type=album`（班级相册发布）：`action_path` 形如
+  `/pages/album/detail?id=<album_id>&student_id=<该家长参与的孩子>`；同一相册对同一家长只发一条，
+  重复发布不重复发；监护人本人关闭班内共享时不投递。
 
 ---
 
@@ -439,12 +443,13 @@ Content-Type: multipart/form-data
 ```json
 // Response
 {
-  "total": 7,
+  "total": 8,
   "by_type": {
     "notice": 2,
     "leave": 1,
     "pickup": 0,
     "growth": 3,
+    "album": 1,
     "task": 1,
     "system": 0
   }

@@ -308,6 +308,10 @@ draft --publish--> published --unpublish--> unpublished
 > 发布草稿或重新上架已下架相册。本班任一老师均可操作，写审计日志
 > （`module=albums`、`action=publish`、`target=album`、`detail` 含标题与状态）。
 >
+> 发布成功后向相册参与者的家长写站内消息（`type=album`，见 `api-common.md`）：
+> 只通知参与者监护人，监护人本人关闭班内共享时不投递；同一相册对同一家长只发一条，
+> 下架后重新发布不重复发。通知写入失败不影响发布结果，也不改变响应。
+>
 > 发布校验：至少 1 张照片；标题 1–30 字、分类为四值之一、相册日期非零。
 
 ```json
