@@ -811,8 +811,10 @@
 
 ## 班级相册（ALB）— 老师端班级相册
 
-> 对应 OpenSpec 变更 `class-album`。规格见 `openspec/changes/class-album/specs/class-album/spec.md`；
-> 契约见 `backend/api/api-teacher/10-album.md`。B20（2026-10-30）落地后端，页面由 T06b 消费。
+> 对应 OpenSpec 变更 `class-album-parent-sharing`（旧 B20 切片 `class-album` 已并入）。
+> 规格见 `openspec/changes/class-album-parent-sharing/specs/class-album/spec.md`；
+> 契约见 `backend/api/api-teacher/10-album.md`。B20（2026-10-30）落地创建/列表/详情，
+> OS-ALB-2（2026-11-01）落地发布状态机、编辑/软删/审计与照片-幼儿关联。
 > 状态：✅ = 服务层用真实 MySQL 夹具验证（`server/internal/service/teacher_album_test.go`，9960xx 夹具，硬删 0 残留）。
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
@@ -824,6 +826,25 @@
 | TC-NEW-ALB-0005 | 详情返回全部照片且顺序与创建时一致 | P0 | Unit | ✅ `TestTeacherAlbumDetailPhotoOrder` |
 | TC-NEW-ALB-0006 | 跨班/跨园读取 404，创建只能落在当前班 | P0 | Unit | ✅ `TestTeacherAlbumIsolation` |
 | TC-NEW-ALB-0007 | 非法分类拒绝创建 | P0 | Unit | ✅ `TestTeacherAlbumCreateRejectsInvalidCategory` |
+| TC-NEW-ALB-0008 | 新建相册默认草稿，家长视图（只查 published）不可见；状态筛选与非法状态 422 | P0 | Unit | ✅ `TestTeacherAlbumCreateDefaultsToDraft` |
+| TC-NEW-ALB-0009 | 统计只算已发布：草稿/下架/软删都不计入 | P0 | Unit | ✅ `TestTeacherAlbumStatsOnlyPublished` |
+| TC-NEW-ALB-0010 | 发布草稿落库 published_at/by 并对家长视图可见；重复发布与无照片发布 422 | P0 | Unit | ✅ `TestTeacherAlbumPublish` |
+| TC-NEW-ALB-0011 | 下架后家长视图立即不可见；非法转换 422；可重新上架 | P0 | Unit | ✅ `TestTeacherAlbumUnpublishAndInvalidTransitions` |
+| TC-NEW-ALB-0012 | 同班任一老师可发布/编辑并写审计（操作人、动作、标题与状态） | P0 | Unit | ✅ `TestTeacherAlbumAnyTeacherCanOperateAndAudit` |
+| TC-NEW-ALB-0013 | 未授权照片计数：opt-out 幼儿计入、无 opt-out 为 0、相册级兜底 | P0 | Unit | ✅ `TestTeacherAlbumUnauthorizedPhotoCount` |
+| TC-NEW-ALB-0014 | 编辑已发布相册立即生效：照片 ID 保留、未提交照片硬删、photo_count/cover_url 重算、幂等 | P0 | Unit | ✅ `TestTeacherAlbumEditRecalculatesAndKeepsPhotoIDs` |
+| TC-NEW-ALB-0015 | 软删后老师详情 404、家长视图不可见、统计清零；重复删除 404 | P0 | Unit | ✅ `TestTeacherAlbumSoftDeleteHidesEverywhere` |
+| TC-NEW-ALB-0016 | 从成长记录选图自动带出关联幼儿并回填 file_id | P0 | Unit | ✅ `TestTeacherAlbumGrowthMediaAutoLinksStudents` |
+| TC-NEW-ALB-0017 | 显式 student_ids 覆盖自动值；关联回读；越权 file_id/媒体/跨班幼儿拒绝 | P0 | Unit | ✅ `TestTeacherAlbumExplicitStudentsOverrideAndRejectForeignInputs` |
+
+### OS-ALB-2 执行记录（2026-11-01）
+
+- 状态机：创建即 `draft`；`publish` 允许 draft/unpublished → published；`unpublish` 仅 published → unpublished；非法转换 422；编辑不改变状态；软删保留行。
+- 统计口径：`Stats` 只统计 `status=published` 且未软删；软删由 GORM `deleted_at` 自动排除。
+- 照片-幼儿关联：`album_students`（相册级）+ `album_photo_students`（照片级）；从 `growth_media` 选图按 `growth_log_students` 自动带出，显式 `student_ids` 覆盖；`file_id` 经 `files` 校验上传者在本园拥有老师角色（`files` 无园所列，无法绕过角色判断）。
+- 审计：`operation_logs` 写 `module=albums`、`action=publish|unpublish|edit|delete`、`target_type=album`，detail 含标题与状态。
+- 测试：`cd server && go test ./internal/service/ -run 'TestTeacherAlbum' -count=1 -timeout 600s` → ok（22 个 Test 函数 = TC 0001–0017 + 5 个守卫用例）；夹具 9960xx 全部硬删，0 残留。
+- 未覆盖（留给后续切片）：家长端班级相册与照片级隐私过滤（5.x）、管理端只读/下架（6.x）、老师端页面（7.x）、`albumretention` 清理命令（10.1）。
 
 ### B20 执行记录（2026-10-30）
 

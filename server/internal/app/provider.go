@@ -132,6 +132,8 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		// 班级相册（openspec class-album）
 		&domain.Album{},
 		&domain.AlbumPhoto{},
+		&domain.AlbumStudent{},
+		&domain.AlbumPhotoStudent{},
 
 		// 老师邀请
 		&domain.TeacherInvitation{},

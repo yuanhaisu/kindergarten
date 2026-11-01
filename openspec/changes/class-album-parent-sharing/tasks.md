@@ -10,20 +10,20 @@
 
 ## 2. 后端：老师相册生命周期
 
-- [ ] 2.1 `AlbumRepo` 增加发布/下架/编辑/软删除/状态筛选；`Stats` 只统计已发布；验证单测覆盖草稿/下架不计入、软删不计入
-- [ ] 2.2 `TeacherPortalService` 实现状态机与审计（publish/unpublish/edit/delete），发布校验至少 1 张照片、标题/分类/日期合法；验证单测覆盖合法/非法转换与操作人记录
-- [ ] 2.3 发布预览返回「含未授权孩子的照片数」；验证单测：有 opt-out 孩子时计数正确、无 opt-out 时为 0
-- [ ] 2.4 老师端 handler/router 增加 `PUT /teacher/albums/:id`、`POST /teacher/albums/:id/publish`、`POST /teacher/albums/:id/unpublish`、`DELETE /teacher/albums/:id`；验证 `go test ./internal/handler/http/` 与 `go build ./...`
-- [ ] 2.5 更新 `backend/api/api-teacher/10-album.md`：状态字段、发布/下架/编辑/删除、预览、参与者；验证契约示例与 handler 字段逐项对照
-- [ ] 2.6 在 `docs/tests/TEST_CATALOG.md` 登记 `TC-NEW-ALB-0008..0015` 并映射到新增单测；验证 TC ID 与测试名一一对应
+- [x] 2.1 `AlbumRepo` 增加发布/下架/编辑/软删除/状态筛选；`Stats` 只统计已发布；验证单测覆盖草稿/下架不计入、软删不计入
+- [x] 2.2 `TeacherPortalService` 实现状态机与审计（publish/unpublish/edit/delete），发布校验至少 1 张照片、标题/分类/日期合法；验证单测覆盖合法/非法转换与操作人记录
+- [x] 2.3 发布预览返回「含未授权孩子的照片数」；验证单测：有 opt-out 孩子时计数正确、无 opt-out 时为 0
+- [x] 2.4 老师端 handler/router 增加 `PUT /teacher/albums/:id`、`POST /teacher/albums/:id/publish`、`POST /teacher/albums/:id/unpublish`、`DELETE /teacher/albums/:id`；验证 `go test ./internal/handler/http/` 与 `go build ./...`
+- [x] 2.5 更新 `backend/api/api-teacher/10-album.md`：状态字段、发布/下架/编辑/删除、预览、参与者；验证契约示例与 handler 字段逐项对照
+- [x] 2.6 在 `docs/tests/TEST_CATALOG.md` 登记 `TC-NEW-ALB-0008..0015` 并映射到新增单测；验证 TC ID 与测试名一一对应
 
 ## 3. 后端：照片-幼儿关联
 
-- [ ] 3.1 `AlbumRepo` 支持 `album_students` 与 `album_photo_students` 的批量写入/替换/查询；验证唯一键冲突与重复提交幂等
-- [ ] 3.2 创建/编辑相册接受 `file_id`、相册级参与幼儿、照片级幼儿；校验 file_id 属于本园、照片数 1–50；验证单测覆盖越权 file_id 与非法参与幼儿
-- [ ] 3.3 从成长记录选图时用 `growth_log_students` 自动带出照片级幼儿；验证单测：记录关联 A/B → 照片关联 A/B，手工覆盖后以覆盖为准
-- [ ] 3.4 更新 `backend/api/api-teacher/10-album.md` 的照片/参与者字段与 `00-common` 上传返回 `id` 的关联说明；验证契约与请求样例可被 handler 绑定
-- [ ] 3.5 在 `TEST_CATALOG.md` 登记 `TC-NEW-ALB-0016..0017`；验证对应用例存在且通过
+- [x] 3.1 `AlbumRepo` 支持 `album_students` 与 `album_photo_students` 的批量写入/替换/查询；验证唯一键冲突与重复提交幂等
+- [x] 3.2 创建/编辑相册接受 `file_id`、相册级参与幼儿、照片级幼儿；校验 file_id 属于本园、照片数 1–50；验证单测覆盖越权 file_id 与非法参与幼儿
+- [x] 3.3 从成长记录选图时用 `growth_log_students` 自动带出照片级幼儿；验证单测：记录关联 A/B → 照片关联 A/B，手工覆盖后以覆盖为准
+- [x] 3.4 更新 `backend/api/api-teacher/10-album.md` 的照片/参与者字段与 `00-common` 上传返回 `id` 的关联说明；验证契约与请求样例可被 handler 绑定
+- [x] 3.5 在 `TEST_CATALOG.md` 登记 `TC-NEW-ALB-0016..0017`；验证对应用例存在且通过
 
 ## 4. 后端：隐私设置与老师端联系方式
 

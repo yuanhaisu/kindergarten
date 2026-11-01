@@ -184,12 +184,17 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 
 	// 班级相册（openspec class-album）。/stats 是静态路径，与 /:id 并存时静态优先，
 	// 这里先声明以保持「统计、列表、创建、详情」的阅读顺序。
+	// 生命周期：创建即草稿，publish/unpublish 切状态，edit 不改变状态，delete 为软删。
 	albums := teacherG.Group("/albums")
 	{
 		albums.GET("/stats", h.TeacherAlbumStats)
 		albums.GET("", h.TeacherListAlbums)
 		albums.POST("", h.TeacherCreateAlbum)
 		albums.GET("/:id", h.TeacherGetAlbum)
+		albums.PUT("/:id", h.TeacherUpdateAlbum)
+		albums.DELETE("/:id", h.TeacherDeleteAlbum)
+		albums.POST("/:id/publish", h.TeacherPublishAlbum)
+		albums.POST("/:id/unpublish", h.TeacherUnpublishAlbum)
 	}
 
 	messages := teacherG.Group("/messages")

@@ -1574,14 +1574,15 @@ func (h *Handler) TeacherAlbumStats(c *gin.Context) {
 	response.OK(c, data)
 }
 
-// TeacherListAlbums GET /teacher/albums?category&page&page_size
+// TeacherListAlbums GET /teacher/albums?category&status&page&page_size
+// status 可选：draft/published/unpublished；不传返回全部状态（老师端管理视图）。
 func (h *Handler) TeacherListAlbums(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {
 		return
 	}
 	page, pageSize := teacherPortalPage(c)
-	data, err := h.teacherPortalSvc.ListAlbums(c.Request.Context(), tc, c.Query("category"), page, pageSize)
+	data, err := h.teacherPortalSvc.ListAlbums(c.Request.Context(), tc, c.Query("category"), c.Query("status"), page, pageSize)
 	if err != nil {
 		teacherPortalErr(c, err, "获取相册列表失败")
 		return
@@ -1607,7 +1608,7 @@ func (h *Handler) TeacherGetAlbum(c *gin.Context) {
 	response.OK(c, data)
 }
 
-// TeacherCreateAlbum POST /teacher/albums 创建相册（关联已上传照片）
+// TeacherCreateAlbum POST /teacher/albums 创建相册草稿（关联已上传照片）
 func (h *Handler) TeacherCreateAlbum(c *gin.Context) {
 	tc, ok := h.teacherPortalContext(c)
 	if !ok {
@@ -1624,4 +1625,81 @@ func (h *Handler) TeacherCreateAlbum(c *gin.Context) {
 		return
 	}
 	response.Created(c, data)
+}
+
+// TeacherUpdateAlbum PUT /teacher/albums/:id 编辑相册（标题/分类/日期/照片/参与者）
+func (h *Handler) TeacherUpdateAlbum(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	var req service.TeacherAlbumInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+	data, err := h.teacherPortalSvc.UpdateAlbum(c.Request.Context(), tc, id, req)
+	if err != nil {
+		teacherPortalErr(c, err, "编辑相册失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherPublishAlbum POST /teacher/albums/:id/publish 发布草稿（或重新上架）
+func (h *Handler) TeacherPublishAlbum(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.PublishAlbum(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "发布相册失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherUnpublishAlbum POST /teacher/albums/:id/unpublish 下架已发布相册
+func (h *Handler) TeacherUnpublishAlbum(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.UnpublishAlbum(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "下架相册失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// TeacherDeleteAlbum DELETE /teacher/albums/:id 软删相册
+func (h *Handler) TeacherDeleteAlbum(c *gin.Context) {
+	tc, ok := h.teacherPortalContext(c)
+	if !ok {
+		return
+	}
+	id, ok := teacherPortalID(c)
+	if !ok {
+		return
+	}
+	data, err := h.teacherPortalSvc.DeleteAlbum(c.Request.Context(), tc, id)
+	if err != nil {
+		teacherPortalErr(c, err, "删除相册失败")
+		return
+	}
+	response.OK(c, data)
 }
