@@ -123,7 +123,7 @@
 {
   "slice_id": "P2-B",
   "phase": "verified",
-  "commit_sha": null,
+  "commit_sha": "07e878e",
   "next_action": "commit + archive class-album-publish-notice; then Phase 2-C",
   "updated_at": "2026-11-01T23:15:00+08:00"
 }
