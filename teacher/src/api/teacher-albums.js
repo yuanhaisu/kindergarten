@@ -56,7 +56,7 @@ export function deleteTeacherAlbum(id, options = {}) {
 }
 
 // 相册照片先走统一上传通道（素材管理基线：biz_type=album），
-// 再把返回的 file_url 关联到 POST /teacher/albums。
+// 上传响应里的 id 就是相册契约的 photos[].file_id（不是 URL、不是其它 ID）。
 export function uploadAlbumPhoto(filePath, onProgressUpdate = null) {
   return uploadFile({
     url: "/common/upload",

@@ -50,7 +50,7 @@
 ## 7. 老师端页面
 
 - [x] 7.1 `teacher/src/pages/album/index.vue` 增加状态徽标、草稿/已发布筛选、发布/下架/编辑/软删入口；验证 `npm run build:mp-weixin` exit 0
-- [ ] 7.2 创建/编辑相册支持批量参与幼儿选择与逐张微调，发布预览展示未授权合影提示；验证 DevTools 真实点击：选 3 张、批量选 A/B、改 1 张为 A、预览提示正确
+- [x] 7.2 创建/编辑相册支持批量参与幼儿选择与逐张微调，发布预览展示未授权合影提示；验证 DevTools 真实点击：选 3 张、批量选 A/B、改 1 张为 A、预览提示正确
 - [x] 7.3 `teacher/src/pages/class/index.vue` 学生信息卡展示家长联系方式（手机号按开关过滤）；验证 DevTools：开/关两种家长数据下手机号出现/缺省
 - [ ] 7.4 两处改动只用现有 token；`node scripts/check-tokens.mjs teacher` 保持基线 3，无新增；验证 `check-secrets` 0
 
