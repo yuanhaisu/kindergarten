@@ -163,6 +163,20 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		// 晨检
 		&domain.MorningHealthCheck{},
 		&domain.HealthCheckMedia{},
+
+		// 膳食 / 带量食谱（openspec: add-quantified-recipe）
+		// 全部是新表，AutoMigrate 只增不改；上线后仍需 dbcheck 核实列与索引。
+		&domain.MealConfig{},
+		&domain.MealConfigMeal{},
+		&domain.FoodCategory{},
+		&domain.Food{},
+		&domain.Recipe{},
+		&domain.RecipeItem{},
+		&domain.MealPlan{},
+		&domain.MealPlanItem{},
+		&domain.TemplatePlan{},
+		&domain.TemplatePlanItem{},
+		&domain.DriAgeTarget{},
 	); err != nil {
 		return nil, err
 	}
