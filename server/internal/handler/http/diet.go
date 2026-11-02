@@ -47,17 +47,19 @@ func (r dietConfigRequest) toInput() service.DietMealConfigInput {
 	}
 }
 
-// NewDietAdminHandler 组装膳食模块（配置 + 食物库 + 菜谱库）的 Handler，供路由级测试使用。
-// 生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
+// NewDietAdminHandler 组装膳食模块（配置 + 食物库 + 菜谱库 + 周食谱/模板）的 Handler，
+// 供路由级测试使用。生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
 func NewDietAdminHandler(
 	dietConfigSvc *service.DietConfigService,
 	dietFoodSvc *service.DietFoodService,
 	dietRecipeSvc *service.DietRecipeService,
+	dietPlanSvc *service.DietPlanService,
 ) *Handler {
 	return &Handler{
 		dietConfigSvc: dietConfigSvc,
 		dietFoodSvc:   dietFoodSvc,
 		dietRecipeSvc: dietRecipeSvc,
+		dietPlanSvc:   dietPlanSvc,
 	}
 }
 
@@ -615,6 +617,258 @@ func respondDietRecipeError(c *gin.Context, err error, fallback string) {
 		response.ErrNotFound(c, "菜谱不存在")
 	case errors.Is(err, service.ErrDietRecipeNameConflict):
 		response.ErrConflict(c, "菜谱名称已存在")
+	default:
+		response.ErrInternal(c, fallback)
+	}
+}
+
+// --- 周食谱与模板（契约 23-diet.md 第五、六节） ---
+
+type listDietPlansQuery struct {
+	AcademicYearID uint64 `form:"academic_year_id"`
+	Keyword        string `form:"keyword"`
+	Page           int    `form:"page"`
+	PageSize       int    `form:"page_size"`
+}
+
+type dietPlanCreateRequest struct {
+	Name           string                       `json:"name"`
+	AcademicYearID uint64                       `json:"academic_year_id"`
+	StartDate      string                       `json:"start_date"`
+	EndDate        string                       `json:"end_date"`
+	WeekOfYear     int                          `json:"week_of_year"`
+	CreatedMethod  domain.DietPlanCreatedMethod `json:"created_method"`
+	TemplateID     *uint64                      `json:"template_id"`
+	SourcePlanID   *uint64                      `json:"source_plan_id"`
+}
+
+func (r dietPlanCreateRequest) toInput() service.DietPlanCreateInput {
+	return service.DietPlanCreateInput{
+		Name:           r.Name,
+		AcademicYearID: r.AcademicYearID,
+		StartDate:      r.StartDate,
+		EndDate:        r.EndDate,
+		WeekOfYear:     r.WeekOfYear,
+		CreatedMethod:  r.CreatedMethod,
+		TemplateID:     r.TemplateID,
+		SourcePlanID:   r.SourcePlanID,
+	}
+}
+
+// dietPlanItemRequest 是整单保存的一行明细。sort 不接受客户端输入。
+type dietPlanItemRequest struct {
+	Date       string             `json:"date"`
+	MealKey    domain.DietMealKey `json:"meal_key"`
+	RecipeName string             `json:"recipe_name"`
+	RecipeID   *uint64            `json:"recipe_id"`
+	FoodID     uint64             `json:"food_id"`
+	FoodName   string             `json:"food_name"`
+	Grams      float64            `json:"grams"`
+}
+
+func toDietPlanItemInputs(rows []dietPlanItemRequest) []service.DietPlanItemInput {
+	out := make([]service.DietPlanItemInput, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, service.DietPlanItemInput{
+			Date:       row.Date,
+			MealKey:    row.MealKey,
+			RecipeName: row.RecipeName,
+			RecipeID:   row.RecipeID,
+			FoodID:     row.FoodID,
+			FoodName:   row.FoodName,
+			Grams:      row.Grams,
+		})
+	}
+	return out
+}
+
+// dietPlanSaveRequest 是 PUT /plans/:id 的请求体。
+// Items 用指针区分「未提交」与「提交空数组」：前者 422，后者等同清空（契约规则 1）。
+type dietPlanSaveRequest struct {
+	Name  *string                `json:"name"`
+	Items *[]dietPlanItemRequest `json:"items"`
+}
+
+// ListDietPlans 返回本园周食谱列表；academic_year_id 缺省取当前学年。
+func (h *Handler) ListDietPlans(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var q listDietPlansQuery
+	_ = c.ShouldBindQuery(&q)
+	pq := pagination.Query{Page: q.Page, PageSize: q.PageSize}
+	list, total, page, pageSize, err := h.dietPlanSvc.ListPlans(
+		c.Request.Context(), kgID, q.AcademicYearID, q.Keyword, pq,
+	)
+	if err != nil {
+		respondDietPlanError(c, err, "获取周食谱列表失败")
+		return
+	}
+	response.OKList(c, list, total, page, pageSize)
+}
+
+// CreateDietPlan 新建周食谱（自定义/模板/复制），HTTP 201。
+func (h *Handler) CreateDietPlan(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var req dietPlanCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	data, err := h.dietPlanSvc.CreatePlan(c.Request.Context(), kgID, req.toInput())
+	if err != nil {
+		respondDietPlanError(c, err, "新建周食谱失败")
+		return
+	}
+	response.Created(c, data)
+}
+
+// GetDietPlan 返回周食谱详情（配置快照 + 全部明细）。
+func (h *Handler) GetDietPlan(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietPlanID(c)
+	if !ok {
+		return
+	}
+	data, err := h.dietPlanSvc.GetPlan(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietPlanError(c, err, "获取周食谱详情失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// UpdateDietPlan 整单保存明细（单事务：校验 → 合并 → 重算快照 → 替换）。
+func (h *Handler) UpdateDietPlan(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietPlanID(c)
+	if !ok {
+		return
+	}
+	var req dietPlanSaveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	in := service.DietPlanSaveInput{Name: req.Name}
+	if req.Items != nil {
+		in.Items = toDietPlanItemInputs(*req.Items)
+	}
+	data, err := h.dietPlanSvc.SavePlan(c.Request.Context(), kgID, id, in)
+	if err != nil {
+		respondDietPlanError(c, err, "保存周食谱失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// DeleteDietPlan 软删除周食谱；列表与详情不再返回。
+func (h *Handler) DeleteDietPlan(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietPlanID(c)
+	if !ok {
+		return
+	}
+	if err := h.dietPlanSvc.DeletePlan(c.Request.Context(), kgID, id); err != nil {
+		respondDietPlanError(c, err, "删除周食谱失败")
+		return
+	}
+	response.OK(c, map[string]any{})
+}
+
+// ClearDietPlan 清空全部明细并保留食谱本身。
+func (h *Handler) ClearDietPlan(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietPlanID(c)
+	if !ok {
+		return
+	}
+	data, err := h.dietPlanSvc.ClearPlan(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietPlanError(c, err, "清空周食谱失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// ListDietTemplates 返回本园可用模板（只读，不分页）。
+func (h *Handler) ListDietTemplates(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	list, err := h.dietPlanSvc.ListTemplates(c.Request.Context(), kgID)
+	if err != nil {
+		respondDietPlanError(c, err, "获取模板列表失败")
+		return
+	}
+	response.OK(c, map[string]any{"list": list})
+}
+
+// GetDietTemplate 返回模板详情（只读）。
+func (h *Handler) GetDietTemplate(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.ErrValidation(c, "无效的模板 ID")
+		return
+	}
+	data, err := h.dietPlanSvc.GetTemplate(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietPlanError(c, err, "获取模板详情失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+func dietPlanID(c *gin.Context) (uint64, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.ErrValidation(c, "无效的食谱 ID")
+		return 0, false
+	}
+	return id, true
+}
+
+// respondDietPlanError 把周食谱服务错误映射到 404/409/422 契约包络。
+func respondDietPlanError(c *gin.Context, err error, fallback string) {
+	var invalid *service.DietPlanValidationError
+	switch {
+	case errors.As(err, &invalid):
+		response.ErrValidation(c, invalid.Message)
+	case errors.Is(err, service.ErrDietPlanNotFound):
+		response.ErrNotFound(c, "周食谱不存在")
+	case errors.Is(err, service.ErrDietTemplateNotFound):
+		response.ErrNotFound(c, "模板不存在")
+	case errors.Is(err, service.ErrDietPlanNameConflict):
+		response.ErrConflict(c, "该学年已存在同名周食谱")
 	default:
 		response.ErrInternal(c, fallback)
 	}

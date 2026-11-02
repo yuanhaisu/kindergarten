@@ -64,6 +64,15 @@ func newPermEngine(resolver PermissionResolver) *gin.Engine {
 	g.GET("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.PUT("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.DELETE("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// AQR-S6 周食谱/模板：用于验证 8 条路由的权限码登记。
+	g.GET("/diet/plans", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/plans", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/plans/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.PUT("/diet/plans/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.DELETE("/diet/plans/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/plans/:id/clear", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/templates", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/templates/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/unregistered-probe", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	return r
 }
@@ -332,4 +341,59 @@ func TestAdminPermission_RoleCatalogHasDietModule(t *testing.T) {
 	assert.Contains(t, codes, "diet:view")
 	assert.Contains(t, codes, "diet:manage")
 	assert.Contains(t, codes, "diet:export")
+}
+
+// AQR-S6：8 条周食谱/模板路由必须逐条登记，GET 用 diet:view、写操作用 diet:manage。
+func TestAdminPermission_DietPlanRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/plans"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans/:id"},
+		{Method: http.MethodPut, Path: "/api/v1/admin/diet/plans/:id"},
+		{Method: http.MethodDelete, Path: "/api/v1/admin/diet/plans/:id"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/plans/:id/clear"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/templates"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/templates/:id"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "周食谱/模板路由不得有登记缺口")
+
+	want := map[string]string{
+		"GET /api/v1/admin/diet/plans":            "diet:view",
+		"POST /api/v1/admin/diet/plans":           "diet:manage",
+		"GET /api/v1/admin/diet/plans/:id":        "diet:view",
+		"PUT /api/v1/admin/diet/plans/:id":        "diet:manage",
+		"DELETE /api/v1/admin/diet/plans/:id":     "diet:manage",
+		"POST /api/v1/admin/diet/plans/:id/clear": "diet:manage",
+		"GET /api/v1/admin/diet/templates":        "diet:view",
+		"GET /api/v1/admin/diet/templates/:id":    "diet:view",
+	}
+	for key, code := range want {
+		assert.Equal(t, code, adminRoutePermission[key], key)
+	}
+}
+
+// 查看码放行周食谱/模板 GET；写操作一律 403。管理码相反。
+func TestAdminPermission_DietPlanViewAndManageCodes(t *testing.T) {
+	viewOnly := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/plans",
+		"/api/v1/admin/diet/plans/1",
+		"/api/v1/admin/diet/templates",
+		"/api/v1/admin/diet/templates/1",
+	} {
+		assert.Equal(t, http.StatusOK, doGet(viewOnly, path).Code, path)
+	}
+	assert.Equal(t, http.StatusForbidden, doPost(viewOnly, "/api/v1/admin/diet/plans").Code)
+	assert.Equal(t, http.StatusForbidden, doPut(viewOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusForbidden, doDelete(viewOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusForbidden, doPost(viewOnly, "/api/v1/admin/diet/plans/1/clear").Code)
+
+	manageOnly := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusOK, doPost(manageOnly, "/api/v1/admin/diet/plans").Code)
+	assert.Equal(t, http.StatusOK, doPut(manageOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusOK, doDelete(manageOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusOK, doPost(manageOnly, "/api/v1/admin/diet/plans/1/clear").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/plans").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/templates").Code)
 }

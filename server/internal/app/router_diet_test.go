@@ -65,6 +65,8 @@ func openRouterDietTestDB(t *testing.T) *gorm.DB {
 		&domain.FoodCategory{}, &domain.Food{},
 		&domain.Recipe{}, &domain.RecipeItem{},
 		&domain.MealPlan{}, &domain.MealPlanItem{},
+		&domain.TemplatePlan{}, &domain.TemplatePlanItem{},
+		&domain.DriAgeTarget{},
 	), "auto migrate diet tables")
 	routerDietDB = db
 	return db
@@ -79,7 +81,10 @@ func cleanupRouterDietData(t *testing.T, db *gorm.DB) {
 		"DELETE FROM diet_recipes WHERE kindergarten_id = ?",
 		"DELETE FROM diet_meal_plan_items WHERE kindergarten_id = ?",
 		"DELETE FROM diet_meal_plans WHERE kindergarten_id = ?",
+		"DELETE FROM diet_template_plan_items WHERE kindergarten_id = ?",
+		"DELETE FROM diet_template_plans WHERE kindergarten_id = ?",
 		"DELETE FROM diet_foods WHERE kindergarten_id = ?",
+		"DELETE FROM academic_years WHERE kindergarten_id = ?",
 	} {
 		if err := db.Exec(sql, testRouterDietKG).Error; err != nil {
 			t.Logf("cleanup %q: %v", sql, err)
@@ -100,6 +105,15 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 	recipeRepo := repository.NewDietRecipeRepo(db)
 	foodSvc := service.NewDietFoodService(foodRepo, recipeRepo)
 	recipeSvc := service.NewDietRecipeService(recipeRepo, foodRepo)
+	planSvc := service.NewDietPlanService(
+		repository.NewDietPlanRepo(db),
+		repository.NewDietTemplateRepo(db),
+		foodRepo,
+		repository.NewClassRepo(db),
+		repository.NewAcademicYearRepo(db),
+		repository.NewDietDriRepo(db),
+		configSvc,
+	)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -111,7 +125,7 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 		c.Next()
 	})
 	adminG.Use(middleware.RequirePermission(resolver))
-	registerAdminRoutes(adminG, handler.NewDietAdminHandler(configSvc, foodSvc, recipeSvc))
+	registerAdminRoutes(adminG, handler.NewDietAdminHandler(configSvc, foodSvc, recipeSvc, planSvc))
 	return r
 }
 
@@ -261,7 +275,7 @@ func TestRouterDiet_FoodRoutesRegistered(t *testing.T) {
 	for _, key := range want {
 		assert.True(t, got[key], "缺少食物路由 %s", key)
 	}
-	assert.Len(t, got, 17, "diet 组当前应恰好 2 条配置 + 8 条食物 + 7 条菜谱路由")
+	assert.Len(t, got, 25, "diet 组当前应恰好 2 条配置 + 8 条食物 + 7 条菜谱 + 8 条周食谱/模板路由")
 }
 
 // AQR-S4：7 条菜谱路由必须真实注册，不得有 501/stub。
@@ -454,6 +468,139 @@ func TestRouterDiet_RecipeRealBehavior(t *testing.T) {
 	w = doDietRequest(t, engine, http.MethodDelete, "/api/v1/admin/diet/recipes/"+strconv.FormatUint(created.ID, 10), "")
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/recipes/"+strconv.FormatUint(created.ID, 10), "")
+	require.Equal(t, http.StatusNotFound, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	assert.Equal(t, 40400, env.Code)
+}
+
+// AQR-S6：8 条周食谱/模板路由必须真实注册，不得有 501/stub。
+func TestRouterDiet_PlanRoutesRegistered(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
+
+	want := []string{
+		"GET /api/v1/admin/diet/plans",
+		"POST /api/v1/admin/diet/plans",
+		"GET /api/v1/admin/diet/plans/:id",
+		"PUT /api/v1/admin/diet/plans/:id",
+		"DELETE /api/v1/admin/diet/plans/:id",
+		"POST /api/v1/admin/diet/plans/:id/clear",
+		"GET /api/v1/admin/diet/templates",
+		"GET /api/v1/admin/diet/templates/:id",
+	}
+	got := map[string]bool{}
+	for _, rt := range engine.Routes() {
+		if strings.HasPrefix(rt.Path, "/api/v1/admin/diet/plans") ||
+			strings.HasPrefix(rt.Path, "/api/v1/admin/diet/templates") {
+			got[rt.Method+" "+rt.Path] = true
+		}
+	}
+	for _, key := range want {
+		assert.True(t, got[key], "缺少周食谱/模板路由 %s", key)
+	}
+	assert.Len(t, got, 8, "周食谱与模板应恰好 8 条路由")
+}
+
+// AQR-S6：GET 走 diet:view，写操作走 diet:manage，两个码互不替代。
+func TestRouterDiet_PlanPermissionCodes(t *testing.T) {
+	viewOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/plans",
+		"/api/v1/admin/diet/plans/999999999",
+		"/api/v1/admin/diet/templates",
+		"/api/v1/admin/diet/templates/999999999",
+	} {
+		assert.NotEqual(t, http.StatusForbidden,
+			doDietRequest(t, viewOnly, http.MethodGet, path, "").Code, "GET %s 应允许 diet:view", path)
+	}
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodPost, "/api/v1/admin/diet/plans", "{}"},
+		{http.MethodPut, "/api/v1/admin/diet/plans/1", "{}"},
+		{http.MethodDelete, "/api/v1/admin/diet/plans/1", ""},
+		{http.MethodPost, "/api/v1/admin/diet/plans/1/clear", ""},
+	} {
+		assert.Equal(t, http.StatusForbidden,
+			doDietRequest(t, viewOnly, tc.method, tc.path, tc.body).Code,
+			"%s %s 只读码必须被拒", tc.method, tc.path)
+	}
+
+	manageOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:manage"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/plans",
+		"/api/v1/admin/diet/templates",
+		"/api/v1/admin/diet/templates/1",
+	} {
+		assert.Equal(t, http.StatusForbidden,
+			doDietRequest(t, manageOnly, http.MethodGet, path, "").Code,
+			"GET %s 管理码不能替代查看码", path)
+	}
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodPost, "/api/v1/admin/diet/plans", "{}"},
+		{http.MethodPut, "/api/v1/admin/diet/plans/999999999", "{}"},
+		{http.MethodDelete, "/api/v1/admin/diet/plans/999999999", ""},
+		{http.MethodPost, "/api/v1/admin/diet/plans/999999999/clear", ""},
+	} {
+		assert.NotEqual(t, http.StatusForbidden,
+			doDietRequest(t, manageOnly, tc.method, tc.path, tc.body).Code,
+			"%s %s 应通过权限检查", tc.method, tc.path)
+	}
+}
+
+// AQR-S6 真实行为：新建 201、同学年重名 409、详情含配置快照、清空保留食谱、删除后 404。
+func TestRouterDiet_PlanRealBehavior(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
+	db := openRouterDietTestDB(t)
+
+	year := &domain.AcademicYear{
+		KindergartenID: testRouterDietKG,
+		Year:           "2026-2027",
+		IsCurrent:      true,
+	}
+	require.NoError(t, db.Create(year).Error)
+
+	yearID := strconv.FormatUint(year.ID, 10)
+	body := `{"name":"S6路由第九周","academic_year_id":` + yearID +
+		`,"start_date":"2026-10-26","end_date":"2026-11-01","week_of_year":9,"created_method":"custom"}`
+
+	w := doDietRequest(t, engine, http.MethodPost, "/api/v1/admin/diet/plans", body)
+	require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+	env := decodeDietEnvelope(t, w)
+	require.Equal(t, 0, env.Code)
+	var created service.DietPlanCreateResult
+	require.NoError(t, json.Unmarshal(env.Data, &created))
+	require.NotZero(t, created.ID)
+	assert.Zero(t, created.DayNum)
+	assert.Equal(t, "2026-10-26", created.StartDate)
+
+	// 同学年重名 → 409 / 40900。
+	w = doDietRequest(t, engine, http.MethodPost, "/api/v1/admin/diet/plans", body)
+	require.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	assert.Equal(t, 40900, env.Code)
+
+	planID := strconv.FormatUint(created.ID, 10)
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/plans/"+planID, "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var detail service.DietPlanDetail
+	require.NoError(t, json.Unmarshal(env.Data, &detail))
+	assert.Equal(t, "S6路由第九周", detail.Name)
+	assert.Equal(t, year.ID, detail.AcademicYearID)
+	assert.Len(t, detail.ConfigSnapshot.Meals, 6)
+	assert.InDelta(t, 0.95, detail.ConfigSnapshot.Coefficient, 1e-9)
+	assert.Empty(t, detail.Items)
+
+	w = doDietRequest(t, engine, http.MethodPost, "/api/v1/admin/diet/plans/"+planID+"/clear", "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var cleared service.DietPlanClearResult
+	require.NoError(t, json.Unmarshal(env.Data, &cleared))
+	assert.Equal(t, created.ID, cleared.ID)
+	assert.Zero(t, cleared.DayNum)
+
+	w = doDietRequest(t, engine, http.MethodDelete, "/api/v1/admin/diet/plans/"+planID, "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/plans/"+planID, "")
 	require.Equal(t, http.StatusNotFound, w.Code, w.Body.String())
 	env = decodeDietEnvelope(t, w)
 	assert.Equal(t, 40400, env.Code)

@@ -466,7 +466,7 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 
 	// 膳食管理：AQR-S2 供餐配置 + AQR-S3 食物库（分类树/列表/详情/新增/修改/删除/
 	// 批量删除/同类替换候选）+ AQR-S4 菜谱库（列表/详情/新增或替换/改名改配方/删除/
-	// 合并/联想）。其余周食谱、模板、分析路由由后续 slice 实现时登记，不建空路由/stub。
+	// 合并/联想）+ AQR-S6 周食谱与模板。报表与导出路由由后续 slice 实现时登记。
 	diet := adminG.Group("/diet")
 	{
 		diet.GET("/config", h.GetDietConfig)
@@ -490,6 +490,18 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		diet.GET("/recipes/:id", h.GetDietRecipe)
 		diet.PUT("/recipes/:id", h.UpdateDietRecipe)
 		diet.DELETE("/recipes/:id", h.DeleteDietRecipe)
+
+		// 周食谱：三种创建方式与整单保存；清空/删除需前端二次确认。
+		diet.GET("/plans", h.ListDietPlans)
+		diet.POST("/plans", h.CreateDietPlan)
+		diet.GET("/plans/:id", h.GetDietPlan)
+		diet.PUT("/plans/:id", h.UpdateDietPlan)
+		diet.DELETE("/plans/:id", h.DeleteDietPlan)
+		diet.POST("/plans/:id/clear", h.ClearDietPlan)
+
+		// 模板：按园种子化，只读。
+		diet.GET("/templates", h.ListDietTemplates)
+		diet.GET("/templates/:id", h.GetDietTemplate)
 	}
 
 	dict := adminG.Group("/dicts")
