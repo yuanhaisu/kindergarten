@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"unicode"
 
@@ -17,6 +18,7 @@ type SystemService struct {
 	userRepo     *repository.UserRepo
 	userRoleRepo *repository.UserRoleRepo
 	kgRepo       *repository.KindergartenRepo
+	dietSeed     *DietSeedService
 }
 
 func NewSystemService(
@@ -24,12 +26,14 @@ func NewSystemService(
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
 	kgRepo *repository.KindergartenRepo,
+	dietSeed *DietSeedService,
 ) *SystemService {
 	return &SystemService{
 		db:           db,
 		userRepo:     userRepo,
 		userRoleRepo: userRoleRepo,
 		kgRepo:       kgRepo,
+		dietSeed:     dietSeed,
 	}
 }
 
@@ -81,13 +85,15 @@ func (s *SystemService) Initialize(ctx context.Context, req InitRequest) error {
 		return err
 	}
 
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var newKindergartenID uint64
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		kg := &domain.Kindergarten{
 			Name: req.KindergartenName,
 		}
 		if err := tx.Create(kg).Error; err != nil {
 			return err
 		}
+		newKindergartenID = kg.ID
 
 		user := &domain.User{
 			Phone:        req.AdminPhone,
@@ -128,7 +134,19 @@ func (s *SystemService) Initialize(ctx context.Context, req InitRequest) error {
 		}
 
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	// 新园食物库在园所事务提交后补齐：复制 kg=0 预置食物 + 种模板。
+	// 失败只记日志，不回滚园所创建——启动 seeder 会按 preset_key 兜底补齐（design D10）。
+	if s.dietSeed != nil {
+		if _, err := s.dietSeed.EnsureKindergartenSeeded(ctx, newKindergartenID); err != nil {
+			slog.Error("system: 新园膳食数据初始化失败，园所已创建，启动 seeder 将兜底补齐",
+				"kindergarten_id", newKindergartenID, "error", err)
+		}
+	}
+	return nil
 }
 
 var phoneRe = regexp.MustCompile(`^1[3-9]\d{9}$`)

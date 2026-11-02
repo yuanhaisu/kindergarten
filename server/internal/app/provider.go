@@ -184,6 +184,10 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 	// Seed default dictionary data (idempotent)
 	SeedDictsAfterMigration(db)
 
+	// 膳食平台数据：分类/DRIs → 按园复制 kg=0 食物 → 模板。
+	// 独立于字典种子，失败只记日志、不阻断启动（design D10）。
+	SeedDietAfterMigration(db)
+
 	// 幂等补齐园长角色（align-class-calendar 4.3）；失败不阻断启动，与字典播种同策略
 	if err := service.SeedPrincipalRolesForAll(context.Background(), db); err != nil {
 		println("principal role seeder: " + err.Error())

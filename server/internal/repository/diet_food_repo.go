@@ -123,6 +123,86 @@ func (r *DietFoodRepo) BatchDelete(ctx context.Context, kindergartenID uint64, i
 	return res.RowsAffected, res.Error
 }
 
+// ListByKindergarten 返回本园全部食物（不分页），供种子复制与模板按名称解析使用。
+// 复制必须看到全部预置行，不能用分页列表逐页拼接。
+func (r *DietFoodRepo) ListByKindergarten(ctx context.Context, kindergartenID uint64) ([]domain.Food, error) {
+	var rows []domain.Food
+	err := r.db.WithContext(ctx).
+		Where("kindergarten_id = ?", kindergartenID).
+		Order("id ASC").
+		Find(&rows).Error
+	return rows, err
+}
+
+// FindByPresetKey 按 (kindergarten_id, preset_key) 查一行；不存在时返回 (nil, nil)。
+// 只匹配未软删除行：本表没有 preset_key 唯一索引，软删除行不占键，
+// 删除后重新导入应当插入新行而不是复活旧行。
+func (r *DietFoodRepo) FindByPresetKey(
+	ctx context.Context,
+	kindergartenID uint64,
+	presetKey string,
+) (*domain.Food, error) {
+	if presetKey == "" {
+		return nil, nil
+	}
+	var row domain.Food
+	err := r.db.WithContext(ctx).
+		Where("kindergarten_id = ? AND preset_key = ?", kindergartenID, presetKey).
+		First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+// CreateBatch 分块插入食物。一次导入可能上千行，单条 INSERT 会超过
+// max_allowed_packet，因此交给 GORM 拆包。
+func (r *DietFoodRepo) CreateBatch(ctx context.Context, foods []domain.Food) error {
+	if len(foods) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).CreateInBatches(&foods, 100).Error
+}
+
+// FindCategoryByParentName 按 (parent_id, name) 查分类。
+// 用 Unscoped：软删除行仍占用唯一索引，重建前必须先看到它。
+func (r *DietFoodRepo) FindCategoryByParentName(
+	ctx context.Context,
+	parentID uint64,
+	name string,
+) (*domain.FoodCategory, error) {
+	var row domain.FoodCategory
+	err := r.db.WithContext(ctx).Unscoped().
+		Where("parent_id = ? AND name = ?", parentID, name).
+		First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+// CreateCategory 新建食物分类。
+func (r *DietFoodRepo) CreateCategory(ctx context.Context, category *domain.FoodCategory) error {
+	if category == nil {
+		return errors.New("diet food: nil category")
+	}
+	return r.db.WithContext(ctx).Create(category).Error
+}
+
+// RestoreCategory 复活被软删除的分类。唯一索引仍占着键，重建只能复用原行。
+func (r *DietFoodRepo) RestoreCategory(ctx context.Context, id uint64) error {
+	return r.db.WithContext(ctx).Unscoped().
+		Model(&domain.FoodCategory{}).
+		Where("id = ?", id).
+		Update("deleted_at", nil).Error
+}
+
 // CountByKindergarten 统计园所食物副本数；kindergartenID=0 时统计平台预置行，
 // 供导入/种子流程判断是否已就绪。
 func (r *DietFoodRepo) CountByKindergarten(ctx context.Context, kindergartenID uint64) (int64, error) {
