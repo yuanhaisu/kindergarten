@@ -1,5 +1,7 @@
 <template>
-  <div v-loading="loading" class="min-h-32 space-y-4">
+  <!-- 文件路由会把 [id]/analysis.vue 生成为本页的子路由，父级必须提供出口；子路由自己渲染整页 -->
+  <NuxtPage v-if="isChildRoute" />
+  <div v-else v-loading="loading" class="min-h-32 space-y-4">
     <el-alert
       v-if="loadError"
       type="error"
@@ -23,6 +25,13 @@
               <span class="text-lg font-semibold text-text-primary">周食谱编辑</span>
             </div>
             <div class="flex flex-wrap gap-2">
+              <el-button
+                data-testid="plan-analysis"
+                title="营养分析使用已保存的明细"
+                @click="openAnalysis"
+              >
+                查看分析
+              </el-button>
               <el-button
                 v-if="canManage"
                 type="primary"
@@ -394,6 +403,7 @@ const route = useRoute()
 const router = useRouter()
 const { can } = usePermission()
 const canManage = computed(() => can('diet:manage'))
+const isChildRoute = computed(() => route.path.endsWith('/analysis'))
 
 const plan = ref<DietPlanDetail | null>(null)
 const planName = ref('')
@@ -435,13 +445,20 @@ const totalItemCount = computed(() =>
   ),
 )
 
-onMounted(loadDetail)
+onMounted(() => {
+  if (!isChildRoute.value) void loadDetail()
+})
 watch(
   () => route.params.id,
   () => {
-    void loadDetail()
+    if (!isChildRoute.value) void loadDetail()
   },
 )
+// 从营养分析子路由返回时父组件不会重新挂载：仅在尚未载入过详情时补载，
+// 避免把编辑器里未保存的改动冲掉
+watch(isChildRoute, (child) => {
+  if (!child && !plan.value) void loadDetail()
+})
 
 async function loadDetail() {
   const id = Number(route.params.id)
@@ -917,6 +934,12 @@ async function removePlan() {
   } catch (e: unknown) {
     ElMessage.error(e instanceof Error ? e.message : '删除失败')
   }
+}
+
+function openAnalysis() {
+  const id = Number(route.params.id)
+  if (!Number.isFinite(id) || id <= 0) return
+  return router.push(`/diet/plans/${id}/analysis`)
 }
 
 function goList() {

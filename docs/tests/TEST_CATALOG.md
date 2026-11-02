@@ -22,6 +22,7 @@
 | ACH | 成就 | ANN | 公告 |
 | PERM | 权限强制 | TBL | 课表 |
 | ALB | 班级相册 | | |
+| DIE | 膳食管理 | | |
 
 ---
 
@@ -1166,3 +1167,78 @@
 - 老师端审核 UI（9.3）、家长端申请开关与公开墙页面（10.3/10.x）、管理端撤回入口（11.4）——B2 无界面可点。
 - 「内容中只有提交者孩子」只能由老师勾选确认，服务端无法自动识别图片/语音里出现了谁。
 - 任务列表/详情（`GET /parent/tasks`、`GET /parent/tasks/:id`）尚未返回 `public_*`；家长端要展示某条提交的公开状态目前走 `checkin-history`。字段补齐归契约任务 8.1。
+
+## 膳食管理（DIE）
+
+> 对应 OpenSpec 变更 `add-quantified-recipe` 的任务 7.1。
+> 规格见 `openspec/changes/add-quantified-recipe/specs/` 下 `diet-meal-config`、`diet-food-library`、
+> `diet-meal-plan`、`diet-nutrition-analysis`；契约见 `backend/api/api-admin/23-diet.md`。
+> 单测分布在 AQR-S2–S7（service 层，真实 MySQL 夹具）；页面交互由 AQR-S10b 的 E2E 覆盖。
+> 状态列中的 S10b 指 `AQR-S10b` 的端到端验收切片。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-DIE-0001 | 首次读取返回默认配置（日托、5 餐、市品重量） | P0 | 单测 | ✅ `TestDietMealConfig_TC0001_FirstReadReturnsDefault` |
+| TC-NEW-DIE-0002 | 标准模式保存餐次时间与默认比例后读取一致 | P0 | 单测 | ✅ `TestDietMealConfig_TC0002_SaveStandardAndReadBack` |
+| TC-NEW-DIE-0003 | 餐次时间顺序错误被拒绝且配置不变 | P0 | 单测 | ✅ `TestDietMealConfig_TC0003_RejectsTimeOutOfOrder` |
+| TC-NEW-DIE-0004 | 自定模式相邻餐次占比超限被拒绝 | P0 | 单测 | ✅ `TestDietMealConfig_TC0004_RejectsCustomAdjacentCap` |
+| TC-NEW-DIE-0005 | 五餐配置折算系数 0.95 | P0 | 单测 | ✅ `TestDietMealConfig_TC0005_StandardCoefficient95` |
+| TC-NEW-DIE-0006 | 停用晚餐后折算系数变为 0.70 | P0 | 单测 | ✅ `TestDietMealConfig_TC0006_DisableDinnerCoefficient70` |
+| TC-NEW-DIE-0007 | 保存可食重量口径被拒绝 | P0 | 单测 | ✅ `TestDietMealConfig_TC0007_RejectsEdibleWeight` |
+| TC-NEW-DIE-0008 | 调整比例后旧食谱按创建时快照计算 | P0 | 单测 | ✅ `TestDietMealConfig_TC0008_SnapshotNotRetroactive` |
+| TC-NEW-DIE-0009 | 新园可见平台预置食物 | P0 | 单测 | ✅ `TestDietSeedCopiesPresetFoods` + `TestDietSeedGlobals` |
+| TC-NEW-DIE-0010 | 修改园所食物副本不影响他园与预置源 | P1 | 单测 | ✅ `TestDietFood_UpdateCopyIsolation` |
+| TC-NEW-DIE-0011 | 缺失营养项存 NULL、读取显示占位符 | P0 | 单测 | ✅ `TestDietFood_DetailPreservesNullNutrients` |
+| TC-NEW-DIE-0012 | 缺失营养项不按 0 计入合计 | P0 | 单测 | ✅ `TestDietAnalysis_NullNutrientSkipped` |
+| TC-NEW-DIE-0013 | 按一级/二级分类与名称片段检索食物 | P1 | 单测 | ✅ `TestDietFood_ListFiltersByCategoryAndKeyword` |
+| TC-NEW-DIE-0014 | 删除被菜谱引用的食物被拒绝 | P0 | 单测 | ✅ `TestDietFood_DeleteReferencedByRecipeRejected` |
+| TC-NEW-DIE-0015 | 删除仅被历史食谱引用的食物成功且历史不变 | P0 | 单测 | ✅ `TestDietFood_DeleteReferencedOnlyByMealPlanAllowed` |
+| TC-NEW-DIE-0016 | 预置库升级跳过园所已修改行并报告冲突 | P1 | 单测 | 🚧 `TestDietFood_UpdatePresetCopyMarksCustomized` 只覆盖标记位；升级命令冲突报告待 S5 命令验证 |
+| TC-NEW-DIE-0017 | 同名菜谱不能并存 | P0 | 单测 | ✅ `TestDietRecipe_DuplicateNameWithoutReplaceConflict` |
+| TC-NEW-DIE-0018 | 新名称保存为新菜谱 | P0 | 单测 | ✅ `TestDietRecipe_SaveNewNameCreatesRecipe` |
+| TC-NEW-DIE-0019 | 重名选择「替换」覆盖原配方 | P0 | 单测 | ✅ `TestDietRecipe_ReplaceOverwritesFormula` |
+| TC-NEW-DIE-0020 | 重名选择「仅限本次使用」不写入菜谱库 | P0 | E2E | 🔲 前端分支，S10b E2E |
+| TC-NEW-DIE-0021 | 同菜内同一种食物合并为一行、克数相加 | P0 | 单测 | ✅ `TestDietRecipe_DuplicateFoodRowsMergeGrams` + `TestDietPlanSaveMergesSameFoodInSameRecipe` |
+| TC-NEW-DIE-0022 | 输入菜名触发名称/拼音码联想 | P1 | 单测 | ✅ `TestDietRecipe_SuggestMatchesNameAndSpellPrefix` |
+| TC-NEW-DIE-0023 | 选中联想候选载入菜谱配方 | P1 | E2E | 🔲 编辑器交互，S10b E2E |
+| TC-NEW-DIE-0024 | 菜谱改名后库与联想更新、历史食谱不变 | P0 | 单测 | ✅ `TestDietRecipe_UpdateRenameAndFormulaKeepsHistory` |
+| TC-NEW-DIE-0025 | 菜谱删除后库不再返回、历史食谱不变 | P0 | 单测 | ✅ `TestDietRecipe_DeleteSoftDeletesAndAllowsRecreate` |
+| TC-NEW-DIE-0026 | 合并重复菜谱时同种食物克数累加并删除源菜谱 | P1 | 单测 | ✅ `TestDietRecipe_MergeSumsGramsAndDeletesSource` |
+| TC-NEW-DIE-0027 | 修改菜谱配料后历史周食谱与报表不变 | P1 | 单测 | ✅ `TestDietRecipe_UpdateRenameAndFormulaKeepsHistory` |
+| TC-NEW-DIE-0028 | 新建后列表显示周次与周一至周日区间 | P0 | 单测 | ✅ `TestDietPlanCreateCustomAndList` |
+| TC-NEW-DIE-0029 | 同一学年内重名周食谱被拒绝 | P0 | 单测 | ✅ `TestDietPlanCreateRejectsDuplicateNameInAcademicYear` |
+| TC-NEW-DIE-0030 | 自定义方式新建空白周食谱 | P0 | 单测 | ✅ `TestDietPlanCreateCustomAndList` |
+| TC-NEW-DIE-0031 | 选用模板新建周食谱 | P0 | 单测 | ✅ `TestDietPlanCreateFromTemplateCopiesItems` |
+| TC-NEW-DIE-0032 | 复制历史新建周食谱 | P0 | 单测 | ✅ `TestDietPlanCopyMapsWeekdayAndRecomputesSnapshot` |
+| TC-NEW-DIE-0033 | 修改模板生成结果不影响模板本身 | P1 | 单测 | 🚧 `TestDietPlanCreateFromTemplateCopiesItems` 证明条目独立复制；「改结果不动模板」无独立断言 |
+| TC-NEW-DIE-0034 | 跨周复制按星期几映射并重算营养快照 | P0 | 单测 | ✅ `TestDietPlanCopyMapsWeekdayAndRecomputesSnapshot` |
+| TC-NEW-DIE-0035 | 网格编辑器添加菜谱、食物与克数 | P0 | E2E | 🚧 后端保存覆盖 `TestDietPlanSaveAddsRemovesAndClearsItems`；网格交互待 S10b E2E |
+| TC-NEW-DIE-0036 | 移除菜谱或食物后明细与小计同步减少 | P1 | E2E | 🚧 后端移除覆盖 `TestDietPlanSaveAddsRemovesAndClearsItems`；UI 小计联动待 S10b E2E |
+| TC-NEW-DIE-0037 | 空克数或 0 克阻止保存并定位到单元格 | P0 | 单测 | ✅ `TestDietPlanSaveValidatesCells` |
+| TC-NEW-DIE-0038 | 同类替换后克数不变、营养按新食物重算 | P1 | E2E | 🔲 编辑器交互，S10b E2E（候选接口见 `TestDietFood_ReplaceCandidatesUseRootCategory`） |
+| TC-NEW-DIE-0039 | 调整菜谱顺序后保存并重新打开保持一致 | P1 | 单测 | ✅ `TestDietPlanSavePersistsArrayOrder` |
+| TC-NEW-DIE-0040 | 保存后立即可被列表与营养分析读取 | P0 | 单测 | ✅ `TestDietPlanSaveImmediatelyReadable` |
+| TC-NEW-DIE-0041 | 清空食谱明细后食谱本身保留 | P0 | 单测 | ✅ `TestDietPlanClearKeepsPlan` |
+| TC-NEW-DIE-0042 | 删除周食谱后列表与营养分析不再返回 | P0 | 单测 | ✅ `TestDietPlanDeleteSoftDeletes` |
+| TC-NEW-DIE-0043 | 修改克数后餐次与当日营养小计立即更新 | P1 | E2E | 🔲 编辑器交互，S10b E2E |
+| TC-NEW-DIE-0044 | 两条明细按食部折算后营养合计 | P0 | 单测 | ✅ `TestDietAnalysis_TwoItemsNutritionSum` |
+| TC-NEW-DIE-0045 | NULL 营养项不参与求和 | P0 | 单测 | ✅ `TestDietAnalysis_NullNutrientSkipped` |
+| TC-NEW-DIE-0046 | 五餐 0.95 的显示值与比较%（DRIs 不缩放） | P0 | 单测 | ✅ `TestDietAnalysis_ZeroNineFiveDisplay` |
+| TC-NEW-DIE-0047 | 折算系数变为 0.70 后显示值与比较% 重算 | P0 | 单测 | ✅ `TestDietAnalysis_CoefficientChange` |
+| TC-NEW-DIE-0048 | 按 3/4/5/6 岁班级人数权重算出 11 项 DRIs 目标值 | P0 | 单测 | ✅ `TestDietAnalysis_DriTargetsFromSnapshot` + `TestDietPlanSnapshotWeightsByGradeStudents` + `TestDietPlanSnapshotFallbackWeightsWithoutStudents` |
+| TC-NEW-DIE-0049 | 评价阈值 ±20% 闭区间边界 | P0 | 单测 | ✅ `TestDietAnalysis_EvaluationBoundaries` |
+| TC-NEW-DIE-0050 | 低于 80% 判「低」、高于 120% 判「高」 | P0 | 单测 | ✅ `TestDietAnalysis_EvaluationLowHigh` |
+| TC-NEW-DIE-0051 | 营养分析表 14 列（视黄醇当量复用维生素A、胡萝卜素「-」） | P0 | 单测 + E2E | 🚧 后端 `TestDietAnalysis_NutritionGoldenSample`；14 列页面渲染待 S10b E2E |
+| TC-NEW-DIE-0052 | 三大营养素供能四行与分母口径 | P0 | 单测 | ✅ `TestDietAnalysis_MacroEnergy` |
+| TC-NEW-DIE-0053 | 三餐供能比按 6 个餐次展示 | P0 | 单测 | ✅ `TestDietAnalysis_MealEnergy` |
+| TC-NEW-DIE-0054 | 膳食构成接口 16 类、页面只渲染 10 类 | P0 | 单测 + E2E | 🚧 后端 `TestDietAnalysis_Composition16Groups`；页面渲染待 S10b E2E |
+| TC-NEW-DIE-0055 | 钙三来源不互斥（126%）、铁两来源互斥（100%） | P0 | 单测 | ✅ `TestDietAnalysis_CalciumIron` |
+| TC-NEW-DIE-0056 | 蛋白质来源只统计动物+豆类，三项合计不等于总蛋白 | P0 | 单测 | ✅ `TestDietAnalysis_ProteinSource` |
+| TC-NEW-DIE-0057 | 脂肪来源返回 3 项、页面只渲染动物性/植物性 | P1 | 单测 | ✅ `TestDietAnalysis_FatSource` |
+| TC-NEW-DIE-0058 | 同一报表三个能量总量并存、不做统一 | P0 | 单测 | ✅ `TestDietAnalysis_NutritionGoldenSample` |
+| TC-NEW-DIE-0059 | 营养表列渲染复用：视黄醇当量=维生素A、胡萝卜素「-」 | P0 | 单测 + E2E | 🚧 后端 `TestDietAnalysis_NoRetinolCarotinInResponse`；页面复用列待 S10b E2E |
+| TC-NEW-DIE-0060 | 三餐供能比合计 85.88% 不归一化 | P0 | 单测 | ✅ `TestDietAnalysis_MealEnergy` |
+| TC-NEW-DIE-0061 | 钙偏低触发固定建议话术 | P0 | 单测 | ✅ `TestDietAnalysis_ConclusionCalciumLowSuggestion` |
+| TC-NEW-DIE-0062 | 「合格」营养素不触发建议 | P0 | 单测 | ✅ `TestDietAnalysis_ConclusionNoSuggestionForOK` |
+| TC-NEW-DIE-0063 | 修改食物库后历史报表 7 组不变 | P0 | 单测 | ✅ `TestDietAnalysis_SnapshotUnaffectedByFoodChanges` |
+| TC-NEW-DIE-0064 | 导出 Excel 5 个 sheet，数值与页面一致 | P0 | 单测 | ✅ `TestDietAnalysisExportWorkbook` |

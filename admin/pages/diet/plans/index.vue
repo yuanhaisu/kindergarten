@@ -92,8 +92,16 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="140" fixed="right">
+      <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
+          <el-button
+            link
+            type="primary"
+            :data-testid="`plan-analysis-${(row as DietPlanListItem).id}`"
+            @click="openAnalysis((row as DietPlanListItem).id)"
+          >
+            营养分析
+          </el-button>
           <el-button link type="primary" @click="openEditor((row as DietPlanListItem).id)">
             编辑
           </el-button>
@@ -531,6 +539,10 @@ async function submitWizard() {
 
 function openEditor(id: number) {
   router.push(`/diet/plans/${id}`)
+}
+
+function openAnalysis(id: number) {
+  router.push(`/diet/plans/${id}/analysis`)
 }
 
 async function remove(row: DietPlanListItem) {
