@@ -34,6 +34,9 @@
   --color-brand-tint: #FFEDD5;
   --color-bg-page: #F8FAFC;
   --color-bg-card: #FFFFFF;
+  --color-preview-parent-bg-card: #FFFFFF;
+  --color-preview-parent-brand-primary-bg: #FFF7ED;
+  --color-preview-parent-brand-primary-dark: #EA580C;
   --typography-font-family-base: 'Noto Sans SC', 'system-ui', '-apple-system', 'sans-serif';
   --typography-font-size-xs: 22rpx;
   --typography-font-size-sm: 24rpx;
