@@ -20,7 +20,7 @@ export function updateSettings(body: Partial<SystemSettingsWithAlbum>) {
 }
 
 export function getAcademicYears() {
-  return useHttp().get<{ list: { year: string; is_current: boolean }[] }>(
+  return useHttp().get<{ list: { id: number; year: string; is_current: boolean }[] }>(
     '/admin/settings/academic-years',
   )
 }
