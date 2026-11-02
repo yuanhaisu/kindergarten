@@ -465,8 +465,8 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 	}
 
 	// 膳食管理：AQR-S2 供餐配置 + AQR-S3 食物库（分类树/列表/详情/新增/修改/删除/
-	// 批量删除/同类替换候选）。其余菜谱、周食谱、模板、分析路由由后续 slice 实现时登记，
-	// 不建空路由/stub。
+	// 批量删除/同类替换候选）+ AQR-S4 菜谱库（列表/详情/新增或替换/改名改配方/删除/
+	// 合并/联想）。其余周食谱、模板、分析路由由后续 slice 实现时登记，不建空路由/stub。
 	diet := adminG.Group("/diet")
 	{
 		diet.GET("/config", h.GetDietConfig)
@@ -481,6 +481,15 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		diet.PUT("/foods/:id", h.UpdateDietFood)
 		diet.DELETE("/foods/:id", h.DeleteDietFood)
 		diet.GET("/foods/:id/replace-candidates", h.ListDietFoodReplaceCandidates)
+
+		// 静态段 suggest/merge 必须先于 :id 注册（gin 静态优先，二者不冲突）。
+		diet.GET("/recipes", h.ListDietRecipes)
+		diet.POST("/recipes", h.CreateDietRecipe)
+		diet.GET("/recipes/suggest", h.SuggestDietRecipes)
+		diet.POST("/recipes/merge", h.MergeDietRecipes)
+		diet.GET("/recipes/:id", h.GetDietRecipe)
+		diet.PUT("/recipes/:id", h.UpdateDietRecipe)
+		diet.DELETE("/recipes/:id", h.DeleteDietRecipe)
 	}
 
 	dict := adminG.Group("/dicts")

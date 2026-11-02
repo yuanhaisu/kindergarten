@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -95,7 +96,10 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 	t.Cleanup(func() { cleanupRouterDietData(t, db) })
 
 	configSvc := service.NewDietConfigService(repository.NewDietConfigRepo(db))
-	foodSvc := service.NewDietFoodService(repository.NewDietFoodRepo(db), repository.NewDietRecipeRepo(db))
+	foodRepo := repository.NewDietFoodRepo(db)
+	recipeRepo := repository.NewDietRecipeRepo(db)
+	foodSvc := service.NewDietFoodService(foodRepo, recipeRepo)
+	recipeSvc := service.NewDietRecipeService(recipeRepo, foodRepo)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -107,7 +111,7 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 		c.Next()
 	})
 	adminG.Use(middleware.RequirePermission(resolver))
-	registerAdminRoutes(adminG, handler.NewDietAdminHandler(configSvc, foodSvc))
+	registerAdminRoutes(adminG, handler.NewDietAdminHandler(configSvc, foodSvc, recipeSvc))
 	return r
 }
 
@@ -257,7 +261,32 @@ func TestRouterDiet_FoodRoutesRegistered(t *testing.T) {
 	for _, key := range want {
 		assert.True(t, got[key], "缺少食物路由 %s", key)
 	}
-	assert.Len(t, got, 10, "diet 组当前应恰好 2 条配置 + 8 条食物路由")
+	assert.Len(t, got, 17, "diet 组当前应恰好 2 条配置 + 8 条食物 + 7 条菜谱路由")
+}
+
+// AQR-S4：7 条菜谱路由必须真实注册，不得有 501/stub。
+func TestRouterDiet_RecipeRoutesRegistered(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
+
+	want := []string{
+		"GET /api/v1/admin/diet/recipes",
+		"POST /api/v1/admin/diet/recipes",
+		"GET /api/v1/admin/diet/recipes/suggest",
+		"POST /api/v1/admin/diet/recipes/merge",
+		"GET /api/v1/admin/diet/recipes/:id",
+		"PUT /api/v1/admin/diet/recipes/:id",
+		"DELETE /api/v1/admin/diet/recipes/:id",
+	}
+	got := map[string]bool{}
+	for _, rt := range engine.Routes() {
+		if strings.HasPrefix(rt.Path, "/api/v1/admin/diet/recipes") {
+			got[rt.Method+" "+rt.Path] = true
+		}
+	}
+	for _, key := range want {
+		assert.True(t, got[key], "缺少菜谱路由 %s", key)
+	}
+	assert.Len(t, got, 7, "菜谱库应恰好 7 条路由")
 }
 
 // AQR-S3：GET 走 diet:view，写操作走 diet:manage，两个码互不替代。
@@ -302,4 +331,130 @@ func TestRouterDiet_FoodPermissionCodes(t *testing.T) {
 			doDietRequest(t, manageOnly, tc.method, tc.path, tc.body).Code,
 			"%s %s 应通过权限检查", tc.method, tc.path)
 	}
+}
+
+// AQR-S4：菜谱 GET（列表/详情/联想）走 diet:view，写操作走 diet:manage。
+func TestRouterDiet_RecipePermissionCodes(t *testing.T) {
+	viewOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/recipes",
+		"/api/v1/admin/diet/recipes/suggest",
+		"/api/v1/admin/diet/recipes/999999999",
+	} {
+		assert.NotEqual(t, http.StatusForbidden,
+			doDietRequest(t, viewOnly, http.MethodGet, path, "").Code, "GET %s 应允许 diet:view", path)
+	}
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodPost, "/api/v1/admin/diet/recipes", "{}"},
+		{http.MethodPost, "/api/v1/admin/diet/recipes/merge", "{}"},
+		{http.MethodPut, "/api/v1/admin/diet/recipes/1", "{}"},
+		{http.MethodDelete, "/api/v1/admin/diet/recipes/1", ""},
+	} {
+		assert.Equal(t, http.StatusForbidden,
+			doDietRequest(t, viewOnly, tc.method, tc.path, tc.body).Code,
+			"%s %s 只读码必须被拒", tc.method, tc.path)
+	}
+
+	manageOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:manage"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/recipes",
+		"/api/v1/admin/diet/recipes/suggest",
+	} {
+		assert.Equal(t, http.StatusForbidden,
+			doDietRequest(t, manageOnly, http.MethodGet, path, "").Code,
+			"GET %s 管理码不能替代查看码", path)
+	}
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodPost, "/api/v1/admin/diet/recipes", "{}"},
+		{http.MethodPost, "/api/v1/admin/diet/recipes/merge", "{}"},
+		{http.MethodPut, "/api/v1/admin/diet/recipes/999999999", "{}"},
+		{http.MethodDelete, "/api/v1/admin/diet/recipes/999999999", ""},
+	} {
+		assert.NotEqual(t, http.StatusForbidden,
+			doDietRequest(t, manageOnly, tc.method, tc.path, tc.body).Code,
+			"%s %s 应通过权限检查", tc.method, tc.path)
+	}
+}
+
+// AQR-S4 真实行为：新增 201、同名冲突 409、替换 200、详情/联想/删除的包络与状态码。
+func TestRouterDiet_RecipeRealBehavior(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
+	db := openRouterDietTestDB(t)
+
+	energy := 286.0
+	food := &domain.Food{
+		KindergartenID: testRouterDietKG,
+		Name:           "S4路由测试面粉",
+		CategoryID:     1,
+		EdiblePercent:  100,
+		Source:         domain.DietFoodSourceCustom,
+		Energy:         &energy,
+	}
+	require.NoError(t, db.Create(food).Error)
+	require.NotZero(t, food.ID)
+
+	createBody := `{"name":"S4路由测试云吞","items":[{"food_id":` +
+		strconv.FormatUint(food.ID, 10) + `,"grams":10}],"replace":false}`
+	w := doDietRequest(t, engine, http.MethodPost, "/api/v1/admin/diet/recipes", createBody)
+	require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+	env := decodeDietEnvelope(t, w)
+	require.Equal(t, 0, env.Code)
+	var created service.DietRecipeSaveResult
+	require.NoError(t, json.Unmarshal(env.Data, &created))
+	require.NotZero(t, created.ID)
+
+	// 同名且 replace=false → 409 / 40900，且不写入。
+	w = doDietRequest(t, engine, http.MethodPost, "/api/v1/admin/diet/recipes", createBody)
+	require.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	assert.Equal(t, 40900, env.Code)
+	assert.Equal(t, "菜谱名称已存在", env.Message)
+
+	// replace=true → 200，同一个菜谱被覆盖。
+	replaceBody := `{"name":"S4路由测试云吞","items":[{"food_id":` +
+		strconv.FormatUint(food.ID, 10) + `,"grams":12}],"replace":true}`
+	w = doDietRequest(t, engine, http.MethodPost, "/api/v1/admin/diet/recipes", replaceBody)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/recipes/"+strconv.FormatUint(created.ID, 10), "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var detail service.DietRecipeDetail
+	require.NoError(t, json.Unmarshal(env.Data, &detail))
+	require.Len(t, detail.Items, 1)
+	assert.Equal(t, "S4路由测试面粉", detail.Items[0].FoodName)
+	assert.InDelta(t, 12.0, detail.Items[0].Grams, 1e-9)
+	require.NotNil(t, detail.Items[0].Nutrients.Energy)
+	assert.InDelta(t, 286.0, *detail.Items[0].Nutrients.Energy, 1e-9)
+
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/recipes?keyword=S4路由", "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var page struct {
+		List  []service.DietRecipeListItem `json:"list"`
+		Total int64                        `json:"total"`
+	}
+	require.NoError(t, json.Unmarshal(env.Data, &page))
+	assert.Equal(t, int64(1), page.Total)
+
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/recipes/suggest?keyword=S4路由&limit=5", "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var suggest struct {
+		List []service.DietRecipeListItem `json:"list"`
+	}
+	require.NoError(t, json.Unmarshal(env.Data, &suggest))
+	assert.Len(t, suggest.List, 1)
+
+	// 合并到自身 → 422。
+	w = doDietRequest(t, engine, http.MethodPost, "/api/v1/admin/diet/recipes/merge",
+		`{"source_id":`+strconv.FormatUint(created.ID, 10)+`,"target_id":`+strconv.FormatUint(created.ID, 10)+`}`)
+	require.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+
+	w = doDietRequest(t, engine, http.MethodDelete, "/api/v1/admin/diet/recipes/"+strconv.FormatUint(created.ID, 10), "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/recipes/"+strconv.FormatUint(created.ID, 10), "")
+	require.Equal(t, http.StatusNotFound, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	assert.Equal(t, 40400, env.Code)
 }

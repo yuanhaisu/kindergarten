@@ -129,6 +129,51 @@ func TestDietRecipeRepo_CreateListFindUpdateDelete(t *testing.T) {
 	assert.Zero(t, itemRows, "删除菜谱必须硬删配料，不留软删行")
 }
 
+// MergeInto：目标配料整组替换、源菜谱软删除且配料硬删，历史快照不参与。
+func TestDietRecipeRepo_MergeIntoReplacesTargetAndDeletesSource(t *testing.T) {
+	db := openDietRepoTestDB(t)
+	repo := NewDietRecipeRepo(db)
+	ctx := context.Background()
+
+	cleanupDietRecipeData(t, db)
+	t.Cleanup(func() { cleanupDietRecipeData(t, db) })
+
+	target := newTestRecipe(testDietRecipeKG, "S1B合并目标",
+		domain.RecipeItem{FoodID: 10001, Grams: 10, Sort: 1},
+		domain.RecipeItem{FoodID: 10005, Grams: 5, Sort: 2},
+	)
+	source := newTestRecipe(testDietRecipeKG, "S1B合并源",
+		domain.RecipeItem{FoodID: 10001, Grams: 7, Sort: 1},
+		domain.RecipeItem{FoodID: 10011, Grams: 3, Sort: 2},
+	)
+	require.NoError(t, repo.Create(ctx, target))
+	require.NoError(t, repo.Create(ctx, source))
+
+	merged := []domain.RecipeItem{
+		{FoodID: 10001, Grams: 17, Sort: 1},
+		{FoodID: 10005, Grams: 5, Sort: 2},
+		{FoodID: 10011, Grams: 3, Sort: 3},
+	}
+	count, err := repo.MergeInto(ctx, testDietRecipeKG, source.ID, target.ID, merged)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), count)
+
+	detail, err := repo.FindByIDWithItems(ctx, testDietRecipeKG, target.ID)
+	require.NoError(t, err)
+	require.NotNil(t, detail)
+	require.Len(t, detail.Items, 3)
+	assert.InDelta(t, 17.0, detail.Items[0].Grams, 1e-9)
+	assert.Equal(t, uint64(10011), detail.Items[2].FoodID)
+
+	gone, err := repo.FindByIDWithItems(ctx, testDietRecipeKG, source.ID)
+	require.NoError(t, err)
+	assert.Nil(t, gone, "源菜谱必须软删除")
+	var sourceItems int64
+	require.NoError(t, db.Unscoped().Model(&domain.RecipeItem{}).
+		Where("recipe_id = ?", source.ID).Count(&sourceItems).Error)
+	assert.Zero(t, sourceItems, "源配料必须硬删")
+}
+
 func TestDietRecipeRepo_SuggestMatchesNameAndSpellPrefix(t *testing.T) {
 	db := openDietRepoTestDB(t)
 	repo := NewDietRecipeRepo(db)

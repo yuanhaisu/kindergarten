@@ -56,6 +56,14 @@ func newPermEngine(resolver PermissionResolver) *gin.Engine {
 	g.PUT("/diet/foods/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.DELETE("/diet/foods/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/diet/foods/:id/replace-candidates", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// AQR-S4 菜谱库：用于验证 7 条路由的权限码登记。
+	g.GET("/diet/recipes", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/recipes", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/recipes/suggest", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/recipes/merge", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.PUT("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.DELETE("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/unregistered-probe", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	return r
 }
@@ -226,6 +234,61 @@ func TestAdminPermission_DietFoodManageCode(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/foods").Code)
 	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/foods/1").Code)
 	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/foods/1/replace-candidates").Code)
+}
+
+// AQR-S4：7 条菜谱路由必须逐条登记，GET 用 diet:view、写操作用 diet:manage。
+func TestAdminPermission_DietRecipeRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/recipes"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/recipes"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/recipes/suggest"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/recipes/merge"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/recipes/:id"},
+		{Method: http.MethodPut, Path: "/api/v1/admin/diet/recipes/:id"},
+		{Method: http.MethodDelete, Path: "/api/v1/admin/diet/recipes/:id"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "菜谱路由不得有登记缺口")
+
+	want := map[string]string{
+		"GET /api/v1/admin/diet/recipes":         "diet:view",
+		"POST /api/v1/admin/diet/recipes":        "diet:manage",
+		"GET /api/v1/admin/diet/recipes/suggest": "diet:view",
+		"POST /api/v1/admin/diet/recipes/merge":  "diet:manage",
+		"GET /api/v1/admin/diet/recipes/:id":     "diet:view",
+		"PUT /api/v1/admin/diet/recipes/:id":     "diet:manage",
+		"DELETE /api/v1/admin/diet/recipes/:id":  "diet:manage",
+	}
+	for key, code := range want {
+		assert.Equal(t, code, adminRoutePermission[key], key)
+	}
+}
+
+// 查看码放行全部菜谱 GET；写操作一律 403。
+func TestAdminPermission_DietRecipeViewCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/recipes",
+		"/api/v1/admin/diet/recipes/suggest",
+		"/api/v1/admin/diet/recipes/1",
+	} {
+		assert.Equal(t, http.StatusOK, doGet(r, path).Code, path)
+	}
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/recipes").Code)
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/recipes/merge").Code)
+	assert.Equal(t, http.StatusForbidden, doPut(r, "/api/v1/admin/diet/recipes/1").Code)
+	assert.Equal(t, http.StatusForbidden, doDelete(r, "/api/v1/admin/diet/recipes/1").Code)
+}
+
+// 管理码放行全部菜谱写操作；菜谱 GET 一律 403。
+func TestAdminPermission_DietRecipeManageCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/recipes").Code)
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/recipes/merge").Code)
+	assert.Equal(t, http.StatusOK, doPut(r, "/api/v1/admin/diet/recipes/1").Code)
+	assert.Equal(t, http.StatusOK, doDelete(r, "/api/v1/admin/diet/recipes/1").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/recipes").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/recipes/suggest").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/recipes/1").Code)
 }
 
 func openAdminPermTestDB(t *testing.T) *gorm.DB {

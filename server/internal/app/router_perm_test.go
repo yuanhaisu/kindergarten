@@ -19,11 +19,12 @@ func TestAdminPermissionRegistryCoversAllRoutes(t *testing.T) {
 	assert.NotNil(t, engine)
 }
 
-// AQR-S1b：/admin/diet 本 slice 只注册供餐配置两条路由。
-// 路由漏登记权限码会让 NewRouter 启动失败（fail-closed），因此本用例同时覆盖 1.6 与 2.3。
+// AQR-S1b/S3/S4：/admin/diet 当前注册 2 条配置 + 8 条食物 + 7 条菜谱。
+// 路由漏登记权限码会让 NewRouter 启动失败（fail-closed），因此本用例同时覆盖
+// 权限登记与精确路由集合；后续 slice 新增 diet 路由时必须同步更新此断言。
 func TestRouterPerm_DietConfigRoutesRegistered(t *testing.T) {
 	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), nil)
-	require.NoError(t, err, "diet 配置路由漏登记权限码时 NewRouter 必须启动失败")
+	require.NoError(t, err, "diet 路由漏登记权限码时 NewRouter 必须启动失败")
 
 	var got []string
 	for _, rt := range engine.Routes() {
@@ -34,5 +35,22 @@ func TestRouterPerm_DietConfigRoutesRegistered(t *testing.T) {
 	assert.ElementsMatch(t, []string{
 		"GET /api/v1/admin/diet/config",
 		"PUT /api/v1/admin/diet/config",
-	}, got, "本 slice 只注册配置两条路由，其余 diet 路由由后续 slice 各自登记")
+
+		"GET /api/v1/admin/diet/food-categories",
+		"GET /api/v1/admin/diet/foods",
+		"POST /api/v1/admin/diet/foods",
+		"POST /api/v1/admin/diet/foods/batch-delete",
+		"GET /api/v1/admin/diet/foods/:id",
+		"PUT /api/v1/admin/diet/foods/:id",
+		"DELETE /api/v1/admin/diet/foods/:id",
+		"GET /api/v1/admin/diet/foods/:id/replace-candidates",
+
+		"GET /api/v1/admin/diet/recipes",
+		"POST /api/v1/admin/diet/recipes",
+		"GET /api/v1/admin/diet/recipes/suggest",
+		"POST /api/v1/admin/diet/recipes/merge",
+		"GET /api/v1/admin/diet/recipes/:id",
+		"PUT /api/v1/admin/diet/recipes/:id",
+		"DELETE /api/v1/admin/diet/recipes/:id",
+	}, got, "diet 组当前应恰好 17 条路由：2 配置 + 8 食物 + 7 菜谱")
 }

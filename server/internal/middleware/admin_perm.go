@@ -217,7 +217,7 @@ var adminRoutePermission = map[string]string{
 	"PUT /api/v1/admin/timetable/setting":           "timetable:manage",
 	"POST /api/v1/admin/timetable/sync":             "timetable:manage",
 
-	// diet —— 供餐配置（AQR-S1b）与食物库（AQR-S3）。其余 /admin/diet/**
+	// diet —— 供餐配置（AQR-S1b）、食物库（AQR-S3）与菜谱库（AQR-S4）。其余 /admin/diet/**
 	// 路由由后续 slice 实现时逐条登记；本表是 fail-closed，漏登记会让服务启动失败。
 	"GET /api/v1/admin/diet/config": "diet:view",
 	"PUT /api/v1/admin/diet/config": "diet:manage",
@@ -231,6 +231,15 @@ var adminRoutePermission = map[string]string{
 	"DELETE /api/v1/admin/diet/foods/:id":                 "diet:manage",
 	"POST /api/v1/admin/diet/foods/batch-delete":          "diet:manage",
 	"GET /api/v1/admin/diet/foods/:id/replace-candidates": "diet:view",
+
+	// 菜谱库：列表/详情/联想用 diet:view；保存/改名改配方/删除/合并用 diet:manage。
+	"GET /api/v1/admin/diet/recipes":         "diet:view",
+	"POST /api/v1/admin/diet/recipes":        "diet:manage",
+	"GET /api/v1/admin/diet/recipes/suggest": "diet:view",
+	"POST /api/v1/admin/diet/recipes/merge":  "diet:manage",
+	"GET /api/v1/admin/diet/recipes/:id":     "diet:view",
+	"PUT /api/v1/admin/diet/recipes/:id":     "diet:manage",
+	"DELETE /api/v1/admin/diet/recipes/:id":  "diet:manage",
 }
 
 // RequirePermission 按登记表强制管理端接口权限，挂在 adminG 组上（AuthJWT/CasbinRBAC 之后）。

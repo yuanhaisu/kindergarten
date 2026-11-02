@@ -47,13 +47,18 @@ func (r dietConfigRequest) toInput() service.DietMealConfigInput {
 	}
 }
 
-// NewDietAdminHandler 组装膳食模块（配置 + 食物库）的 Handler，供路由级测试使用。
+// NewDietAdminHandler 组装膳食模块（配置 + 食物库 + 菜谱库）的 Handler，供路由级测试使用。
 // 生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
 func NewDietAdminHandler(
 	dietConfigSvc *service.DietConfigService,
 	dietFoodSvc *service.DietFoodService,
+	dietRecipeSvc *service.DietRecipeService,
 ) *Handler {
-	return &Handler{dietConfigSvc: dietConfigSvc, dietFoodSvc: dietFoodSvc}
+	return &Handler{
+		dietConfigSvc: dietConfigSvc,
+		dietFoodSvc:   dietFoodSvc,
+		dietRecipeSvc: dietRecipeSvc,
+	}
 }
 
 // GetDietConfig 返回园所供餐配置；未配置时返回默认值。
@@ -389,6 +394,227 @@ func respondDietFoodError(c *gin.Context, err error, fallback string) {
 		response.ErrNotFound(c, "食物不存在")
 	case errors.Is(err, service.ErrDietFoodReferencedByRecipe):
 		response.ErrConflict(c, "食物仍被菜谱引用，无法删除")
+	default:
+		response.ErrInternal(c, fallback)
+	}
+}
+
+// --- 菜谱库（契约 23-diet.md 第四节） ---
+
+type dietRecipeItemRequest struct {
+	FoodID uint64  `json:"food_id"`
+	Grams  float64 `json:"grams"`
+}
+
+func toDietRecipeItemInputs(rows []dietRecipeItemRequest) []service.DietRecipeItemInput {
+	out := make([]service.DietRecipeItemInput, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, service.DietRecipeItemInput{FoodID: row.FoodID, Grams: row.Grams})
+	}
+	return out
+}
+
+// dietRecipeSaveRequest 是 POST /recipes 的请求体。
+// replace 只影响同名分支；缺省 false = 触发前端「替换 / 仅本次」询问。
+type dietRecipeSaveRequest struct {
+	Name    string                  `json:"name"`
+	Items   []dietRecipeItemRequest `json:"items"`
+	Replace bool                    `json:"replace"`
+}
+
+// dietRecipeUpdateRequest 是 PUT /recipes/:id 的请求体。
+// name/items 均可选（改名与/或改配方）；items 一旦提交即整体替换。
+type dietRecipeUpdateRequest struct {
+	Name  *string                  `json:"name"`
+	Items *[]dietRecipeItemRequest `json:"items"`
+}
+
+type dietRecipeMergeRequest struct {
+	SourceID uint64 `json:"source_id"`
+	TargetID uint64 `json:"target_id"`
+}
+
+type listDietRecipesQuery struct {
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
+	Keyword  string `form:"keyword"`
+}
+
+type dietRecipeSuggestQuery struct {
+	Keyword string `form:"keyword"`
+	Limit   int    `form:"limit"`
+}
+
+// ListDietRecipes 返回本园菜谱列表（名称/拼音码/配料数）。
+func (h *Handler) ListDietRecipes(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var q listDietRecipesQuery
+	_ = c.ShouldBindQuery(&q)
+	pq := pagination.Query{Page: q.Page, PageSize: q.PageSize}
+	list, total, page, pageSize, err := h.dietRecipeSvc.ListRecipes(
+		c.Request.Context(), kgID, q.Keyword, pq,
+	)
+	if err != nil {
+		respondDietRecipeError(c, err, "获取菜谱列表失败")
+		return
+	}
+	response.OKList(c, list, total, page, pageSize)
+}
+
+// GetDietRecipe 返回菜谱详情（配料 + 每种食物当前 27 项营养）。
+func (h *Handler) GetDietRecipe(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietRecipeID(c)
+	if !ok {
+		return
+	}
+	data, err := h.dietRecipeSvc.GetRecipe(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietRecipeError(c, err, "获取菜谱详情失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// CreateDietRecipe 保存菜谱：新增返回 201，replace=true 覆盖原菜谱返回 200；
+// 同名且 replace=false 返回 409（前端据此弹「替换 / 仅本次」）。
+func (h *Handler) CreateDietRecipe(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var req dietRecipeSaveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	data, err := h.dietRecipeSvc.SaveRecipe(c.Request.Context(), kgID, service.DietRecipeSaveInput{
+		Name:    req.Name,
+		Items:   toDietRecipeItemInputs(req.Items),
+		Replace: req.Replace,
+	})
+	if err != nil {
+		respondDietRecipeError(c, err, "保存菜谱失败")
+		return
+	}
+	if data.Created {
+		response.Created(c, data)
+		return
+	}
+	response.OK(c, data)
+}
+
+// UpdateDietRecipe 改名与/或改配方；改名撞上其他菜谱返回 409。
+func (h *Handler) UpdateDietRecipe(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietRecipeID(c)
+	if !ok {
+		return
+	}
+	var req dietRecipeUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	in := service.DietRecipeUpdateInput{Name: req.Name}
+	if req.Items != nil {
+		items := toDietRecipeItemInputs(*req.Items)
+		in.Items = &items
+	}
+	if err := h.dietRecipeSvc.UpdateRecipe(c.Request.Context(), kgID, id, in); err != nil {
+		respondDietRecipeError(c, err, "修改菜谱失败")
+		return
+	}
+	response.OK(c, map[string]any{"id": id})
+}
+
+// DeleteDietRecipe 软删除菜谱；历史周食谱保持原菜名、克数与营养快照。
+func (h *Handler) DeleteDietRecipe(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietRecipeID(c)
+	if !ok {
+		return
+	}
+	if err := h.dietRecipeSvc.DeleteRecipe(c.Request.Context(), kgID, id); err != nil {
+		respondDietRecipeError(c, err, "删除菜谱失败")
+		return
+	}
+	response.OK(c, map[string]any{})
+}
+
+// MergeDietRecipes 合并重复菜谱：源的同种食物克数累加到目标，然后删除源。
+func (h *Handler) MergeDietRecipes(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var req dietRecipeMergeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	data, err := h.dietRecipeSvc.MergeRecipes(c.Request.Context(), kgID, req.SourceID, req.TargetID)
+	if err != nil {
+		respondDietRecipeError(c, err, "合并菜谱失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// SuggestDietRecipes 编辑器菜名联想：名称包含或拼音码前缀匹配，不含配料。
+func (h *Handler) SuggestDietRecipes(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var q dietRecipeSuggestQuery
+	_ = c.ShouldBindQuery(&q)
+	list, err := h.dietRecipeSvc.SuggestRecipes(c.Request.Context(), kgID, q.Keyword, q.Limit)
+	if err != nil {
+		respondDietRecipeError(c, err, "获取菜谱联想失败")
+		return
+	}
+	response.OK(c, map[string]any{"list": list})
+}
+
+func dietRecipeID(c *gin.Context) (uint64, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.ErrValidation(c, "无效的菜谱 ID")
+		return 0, false
+	}
+	return id, true
+}
+
+// respondDietRecipeError 把菜谱服务错误映射到 404/409/422 契约包络。
+func respondDietRecipeError(c *gin.Context, err error, fallback string) {
+	var invalid *service.DietRecipeValidationError
+	switch {
+	case errors.As(err, &invalid):
+		response.ErrValidation(c, invalid.Message)
+	case errors.Is(err, service.ErrDietRecipeNotFound):
+		response.ErrNotFound(c, "菜谱不存在")
+	case errors.Is(err, service.ErrDietRecipeNameConflict):
+		response.ErrConflict(c, "菜谱名称已存在")
 	default:
 		response.ErrInternal(c, fallback)
 	}

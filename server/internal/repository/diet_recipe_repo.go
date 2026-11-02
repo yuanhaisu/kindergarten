@@ -36,7 +36,12 @@ func (r *DietRecipeRepo) listQuery(ctx context.Context, kindergartenID uint64, k
 	q := r.db.WithContext(ctx).Table("diet_recipes AS r").
 		Where("r.kindergarten_id = ? AND r.deleted_at IS NULL", kindergartenID)
 	if kw := strings.TrimSpace(keyword); kw != "" {
-		q = q.Where("r.name LIKE ?", "%"+kw+"%")
+		// 列表关键字同时匹配名称与拼音码前缀（与食物库/联想保持一致）。
+		q = q.Where(
+			"(r.name LIKE ? OR r.spell_code LIKE ?)",
+			"%"+kw+"%",
+			strings.ToUpper(kw)+"%",
+		)
 	}
 	return q
 }
@@ -215,6 +220,46 @@ func (r *DietRecipeRepo) Delete(ctx context.Context, kindergartenID, id uint64) 
 		return res.Error
 	})
 	return affected, err
+}
+
+// MergeInto 把一个菜谱的合并结果写回目标菜谱，并删除源菜谱（同一事务）。
+//
+// 目标配料硬删后重插：RecipeItem 带软删除列，软删行会无限累积且占用查询。
+// 源菜谱软删除、配料硬删，与 Delete 的语义一致；历史周食谱不受影响（明细存自己的快照）。
+// 源菜谱是否存在的判定在服务层完成（不存在时返回 404，不进入本方法）。
+func (r *DietRecipeRepo) MergeInto(
+	ctx context.Context,
+	kindergartenID, sourceID, targetID uint64,
+	items []domain.RecipeItem,
+) (int64, error) {
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().
+			Where("recipe_id = ? AND kindergarten_id = ?", targetID, kindergartenID).
+			Delete(&domain.RecipeItem{}).Error; err != nil {
+			return err
+		}
+		if len(items) > 0 {
+			prepared := make([]domain.RecipeItem, len(items))
+			copy(prepared, items)
+			for i := range prepared {
+				prepared[i].BaseModel = domain.BaseModel{}
+				prepared[i].RecipeID = targetID
+				prepared[i].KindergartenID = kindergartenID
+			}
+			if err := tx.Create(&prepared).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Unscoped().
+			Where("recipe_id = ? AND kindergarten_id = ?", sourceID, kindergartenID).
+			Delete(&domain.RecipeItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("kindergarten_id = ? AND id = ?", kindergartenID, sourceID).
+			Delete(&domain.Recipe{}).Error
+	})
+	return int64(len(items)), err
 }
 
 // CountByFoodID 统计本园菜谱中引用该食物的配料行数。
