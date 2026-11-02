@@ -58,6 +58,16 @@ var dietRootCategoryNames = []string{
 // dietDriAgeBands 是 DRIs 的四个年龄档。
 var dietDriAgeBands = [4]int{3, 4, 5, 6}
 
+// dietPlaceholderLeafName 是每个一级分类下的占位二级分类名。
+//
+// 授权 CSV 未导入时资源库没有任何真实二级分类，新增食物会被「请选择二级（叶子）分类」
+// 拦截，整个资源库不可用。种子为每个一级分类补一个「其他」占位；CSV 导入的真实二级
+// 分类按 (parent_id, name) upsert，与该占位共存（design D10）。
+const dietPlaceholderLeafName = "其他"
+
+// dietPlaceholderLeafSort 让占位分类排在真实二级分类之后（导入行的 sort 默认 0）。
+const dietPlaceholderLeafSort = 9999
+
 // DietSeedService 负责膳食平台数据的幂等播种与授权 CSV 导入。
 //
 // 种子顺序固定：全局分类/DRIs → 按园复制 kg=0 食物 → 种模板（design D10）。
@@ -81,8 +91,9 @@ func NewDietSeedService(
 
 // DietGlobalSeedResult 是全局种子结果；已存在的行不重复插入。
 type DietGlobalSeedResult struct {
-	CategoriesAdded int `json:"categories_added"`
-	DriRowsAdded    int `json:"dri_rows_added"`
+	CategoriesAdded     int `json:"categories_added"`
+	LeafCategoriesAdded int `json:"leaf_categories_added"`
+	DriRowsAdded        int `json:"dri_rows_added"`
 }
 
 // DietTemplateSeedResult 是单园模板种子结果。
@@ -119,6 +130,7 @@ type DietSeedForAllResult struct {
 // 软删除行仍占用唯一索引，因此查到被软删除的同类行时复活它而不是新建。
 func (s *DietSeedService) SeedDietGlobals(ctx context.Context) (DietGlobalSeedResult, error) {
 	var result DietGlobalSeedResult
+	roots := make(map[string]domain.FoodCategory, len(dietRootCategoryNames))
 	for i, name := range dietRootCategoryNames {
 		existing, err := s.foods.FindCategoryByParentName(ctx, 0, name)
 		if err != nil {
@@ -130,6 +142,7 @@ func (s *DietSeedService) SeedDietGlobals(ctx context.Context) (DietGlobalSeedRe
 					return result, fmt.Errorf("restore food category %q: %w", name, err)
 				}
 			}
+			roots[name] = *existing
 			continue
 		}
 		category := &domain.FoodCategory{ParentID: 0, Level: 1, Name: name, Sort: i + 1}
@@ -147,9 +160,26 @@ func (s *DietSeedService) SeedDietGlobals(ctx context.Context) (DietGlobalSeedRe
 					return result, fmt.Errorf("restore food category %q: %w", name, err)
 				}
 			}
+			roots[name] = *raced
 			continue
 		}
+		roots[name] = *category
 		result.CategoriesAdded++
+	}
+
+	// 二级占位必须挂在已确认存在的一级分类下，因此放在一级循环之后。
+	for _, name := range dietRootCategoryNames {
+		root, ok := roots[name]
+		if !ok {
+			continue
+		}
+		created, err := s.ensurePlaceholderLeafCategory(ctx, root)
+		if err != nil {
+			return result, err
+		}
+		if created {
+			result.LeafCategoriesAdded++
+		}
 	}
 
 	existing, err := s.dri.ListAllIncludingDeleted(ctx)
@@ -179,6 +209,54 @@ func (s *DietSeedService) SeedDietGlobals(ctx context.Context) (DietGlobalSeedRe
 	}
 	result.DriRowsAdded = int(added)
 	return result, nil
+}
+
+// ensurePlaceholderLeafCategory 幂等保证一级分类下存在占位二级分类「其他」，
+// 返回本次是否新建。软删除行先复活复用：唯一索引仍占着 (parent_id, name)。
+func (s *DietSeedService) ensurePlaceholderLeafCategory(
+	ctx context.Context,
+	root domain.FoodCategory,
+) (bool, error) {
+	existing, err := s.foods.FindCategoryByParentName(ctx, root.ID, dietPlaceholderLeafName)
+	if err != nil {
+		return false, fmt.Errorf("query placeholder leaf %q/%q: %w",
+			root.Name, dietPlaceholderLeafName, err)
+	}
+	if existing != nil {
+		if existing.DeletedAt.Valid {
+			if err := s.foods.RestoreCategory(ctx, existing.ID); err != nil {
+				return false, fmt.Errorf("restore placeholder leaf %q/%q: %w",
+					root.Name, dietPlaceholderLeafName, err)
+			}
+		}
+		return false, nil
+	}
+	leaf := &domain.FoodCategory{
+		ParentID: root.ID,
+		Level:    2,
+		Name:     dietPlaceholderLeafName,
+		Sort:     dietPlaceholderLeafSort,
+	}
+	if err := s.foods.CreateCategory(ctx, leaf); err != nil {
+		// 并发播种可能刚插入同名叶子；回查沿用而不是让整次播种失败。
+		raced, findErr := s.foods.FindCategoryByParentName(ctx, root.ID, dietPlaceholderLeafName)
+		if findErr != nil {
+			return false, fmt.Errorf("query placeholder leaf %q/%q after create failure: %w",
+				root.Name, dietPlaceholderLeafName, findErr)
+		}
+		if raced == nil {
+			return false, fmt.Errorf("create placeholder leaf %q/%q: %w",
+				root.Name, dietPlaceholderLeafName, err)
+		}
+		if raced.DeletedAt.Valid {
+			if err := s.foods.RestoreCategory(ctx, raced.ID); err != nil {
+				return false, fmt.Errorf("restore placeholder leaf %q/%q: %w",
+					root.Name, dietPlaceholderLeafName, err)
+			}
+		}
+		return false, nil
+	}
+	return true, nil
 }
 
 // SeedDietForAll 遍历全部园所，补齐食物副本与模板。

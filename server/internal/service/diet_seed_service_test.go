@@ -125,6 +125,7 @@ func TestDietTemplateSpecsShape(t *testing.T) {
 func TestDietSeedGlobals(t *testing.T) {
 	db := openDietSeedTestDB(t)
 	svc := newDietSeedTestService(db)
+	foodSvc := NewDietFoodService(repository.NewDietFoodRepo(db), repository.NewDietRecipeRepo(db))
 	ctx := context.Background()
 
 	_, err := svc.SeedDietGlobals(ctx)
@@ -133,6 +134,7 @@ func TestDietSeedGlobals(t *testing.T) {
 	second, err := svc.SeedDietGlobals(ctx)
 	require.NoError(t, err, "second SeedDietGlobals")
 	assert.Zero(t, second.CategoriesAdded, "已存在的一级分类不得重复插入")
+	assert.Zero(t, second.LeafCategoriesAdded, "已存在的二级占位分类不得重复插入")
 	assert.Zero(t, second.DriRowsAdded, "已存在的 DRIs 不得重复插入")
 
 	var categoryCount int64
@@ -140,6 +142,32 @@ func TestDietSeedGlobals(t *testing.T) {
 		Where("parent_id = 0 AND name IN ?", dietRootCategoryNames).
 		Count(&categoryCount).Error)
 	assert.EqualValues(t, len(dietRootCategoryNames), categoryCount, "20 个官方一级分类必须齐全")
+
+	// F3：授权 CSV 未导入时每个一级分类也必须至少有一个叶子，否则资源库无法新增食物。
+	var roots []domain.FoodCategory
+	require.NoError(t, db.Where("parent_id = 0 AND name IN ?", dietRootCategoryNames).
+		Find(&roots).Error)
+	require.Len(t, roots, len(dietRootCategoryNames))
+	for _, root := range roots {
+		var leafCount int64
+		require.NoError(t, db.Model(&domain.FoodCategory{}).
+			Where("parent_id = ? AND level = 2", root.ID).
+			Count(&leafCount).Error)
+		assert.GreaterOrEqual(t, leafCount, int64(1), "一级分类 %q 至少一个二级分类", root.Name)
+
+		var placeholder domain.FoodCategory
+		require.NoError(t, db.Where("parent_id = ? AND name = ?", root.ID, dietPlaceholderLeafName).
+			First(&placeholder).Error, "一级分类 %q 缺少占位二级分类", root.Name)
+		assert.Equal(t, 2, placeholder.Level, "占位分类必须是二级")
+
+		// 主诉是「UI 新增食物被叶子校验拦截」，因此直接用服务层校验该占位叶子。
+		category, rootName, err := foodSvc.requireLeafCategory(ctx, placeholder.ID)
+		require.NoError(t, err, "占位叶子 %q/%q 必须被 requireLeafCategory 接受",
+			root.Name, placeholder.Name)
+		require.NotNil(t, category)
+		assert.Equal(t, 2, category.Level)
+		assert.Equal(t, root.Name, rootName)
+	}
 
 	var driCount int64
 	require.NoError(t, db.Model(&domain.DriAgeTarget{}).

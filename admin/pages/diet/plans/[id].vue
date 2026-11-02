@@ -355,7 +355,7 @@
       :recipe-name="conflictDish?.name ?? ''"
       :saving="recipeSaving"
       @replace="onConflictReplace"
-      @once="onConflictOnce"
+      @apply-once="onConflictOnce"
       @cancel="onConflictCancel"
     />
   </div>
@@ -895,8 +895,13 @@ async function clearPlan() {
   if (!plan.value) return
   try {
     await ElMessageBox.confirm(
-      `将清空「${plan.value.name}」的全部明细（${totalItemCount.value} 条），食谱本身保留。此操作不可撤销。`,
+      `将清空「${plan.value.name}」的全部明细（${totalItemCount.value} 条），食谱本身保留。`,
       '清空确认',
+      { type: 'warning', confirmButtonText: '下一步' },
+    )
+    await ElMessageBox.confirm(
+      '再次确认：清空后明细无法恢复，营养分析也会因没有明细而无法查看。',
+      '最终确认',
       { type: 'warning', confirmButtonText: '确认清空' },
     )
   } catch {

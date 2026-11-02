@@ -548,8 +548,13 @@ function openAnalysis(id: number) {
 async function remove(row: DietPlanListItem) {
   try {
     await ElMessageBox.confirm(
-      `确定删除周食谱「${row.name}」？删除后列表与营养分析都不再返回该食谱。`,
+      `确定删除周食谱「${row.name}」？`,
       '删除确认',
+      { type: 'warning', confirmButtonText: '下一步' },
+    )
+    await ElMessageBox.confirm(
+      '再次确认：删除后该食谱与营养分析都将不再返回，且无法恢复。',
+      '最终确认',
       { type: 'warning', confirmButtonText: '确认删除' },
     )
   } catch {

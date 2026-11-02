@@ -9,7 +9,7 @@
     </div>
     <template #footer>
       <el-button data-testid="recipe-conflict-cancel" @click="emit('cancel')">取消</el-button>
-      <el-button data-testid="recipe-conflict-once" @click="emit('once')">仅本次使用</el-button>
+      <el-button data-testid="recipe-conflict-once" @click="emit('applyOnce')">仅本次使用</el-button>
       <el-button
         type="primary"
         data-testid="recipe-conflict-replace"
@@ -28,9 +28,11 @@ defineProps<{
   saving: boolean
 }>()
 
+// 事件名不能是纯保留后缀：Vue 会把监听编译成 on<Event>，isEmitListener 剥掉
+// 末尾的 Once 后若得到空串，读取首字符即抛异常，组件挂载失败导致整页白屏。
 const emit = defineEmits<{
   replace: []
-  once: []
+  applyOnce: []
   cancel: []
 }>()
 
