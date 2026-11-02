@@ -464,13 +464,16 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		tt.POST("/sync", h.AdminSyncTimetable)
 	}
 
-	// 膳食管理：AQR-S2 供餐配置 + AQR-S3 食物库（分类树/列表/详情/新增/修改/删除/
-	// 批量删除/同类替换候选）+ AQR-S4 菜谱库（列表/详情/新增或替换/改名改配方/删除/
-	// 合并/联想）+ AQR-S6 周食谱与模板 + AQR-S7 营养分析与导出。
+	// 膳食管理：基本参数（按学年的集体对象，DGO-S3b）+ AQR-S3 食物库（分类树/列表/
+	// 详情/新增/修改/删除/批量删除/同类替换候选）+ AQR-S4 菜谱库（列表/详情/新增或替换/
+	// 改名改配方/删除/合并/联想）+ AQR-S6 周食谱与模板 + AQR-S7 营养分析与导出。
 	diet := adminG.Group("/diet")
 	{
-		diet.GET("/config", h.GetDietConfig)
-		diet.PUT("/config", h.PutDietConfig)
+		// 旧的园所单例配置端点已移除（BREAKING，design D7）；无删除入口（design D5）。
+		diet.GET("/group-objects", h.ListDietGroupObjects)
+		diet.POST("/group-objects", h.CreateDietGroupObject)
+		diet.GET("/group-objects/:id", h.GetDietGroupObject)
+		diet.PUT("/group-objects/:id", h.UpdateDietGroupObject)
 
 		diet.GET("/food-categories", h.ListDietFoodCategories)
 		diet.GET("/foods", h.ListDietFoods)

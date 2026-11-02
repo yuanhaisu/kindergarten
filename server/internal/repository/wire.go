@@ -33,7 +33,6 @@ var Set = wire.NewSet(
 	NewHealthCheckRepo,
 	NewCalendarRepo,
 	NewTimetableRepo,
-	NewDietConfigRepo,
 	NewDietGroupObjectRepo,
 	NewDietFoodRepo,
 	NewDietRecipeRepo,

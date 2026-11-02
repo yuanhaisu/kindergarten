@@ -45,8 +45,10 @@ func newPermEngine(resolver PermissionResolver) *gin.Engine {
 	})
 	g.Use(RequirePermission(resolver))
 	g.GET("/dashboard/overview", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
-	g.GET("/diet/config", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
-	g.PUT("/diet/config", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/group-objects", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/group-objects", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/group-objects/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.PUT("/diet/group-objects/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	// AQR-S3 食物库：用于验证 8 条路由的权限码登记。
 	g.GET("/diet/food-categories", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/diet/foods", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
@@ -164,29 +166,40 @@ func TestAdminPermissionGaps(t *testing.T) {
 	assert.Empty(t, adminPermissionGaps(routes[:2], adminRoutePermission))
 }
 
-// AQR-S1b 2.3：供餐配置两条路由必须登记到 diet:view / diet:manage。
-func TestAdminPermission_DietConfigRoutesRegistered(t *testing.T) {
+// DGO-S3b：集体对象 4 条路由必须登记到 diet:view / diet:manage；旧配置路由已移除。
+func TestAdminPermission_DietGroupObjectRoutesRegistered(t *testing.T) {
 	routes := []gin.RouteInfo{
-		{Method: http.MethodGet, Path: "/api/v1/admin/diet/config"},
-		{Method: http.MethodPut, Path: "/api/v1/admin/diet/config"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/group-objects"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/group-objects"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/group-objects/:id"},
+		{Method: http.MethodPut, Path: "/api/v1/admin/diet/group-objects/:id"},
 	}
-	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "diet 配置路由不得有登记缺口")
-	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/config"])
-	assert.Equal(t, "diet:manage", adminRoutePermission["PUT /api/v1/admin/diet/config"])
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "集体对象路由不得有登记缺口")
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/group-objects"])
+	assert.Equal(t, "diet:manage", adminRoutePermission["POST /api/v1/admin/diet/group-objects"])
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/group-objects/:id"])
+	assert.Equal(t, "diet:manage", adminRoutePermission["PUT /api/v1/admin/diet/group-objects/:id"])
+
+	_, ok := adminRoutePermission["GET /api/v1/admin/diet/config"]
+	assert.False(t, ok, "旧配置路由必须从登记表移除")
 }
 
-// 查看码可以读配置，但不能保存。
-func TestAdminPermission_DietConfigViewCode(t *testing.T) {
+// 查看码可以读集体对象，但不能新增/修改。
+func TestAdminPermission_DietGroupObjectViewCode(t *testing.T) {
 	r := newPermEngine(stubResolver{codes: []string{"diet:view"}})
-	assert.Equal(t, http.StatusOK, doGet(r, "/api/v1/admin/diet/config").Code)
-	assert.Equal(t, http.StatusForbidden, doPut(r, "/api/v1/admin/diet/config").Code)
+	assert.Equal(t, http.StatusOK, doGet(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusOK, doGet(r, "/api/v1/admin/diet/group-objects/1").Code)
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusForbidden, doPut(r, "/api/v1/admin/diet/group-objects/1").Code)
 }
 
-// 管理码可以保存配置，但不能读配置（两个码互不替代）。
-func TestAdminPermission_DietConfigManageCode(t *testing.T) {
+// 管理码可以新增/修改集体对象，但不能读列表/详情（两个码互不替代）。
+func TestAdminPermission_DietGroupObjectManageCode(t *testing.T) {
 	r := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
-	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/config").Code)
-	assert.Equal(t, http.StatusOK, doPut(r, "/api/v1/admin/diet/config").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/group-objects/1").Code)
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusOK, doPut(r, "/api/v1/admin/diet/group-objects/1").Code)
 }
 
 // AQR-S3：8 条食物路由必须逐条登记，GET 用 diet:view、写操作用 diet:manage。

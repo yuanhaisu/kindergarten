@@ -217,10 +217,13 @@ var adminRoutePermission = map[string]string{
 	"PUT /api/v1/admin/timetable/setting":           "timetable:manage",
 	"POST /api/v1/admin/timetable/sync":             "timetable:manage",
 
-	// diet —— 供餐配置（AQR-S1b）、食物库（AQR-S3）、菜谱库（AQR-S4）与
+	// diet —— 基本参数集体对象（DGO-S3b）、食物库（AQR-S3）、菜谱库（AQR-S4）与
 	// 周食谱/模板（AQR-S6）。本表是 fail-closed，漏登记会让服务启动失败。
-	"GET /api/v1/admin/diet/config": "diet:view",
-	"PUT /api/v1/admin/diet/config": "diet:manage",
+	// 旧的 /diet/config 单例端点已移除，不再登记。
+	"GET /api/v1/admin/diet/group-objects":     "diet:view",
+	"POST /api/v1/admin/diet/group-objects":    "diet:manage",
+	"GET /api/v1/admin/diet/group-objects/:id": "diet:view",
+	"PUT /api/v1/admin/diet/group-objects/:id": "diet:manage",
 
 	// 食物库：查看（分类/列表/详情/候选）用 diet:view，所有写操作 diet:manage。
 	"GET /api/v1/admin/diet/food-categories":              "diet:view",

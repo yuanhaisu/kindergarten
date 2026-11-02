@@ -1,14 +1,19 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"regexp"
 
 	"kindergarten-server/internal/domain"
-	"kindergarten-server/internal/repository"
 )
+
+// 本文件是供餐配置的公共校验与展示文案（openspec add-diet-group-objects design D8）。
+//
+// 这些函数不持有状态，由集体对象服务（DietGroupObjectService）与营养分析共用：
+// 餐次时间、供能占比、比例模式与重量口径的规则只有这一份，错误文案因此不会因
+// 旧园所单例配置服务下线而漂移（TC-NEW-DIE-0003..0007）。
+// 单例的 DietConfigService 已被按学年的集体对象取代（design D1/D2）。
 
 // DietConfigValidationError 表示供餐配置未通过业务校验。
 // handler 用 errors.As 识别并映射为项目统一的 422 包络；Message 可直接展示给管理员。
@@ -22,35 +27,12 @@ func dietConfigInvalid(format string, args ...any) error {
 	return &DietConfigValidationError{Message: fmt.Sprintf(format, args...)}
 }
 
-// DietMealConfigInput 是保存供餐配置的入参，只含管理员可改的字段。
-// 餐次名称与 sort 由服务端按 meal_key 固定写入（契约 23-diet.md：name/sort 只读）。
-type DietMealConfigInput struct {
-	CareType      domain.DietCareType
-	FoodInputType domain.DietFoodInputType
-	RatioMode     domain.DietRatioMode
-	Meals         []DietMealConfigMealInput
-}
-
 // DietMealConfigMealInput 是单个餐次的保存入参。
 type DietMealConfigMealInput struct {
 	MealKey       domain.DietMealKey
 	Time          string
 	EnergyPercent float64
 	Enabled       bool
-}
-
-// DietConfigView 是 GET/PUT /admin/diet/config 的 data 部分。
-// 不直接返回 domain.MealConfig：契约要求 label 与只读 coefficient，
-// 且 kindergarten_id 不应出现在响应里。
-type DietConfigView struct {
-	CareType           domain.DietCareType      `json:"care_type"`
-	CareTypeLabel      string                   `json:"care_type_label"`
-	FoodInputType      domain.DietFoodInputType `json:"food_input_type"`
-	FoodInputTypeLabel string                   `json:"food_input_type_label"`
-	RatioMode          domain.DietRatioMode     `json:"ratio_mode"`
-	RatioModeLabel     string                   `json:"ratio_mode_label"`
-	Coefficient        float64                  `json:"coefficient"`
-	Meals              []DietMealConfigMealView `json:"meals"`
 }
 
 // DietMealConfigMealView 是单个餐次的响应项。
@@ -100,126 +82,8 @@ var dietMealNameByKey = map[domain.DietMealKey]string{
 // 与契约「HH:mm（两位补零）」不符，所以用正则卡死格式。
 var mealTimePattern = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)
 
-// DietConfigService 供餐配置服务。
-//
-// 配置是园所单例：首次读取返回默认值（不落库），保存后读取返回已保存值。
-// 已保存周食谱读自己的 config_snapshot，不随本配置回溯（design D3、TC-NEW-DIE-0008）。
-type DietConfigService struct {
-	cfg *repository.DietConfigRepo
-}
-
-func NewDietConfigService(cfg *repository.DietConfigRepo) *DietConfigService {
-	return &DietConfigService{cfg: cfg}
-}
-
-// GetConfig 返回园所供餐配置；园所未配置时返回默认配置。
-// 默认值刻意不落库：读取路径不产生写入，重复读取结果一致。
-func (s *DietConfigService) GetConfig(ctx context.Context, kindergartenID uint64) (*DietConfigView, error) {
-	if kindergartenID == 0 {
-		return nil, dietConfigInvalid("未绑定园所，无法读取供餐配置")
-	}
-	cfg, err := s.cfg.GetByKindergarten(ctx, kindergartenID)
-	if err != nil {
-		return nil, err
-	}
-	if cfg == nil {
-		return buildDietConfigView(
-			domain.DietCareTypeDayCare,
-			domain.DietFoodInputTypeMarketWeight,
-			domain.DietRatioModeStandard,
-			defaultDietMealConfigMeals(),
-		), nil
-	}
-	return buildDietConfigView(
-		cfg.CareType,
-		cfg.FoodInputType,
-		normalizeRatioModeForRead(cfg.RatioMode),
-		dietMealInputsFromModel(cfg.Meals),
-	), nil
-}
-
-// SaveConfig 校验并保存园所供餐配置（整组替换餐次），返回保存后的配置。
-func (s *DietConfigService) SaveConfig(
-	ctx context.Context,
-	kindergartenID uint64,
-	in DietMealConfigInput,
-) (*DietConfigView, error) {
-	if kindergartenID == 0 {
-		return nil, dietConfigInvalid("未绑定园所，无法保存供餐配置")
-	}
-	cfg, err := validateDietConfigInput(kindergartenID, in)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.cfg.Save(ctx, cfg); err != nil {
-		return nil, err
-	}
-	return buildDietConfigView(cfg.CareType, cfg.FoodInputType, cfg.RatioMode, dietMealInputsFromModel(cfg.Meals)), nil
-}
-
-// BuildConfigSnapshot 返回当前供餐配置的固化快照，供 S6 创建周食谱时写入
-// MealPlan.config_snapshot。快照一旦写入就不随配置变更回溯（design D3）。
-// DRIs 目标值依赖班级人数加权，属于 S6/S7；本方法只填餐次结构、口径、比例模式与折算系数。
-func (s *DietConfigService) BuildConfigSnapshot(
-	ctx context.Context,
-	kindergartenID uint64,
-) (*domain.DietConfigSnapshot, error) {
-	view, err := s.GetConfig(ctx, kindergartenID)
-	if err != nil {
-		return nil, err
-	}
-	snapshot := &domain.DietConfigSnapshot{
-		CareType:      view.CareType,
-		FoodInputType: view.FoodInputType,
-		RatioMode:     view.RatioMode,
-		Coefficient:   view.Coefficient,
-	}
-	for _, meal := range view.Meals {
-		snapshot.Meals = append(snapshot.Meals, domain.DietMealSnapshot{
-			MealKey:       meal.MealKey,
-			Name:          meal.Name,
-			Time:          meal.Time,
-			EnergyPercent: meal.EnergyPercent,
-			Sort:          meal.Sort,
-			Enabled:       meal.Enabled,
-		})
-	}
-	return snapshot, nil
-}
-
-// validateDietConfigInput 校验并规范化保存入参，返回可直接落库的模型。
-// 校验失败时不产生任何写入，原配置保持不变。
-func validateDietConfigInput(kindergartenID uint64, in DietMealConfigInput) (*domain.MealConfig, error) {
-	ratioMode, ordered, err := validateDietMealConfig(
-		in.CareType, in.FoodInputType, in.RatioMode, in.Meals)
-	if err != nil {
-		return nil, err
-	}
-
-	meals := make([]domain.MealConfigMeal, 0, len(ordered))
-	for _, meal := range ordered {
-		meals = append(meals, domain.MealConfigMeal{
-			KindergartenID: kindergartenID,
-			MealKey:        meal.MealKey,
-			Name:           dietMealName(meal.MealKey),
-			Time:           meal.Time,
-			EnergyPercent:  meal.EnergyPercent,
-			Sort:           domain.DietMealSort(meal.MealKey),
-			Enabled:        meal.Enabled,
-		})
-	}
-	return &domain.MealConfig{
-		KindergartenID: kindergartenID,
-		CareType:       in.CareType,
-		FoodInputType:  in.FoodInputType,
-		RatioMode:      ratioMode,
-		Meals:          meals,
-	}, nil
-}
-
 // validateDietMealConfig 是供餐配置的公共校验：托管形式、重量口径、比例模式与全部餐次。
-// 旧园所单例与按学年的集体对象共用这一份规则，保证错误文案与 TC-NEW-DIE-0003..0007
-// 的行为不因改造漂移（design D8）。返回收敛后的比例模式与按固定餐次顺序排列的入参。
+// 返回收敛后的比例模式与按固定餐次顺序排列的入参。
 func validateDietMealConfig(
 	careType domain.DietCareType,
 	foodInputType domain.DietFoodInputType,
@@ -374,62 +238,6 @@ func validateAdjacentEnergyCaps(
 		}
 	}
 	return nil
-}
-
-// buildDietConfigView 按固定餐次顺序输出，并按已启用餐次占比之和计算折算系数。
-func buildDietConfigView(
-	careType domain.DietCareType,
-	foodInputType domain.DietFoodInputType,
-	ratioMode domain.DietRatioMode,
-	meals []DietMealConfigMealInput,
-) *DietConfigView {
-	byKey := make(map[domain.DietMealKey]DietMealConfigMealInput, len(meals))
-	for _, meal := range meals {
-		byKey[meal.MealKey] = meal
-	}
-
-	views := make([]DietMealConfigMealView, 0, len(domain.DietMealKeyOrder))
-	enabledSum := 0.0
-	for _, key := range domain.DietMealKeyOrder {
-		meal, ok := byKey[key]
-		if !ok {
-			continue
-		}
-		views = append(views, DietMealConfigMealView{
-			MealKey:       key,
-			Name:          dietMealName(key),
-			Time:          meal.Time,
-			EnergyPercent: meal.EnergyPercent,
-			Sort:          domain.DietMealSort(key),
-			Enabled:       meal.Enabled,
-		})
-		if meal.Enabled {
-			enabledSum += meal.EnergyPercent
-		}
-	}
-	return &DietConfigView{
-		CareType:           careType,
-		CareTypeLabel:      dietCareTypeLabel(careType),
-		FoodInputType:      foodInputType,
-		FoodInputTypeLabel: dietFoodInputTypeLabel(foodInputType),
-		RatioMode:          ratioMode,
-		RatioModeLabel:     dietRatioModeLabel(ratioMode),
-		Coefficient:        math.Round(enabledSum/100*10000) / 10000,
-		Meals:              views,
-	}
-}
-
-func dietMealInputsFromModel(meals []domain.MealConfigMeal) []DietMealConfigMealInput {
-	out := make([]DietMealConfigMealInput, 0, len(meals))
-	for _, meal := range meals {
-		out = append(out, DietMealConfigMealInput{
-			MealKey:       meal.MealKey,
-			Time:          meal.Time,
-			EnergyPercent: meal.EnergyPercent,
-			Enabled:       meal.Enabled,
-		})
-	}
-	return out
 }
 
 func dietMealName(key domain.DietMealKey) string { return dietMealNameByKey[key] }

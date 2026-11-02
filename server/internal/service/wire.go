@@ -35,7 +35,6 @@ var Set = wire.NewSet(
 	NewTimetableServiceForApp,
 	NewAdminAuthzService,
 	NewFaceRegistryService,
-	NewDietConfigService,
 	NewDietGroupObjectService,
 	NewDietFoodService,
 	NewDietRecipeService,

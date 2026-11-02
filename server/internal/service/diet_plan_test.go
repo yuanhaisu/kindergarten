@@ -94,7 +94,6 @@ func cleanupDietPlanServiceData(t *testing.T, db *gorm.DB) {
 type dietPlanFixture struct {
 	db             *gorm.DB
 	svc            *DietPlanService
-	configSvc      *DietConfigService
 	objectSvc      *DietGroupObjectService
 	foodRepo       *repository.DietFoodRepo
 	planRepo       *repository.DietPlanRepo
@@ -122,7 +121,6 @@ func newDietPlanFixture(t *testing.T) *dietPlanFixture {
 		BaseModel: domain.BaseModel{ID: testDietPlanSvcOtherKG}, Name: "S6测试他园",
 	}).Error)
 
-	configSvc := NewDietConfigService(repository.NewDietConfigRepo(db))
 	foodRepo := repository.NewDietFoodRepo(db)
 	planRepo := repository.NewDietPlanRepo(db)
 	tplRepo := repository.NewDietTemplateRepo(db)
@@ -132,7 +130,7 @@ func newDietPlanFixture(t *testing.T) *dietPlanFixture {
 	objectSvc := NewDietGroupObjectService(
 		repository.NewDietGroupObjectRepo(db), yearRepo, classRepo)
 	svc := NewDietPlanService(
-		planRepo, tplRepo, foodRepo, classRepo, yearRepo, driRepo, configSvc, objectSvc,
+		planRepo, tplRepo, foodRepo, classRepo, yearRepo, driRepo, objectSvc,
 	)
 
 	// DRIs 是全局只读数据；测试按正式种子幂等写入，避免依赖开发库是否启动过。
@@ -149,7 +147,6 @@ func newDietPlanFixture(t *testing.T) *dietPlanFixture {
 	f := &dietPlanFixture{
 		db:             db,
 		svc:            svc,
-		configSvc:      configSvc,
 		objectSvc:      objectSvc,
 		foodRepo:       foodRepo,
 		planRepo:       planRepo,

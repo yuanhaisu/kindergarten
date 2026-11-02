@@ -15,23 +15,28 @@ import (
 	"kindergarten-server/pkg/response"
 )
 
-// dietConfigRequest 是 PUT /admin/diet/config 的请求体（契约 23-diet.md）。
-// name/sort/coefficient 只读，客户端传了也不采纳。
-type dietConfigRequest struct {
-	CareType      domain.DietCareType          `json:"care_type"`
-	FoodInputType domain.DietFoodInputType     `json:"food_input_type"`
-	RatioMode     domain.DietRatioMode         `json:"ratio_mode"`
-	Meals         []dietConfigRequestMealInput `json:"meals"`
+// --- 基本参数：集体对象（契约 23-diet.md 第一节，design D7） ---
+
+// dietGroupObjectRequest 是 POST/PUT /admin/diet/group-objects 的请求体。
+// 学年在修改时只读：service 沿用对象原学年，但仍校验提交值属于本园。
+type dietGroupObjectRequest struct {
+	AcademicYearID uint64                       `json:"academic_year_id"`
+	Name           string                       `json:"name"`
+	CareType       domain.DietCareType          `json:"care_type"`
+	FoodInputType  domain.DietFoodInputType     `json:"food_input_type"`
+	RatioMode      domain.DietRatioMode         `json:"ratio_mode"`
+	ClassIDs       []uint64                     `json:"class_ids"`
+	Meals          []dietGroupObjectMealRequest `json:"meals"`
 }
 
-type dietConfigRequestMealInput struct {
+type dietGroupObjectMealRequest struct {
 	MealKey       domain.DietMealKey `json:"meal_key"`
 	Time          string             `json:"time"`
 	EnergyPercent float64            `json:"energy_percent"`
 	Enabled       bool               `json:"enabled"`
 }
 
-func (r dietConfigRequest) toInput() service.DietMealConfigInput {
+func (r dietGroupObjectRequest) toInput() service.DietGroupObjectInput {
 	meals := make([]service.DietMealConfigMealInput, 0, len(r.Meals))
 	for _, meal := range r.Meals {
 		meals = append(meals, service.DietMealConfigMealInput{
@@ -41,76 +46,147 @@ func (r dietConfigRequest) toInput() service.DietMealConfigInput {
 			Enabled:       meal.Enabled,
 		})
 	}
-	return service.DietMealConfigInput{
-		CareType:      r.CareType,
-		FoodInputType: r.FoodInputType,
-		RatioMode:     r.RatioMode,
-		Meals:         meals,
+	return service.DietGroupObjectInput{
+		AcademicYearID: r.AcademicYearID,
+		Name:           r.Name,
+		CareType:       r.CareType,
+		FoodInputType:  r.FoodInputType,
+		RatioMode:      r.RatioMode,
+		ClassIDs:       r.ClassIDs,
+		Meals:          meals,
 	}
 }
 
-// NewDietAdminHandler 组装膳食模块（配置 + 食物库 + 菜谱库 + 周食谱/模板 + 营养分析）的 Handler，
-// 供路由级测试使用。生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
+type listDietGroupObjectsQuery struct {
+	AcademicYearID uint64 `form:"academic_year_id"`
+	Keyword        string `form:"keyword"`
+	Page           int    `form:"page"`
+	PageSize       int    `form:"page_size"`
+}
+
+// NewDietAdminHandler 组装膳食模块（集体对象 + 食物库 + 菜谱库 + 周食谱/模板 + 营养分析）的
+// Handler，供路由级测试使用。生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
 func NewDietAdminHandler(
-	dietConfigSvc *service.DietConfigService,
+	dietGroupObjectSvc *service.DietGroupObjectService,
 	dietFoodSvc *service.DietFoodService,
 	dietRecipeSvc *service.DietRecipeService,
 	dietPlanSvc *service.DietPlanService,
 	dietAnalysisSvc *service.DietAnalysisService,
 ) *Handler {
 	return &Handler{
-		dietConfigSvc:   dietConfigSvc,
-		dietFoodSvc:     dietFoodSvc,
-		dietRecipeSvc:   dietRecipeSvc,
-		dietPlanSvc:     dietPlanSvc,
-		dietAnalysisSvc: dietAnalysisSvc,
+		dietGroupObjectSvc: dietGroupObjectSvc,
+		dietFoodSvc:        dietFoodSvc,
+		dietRecipeSvc:      dietRecipeSvc,
+		dietPlanSvc:        dietPlanSvc,
+		dietAnalysisSvc:    dietAnalysisSvc,
 	}
 }
 
-// GetDietConfig 返回园所供餐配置；未配置时返回默认值。
-func (h *Handler) GetDietConfig(c *gin.Context) {
+// ListDietGroupObjects 返回本园某学年的集体对象；academic_year_id 缺省取当前学年，
+// 该学年没有对象时返回空列表，不在读取路径创建（TC-NEW-DIE-0065）。
+func (h *Handler) ListDietGroupObjects(c *gin.Context) {
 	kgID := middleware.GetKindergartenID(c)
 	if kgID == 0 {
 		response.ErrForbidden(c, "未绑定园所，请重新登录")
 		return
 	}
-	data, err := h.dietConfigSvc.GetConfig(c.Request.Context(), kgID)
+	var q listDietGroupObjectsQuery
+	_ = c.ShouldBindQuery(&q)
+	pq := pagination.Query{Page: q.Page, PageSize: q.PageSize}
+	list, total, page, pageSize, err := h.dietGroupObjectSvc.List(
+		c.Request.Context(), kgID, q.AcademicYearID, q.Keyword, pq,
+	)
 	if err != nil {
-		respondDietConfigError(c, err)
+		respondDietGroupObjectError(c, err)
 		return
 	}
-	response.OK(c, data)
+	response.OKList(c, list, total, page, pageSize)
 }
 
-// PutDietConfig 保存园所供餐配置（整组替换餐次），响应与 GET 同构。
-func (h *Handler) PutDietConfig(c *gin.Context) {
+// CreateDietGroupObject 新增集体对象，HTTP 201。
+func (h *Handler) CreateDietGroupObject(c *gin.Context) {
 	kgID := middleware.GetKindergartenID(c)
 	if kgID == 0 {
 		response.ErrForbidden(c, "未绑定园所，请重新登录")
 		return
 	}
-	var req dietConfigRequest
+	var req dietGroupObjectRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ErrValidation(c, "请求体格式错误")
 		return
 	}
-	data, err := h.dietConfigSvc.SaveConfig(c.Request.Context(), kgID, req.toInput())
+	data, err := h.dietGroupObjectSvc.Create(c.Request.Context(), kgID, req.toInput())
 	if err != nil {
-		respondDietConfigError(c, err)
+		respondDietGroupObjectError(c, err)
+		return
+	}
+	response.Created(c, data)
+}
+
+// GetDietGroupObject 返回集体对象详情（完整餐次、比例模式与系数）。
+func (h *Handler) GetDietGroupObject(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietGroupObjectID(c)
+	if !ok {
+		return
+	}
+	data, err := h.dietGroupObjectSvc.Get(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietGroupObjectError(c, err)
 		return
 	}
 	response.OK(c, data)
 }
 
-// respondDietConfigError 把 service 错误映射到项目统一错误包络。
-// 业务校验失败返回 422 且带可读 message；仓储等内部错误不向外泄露细节。
-func respondDietConfigError(c *gin.Context, err error) {
-	var invalid *service.DietConfigValidationError
-	if errors.As(err, &invalid) {
-		response.ErrValidation(c, invalid.Message)
+// UpdateDietGroupObject 修改集体对象，响应返回保存后的详情，便于前端就地刷新。
+func (h *Handler) UpdateDietGroupObject(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
 		return
 	}
-	response.ErrInternal(c, "膳食配置服务异常")
+	id, ok := dietGroupObjectID(c)
+	if !ok {
+		return
+	}
+	var req dietGroupObjectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	data, err := h.dietGroupObjectSvc.Update(c.Request.Context(), kgID, id, req.toInput())
+	if err != nil {
+		respondDietGroupObjectError(c, err)
+		return
+	}
+	response.OK(c, data)
+}
+
+func dietGroupObjectID(c *gin.Context) (uint64, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.ErrValidation(c, "无效的集体对象 ID")
+		return 0, false
+	}
+	return id, true
+}
+
+// respondDietGroupObjectError 映射 404/422；业务校验文案原样透出。
+// 名称冲突目前由 service 以校验错误返回（422），契约若要求 409 再在 S4 收紧。
+func respondDietGroupObjectError(c *gin.Context, err error) {
+	var invalid *service.DietConfigValidationError
+	switch {
+	case errors.As(err, &invalid):
+		response.ErrValidation(c, invalid.Message)
+	case errors.Is(err, service.ErrDietGroupObjectNotFound):
+		response.ErrNotFound(c, "集体对象不存在")
+	default:
+		response.ErrInternal(c, "集体对象服务异常")
+	}
 }
 
 // --- 食物库（契约 23-diet.md 第二、三节） ---
@@ -638,6 +714,7 @@ type listDietPlansQuery struct {
 type dietPlanCreateRequest struct {
 	Name           string                       `json:"name"`
 	AcademicYearID uint64                       `json:"academic_year_id"`
+	GroupObjectID  uint64                       `json:"group_object_id"`
 	StartDate      string                       `json:"start_date"`
 	EndDate        string                       `json:"end_date"`
 	WeekOfYear     int                          `json:"week_of_year"`
@@ -650,6 +727,7 @@ func (r dietPlanCreateRequest) toInput() service.DietPlanCreateInput {
 	return service.DietPlanCreateInput{
 		Name:           r.Name,
 		AcademicYearID: r.AcademicYearID,
+		GroupObjectID:  r.GroupObjectID,
 		StartDate:      r.StartDate,
 		EndDate:        r.EndDate,
 		WeekOfYear:     r.WeekOfYear,

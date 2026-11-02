@@ -188,9 +188,7 @@ type DietPlanService struct {
 	classes   *repository.ClassRepo
 	years     *repository.AcademicYearRepo
 	dris      *repository.DietDriRepo
-	// config 是旧园所单例配置，S3b 删除旧配置服务前保留构造参数；
-	// 周食谱的配置快照已改由集体对象提供（design D2/D3）。
-	config  *DietConfigService
+	// 周食谱的配置快照与 DRIs 加权范围都由集体对象提供（design D2/D3）。
 	objects *DietGroupObjectService
 }
 
@@ -201,7 +199,6 @@ func NewDietPlanService(
 	classes *repository.ClassRepo,
 	years *repository.AcademicYearRepo,
 	dris *repository.DietDriRepo,
-	config *DietConfigService,
 	objects *DietGroupObjectService,
 ) *DietPlanService {
 	return &DietPlanService{
@@ -211,7 +208,6 @@ func NewDietPlanService(
 		classes:   classes,
 		years:     years,
 		dris:      dris,
-		config:    config,
 		objects:   objects,
 	}
 }
