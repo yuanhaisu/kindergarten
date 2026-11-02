@@ -9,6 +9,7 @@ import {
   Download,
   Files,
   FirstAidKit,
+  Food,
   Grid,
   Histogram,
   HomeFilled,
@@ -67,6 +68,16 @@ export const ADMIN_MENU_GROUPS: MenuGroup[] = [
       { title: '亲子任务', path: '/tasks', icon: List, permission: 'task:view' },
       { title: '积分管理', path: '/points', icon: Star, permission: 'points:view' },
       { title: '成就管理', path: '/achievements', icon: Medal, permission: 'achievement:view' },
+    ],
+  },
+  {
+    label: '膳食管理',
+    children: [
+      { title: '基本参数', path: '/diet/config', icon: Setting, permission: 'diet:view' },
+      // 膳食计划页在 S9 落地；菜单先行，点击暂 404（brief 允许）
+      { title: '膳食计划', path: '/diet/plans', icon: Calendar, permission: 'diet:view' },
+      { title: '菜谱库', path: '/diet/recipes', icon: Notebook, permission: 'diet:view' },
+      { title: '资源库', path: '/diet/foods', icon: Food, permission: 'diet:view' },
     ],
   },
   {

@@ -911,3 +911,591 @@ export interface TimetableSyncResult {
   deleted: number
   skipped_overridden: number
 }
+
+// ===== 膳食管理（add-quantified-recipe；契约 backend/api/api-admin/23-diet.md） =====
+
+/** 膳食接口错误：useHttp 把 HTTP 状态挂在 error.status 上，404/409/422 由契约定义业务含义 */
+export interface DietApiError extends Error {
+  status?: number
+}
+
+export type DietMealKey =
+  | 'breakfast'
+  | 'morning_snack'
+  | 'lunch'
+  | 'afternoon_snack'
+  | 'dinner'
+  | 'evening_snack'
+
+export type DietCareType = 'day_care' | 'full_care'
+export type DietRatioMode = 'standard' | 'custom'
+/** 重量口径：本变更仅支持市品重量 */
+export type DietFoodInputType = 'market_weight'
+export type DietCreatedMethod = 'custom' | 'template' | 'copy'
+export type DietFoodSource = 'system' | 'custom'
+export type DietSourceFlag = 'animal' | 'plant' | 'milk' | 'meat'
+
+export type DietGroup16 =
+  | 'grain'
+  | 'tuber'
+  | 'vegetable'
+  | 'fruit'
+  | 'meat'
+  | 'egg'
+  | 'aquatic'
+  | 'soybean'
+  | 'dairy'
+  | 'oil'
+  | 'nut'
+  | 'instant_food'
+  | 'beverage'
+  | 'confection'
+  | 'condiment'
+  | 'other'
+
+/**
+ * 27 项营养（每 100g 可食部浓度）。缺测为 null —— 展示「—」，
+ * 任何合计都不得把 null 当 0（契约「营养字段」一节）。
+ */
+export interface DietNutrients {
+  energy: number | null
+  heat: number | null
+  protein: number | null
+  fats: number | null
+  carb: number | null
+  dietary_fiber: number | null
+  ash: number | null
+  water: number | null
+  cholesterol: number | null
+  retinol: number | null
+  carotin: number | null
+  vitamin_a: number | null
+  vitamin_b1: number | null
+  vitamin_b2: number | null
+  nicotinic_acid: number | null
+  vitamin_c: number | null
+  vitamin_e: number | null
+  calcium: number | null
+  phosphorus: number | null
+  potassium: number | null
+  sodium: number | null
+  magnesium: number | null
+  iron: number | null
+  zinc: number | null
+  selenium: number | null
+  copper: number | null
+  manganese: number | null
+}
+
+/** 食物列表页展示的核心 15 项营养 */
+export interface DietFoodCoreNutrients {
+  energy: number | null
+  protein: number | null
+  fats: number | null
+  carb: number | null
+  retinol: number | null
+  carotin: number | null
+  calcium: number | null
+  iron: number | null
+  zinc: number | null
+  phosphorus: number | null
+  nicotinic_acid: number | null
+  vitamin_a: number | null
+  vitamin_b1: number | null
+  vitamin_b2: number | null
+  vitamin_c: number | null
+}
+
+/** 周食谱明细的营养快照：27 项浓度 + 食部 */
+export interface DietNutritionSnapshot extends DietNutrients {
+  edible_percent: number | null
+}
+
+// ----- 供餐配置 -----
+
+export interface DietMealConfigItem {
+  meal_key: DietMealKey
+  name: string
+  time: string
+  energy_percent: number
+  sort: number
+  enabled: boolean
+}
+
+export interface DietConfig {
+  care_type: DietCareType
+  care_type_label: string
+  food_input_type: DietFoodInputType
+  food_input_type_label: string
+  ratio_mode: DietRatioMode
+  ratio_mode_label: string
+  /** 折算系数只读：已启用餐次 energy_percent 之和 ÷ 100 */
+  coefficient: number
+  meals: DietMealConfigItem[]
+}
+
+export interface DietMealConfigInput {
+  meal_key: DietMealKey
+  time: string
+  energy_percent: number
+  enabled: boolean
+}
+
+export interface DietConfigUpdateBody {
+  care_type: DietCareType
+  food_input_type: DietFoodInputType
+  ratio_mode: DietRatioMode
+  meals: DietMealConfigInput[]
+}
+
+// ----- 食物分类 -----
+
+export interface DietFoodCategory {
+  id: number
+  parent_id: number
+  level: 1 | 2
+  name: string
+  children?: DietFoodCategory[]
+}
+
+// ----- 食物库 -----
+
+export interface DietFoodListItem extends DietFoodCoreNutrients {
+  id: number
+  name: string
+  spell_code: string
+  category_id: number
+  category_name: string
+  source: DietFoodSource
+  edible_percent: number | null
+}
+
+export interface DietFoodListQuery {
+  keyword?: string
+  /** 一级分类（含其全部二级）或二级分类 */
+  category_id?: number
+  page?: number
+  page_size?: number
+}
+
+export interface DietFoodListResult extends PageResult<DietFoodListItem> {}
+
+export interface DietFoodDetail {
+  id: number
+  name: string
+  spell_code: string
+  category_id: number
+  category_name: string
+  category_parent_id: number
+  source: DietFoodSource
+  edible_percent: number | null
+  group12: number | null
+  group16: DietGroup16 | null
+  source_flags: DietSourceFlag[]
+  nutrients: DietNutrients
+}
+
+export interface DietFoodCreateBody {
+  name: string
+  /** 叶子分类 */
+  category_id: number
+  edible_percent: number
+  group12?: number | null
+  group16?: DietGroup16 | null
+  source_flags?: DietSourceFlag[]
+  /** 只传有值的键；未传的键写 NULL（不写 0） */
+  nutrients?: Partial<DietNutrients>
+}
+
+/** PUT 字段均可选；nutrients 一旦提交即整体替换 */
+export type DietFoodUpdateBody = Partial<DietFoodCreateBody>
+
+export interface DietFoodBatchDeleteBody {
+  ids: number[]
+}
+
+export type DietFoodBatchDeleteSkipReason = 'referenced_by_recipe' | 'not_found'
+
+export interface DietFoodBatchDeleteSkipped {
+  id: number
+  name: string
+  reason: DietFoodBatchDeleteSkipReason
+}
+
+export interface DietFoodBatchDeleteResult {
+  deleted: number
+  skipped: DietFoodBatchDeleteSkipped[]
+}
+
+export interface DietReplaceCandidate {
+  id: number
+  name: string
+  spell_code: string
+  category_id: number
+  category_name: string
+}
+
+export interface DietReplaceCandidateQuery {
+  keyword?: string
+  limit?: number
+}
+
+export interface DietReplaceCandidateResult {
+  list: DietReplaceCandidate[]
+}
+
+// ----- 菜谱库 -----
+
+export interface DietRecipeListItem {
+  id: number
+  name: string
+  spell_code: string
+  item_count: number
+}
+
+export interface DietRecipeListQuery {
+  keyword?: string
+  page?: number
+  page_size?: number
+}
+
+export interface DietRecipeListResult extends PageResult<DietRecipeListItem> {}
+
+export interface DietRecipeSaveItem {
+  food_id: number
+  grams: number
+}
+
+export interface DietRecipeCreateBody {
+  name: string
+  items: DietRecipeSaveItem[]
+  /** 同名时 false → 409（前端弹「替换 / 仅本次」）；true → 覆盖原配方 */
+  replace?: boolean
+}
+
+export interface DietRecipeDetailItem {
+  food_id: number
+  food_name: string
+  grams: number
+  sort: number
+  /** 该食物当前的 27 项营养（每 100g 可食部） */
+  nutrients: DietNutrients
+}
+
+export interface DietRecipeDetail {
+  id: number
+  name: string
+  spell_code: string
+  items: DietRecipeDetailItem[]
+}
+
+export interface DietRecipeUpdateBody {
+  name?: string
+  /** 提交即整体替换 */
+  items?: DietRecipeSaveItem[]
+}
+
+export interface DietRecipeMergeBody {
+  source_id: number
+  target_id: number
+}
+
+export interface DietRecipeMergeResult {
+  target_id: number
+  merged_item_count: number
+}
+
+export interface DietRecipeSuggestQuery {
+  keyword?: string
+  limit?: number
+}
+
+export interface DietRecipeSuggestResult {
+  list: DietRecipeListItem[]
+}
+
+// ----- 周食谱 -----
+
+export interface DietPlanListItem {
+  id: number
+  name: string
+  academic_year_id: number
+  start_date: string
+  end_date: string
+  day_num: number
+  week_of_year: number
+  created_method: DietCreatedMethod
+  created_method_label: string
+}
+
+export interface DietPlanListQuery {
+  /** 缺省取当前学年 */
+  academic_year_id?: number
+  keyword?: string
+  page?: number
+  page_size?: number
+}
+
+export interface DietPlanListResult extends PageResult<DietPlanListItem> {}
+
+export interface DietPlanCreateBase {
+  name: string
+  academic_year_id: number
+  /** 周一 */
+  start_date: string
+  /** = start_date + 6 天 */
+  end_date: string
+  /** 仅展示，不参与计算 */
+  week_of_year?: number
+}
+
+export type DietPlanCreateBody = DietPlanCreateBase &
+  (
+    | { created_method: 'custom' }
+    | { created_method: 'template'; template_id: number }
+    | { created_method: 'copy'; source_plan_id: number }
+  )
+
+export interface DietPlanCreateResult {
+  id: number
+  name: string
+  start_date: string
+  end_date: string
+  day_num: number
+  week_of_year: number
+  warnings: string[]
+}
+
+export interface DietDriTarget {
+  nutrient_key: string
+  label: string
+  unit: string
+  value: number
+}
+
+export interface DietDriWeight {
+  age_band: number
+  weight: number
+}
+
+export interface DietPlanConfigSnapshot {
+  care_type: DietCareType
+  food_input_type: DietFoodInputType
+  coefficient: number
+  meals: DietMealConfigItem[]
+  dri_targets: DietDriTarget[]
+  dri_weights: DietDriWeight[]
+}
+
+export interface DietPlanItemInput {
+  date: string
+  meal_key: DietMealKey
+  recipe_name: string
+  recipe_id?: number | null
+  food_id: number
+  /** 客户端传值仅作旧数据兜底，服务端以食物库名称为准 */
+  food_name?: string
+  grams: number
+}
+
+export interface DietPlanItem extends DietPlanItemInput {
+  id: number
+  /** 由 date 推导：1=周一 … 7=周日 */
+  weekday: number
+  sort: number
+  nutrition_snapshot: DietNutritionSnapshot
+}
+
+export interface DietPlanDetail {
+  id: number
+  name: string
+  academic_year_id: number
+  start_date: string
+  end_date: string
+  day_num: number
+  week_of_year: number
+  created_method: DietCreatedMethod
+  created_method_label: string
+  source_template_id: number | null
+  source_plan_id: number | null
+  config_snapshot: DietPlanConfigSnapshot
+  items: DietPlanItem[]
+}
+
+export interface DietPlanSaveBody {
+  name?: string
+  items: DietPlanItemInput[]
+}
+
+export interface DietPlanSaveResult {
+  id: number
+  day_num: number
+  item_count: number
+}
+
+export interface DietPlanClearResult {
+  id: number
+  day_num: number
+}
+
+// ----- 模板食谱 -----
+
+export interface DietTemplateListItem {
+  id: number
+  name: string
+  day_num: number
+  meal_keys: DietMealKey[]
+  item_count: number
+}
+
+export interface DietTemplateListResult {
+  list: DietTemplateListItem[]
+}
+
+export interface DietTemplateItem {
+  weekday: number
+  meal_key: DietMealKey
+  recipe_name: string
+  food_id: number
+  food_name: string
+  grams: number
+  sort: number
+}
+
+export interface DietTemplateDetail {
+  id: number
+  name: string
+  day_num: number
+  meal_keys: DietMealKey[]
+  items: DietTemplateItem[]
+}
+
+// ----- 营养分析（7 组表 + 结论） -----
+
+export interface DietAnalysisPlan {
+  id: number
+  name: string
+  start_date: string
+  end_date: string
+  day_num: number
+  coefficient: number
+}
+
+export type DietNutrientComment = '低' | '合格' | '高'
+
+export interface DietNutritionRow {
+  key: string
+  label: string
+  unit: string
+  intake: number
+  dri: number
+  compare_percent: number
+  comment: DietNutrientComment
+}
+
+export interface DietAnalysisNutrition {
+  items: DietNutritionRow[]
+}
+
+export type DietMacroEnergyRowKey = 'kcal' | 'kj' | 'percent' | 'grams_ratio'
+
+export interface DietMacroEnergyRow {
+  key: DietMacroEnergyRowKey
+  label: string
+  protein: number
+  fats: number
+  carb: number
+  recommended?: { protein: string; fats: string; carb: string }
+}
+
+export interface DietAnalysisMacroEnergy {
+  denominator: number
+  rows: DietMacroEnergyRow[]
+}
+
+export interface DietMealEnergyItem {
+  meal_key: DietMealKey
+  label: string
+  energy: number
+  percent: number
+}
+
+export interface DietAnalysisMealEnergy {
+  meals: DietMealEnergyItem[]
+  total_percent: number
+}
+
+export interface DietCompositionGroup {
+  key: DietGroup16
+  label: string
+  grams: number
+  /** 页面只渲染 true 的 10 类 */
+  displayed: boolean
+}
+
+export interface DietAnalysisComposition {
+  groups: DietCompositionGroup[]
+}
+
+export interface DietCalciumIronSource {
+  key: string
+  label: string
+  value: number
+  percent: number
+}
+
+export interface DietAnalysisCalciumIron {
+  calcium: { total: number; sources: DietCalciumIronSource[] }
+  iron: { total: number; sources: DietCalciumIronSource[] }
+}
+
+export interface DietProteinSourceItem {
+  key: string
+  label: string
+  value: number
+  percent: number
+}
+
+export interface DietAnalysisProteinSource {
+  total: number
+  items: DietProteinSourceItem[]
+  animal_bean_percent: number
+}
+
+export interface DietFatSourceItem extends DietCalciumIronSource {
+  displayed: boolean
+}
+
+export interface DietAnalysisFatSource {
+  total: number
+  items: DietFatSourceItem[]
+}
+
+export interface DietSuggestion {
+  nutrient_key: string
+  level: 'low' | 'high'
+  text: string
+}
+
+export interface DietConclusion {
+  food_kind_count: number
+  condiment_kind_count: number
+  non_condiment_kind_count: number
+  dri_percent: Record<string, number>
+  macro_percent: { protein: number; fats: number; carb: number }
+  macro_ratio: string
+  animal_bean_protein_percent: number
+  suggestions: DietSuggestion[]
+}
+
+export interface DietAnalysis {
+  plan: DietAnalysisPlan
+  nutrition: DietAnalysisNutrition
+  macro_energy: DietAnalysisMacroEnergy
+  meal_energy: DietAnalysisMealEnergy
+  composition: DietAnalysisComposition
+  calcium_iron: DietAnalysisCalciumIron
+  protein_source: DietAnalysisProteinSource
+  fat_source: DietAnalysisFatSource
+  conclusion: DietConclusion
+}
