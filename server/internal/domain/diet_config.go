@@ -13,6 +13,9 @@ const (
 //
 // 一个园所只允许一条记录：保存时按 kindergarten_id 更新，不新增第二条。
 // 餐次结构变化只影响此后新建的周食谱；已保存食谱读自己的 config_snapshot（design D3）。
+//
+// Deprecated: 供餐配置已由按学年管理的 DietGroupObject 取代（openspec: add-diet-group-objects）。
+// 旧表保留在库中但不再读写，见 design D1。
 type MealConfig struct {
 	BaseModel
 	KindergartenID uint64            `gorm:"not null;uniqueIndex:idx_diet_meal_config_kg" json:"kindergarten_id"`
@@ -29,6 +32,8 @@ func (MealConfig) TableName() string { return "diet_meal_configs" }
 //
 // (config_id, meal_key) 唯一。注意该表带软删除列：整组保存必须按 meal_key 就地更新，
 // 不能「软删旧行 + 插入新行」——软删除行仍占用唯一索引，第二次保存会撞键。
+//
+// Deprecated: 随 MealConfig 一同停用，改用 DietGroupObjectMeal。
 type MealConfigMeal struct {
 	BaseModel
 	KindergartenID uint64      `gorm:"not null;index" json:"kindergarten_id"`

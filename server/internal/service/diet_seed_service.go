@@ -121,7 +121,18 @@ type DietSeedForAllResult struct {
 	FoodsCopied          int      `json:"foods_copied"`
 	TemplatesCreated     int      `json:"templates_created"`
 	TemplateItemsCreated int      `json:"template_items_created"`
+	GroupObjectsCreated  int      `json:"group_objects_created"`
+	PlansBackfilled      int64    `json:"plans_backfilled"`
 	Warnings             []string `json:"warnings,omitempty"`
+}
+
+// DietGroupObjectSeedResult 是单园集体对象迁移的计数。
+type DietGroupObjectSeedResult struct {
+	KindergartenID  uint64 `json:"kindergarten_id"`
+	ObjectsCreated  int    `json:"objects_created"`
+	MealsCreated    int    `json:"meals_created"`
+	ClassesLinked   int    `json:"classes_linked"`
+	PlansBackfilled int64  `json:"plans_backfilled"`
 }
 
 // SeedDietGlobals 幂等播种平台级只读数据：20 个一级食物分类 + 3/4/5/6 岁 × 11 项 DRIs。
@@ -275,6 +286,18 @@ func (s *DietSeedService) SeedDietForAll(ctx context.Context) (DietSeedForAllRes
 			continue
 		}
 		result.Kindergartens++
+
+		// 集体对象与食物/模板互不依赖：先种对象，食物库有问题时基本参数仍然可用（design D6）。
+		groupObjects, err := s.EnsureDietGroupObjects(ctx, kg.ID)
+		if err != nil {
+			warning := fmt.Sprintf("kindergarten %d group objects: %v", kg.ID, err)
+			result.Warnings = append(result.Warnings, warning)
+			slog.Warn("diet seed: 园所集体对象播种失败，继续下一个园所", "kindergarten_id", kg.ID, "error", err)
+		} else {
+			result.GroupObjectsCreated += groupObjects.ObjectsCreated
+			result.PlansBackfilled += groupObjects.PlansBackfilled
+		}
+
 		seeded, err := s.EnsureKindergartenSeeded(ctx, kg.ID)
 		if err != nil {
 			warning := fmt.Sprintf("kindergarten %d: %v", kg.ID, err)
@@ -317,7 +340,179 @@ func (s *DietSeedService) EnsureKindergartenSeeded(
 	result.TemplateItemsCreated = templates.ItemsCreated
 	result.SkippedNoFoods = templates.SkippedNoFoods
 	result.MissingFoods = templates.MissingFoods
+
+	// 新园所初始化时通常还没有学年/班级，此时不会产生对象；启动种子会按园所兜底补齐（design D6）。
+	if _, err := s.EnsureDietGroupObjects(ctx, kindergartenID); err != nil {
+		return result, err
+	}
 	return result, nil
+}
+
+// EnsureDietGroupObjects 幂等保证每个学年至少有一条默认集体对象「全体幼儿」，
+// 并把该学年尚未绑定对象的周食谱回填到它（openspec: add-diet-group-objects, design D6）。
+//
+// 已有任意对象的学年整体跳过：不做合并、不改已有对象，避免覆盖管理员配置。
+// 就餐班级取该学年的在读班级；该学年没有班级时回退到本园全部在读班级。
+// 只读写新表与 diet_meal_plans，不读旧单例配置（design D1）。
+func (s *DietSeedService) EnsureDietGroupObjects(
+	ctx context.Context,
+	kindergartenID uint64,
+) (DietGroupObjectSeedResult, error) {
+	result := DietGroupObjectSeedResult{KindergartenID: kindergartenID}
+	if kindergartenID == 0 {
+		return result, errors.New("diet seed: kindergarten_id 不能为 0")
+	}
+
+	var years []domain.AcademicYear
+	if err := s.db.WithContext(ctx).
+		Where("kindergarten_id = ?", kindergartenID).
+		Order("id ASC").
+		Find(&years).Error; err != nil {
+		return result, fmt.Errorf("list academic years for kindergarten %d: %w", kindergartenID, err)
+	}
+	if len(years) == 0 {
+		return result, nil
+	}
+
+	// 回退班级集合只依赖园所，不随学年变化，循环外查一次。
+	fallbackClassIDs, err := s.dietGroupObjectClassIDs(ctx, kindergartenID, "")
+	if err != nil {
+		return result, err
+	}
+
+	for _, year := range years {
+		var existing int64
+		if err := s.db.WithContext(ctx).Model(&domain.DietGroupObject{}).
+			Where("kindergarten_id = ? AND academic_year_id = ?", kindergartenID, year.ID).
+			Count(&existing).Error; err != nil {
+			return result, fmt.Errorf("count group objects for year %d: %w", year.ID, err)
+		}
+		if existing > 0 {
+			continue
+		}
+
+		classIDs, err := s.dietGroupObjectClassIDs(ctx, kindergartenID, year.Year)
+		if err != nil {
+			return result, err
+		}
+		if len(classIDs) == 0 {
+			classIDs = fallbackClassIDs
+		}
+
+		mealsCreated := 0
+		backfilled := int64(0)
+		if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			object := &domain.DietGroupObject{
+				KindergartenID: kindergartenID,
+				AcademicYearID: year.ID,
+				Name:           dietDefaultGroupObjectName,
+				CareType:       domain.DietCareTypeDayCare,
+				FoodInputType:  domain.DietFoodInputTypeMarketWeight,
+				RatioMode:      domain.DietRatioModeStandard,
+				PolicyName:     dietGroupObjectPolicyName,
+			}
+			if err := tx.Create(object).Error; err != nil {
+				return fmt.Errorf("create default group object for year %d: %w", year.ID, err)
+			}
+
+			meals := dietDefaultGroupObjectMeals(kindergartenID, object.ID)
+			if err := tx.Create(&meals).Error; err != nil {
+				return fmt.Errorf("create default group object meals for year %d: %w", year.ID, err)
+			}
+			mealsCreated = len(meals)
+
+			if len(classIDs) > 0 {
+				links := make([]domain.DietGroupObjectClass, 0, len(classIDs))
+				for _, classID := range classIDs {
+					links = append(links, domain.DietGroupObjectClass{
+						KindergartenID: kindergartenID,
+						GroupObjectID:  object.ID,
+						ClassID:        classID,
+					})
+				}
+				if err := tx.Create(&links).Error; err != nil {
+					return fmt.Errorf("link default group object classes for year %d: %w", year.ID, err)
+				}
+			}
+
+			update := tx.Model(&domain.MealPlan{}).
+				Where("kindergarten_id = ? AND academic_year_id = ? AND group_object_id = 0",
+					kindergartenID, year.ID).
+				Update("group_object_id", object.ID)
+			if update.Error != nil {
+				return fmt.Errorf("backfill meal plans for year %d: %w", year.ID, update.Error)
+			}
+			backfilled = update.RowsAffected
+			return nil
+		}); err != nil {
+			return result, err
+		}
+
+		result.ObjectsCreated++
+		result.MealsCreated += mealsCreated
+		result.ClassesLinked += len(classIDs)
+		result.PlansBackfilled += backfilled
+	}
+	return result, nil
+}
+
+// dietGroupObjectClassIDs 返回本园在读班级 ID；academicYear 为空时不过滤学年。
+func (s *DietSeedService) dietGroupObjectClassIDs(
+	ctx context.Context,
+	kindergartenID uint64,
+	academicYear string,
+) ([]uint64, error) {
+	query := s.db.WithContext(ctx).Model(&domain.Class{}).
+		Where("kindergarten_id = ? AND status = ?", kindergartenID, 1)
+	if academicYear != "" {
+		query = query.Where("academic_year = ?", academicYear)
+	}
+	var ids []uint64
+	if err := query.Order("id ASC").Pluck("id", &ids).Error; err != nil {
+		return nil, fmt.Errorf("list classes for kindergarten %d (year %q): %w",
+			kindergartenID, academicYear, err)
+	}
+	return ids, nil
+}
+
+// 默认集体对象的固定取值：名称与 DRIs 标准由 design D6 决定。
+const (
+	dietDefaultGroupObjectName = "全体幼儿"
+	dietGroupObjectPolicyName  = "DRIs2000"
+)
+
+// dietDefaultGroupObjectMeals 是默认对象的 6 个餐次，沿用旧单例配置的默认值
+// （调研 notes §2.3）：晚点停用，启用餐次合计 95%（折算系数 0.95）。
+// 值在此显式写死而不是复用 MealConfig 的默认函数：旧单例表已停用（design D1）。
+func dietDefaultGroupObjectMeals(kindergartenID, groupObjectID uint64) []domain.DietGroupObjectMeal {
+	specs := []struct {
+		key     domain.DietMealKey
+		name    string
+		time    string
+		percent float64
+		enabled bool
+	}{
+		{domain.DietMealBreakfast, "早餐", "07:00", 25, true},
+		{domain.DietMealMorningSnack, "早点", "09:00", 5, true},
+		{domain.DietMealLunch, "午餐", "11:00", 35, true},
+		{domain.DietMealAfternoonSnack, "午点", "14:30", 5, true},
+		{domain.DietMealDinner, "晚餐", "17:00", 25, true},
+		{domain.DietMealEveningSnack, "晚点", "20:00", 5, false},
+	}
+	meals := make([]domain.DietGroupObjectMeal, 0, len(specs))
+	for _, spec := range specs {
+		meals = append(meals, domain.DietGroupObjectMeal{
+			KindergartenID: kindergartenID,
+			GroupObjectID:  groupObjectID,
+			MealKey:        spec.key,
+			Name:           spec.name,
+			Time:           spec.time,
+			EnergyPercent:  spec.percent,
+			Sort:           domain.DietMealSort(spec.key),
+			Enabled:        spec.enabled,
+		})
+	}
+	return meals
 }
 
 // SeedDietTemplates 幂等种入平台初稿模板。园所没有食物时整体跳过并告警；

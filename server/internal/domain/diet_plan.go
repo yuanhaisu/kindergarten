@@ -9,8 +9,10 @@ import "time"
 // 后续修改供餐配置或学生名册都不得改写它（design D3、TC-NEW-DIE-0008）。
 type MealPlan struct {
 	SoftDeleteModel
-	KindergartenID uint64                `gorm:"not null;index:idx_diet_plan_kg_year,priority:1" json:"kindergarten_id"`
-	AcademicYearID uint64                `gorm:"not null;index:idx_diet_plan_kg_year,priority:2" json:"academic_year_id"`
+	KindergartenID uint64 `gorm:"not null;index:idx_diet_plan_kg_year,priority:1" json:"kindergarten_id"`
+	AcademicYearID uint64 `gorm:"not null;index:idx_diet_plan_kg_year,priority:2" json:"academic_year_id"`
+	// GroupObjectID 是食谱所属的集体对象（design D3）。旧行初始为 0，由种子回填到同学年默认对象。
+	GroupObjectID  uint64                `gorm:"not null;default:0;index:idx_diet_plan_group_object" json:"group_object_id"`
 	Name           string                `gorm:"size:128;not null;index" json:"name"`
 	StartDate      time.Time             `gorm:"type:date;not null" json:"start_date"`
 	EndDate        time.Time             `gorm:"type:date;not null" json:"end_date"`

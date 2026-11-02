@@ -168,6 +168,10 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 		// 全部是新表，AutoMigrate 只增不改；上线后仍需 dbcheck 核实列与索引。
 		&domain.MealConfig{},
 		&domain.MealConfigMeal{},
+		// 集体对象（openspec: add-diet-group-objects, design D1）：旧单例表保留但不再读写。
+		&domain.DietGroupObject{},
+		&domain.DietGroupObjectMeal{},
+		&domain.DietGroupObjectClass{},
 		&domain.FoodCategory{},
 		&domain.Food{},
 		&domain.Recipe{},

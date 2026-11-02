@@ -155,14 +155,19 @@ type DietDriWeight struct {
 //
 // 快照一旦写入，后续修改供餐配置或学生名册都不得回溯历史食谱（design D3、TC-NEW-DIE-0008）。
 // Coefficient = 启用餐次占比之和（默认 0.95），报表在分子侧除以它、在基准侧乘以它。
+// 对象字段（group_object_*）是 add-diet-group-objects 新增的历史追溯信息：对象改名或改班级后，
+// 旧食谱仍按快照显示当时的对象；旧快照缺这三个字段时解析为空，不阻断报表（design D2）。
 type DietConfigSnapshot struct {
-	CareType      DietCareType            `json:"care_type"`
-	FoodInputType DietFoodInputType       `json:"food_input_type"`
-	RatioMode     DietRatioMode           `json:"ratio_mode"`
-	Coefficient   float64                 `json:"coefficient"`
-	Meals         []DietMealSnapshot      `json:"meals"`
-	DriTargets    []DietDriTargetSnapshot `json:"dri_targets"`
-	DriWeights    []DietDriWeight         `json:"dri_weights"`
+	GroupObjectID       uint64                  `json:"group_object_id"`
+	GroupObjectName     string                  `json:"group_object_name"`
+	GroupObjectClassIDs []uint64                `json:"group_object_class_ids"`
+	CareType            DietCareType            `json:"care_type"`
+	FoodInputType       DietFoodInputType       `json:"food_input_type"`
+	RatioMode           DietRatioMode           `json:"ratio_mode"`
+	Coefficient         float64                 `json:"coefficient"`
+	Meals               []DietMealSnapshot      `json:"meals"`
+	DriTargets          []DietDriTargetSnapshot `json:"dri_targets"`
+	DriWeights          []DietDriWeight         `json:"dri_weights"`
 }
 
 // DietNutritionSnapshot 是周食谱明细在录入时固化的营养浓度快照（ADR-0006）。
