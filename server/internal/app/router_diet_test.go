@@ -114,6 +114,7 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 		repository.NewDietDriRepo(db),
 		configSvc,
 	)
+	analysisSvc := service.NewDietAnalysisService(repository.NewDietPlanRepo(db), foodRepo)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -125,7 +126,7 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 		c.Next()
 	})
 	adminG.Use(middleware.RequirePermission(resolver))
-	registerAdminRoutes(adminG, handler.NewDietAdminHandler(configSvc, foodSvc, recipeSvc, planSvc))
+	registerAdminRoutes(adminG, handler.NewDietAdminHandler(configSvc, foodSvc, recipeSvc, planSvc, analysisSvc))
 	return r
 }
 
@@ -275,7 +276,7 @@ func TestRouterDiet_FoodRoutesRegistered(t *testing.T) {
 	for _, key := range want {
 		assert.True(t, got[key], "缺少食物路由 %s", key)
 	}
-	assert.Len(t, got, 25, "diet 组当前应恰好 2 条配置 + 8 条食物 + 7 条菜谱 + 8 条周食谱/模板路由")
+	assert.Len(t, got, 27, "diet 组当前应恰好 2 条配置 + 8 条食物 + 7 条菜谱 + 8 条周食谱/模板 + 2 条营养分析路由")
 }
 
 // AQR-S4：7 条菜谱路由必须真实注册，不得有 501/stub。
@@ -497,7 +498,7 @@ func TestRouterDiet_PlanRoutesRegistered(t *testing.T) {
 	for _, key := range want {
 		assert.True(t, got[key], "缺少周食谱/模板路由 %s", key)
 	}
-	assert.Len(t, got, 8, "周食谱与模板应恰好 8 条路由")
+	assert.Len(t, got, 10, "周食谱与模板 8 条 + AQR-S7 营养分析 2 条（analysis 挂在 /plans/:id 下）")
 }
 
 // AQR-S6：GET 走 diet:view，写操作走 diet:manage，两个码互不替代。
@@ -604,4 +605,49 @@ func TestRouterDiet_PlanRealBehavior(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, w.Code, w.Body.String())
 	env = decodeDietEnvelope(t, w)
 	assert.Equal(t, 40400, env.Code)
+}
+
+// AQR-S7：2 条营养分析路由必须真实注册，不得有 501/stub。
+func TestRouterDiet_AnalysisRoutesRegistered(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:export"}})
+
+	want := []string{
+		"GET /api/v1/admin/diet/plans/:id/analysis",
+		"GET /api/v1/admin/diet/plans/:id/analysis/export",
+	}
+	got := map[string]bool{}
+	for _, rt := range engine.Routes() {
+		if strings.HasPrefix(rt.Path, "/api/v1/admin/diet/plans/") &&
+			strings.Contains(rt.Path, "analysis") {
+			got[rt.Method+" "+rt.Path] = true
+		}
+	}
+	for _, key := range want {
+		assert.True(t, got[key], "缺少营养分析路由 %s", key)
+	}
+	assert.Len(t, got, 2, "营养分析应恰好 2 条路由")
+}
+
+// AQR-S7：analysis 走 diet:view，export 走 diet:export，两个码互不替代。
+func TestRouterDiet_AnalysisPermissionCodes(t *testing.T) {
+	const (
+		analysisPath = "/api/v1/admin/diet/plans/999999999/analysis"
+		exportPath   = "/api/v1/admin/diet/plans/999999999/analysis/export"
+	)
+
+	viewOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view"}})
+	assert.NotEqual(t, http.StatusForbidden,
+		doDietRequest(t, viewOnly, http.MethodGet, analysisPath, "").Code,
+		"analysis 应允许 diet:view")
+	assert.Equal(t, http.StatusForbidden,
+		doDietRequest(t, viewOnly, http.MethodGet, exportPath, "").Code,
+		"export 只读码不能替代导出码")
+
+	exportOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:export"}})
+	assert.Equal(t, http.StatusForbidden,
+		doDietRequest(t, exportOnly, http.MethodGet, analysisPath, "").Code,
+		"导出码不能替代查看码")
+	assert.NotEqual(t, http.StatusForbidden,
+		doDietRequest(t, exportOnly, http.MethodGet, exportPath, "").Code,
+		"export 应允许 diet:export")
 }

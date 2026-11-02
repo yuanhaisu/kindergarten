@@ -2,6 +2,8 @@ package handler
 
 import (
 	"errors"
+	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -47,19 +49,21 @@ func (r dietConfigRequest) toInput() service.DietMealConfigInput {
 	}
 }
 
-// NewDietAdminHandler 组装膳食模块（配置 + 食物库 + 菜谱库 + 周食谱/模板）的 Handler，
+// NewDietAdminHandler 组装膳食模块（配置 + 食物库 + 菜谱库 + 周食谱/模板 + 营养分析）的 Handler，
 // 供路由级测试使用。生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
 func NewDietAdminHandler(
 	dietConfigSvc *service.DietConfigService,
 	dietFoodSvc *service.DietFoodService,
 	dietRecipeSvc *service.DietRecipeService,
 	dietPlanSvc *service.DietPlanService,
+	dietAnalysisSvc *service.DietAnalysisService,
 ) *Handler {
 	return &Handler{
-		dietConfigSvc: dietConfigSvc,
-		dietFoodSvc:   dietFoodSvc,
-		dietRecipeSvc: dietRecipeSvc,
-		dietPlanSvc:   dietPlanSvc,
+		dietConfigSvc:   dietConfigSvc,
+		dietFoodSvc:     dietFoodSvc,
+		dietRecipeSvc:   dietRecipeSvc,
+		dietPlanSvc:     dietPlanSvc,
+		dietAnalysisSvc: dietAnalysisSvc,
 	}
 }
 
@@ -871,5 +875,65 @@ func respondDietPlanError(c *gin.Context, err error, fallback string) {
 		response.ErrConflict(c, "该学年已存在同名周食谱")
 	default:
 		response.ErrInternal(c, fallback)
+	}
+}
+
+// --- 营养分析（契约 23-diet.md 第七节） ---
+
+// GetDietPlanAnalysis 返回某周食谱的 7 组报表与自动结论（只读）。
+func (h *Handler) GetDietPlanAnalysis(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietPlanID(c)
+	if !ok {
+		return
+	}
+	data, err := h.dietAnalysisSvc.Analyze(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietAnalysisError(c, err)
+		return
+	}
+	response.OK(c, data)
+}
+
+// ExportDietPlanAnalysis 同步生成营养分析 Excel，直接返回二进制而不是 JSON 包络。
+func (h *Handler) ExportDietPlanAnalysis(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietPlanID(c)
+	if !ok {
+		return
+	}
+	data, err := h.dietAnalysisSvc.ExportExcel(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietAnalysisError(c, err)
+		return
+	}
+	const xlsxMIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	c.Header("Content-Type", xlsxMIME)
+	// 契约要求 filename*=UTF-8''<urlencoded>，保留「营养分析」中文文件名。
+	c.Header("Content-Disposition",
+		"attachment; filename*=UTF-8''"+url.PathEscape("营养分析")+".xlsx")
+	c.Data(http.StatusOK, xlsxMIME, data)
+}
+
+// respondDietAnalysisError 映射营养分析错误：无明细 422、跨园/不存在 404。
+func respondDietAnalysisError(c *gin.Context, err error) {
+	var invalid *service.DietPlanValidationError
+	switch {
+	case errors.As(err, &invalid):
+		response.ErrValidation(c, invalid.Message)
+	case errors.Is(err, service.ErrDietAnalysisEmpty):
+		response.ErrValidation(c, "该食谱暂无明细，无法生成营养分析")
+	case errors.Is(err, service.ErrDietPlanNotFound):
+		response.ErrNotFound(c, "周食谱不存在")
+	default:
+		response.ErrInternal(c, "营养分析服务异常")
 	}
 }

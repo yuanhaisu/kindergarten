@@ -73,6 +73,9 @@ func newPermEngine(resolver PermissionResolver) *gin.Engine {
 	g.POST("/diet/plans/:id/clear", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/diet/templates", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/diet/templates/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// AQR-S7 营养分析：用于验证查看（diet:view）与导出（diet:export）两条路由。
+	g.GET("/diet/plans/:id/analysis", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/plans/:id/analysis/export", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/unregistered-probe", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	return r
 }
@@ -396,4 +399,29 @@ func TestAdminPermission_DietPlanViewAndManageCodes(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/plans").Code)
 	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/plans/1").Code)
 	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/templates").Code)
+}
+
+// AQR-S7：营养分析两条路由逐条登记；查看用 diet:view，导出用 diet:export。
+func TestAdminPermission_DietAnalysisRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans/:id/analysis"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans/:id/analysis/export"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "营养分析路由不得有登记缺口")
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/plans/:id/analysis"])
+	assert.Equal(t, "diet:export", adminRoutePermission["GET /api/v1/admin/diet/plans/:id/analysis/export"])
+}
+
+// AQR-S7：查看码不能导出，导出码不能看报表（两个码互不替代）。
+func TestAdminPermission_DietAnalysisViewAndExportCodes(t *testing.T) {
+	viewOnly := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	assert.Equal(t, http.StatusOK, doGet(viewOnly, "/api/v1/admin/diet/plans/1/analysis").Code)
+	assert.Equal(t, http.StatusForbidden,
+		doGet(viewOnly, "/api/v1/admin/diet/plans/1/analysis/export").Code)
+
+	exportOnly := newPermEngine(stubResolver{codes: []string{"diet:export"}})
+	assert.Equal(t, http.StatusForbidden,
+		doGet(exportOnly, "/api/v1/admin/diet/plans/1/analysis").Code)
+	assert.Equal(t, http.StatusOK,
+		doGet(exportOnly, "/api/v1/admin/diet/plans/1/analysis/export").Code)
 }

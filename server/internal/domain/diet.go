@@ -196,4 +196,9 @@ type DietNutritionSnapshot struct {
 	Selenium      *float64 `json:"selenium"`       // 微克
 	Copper        *float64 `json:"copper"`         // 毫克
 	Manganese     *float64 `json:"manganese"`      // 毫克
+
+	// Group16 / SourceFlags 固化录入当时的食物分类，构成与来源报表只认快照。
+	// 旧行没有这两个字段（空值），分析时回退到食物库当前值。
+	Group16     DietFoodGroup16 `json:"group16"`
+	SourceFlags string          `json:"source_flags"`
 }

@@ -63,11 +63,14 @@ type Food struct {
 
 func (Food) TableName() string { return "diet_foods" }
 
-// NutritionSnapshot 把食物当前的食部与 27 项浓度复制成快照。
+// NutritionSnapshot 把食物当前的食部、分类与 27 项浓度复制成快照。
 // 只在周食谱保存/复制时调用；菜谱库不存快照（ADR-0006）。
+// 分类一并固化，避免事后调整食物分类改写历史报表（TC-NEW-DIE-0063）。
 func (f Food) NutritionSnapshot() DietNutritionSnapshot {
 	return DietNutritionSnapshot{
 		EdiblePercent: f.EdiblePercent,
+		Group16:       f.Group16,
+		SourceFlags:   f.SourceFlags,
 		Energy:        f.Energy,
 		Heat:          f.Heat,
 		Protein:       f.Protein,

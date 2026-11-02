@@ -250,6 +250,10 @@ var adminRoutePermission = map[string]string{
 	"POST /api/v1/admin/diet/plans/:id/clear": "diet:manage",
 	"GET /api/v1/admin/diet/templates":        "diet:view",
 	"GET /api/v1/admin/diet/templates/:id":    "diet:view",
+
+	// 营养分析（AQR-S7）：查看报表用 diet:view，导出 Excel 用 diet:export。
+	"GET /api/v1/admin/diet/plans/:id/analysis":        "diet:view",
+	"GET /api/v1/admin/diet/plans/:id/analysis/export": "diet:export",
 }
 
 // RequirePermission 按登记表强制管理端接口权限，挂在 adminG 组上（AuthJWT/CasbinRBAC 之后）。
