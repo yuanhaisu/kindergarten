@@ -8,7 +8,7 @@
           type="primary"
           data-testid="plan-new"
           :disabled="years.length === 0"
-          @click="openWizard"
+          @click="openWizard()"
         >
           新建周食谱
         </el-button>
@@ -74,6 +74,11 @@
       @size-change="load"
     >
       <el-table-column prop="name" label="名称" min-width="180" />
+      <el-table-column label="集体对象" min-width="140" show-overflow-tooltip>
+        <template #default="{ row }">
+          {{ (row as DietPlanListItem).group_object_name || '—' }}
+        </template>
+      </el-table-column>
       <el-table-column label="起止日期" min-width="220">
         <template #default="{ row }">
           {{ (row as DietPlanListItem).start_date }} 至 {{ (row as DietPlanListItem).end_date }}
@@ -152,6 +157,35 @@
                 :value="year.id"
               />
             </el-select>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="集体对象" required>
+          <div class="w-full" data-testid="plan-group-object">
+            <el-select
+              v-model="wizard.group_object_id"
+              placeholder="请选择集体对象"
+              class="w-full"
+              :loading="groupObjectsLoading"
+              :disabled="groupObjectsLoading || groupObjects.length === 0"
+              @change="onGroupObjectChange"
+            >
+              <el-option
+                v-for="object in groupObjects"
+                :key="object.id"
+                :label="object.name"
+                :value="object.id"
+              />
+            </el-select>
+          </div>
+          <div v-if="groupObjectError" class="text-xs text-semantic-danger">
+            {{ groupObjectError }}
+          </div>
+          <div
+            v-else-if="!groupObjectsLoading && groupObjects.length === 0"
+            class="text-xs text-semantic-warning"
+          >
+            该学年暂无集体对象，请先到「基本参数设置」添加。
           </div>
         </el-form-item>
 
@@ -281,17 +315,26 @@
 import type {
   DietApiError,
   DietCreatedMethod,
+  DietGroupObjectListItem,
   DietPlanCreateBody,
   DietPlanListItem,
   DietTemplateListItem,
 } from '~/types/api'
-import { createDietPlan, deleteDietPlan, getDietPlans, getDietTemplates } from '~/api/diet'
+import {
+  createDietPlan,
+  deleteDietPlan,
+  getDietGroupObject,
+  getDietGroupObjects,
+  getDietPlans,
+  getDietTemplates,
+} from '~/api/diet'
 import { getAcademicYears } from '~/api/settings'
 import { addDaysISO, isMondayISO, nextMondayISO } from './components/plan-utils'
 
 const { can } = usePermission()
 const canManage = computed(() => can('diet:manage'))
 const router = useRouter()
+const route = useRoute()
 
 const { page, pageSize, total, resetPage } = usePagination()
 const keyword = ref('')
@@ -304,8 +347,32 @@ const listError = ref('')
 
 onMounted(async () => {
   await loadYears()
+  await openWizardFromQuery()
   await load()
 })
+
+/** 「制定食谱」从基本参数页带 query 进来：对象决定学年，先取对象再开向导 */
+async function openWizardFromQuery() {
+  if (route.query.create !== '1') return
+  const raw = Array.isArray(route.query.group_object_id)
+    ? route.query.group_object_id[0]
+    : route.query.group_object_id
+  const id = Number(raw)
+  if (!Number.isFinite(id) || id <= 0) return
+
+  let preselect: { id: number; academic_year_id: number } | undefined
+  try {
+    const object = await getDietGroupObject(id)
+    preselect = { id: object.id, academic_year_id: object.academic_year_id }
+    academicYearId.value = object.academic_year_id
+  } catch {
+    // 对象已删除时不阻断：向导照常打开，由用户自行选择
+    ElMessage.warning('未找到该集体对象，请重新选择')
+  }
+  openWizard(preselect)
+  // 清掉 query，避免返回/刷新时重复弹出向导
+  await router.replace({ path: '/diet/plans' })
+}
 
 async function loadYears() {
   yearError.value = ''
@@ -358,9 +425,13 @@ const templateError = ref('')
 const copyPlans = ref<DietPlanListItem[]>([])
 const copyLoading = ref(false)
 const copyError = ref('')
+const groupObjects = ref<DietGroupObjectListItem[]>([])
+const groupObjectsLoading = ref(false)
+const groupObjectError = ref('')
 
 const wizard = reactive<{
   academic_year_id: number | undefined
+  group_object_id: number | undefined
   name: string
   start_date: string
   week_of_year: number | undefined
@@ -369,6 +440,7 @@ const wizard = reactive<{
   source_plan_id: number | undefined
 }>({
   academic_year_id: undefined,
+  group_object_id: undefined,
   name: '',
   start_date: nextMondayISO(),
   week_of_year: undefined,
@@ -385,13 +457,16 @@ function notMonday(date: Date) {
   return date.getDay() !== 1
 }
 
-function openWizard() {
+function openWizard(preselect?: { id: number; academic_year_id?: number }) {
   resetWizard()
   wizard.academic_year_id =
+    preselect?.academic_year_id ??
     academicYearId.value ??
     years.value.find((year) => year.is_current)?.id ??
     years.value[0]?.id
+  wizard.group_object_id = preselect?.id
   wizardVisible.value = true
+  void loadGroupObjects()
   void loadTemplates()
   void searchCopyPlans('')
 }
@@ -401,7 +476,9 @@ function resetWizard() {
   createError.value = ''
   templateError.value = ''
   copyError.value = ''
+  groupObjectError.value = ''
   wizard.academic_year_id = academicYearId.value
+  wizard.group_object_id = undefined
   wizard.name = ''
   wizard.start_date = nextMondayISO()
   wizard.week_of_year = undefined
@@ -410,12 +487,41 @@ function resetWizard() {
   wizard.source_plan_id = undefined
   templates.value = []
   copyPlans.value = []
+  groupObjects.value = []
   templatesLoading.value = false
   copyLoading.value = false
+  groupObjectsLoading.value = false
 }
 
 function onWizardYearChange() {
+  // 对象必须属于所选学年：换学年即清空已选对象并重拉候选
+  wizard.group_object_id = undefined
+  void loadGroupObjects()
   if (wizard.created_method === 'copy') void searchCopyPlans('')
+}
+
+/** 对象自带学年：选定后回填，保证提交时两者一致（后端仍双向校验） */
+function onGroupObjectChange(id: number | undefined) {
+  const object = groupObjects.value.find((item) => item.id === id)
+  if (object) wizard.academic_year_id = object.academic_year_id
+  createError.value = ''
+}
+
+async function loadGroupObjects() {
+  groupObjectsLoading.value = true
+  groupObjectError.value = ''
+  try {
+    const res = await getDietGroupObjects({
+      academic_year_id: wizard.academic_year_id,
+      page_size: 100,
+    })
+    groupObjects.value = res.list ?? []
+  } catch (e: unknown) {
+    groupObjects.value = []
+    groupObjectError.value = e instanceof Error ? e.message : '集体对象加载失败'
+  } finally {
+    groupObjectsLoading.value = false
+  }
 }
 
 function onMethodChange() {
@@ -468,6 +574,11 @@ async function submitWizard() {
     createError.value = '请选择学年'
     return
   }
+  const groupObjectId = wizard.group_object_id
+  if (typeof groupObjectId !== 'number') {
+    createError.value = '请选择集体对象'
+    return
+  }
   const name = wizard.name.trim()
   if (!name) {
     createError.value = '请输入食谱名称'
@@ -485,6 +596,7 @@ async function submitWizard() {
   const base = {
     name,
     academic_year_id: yearId,
+    group_object_id: groupObjectId,
     start_date: wizard.start_date,
     end_date: endDate,
     week_of_year: wizard.week_of_year ?? 0,

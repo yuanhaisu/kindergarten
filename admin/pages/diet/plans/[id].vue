@@ -84,6 +84,9 @@
             <el-descriptions-item label="学年">
               {{ academicYearLabel || '—' }}
             </el-descriptions-item>
+            <el-descriptions-item label="集体对象">
+              <span data-testid="plan-group-object-name">{{ plan.group_object_name || '—' }}</span>
+            </el-descriptions-item>
             <el-descriptions-item label="周期">
               {{ plan.start_date }} 至 {{ plan.end_date }}
             </el-descriptions-item>
@@ -124,8 +127,8 @@
       />
 
       <el-card v-if="mealRows.length === 0" shadow="never">
-        <el-empty description="当前供餐配置没有启用任何餐次，无法编辑周食谱">
-          <el-button type="primary" @click="router.push('/diet/config')">前往基本参数</el-button>
+        <el-empty description="所属集体对象没有启用任何餐次，无法编辑周食谱">
+          <el-button type="primary" @click="router.push('/diet/config')">前往基本参数设置</el-button>
         </el-empty>
       </el-card>
 

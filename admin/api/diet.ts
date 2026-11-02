@@ -1,7 +1,5 @@
 import type {
   DietAnalysis,
-  DietConfig,
-  DietConfigUpdateBody,
   DietFoodBatchDeleteBody,
   DietFoodBatchDeleteResult,
   DietFoodCategory,
@@ -10,6 +8,10 @@ import type {
   DietFoodListQuery,
   DietFoodListResult,
   DietFoodUpdateBody,
+  DietGroupObjectDetail,
+  DietGroupObjectInput,
+  DietGroupObjectListQuery,
+  DietGroupObjectListResult,
   DietPlanCreateBody,
   DietPlanCreateResult,
   DietPlanClearResult,
@@ -34,18 +36,26 @@ import type {
 } from '~/types/api'
 
 /**
- * 膳食管理接口（契约：backend/api/api-admin/23-diet.md，27 个）。
+ * 膳食管理接口（契约：backend/api/api-admin/23-diet.md）。
  * 统一走 useHttp，响应由拦截器解包；错误 message 直接展示给用户。
  */
 
-// ===== 供餐配置 =====
+// ===== 集体对象（基本参数） =====
 
-export function getDietConfig() {
-  return useHttp().get<DietConfig>('/admin/diet/config')
+export function getDietGroupObjects(params: DietGroupObjectListQuery) {
+  return useHttp().get<DietGroupObjectListResult>('/admin/diet/group-objects', { params })
 }
 
-export function updateDietConfig(body: DietConfigUpdateBody) {
-  return useHttp().put<DietConfig>('/admin/diet/config', body)
+export function getDietGroupObject(id: number) {
+  return useHttp().get<DietGroupObjectDetail>(`/admin/diet/group-objects/${id}`)
+}
+
+export function createDietGroupObject(body: DietGroupObjectInput) {
+  return useHttp().post<DietGroupObjectDetail>('/admin/diet/group-objects', body)
+}
+
+export function updateDietGroupObject(id: number, body: DietGroupObjectInput) {
+  return useHttp().put<DietGroupObjectDetail>(`/admin/diet/group-objects/${id}`, body)
 }
 
 // ===== 食物分类 =====

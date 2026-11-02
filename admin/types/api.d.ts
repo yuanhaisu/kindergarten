@@ -1011,7 +1011,7 @@ export interface DietNutritionSnapshot extends DietNutrients {
   edible_percent: number | null
 }
 
-// ----- 供餐配置 -----
+// ----- 集体对象（基本参数） -----
 
 export interface DietMealConfigItem {
   meal_key: DietMealKey
@@ -1022,18 +1022,6 @@ export interface DietMealConfigItem {
   enabled: boolean
 }
 
-export interface DietConfig {
-  care_type: DietCareType
-  care_type_label: string
-  food_input_type: DietFoodInputType
-  food_input_type_label: string
-  ratio_mode: DietRatioMode
-  ratio_mode_label: string
-  /** 折算系数只读：已启用餐次 energy_percent 之和 ÷ 100 */
-  coefficient: number
-  meals: DietMealConfigItem[]
-}
-
 export interface DietMealConfigInput {
   meal_key: DietMealKey
   time: string
@@ -1041,10 +1029,54 @@ export interface DietMealConfigInput {
   enabled: boolean
 }
 
-export interface DietConfigUpdateBody {
+/** 就餐班级：班级是动态数据，对象只存 class_id，读取时回查当前班级表 */
+export interface DietGroupObjectClass {
+  id: number
+  name: string
+  grade: string
+}
+
+/** 列表行只含渲染所需字段；时间、占比、比例模式在详情才返回（契约 §一） */
+export interface DietGroupObjectListItem {
+  id: number
+  name: string
+  academic_year_id: number
+  care_type: DietCareType
+  care_type_label: string
+  food_input_type: DietFoodInputType
+  food_input_type_label: string
+  policy_name: string
+  /** 只含已启用餐次，按固定餐次顺序排列 */
+  meal_names: string[]
+  classes: DietGroupObjectClass[]
+}
+
+export interface DietGroupObjectListQuery {
+  /** 缺省取当前学年 */
+  academic_year_id?: number
+  keyword?: string
+  page?: number
+  page_size?: number
+}
+
+export interface DietGroupObjectListResult extends PageResult<DietGroupObjectListItem> {}
+
+export interface DietGroupObjectDetail extends DietGroupObjectListItem {
+  ratio_mode: DietRatioMode
+  ratio_mode_label: string
+  /** 只读：已启用餐次 energy_percent 之和 ÷ 100 */
+  coefficient: number
+  /** 全部 6 个餐次（含未启用） */
+  meals: DietMealConfigItem[]
+}
+
+export interface DietGroupObjectInput {
+  academic_year_id: number
+  name: string
   care_type: DietCareType
   food_input_type: DietFoodInputType
   ratio_mode: DietRatioMode
+  class_ids: number[]
   meals: DietMealConfigInput[]
 }
 
@@ -1220,6 +1252,9 @@ export interface DietPlanListItem {
   id: number
   name: string
   academic_year_id: number
+  group_object_id: number
+  /** 回查当前对象名称；旧行 group_object_id=0 时为空串 */
+  group_object_name: string
   start_date: string
   end_date: string
   day_num: number
@@ -1241,6 +1276,8 @@ export interface DietPlanListResult extends PageResult<DietPlanListItem> {}
 export interface DietPlanCreateBase {
   name: string
   academic_year_id: number
+  /** 必填；对象的学年必须与 academic_year_id 一致（前端从对象带出学年） */
+  group_object_id: number
   /** 周一 */
   start_date: string
   /** = start_date + 6 天 */
@@ -1279,8 +1316,13 @@ export interface DietDriWeight {
 }
 
 export interface DietPlanConfigSnapshot {
+  group_object_id: number
+  group_object_name: string
+  /** 创建时固化的就餐班级，供复核 DRIs 加权范围 */
+  group_object_class_ids: number[]
   care_type: DietCareType
   food_input_type: DietFoodInputType
+  ratio_mode: DietRatioMode
   coefficient: number
   meals: DietMealConfigItem[]
   dri_targets: DietDriTarget[]
@@ -1310,6 +1352,9 @@ export interface DietPlanDetail {
   id: number
   name: string
   academic_year_id: number
+  /** 名称优先取创建快照：对象改名后旧食谱仍显示原名 */
+  group_object_id: number
+  group_object_name: string
   start_date: string
   end_date: string
   day_num: number
