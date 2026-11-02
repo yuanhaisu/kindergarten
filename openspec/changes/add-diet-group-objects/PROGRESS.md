@@ -13,7 +13,7 @@
 | DGO-S3b | 2.4 | handler/router/wire/权限 + 移除旧配置服务 | passed | aac8739 | a197ef4 | .claude/runs/dgo-s3b/verdict.json | a197ef4 |
 | DGO-S4 | 3.1–3.2 | 契约：集体对象 + 周食谱对象字段 | passed | a197ef4 | 7dd004a | .claude/runs/dgo-s4/verdict.json | 7dd004a |
 | DGO-S5 | 4.1–4.4 | admin API/types + 基本参数页 + 计划页 | passed | 7dd004a | c99eafa | .claude/runs/dgo-s5/verdict.json | c99eafa |
-| DGO-S6 | 5.1–5.4 | TEST_CATALOG + 后端重启 + Playwright E2E + 最终验收 | in_progress | c99eafa | | | |
+| DGO-S6 | 5.1–5.4 | TEST_CATALOG + 后端重启 + Playwright E2E + 最终验收 | passed | c99eafa | 11006d4 | .claude/runs/dgo-s6/verdict.json | f7f82df / 11006d4 |
 
 ## 关键决策
 
@@ -27,3 +27,13 @@
 - S3a：delta spec 的回退算例写 1484.26，实现为 1485.95（AQR-S6 既有漂移），S6 统一校准并在 TEST_CATALOG 注明。
 - S2：seed 测试园所 ID 990994 与 `diet_recipe_test.go` 重复（同包串行暂不冲突）；`ClassRepo` 无 `ListByIDs`，列表按 class_id 逐个查询（有请求内缓存）。
 - S3b：重名返回 422（已按实际写入契约）；删除 `diet_meal_config_test.go` 时丢了共享校验的边界用例，S6 补回；周食谱列表暂无可选 `group_object_id` 筛选（design 标注可选，未阻塞验收）。
+
+## 最终状态（2026-11-03）
+
+- **全部 slice PASS**：S1 / S2 / S3a / S3b / S4 / S5 / S6；HEAD `11006d4`，已 push `origin/feat/add-quantified-recipe`。
+- **提交**：e87ad00（模型/种子）、4dcff90（仓储/服务）、aac8739（周食谱绑定）、a197ef4（HTTP/路由）、7dd004a（契约）、c99eafa（admin）、f7f82df（验收/TC）、11006d4（工件/评审）。
+- **E2E**：新后端 + :3000 admin，7 步真实点击全过；0 未捕获异常、0 500；截图在 `.claude/runs/dgo-s6/screenshots/`。
+- **清理**：E2E 留下的集体对象 402/403 已从开发库硬删，`GET group-objects?year=3` 只剩默认「全体幼儿」401。
+- **校准**：DRIs fallback 算例按实现改为 1485.95；1484.26 作为参考产品黄金样本保留说明。
+- **残留 P2**：S3b 删除旧测试时丢失的共享校验边界用例未补回；周食谱列表可选 `group_object_id` 筛选未实现；两条 E2E 对象已清理。
+- **发布阻断**：沿用 `add-quantified-recipe` 的 7.5 数据许可门，上线前仍需授权 CSV/合同。
