@@ -5,15 +5,25 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 
 	"kindergarten-server/internal/auth"
+	"kindergarten-server/internal/config"
+	"kindergarten-server/internal/domain"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/service"
 )
 
 // dietTestResolver 是权限中间件的桩：只返回指定权限码，不依赖 DB。
@@ -26,76 +36,190 @@ func (s dietTestResolver) ResolveAdminCodes(context.Context, uint64, uint64) ([]
 	return s.codes, s.wildcard, nil
 }
 
+// 独立测试园所 ID，避开真实数据与其他测试文件。
+const testRouterDietKG uint64 = 990982
+
+var routerDietDB *gorm.DB
+
+func openRouterDietTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	if routerDietDB != nil {
+		return routerDietDB
+	}
+	cfgPath := filepath.Join("..", "..", "configs", "app.ini")
+	if _, err := os.Stat(cfgPath); err != nil {
+		t.Skipf("跳过：找不到 %s（本地无 DB 配置）", cfgPath)
+	}
+	cfg, err := config.Load(cfgPath)
+	require.NoError(t, err, "load config")
+	if cfg.MySQL.DSN == "" {
+		t.Skip("跳过：MySQL DSN 为空")
+	}
+	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
+	})
+	require.NoError(t, err, "open db")
+	require.NoError(t, db.AutoMigrate(&domain.MealConfig{}, &domain.MealConfigMeal{}),
+		"auto migrate diet config tables")
+	routerDietDB = db
+	return db
+}
+
+func cleanupRouterDietData(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	for _, sql := range []string{
+		"DELETE FROM diet_meal_config_meals WHERE kindergarten_id = ?",
+		"DELETE FROM diet_meal_configs WHERE kindergarten_id = ?",
+	} {
+		if err := db.Exec(sql, testRouterDietKG).Error; err != nil {
+			t.Logf("cleanup %q: %v", sql, err)
+		}
+	}
+}
+
 // newDietAdminEngine 只装配 admin 路由与细闸中间件，不经过 AuthJWT/Casbin/Redis。
-// Handler 用零值：S1b 的 DietConfigService 是纯占位、不触碰字段，因此 nil receiver
-// 也能返回 501。S2 实现真实读写后，本测试需要改为注入真实 service。
+// 供餐配置服务打真实 MySQL（与 repository/service 测试同源），无 DB 时整组跳过。
 func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *gin.Engine {
 	t.Helper()
+	db := openRouterDietTestDB(t)
+	cleanupRouterDietData(t, db)
+	t.Cleanup(func() { cleanupRouterDietData(t, db) })
+
+	svc := service.NewDietConfigService(repository.NewDietConfigRepo(db))
+
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	adminG := r.Group("/api/v1/admin")
 	adminG.Use(func(c *gin.Context) {
 		c.Set(middleware.CtxClaimsKey, &auth.AccessClaims{
-			UserID: "4", Roles: []string{"admin"}, KindergartenID: 4,
+			UserID: "4", Roles: []string{"admin"}, KindergartenID: testRouterDietKG,
 		})
 		c.Next()
 	})
 	adminG.Use(middleware.RequirePermission(resolver))
-	registerAdminRoutes(adminG, &handler.Handler{})
+	registerAdminRoutes(adminG, handler.NewDietConfigHandler(svc))
 	return r
 }
 
-func doDietRequest(t *testing.T, engine *gin.Engine, method, path string) *httptest.ResponseRecorder {
+func doDietRequest(t *testing.T, engine *gin.Engine, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(method, path, nil)
-	if method == http.MethodPut {
+	var payload *strings.Reader
+	if body != "" {
+		payload = strings.NewReader(body)
+	}
+	var req *http.Request
+	if payload == nil {
+		req = httptest.NewRequest(method, path, nil)
+	} else {
+		req = httptest.NewRequest(method, path, payload)
 		req.Header.Set("Content-Type", "application/json")
 	}
+	w := httptest.NewRecorder()
 	engine.ServeHTTP(w, req)
 	return w
 }
 
-func decodeDietEnvelope(t *testing.T, w *httptest.ResponseRecorder) (code int, message string) {
-	t.Helper()
-	var env struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	}
-	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &env),
-		"响应必须是 JSON 包络：%s", w.Body.String())
-	return env.Code, env.Message
+type dietEnvelope struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
 }
 
-// S1b 骨架：GET/PUT /admin/diet/config 必须返回 501 + 项目统一错误包络。
-func TestRouterDiet_ConfigSkeletonReturns501(t *testing.T) {
+func decodeDietEnvelope(t *testing.T, w *httptest.ResponseRecorder) dietEnvelope {
+	t.Helper()
+	var env dietEnvelope
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &env),
+		"响应必须是 JSON 包络：%s", w.Body.String())
+	return env
+}
+
+const dietStandardConfigJSON = `{
+  "care_type": "day_care",
+  "food_input_type": "market_weight",
+  "ratio_mode": "standard",
+  "meals": [
+    { "meal_key": "breakfast",       "time": "07:00", "energy_percent": 25, "enabled": true },
+    { "meal_key": "morning_snack",   "time": "09:00", "energy_percent": 5,  "enabled": true },
+    { "meal_key": "lunch",           "time": "11:00", "energy_percent": 35, "enabled": true },
+    { "meal_key": "afternoon_snack", "time": "14:30", "energy_percent": 5,  "enabled": true },
+    { "meal_key": "dinner",          "time": "17:00", "energy_percent": 25, "enabled": true },
+    { "meal_key": "evening_snack",   "time": "20:00", "energy_percent": 5,  "enabled": false }
+  ]
+}`
+
+// 自定模式下早餐 25 + 早点 6 = 31，超过日托上限 29。
+const dietInvalidCustomConfigJSON = `{
+  "care_type": "day_care",
+  "food_input_type": "market_weight",
+  "ratio_mode": "custom",
+  "meals": [
+    { "meal_key": "breakfast",       "time": "07:00", "energy_percent": 25, "enabled": true },
+    { "meal_key": "morning_snack",   "time": "09:00", "energy_percent": 6,  "enabled": true },
+    { "meal_key": "lunch",           "time": "11:00", "energy_percent": 35, "enabled": true },
+    { "meal_key": "afternoon_snack", "time": "14:30", "energy_percent": 5,  "enabled": true },
+    { "meal_key": "dinner",          "time": "17:00", "energy_percent": 25, "enabled": true },
+    { "meal_key": "evening_snack",   "time": "20:00", "energy_percent": 5,  "enabled": false }
+  ]
+}`
+
+// 真实行为：GET 返回默认配置，PUT 标准比例成功，再 GET 读回保存值。
+func TestRouterDiet_ConfigRealBehavior(t *testing.T) {
 	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
 
-	for _, tc := range []struct{ method, path string }{
-		{http.MethodGet, "/api/v1/admin/diet/config"},
-		{http.MethodPut, "/api/v1/admin/diet/config"},
-	} {
-		t.Run(tc.method, func(t *testing.T) {
-			w := doDietRequest(t, engine, tc.method, tc.path)
-			require.Equal(t, http.StatusNotImplemented, w.Code, w.Body.String())
-			code, message := decodeDietEnvelope(t, w)
-			assert.Equal(t, 50100, code)
-			assert.NotEmpty(t, message)
-		})
-	}
+	w := doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/config", "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env := decodeDietEnvelope(t, w)
+	require.Equal(t, 0, env.Code)
+	var view service.DietConfigView
+	require.NoError(t, json.Unmarshal(env.Data, &view))
+	assert.Equal(t, domain.DietCareTypeDayCare, view.CareType)
+	assert.Equal(t, domain.DietRatioModeStandard, view.RatioMode)
+	assert.Equal(t, 0.95, view.Coefficient)
+	require.Len(t, view.Meals, 6)
+
+	w = doDietRequest(t, engine, http.MethodPut, "/api/v1/admin/diet/config", dietStandardConfigJSON)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	require.Equal(t, 0, env.Code)
+	var saved service.DietConfigView
+	require.NoError(t, json.Unmarshal(env.Data, &saved))
+	assert.Equal(t, 0.95, saved.Coefficient)
+
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/config", "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var reloaded service.DietConfigView
+	require.NoError(t, json.Unmarshal(env.Data, &reloaded))
+	assert.Equal(t, saved, reloaded, "保存后读取必须一致")
+}
+
+// 业务校验失败返回 422 + 可读 message；非法 JSON 也走 422。
+func TestRouterDiet_ConfigValidationReturns422(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
+
+	w := doDietRequest(t, engine, http.MethodPut, "/api/v1/admin/diet/config", dietInvalidCustomConfigJSON)
+	require.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+	env := decodeDietEnvelope(t, w)
+	assert.Equal(t, 42200, env.Code)
+	assert.NotEmpty(t, env.Message)
+
+	w = doDietRequest(t, engine, http.MethodPut, "/api/v1/admin/diet/config", "{not-json")
+	require.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	assert.Equal(t, 42200, env.Code)
 }
 
 // 两条配置路由的权限码：GET=diet:view，PUT=diet:manage，互不替代。
 func TestRouterDiet_ConfigPermissionCodes(t *testing.T) {
 	viewOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view"}})
-	assert.Equal(t, http.StatusNotImplemented,
-		doDietRequest(t, viewOnly, http.MethodGet, "/api/v1/admin/diet/config").Code)
+	assert.Equal(t, http.StatusOK,
+		doDietRequest(t, viewOnly, http.MethodGet, "/api/v1/admin/diet/config", "").Code)
 	assert.Equal(t, http.StatusForbidden,
-		doDietRequest(t, viewOnly, http.MethodPut, "/api/v1/admin/diet/config").Code)
+		doDietRequest(t, viewOnly, http.MethodPut, "/api/v1/admin/diet/config", dietStandardConfigJSON).Code)
 
 	manageOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:manage"}})
 	assert.Equal(t, http.StatusForbidden,
-		doDietRequest(t, manageOnly, http.MethodGet, "/api/v1/admin/diet/config").Code)
-	assert.Equal(t, http.StatusNotImplemented,
-		doDietRequest(t, manageOnly, http.MethodPut, "/api/v1/admin/diet/config").Code)
+		doDietRequest(t, manageOnly, http.MethodGet, "/api/v1/admin/diet/config", "").Code)
+	assert.Equal(t, http.StatusOK,
+		doDietRequest(t, manageOnly, http.MethodPut, "/api/v1/admin/diet/config", dietStandardConfigJSON).Code)
 }

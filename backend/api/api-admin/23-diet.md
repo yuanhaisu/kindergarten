@@ -134,6 +134,8 @@
 
 **托管形式 `care_type`**：`day_care` 日托 / `full_care` 全托。
 
+**比例模式 `ratio_mode`**：`standard` 标准比例（默认）/ `custom` 自定比例。标准模式使用固定标准占比并跳过相邻上限；自定模式校验相邻上限。
+
 **重量口径 `food_input_type`**：仅 `market_weight`（市品重量）。其他值一律 422。
 
 **周食谱创建方式 `created_method`**：`custom` 自定义 / `template` 选用模板 / `copy` 复制历史。
@@ -163,7 +165,7 @@
 
 ### GET `/admin/diet/config`
 
-> 供餐配置是园所单例。首次读取返回默认值（日托、5 餐、市品重量、系数 0.95）。
+> 供餐配置是园所单例。首次读取返回默认值（日托、5 餐、市品重量、标准比例、系数 0.95）。
 
 ```json
 {
@@ -171,6 +173,8 @@
   "care_type_label": "日托",
   "food_input_type": "market_weight",
   "food_input_type_label": "市品重量",
+  "ratio_mode": "standard",
+  "ratio_mode_label": "标准比例",
   "coefficient": 0.95,
   "meals": [
     { "meal_key": "breakfast",       "name": "早餐", "time": "07:00", "energy_percent": 25, "sort": 1, "enabled": true },
@@ -195,6 +199,7 @@
 {
   "care_type": "day_care",
   "food_input_type": "market_weight",
+  "ratio_mode": "standard",
   "meals": [
     { "meal_key": "breakfast",       "time": "07:00", "energy_percent": 25, "enabled": true },
     { "meal_key": "morning_snack",   "time": "09:00", "energy_percent": 5,  "enabled": true },
@@ -212,11 +217,13 @@
 校验（失败一律 422，配置保持原值）：
 
 1. `meals` 恰好包含 6 个已知 `meal_key`，各一次。
-2. 已启用餐次的时间严格递增（早餐 < 早点 < 午餐 < 午点 < 晚餐 < 晚点）。
+2. 已启用餐次的时间严格递增（早餐 < 早点 < 午餐 < 午点 < 晚餐 < 晚点），标准与自定模式均适用。
 3. 至少一餐启用；已启用餐次的 `energy_percent` 必须 > 0。
-4. 相邻餐次共享上限（`care_type=day_care` 时早餐+早点 ≤ 29，否则 ≤ 30；午餐+午点 ≤ 39；晚餐+晚点 ≤ 30）。
-5. `food_input_type` 只接受 `market_weight`，传 `edible_weight` 等值返回 422（TC-NEW-DIE-0007）。
-6. `care_type` 只接受 `day_care` / `full_care`。
+4. `ratio_mode` 只接受 `standard` / `custom`；缺省按 `standard`。
+5. `ratio_mode=standard` 时跳过相邻上限，但已启用餐次的 `energy_percent` 必须等于该餐次的固定标准占比（早 25 / 早点 5 / 午 35 / 午点 5 / 晚 25 / 晚点 5）。
+6. `ratio_mode=custom` 时校验相邻餐次共享上限（`care_type=day_care` 时早餐+早点 ≤ 29，否则 ≤ 30；午餐+午点 ≤ 39；晚餐+晚点 ≤ 30）。
+7. `food_input_type` 只接受 `market_weight`，传 `edible_weight` 等值返回 422（TC-NEW-DIE-0007）。
+8. `care_type` 只接受 `day_care` / `full_care`。
 
 ---
 

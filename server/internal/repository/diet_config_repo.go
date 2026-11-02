@@ -71,6 +71,7 @@ func (r *DietConfigRepo) Save(ctx context.Context, cfg *domain.MealConfig) error
 				Updates(map[string]any{
 					"care_type":       cfg.CareType,
 					"food_input_type": cfg.FoodInputType,
+					"ratio_mode":      cfg.RatioMode,
 				}).Error; err != nil {
 				return err
 			}

@@ -158,6 +158,7 @@ type DietDriWeight struct {
 type DietConfigSnapshot struct {
 	CareType      DietCareType            `json:"care_type"`
 	FoodInputType DietFoodInputType       `json:"food_input_type"`
+	RatioMode     DietRatioMode           `json:"ratio_mode"`
 	Coefficient   float64                 `json:"coefficient"`
 	Meals         []DietMealSnapshot      `json:"meals"`
 	DriTargets    []DietDriTargetSnapshot `json:"dri_targets"`

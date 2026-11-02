@@ -1,5 +1,14 @@
 package domain
 
+// DietRatioMode 各餐供能占比的来源。对齐参考产品 groupObj 的 precentType：
+// 1=标准比例（固定值、跳过相邻上限）、2=自定比例（校验上限），见 design D3。
+type DietRatioMode string
+
+const (
+	DietRatioModeStandard DietRatioMode = "standard" // 标准比例（默认）
+	DietRatioModeCustom   DietRatioMode = "custom"   // 自定比例
+)
+
 // MealConfig 园所级供餐配置（单例）。
 //
 // 一个园所只允许一条记录：保存时按 kindergarten_id 更新，不新增第二条。
@@ -9,6 +18,7 @@ type MealConfig struct {
 	KindergartenID uint64            `gorm:"not null;uniqueIndex:idx_diet_meal_config_kg" json:"kindergarten_id"`
 	CareType       DietCareType      `gorm:"size:20;not null;default:day_care" json:"care_type"`
 	FoodInputType  DietFoodInputType `gorm:"size:20;not null;default:market_weight" json:"food_input_type"`
+	RatioMode      DietRatioMode     `gorm:"size:20;not null;default:standard" json:"ratio_mode"`
 
 	Meals []MealConfigMeal `gorm:"foreignKey:ConfigID" json:"meals,omitempty"`
 }
