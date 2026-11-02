@@ -1,25 +1,27 @@
 # 23. 膳食管理（带量食谱）
 
-> 对应前端页面：`admin/pages/diet/config.vue`（基本参数）、`admin/pages/diet/plans/index.vue`（膳食计划）、`admin/pages/diet/plans/[id].vue`（周食谱编辑器）、`admin/pages/diet/plans/[id]/analysis.vue`（营养分析）、`admin/pages/diet/recipes/index.vue`（菜谱库）、`admin/pages/diet/foods/index.vue`（资源库）
+> 对应前端页面：`admin/pages/diet/` 下的 `config.vue`（基本参数：集体对象列表 + 表单）、`admin/pages/diet/plans/index.vue`（膳食计划）、`admin/pages/diet/plans/[id].vue`（周食谱编辑器）、`admin/pages/diet/plans/[id]/analysis.vue`（营养分析）、`admin/pages/diet/recipes/index.vue`（菜谱库）、`admin/pages/diet/foods/index.vue`（资源库）
 >
 > 基础路径：`/api/v1/admin`，需 `Authorization: Bearer <token>`，角色 `admin`。
 >
-> 权限码：`diet:view`（查看配置/食物/菜谱/周食谱/模板/报表）、`diet:manage`（维护配置/食物/菜谱/周食谱）、`diet:export`（导出营养分析 Excel）。**全部接口须逐条登记进 `middleware/admin_perm.go`**（fail-closed，漏登记会使服务启动失败）。
+> 权限码：`diet:view`（查看集体对象/食物/菜谱/周食谱/模板/报表）、`diet:manage`（维护集体对象/食物/菜谱/周食谱）、`diet:export`（导出营养分析 Excel）。**全部接口须逐条登记进 `middleware/admin_perm.go`**（fail-closed，漏登记会使服务启动失败）。
 >
 > Casbin：`admin` 组为通配时 `rbac_policy.csv` 不改；实现前先核对，若策略不是通配则补 `/api/v1/admin/diet/*` 的 policy（design D7）。
 >
-> 状态：🔲 未实现（变更 `add-quantified-recipe`）。
+> 状态：🚧 部分实现（变更 `add-diet-group-objects`）：后端已实现，admin 基本参数页待重写。
 >
-> 契约变更：本次新增本文件与 `README.md` 索引；学年复用既有 `GET /admin/settings/academic-years`，本文件不重复定义。
+> 契约变更：`add-quantified-recipe` 新增本文件与 `README.md` 索引；`add-diet-group-objects` 把配置章节改为集体对象并给周食谱增加对象字段（BREAKING）。学年复用既有 `GET /admin/settings/academic-years`，本文件不重复定义。
 >
 > 字段基线：参考产品页面/接口（ADR-0004）与 `docs/research/2026-11-01-oyujian-diet/notes.md`、`docs/research/2026-11-01-nutrition-data/notes.md`。字段溯源见文末。
 
-## 接口清单（27 个）
+## 接口清单（29 个）
 
 | 分组 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|---|
-| 配置 | GET | `/admin/diet/config` | `diet:view` | 供餐配置（单例，缺省返回默认值） |
-| 配置 | PUT | `/admin/diet/config` | `diet:manage` | 保存供餐配置（整组替换餐次） |
+| 集体对象 | GET | `/admin/diet/group-objects` | `diet:view` | 集体对象列表（按学年 + 关键词） |
+| 集体对象 | POST | `/admin/diet/group-objects` | `diet:manage` | 新增集体对象 |
+| 集体对象 | GET | `/admin/diet/group-objects/:id` | `diet:view` | 集体对象详情 |
+| 集体对象 | PUT | `/admin/diet/group-objects/:id` | `diet:manage` | 修改集体对象（学年只读） |
 | 分类 | GET | `/admin/diet/food-categories` | `diet:view` | 全局两级食物分类树 |
 | 食物 | GET | `/admin/diet/foods` | `diet:view` | 食物列表（列表列，不含 27 项全量） |
 | 食物 | POST | `/admin/diet/foods` | `diet:manage` | 新增园所食物 |
@@ -46,6 +48,8 @@
 | 报表 | GET | `/admin/diet/plans/:id/analysis` | `diet:view` | 营养分析（7 组表 + 结论） |
 | 报表 | GET | `/admin/diet/plans/:id/analysis/export` | `diet:export` | 导出营养分析 Excel（xlsx 二进制） |
 
+> 集体对象**不提供 DELETE 端点**：对齐参考产品，误建对象通过改名或调整班级/餐次处理；对象还会被历史周食谱的配置快照引用（design D5）。
+
 ---
 
 ## 通用约定
@@ -62,9 +66,9 @@
 
 | HTTP | code | 场景 |
 |---:|---:|---|
-| 404 | 40400 | 食物 / 菜谱 / 食谱 / 模板不存在，或跨园所访问 |
+| 404 | 40400 | 食物 / 菜谱 / 食谱 / 集体对象 / 模板不存在，或跨园所访问 |
 | 409 | 40900 | 菜谱名称冲突（需前端弹「替换 / 仅本次」）、周食谱同一学年重名、食物仍被菜谱引用 |
-| 422 | 42200 | 参数与业务校验失败（餐次时间/占比、重量口径、克数、菜名等） |
+| 422 | 42200 | 参数与业务校验失败（集体对象名称/就餐班级、餐次时间/占比、重量口径、克数、菜名等） |
 | 403 | 40300 | 缺少 `diet:*` 权限 |
 
 ### 分页
@@ -161,18 +165,74 @@
 
 ---
 
-## 一、供餐配置
+## 一、集体对象（基本参数）
 
-### GET `/admin/diet/config`
+> 集体对象是供餐配置的唯一边界：一个园所的一个学年可以有多条对象（如「全体幼儿」「日托班」），每条对象独立保存就餐班级、餐次与占比。周食谱创建时必须选择一条对象，配置快照与 DRIs 加权范围都以该对象为准（design D2/D3/D4）。
+>
+> **BREAKING**：原「园所单例供餐配置」端点（`GET|PUT /admin/diet/` 下的 `config`）已移除，旧单例表不再读写。
+>
+> 不提供删除：对齐参考产品，误建对象通过改名或调整班级/餐次处理（design D5）。
+>
+> 学年复用 `GET /admin/settings/academic-years`，本文件不重复定义。
 
-> 供餐配置是园所单例。首次读取返回默认值（日托、5 餐、市品重量、标准比例、系数 0.95）。
+### GET `/admin/diet/group-objects`
+
+> 列表只返回行渲染所需字段；时间、占比、比例模式只在详情返回（design D7）。
+> `academic_year_id` 缺省取当前学年（`academic_years.is_current`）；该学年没有对象时返回空列表，**不在读取路径自动创建对象**。显式传入不存在的学年 ID 同样返回空列表。
+
+```json
+// Query: ?academic_year_id=31846&keyword=全体&page=1&page_size=20
+// keyword 按集体对象名称模糊匹配
+
+// Response
+{
+  "list": [
+    {
+      "id": 12,
+      "name": "全体幼儿",
+      "academic_year_id": 31846,
+      "care_type": "day_care",
+      "care_type_label": "日托",
+      "food_input_type": "market_weight",
+      "food_input_type_label": "市品重量",
+      "policy_name": "DRIs2000",
+      "meal_names": ["早餐", "早点", "午餐", "午点", "晚餐"],
+      "classes": [
+        { "id": 301, "name": "小一班", "grade": "小班" },
+        { "id": 302, "name": "中一班", "grade": "中班" }
+      ]
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+- `meal_names` 只含**已启用**餐次，按固定餐次顺序排列。
+- `classes` 只返回仍然存在的班级：按 `class_id` 关联当前班级表，已删除的班级跳过，不中断列表。
+- 输出用 `classes[]`、输入用 `class_ids`，不重复返回 `class_ids`（design D7）。
+- 排序：创建时间倒序。
+
+### GET `/admin/diet/group-objects/:id`
+
+> 详情 = 列表字段 + 比例模式、系数与完整餐次配置。对象不存在或跨园一律 404。
 
 ```json
 {
+  "id": 12,
+  "name": "全体幼儿",
+  "academic_year_id": 31846,
   "care_type": "day_care",
   "care_type_label": "日托",
   "food_input_type": "market_weight",
   "food_input_type_label": "市品重量",
+  "policy_name": "DRIs2000",
+  "meal_names": ["早餐", "早点", "午餐", "午点", "晚餐"],
+  "classes": [
+    { "id": 301, "name": "小一班", "grade": "小班" },
+    { "id": 302, "name": "中一班", "grade": "中班" }
+  ],
   "ratio_mode": "standard",
   "ratio_mode_label": "标准比例",
   "coefficient": 0.95,
@@ -187,19 +247,23 @@
 }
 ```
 
-- `coefficient`（折算系数）**只读**：= 已启用餐次 `energy_percent` 之和 ÷ 100，默认 0.95。
-- `name` / `sort` **只读**：按 `meal_key` 固定顺序由服务端写入；参考产品也不允许改名或重排餐次。
+- `meals` 返回全部 6 个餐次（含未启用），按固定餐次顺序排列。
+- `coefficient`（折算系数）**只读**：= 已启用餐次 `energy_percent` 之和 ÷ 100，保留 4 位小数，默认 0.95。
+- `meals[].name` / `meals[].sort` **只读**：按 `meal_key` 固定顺序由服务端写入，参考产品也不允许改名或重排餐次。
 
-### PUT `/admin/diet/config`
+### POST `/admin/diet/group-objects`
 
-> 整组保存餐次（6 个 `meal_key` 必须各出现一次）。保存后只影响此后新建的周食谱。
+> 新增集体对象，HTTP **201**；响应与详情同构。
 
 ```json
 // Request
 {
+  "academic_year_id": 31846,
+  "name": "全体幼儿",
   "care_type": "day_care",
   "food_input_type": "market_weight",
   "ratio_mode": "standard",
+  "class_ids": [301, 302],
   "meals": [
     { "meal_key": "breakfast",       "time": "07:00", "energy_percent": 25, "enabled": true },
     { "meal_key": "morning_snack",   "time": "09:00", "energy_percent": 5,  "enabled": true },
@@ -210,20 +274,44 @@
   ]
 }
 
-// Response（与 GET 同构）
-{ "care_type": "day_care", "coefficient": 0.95, "meals": [ "..." ] }
+// Response（与详情同构）
+{ "id": 12, "name": "全体幼儿", "...": "同 GET /admin/diet/group-objects/:id" }
 ```
 
-校验（失败一律 422，配置保持原值）：
+- `policy_name` 固定 `DRIs2000`，不接受客户端输入（design D5）。
+- 餐次只提交 `meal_key` / `time` / `energy_percent` / `enabled`。
 
-1. `meals` 恰好包含 6 个已知 `meal_key`，各一次。
-2. 已启用餐次的时间严格递增（早餐 < 早点 < 午餐 < 午点 < 晚餐 < 晚点），标准与自定模式均适用。
-3. 至少一餐启用；已启用餐次的 `energy_percent` 必须 > 0。
-4. `ratio_mode` 只接受 `standard` / `custom`；缺省按 `standard`。
-5. `ratio_mode=standard` 时跳过相邻上限，但已启用餐次的 `energy_percent` 必须等于该餐次的固定标准占比（早 25 / 早点 5 / 午 35 / 午点 5 / 晚 25 / 晚点 5）。
-6. `ratio_mode=custom` 时校验相邻餐次共享上限（`care_type=day_care` 时早餐+早点 ≤ 29，否则 ≤ 30；午餐+午点 ≤ 39；晚餐+晚点 ≤ 30）。
-7. `food_input_type` 只接受 `market_weight`，传 `edible_weight` 等值返回 422（TC-NEW-DIE-0007）。
-8. `care_type` 只接受 `day_care` / `full_care`。
+### PUT `/admin/diet/group-objects/:id`
+
+> 修改集体对象，HTTP **200**；响应与详情同构。
+> `academic_year_id` **只读**：可省略（沿用对象原学年）；提交时必须属于本园，但落库始终沿用对象原学年，不会把对象挪到别的学年（design D5）。
+> 对象不存在或跨园 → 404。
+
+```json
+// Request（与 POST 同构）
+{ "academic_year_id": 31846, "name": "全体幼儿（改）", "...": "..." }
+
+// Response（与详情同构）
+{ "id": 12, "name": "全体幼儿（改）", "...": "..." }
+```
+
+### 校验（新增与修改共用）
+
+> 失败一律 422 `42200`；校验在写库前完成，失败时原对象保持不变。下面按字段分组列出规则，实现会在首个失败项返回。
+
+1. `name`：去除首尾空白后 1–20 个字符。为空 → `请设置集体对象名称`；超过 20 → `集体对象名称不能超过 20 个字符`。
+2. `academic_year_id`：新增必填，缺省 → `请选择学年`；必须是本园学年，否则 → `学年不存在或不属于本园`。
+3. 名称唯一：同一园所同一学年内不可重名（修改时排除自身）。重名 → **422**（不是 409），文案 `该学年已存在同名集体对象`。
+4. `class_ids`：至少 1 个，重复 ID 去重；每个 ID 必须是本园存在的班级，否则 → `就餐班级不存在或不属于本园`；去重后为空 → `请至少选择一个就餐班级`。
+5. `care_type` 只接受 `day_care` / `full_care`，否则 → `托管形式无效，只支持日托或全托`。
+6. `food_input_type` 只接受 `market_weight`，传 `edible_weight` 等值 → `食物重量口径只支持市品重量`（TC-NEW-DIE-0007）。
+7. `ratio_mode` 缺省或空串按 `standard`；只接受 `standard` / `custom`，否则 → `比例模式无效，只支持标准比例或自定比例`。
+8. `meals` 恰好包含 6 个已知 `meal_key`，每个各出现一次。数量不符 → `餐次必须恰好包含 6 个已知餐次，每个出现一次`；未知 key → `未知餐次：<key>`；重复 → `餐次 <名称> 重复`。
+9. `meals[].time` 必须是两位补零的 `HH:mm`，否则 → `<餐次> 的时间格式必须为 HH:mm`。
+10. 已启用餐次的时间按固定餐次顺序严格递增，否则 → `餐次时间必须按早餐、早点、午餐、午点、晚餐、晚点的顺序严格递增`。停用餐次保留时间，但不参与比较。
+11. `meals[].energy_percent` 不得为负；已启用餐次必须大于 0（`已启用餐次（<餐次>）的供能占比必须大于 0`）；至少一餐启用（`至少需要启用一个餐次`）。
+12. `ratio_mode=standard`：已启用餐次的占比必须等于固定标准（早 25 / 早点 5 / 午 35 / 午点 5 / 晚 25 / 晚点 5），否则 → `标准比例模式下<餐次>的供能占比必须为 <X>%`。停用餐次不校验。
+13. `ratio_mode=custom`：相邻餐次共享上限 —— `day_care` 的早餐+早点 ≤ 29、`full_care` ≤ 30；午餐+午点 ≤ 39；晚餐+晚点 ≤ 30。超限 → `<A>与<B>的供能占比合计不能超过 <X>%`。
 
 ---
 
@@ -553,7 +641,7 @@
 
 ### GET `/admin/diet/plans`
 
-> 列表只返回名称、周期、天数、创建方式。
+> 列表只返回名称、周期、天数、集体对象与创建方式。
 
 ```json
 // Query: ?academic_year_id=31846&keyword=第九&page=1&page_size=20
@@ -566,6 +654,8 @@
       "id": 1017248,
       "name": "第九周",
       "academic_year_id": 31846,
+      "group_object_id": 12,
+      "group_object_name": "全体幼儿",
       "start_date": "2026-10-26",
       "end_date": "2026-11-01",
       "day_num": 5,
@@ -580,19 +670,21 @@
 }
 ```
 
+- `group_object_name` 回查当前对象名称；对象已删除或旧行 `group_object_id=0` 时为空字符串，不阻断列表。
+
 ### POST `/admin/diet/plans`
 
-> 新建周食谱，三种方式三选一。
+> 新建周食谱，三种方式三选一；`group_object_id` 必填。
 
 ```json
 // 自定义
-{ "name": "第九周", "academic_year_id": 31846, "start_date": "2026-10-26", "end_date": "2026-11-01", "week_of_year": 9, "created_method": "custom" }
+{ "name": "第九周", "academic_year_id": 31846, "group_object_id": 12, "start_date": "2026-10-26", "end_date": "2026-11-01", "week_of_year": 9, "created_method": "custom" }
 
 // 选用模板
-{ "name": "第十周", "academic_year_id": 31846, "start_date": "2026-11-02", "end_date": "2026-11-08", "week_of_year": 10, "created_method": "template", "template_id": 3 }
+{ "name": "第十周", "academic_year_id": 31846, "group_object_id": 12, "start_date": "2026-11-02", "end_date": "2026-11-08", "week_of_year": 10, "created_method": "template", "template_id": 3 }
 
 // 复制历史
-{ "name": "第十周", "academic_year_id": 31846, "start_date": "2026-11-02", "end_date": "2026-11-08", "week_of_year": 10, "created_method": "copy", "source_plan_id": 1017248 }
+{ "name": "第十周", "academic_year_id": 31846, "group_object_id": 12, "start_date": "2026-11-02", "end_date": "2026-11-08", "week_of_year": 10, "created_method": "copy", "source_plan_id": 1017248 }
 
 // Response 201
 {
@@ -610,22 +702,28 @@
 
 1. `start_date` 必须是周一，`end_date` 必须等于 `start_date + 6 天`。
 2. `academic_year_id` 必须属于本园；名称在本学年内唯一，重名 409。
-3. `created_method` 决定附加字段：`template` 必须带 `template_id`；`copy` 必须带 `source_plan_id`；自定义不接受这两个字段。
-4. 创建时把当前供餐配置、折算系数、按班级人数加权的 11 项 DRIs 目标值与权重固化进 `config_snapshot`；此后修改配置不回溯。
-5. 模板：复制模板条目到新食谱，`day_num` = 模板有效天数；模板缺失的食物跳过，写入 `warnings`。
-6. 复制历史：按**星期几**映射到新周期（周一→新周一），用当前食物库重新固化营养快照；源食谱里已删除的食物跳过，写入 `warnings`。
-7. `week_of_year` 可选，由前端新建向导填写（如「第九周」对应 9）；缺省写 0，只作展示，不参与任何计算。
-8. 自定义创建的空白食谱 `day_num = 0`。
+3. `group_object_id` 必填；缺省或 0 → 422 `请选择集体对象`（TC-NEW-DIE-0071）。
+4. 集体对象必须存在且属于本园，否则 → 422 `集体对象不存在或不属于本园`（TC-NEW-DIE-0072）。
+5. 集体对象的学年必须等于请求的 `academic_year_id`，否则 → 422 `集体对象不属于所选学年`。前端从对象带出学年，后端仍双向校验（design D3）。
+6. `created_method` 决定附加字段：`template` 必须带 `template_id`；`copy` 必须带 `source_plan_id`；自定义不接受这两个字段。
+7. 创建时把**所属集体对象**的供餐配置、折算系数、以及按该对象就餐班级人数加权的 11 项 DRIs 目标值与权重固化进 `config_snapshot`；此后修改对象或配置不回溯。
+8. 模板：复制模板条目到新食谱，`day_num` = 模板有效天数；模板缺失的食物跳过，写入 `warnings`。
+9. 复制历史：按**星期几**映射到新周期（周一→新周一），用当前食物库重新固化营养快照；源食谱里已删除的食物跳过，写入 `warnings`。
+10. `week_of_year` 可选，由前端新建向导填写（如「第九周」对应 9）；缺省写 0，只作展示，不参与任何计算。
+11. 自定义创建的空白食谱 `day_num = 0`。
 
 ### GET `/admin/diet/plans/:id`
 
 > 详情：配置快照 + 全部明细。快照与 `nutrition_snapshot` 都是**只读**返回，不接受写入。
+> `group_object_name` 优先取 `config_snapshot.group_object_name`（创建时原名），对象改名后旧食谱仍显示原名；快照缺该字段时回查当前对象；对象已删除时为空字符串，详情仍可打开（design D3、TC-NEW-DIE-0075）。
 
 ```json
 {
   "id": 1017248,
   "name": "第九周",
   "academic_year_id": 31846,
+  "group_object_id": 12,
+  "group_object_name": "全体幼儿",
   "start_date": "2026-10-26",
   "end_date": "2026-11-01",
   "day_num": 5,
@@ -635,12 +733,16 @@
   "source_template_id": null,
   "source_plan_id": null,
   "config_snapshot": {
+    "group_object_id": 12,
+    "group_object_name": "全体幼儿",
+    "group_object_class_ids": [301, 302],
     "care_type": "day_care",
     "food_input_type": "market_weight",
+    "ratio_mode": "standard",
     "coefficient": 0.95,
     "meals": [
       { "meal_key": "breakfast", "name": "早餐", "time": "07:00", "energy_percent": 25, "sort": 1, "enabled": true }
-      // 其余 5 个餐次同 GET /admin/diet/config
+      // 其余 5 个餐次同 GET /admin/diet/group-objects/:id
     ],
     "dri_targets": [
       { "nutrient_key": "energy", "label": "能量", "unit": "千卡", "value": 1484.26 },
@@ -679,6 +781,7 @@
 
 > `nutrition_snapshot` 供编辑器实时小计与报表计算，返回的是保存当时的浓度值；食物库后续修改不影响它。
 > `weekday` 由 `date` 推导（1=周一 … 7=周日）。
+> `config_snapshot.group_object_*` 是历史追溯信息；旧快照缺这三个字段时解析为空（`group_object_id` 为 0、名称为空串、班级列表为空），不阻断报表。
 
 ### PUT `/admin/diet/plans/:id`
 
@@ -971,11 +1074,11 @@ Content-Disposition: attachment; filename*=UTF-8''%E8%90%A5%E5%85%BB%E5%88%86%E6
 
 | 分组 | 字段来源 |
 |---|---|
-| 配置 | `notes.md` §2.3（groupObj 表单与接口：托管形式、餐次、时间、占比、重量口径、相邻上限） |
+| 集体对象 | `notes.md` §2.3（groupObj 表单与接口：托管形式、餐次、时间、占比、重量口径、相邻上限）、design D7 字段溯源表（名称 / 学年 / 就餐班级 / DRIs 标准） |
 | 食物分类 | `notes.md` §2.10（`getFoodTypeList`：20 个一级类 + 二级） |
 | 食物 | `notes.md` §2.6（dietInfo / orgFood、新增食物弹窗 27 项与单位）、§2.9–2.10（group12/group16 映射）、`notes.md`（营养数据）§1.1/§3 |
 | 菜谱 | `notes.md` §3.6（getOrgRecipeInfo：食物 + 一人均量克数、拼音码、替换/仅本次） |
-| 周食谱 | `notes.md` §2.4 / §2.5（diet、dietInfo 187 行样本）、§3.7（createMethod）、§3.8（三种创建方式） |
+| 周食谱 | `notes.md` §2.4 / §2.5（diet、dietInfo 187 行样本）、§3.7（createMethod）、§3.8（三种创建方式）；所属集体对象见 design D3/D7 |
 | 模板 | `notes.md` §3.8（getAvilableDietary / queryDietary：可用模板、dayNum、餐次集合） |
 | 营养分析 | `notes.md` §3.5 / §3.9 / §3.11 / §3.12（7 组表、阈值、DRIs、0.95）、`report-page.jsp` / `print-report.jsp` |
 | 导出 | `notes.md` §3.13 与 `api-samples/nutrition-analysis-export.xls` |
