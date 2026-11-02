@@ -1175,6 +1175,10 @@
 > `diet-meal-plan`、`diet-nutrition-analysis`；契约见 `backend/api/api-admin/23-diet.md`。
 > 单测分布在 AQR-S2–S7（service 层，真实 MySQL 夹具）；页面交互由 AQR-S10b 的 E2E 覆盖。
 > 状态列中的 S10b 指 `AQR-S10b` 的端到端验收切片。
+> `add-diet-group-objects`（DGO-S6）补充 TC-NEW-DIE-0065..0077：后端单测见
+> `diet_group_object_service_test.go` / `diet_plan_test.go`，页面交互由 DGO-S6 的 Playwright E2E 覆盖。
+> DGO-S6 校准：fallback 权重 26.7%/32.6%/40.8%/0 的能量目标为 **1485.95** 千卡（`diet_plan_test.go` 断言）；
+> `diet_analysis_test.go` 的 1484.26 是对参考产品黄金样本的复刻，不走 fallback 计算，两者口径不同。
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |-------|------|--------|------|------|
@@ -1242,3 +1246,16 @@
 | TC-NEW-DIE-0062 | 「合格」营养素不触发建议 | P0 | 单测 | ✅ `TestDietAnalysis_ConclusionNoSuggestionForOK` |
 | TC-NEW-DIE-0063 | 修改食物库后历史报表 7 组不变 | P0 | 单测 | ✅ `TestDietAnalysis_SnapshotUnaffectedByFoodChanges` |
 | TC-NEW-DIE-0064 | 导出 Excel 5 个 sheet，数值与页面一致 | P0 | 单测 | ✅ `TestDietAnalysisExportWorkbook` |
+| TC-NEW-DIE-0065 | 学年没有对象时返回空列表、不自动创建 | P1 | 单测 | ✅ `TestDietGroupObjectService_TC0065_ListEmptyAndFilter` |
+| TC-NEW-DIE-0066 | 新增集体对象成功并出现在列表 | P0 | 单测 + E2E | ✅ `TestDietGroupObjectService_TC0066_TC0074_CreateDefaultAndDetail`；DGO-S6 E2E 真实点击新增 |
+| TC-NEW-DIE-0067 | 同学年重名被拒绝 | P0 | 单测 | ✅ `TestDietGroupObjectService_TC0067_RejectsDuplicateName` |
+| TC-NEW-DIE-0068 | 未选择就餐班级被拒绝 | P0 | 单测 | ✅ `TestDietGroupObjectService_TC0068_RejectsNoClass` |
+| TC-NEW-DIE-0069 | 修改就餐班级只影响新食谱 | P0 | 单测 | ✅ `TestDietPlanDriWeightsFollowGroupObjectClasses` |
+| TC-NEW-DIE-0070 | 制定食谱携带对象与学年进入新建向导 | P0 | E2E | ✅ DGO-S6 E2E：基本参数页点击「制定食谱」→ 周食谱页向导自动打开且对象预选 |
+| TC-NEW-DIE-0071 | 未指定集体对象被拒绝 | P0 | 单测 | ✅ `TestDietPlanCreateRequiresGroupObject`（缺少集体对象） |
+| TC-NEW-DIE-0072 | 跨学年或跨园对象被拒绝 | P0 | 单测 | ✅ `TestDietPlanCreateRequiresGroupObject`（对象不存在/他园/其他学年，均不落库） |
+| TC-NEW-DIE-0073 | 列表与详情显示集体对象 | P0 | 单测 + E2E | ✅ `TestDietPlanListAndDetailReturnGroupObject`；DGO-S6 E2E 计划列表与详情头显示对象名 |
+| TC-NEW-DIE-0074 | 详情展示完整配置 | P0 | 单测 + E2E | ✅ `TestDietGroupObjectService_TC0066_TC0074_CreateDefaultAndDetail`；DGO-S6 E2E 详情含 DRIs2000 与系数 0.95 |
+| TC-NEW-DIE-0075 | 对象改名后旧食谱仍显示原名 | P0 | 单测 | ✅ `TestDietPlanDetailKeepsSnapshotObjectNameAfterRename` |
+| TC-NEW-DIE-0076 | DRIs 只统计集体对象内的班级 | P0 | 单测 | ✅ `TestDietPlanDriWeightsFollowGroupObjectClasses` |
+| TC-NEW-DIE-0077 | 就餐班级选项来自班级列表（按年级分组/全选） | P0 | E2E | ✅ DGO-S6 E2E：新增对话框按小班/中班/大班分组，年级全选生效 |
