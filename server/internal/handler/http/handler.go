@@ -41,6 +41,7 @@ type Handler struct {
 	gardenCalendarSvc *service.GardenCalendarService
 	timetableSvc      *service.TimetableService
 	dietConfigSvc     *service.DietConfigService
+	dietFoodSvc       *service.DietFoodService
 }
 
 func NewHandler(
@@ -76,6 +77,7 @@ func NewHandler(
 	gardenCalendarSvc *service.GardenCalendarService,
 	timetableSvc *service.TimetableService,
 	dietConfigSvc *service.DietConfigService,
+	dietFoodSvc *service.DietFoodService,
 ) *Handler {
 	return &Handler{
 		authSvc:           authSvc,
@@ -110,5 +112,6 @@ func NewHandler(
 		gardenCalendarSvc: gardenCalendarSvc,
 		timetableSvc:      timetableSvc,
 		dietConfigSvc:     dietConfigSvc,
+		dietFoodSvc:       dietFoodSvc,
 	}
 }

@@ -217,10 +217,20 @@ var adminRoutePermission = map[string]string{
 	"PUT /api/v1/admin/timetable/setting":           "timetable:manage",
 	"POST /api/v1/admin/timetable/sync":             "timetable:manage",
 
-	// diet —— 供餐配置（AQR-S1b）。其余 /admin/diet/** 路由由后续 slice 实现时逐条登记；
-	// 本表是 fail-closed，漏登记会让服务启动失败。
+	// diet —— 供餐配置（AQR-S1b）与食物库（AQR-S3）。其余 /admin/diet/**
+	// 路由由后续 slice 实现时逐条登记；本表是 fail-closed，漏登记会让服务启动失败。
 	"GET /api/v1/admin/diet/config": "diet:view",
 	"PUT /api/v1/admin/diet/config": "diet:manage",
+
+	// 食物库：查看（分类/列表/详情/候选）用 diet:view，所有写操作 diet:manage。
+	"GET /api/v1/admin/diet/food-categories":              "diet:view",
+	"GET /api/v1/admin/diet/foods":                        "diet:view",
+	"POST /api/v1/admin/diet/foods":                       "diet:manage",
+	"GET /api/v1/admin/diet/foods/:id":                    "diet:view",
+	"PUT /api/v1/admin/diet/foods/:id":                    "diet:manage",
+	"DELETE /api/v1/admin/diet/foods/:id":                 "diet:manage",
+	"POST /api/v1/admin/diet/foods/batch-delete":          "diet:manage",
+	"GET /api/v1/admin/diet/foods/:id/replace-candidates": "diet:view",
 }
 
 // RequirePermission 按登记表强制管理端接口权限，挂在 adminG 组上（AuthJWT/CasbinRBAC 之后）。

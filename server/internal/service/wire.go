@@ -36,6 +36,7 @@ var Set = wire.NewSet(
 	NewAdminAuthzService,
 	NewFaceRegistryService,
 	NewDietConfigService,
+	NewDietFoodService,
 
 	// 晨检服务依赖策略读取接口，而不是整个 SettingsService。
 	wire.Bind(new(HealthPolicyProvider), new(*SettingsService)),

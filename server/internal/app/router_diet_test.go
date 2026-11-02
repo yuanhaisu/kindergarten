@@ -59,8 +59,12 @@ func openRouterDietTestDB(t *testing.T) *gorm.DB {
 		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
 	})
 	require.NoError(t, err, "open db")
-	require.NoError(t, db.AutoMigrate(&domain.MealConfig{}, &domain.MealConfigMeal{}),
-		"auto migrate diet config tables")
+	require.NoError(t, db.AutoMigrate(
+		&domain.MealConfig{}, &domain.MealConfigMeal{},
+		&domain.FoodCategory{}, &domain.Food{},
+		&domain.Recipe{}, &domain.RecipeItem{},
+		&domain.MealPlan{}, &domain.MealPlanItem{},
+	), "auto migrate diet tables")
 	routerDietDB = db
 	return db
 }
@@ -70,6 +74,11 @@ func cleanupRouterDietData(t *testing.T, db *gorm.DB) {
 	for _, sql := range []string{
 		"DELETE FROM diet_meal_config_meals WHERE kindergarten_id = ?",
 		"DELETE FROM diet_meal_configs WHERE kindergarten_id = ?",
+		"DELETE FROM diet_recipe_items WHERE kindergarten_id = ?",
+		"DELETE FROM diet_recipes WHERE kindergarten_id = ?",
+		"DELETE FROM diet_meal_plan_items WHERE kindergarten_id = ?",
+		"DELETE FROM diet_meal_plans WHERE kindergarten_id = ?",
+		"DELETE FROM diet_foods WHERE kindergarten_id = ?",
 	} {
 		if err := db.Exec(sql, testRouterDietKG).Error; err != nil {
 			t.Logf("cleanup %q: %v", sql, err)
@@ -78,14 +87,15 @@ func cleanupRouterDietData(t *testing.T, db *gorm.DB) {
 }
 
 // newDietAdminEngine 只装配 admin 路由与细闸中间件，不经过 AuthJWT/Casbin/Redis。
-// 供餐配置服务打真实 MySQL（与 repository/service 测试同源），无 DB 时整组跳过。
+// 膳食服务打真实 MySQL（与 repository/service 测试同源），无 DB 时整组跳过。
 func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *gin.Engine {
 	t.Helper()
 	db := openRouterDietTestDB(t)
 	cleanupRouterDietData(t, db)
 	t.Cleanup(func() { cleanupRouterDietData(t, db) })
 
-	svc := service.NewDietConfigService(repository.NewDietConfigRepo(db))
+	configSvc := service.NewDietConfigService(repository.NewDietConfigRepo(db))
+	foodSvc := service.NewDietFoodService(repository.NewDietFoodRepo(db), repository.NewDietRecipeRepo(db))
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -97,7 +107,7 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 		c.Next()
 	})
 	adminG.Use(middleware.RequirePermission(resolver))
-	registerAdminRoutes(adminG, handler.NewDietConfigHandler(svc))
+	registerAdminRoutes(adminG, handler.NewDietAdminHandler(configSvc, foodSvc))
 	return r
 }
 
@@ -222,4 +232,74 @@ func TestRouterDiet_ConfigPermissionCodes(t *testing.T) {
 		doDietRequest(t, manageOnly, http.MethodGet, "/api/v1/admin/diet/config", "").Code)
 	assert.Equal(t, http.StatusOK,
 		doDietRequest(t, manageOnly, http.MethodPut, "/api/v1/admin/diet/config", dietStandardConfigJSON).Code)
+}
+
+// AQR-S3：8 条食物路由必须真实注册（分类 1 + 食物 7），不得有 501/stub。
+func TestRouterDiet_FoodRoutesRegistered(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
+
+	want := []string{
+		"GET /api/v1/admin/diet/food-categories",
+		"GET /api/v1/admin/diet/foods",
+		"POST /api/v1/admin/diet/foods",
+		"POST /api/v1/admin/diet/foods/batch-delete",
+		"GET /api/v1/admin/diet/foods/:id",
+		"PUT /api/v1/admin/diet/foods/:id",
+		"DELETE /api/v1/admin/diet/foods/:id",
+		"GET /api/v1/admin/diet/foods/:id/replace-candidates",
+	}
+	got := map[string]bool{}
+	for _, rt := range engine.Routes() {
+		if strings.HasPrefix(rt.Path, "/api/v1/admin/diet/") {
+			got[rt.Method+" "+rt.Path] = true
+		}
+	}
+	for _, key := range want {
+		assert.True(t, got[key], "缺少食物路由 %s", key)
+	}
+	assert.Len(t, got, 10, "diet 组当前应恰好 2 条配置 + 8 条食物路由")
+}
+
+// AQR-S3：GET 走 diet:view，写操作走 diet:manage，两个码互不替代。
+func TestRouterDiet_FoodPermissionCodes(t *testing.T) {
+	viewOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/food-categories",
+		"/api/v1/admin/diet/foods",
+		"/api/v1/admin/diet/foods/999999999",
+		"/api/v1/admin/diet/foods/999999999/replace-candidates",
+	} {
+		assert.NotEqual(t, http.StatusForbidden,
+			doDietRequest(t, viewOnly, http.MethodGet, path, "").Code, "GET %s 应允许 diet:view", path)
+	}
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodPost, "/api/v1/admin/diet/foods", "{}"},
+		{http.MethodPut, "/api/v1/admin/diet/foods/1", "{}"},
+		{http.MethodDelete, "/api/v1/admin/diet/foods/1", ""},
+		{http.MethodPost, "/api/v1/admin/diet/foods/batch-delete", `{"ids":[]}`},
+	} {
+		assert.Equal(t, http.StatusForbidden,
+			doDietRequest(t, viewOnly, tc.method, tc.path, tc.body).Code,
+			"%s %s 只读码必须被拒", tc.method, tc.path)
+	}
+
+	manageOnly := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:manage"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/food-categories",
+		"/api/v1/admin/diet/foods",
+	} {
+		assert.Equal(t, http.StatusForbidden,
+			doDietRequest(t, manageOnly, http.MethodGet, path, "").Code,
+			"GET %s 管理码不能替代查看码", path)
+	}
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodPost, "/api/v1/admin/diet/foods", "{}"},
+		{http.MethodPut, "/api/v1/admin/diet/foods/999999999", "{}"},
+		{http.MethodDelete, "/api/v1/admin/diet/foods/999999999", ""},
+		{http.MethodPost, "/api/v1/admin/diet/foods/batch-delete", `{"ids":[]}`},
+	} {
+		assert.NotEqual(t, http.StatusForbidden,
+			doDietRequest(t, manageOnly, tc.method, tc.path, tc.body).Code,
+			"%s %s 应通过权限检查", tc.method, tc.path)
+	}
 }

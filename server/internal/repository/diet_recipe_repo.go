@@ -216,3 +216,13 @@ func (r *DietRecipeRepo) Delete(ctx context.Context, kindergartenID, id uint64) 
 	})
 	return affected, err
 }
+
+// CountByFoodID 统计本园菜谱中引用该食物的配料行数。
+// 食物删除规则：只被菜谱引用时拒绝；只被周食谱（MealPlanItem）引用时允许（design D4）。
+func (r *DietRecipeRepo) CountByFoodID(ctx context.Context, kindergartenID, foodID uint64) (int64, error) {
+	var total int64
+	err := r.db.WithContext(ctx).Model(&domain.RecipeItem{}).
+		Where("kindergarten_id = ? AND food_id = ?", kindergartenID, foodID).
+		Count(&total).Error
+	return total, err
+}

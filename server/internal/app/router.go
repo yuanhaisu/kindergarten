@@ -464,12 +464,23 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		tt.POST("/sync", h.AdminSyncTimetable)
 	}
 
-	// 膳食管理：本切片刻意只注册供餐配置两条路由（契约 27 条中的其余路由
-	// 由 S3/S4/S6/S7 在实现对应功能时各自登记，不建空路由/stub）。
+	// 膳食管理：AQR-S2 供餐配置 + AQR-S3 食物库（分类树/列表/详情/新增/修改/删除/
+	// 批量删除/同类替换候选）。其余菜谱、周食谱、模板、分析路由由后续 slice 实现时登记，
+	// 不建空路由/stub。
 	diet := adminG.Group("/diet")
 	{
 		diet.GET("/config", h.GetDietConfig)
 		diet.PUT("/config", h.PutDietConfig)
+
+		diet.GET("/food-categories", h.ListDietFoodCategories)
+		diet.GET("/foods", h.ListDietFoods)
+		diet.POST("/foods", h.CreateDietFood)
+		// 静态段 batch-delete 与 :id 同层；gin 静态优先，不会与详情路由冲突。
+		diet.POST("/foods/batch-delete", h.BatchDeleteDietFoods)
+		diet.GET("/foods/:id", h.GetDietFood)
+		diet.PUT("/foods/:id", h.UpdateDietFood)
+		diet.DELETE("/foods/:id", h.DeleteDietFood)
+		diet.GET("/foods/:id/replace-candidates", h.ListDietFoodReplaceCandidates)
 	}
 
 	dict := adminG.Group("/dicts")

@@ -2,12 +2,14 @@ package handler
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/pagination"
 	"kindergarten-server/pkg/response"
 )
 
@@ -45,10 +47,13 @@ func (r dietConfigRequest) toInput() service.DietMealConfigInput {
 	}
 }
 
-// NewDietConfigHandler 组装只依赖供餐配置服务的 Handler。
-// 生产路径仍由 NewHandler 全量注入；路由级测试用它避免构造数十个无关 service。
-func NewDietConfigHandler(dietConfigSvc *service.DietConfigService) *Handler {
-	return &Handler{dietConfigSvc: dietConfigSvc}
+// NewDietAdminHandler 组装膳食模块（配置 + 食物库）的 Handler，供路由级测试使用。
+// 生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
+func NewDietAdminHandler(
+	dietConfigSvc *service.DietConfigService,
+	dietFoodSvc *service.DietFoodService,
+) *Handler {
+	return &Handler{dietConfigSvc: dietConfigSvc, dietFoodSvc: dietFoodSvc}
 }
 
 // GetDietConfig 返回园所供餐配置；未配置时返回默认值。
@@ -95,4 +100,296 @@ func respondDietConfigError(c *gin.Context, err error) {
 		return
 	}
 	response.ErrInternal(c, "膳食配置服务异常")
+}
+
+// --- 食物库（契约 23-diet.md 第二、三节） ---
+
+// dietFoodNutrientsRequest 是 27 项营养的请求体；未提交或提交 null 都写 NULL。
+type dietFoodNutrientsRequest struct {
+	Energy        *float64 `json:"energy"`
+	Heat          *float64 `json:"heat"`
+	Protein       *float64 `json:"protein"`
+	Fats          *float64 `json:"fats"`
+	Carb          *float64 `json:"carb"`
+	DietaryFiber  *float64 `json:"dietary_fiber"`
+	Ash           *float64 `json:"ash"`
+	Water         *float64 `json:"water"`
+	Cholesterol   *float64 `json:"cholesterol"`
+	Retinol       *float64 `json:"retinol"`
+	Carotin       *float64 `json:"carotin"`
+	VitaminA      *float64 `json:"vitamin_a"`
+	VitaminB1     *float64 `json:"vitamin_b1"`
+	VitaminB2     *float64 `json:"vitamin_b2"`
+	NicotinicAcid *float64 `json:"nicotinic_acid"`
+	VitaminC      *float64 `json:"vitamin_c"`
+	VitaminE      *float64 `json:"vitamin_e"`
+	Calcium       *float64 `json:"calcium"`
+	Phosphorus    *float64 `json:"phosphorus"`
+	Potassium     *float64 `json:"potassium"`
+	Sodium        *float64 `json:"sodium"`
+	Magnesium     *float64 `json:"magnesium"`
+	Iron          *float64 `json:"iron"`
+	Zinc          *float64 `json:"zinc"`
+	Selenium      *float64 `json:"selenium"`
+	Copper        *float64 `json:"copper"`
+	Manganese     *float64 `json:"manganese"`
+	// EdiblePercent 只用于识别并拒绝契约禁止的写法（食部在顶层）。
+	EdiblePercent *float64 `json:"edible_percent"`
+}
+
+func (r dietFoodNutrientsRequest) toInput() service.DietFoodNutrientsInput {
+	return service.DietFoodNutrientsInput{
+		Energy:        r.Energy,
+		Heat:          r.Heat,
+		Protein:       r.Protein,
+		Fats:          r.Fats,
+		Carb:          r.Carb,
+		DietaryFiber:  r.DietaryFiber,
+		Ash:           r.Ash,
+		Water:         r.Water,
+		Cholesterol:   r.Cholesterol,
+		Retinol:       r.Retinol,
+		Carotin:       r.Carotin,
+		VitaminA:      r.VitaminA,
+		VitaminB1:     r.VitaminB1,
+		VitaminB2:     r.VitaminB2,
+		NicotinicAcid: r.NicotinicAcid,
+		VitaminC:      r.VitaminC,
+		VitaminE:      r.VitaminE,
+		Calcium:       r.Calcium,
+		Phosphorus:    r.Phosphorus,
+		Potassium:     r.Potassium,
+		Sodium:        r.Sodium,
+		Magnesium:     r.Magnesium,
+		Iron:          r.Iron,
+		Zinc:          r.Zinc,
+		Selenium:      r.Selenium,
+		Copper:        r.Copper,
+		Manganese:     r.Manganese,
+		EdiblePercent: r.EdiblePercent,
+	}
+}
+
+// dietFoodRequest 是 POST /foods 与 PUT /foods/:id 的公共请求体。
+// 修改时字段均可选（指针区分「未提交」），新建时由 service 校验必填项。
+type dietFoodRequest struct {
+	Name          *string                   `json:"name"`
+	CategoryID    *uint64                   `json:"category_id"`
+	EdiblePercent *float64                  `json:"edible_percent"`
+	Group12       *int                      `json:"group12"`
+	Group16       *domain.DietFoodGroup16   `json:"group16"`
+	SourceFlags   []string                  `json:"source_flags"`
+	Nutrients     *dietFoodNutrientsRequest `json:"nutrients"`
+}
+
+func (r dietFoodRequest) toInput() service.DietFoodInput {
+	var nutrients *service.DietFoodNutrientsInput
+	if r.Nutrients != nil {
+		in := r.Nutrients.toInput()
+		nutrients = &in
+	}
+	return service.DietFoodInput{
+		Name:          r.Name,
+		CategoryID:    r.CategoryID,
+		EdiblePercent: r.EdiblePercent,
+		Group12:       r.Group12,
+		Group16:       r.Group16,
+		SourceFlags:   r.SourceFlags,
+		Nutrients:     nutrients,
+	}
+}
+
+type listDietFoodsQuery struct {
+	Page       int    `form:"page"`
+	PageSize   int    `form:"page_size"`
+	CategoryID uint64 `form:"category_id"`
+	Keyword    string `form:"keyword"`
+}
+
+type dietFoodReplaceCandidatesQuery struct {
+	Keyword string `form:"keyword"`
+	Limit   int    `form:"limit"`
+}
+
+type dietFoodBatchDeleteRequest struct {
+	IDs []uint64 `json:"ids"`
+}
+
+// ListDietFoodCategories 返回全局两级食物分类树。
+func (h *Handler) ListDietFoodCategories(c *gin.Context) {
+	if middleware.GetKindergartenID(c) == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	list, err := h.dietFoodSvc.ListCategories(c.Request.Context())
+	if err != nil {
+		response.ErrInternal(c, "获取食物分类失败")
+		return
+	}
+	response.OK(c, map[string]any{"list": list})
+}
+
+// ListDietFoods 返回本园食物列表（列表列裁剪，不含 27 项全量）。
+func (h *Handler) ListDietFoods(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var q listDietFoodsQuery
+	_ = c.ShouldBindQuery(&q)
+	pq := pagination.Query{Page: q.Page, PageSize: q.PageSize}
+	list, total, page, pageSize, err := h.dietFoodSvc.ListFoods(
+		c.Request.Context(), kgID, q.CategoryID, q.Keyword, pq,
+	)
+	if err != nil {
+		respondDietFoodError(c, err, "获取食物列表失败")
+		return
+	}
+	response.OKList(c, list, total, page, pageSize)
+}
+
+// GetDietFood 返回食物详情（27 项全量，缺失值为 null）。
+func (h *Handler) GetDietFood(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietFoodID(c)
+	if !ok {
+		return
+	}
+	data, err := h.dietFoodSvc.GetFood(c.Request.Context(), kgID, id)
+	if err != nil {
+		respondDietFoodError(c, err, "获取食物详情失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// CreateDietFood 新增园所自建食物，HTTP 201。
+func (h *Handler) CreateDietFood(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var req dietFoodRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	data, err := h.dietFoodSvc.CreateFood(c.Request.Context(), kgID, req.toInput())
+	if err != nil {
+		respondDietFoodError(c, err, "新增食物失败")
+		return
+	}
+	response.Created(c, data)
+}
+
+// UpdateDietFood 修改园所食物；对预置副本的修改会标记 is_customized。
+func (h *Handler) UpdateDietFood(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietFoodID(c)
+	if !ok {
+		return
+	}
+	var req dietFoodRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	if err := h.dietFoodSvc.UpdateFood(c.Request.Context(), kgID, id, req.toInput()); err != nil {
+		respondDietFoodError(c, err, "修改食物失败")
+		return
+	}
+	response.OK(c, map[string]any{"id": id})
+}
+
+// DeleteDietFood 软删除园所食物；被菜谱引用时返回 409。
+func (h *Handler) DeleteDietFood(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietFoodID(c)
+	if !ok {
+		return
+	}
+	if err := h.dietFoodSvc.DeleteFood(c.Request.Context(), kgID, id); err != nil {
+		respondDietFoodError(c, err, "删除食物失败")
+		return
+	}
+	response.OK(c, map[string]any{})
+}
+
+// BatchDeleteDietFoods 批量删除：逐条判定，返回 deleted 与 skipped。
+func (h *Handler) BatchDeleteDietFoods(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	var req dietFoodBatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求体格式错误")
+		return
+	}
+	data, err := h.dietFoodSvc.BatchDeleteFoods(c.Request.Context(), kgID, req.IDs)
+	if err != nil {
+		respondDietFoodError(c, err, "批量删除食物失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// ListDietFoodReplaceCandidates 返回同一一级分类下的其他本园食物。
+func (h *Handler) ListDietFoodReplaceCandidates(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	id, ok := dietFoodID(c)
+	if !ok {
+		return
+	}
+	var q dietFoodReplaceCandidatesQuery
+	_ = c.ShouldBindQuery(&q)
+	list, err := h.dietFoodSvc.ListReplaceCandidates(c.Request.Context(), kgID, id, q.Keyword, q.Limit)
+	if err != nil {
+		respondDietFoodError(c, err, "获取同类替换候选失败")
+		return
+	}
+	response.OK(c, map[string]any{"list": list})
+}
+
+func dietFoodID(c *gin.Context) (uint64, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.ErrValidation(c, "无效的食物 ID")
+		return 0, false
+	}
+	return id, true
+}
+
+// respondDietFoodError 把食物服务错误映射到 404/409/422 契约包络。
+func respondDietFoodError(c *gin.Context, err error, fallback string) {
+	var invalid *service.DietFoodValidationError
+	switch {
+	case errors.As(err, &invalid):
+		response.ErrValidation(c, invalid.Message)
+	case errors.Is(err, service.ErrDietFoodNotFound):
+		response.ErrNotFound(c, "食物不存在")
+	case errors.Is(err, service.ErrDietFoodReferencedByRecipe):
+		response.ErrConflict(c, "食物仍被菜谱引用，无法删除")
+	default:
+		response.ErrInternal(c, fallback)
+	}
 }
