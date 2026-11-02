@@ -42,8 +42,8 @@
 
 - **全部 slice PASS**：S1a / S1b / S2 / S3 / S4 / S5 / S6 / S7 / S8 / S9 / S9a / S10a / S10b；HEAD `2e6afd7`，已 push `origin/feat/add-quantified-recipe`。
 - **E2E Round 2 PASS**：真实 Playwright 点击覆盖配置→食物→菜谱→周食谱→编辑器（白屏修复后）→同类替换→409 替换/仅本次→清空/删除两次确认→分析/导出/打印/空态；0 未捕获异常、0 500。
-- **豁免 W1**：`make test` 未全绿，失败为既有非 diet 项（notice 测试写死 `2026-11-01` 已过期；service 套件 MySQL COMMIT 抖动）。diet 103 测试 PASS / 0 FAIL。建议独立 chore 修日期炸弹。
-- **豁免 W2**：`check-tokens` 14 条存量违规（teacher/parent/admin teachers），diet 0 新增。
+- **豁免 W1（2026-11-03 部分修复）**：notice 日期炸弹已修（改用 2099-01-01，定向测试 PASS）；`make test` 仍可能因 service 套件 MySQL COMMIT 抖动中断。diet 103 测试 PASS / 0 FAIL。
+- **豁免 W2（2026-11-03 已修复）**：14 条存量 token 违规已清零（`check-tokens` 0）；CalendarEventCard 改用 `previewParent` token，admin 教师页改用 Tailwind token 类。
 - **发布阻断 7.5**：上线前必须与中国疾控中心营养与健康所签署授权协议并导入授权 CSV；Sanotsu 数据仅本地开发验证，未提交、未分发。
 - **残留 dev 数据（非仓库）**：`e2e-s10b-rice`（kg=0 及 6 园副本）、分类 587；上线前清理。
 - **临时关闭**：`/tmp/aqr-s10b-*` 日志与 `.claude/runs/` 运行工件不入库。

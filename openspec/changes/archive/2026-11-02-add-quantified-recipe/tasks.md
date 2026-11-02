@@ -61,6 +61,6 @@
 - [x] 7.2 补 router 权限回归测试：未登记路由启动失败、`diet:view`/`diet:manage`/`diet:export` 分支正确；验证方式：`go test ./internal/app -run Router` 与 `./internal/middleware -run AdminPerm` 通过
 - [x] 7.3 admin 端到端验证：用 Playwright MCP 真实点击（不依赖空的 `admin/tests/e2e` harness）完成一次完整带量食谱流程，覆盖空状态、校验错误、删除二次确认；验证方式：截图与断言全部通过
 - [ ] 7.4 最终验收：`make test`、`npm run build`、`node scripts/check-tokens.mjs`、`openspec validate add-quantified-recipe --strict` 全部通过；逐条对照 4 份 specs 勾选
-  > 2026-11-03 状态：`npm run build` 与 `openspec validate --strict` 通过；`make test` 与 `check-tokens` 未全绿，失败均为**既有非 diet** 项（notice 测试写死 `2026-11-01` 已过期；service 套件 MySQL COMMIT 抖动；14 条存量 token 违规）。diet：103 测试 PASS、0 新增 token 违规。豁免 W1/W2，详见 PROGRESS。
+  > 2026-11-03 状态：`npm run build` 与 `openspec validate --strict` 通过；`check-tokens` 已清零；notice 日期炸弹已修（2099-01-01，定向测试 PASS）；`make test` 仍可能因 service 套件 MySQL COMMIT 抖动中断。diet：103 测试 PASS、0 token 违规。详见 PROGRESS。
 - [ ] 7.5 数据许可门：与中国疾控中心营养与健康所签《中国国家食物成分数据授权使用协议》（覆盖入库/终端展示/SaaS 分发/衍生作品/续期五项），取得授权 CSV 与 2002 版字段清单；验证方式：合同/授权文件归档，未授权数据不在仓库与发行物中
   > 发布阻断：需用户/法务签署授权协议并导入授权 CSV；Sanotsu 数据仅本地，未提交。
