@@ -1,7 +1,13 @@
 <template>
   <!-- 文件路由会把 [id]/analysis.vue 生成为本页的子路由，父级必须提供出口；子路由自己渲染整页 -->
   <NuxtPage v-if="isChildRoute" />
-  <div v-else v-loading="loading" class="min-h-32 space-y-4">
+  <div
+    v-else
+    ref="editorRoot"
+    v-loading="loading"
+    class="min-h-32 space-y-4"
+    :class="{ 'overflow-auto bg-bg-page p-4': isFullscreen }"
+  >
     <el-alert
       v-if="loadError"
       type="error"
@@ -25,6 +31,9 @@
               <span class="text-lg font-semibold text-text-primary">周食谱编辑</span>
             </div>
             <div class="flex flex-wrap gap-2">
+              <el-button data-testid="plan-fullscreen" @click="toggleFullscreen">
+                {{ isFullscreen ? '退出全屏' : '全屏' }}
+              </el-button>
               <el-button
                 data-testid="plan-analysis"
                 title="营养分析使用已保存的明细"
@@ -152,7 +161,7 @@
               v-for="day in days"
               :key="day.date"
               :label="`${day.label} ${day.date.slice(5)}`"
-              min-width="280"
+              :min-width="isFullscreen ? 200 : 280"
             >
               <template #default="{ row }">
                 <div
@@ -416,6 +425,24 @@ const loadedItemCount = ref(0)
 const saving = ref(false)
 const saveError = ref('')
 const highlightKey = ref('')
+const editorRoot = ref<HTMLElement | null>(null)
+const isFullscreen = ref(false)
+
+function syncFullscreen() {
+  isFullscreen.value = !!document.fullscreenElement
+}
+
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+    } else if (editorRoot.value) {
+      await editorRoot.value.requestFullscreen()
+    }
+  } catch {
+    ElMessage.warning('当前浏览器不支持全屏')
+  }
+}
 let highlightTimer: ReturnType<typeof setTimeout> | null = null
 
 const mealRows = computed<MealRow[]>(() => {
@@ -446,7 +473,12 @@ const totalItemCount = computed(() =>
 )
 
 onMounted(() => {
+  document.addEventListener('fullscreenchange', syncFullscreen)
   if (!isChildRoute.value) void loadDetail()
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', syncFullscreen)
+  if (document.fullscreenElement) void document.exitFullscreen()
 })
 watch(
   () => route.params.id,
