@@ -190,68 +190,10 @@ func (s *DietConfigService) BuildConfigSnapshot(
 // validateDietConfigInput 校验并规范化保存入参，返回可直接落库的模型。
 // 校验失败时不产生任何写入，原配置保持不变。
 func validateDietConfigInput(kindergartenID uint64, in DietMealConfigInput) (*domain.MealConfig, error) {
-	switch in.CareType {
-	case domain.DietCareTypeDayCare, domain.DietCareTypeFullCare:
-	default:
-		return nil, dietConfigInvalid("托管形式无效，只支持日托或全托")
-	}
-	// 口径在本变更中不可配置：只接受市品重量（TC-NEW-DIE-0007）。
-	if in.FoodInputType != domain.DietFoodInputTypeMarketWeight {
-		return nil, dietConfigInvalid("食物重量口径只支持市品重量")
-	}
-	ratioMode, err := normalizeRatioMode(in.RatioMode)
+	ratioMode, ordered, err := validateDietMealConfig(
+		in.CareType, in.FoodInputType, in.RatioMode, in.Meals)
 	if err != nil {
 		return nil, err
-	}
-	if len(in.Meals) != len(domain.DietMealKeyOrder) {
-		return nil, dietConfigInvalid("餐次必须恰好包含 %d 个已知餐次，每个出现一次", len(domain.DietMealKeyOrder))
-	}
-
-	byKey := make(map[domain.DietMealKey]DietMealConfigMealInput, len(in.Meals))
-	for _, meal := range in.Meals {
-		if domain.DietMealSort(meal.MealKey) == 0 {
-			return nil, dietConfigInvalid("未知餐次：%s", meal.MealKey)
-		}
-		if _, dup := byKey[meal.MealKey]; dup {
-			return nil, dietConfigInvalid("餐次 %s 重复", dietMealName(meal.MealKey))
-		}
-		byKey[meal.MealKey] = meal
-	}
-
-	ordered := make([]DietMealConfigMealInput, 0, len(domain.DietMealKeyOrder))
-	enabledCount := 0
-	for _, key := range domain.DietMealKeyOrder {
-		meal := byKey[key]
-		if !mealTimePattern.MatchString(meal.Time) {
-			return nil, dietConfigInvalid("%s 的时间格式必须为 HH:mm", dietMealName(key))
-		}
-		if math.IsNaN(meal.EnergyPercent) || math.IsInf(meal.EnergyPercent, 0) ||
-			meal.EnergyPercent < 0 {
-			return nil, dietConfigInvalid("%s 的供能占比无效", dietMealName(key))
-		}
-		if meal.Enabled {
-			if meal.EnergyPercent <= 0 {
-				return nil, dietConfigInvalid("已启用餐次（%s）的供能占比必须大于 0", dietMealName(key))
-			}
-			enabledCount++
-		}
-		ordered = append(ordered, meal)
-	}
-	if enabledCount == 0 {
-		return nil, dietConfigInvalid("至少需要启用一个餐次")
-	}
-	if err := validateEnabledMealTimeOrder(ordered); err != nil {
-		return nil, err
-	}
-	switch ratioMode {
-	case domain.DietRatioModeStandard:
-		if err := validateStandardEnergyPercent(ordered); err != nil {
-			return nil, err
-		}
-	case domain.DietRatioModeCustom:
-		if err := validateAdjacentEnergyCaps(in.CareType, byKey); err != nil {
-			return nil, err
-		}
 	}
 
 	meals := make([]domain.MealConfigMeal, 0, len(ordered))
@@ -273,6 +215,83 @@ func validateDietConfigInput(kindergartenID uint64, in DietMealConfigInput) (*do
 		RatioMode:      ratioMode,
 		Meals:          meals,
 	}, nil
+}
+
+// validateDietMealConfig 是供餐配置的公共校验：托管形式、重量口径、比例模式与全部餐次。
+// 旧园所单例与按学年的集体对象共用这一份规则，保证错误文案与 TC-NEW-DIE-0003..0007
+// 的行为不因改造漂移（design D8）。返回收敛后的比例模式与按固定餐次顺序排列的入参。
+func validateDietMealConfig(
+	careType domain.DietCareType,
+	foodInputType domain.DietFoodInputType,
+	ratioMode domain.DietRatioMode,
+	meals []DietMealConfigMealInput,
+) (domain.DietRatioMode, []DietMealConfigMealInput, error) {
+	switch careType {
+	case domain.DietCareTypeDayCare, domain.DietCareTypeFullCare:
+	default:
+		return "", nil, dietConfigInvalid("托管形式无效，只支持日托或全托")
+	}
+	// 口径在本变更中不可配置：只接受市品重量（TC-NEW-DIE-0007）。
+	if foodInputType != domain.DietFoodInputTypeMarketWeight {
+		return "", nil, dietConfigInvalid("食物重量口径只支持市品重量")
+	}
+	normalizedRatioMode, err := normalizeRatioMode(ratioMode)
+	if err != nil {
+		return "", nil, err
+	}
+	if len(meals) != len(domain.DietMealKeyOrder) {
+		return "", nil, dietConfigInvalid(
+			"餐次必须恰好包含 %d 个已知餐次，每个出现一次", len(domain.DietMealKeyOrder))
+	}
+
+	byKey := make(map[domain.DietMealKey]DietMealConfigMealInput, len(meals))
+	for _, meal := range meals {
+		if domain.DietMealSort(meal.MealKey) == 0 {
+			return "", nil, dietConfigInvalid("未知餐次：%s", meal.MealKey)
+		}
+		if _, dup := byKey[meal.MealKey]; dup {
+			return "", nil, dietConfigInvalid("餐次 %s 重复", dietMealName(meal.MealKey))
+		}
+		byKey[meal.MealKey] = meal
+	}
+
+	ordered := make([]DietMealConfigMealInput, 0, len(domain.DietMealKeyOrder))
+	enabledCount := 0
+	for _, key := range domain.DietMealKeyOrder {
+		meal := byKey[key]
+		if !mealTimePattern.MatchString(meal.Time) {
+			return "", nil, dietConfigInvalid("%s 的时间格式必须为 HH:mm", dietMealName(key))
+		}
+		if math.IsNaN(meal.EnergyPercent) || math.IsInf(meal.EnergyPercent, 0) ||
+			meal.EnergyPercent < 0 {
+			return "", nil, dietConfigInvalid("%s 的供能占比无效", dietMealName(key))
+		}
+		if meal.Enabled {
+			if meal.EnergyPercent <= 0 {
+				return "", nil, dietConfigInvalid(
+					"已启用餐次（%s）的供能占比必须大于 0", dietMealName(key))
+			}
+			enabledCount++
+		}
+		ordered = append(ordered, meal)
+	}
+	if enabledCount == 0 {
+		return "", nil, dietConfigInvalid("至少需要启用一个餐次")
+	}
+	if err := validateEnabledMealTimeOrder(ordered); err != nil {
+		return "", nil, err
+	}
+	switch normalizedRatioMode {
+	case domain.DietRatioModeStandard:
+		if err := validateStandardEnergyPercent(ordered); err != nil {
+			return "", nil, err
+		}
+	case domain.DietRatioModeCustom:
+		if err := validateAdjacentEnergyCaps(careType, byKey); err != nil {
+			return "", nil, err
+		}
+	}
+	return normalizedRatioMode, ordered, nil
 }
 
 // normalizeRatioMode 把缺省值收敛为 standard（契约：缺省按 standard）。

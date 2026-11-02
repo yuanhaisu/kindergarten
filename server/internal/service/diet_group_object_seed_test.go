@@ -14,7 +14,7 @@ import (
 
 // 集体对象种子测试打真实 MySQL（与 diet_seed_service_test.go 同源）。
 // 清理一律原始 DELETE 硬删：软删除行会占唯一索引，重跑撞键（CLAUDE.md 已知坑）。
-const dietGroupSeedTestKG uint64 = 990992
+const dietGroupSeedTestKG uint64 = 990994
 
 func openDietGroupObjectSeedTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
