@@ -38,11 +38,13 @@ var (
 
 const dietPlanDateLayout = "2006-01-02"
 
-// DietPlanListItem 是周食谱列表行：只含名称、周期、天数与创建方式（契约 §五 列表裁剪）。
+// DietPlanListItem 是周食谱列表行：只含名称、周期、天数、集体对象与创建方式（契约 §五 列表裁剪）。
 type DietPlanListItem struct {
 	ID                 uint64                       `json:"id"`
 	Name               string                       `json:"name"`
 	AcademicYearID     uint64                       `json:"academic_year_id"`
+	GroupObjectID      uint64                       `json:"group_object_id"`
+	GroupObjectName    string                       `json:"group_object_name"`
 	StartDate          string                       `json:"start_date"`
 	EndDate            string                       `json:"end_date"`
 	DayNum             int                          `json:"day_num"`
@@ -54,9 +56,11 @@ type DietPlanListItem struct {
 // DietPlanCreateInput 是 POST /admin/diet/plans 的入参。
 // 三种创建方式三选一：custom 不接受附加字段，template 必须带 TemplateID，
 // copy 必须带 SourcePlanID（契约校验第 3 条）。
+// GroupObjectID 必填：对象决定供餐配置、就餐班级与学年归属（design D3）。
 type DietPlanCreateInput struct {
 	Name           string
 	AcademicYearID uint64
+	GroupObjectID  uint64
 	StartDate      string
 	EndDate        string
 	WeekOfYear     int
@@ -93,10 +97,13 @@ type DietPlanItemView struct {
 }
 
 // DietPlanDetail 是周食谱详情：配置快照 + 全部明细（契约 §五 GET /plans/:id）。
+// GroupObjectName 优先取创建快照：对象改名后旧食谱仍显示原名（TC-NEW-DIE-0075）。
 type DietPlanDetail struct {
 	ID                 uint64                       `json:"id"`
 	Name               string                       `json:"name"`
 	AcademicYearID     uint64                       `json:"academic_year_id"`
+	GroupObjectID      uint64                       `json:"group_object_id"`
+	GroupObjectName    string                       `json:"group_object_name"`
 	StartDate          string                       `json:"start_date"`
 	EndDate            string                       `json:"end_date"`
 	DayNum             int                          `json:"day_num"`
@@ -181,7 +188,10 @@ type DietPlanService struct {
 	classes   *repository.ClassRepo
 	years     *repository.AcademicYearRepo
 	dris      *repository.DietDriRepo
-	config    *DietConfigService
+	// config 是旧园所单例配置，S3b 删除旧配置服务前保留构造参数；
+	// 周食谱的配置快照已改由集体对象提供（design D2/D3）。
+	config  *DietConfigService
+	objects *DietGroupObjectService
 }
 
 func NewDietPlanService(
@@ -192,6 +202,7 @@ func NewDietPlanService(
 	years *repository.AcademicYearRepo,
 	dris *repository.DietDriRepo,
 	config *DietConfigService,
+	objects *DietGroupObjectService,
 ) *DietPlanService {
 	return &DietPlanService{
 		plans:     plans,
@@ -201,6 +212,7 @@ func NewDietPlanService(
 		years:     years,
 		dris:      dris,
 		config:    config,
+		objects:   objects,
 	}
 }
 
@@ -234,11 +246,73 @@ func (s *DietPlanService) ListPlans(
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
+	objectNames, err := s.planGroupObjectNames(ctx, kindergartenID, rows)
+	if err != nil {
+		return nil, 0, 0, 0, err
+	}
 	out := make([]DietPlanListItem, 0, len(rows))
 	for i := range rows {
-		out = append(out, dietPlanListItemView(&rows[i]))
+		out = append(out, dietPlanListItemView(&rows[i], objectNames[rows[i].GroupObjectID]))
 	}
 	return out, total, pn.Page, pn.PageSize, nil
+}
+
+// planGroupObjectNames 回填列表行的集体对象名称。页大小上限 100，按去重后的对象 ID
+// 逐个读取可接受；对象已被删除时留空，不阻断列表（design Risks）。
+func (s *DietPlanService) planGroupObjectNames(
+	ctx context.Context,
+	kindergartenID uint64,
+	plans []domain.MealPlan,
+) (map[uint64]string, error) {
+	names := make(map[uint64]string)
+	for i := range plans {
+		id := plans[i].GroupObjectID
+		if id == 0 {
+			continue
+		}
+		if _, ok := names[id]; ok {
+			continue
+		}
+		object, err := s.objects.Get(ctx, kindergartenID, id)
+		if err != nil {
+			if errors.Is(err, ErrDietGroupObjectNotFound) {
+				names[id] = ""
+				continue
+			}
+			return nil, err
+		}
+		names[id] = object.Name
+	}
+	return names, nil
+}
+
+// planGroupObjectIdentity 返回详情展示的对象身份：名称优先取创建快照，对象改名后
+// 旧食谱仍显示原名（TC-NEW-DIE-0075）；旧行快照缺对象字段时回查当前对象。
+// 对象已被删除时只返回 ID 与空名称，详情仍可打开（design Risks）。
+func (s *DietPlanService) planGroupObjectIdentity(
+	ctx context.Context,
+	kindergartenID uint64,
+	plan *domain.MealPlan,
+	snapshot domain.DietConfigSnapshot,
+) (uint64, string, error) {
+	objectID := plan.GroupObjectID
+	if objectID == 0 {
+		objectID = snapshot.GroupObjectID
+	}
+	if name := strings.TrimSpace(snapshot.GroupObjectName); name != "" {
+		return objectID, name, nil
+	}
+	if objectID == 0 {
+		return 0, "", nil
+	}
+	object, err := s.objects.Get(ctx, kindergartenID, objectID)
+	if err != nil {
+		if errors.Is(err, ErrDietGroupObjectNotFound) {
+			return objectID, "", nil
+		}
+		return 0, "", err
+	}
+	return objectID, object.Name, nil
 }
 
 // CreatePlan 按三种方式之一新建周食谱，创建时固化配置与 DRIs 快照。
@@ -271,6 +345,10 @@ func (s *DietPlanService) CreatePlan(
 	if year == nil {
 		return nil, dietPlanInvalid("学年不存在或不属于本园")
 	}
+	object, err := s.resolveDietPlanGroupObject(ctx, kindergartenID, year.ID, in.GroupObjectID)
+	if err != nil {
+		return nil, err
+	}
 	start, err := parseDietPlanPeriod(in.StartDate, in.EndDate)
 	if err != nil {
 		return nil, err
@@ -282,7 +360,7 @@ func (s *DietPlanService) CreatePlan(
 	if existing != nil {
 		return nil, ErrDietPlanNameConflict
 	}
-	configSnapshot, err := s.buildDietConfigSnapshot(ctx, kindergartenID)
+	configSnapshot, err := s.buildDietConfigSnapshot(ctx, kindergartenID, object.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -294,6 +372,7 @@ func (s *DietPlanService) CreatePlan(
 	plan := &domain.MealPlan{
 		KindergartenID: kindergartenID,
 		AcademicYearID: year.ID,
+		GroupObjectID:  object.ID,
 		Name:           name,
 		StartDate:      start,
 		EndDate:        start.AddDate(0, 0, 6),
@@ -355,6 +434,11 @@ func (s *DietPlanService) GetPlan(
 	if err != nil {
 		return nil, err
 	}
+	groupObjectID, groupObjectName, err := s.planGroupObjectIdentity(
+		ctx, kindergartenID, plan, snapshot)
+	if err != nil {
+		return nil, err
+	}
 
 	items := make([]DietPlanItemView, 0, len(plan.Items))
 	for _, item := range plan.Items {
@@ -396,6 +480,8 @@ func (s *DietPlanService) GetPlan(
 		ID:                 plan.ID,
 		Name:               plan.Name,
 		AcademicYearID:     plan.AcademicYearID,
+		GroupObjectID:      groupObjectID,
+		GroupObjectName:    groupObjectName,
 		StartDate:          plan.StartDate.Format(dietPlanDateLayout),
 		EndDate:            plan.EndDate.Format(dietPlanDateLayout),
 		DayNum:             plan.DayNum,
@@ -854,16 +940,18 @@ func (s *DietPlanService) buildItemsFromCopy(
 	return items, warnings, nil
 }
 
-// buildDietConfigSnapshot 固化当前配置 + 按班级人数加权的 11 项 DRIs 目标值。
+// buildDietConfigSnapshot 固化集体对象配置 + 按对象就餐班级加权的 11 项 DRIs 目标值。
+// 对象身份（ID/名称/班级）随快照留档：对象改名或改班级后旧食谱不受影响（design D2）。
 func (s *DietPlanService) buildDietConfigSnapshot(
 	ctx context.Context,
-	kindergartenID uint64,
+	kindergartenID, objectID uint64,
 ) (string, error) {
-	snapshot, err := s.config.BuildConfigSnapshot(ctx, kindergartenID)
+	snapshot, err := s.objects.BuildConfigSnapshot(ctx, kindergartenID, objectID)
 	if err != nil {
 		return "", err
 	}
-	targets, weights, err := s.buildDietDriSnapshot(ctx, kindergartenID)
+	targets, weights, err := s.buildDietDriSnapshot(
+		ctx, kindergartenID, snapshot.GroupObjectClassIDs)
 	if err != nil {
 		return "", err
 	}
@@ -874,6 +962,28 @@ func (s *DietPlanService) buildDietConfigSnapshot(
 		return "", err
 	}
 	return string(raw), nil
+}
+
+// resolveDietPlanGroupObject 校验创建入参里的集体对象：必填、属于本园、属于所选学年。
+// 对象决定学年（design D3），这里双向校验是为了挡住前端错配，而不是允许对象跨学年。
+func (s *DietPlanService) resolveDietPlanGroupObject(
+	ctx context.Context,
+	kindergartenID, academicYearID, objectID uint64,
+) (*DietGroupObjectDetail, error) {
+	if objectID == 0 {
+		return nil, dietPlanInvalid("请选择集体对象")
+	}
+	object, err := s.objects.Get(ctx, kindergartenID, objectID)
+	if err != nil {
+		if errors.Is(err, ErrDietGroupObjectNotFound) {
+			return nil, dietPlanInvalid("集体对象不存在或不属于本园")
+		}
+		return nil, err
+	}
+	if object.AcademicYearID != academicYearID {
+		return nil, dietPlanInvalid("集体对象不属于所选学年")
+	}
+	return object, nil
 }
 
 func (s *DietPlanService) findAcademicYear(
@@ -982,11 +1092,13 @@ func countDietPlanDays(items []domain.MealPlanItem) int {
 	return len(days)
 }
 
-func dietPlanListItemView(plan *domain.MealPlan) DietPlanListItem {
+func dietPlanListItemView(plan *domain.MealPlan, groupObjectName string) DietPlanListItem {
 	return DietPlanListItem{
 		ID:                 plan.ID,
 		Name:               plan.Name,
 		AcademicYearID:     plan.AcademicYearID,
+		GroupObjectID:      plan.GroupObjectID,
+		GroupObjectName:    groupObjectName,
 		StartDate:          plan.StartDate.Format(dietPlanDateLayout),
 		EndDate:            plan.EndDate.Format(dietPlanDateLayout),
 		DayNum:             plan.DayNum,

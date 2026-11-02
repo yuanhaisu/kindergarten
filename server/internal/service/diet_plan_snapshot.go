@@ -12,7 +12,7 @@ import (
 // 快照一旦写入就不随供餐配置、学生名册或食物库回溯（design D3/D5、ADR-0006）。
 
 const (
-	// dietPlanClassListLimit 取本园全部班级用于人数加权；园所班级数远小于此上限。
+	// dietPlanClassListLimit 取本园全部班级后按对象的就餐班级过滤；园所班级数远小于此上限。
 	// 仓储的 List 是分页接口，传 0 在部分 GORM 版本会被当作 LIMIT 0。
 	dietPlanClassListLimit = 10000
 
@@ -39,7 +39,7 @@ var dietDriFallbackWeight = map[int]float64{
 	6: 0,
 }
 
-// buildDietDriSnapshot 计算按班级人数加权的 11 项 DRIs 目标值与四档权重。
+// buildDietDriSnapshot 计算按集体对象就餐班级人数加权的 11 项 DRIs 目标值与四档权重。
 //
 // 权重先按 4 位小数取整、再用取整后的权重计算目标值，保证快照里
 // 「权重 × 各档值」能复核出目标值；目标值保留 2 位小数。
@@ -47,8 +47,9 @@ var dietDriFallbackWeight = map[int]float64{
 func (s *DietPlanService) buildDietDriSnapshot(
 	ctx context.Context,
 	kindergartenID uint64,
+	classIDs []uint64,
 ) ([]domain.DietDriTargetSnapshot, []domain.DietDriWeight, error) {
-	weights, err := s.dietDriWeights(ctx, kindergartenID)
+	weights, err := s.dietDriWeights(ctx, kindergartenID, classIDs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -108,40 +109,55 @@ func (s *DietPlanService) buildDietDriSnapshot(
 	return targets, weights, nil
 }
 
-// dietDriWeights 按小/中/大班在读人数计算四档权重。
+// dietDriWeights 按集体对象就餐班级的小/中/大班在读人数计算四档权重。
 //
-// 只统计能映射到年龄档的班级；没有这类学生时回退固定权重 26.7%/32.6%/40.8%/0。
-// 使用 CountStudentsByClassIDs 的 status=1 口径，与「在读学生」一致。
+// 只统计 classIDs 内的班级（design D4：就餐班级就是供餐范围）；classIDs 为空时
+// 回退为全部班级，兼容旧调用与异常数据。只映射能到年龄档的班级；没有这类学生时
+// 回退固定权重 26.7%/32.6%/40.8%/0。使用 CountStudentsByClassIDs 的 status=1 口径。
 func (s *DietPlanService) dietDriWeights(
 	ctx context.Context,
 	kindergartenID uint64,
+	classIDs []uint64,
 ) ([]domain.DietDriWeight, error) {
 	classes, _, err := s.classes.List(ctx, kindergartenID, "", "", 0, dietPlanClassListLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	classIDs := make([]uint64, 0, len(classes))
-	for _, class := range classes {
-		if _, ok := dietGradeAgeBand[class.Grade]; ok {
-			classIDs = append(classIDs, class.ID)
-		}
+	scope := make(map[uint64]bool, len(classIDs))
+	for _, id := range classIDs {
+		scope[id] = true
 	}
-	counts, err := s.classes.CountStudentsByClassIDs(ctx, kindergartenID, classIDs)
+	scopedByBand := make(map[int][]uint64, len(dietDriAgeBands))
+	totalScoped := 0
+	for _, class := range classes {
+		if len(scope) > 0 && !scope[class.ID] {
+			continue
+		}
+		ageBand, ok := dietGradeAgeBand[class.Grade]
+		if !ok {
+			continue
+		}
+		scopedByBand[ageBand] = append(scopedByBand[ageBand], class.ID)
+		totalScoped++
+	}
+	scopedIDs := make([]uint64, 0, totalScoped)
+	for _, ids := range scopedByBand {
+		scopedIDs = append(scopedIDs, ids...)
+	}
+	counts, err := s.classes.CountStudentsByClassIDs(ctx, kindergartenID, scopedIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	studentsByBand := make(map[int]int64, len(dietDriAgeBands))
 	var total int64
-	for _, class := range classes {
-		ageBand, ok := dietGradeAgeBand[class.Grade]
-		if !ok {
-			continue
+	for ageBand, ids := range scopedByBand {
+		for _, id := range ids {
+			n := counts[id]
+			studentsByBand[ageBand] += n
+			total += n
 		}
-		n := counts[class.ID]
-		studentsByBand[ageBand] += n
-		total += n
 	}
 
 	weights := make([]domain.DietDriWeight, 0, len(dietDriAgeBands))

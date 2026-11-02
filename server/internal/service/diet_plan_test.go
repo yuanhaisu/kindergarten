@@ -50,6 +50,9 @@ func openDietPlanServiceTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err, "open db")
 	require.NoError(t, db.AutoMigrate(
 		&domain.MealConfig{}, &domain.MealConfigMeal{},
+		&domain.DietGroupObject{},
+		&domain.DietGroupObjectMeal{},
+		&domain.DietGroupObjectClass{},
 		&domain.FoodCategory{}, &domain.Food{},
 		&domain.Recipe{}, &domain.RecipeItem{},
 		&domain.MealPlan{}, &domain.MealPlanItem{},
@@ -73,6 +76,9 @@ func cleanupDietPlanServiceData(t *testing.T, db *gorm.DB) {
 		"DELETE FROM diet_recipes WHERE kindergarten_id IN ?",
 		"DELETE FROM diet_meal_config_meals WHERE kindergarten_id IN ?",
 		"DELETE FROM diet_meal_configs WHERE kindergarten_id IN ?",
+		"DELETE FROM diet_group_object_classes WHERE kindergarten_id IN ?",
+		"DELETE FROM diet_group_object_meals WHERE kindergarten_id IN ?",
+		"DELETE FROM diet_group_objects WHERE kindergarten_id IN ?",
 		"DELETE FROM diet_foods WHERE kindergarten_id IN ?",
 		"DELETE FROM students WHERE kindergarten_id IN ?",
 		"DELETE FROM classes WHERE kindergarten_id IN ?",
@@ -86,20 +92,24 @@ func cleanupDietPlanServiceData(t *testing.T, db *gorm.DB) {
 }
 
 type dietPlanFixture struct {
-	db        *gorm.DB
-	svc       *DietPlanService
-	configSvc *DietConfigService
-	foodRepo  *repository.DietFoodRepo
-	planRepo  *repository.DietPlanRepo
-	tplRepo   *repository.DietTemplateRepo
-	driRepo   *repository.DietDriRepo
-	classRepo *repository.ClassRepo
-	yearRepo  *repository.AcademicYearRepo
-	year      *domain.AcademicYear
+	db             *gorm.DB
+	svc            *DietPlanService
+	configSvc      *DietConfigService
+	objectSvc      *DietGroupObjectService
+	foodRepo       *repository.DietFoodRepo
+	planRepo       *repository.DietPlanRepo
+	tplRepo        *repository.DietTemplateRepo
+	driRepo        *repository.DietDriRepo
+	classRepo      *repository.ClassRepo
+	yearRepo       *repository.AcademicYearRepo
+	year           *domain.AcademicYear
+	object         *DietGroupObjectDetail
+	classesByGrade map[string]*domain.Class
 }
 
 func newDietPlanFixture(t *testing.T) *dietPlanFixture {
 	t.Helper()
+	ctx := context.Background()
 	db := openDietPlanServiceTestDB(t)
 	cleanupDietPlanServiceData(t, db)
 	t.Cleanup(func() { cleanupDietPlanServiceData(t, db) })
@@ -119,12 +129,14 @@ func newDietPlanFixture(t *testing.T) *dietPlanFixture {
 	driRepo := repository.NewDietDriRepo(db)
 	classRepo := repository.NewClassRepo(db)
 	yearRepo := repository.NewAcademicYearRepo(db)
+	objectSvc := NewDietGroupObjectService(
+		repository.NewDietGroupObjectRepo(db), yearRepo, classRepo)
 	svc := NewDietPlanService(
-		planRepo, tplRepo, foodRepo, classRepo, yearRepo, driRepo, configSvc,
+		planRepo, tplRepo, foodRepo, classRepo, yearRepo, driRepo, configSvc, objectSvc,
 	)
 
 	// DRIs 是全局只读数据；测试按正式种子幂等写入，避免依赖开发库是否启动过。
-	_, err := driRepo.CreateBatch(context.Background(), dietDriSeedRows())
+	_, err := driRepo.CreateBatch(ctx, dietDriSeedRows())
 	require.NoError(t, err, "seed DRI age targets")
 
 	year := &domain.AcademicYear{
@@ -132,20 +144,80 @@ func newDietPlanFixture(t *testing.T) *dietPlanFixture {
 		Year:           "2026-2027",
 		IsCurrent:      true,
 	}
-	require.NoError(t, yearRepo.Create(context.Background(), year))
+	require.NoError(t, yearRepo.Create(ctx, year))
 
-	return &dietPlanFixture{
-		db:        db,
-		svc:       svc,
-		configSvc: configSvc,
-		foodRepo:  foodRepo,
-		planRepo:  planRepo,
-		tplRepo:   tplRepo,
-		driRepo:   driRepo,
-		classRepo: classRepo,
-		yearRepo:  yearRepo,
-		year:      year,
+	f := &dietPlanFixture{
+		db:             db,
+		svc:            svc,
+		configSvc:      configSvc,
+		objectSvc:      objectSvc,
+		foodRepo:       foodRepo,
+		planRepo:       planRepo,
+		tplRepo:        tplRepo,
+		driRepo:        driRepo,
+		classRepo:      classRepo,
+		yearRepo:       yearRepo,
+		year:           year,
+		classesByGrade: make(map[string]*domain.Class, 3),
 	}
+	// 三个年级班级先建好（此时无学生）：默认集体对象要覆盖真实班级，
+	// 加权用例再按年级补学生，避免对象创建后班级才出现。
+	for _, grade := range []string{
+		dietPlanClassGradeJunior, dietPlanClassGradeMiddle, dietPlanClassGradeSenior,
+	} {
+		class := &domain.Class{
+			KindergartenID: testDietPlanSvcKG,
+			Name:           "S6测试" + grade,
+			Grade:          grade,
+			AcademicYear:   year.Year,
+			Status:         1,
+		}
+		require.NoError(t, db.Create(class).Error)
+		f.classesByGrade[grade] = class
+	}
+	f.object = f.createGroupObject(t, year.ID, "全体幼儿", f.allClassIDs()...)
+	return f
+}
+
+func (f *dietPlanFixture) allClassIDs() []uint64 {
+	out := make([]uint64, 0, len(f.classesByGrade))
+	for _, grade := range []string{
+		dietPlanClassGradeJunior, dietPlanClassGradeMiddle, dietPlanClassGradeSenior,
+	} {
+		out = append(out, f.classesByGrade[grade].ID)
+	}
+	return out
+}
+
+// groupObjectInput 与默认对象一致：日托、标准比例、五餐启用晚点停用，DRIs2000。
+func (f *dietPlanFixture) groupObjectInput(
+	yearID uint64,
+	name string,
+	classIDs ...uint64,
+) DietGroupObjectInput {
+	return DietGroupObjectInput{
+		AcademicYearID: yearID,
+		Name:           name,
+		CareType:       domain.DietCareTypeDayCare,
+		FoodInputType:  domain.DietFoodInputTypeMarketWeight,
+		RatioMode:      domain.DietRatioModeStandard,
+		ClassIDs:       classIDs,
+		Meals:          defaultDietMealConfigMeals(),
+	}
+}
+
+func (f *dietPlanFixture) createGroupObject(
+	t *testing.T,
+	yearID uint64,
+	name string,
+	classIDs ...uint64,
+) *DietGroupObjectDetail {
+	t.Helper()
+	object, err := f.objectSvc.Create(
+		context.Background(), testDietPlanSvcKG, f.groupObjectInput(yearID, name, classIDs...))
+	require.NoError(t, err)
+	require.NotZero(t, object.ID)
+	return object
 }
 
 func dietFloat(v float64) *float64 { return &v }
@@ -217,13 +289,8 @@ func (f *dietPlanFixture) createSourcePlan(
 
 func (f *dietPlanFixture) seedStudents(t *testing.T, grade string, n int) {
 	t.Helper()
-	class := &domain.Class{
-		KindergartenID: testDietPlanSvcKG,
-		Name:           "S6测试" + grade,
-		Grade:          grade,
-		Status:         1,
-	}
-	require.NoError(t, f.db.Create(class).Error)
+	class, ok := f.classesByGrade[grade]
+	require.True(t, ok, "fixture 未预建 %s 班级", grade)
 	for i := 0; i < n; i++ {
 		student := &domain.Student{
 			KindergartenID: testDietPlanSvcKG,
@@ -239,9 +306,19 @@ func (f *dietPlanFixture) seedStudents(t *testing.T, grade string, n int) {
 
 func (f *dietPlanFixture) createCustomPlan(t *testing.T, name string) *DietPlanCreateResult {
 	t.Helper()
+	return f.createCustomPlanWithObject(t, name, f.object.ID)
+}
+
+func (f *dietPlanFixture) createCustomPlanWithObject(
+	t *testing.T,
+	name string,
+	objectID uint64,
+) *DietPlanCreateResult {
+	t.Helper()
 	result, err := f.svc.CreatePlan(context.Background(), testDietPlanSvcKG, DietPlanCreateInput{
 		Name:           name,
 		AcademicYearID: f.year.ID,
+		GroupObjectID:  objectID,
 		StartDate:      "2026-10-26",
 		EndDate:        "2026-11-01",
 		WeekOfYear:     9,
@@ -308,6 +385,7 @@ func TestDietPlanCreateRejectsDuplicateNameInAcademicYear(t *testing.T) {
 	_, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, DietPlanCreateInput{
 		Name:           "第九周",
 		AcademicYearID: f.year.ID,
+		GroupObjectID:  f.object.ID,
 		StartDate:      "2026-11-02",
 		EndDate:        "2026-11-08",
 		CreatedMethod:  domain.DietPlanCreatedByCustom,
@@ -319,9 +397,11 @@ func TestDietPlanCreateRejectsDuplicateNameInAcademicYear(t *testing.T) {
 		Year:           "2025-2026",
 	}
 	require.NoError(t, f.yearRepo.Create(ctx, otherYear))
+	otherObject := f.createGroupObject(t, otherYear.ID, "上学年全体幼儿", f.allClassIDs()...)
 	_, err = f.svc.CreatePlan(ctx, testDietPlanSvcKG, DietPlanCreateInput{
 		Name:           "第九周",
 		AcademicYearID: otherYear.ID,
+		GroupObjectID:  otherObject.ID,
 		StartDate:      "2025-10-27",
 		EndDate:        "2025-11-02",
 		CreatedMethod:  domain.DietPlanCreatedByCustom,
@@ -432,7 +512,9 @@ func TestDietPlanCreateValidatesPeriodMethodAndYear(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, tc.input)
+			input := tc.input
+			input.GroupObjectID = f.object.ID
+			_, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, input)
 			require.Error(t, err)
 			var invalid *DietPlanValidationError
 			require.ErrorAs(t, err, &invalid)
@@ -457,6 +539,7 @@ func TestDietPlanCreateFromTemplateCopiesItems(t *testing.T) {
 	result, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, DietPlanCreateInput{
 		Name:           "第十周",
 		AcademicYearID: f.year.ID,
+		GroupObjectID:  f.object.ID,
 		StartDate:      "2026-11-02",
 		EndDate:        "2026-11-08",
 		WeekOfYear:     10,
@@ -510,6 +593,7 @@ func TestDietPlanCreateFromTemplateSkipsMissingFood(t *testing.T) {
 	result, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, DietPlanCreateInput{
 		Name:           "S6模板缺食物",
 		AcademicYearID: f.year.ID,
+		GroupObjectID:  f.object.ID,
 		StartDate:      "2026-11-02",
 		EndDate:        "2026-11-08",
 		CreatedMethod:  domain.DietPlanCreatedByTemplate,
@@ -551,6 +635,7 @@ func TestDietPlanCopyMapsWeekdayAndRecomputesSnapshot(t *testing.T) {
 	result, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, DietPlanCreateInput{
 		Name:           "S6复制第十周",
 		AcademicYearID: f.year.ID,
+		GroupObjectID:  f.object.ID,
 		StartDate:      "2026-11-02",
 		EndDate:        "2026-11-08",
 		CreatedMethod:  domain.DietPlanCreatedByCopy,
@@ -602,6 +687,7 @@ func TestDietPlanCopySkipsDeletedFood(t *testing.T) {
 	result, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, DietPlanCreateInput{
 		Name:           "S6复制缺食物",
 		AcademicYearID: f.year.ID,
+		GroupObjectID:  f.object.ID,
 		StartDate:      "2026-11-02",
 		EndDate:        "2026-11-08",
 		CreatedMethod:  domain.DietPlanCreatedByCopy,
@@ -1044,6 +1130,214 @@ func TestDietPlanTemplatesListAndCrossTenant(t *testing.T) {
 
 	_, err = f.svc.GetTemplate(ctx, testDietPlanSvcOtherKG, tpl.ID)
 	require.ErrorIs(t, err, ErrDietTemplateNotFound)
+}
+
+// TC-NEW-DIE-0071 / 0072：集体对象必填，且必须属于本园与所选学年；校验失败不落库。
+func TestDietPlanCreateRequiresGroupObject(t *testing.T) {
+	f := newDietPlanFixture(t)
+	ctx := context.Background()
+
+	otherYear := &domain.AcademicYear{
+		KindergartenID: testDietPlanSvcKG,
+		Year:           "2025-2026",
+	}
+	require.NoError(t, f.yearRepo.Create(ctx, otherYear))
+	otherYearObject := f.createGroupObject(t, otherYear.ID, "上学年全体幼儿", f.allClassIDs()...)
+
+	otherKGYear := &domain.AcademicYear{
+		KindergartenID: testDietPlanSvcOtherKG,
+		Year:           "2026-2027",
+		IsCurrent:      true,
+	}
+	require.NoError(t, f.yearRepo.Create(ctx, otherKGYear))
+	otherKGClass := &domain.Class{
+		KindergartenID: testDietPlanSvcOtherKG,
+		Name:           "S6他园小班",
+		Grade:          dietPlanClassGradeJunior,
+		Status:         1,
+	}
+	require.NoError(t, f.db.Create(otherKGClass).Error)
+	otherKGObject, err := f.objectSvc.Create(ctx, testDietPlanSvcOtherKG,
+		f.groupObjectInput(otherKGYear.ID, "他园全体幼儿", otherKGClass.ID))
+	require.NoError(t, err)
+
+	base := DietPlanCreateInput{
+		Name:           "S6对象校验",
+		AcademicYearID: f.year.ID,
+		StartDate:      "2026-10-26",
+		EndDate:        "2026-11-01",
+		CreatedMethod:  domain.DietPlanCreatedByCustom,
+	}
+	cases := []struct {
+		name    string
+		mutate  func(*DietPlanCreateInput)
+		wantMsg string
+	}{
+		{
+			name:    "缺少集体对象",
+			mutate:  func(*DietPlanCreateInput) {},
+			wantMsg: "请选择集体对象",
+		},
+		{
+			name:    "对象不存在",
+			mutate:  func(in *DietPlanCreateInput) { in.GroupObjectID = 1 << 40 },
+			wantMsg: "集体对象不存在或不属于本园",
+		},
+		{
+			name:    "对象属于他园",
+			mutate:  func(in *DietPlanCreateInput) { in.GroupObjectID = otherKGObject.ID },
+			wantMsg: "集体对象不存在或不属于本园",
+		},
+		{
+			name:    "对象属于其他学年",
+			mutate:  func(in *DietPlanCreateInput) { in.GroupObjectID = otherYearObject.ID },
+			wantMsg: "集体对象不属于所选学年",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			input := base
+			tc.mutate(&input)
+			_, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, input)
+			require.Error(t, err)
+			var invalid *DietPlanValidationError
+			require.ErrorAs(t, err, &invalid)
+			assert.Contains(t, invalid.Message, tc.wantMsg)
+		})
+	}
+
+	var count int64
+	require.NoError(t, f.db.Model(&domain.MealPlan{}).
+		Where("kindergarten_id = ?", testDietPlanSvcKG).Count(&count).Error)
+	assert.Zero(t, count, "对象校验失败不得落库")
+}
+
+// TC-NEW-DIE-0073：列表与详情返回所属集体对象 ID 与名称。
+func TestDietPlanListAndDetailReturnGroupObject(t *testing.T) {
+	f := newDietPlanFixture(t)
+	ctx := context.Background()
+
+	dayCare := f.createGroupObject(t, f.year.ID, "日托班",
+		f.classesByGrade[dietPlanClassGradeJunior].ID)
+	first := f.createCustomPlan(t, "S6对象列表A")
+	second, err := f.svc.CreatePlan(ctx, testDietPlanSvcKG, DietPlanCreateInput{
+		Name:           "S6对象列表B",
+		AcademicYearID: f.year.ID,
+		GroupObjectID:  dayCare.ID,
+		StartDate:      "2026-11-02",
+		EndDate:        "2026-11-08",
+		CreatedMethod:  domain.DietPlanCreatedByCustom,
+	})
+	require.NoError(t, err)
+
+	list, total, _, _, err := f.svc.ListPlans(
+		ctx, testDietPlanSvcKG, f.year.ID, "", pagination.Query{})
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, total)
+	byID := make(map[uint64]DietPlanListItem, len(list))
+	for _, item := range list {
+		byID[item.ID] = item
+	}
+	assert.Equal(t, f.object.ID, byID[first.ID].GroupObjectID)
+	assert.Equal(t, "全体幼儿", byID[first.ID].GroupObjectName)
+	assert.Equal(t, dayCare.ID, byID[second.ID].GroupObjectID)
+	assert.Equal(t, "日托班", byID[second.ID].GroupObjectName)
+
+	detail, err := f.svc.GetPlan(ctx, testDietPlanSvcKG, second.ID)
+	require.NoError(t, err)
+	assert.Equal(t, dayCare.ID, detail.GroupObjectID)
+	assert.Equal(t, "日托班", detail.GroupObjectName)
+}
+
+// TC-NEW-DIE-0075：对象改名后旧食谱详情仍显示快照原名，列表按当前对象名展示。
+func TestDietPlanDetailKeepsSnapshotObjectNameAfterRename(t *testing.T) {
+	f := newDietPlanFixture(t)
+	ctx := context.Background()
+
+	plan := f.createCustomPlan(t, "S6对象改名")
+	_, err := f.objectSvc.Update(ctx, testDietPlanSvcKG, f.object.ID,
+		f.groupObjectInput(f.year.ID, "日托幼儿", f.allClassIDs()...))
+	require.NoError(t, err)
+
+	detail, err := f.svc.GetPlan(ctx, testDietPlanSvcKG, plan.ID)
+	require.NoError(t, err)
+	assert.Equal(t, f.object.ID, detail.GroupObjectID)
+	assert.Equal(t, "全体幼儿", detail.GroupObjectName, "详情必须保留创建时的对象名称")
+	assert.Equal(t, "全体幼儿", detail.ConfigSnapshot.GroupObjectName)
+
+	list, _, _, _, err := f.svc.ListPlans(
+		ctx, testDietPlanSvcKG, f.year.ID, "", pagination.Query{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "日托幼儿", list[0].GroupObjectName, "列表按当前对象名称展示")
+}
+
+// TC-NEW-DIE-0069 / 0076：DRIs 只按对象就餐班级加权；对象改班级后旧食谱快照不回溯，
+// 新食谱按新班级人数比例计算。
+func TestDietPlanDriWeightsFollowGroupObjectClasses(t *testing.T) {
+	f := newDietPlanFixture(t)
+	ctx := context.Background()
+
+	f.seedStudents(t, dietPlanClassGradeJunior, 3)
+	f.seedStudents(t, dietPlanClassGradeMiddle, 4)
+	juniorID := f.classesByGrade[dietPlanClassGradeJunior].ID
+	middleID := f.classesByGrade[dietPlanClassGradeMiddle].ID
+
+	juniorOnly := f.createGroupObject(t, f.year.ID, "小班对象", juniorID)
+	oldPlan := f.createCustomPlanWithObject(t, "S6小班食谱", juniorOnly.ID)
+	oldDetail, err := f.svc.GetPlan(ctx, testDietPlanSvcKG, oldPlan.ID)
+	require.NoError(t, err)
+	assert.Equal(t, juniorOnly.ID, oldDetail.ConfigSnapshot.GroupObjectID)
+	assert.Equal(t, "小班对象", oldDetail.ConfigSnapshot.GroupObjectName)
+	assert.Equal(t, []uint64{juniorID}, oldDetail.ConfigSnapshot.GroupObjectClassIDs,
+		"快照留档加权范围")
+	assert.Equal(t, []float64{1, 0, 0, 0}, dietWeightValues(oldDetail.ConfigSnapshot.DriWeights))
+	assert.InDelta(t, 1350.0,
+		dietTargetValue(oldDetail.ConfigSnapshot.DriTargets, "energy"), 0.02)
+	assert.InDelta(t, 600.0,
+		dietTargetValue(oldDetail.ConfigSnapshot.DriTargets, "calcium"), 0.02)
+
+	// 对象改为小 + 中班：新食谱按 3:4 人数加权。
+	_, err = f.objectSvc.Update(ctx, testDietPlanSvcKG, juniorOnly.ID,
+		f.groupObjectInput(f.year.ID, "小班对象", juniorID, middleID))
+	require.NoError(t, err)
+	newPlan := f.createCustomPlanWithObject(t, "S6小中班食谱", juniorOnly.ID)
+	newDetail, err := f.svc.GetPlan(ctx, testDietPlanSvcKG, newPlan.ID)
+	require.NoError(t, err)
+	weights := dietWeightValues(newDetail.ConfigSnapshot.DriWeights)
+	require.Len(t, weights, 4)
+	assert.InDelta(t, 0.4286, weights[0], 1e-9)
+	assert.InDelta(t, 0.5714, weights[1], 1e-9)
+	assert.Zero(t, weights[2])
+	assert.Zero(t, weights[3])
+	// 0.4286×1350 + 0.5714×1450 = 1407.14
+	assert.InDelta(t, 1407.14,
+		dietTargetValue(newDetail.ConfigSnapshot.DriTargets, "energy"), 0.02)
+
+	// 旧食谱快照不随对象改动回溯。
+	reloaded, err := f.svc.GetPlan(ctx, testDietPlanSvcKG, oldPlan.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []float64{1, 0, 0, 0},
+		dietWeightValues(reloaded.ConfigSnapshot.DriWeights))
+	assert.InDelta(t, 1350.0,
+		dietTargetValue(reloaded.ConfigSnapshot.DriTargets, "energy"), 0.02)
+}
+
+func dietWeightValues(weights []domain.DietDriWeight) []float64 {
+	out := make([]float64, 0, len(weights))
+	for _, weight := range weights {
+		out = append(out, weight.Weight)
+	}
+	return out
+}
+
+func dietTargetValue(targets []domain.DietDriTargetSnapshot, key string) float64 {
+	for _, target := range targets {
+		if target.NutrientKey == key {
+			return target.Value
+		}
+	}
+	return 0
 }
 
 func strPtr(v string) *string { return &v }
