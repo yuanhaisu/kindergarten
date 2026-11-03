@@ -69,27 +69,27 @@
         @page-change="load"
         @size-change="load"
       >
-        <el-table-column prop="name" label="集体对象名称" min-width="150" fixed="left" />
-        <el-table-column label="托管形式" width="100">
+        <el-table-column prop="name" label="集体对象名称" min-width="130" fixed="left" />
+        <el-table-column label="托管形式" width="90">
           <template #default="{ row }">
             {{ (row as DietGroupObjectListItem).care_type_label || '—' }}
           </template>
         </el-table-column>
-        <el-table-column label="就餐对象" min-width="240" show-overflow-tooltip>
+        <el-table-column label="就餐对象" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">{{ classNames(row as DietGroupObjectListItem) }}</template>
         </el-table-column>
-        <el-table-column label="餐次" min-width="180" show-overflow-tooltip>
+        <el-table-column label="餐次" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ mealNames(row as DietGroupObjectListItem) }}</template>
         </el-table-column>
-        <el-table-column label="食物重量输入方式" width="150">
+        <el-table-column label="食物重量输入方式" width="130">
           <template #default="{ row }">
             {{ (row as DietGroupObjectListItem).food_input_type_label || '—' }}
           </template>
         </el-table-column>
-        <el-table-column label="膳食营养素参考摄入量标准" width="210">
+        <el-table-column label="膳食营养素参考摄入量标准" width="170">
           <template #default="{ row }">{{ (row as DietGroupObjectListItem).policy_name || '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="210" fixed="right">
+        <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="canManage"
