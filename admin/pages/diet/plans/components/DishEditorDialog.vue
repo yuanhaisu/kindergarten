@@ -25,7 +25,7 @@
             <el-autocomplete
               v-model="name"
               :fetch-suggestions="fetchSuggestions"
-              placeholder="输入菜名联想菜谱库；新名称也可直接使用"
+              placeholder="点击或输入菜名，联想/筛选菜谱库；新名称也可直接使用"
               clearable
               class="w-full"
               :disabled="loadingRecipe"
@@ -208,11 +208,9 @@ function makeRow(input: {
 }
 
 async function fetchSuggestions(query: string, callback: (items: RecipeSuggestion[]) => void) {
+  // 空关键词也要展示默认列表：目标产品点击菜名框即可看到可选菜谱，
+  // 而不是必须先输入两个字才出现联想。
   const keyword = query.trim()
-  if (!keyword) {
-    callback([])
-    return
-  }
   try {
     const res = await suggestDietRecipes({ keyword, limit: 10 })
     callback(
