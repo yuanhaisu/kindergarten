@@ -22,22 +22,27 @@
       <el-form label-width="80px">
         <el-form-item label="菜名" required>
           <div class="w-full" data-testid="dish-name">
-            <el-autocomplete
-              v-model="name"
-              :fetch-suggestions="fetchSuggestions"
-              placeholder="点击或输入菜名，联想/筛选菜谱库；新名称也可直接使用"
-              clearable
-              class="w-full"
-              :disabled="loadingRecipe"
-              @select="onRecipePicked"
-            >
-              <template #default="{ item }">
-                <div class="flex w-full items-center justify-between gap-2">
-                  <span>{{ item.value }}</span>
-                  <span class="text-text-muted text-xs">{{ item.itemCount }} 项配料</span>
-                </div>
-              </template>
-            </el-autocomplete>
+            <div class="flex gap-2">
+              <el-autocomplete
+                v-model="name"
+                :fetch-suggestions="fetchSuggestions"
+                placeholder="点击或输入菜名，联想/筛选菜谱库；新名称也可直接使用"
+                clearable
+                class="min-w-0 flex-1"
+                :disabled="loadingRecipe"
+                @select="onRecipePicked"
+              >
+                <template #default="{ item }">
+                  <div class="flex w-full items-center justify-between gap-2">
+                    <span>{{ item.value }}</span>
+                    <span class="text-text-muted text-xs">{{ item.itemCount }} 项配料</span>
+                  </div>
+                </template>
+              </el-autocomplete>
+              <el-button data-testid="recipe-picker-open" :disabled="loadingRecipe" @click="openRecipePicker">
+                浏览菜谱库
+              </el-button>
+            </div>
           </div>
           <div class="text-text-muted text-xs leading-5 mt-1">
             选中联想菜谱会替换下方食物明细；手动输入的新菜名不会自动写入菜谱库。
@@ -121,11 +126,67 @@
       </el-button>
     </template>
   </el-dialog>
+
+  <el-dialog
+    v-model="pickerVisible"
+    title="从菜谱库选择"
+    width="760px"
+    append-to-body
+    destroy-on-close
+    data-testid="recipe-picker"
+  >
+    <div class="space-y-3">
+      <div class="flex gap-2">
+        <el-input
+          v-model="pickerKeyword"
+          placeholder="按菜名搜索菜谱库"
+          clearable
+          data-testid="recipe-picker-search"
+          @keyup.enter="onPickerSearch"
+        />
+        <el-button type="primary" @click="onPickerSearch">查询</el-button>
+        <el-button @click="onPickerReset">重置</el-button>
+      </div>
+      <el-table
+        v-loading="pickerLoading"
+        :data="pickerList"
+        border
+        height="380"
+        data-testid="recipe-picker-table"
+        @row-dblclick="onPickerSelect"
+      >
+        <el-table-column prop="name" label="菜名" min-width="360" show-overflow-tooltip />
+        <el-table-column prop="item_count" label="配料数" width="100" />
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" :data-testid="`recipe-picker-select-${row.id}`" @click="onPickerSelect(row)">
+              选择
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-text-muted text-xs" data-testid="recipe-picker-total">共 {{ pickerTotal }} 道菜</span>
+        <el-pagination
+          v-model:current-page="pickerPage"
+          v-model:page-size="pickerPageSize"
+          :total="pickerTotal"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="sizes, prev, pager, next, jumper"
+          @current-change="loadRecipePicker"
+          @size-change="onPickerSizeChange"
+        />
+      </div>
+    </div>
+    <template #footer>
+      <el-button @click="pickerVisible = false">关闭</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import type { DietFoodDetail, DietNutritionSnapshot } from '~/types/api'
-import { getDietFood, getDietFoods, getDietRecipe, suggestDietRecipes } from '~/api/diet'
+import type { DietFoodDetail, DietNutritionSnapshot, DietRecipeListItem } from '~/types/api'
+import { getDietFood, getDietFoods, getDietRecipe, getDietRecipes, suggestDietRecipes } from '~/api/diet'
 import type { DishDraftPayload, FoodDraft } from './plan-types'
 import { nextKey } from './plan-types'
 
@@ -174,6 +235,61 @@ const error = ref('')
 const loadingRecipe = ref(false)
 const foodOptions = ref<FoodOption[]>([])
 const foodSearching = ref(false)
+
+const pickerVisible = ref(false)
+const pickerKeyword = ref('')
+const pickerPage = ref(1)
+const pickerPageSize = ref(20)
+const pickerTotal = ref(0)
+const pickerList = ref<DietRecipeListItem[]>([])
+const pickerLoading = ref(false)
+
+function openRecipePicker() {
+  pickerKeyword.value = ''
+  pickerPage.value = 1
+  pickerVisible.value = true
+  void loadRecipePicker()
+}
+
+async function loadRecipePicker() {
+  pickerLoading.value = true
+  try {
+    const res = await getDietRecipes({
+      keyword: pickerKeyword.value.trim() || undefined,
+      page: pickerPage.value,
+      page_size: pickerPageSize.value,
+    })
+    pickerList.value = res.list ?? []
+    pickerTotal.value = res.total ?? 0
+  } catch (e: unknown) {
+    ElMessage.error(e instanceof Error ? e.message : '菜谱库加载失败')
+    pickerList.value = []
+    pickerTotal.value = 0
+  } finally {
+    pickerLoading.value = false
+  }
+}
+
+function onPickerSearch() {
+  pickerPage.value = 1
+  void loadRecipePicker()
+}
+
+function onPickerReset() {
+  pickerKeyword.value = ''
+  pickerPage.value = 1
+  void loadRecipePicker()
+}
+
+function onPickerSizeChange() {
+  pickerPage.value = 1
+  void loadRecipePicker()
+}
+
+function onPickerSelect(row: DietRecipeListItem) {
+  pickerVisible.value = false
+  void onRecipePicked({ id: row.id, value: row.name, itemCount: row.item_count })
+}
 
 function reset() {
   name.value = props.initial?.name ?? ''
