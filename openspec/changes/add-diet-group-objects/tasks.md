@@ -31,3 +31,9 @@
 - [x] 5.2 补 router 权限回归：4 条新路由的 `diet:view` / `diet:manage` 分支正确，旧 config 路由已移除。验证方式：`go test ./internal/app -run Router` 与 `./internal/middleware -run AdminPerm` 通过
 - [x] 5.3 用 Playwright MCP 真实点击跑通：切换学年 → 添加「全体幼儿」→ 修改餐次 → 制定食谱 → 新建周食谱 → 保存 → 详情显示对象 → 营养分析 DRIs 只按对象班级加权。验证方式：截图与断言全部通过，0 未捕获异常、0 500
 - [x] 5.4 最终验收：`go build ./...`、`npm run build`、`node scripts/check-tokens.mjs`、`openspec validate add-diet-group-objects --strict` 全部通过；逐条对照三份 delta specs 勾选
+
+## 6. 切换补丁：diet 自读选项接口
+
+- [x] 6.1 新增 `GET /api/v1/admin/diet/academic-years`（`diet:view`）与 `GET /api/v1/admin/diet/classes?academic_year=<label>`（`diet:view`），让只有 diet 权限的角色无需 `system:kindergarten` / `student:view` 即可加载学年与就餐班级。验证方式：`go test ./internal/app -run Router` 与 `./internal/middleware -run AdminPerm` 通过
+- [x] 6.2 更新 `backend/api/api-admin/23-diet.md` 与 admin `api/diet.ts` / `config.vue` / `plans/index.vue` 改用新接口。验证方式：`npm run build` 通过
+- [x] 6.3 用「保健医」账号真实点击：基本参数页学年正常、编辑对话框加载 6 个班级；「后勤主任」「行政园长」可查看但不能添加/修改。验证方式：Playwright 截图与 DOM 断言

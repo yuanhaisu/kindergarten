@@ -14,6 +14,7 @@
 | DGO-S4 | 3.1–3.2 | 契约：集体对象 + 周食谱对象字段 | passed | a197ef4 | 7dd004a | .claude/runs/dgo-s4/verdict.json | 7dd004a |
 | DGO-S5 | 4.1–4.4 | admin API/types + 基本参数页 + 计划页 | passed | 7dd004a | c99eafa | .claude/runs/dgo-s5/verdict.json | c99eafa |
 | DGO-S6 | 5.1–5.4 | TEST_CATALOG + 后端重启 + Playwright E2E + 最终验收 | passed | c99eafa | 11006d4 | .claude/runs/dgo-s6/verdict.json | f7f82df / 11006d4 |
+| DGO-S7 | 6.1–6.3 | 切换补丁：diet 自读学年/班级 + 角色验收 | passed | fa48415 | fdd366d | .claude/runs/dgo-s7/verdict.json | fdd366d |
 
 ## 关键决策
 
@@ -37,3 +38,10 @@
 - **校准**：DRIs fallback 算例按实现改为 1485.95；1484.26 作为参考产品黄金样本保留说明。
 - **残留 P2**：S3b 删除旧测试时丢失的共享校验边界用例未补回；周食谱列表可选 `group_object_id` 筛选未实现；两条 E2E 对象已清理。
 - **发布阻断**：沿用 `add-quantified-recipe` 的 7.5 数据许可门，上线前仍需授权 CSV/合同。
+
+## 切换补丁（2026-11-03）
+
+- DGO-S7 / S7b 已 PASS：新增 `GET /admin/diet/academic-years` 与 `GET /admin/diet/classes?academic_year=`（`diet:view`），只有 diet 权限的角色不再依赖 `system:kindergarten` / `student:view`。
+- 已建开发库账号：保健医 13800008003（view+manage+export）、后勤主任 13800008004（view+export）、行政园长 13800008005（view）；初始密码在交付说明中给出，不写入仓库。
+- 三账号 Playwright 验收：保健医可看可改（6 班、编辑器学年 2026-2027）；后勤/园长只读，列表无编辑/删除；0 未捕获异常、0 500。
+- 残留 P2：`diet/classes` 按 page_size=100 截断（园所 <100 班无影响）；行政园长登录落地页 `/admin/dicts/types` 403 为既有菜单缺口。
