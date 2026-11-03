@@ -28,7 +28,10 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2">
               <el-button link type="primary" @click="goList">← 返回列表</el-button>
-              <span class="text-lg font-semibold text-text-primary">周食谱编辑</span>
+              <span class="text-lg font-semibold text-text-primary">
+                {{ detailMode ? '周食谱详情' : '周食谱编辑' }}
+              </span>
+              <el-tag v-if="detailMode" size="small" type="info">只读</el-tag>
             </div>
             <div class="flex flex-wrap gap-2">
               <el-button data-testid="plan-fullscreen" @click="toggleFullscreen">
@@ -42,7 +45,15 @@
                 查看分析
               </el-button>
               <el-button
-                v-if="canManage"
+                v-if="detailMode && canManage"
+                type="primary"
+                data-testid="plan-switch-edit"
+                @click="switchToEdit"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-if="canEdit"
                 type="primary"
                 data-testid="plan-save"
                 :loading="saving"
@@ -50,11 +61,11 @@
               >
                 保存
               </el-button>
-              <el-button v-if="canManage" data-testid="plan-clear" @click="clearPlan">
+              <el-button v-if="canEdit" data-testid="plan-clear" @click="clearPlan">
                 清空
               </el-button>
               <el-button
-                v-if="canManage"
+                v-if="canEdit"
                 type="danger"
                 plain
                 data-testid="plan-delete"
@@ -73,7 +84,7 @@
                 <el-input
                   v-model="planName"
                   maxlength="128"
-                  :disabled="!canManage"
+                  :disabled="!canEdit"
                   placeholder="请输入食谱名称"
                 />
               </div>
@@ -109,7 +120,7 @@
             总明细 {{ totalItemCount }} 条；营养小计按「克数 × 食部% × 每 100g 浓度 / 100」实时计算，
             缺测项不按 0 计入。
           </div>
-          <div v-if="!canManage" class="text-sm text-text-muted">
+          <div v-if="!canEdit" class="text-sm text-text-muted">
             当前账号无 diet:manage 权限，仅可查看。
           </div>
         </div>
@@ -184,7 +195,7 @@
                     <div class="text-sm font-medium text-text-primary break-all">{{ dish.name }}</div>
 
                     <div
-                      v-if="canManage"
+                      v-if="canEdit"
                       class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5"
                     >
                       <el-button
@@ -259,13 +270,13 @@
                           size="small"
                           class="!w-20"
                           data-testid="plan-food-grams"
-                          :disabled="!canManage"
+                          :disabled="!canEdit"
                           @input="markFoodDirty(food)"
                         />
                         <span class="text-xs text-text-muted">克</span>
                       </div>
 
-                      <div v-if="canManage" class="mt-0.5 flex flex-wrap items-center gap-x-2">
+                      <div v-if="canEdit" class="mt-0.5 flex flex-wrap items-center gap-x-2">
                         <el-button
                           link
                           size="small"
@@ -300,7 +311,7 @@
                   </div>
 
                   <el-button
-                    v-if="canManage"
+                    v-if="canEdit"
                     size="small"
                     class="w-full"
                     :data-testid="`add-dish-${day.weekday}-${(row as MealRow).meal_key}`"
@@ -415,6 +426,8 @@ const route = useRoute()
 const router = useRouter()
 const { can } = usePermission()
 const canManage = computed(() => can('diet:manage'))
+const detailMode = computed(() => route.query.mode === 'detail')
+const canEdit = computed(() => canManage.value && !detailMode.value)
 const isChildRoute = computed(() => route.path.endsWith('/analysis'))
 
 const plan = ref<DietPlanDetail | null>(null)
@@ -661,7 +674,7 @@ function openDishEditor(
   dish?: DishDraft,
   appendEmptyRow = false,
 ) {
-  if (!canManage.value) return
+  if (!canEdit.value) return
   const day = days.value.find((candidate) => candidate.date === date)
   const meal = mealRows.value.find((candidate) => candidate.meal_key === mealKey)
   dishDialogMode.value = dish ? 'edit' : 'create'
@@ -716,7 +729,7 @@ const replaceVisible = ref(false)
 const replaceTarget = ref<FoodDraft | null>(null)
 
 function openReplace(food: FoodDraft) {
-  if (!canManage.value) return
+  if (!canEdit.value) return
   replaceTarget.value = food
   replaceVisible.value = true
 }
@@ -974,6 +987,10 @@ async function removePlan() {
   } catch (e: unknown) {
     ElMessage.error(e instanceof Error ? e.message : '删除失败')
   }
+}
+
+function switchToEdit() {
+  router.replace(`/diet/plans/${route.params.id}`)
 }
 
 function openAnalysis() {

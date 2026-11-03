@@ -97,8 +97,16 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="300" fixed="right">
         <template #default="{ row }">
+          <el-button
+            link
+            type="primary"
+            :data-testid="`plan-detail-${(row as DietPlanListItem).id}`"
+            @click="openDetail((row as DietPlanListItem).id)"
+          >
+            详情
+          </el-button>
           <el-button
             link
             type="primary"
@@ -654,6 +662,10 @@ async function submitWizard() {
 }
 
 // ===== 列表操作 =====
+
+function openDetail(id: number) {
+  router.push(`/diet/plans/${id}?mode=detail`)
+}
 
 function openEditor(id: number) {
   router.push(`/diet/plans/${id}`)
