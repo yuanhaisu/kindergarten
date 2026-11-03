@@ -225,6 +225,10 @@ var adminRoutePermission = map[string]string{
 	"GET /api/v1/admin/diet/group-objects/:id": "diet:view",
 	"PUT /api/v1/admin/diet/group-objects/:id": "diet:manage",
 
+	// 基本参数选项（DGO-S7）：学年与就餐班级的自读接口，只有 diet 权限的角色即可加载。
+	"GET /api/v1/admin/diet/academic-years": "diet:view",
+	"GET /api/v1/admin/diet/classes":        "diet:view",
+
 	// 食物库：查看（分类/列表/详情/候选）用 diet:view，所有写操作 diet:manage。
 	"GET /api/v1/admin/diet/food-categories":              "diet:view",
 	"GET /api/v1/admin/diet/foods":                        "diet:view",

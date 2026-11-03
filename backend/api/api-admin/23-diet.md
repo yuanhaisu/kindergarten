@@ -8,16 +8,18 @@
 >
 > Casbin：`admin` 组为通配时 `rbac_policy.csv` 不改；实现前先核对，若策略不是通配则补 `/api/v1/admin/diet/*` 的 policy（design D7）。
 >
-> 状态：🚧 部分实现（变更 `add-diet-group-objects`）：后端已实现，admin 基本参数页待重写。
+> 状态：✅ 已实现（变更 `add-diet-group-objects`，含 DGO-S7 切换补丁）。
 >
-> 契约变更：`add-quantified-recipe` 新增本文件与 `README.md` 索引；`add-diet-group-objects` 把配置章节改为集体对象并给周食谱增加对象字段（BREAKING）。学年复用既有 `GET /admin/settings/academic-years`，本文件不重复定义。
+> 契约变更：`add-quantified-recipe` 新增本文件与 `README.md` 索引；`add-diet-group-objects` 把配置章节改为集体对象并给周食谱增加对象字段（BREAKING）；`add-diet-group-objects`（DGO-S7）新增学年与就餐班级两条 diet 自读选项接口，避免只有 `diet:*` 权限的角色直连 `/settings/*`、`/classes`。
 >
 > 字段基线：参考产品页面/接口（ADR-0004）与 `docs/research/2026-11-01-oyujian-diet/notes.md`、`docs/research/2026-11-01-nutrition-data/notes.md`。字段溯源见文末。
 
-## 接口清单（29 个）
+## 接口清单（31 个）
 
 | 分组 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|---|
+| 选项 | GET | `/admin/diet/academic-years` | `diet:view` | 本园学年选项（基本参数/周食谱下拉） |
+| 选项 | GET | `/admin/diet/classes` | `diet:view` | 就餐班级选项（可按学年过滤） |
 | 集体对象 | GET | `/admin/diet/group-objects` | `diet:view` | 集体对象列表（按学年 + 关键词） |
 | 集体对象 | POST | `/admin/diet/group-objects` | `diet:manage` | 新增集体对象 |
 | 集体对象 | GET | `/admin/diet/group-objects/:id` | `diet:view` | 集体对象详情 |
@@ -173,7 +175,43 @@
 >
 > 不提供删除：对齐参考产品，误建对象通过改名或调整班级/餐次处理（design D5）。
 >
-> 学年复用 `GET /admin/settings/academic-years`，本文件不重复定义。
+> 学年与就餐班级选项由本文件 §一「选项接口」提供。只有 `diet:*` 权限的角色不应依赖 `/admin/settings/academic-years`（需 `system:kindergarten`）或 `/admin/classes`（需 `student:view`）。
+
+### 选项接口
+
+> 供基本参数页与周食谱的下拉使用。两个接口只需 `diet:view`，返回**裁剪字段**：不含教师、幼儿数、容量、创建时间等敏感或无关信息。不分页。
+
+#### GET `/admin/diet/academic-years`
+
+```json
+// Response
+{
+  "list": [
+    { "id": 3, "year": "2026-2027", "is_current": true }
+  ]
+}
+```
+
+- 顺序沿用学年服务：当前学年优先，其余按 id 倒序（新建学年 id 更大）。
+- 无学年的园所返回空 `list`，不报错。
+
+#### GET `/admin/diet/classes`
+
+```json
+// Query: ?academic_year=2026-2027
+// academic_year 可选；缺省返回全部学年班级
+
+// Response
+{
+  "list": [
+    { "id": 1, "name": "小一班", "grade": "小班", "academic_year": "2026-2027", "status": 1 }
+  ]
+}
+```
+
+- `academic_year` 按班级的学年标签精确匹配；传空串等同缺省。
+- `status`：`1` 正常 / `0` 停用。
+- 服务端最多读取首页 100 条班级后过滤；超出部分不返回（当前园所班级数远低于上限，若将来超过需改为服务端分页，见 known_gap）。
 
 ### GET `/admin/diet/group-objects`
 

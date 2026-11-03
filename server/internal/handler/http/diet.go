@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -66,12 +67,15 @@ type listDietGroupObjectsQuery struct {
 
 // NewDietAdminHandler 组装膳食模块（集体对象 + 食物库 + 菜谱库 + 周食谱/模板 + 营养分析）的
 // Handler，供路由级测试使用。生产路径仍由 NewHandler 全量注入；这里避免构造数十个无关 service。
+// settingsSvc / classSvc 只服务于 diet 自读选项接口（学年、就餐班级，DGO-S7）。
 func NewDietAdminHandler(
 	dietGroupObjectSvc *service.DietGroupObjectService,
 	dietFoodSvc *service.DietFoodService,
 	dietRecipeSvc *service.DietRecipeService,
 	dietPlanSvc *service.DietPlanService,
 	dietAnalysisSvc *service.DietAnalysisService,
+	settingsSvc *service.SettingsService,
+	classSvc *service.ClassService,
 ) *Handler {
 	return &Handler{
 		dietGroupObjectSvc: dietGroupObjectSvc,
@@ -79,6 +83,8 @@ func NewDietAdminHandler(
 		dietRecipeSvc:      dietRecipeSvc,
 		dietPlanSvc:        dietPlanSvc,
 		dietAnalysisSvc:    dietAnalysisSvc,
+		settingsSvc:        settingsSvc,
+		classSvc:           classSvc,
 	}
 }
 
@@ -187,6 +193,73 @@ func respondDietGroupObjectError(c *gin.Context, err error) {
 	default:
 		response.ErrInternal(c, "集体对象服务异常")
 	}
+}
+
+// --- 基本参数选项：学年与就餐班级（DGO-S7，契约 23-diet.md §一 选项接口） ---
+//
+// 只有 diet:* 权限的角色（保健医/后勤/园长）不能读 system:kindergarten 与 student:view，
+// 因此基本参数页不能直连 /settings/academic-years 与 /classes。这两个自读接口把
+// 「供餐配置所需的选项数据」收进 diet 权限域，避免给角色扩权。
+
+// ListDietAcademicYears 返回本园学年列表，供基本参数页与膳食计划页的学年下拉使用。
+func (h *Handler) ListDietAcademicYears(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	data, err := h.settingsSvc.ListAcademicYears(c.Request.Context(), kgID)
+	if err != nil {
+		if err.Error() == "NO_KINDERGARTEN" {
+			response.ErrForbidden(c, "未绑定园所，请重新登录")
+			return
+		}
+		response.ErrInternal(c, "获取学年列表失败")
+		return
+	}
+	response.OK(c, data)
+}
+
+// dietClassOption 是就餐班级选项的精简形状：不返回教师、学生数等无关字段（契约 §一）。
+type dietClassOption struct {
+	ID           uint64 `json:"id"`
+	Name         string `json:"name"`
+	Grade        string `json:"grade"`
+	AcademicYear string `json:"academic_year"`
+	Status       int8   `json:"status"`
+}
+
+// ListDietClasses 返回本园班级精简列表，供基本参数页选择就餐班级。
+// academic_year 是学年标签（如 2026-2027），缺省返回全部班级。
+func (h *Handler) ListDietClasses(c *gin.Context) {
+	kgID := middleware.GetKindergartenID(c)
+	if kgID == 0 {
+		response.ErrForbidden(c, "未绑定园所，请重新登录")
+		return
+	}
+	academicYear := strings.TrimSpace(c.Query("academic_year"))
+	// page_size 100 是分页上限；本园班级数远小于 100，截断风险见 DGO-S7 known_gaps。
+	list, _, _, _, err := h.classSvc.ListClasses(
+		c.Request.Context(), kgID, pagination.Query{Page: 1, PageSize: 100}, "",
+	)
+	if err != nil {
+		response.ErrInternal(c, "获取班级列表失败")
+		return
+	}
+	out := make([]dietClassOption, 0, len(list))
+	for _, item := range list {
+		if academicYear != "" && item.AcademicYear != academicYear {
+			continue
+		}
+		out = append(out, dietClassOption{
+			ID:           item.ID,
+			Name:         item.Name,
+			Grade:        item.Grade,
+			AcademicYear: item.AcademicYear,
+			Status:       item.Status,
+		})
+	}
+	response.OK(c, map[string]any{"list": out})
 }
 
 // --- 食物库（契约 23-diet.md 第二、三节） ---

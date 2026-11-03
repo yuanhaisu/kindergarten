@@ -19,10 +19,10 @@ func TestAdminPermissionRegistryCoversAllRoutes(t *testing.T) {
 	assert.NotNil(t, engine)
 }
 
-// DGO-S3b/AQR-S3/S4/S6/S7：/admin/diet 当前注册 4 条集体对象 + 8 条食物 + 7 条菜谱 +
-// 8 条周食谱/模板 + 2 条营养分析；旧的 /diet/config 已移除。路由漏登记权限码会让
-// NewRouter 启动失败（fail-closed），因此本用例同时覆盖权限登记与精确路由集合；
-// 后续 slice 新增 diet 路由时必须同步更新此断言。
+// DGO-S3b/AQR-S3/S4/S6/S7/DGO-S7：/admin/diet 当前注册 4 条集体对象 + 2 条基本参数
+// 选项 + 8 条食物 + 7 条菜谱 + 8 条周食谱/模板 + 2 条营养分析；旧的 /diet/config 已移除。
+// 路由漏登记权限码会让 NewRouter 启动失败（fail-closed），因此本用例同时覆盖权限登记
+// 与精确路由集合；后续 slice 新增 diet 路由时必须同步更新此断言。
 func TestRouterPerm_DietConfigRoutesRegistered(t *testing.T) {
 	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), nil)
 	require.NoError(t, err, "diet 路由漏登记权限码时 NewRouter 必须启动失败")
@@ -38,6 +38,9 @@ func TestRouterPerm_DietConfigRoutesRegistered(t *testing.T) {
 		"POST /api/v1/admin/diet/group-objects",
 		"GET /api/v1/admin/diet/group-objects/:id",
 		"PUT /api/v1/admin/diet/group-objects/:id",
+
+		"GET /api/v1/admin/diet/academic-years",
+		"GET /api/v1/admin/diet/classes",
 
 		"GET /api/v1/admin/diet/food-categories",
 		"GET /api/v1/admin/diet/foods",
@@ -67,5 +70,5 @@ func TestRouterPerm_DietConfigRoutesRegistered(t *testing.T) {
 
 		"GET /api/v1/admin/diet/plans/:id/analysis",
 		"GET /api/v1/admin/diet/plans/:id/analysis/export",
-	}, got, "diet 组当前应恰好 29 条路由：4 集体对象 + 8 食物 + 7 菜谱 + 8 周食谱/模板 + 2 营养分析")
+	}, got, "diet 组当前应恰好 31 条路由：4 集体对象 + 2 选项 + 8 食物 + 7 菜谱 + 8 周食谱/模板 + 2 营养分析")
 }

@@ -107,7 +107,12 @@
           >
             营养分析
           </el-button>
-          <el-button link type="primary" @click="openEditor((row as DietPlanListItem).id)">
+          <el-button
+            v-if="canManage"
+            link
+            type="primary"
+            @click="openEditor((row as DietPlanListItem).id)"
+          >
             编辑
           </el-button>
           <el-button
@@ -313,6 +318,7 @@
 
 <script setup lang="ts">
 import type {
+  DietAcademicYearOption,
   DietApiError,
   DietCreatedMethod,
   DietGroupObjectListItem,
@@ -323,12 +329,12 @@ import type {
 import {
   createDietPlan,
   deleteDietPlan,
+  getDietAcademicYears,
   getDietGroupObject,
   getDietGroupObjects,
   getDietPlans,
   getDietTemplates,
 } from '~/api/diet'
-import { getAcademicYears } from '~/api/settings'
 import { addDaysISO, isMondayISO, nextMondayISO } from './components/plan-utils'
 
 const { can } = usePermission()
@@ -339,7 +345,7 @@ const route = useRoute()
 const { page, pageSize, total, resetPage } = usePagination()
 const keyword = ref('')
 const academicYearId = ref<number | undefined>(undefined)
-const years = ref<{ id: number; year: string; is_current: boolean }[]>([])
+const years = ref<DietAcademicYearOption[]>([])
 const yearError = ref('')
 const list = ref<DietPlanListItem[]>([])
 const loading = ref(false)
@@ -377,7 +383,7 @@ async function openWizardFromQuery() {
 async function loadYears() {
   yearError.value = ''
   try {
-    const res = await getAcademicYears()
+    const res = await getDietAcademicYears()
     years.value = res.list ?? []
     if (academicYearId.value == null) {
       const current = years.value.find((year) => year.is_current) ?? years.value[0]

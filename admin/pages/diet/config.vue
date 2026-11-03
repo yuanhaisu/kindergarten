@@ -355,9 +355,10 @@
 
 <script setup lang="ts">
 import type {
-  ClassItem,
   DietApiError,
+  DietAcademicYearOption,
   DietCareType,
+  DietClassOption,
   DietGroupObjectDetail,
   DietGroupObjectInput,
   DietGroupObjectListItem,
@@ -368,12 +369,12 @@ import type {
 } from '~/types/api'
 import {
   createDietGroupObject,
+  getDietAcademicYears,
+  getDietClasses,
   getDietGroupObject,
   getDietGroupObjects,
   updateDietGroupObject,
 } from '~/api/diet'
-import { getClasses } from '~/api/classes'
-import { getAcademicYears } from '~/api/settings'
 
 /**
  * 契约默认值：餐次名称、顺序与标准占比由服务端固定写入（23-diet.md §一），
@@ -416,7 +417,7 @@ const router = useRouter()
 const { page, pageSize, total, resetPage } = usePagination()
 const keyword = ref('')
 const academicYearId = ref<number | undefined>(undefined)
-const years = ref<{ id: number; year: string; is_current: boolean }[]>([])
+const years = ref<DietAcademicYearOption[]>([])
 const yearError = ref('')
 const list = ref<DietGroupObjectListItem[]>([])
 const loading = ref(false)
@@ -431,7 +432,7 @@ const saving = ref(false)
 const formError = ref('')
 const form = reactive<EditorForm>(blankForm())
 
-const classOptions = ref<ClassItem[]>([])
+const classOptions = ref<DietClassOption[]>([])
 const classLoading = ref(false)
 const classError = ref('')
 
@@ -460,14 +461,10 @@ const selectedYearLabel = computed(
   () => years.value.find((year) => year.id === form.academic_year_id)?.year ?? '',
 )
 
-/** 班级按所选学年过滤：ClassItem.academic_year 就是学年标签（如 2026-2027） */
-const yearClasses = computed(() =>
-  classOptions.value.filter((item) => item.academic_year === selectedYearLabel.value),
-)
-
+/** 班级由服务端按学年过滤（DGO-S7），不再拉全量后前端筛选 */
 const gradeGroups = computed(() => {
-  const groups = new Map<string, ClassItem[]>()
-  for (const item of yearClasses.value) {
+  const groups = new Map<string, DietClassOption[]>()
+  for (const item of classOptions.value) {
     const grade = item.grade || '未分年级'
     const bucket = groups.get(grade)
     if (bucket) bucket.push(item)
@@ -530,7 +527,7 @@ function mealNames(row: { meal_names?: string[] }) {
 async function loadYears() {
   yearError.value = ''
   try {
-    const res = await getAcademicYears()
+    const res = await getDietAcademicYears()
     years.value = res.list ?? []
     if (academicYearId.value == null) {
       const current = years.value.find((year) => year.is_current) ?? years.value[0]
@@ -579,6 +576,7 @@ function resetEditor() {
   classOptions.value = []
   classError.value = ''
   classLoading.value = false
+  classRequestSeq += 1
 }
 
 function openCreate() {
@@ -632,27 +630,31 @@ function applyDetail(res: DietGroupObjectDetail) {
 }
 
 /** 班级选项是动态数据：每次打开对话框重新拉取，新增班级后重开即可见 */
+let classRequestSeq = 0
 async function loadClasses() {
+  const seq = ++classRequestSeq
   classLoading.value = true
   classError.value = ''
   try {
-    const res = await getClasses({ page_size: 200 })
+    const res = await getDietClasses(selectedYearLabel.value || undefined)
+    if (seq !== classRequestSeq) return
     classOptions.value = res.list ?? []
   } catch (e: unknown) {
+    if (seq !== classRequestSeq) return
     classOptions.value = []
     classError.value = e instanceof Error ? e.message : '网络错误'
   } finally {
-    classLoading.value = false
+    if (seq === classRequestSeq) classLoading.value = false
   }
 }
 
 function onEditorYearChange() {
-  // 换学年后保留的班级可能属于别的学年，提交前剔除
-  const allowed = new Set(yearClasses.value.map((item) => item.id))
-  form.class_ids = form.class_ids.filter((id) => allowed.has(id))
+  // 换学年后已选班级属于别的学年，全部清空并按新学年重新拉取
+  form.class_ids = []
+  void loadClasses()
 }
 
-function groupState(group: { grade: string; classes: ClassItem[] }) {
+function groupState(group: { grade: string; classes: DietClassOption[] }) {
   const selected = group.classes.filter((item) => form.class_ids.includes(item.id)).length
   return {
     selected,
@@ -661,7 +663,7 @@ function groupState(group: { grade: string; classes: ClassItem[] }) {
   }
 }
 
-function toggleGrade(group: { grade: string; classes: ClassItem[] }, checked: boolean) {
+function toggleGrade(group: { grade: string; classes: DietClassOption[] }, checked: boolean) {
   const ids = group.classes.map((item) => item.id)
   const rest = form.class_ids.filter((id) => !ids.includes(id))
   form.class_ids = checked ? [...rest, ...ids] : rest

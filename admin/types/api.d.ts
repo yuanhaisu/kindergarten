@@ -1013,6 +1013,23 @@ export interface DietNutritionSnapshot extends DietNutrients {
 
 // ----- 集体对象（基本参数） -----
 
+/** 基本参数下拉用的学年选项（契约 §一 选项接口） */
+export interface DietAcademicYearOption {
+  id: number
+  year: string
+  is_current: boolean
+}
+
+/** 基本参数下拉用的就餐班级选项：裁剪字段，不含教师/幼儿数/容量 */
+export interface DietClassOption {
+  id: number
+  name: string
+  grade: string
+  academic_year: string
+  /** 1 正常 / 0 停用 */
+  status: number
+}
+
 export interface DietMealConfigItem {
   meal_key: DietMealKey
   name: string

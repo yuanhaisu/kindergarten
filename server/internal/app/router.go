@@ -475,6 +475,11 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		diet.GET("/group-objects/:id", h.GetDietGroupObject)
 		diet.PUT("/group-objects/:id", h.UpdateDietGroupObject)
 
+		// 基本参数选项（DGO-S7）：只含 diet 权限的角色需要学年与就餐班级，
+		// 不能直连 /settings/academic-years（system:kindergarten）或 /classes（student:view）。
+		diet.GET("/academic-years", h.ListDietAcademicYears)
+		diet.GET("/classes", h.ListDietClasses)
+
 		diet.GET("/food-categories", h.ListDietFoodCategories)
 		diet.GET("/foods", h.ListDietFoods)
 		diet.POST("/foods", h.CreateDietFood)

@@ -49,6 +49,9 @@ func newPermEngine(resolver PermissionResolver) *gin.Engine {
 	g.POST("/diet/group-objects", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/diet/group-objects/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.PUT("/diet/group-objects/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// DGO-S7 基本参数选项：学年与就餐班级的自读接口。
+	g.GET("/diet/academic-years", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/classes", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	// AQR-S3 食物库：用于验证 8 条路由的权限码登记。
 	g.GET("/diet/food-categories", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/diet/foods", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
@@ -200,6 +203,25 @@ func TestAdminPermission_DietGroupObjectManageCode(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/group-objects/1").Code)
 	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/group-objects").Code)
 	assert.Equal(t, http.StatusOK, doPut(r, "/api/v1/admin/diet/group-objects/1").Code)
+}
+
+// DGO-S7：基本参数选项 2 条路由登记 diet:view，只有 view 码可读。
+func TestAdminPermission_DietOptionRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/academic-years"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/classes"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "基本参数选项路由不得有登记缺口")
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/academic-years"])
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/classes"])
+
+	viewOnly := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	assert.Equal(t, http.StatusOK, doGet(viewOnly, "/api/v1/admin/diet/academic-years").Code)
+	assert.Equal(t, http.StatusOK, doGet(viewOnly, "/api/v1/admin/diet/classes").Code)
+
+	manageOnly := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/academic-years").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/classes").Code)
 }
 
 // AQR-S3：8 条食物路由必须逐条登记，GET 用 diet:view、写操作用 diet:manage。

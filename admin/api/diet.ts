@@ -1,5 +1,7 @@
 import type {
+  DietAcademicYearOption,
   DietAnalysis,
+  DietClassOption,
   DietFoodBatchDeleteBody,
   DietFoodBatchDeleteResult,
   DietFoodCategory,
@@ -56,6 +58,18 @@ export function createDietGroupObject(body: DietGroupObjectInput) {
 
 export function updateDietGroupObject(id: number, body: DietGroupObjectInput) {
   return useHttp().put<DietGroupObjectDetail>(`/admin/diet/group-objects/${id}`, body)
+}
+
+// ===== 基本参数选项（DGO-S7：只需 diet:view） =====
+
+export function getDietAcademicYears() {
+  return useHttp().get<{ list: DietAcademicYearOption[] }>('/admin/diet/academic-years')
+}
+
+export function getDietClasses(academicYear?: string) {
+  return useHttp().get<{ list: DietClassOption[] }>('/admin/diet/classes', {
+    params: academicYear ? { academic_year: academicYear } : undefined,
+  })
 }
 
 // ===== 食物分类 =====

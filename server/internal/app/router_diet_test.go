@@ -127,6 +127,20 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 	)
 	analysisSvc := service.NewDietAnalysisService(repository.NewDietPlanRepo(db), foodRepo)
 
+	// DGO-S7 选项接口：学年与就餐班级的自读 handler 依赖 settings/class 服务。
+	settingsSvc := service.NewSettingsService(
+		db,
+		repository.NewKindergartenRepo(db),
+		yearRepo,
+		repository.NewKindergartenAppSettingRepo(db),
+		classRepo,
+		repository.NewStudentRepo(db),
+		repository.NewUserRoleRepo(db),
+		repository.NewOperationLogRepo(db),
+	)
+	classSvc := service.NewClassService(
+		classRepo, repository.NewUserRoleRepo(db), repository.NewOperationLogRepo(db))
+
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	adminG := r.Group("/api/v1/admin")
@@ -137,7 +151,8 @@ func newDietAdminEngine(t *testing.T, resolver middleware.PermissionResolver) *g
 		c.Next()
 	})
 	adminG.Use(middleware.RequirePermission(resolver))
-	registerAdminRoutes(adminG, handler.NewDietAdminHandler(groupObjectSvc, foodSvc, recipeSvc, planSvc, analysisSvc))
+	registerAdminRoutes(adminG, handler.NewDietAdminHandler(
+		groupObjectSvc, foodSvc, recipeSvc, planSvc, analysisSvc, settingsSvc, classSvc))
 	return r
 }
 
@@ -289,6 +304,105 @@ func TestRouterDiet_GroupObjectPermissionCodes(t *testing.T) {
 	}
 }
 
+// DGO-S7：学年与班级的自读选项接口必须注册，且权限只要求 diet:view。
+func TestRouterDiet_OptionRoutesRegistered(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view"}})
+
+	got := map[string]bool{}
+	for _, rt := range engine.Routes() {
+		if rt.Path == "/api/v1/admin/diet/academic-years" || rt.Path == "/api/v1/admin/diet/classes" {
+			got[rt.Method+" "+rt.Path] = true
+		}
+	}
+	for _, key := range []string{
+		"GET /api/v1/admin/diet/academic-years",
+		"GET /api/v1/admin/diet/classes",
+	} {
+		assert.True(t, got[key], "缺少基本参数选项路由 %s", key)
+	}
+	assert.Len(t, got, 2, "基本参数选项应恰好 2 条路由")
+}
+
+// DGO-S7 真实行为：只有 diet:view 的角色能读学年与班级；班级按学年过滤且只含精简字段。
+func TestRouterDiet_OptionEndpointsRealBehavior(t *testing.T) {
+	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view"}})
+	db := openRouterDietTestDB(t)
+	year, class := seedRouterDietSchool(t, db)
+	otherClass := &domain.Class{
+		KindergartenID: testRouterDietKG,
+		Name:           "S7旧学年班",
+		Grade:          "大班",
+		AcademicYear:   "2025-2026",
+		Status:         1,
+	}
+	require.NoError(t, db.Create(otherClass).Error)
+
+	w := doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/academic-years", "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env := decodeDietEnvelope(t, w)
+	var years struct {
+		List []struct {
+			ID        uint64 `json:"id"`
+			Year      string `json:"year"`
+			IsCurrent bool   `json:"is_current"`
+		} `json:"list"`
+	}
+	require.NoError(t, json.Unmarshal(env.Data, &years))
+	require.Len(t, years.List, 1)
+	assert.Equal(t, year.ID, years.List[0].ID)
+	assert.Equal(t, "2026-2027", years.List[0].Year)
+	assert.True(t, years.List[0].IsCurrent)
+
+	// 按学年过滤：只返回该学年的小一班。
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/classes?academic_year="+year.Year, "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var filtered struct {
+		List []map[string]any `json:"list"`
+	}
+	require.NoError(t, json.Unmarshal(env.Data, &filtered))
+	require.Len(t, filtered.List, 1)
+	assert.Equal(t, float64(class.ID), filtered.List[0]["id"])
+	assert.Equal(t, "S3b小一班", filtered.List[0]["name"])
+	assert.Equal(t, "小班", filtered.List[0]["grade"])
+	assert.Equal(t, "2026-2027", filtered.List[0]["academic_year"])
+	assert.Equal(t, float64(1), filtered.List[0]["status"])
+	// 精简形状：不得返回教师、学生数等无关字段（契约 §一 选项接口）。
+	assert.NotContains(t, filtered.List[0], "teachers")
+	assert.NotContains(t, filtered.List[0], "student_count")
+	assert.NotContains(t, filtered.List[0], "capacity")
+	assert.NotContains(t, filtered.List[0], "created_at")
+
+	// 缺省 academic_year 返回全部班级（含其他学年）。
+	w = doDietRequest(t, engine, http.MethodGet, "/api/v1/admin/diet/classes", "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	env = decodeDietEnvelope(t, w)
+	var all struct {
+		List []map[string]any `json:"list"`
+	}
+	require.NoError(t, json.Unmarshal(env.Data, &all))
+	assert.Len(t, all.List, 2, "缺省应返回本园全部班级")
+}
+
+// DGO-S7：选项接口只认 diet:view；diet:manage 与旧的 system:kindergarten/student:view 都不放行。
+func TestRouterDiet_OptionPermissionCodes(t *testing.T) {
+	for _, codes := range [][]string{
+		{"diet:manage"},
+		{"system:kindergarten"},
+		{"student:view"},
+	} {
+		engine := newDietAdminEngine(t, dietTestResolver{codes: codes})
+		for _, path := range []string{
+			"/api/v1/admin/diet/academic-years",
+			"/api/v1/admin/diet/classes",
+		} {
+			assert.Equal(t, http.StatusForbidden,
+				doDietRequest(t, engine, http.MethodGet, path, "").Code,
+				"%v 不应能读 %s", codes, path)
+		}
+	}
+}
+
 // DGO-S3b 真实行为：新增 201、重名/缺班级 422、列表裁剪、详情与修改读回、跨园 404。
 func TestRouterDiet_GroupObjectRealBehavior(t *testing.T) {
 	engine := newDietAdminEngine(t, dietTestResolver{codes: []string{"diet:view", "diet:manage"}})
@@ -403,7 +517,7 @@ func TestRouterDiet_FoodRoutesRegistered(t *testing.T) {
 	for _, key := range want {
 		assert.True(t, got[key], "缺少食物路由 %s", key)
 	}
-	assert.Len(t, got, 29, "diet 组当前应恰好 4 条集体对象 + 8 条食物 + 7 条菜谱 + 8 条周食谱/模板 + 2 条营养分析路由")
+	assert.Len(t, got, 31, "diet 组当前应恰好 4 条集体对象 + 2 条基本参数选项 + 8 条食物 + 7 条菜谱 + 8 条周食谱/模板 + 2 条营养分析路由")
 }
 
 // AQR-S4：7 条菜谱路由必须真实注册，不得有 501/stub。

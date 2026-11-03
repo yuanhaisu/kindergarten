@@ -386,11 +386,11 @@ import {
   clearDietPlan,
   createDietRecipe,
   deleteDietPlan,
+  getDietAcademicYears,
   getDietFood,
   getDietPlan,
   updateDietPlan,
 } from '~/api/diet'
-import { getAcademicYears } from '~/api/settings'
 import NutritionTotals from './components/NutritionTotals.vue'
 import DishEditorDialog from './components/DishEditorDialog.vue'
 import ReplaceFoodDialog from './components/ReplaceFoodDialog.vue'
@@ -524,7 +524,7 @@ async function loadDetail() {
 
 async function loadYearLabel(academicYearId: number) {
   try {
-    const res = await getAcademicYears()
+    const res = await getDietAcademicYears()
     academicYearLabel.value =
       res.list?.find((year) => year.id === academicYearId)?.year ?? `#${academicYearId}`
   } catch {
