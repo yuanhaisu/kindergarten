@@ -18,7 +18,7 @@ import (
 // 每个测试用独立的高位园所 ID；清理一律原始 DELETE 硬删——软删除行会占住唯一索引，
 // 重跑时撞键（CLAUDE.md「软删除+唯一索引」已知坑）。
 //
-// 表结构用 AutoMigrate 保证与模型一致（部署时跑的是同一份 AutoMigrate）。
+// 表结构由测试内 AutoMigrate 建立；生产 schema 由 server/migrations/ 的 goose 迁移管理。
 
 var dietRepoTestDB *gorm.DB
 
