@@ -436,8 +436,8 @@ onPullDownRefresh(() => {
 }
 
 .filter-pill.is-active {
-  border-color: $color-brand-primary;
-  background: $color-brand-primary-dark;
+  border-color: $color-brand-primary-dark;
+  background: $color-brand-primary-bg;
 }
 
 .filter-pill.is-locked {
@@ -454,7 +454,7 @@ onPullDownRefresh(() => {
 }
 
 .filter-pill.is-active .filter-text {
-  color: $color-text-on-brand;
+  color: $color-brand-primary-dark;
   font-weight: $typography-font-weight-semibold;
 }
 

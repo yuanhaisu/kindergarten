@@ -1,11 +1,14 @@
 <script setup>
 import { ref, computed, nextTick, getCurrentInstance } from "vue"
-import { onLoad, onShow, onHide } from "@dcloudio/uni-app"
+import { onLoad, onShow, onHide, onUnload } from "@dcloudio/uni-app"
 import qrcode from "qrcode-generator"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId } from "@/utils/currentStudent"
 import { relationLabel } from "@/utils/relation"
-import { fetchDesignatedPerson, fetchPickupQRCode } from "@/api/parent-pickup"
+import { fetchDesignatedPerson, fetchPickupQRCode, fetchPickupRecords } from "@/api/parent-pickup"
+import { formatClock } from "@/utils/time"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 const instance = getCurrentInstance()
 const qrData = ref({})
@@ -14,6 +17,8 @@ const refreshing = ref(false)
 const error = ref("")
 const nowTick = ref(Date.now())
 const expireAtMs = ref(0)
+// 老师核验后本码会失效，但接口没有「核验状态」字段；用当天接送记录里的接走节点反推。
+const verified = ref(null)
 // 画布逻辑尺寸（px）；显示尺寸由 CSS 的 rpx 控制
 const QR_SIZE = 200
 // canvas 绘制 API 不接受 CSS 变量；这两个值与 token 的白色卡片 / text-primary 对齐。
@@ -21,11 +26,16 @@ const QR_BG = "#FFFFFF"
 const QR_INK = "#1E293B"
 let firstShow = true
 let expiryTimer = 0
+let verifyTimer = 0
 
 const isExpired = computed(() => expireAtMs.value > 0 && nowTick.value >= expireAtMs.value)
 const noCredential = computed(() => error.value.includes("请先指定") || error.value === "未获取到接送凭证")
-const statusLabel = computed(() => (refreshing.value ? "刷新中" : isExpired.value ? "已过期" : "有效"))
-const statusClass = computed(() => (refreshing.value ? "is-info" : isExpired.value ? "is-danger" : "is-success"))
+const statusLabel = computed(() =>
+  verified.value ? "已核验" : refreshing.value ? "刷新中" : isExpired.value ? "已过期" : "有效"
+)
+const statusClass = computed(() =>
+  verified.value ? "is-success" : refreshing.value ? "is-info" : isExpired.value ? "is-danger" : "is-success"
+)
 const studentName = computed(() => qrData.value.student?.name || "孩子")
 const personName = computed(() => qrData.value.person?.name || "待指定")
 // 关系统一走 utils/relation.js：兼容 9 个 code 与存量中文，未知值兜底「接走人」
@@ -84,7 +94,12 @@ async function loadData(isRefresh = false) {
     nowTick.value = Date.now()
     await nextTick()
     renderQR(data.qr_code)
-    if (isRefresh) uni.showToast({ title: "二维码已刷新", icon: "none" })
+    if (isRefresh) {
+      verified.value = null
+      stopVerifyPolling()
+      uni.showToast({ title: "二维码已刷新", icon: "none" })
+    }
+    startVerifyPolling()
   } catch (err) {
     const msg = err?.message || "加载失败"
     const friendly = msg.includes("参数") && msg.includes("指定")
@@ -102,6 +117,46 @@ async function loadData(isRefresh = false) {
   } finally {
     loading.value = false
     refreshing.value = false
+  }
+}
+
+function localDateKey(date) {
+  const pad = (n) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+async function checkVerified() {
+  if (verified.value || !qrData.value?.qr_code || isExpired.value) return
+  try {
+    const sid = getCurrentStudentId()
+    const res = await fetchPickupRecords({ student_id: sid || undefined })
+    const today = localDateKey(new Date())
+    const outs = (res.data?.list || [])
+      .filter((r) => r.date === today && Number(r.type) === 2)
+      .sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))
+    if (!outs.length) return
+    const latest = outs[0]
+    verified.value = {
+      time: formatClock(latest.recorded_at),
+      name: latest.pickup_name || "接送人未记录"
+    }
+    stopVerifyPolling()
+    uni.showToast({ title: "老师已核验", icon: "none" })
+  } catch (err) {
+    // 轮询失败保持“有效”，不打断家长当前的使用；下一轮继续。
+  }
+}
+
+function startVerifyPolling() {
+  if (verifyTimer || verified.value || !qrData.value?.qr_code) return
+  checkVerified()
+  verifyTimer = setInterval(checkVerified, 5000)
+}
+
+function stopVerifyPolling() {
+  if (verifyTimer) {
+    clearInterval(verifyTimer)
+    verifyTimer = 0
   }
 }
 
@@ -165,6 +220,15 @@ onHide(() => {
     clearInterval(expiryTimer)
     expiryTimer = 0
   }
+  stopVerifyPolling()
+})
+
+onUnload(() => {
+  if (expiryTimer) {
+    clearInterval(expiryTimer)
+    expiryTimer = 0
+  }
+  stopVerifyPolling()
 })
 </script>
 
@@ -234,7 +298,7 @@ onHide(() => {
         <view class="person-row">
           <view class="person-item">
             <view class="avatar">
-              <image v-if="qrData.student?.photo" :src="qrData.student.photo" class="avatar-img" mode="aspectFill" />
+              <image @error="onMediaError" v-if="qrData.student?.photo" :src="qrData.student.photo" class="avatar-img" mode="aspectFill" />
               <text v-else>{{ studentInitial }}</text>
             </view>
             <text class="person-name">{{ studentName }}</text>
@@ -243,7 +307,7 @@ onHide(() => {
           <text class="person-arrow">→</text>
           <view class="person-item">
             <view class="avatar avatar--person">
-              <image v-if="qrData.person?.photo" :src="qrData.person.photo" class="avatar-img" mode="aspectFill" />
+              <image @error="onMediaError" v-if="qrData.person?.photo" :src="qrData.person.photo" class="avatar-img" mode="aspectFill" />
               <text v-else>{{ personInitial }}</text>
             </view>
             <text class="person-name">{{ personName }}</text>
@@ -259,19 +323,28 @@ onHide(() => {
 
         <view class="qr-panel">
           <canvas canvas-id="pickupQr" id="pickupQr" class="qr-canvas" />
-          <view v-if="isExpired" class="qr-mask">
+          <view v-if="isExpired && !verified" class="qr-mask">
             <text class="qr-mask-text">已过期 · 刷新后可用</text>
           </view>
-          <view v-if="refreshing" class="qr-mask qr-mask--refresh">
+          <view v-if="refreshing && !verified" class="qr-mask qr-mask--refresh">
             <view class="spinner" />
+          </view>
+          <view v-if="verified" class="qr-mask qr-mask--verified">
+            <text class="qr-mask-check">✓</text>
+            <text class="qr-mask-text">已核验</text>
           </view>
         </view>
 
-        <text class="expiry" :class="{ danger: isExpired }">{{ expireLabel }}</text>
-        <text class="pass-tip">请向老师出示此码，核验后一次有效</text>
+        <text class="expiry" :class="{ danger: isExpired && !verified }">{{ verified ? `已核验 · ${verified.time} 由${verified.name}接走` : expireLabel }}</text>
+        <text class="pass-tip">{{ verified ? "老师已核验，本码已失效" : "请向老师出示此码，核验后一次有效" }}</text>
       </view>
 
-      <view class="actions">
+      <view v-if="verified" class="verified-note">
+        <text class="verified-check">✓</text>
+        <text>今日接送已完成，可安心接孩子</text>
+      </view>
+
+      <view v-else class="actions">
         <text v-if="isExpired" class="refresh-hint">刷新后即可继续使用</text>
         <button class="primary-btn" :disabled="refreshing" @click="refresh">
           {{ refreshing ? "刷新中…" : "刷新二维码" }}
@@ -504,6 +577,50 @@ onHide(() => {
 
 .qr-mask--refresh {
   background: $color-bg-card;
+}
+
+.qr-mask--verified {
+  flex-direction: column;
+  gap: $spacing-sm;
+  background: rgba(255, 250, 240, 0.94);
+}
+
+.qr-mask-check {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-success;
+  color: $color-text-on-brand;
+  font-size: 52rpx;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.qr-mask--verified .qr-mask-text {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  color: $color-semantic-success-strong;
+  font-size: $typography-font-size-lg;
+}
+
+.verified-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  margin-top: 28rpx;
+  padding: $spacing-lg;
+  border-radius: $component-card-radius;
+  background: $color-semantic-success-bg;
+  color: $color-semantic-success-strong;
+  font-size: $typography-font-size-sm;
+  font-weight: $typography-font-weight-semibold;
+}
+
+.verified-check {
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-bold;
 }
 
 .spinner {

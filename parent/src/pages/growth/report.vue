@@ -3,6 +3,8 @@ import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { fetchGrowthReport } from "@/api/parent-growth"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 const report = ref({})
 const loading = ref(false)
@@ -233,7 +235,7 @@ onLoad(() => loadData(false))
     <view v-else class="report-card">
       <view class="sheet-head">
         <view class="head-avatar">
-          <image v-if="report.student?.avatar" :src="report.student.avatar" class="head-avatar-img" mode="aspectFill" />
+          <image @error="onMediaError" v-if="report.student?.avatar" :src="report.student.avatar" class="head-avatar-img" mode="aspectFill" />
           <text v-else>{{ report.student?.name ? report.student.name[0] : "" }}</text>
         </view>
         <view class="head-copy">

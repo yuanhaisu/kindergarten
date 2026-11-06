@@ -47,6 +47,8 @@ import {
   withStudentScope
 } from "@/api/parent-task"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => ((taskId.value ? loadData(taskId.value) : undefined)))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -720,7 +722,7 @@ onUnload(stopVoice)
         <text class="submit-text" :class="{ 'is-quiet': !currentCheckin.content }">
           {{ currentCheckin.content || "（一键完成）" }}
         </text>
-        <image
+        <image @error="onMediaError"
           v-if="currentCheckin.media_url"
           class="submit-shot"
           :src="currentCheckin.media_url"
@@ -757,7 +759,7 @@ onUnload(stopVoice)
             <text class="upload-label">添加照片</text>
           </view>
           <view v-else class="upload-preview">
-            <image class="upload-image" :src="mediaPreview" mode="aspectFill" />
+            <image @error="onMediaError" class="upload-image" :src="mediaPreview" mode="aspectFill" />
             <view v-if="!uploading" class="upload-remove" @click.stop="removeMedia">
               <text class="upload-remove-glyph">{{ ICON.close }}</text>
             </view>
@@ -817,7 +819,7 @@ onUnload(stopVoice)
             </view>
             <text class="tl-text" :class="{ 'is-quiet': !item.content }">{{ item.content || "（一键完成）" }}</text>
             <view v-if="item.media_url || historyNote(item) || showHistoryAction(item)" class="tl-body">
-              <image
+              <image @error="onMediaError"
                 v-if="item.media_url"
                 class="tl-thumb"
                 :src="item.media_url"
@@ -1044,7 +1046,7 @@ onUnload(stopVoice)
   border-radius: $border-radius-full;
   background: $color-brand-primary-bg;
   color: $color-brand-primary-dark;
-  font-size: 20rpx;
+  font-size: $typography-font-size-xs;
   font-weight: $typography-font-weight-semibold;
   line-height: 32rpx;
   text-align: center;

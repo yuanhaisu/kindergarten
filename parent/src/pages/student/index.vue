@@ -17,6 +17,8 @@ import { fetchStudentProfile, fetchStudents, unbindStudent } from "@/api/parent-
 import { fetchHealthRecords } from "@/api/parent-health"
 import { formatDateOnly, formatMonthDayWeekday } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -381,7 +383,7 @@ onLoad(() => {
       <view class="card profile-card">
         <view class="identity">
           <view class="avatar">
-            <image v-if="profile.avatar" class="avatar-img" :src="profile.avatar" mode="aspectFill" />
+            <image @error="onMediaError" v-if="profile.avatar" class="avatar-img" :src="profile.avatar" mode="aspectFill" />
             <text v-else class="avatar-initial">{{ avatarInitial }}</text>
           </view>
           <view class="identity-main">

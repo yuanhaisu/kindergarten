@@ -14,6 +14,8 @@ import { fetchParentHomeOverview } from "@/api/parent-home"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { formatDateLabel } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadAlbums()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -348,7 +350,7 @@ onPullDownRefresh(() => {
       >
         <view class="album-cover" :class="'album-cover--' + album.coverTiles.length">
           <view v-for="(cover, index) in album.coverTiles" :key="index" class="cover-cell">
-            <image class="cover-img" :src="cover" mode="aspectFill" />
+            <image @error="onMediaError" class="cover-img" :src="cover" mode="aspectFill" />
           </view>
           <view v-if="!album.coverTiles.length" class="cover-cell cover-cell--empty">
             <text class="cover-glyph">{{ ICON.gallery }}</text>

@@ -1,10 +1,10 @@
 // 微信原生自定义 tabBar：本目录被 @dcloudio/uni-mp-weixin 原样复制到 dist，
 // 不经过 uni/Vue 编译，因此这里只能用原生 Component + wx.* API。
-// 图标码位与 shared-ui BottomNav 一致（remixicon U+EE1C / U+EDA5 / U+EC79 / U+F264）。
+// 图标码位与 shared-ui BottomNav 一致（remixicon U+EE1C / U+EDA5 / U+EB39 / U+F264）。
 const TABS = [
   { pagePath: "pages/index/index", text: "首页", icon: "" },
   { pagePath: "pages/growth/index", text: "成长", icon: "" },
-  { pagePath: "pages/pickup/index", text: "接送", icon: "" },
+  { pagePath: "pages/pickup/index", text: "接送", icon: "" },
   { pagePath: "pages/profile/index", text: "我的", icon: "" }
 ]
 

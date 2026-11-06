@@ -10,6 +10,8 @@ import {
 } from "@/api/doctor-health"
 import { formatDateLabel, formatWeekdayShort, todayKey } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadQueue()))
 
 // 五项检查的三态取值：0 正常 / 1、2 异常。手部/口腔/皮肤的 3=其他异常
 // 在本次重做里没有对应 chip（设计稿只有三态），提交值因此只可能是 0–2。
@@ -462,7 +464,7 @@ onLoad(() => {
             :class="{ 'is-open': openId === row.id }"
           >
             <view class="child-toggle" @click="toggleChild(row)">
-              <image v-if="row.avatar" class="avatar" :src="row.avatar" mode="aspectFill" />
+              <image @error="onMediaError" v-if="row.avatar" class="avatar" :src="row.avatar" mode="aspectFill" />
               <view v-else class="avatar">{{ initialOf(row.student_name) }}</view>
               <view class="child-main">
                 <text class="child-name">{{ row.student_name }}</text>
@@ -549,7 +551,7 @@ onLoad(() => {
               <view v-if="(media[row.id] || []).length" class="photos-block">
                 <text class="photos-title">异常照片</text>
                 <view class="photo-list">
-                  <image
+                  <image @error="onMediaError"
                     v-for="item in media[row.id]"
                     :key="item.id"
                     class="photo-item"
@@ -622,7 +624,7 @@ onLoad(() => {
         </view>
         <view v-if="completedOpen" class="completed-card">
           <view v-for="row in completedRows" :key="row.id" class="completed-row">
-            <image v-if="row.avatar" class="avatar is-sm" :src="row.avatar" mode="aspectFill" />
+            <image @error="onMediaError" v-if="row.avatar" class="avatar is-sm" :src="row.avatar" mode="aspectFill" />
             <view v-else class="avatar is-sm">{{ initialOf(row.student_name) }}</view>
             <view class="completed-main">
               <text class="completed-name">{{ row.student_name }}</text>

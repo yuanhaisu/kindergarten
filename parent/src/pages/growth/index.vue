@@ -9,6 +9,8 @@ import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/cur
 import { syncTabBar } from "@/utils/tabbar"
 import { formatMonthLabel, formatRecordTime, formatYearRange, monthKeyOf } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -324,7 +326,7 @@ onPullDownRefresh(loadData)
       <view class="child-card">
         <view class="child-top">
           <view class="child-avatar">
-            <image
+            <image @error="onMediaError"
               v-if="childInfo.avatar"
               class="child-avatar-img"
               :src="childInfo.avatar"
@@ -409,7 +411,7 @@ onPullDownRefresh(loadData)
               <view v-for="item in group.records" :key="item.id" class="rec" @click="goDetail(item.id)">
                 <view class="rec-head">
                   <view class="rec-avatar">
-                    <image
+                    <image @error="onMediaError"
                       v-if="item.creator && item.creator.avatar"
                       class="rec-avatar-img"
                       :src="item.creator.avatar"
@@ -443,7 +445,7 @@ onPullDownRefresh(loadData)
                   :class="{ 'photo-grid--single': photoList(item).length === 1 }"
                 >
                   <view v-for="m in photoList(item)" :key="m.id" class="photo-cell">
-                    <image class="photo-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
+                    <image @error="onMediaError" class="photo-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
                   </view>
                 </view>
 
@@ -557,9 +559,10 @@ onPullDownRefresh(loadData)
 .child-card {
   margin-top: $spacing-lg;
   padding: $spacing-xl;
-  border-radius: $component-card-radius;
+  // 与首页 hero / 接送凭证 / 我的身份卡统一为 2xl，避免四个页头四种圆角
+  border-radius: $border-radius-2xl;
   background: $gradient-brand-soft;
-  box-shadow: $shadow-md;
+  box-shadow: $shadow-sm;
 }
 
 .child-top {
@@ -779,7 +782,7 @@ onPullDownRefresh(loadData)
 }
 
 .seg-btn.is-active {
-  border-color: $color-brand-primary-light;
+  border-color: $color-brand-primary-dark;
   background: $color-brand-primary-bg;
   box-shadow: $shadow-sm;
 }

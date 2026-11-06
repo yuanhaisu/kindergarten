@@ -4,6 +4,8 @@ import { onLoad } from "@dcloudio/uni-app"
 import { createTeacherNotice, fetchTeacherNotice, fetchTeacherNoticeTemplates, updateTeacherNotice, uploadNoticeAttachment } from "@/api/teacher-notices"
 import { requestWithAuth } from "@/api/http"
 import { NOTICE_CATEGORIES, noticeCategoryLabel } from "@/utils/notice"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => ((editingId.value ? loadNotice(editingId.value) : undefined)))
 
 const MAX_ATTACHMENTS = 9
 // 与契约「单张 ≤20MB」同口径；上传通道也会拦，这里先拦一次避免白传。
@@ -585,7 +587,7 @@ async function submit(mode: "draft" | "publish") {
                   :key="img.file_url || img.local_path || i"
                   class="thumb"
                 >
-                  <image :src="img.local_path || img.file_url" mode="aspectFill" class="thumb-img" />
+                  <image @error="onMediaError" :src="img.local_path || img.file_url" mode="aspectFill" class="thumb-img" />
                   <view v-if="img.status === 'uploading'" class="thumb-mask">
                     <text>{{ img.progress || 0 }}%</text>
                   </view>

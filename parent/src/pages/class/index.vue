@@ -13,6 +13,8 @@ import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchClassInfo } from "@/api/parent-class"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -189,7 +191,7 @@ onLoad(() => {
           <view v-if="teachers.length" class="teacher-list">
             <view v-for="t in teachers" :key="t.id" class="teacher-row">
               <view class="teacher-avatar">
-                <image v-if="t.avatar" class="teacher-avatar-img" :src="t.avatar" mode="aspectFill" />
+                <image @error="onMediaError" v-if="t.avatar" class="teacher-avatar-img" :src="t.avatar" mode="aspectFill" />
                 <text v-else class="teacher-avatar-initial">{{ initialOf(t.nickname) }}</text>
               </view>
               <view class="teacher-copy">

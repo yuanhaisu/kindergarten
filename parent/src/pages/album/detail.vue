@@ -14,6 +14,8 @@ import { fetchParentHomeOverview } from "@/api/parent-home"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { formatDateLabel } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -363,7 +365,7 @@ onLoad(query => {
             :aria-label="'查看第 ' + (index + 1) + ' 张照片'"
             @click="openPreview(index)"
           >
-            <image
+            <image @error="onMediaError"
               class="photo-img"
               :src="photo.thumb_url || photo.file_url"
               mode="aspectFill"
@@ -394,7 +396,7 @@ onLoad(query => {
         @touchstart="onStageTouchStart"
         @touchend="onStageTouchEnd"
       >
-        <image
+        <image @error="onMediaError"
           v-if="currentPhoto"
           class="viewer-img"
           :src="currentPhoto.file_url || currentPhoto.thumb_url"

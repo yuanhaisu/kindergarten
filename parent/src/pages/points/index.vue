@@ -21,6 +21,8 @@ import {
 import { formatDateLabel, formatDateTimeLabel, localDateKey } from "@/utils/time"
 import { badgeIconKey, historyTitle, historyTone, signedAmount } from "@/utils/points"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 // remixicon 字形（App.vue 已全局注册字体）；小程序 WXML 不允许内联 SVG。
 const ICON = {
@@ -473,7 +475,7 @@ onLoad(() => {
             @click="handleRankTap(row)"
           >
             <text class="rank-num" :class="{ 'is-top': row.rank <= 3 }">{{ row.rank }}</text>
-            <image v-if="row.avatar" class="rank-avatar rank-avatar--image" :src="row.avatar" mode="aspectFill" />
+            <image @error="onMediaError" v-if="row.avatar" class="rank-avatar rank-avatar--image" :src="row.avatar" mode="aspectFill" />
             <view v-else class="rank-avatar">
               <text class="rank-initial">{{ row.initial }}</text>
             </view>
@@ -507,7 +509,7 @@ onLoad(() => {
             @click="openBadge(badge)"
           >
             <view class="badge-icon">
-              <image v-if="badge.iconUrl" class="badge-image" :src="badge.iconUrl" mode="aspectFit" />
+              <image @error="onMediaError" v-if="badge.iconUrl" class="badge-image" :src="badge.iconUrl" mode="aspectFit" />
               <text v-else class="badge-glyph">{{ badgeGlyph(badge) }}</text>
             </view>
             <text class="badge-name">{{ badge.name }}</text>
@@ -525,7 +527,7 @@ onLoad(() => {
         <text class="sheet-close-glyph">{{ ICON.close }}</text>
       </view>
       <view class="sheet-icon" :class="sheetBadge.earned ? 'is-earned' : 'is-locked'">
-        <image v-if="sheetBadge.iconUrl" class="sheet-image" :src="sheetBadge.iconUrl" mode="aspectFit" />
+        <image @error="onMediaError" v-if="sheetBadge.iconUrl" class="sheet-image" :src="sheetBadge.iconUrl" mode="aspectFit" />
         <text v-else class="sheet-glyph">{{ badgeGlyph(sheetBadge) }}</text>
       </view>
       <text class="sheet-name">{{ sheetBadge.name }}</text>
@@ -1062,7 +1064,7 @@ onLoad(() => {
   border-radius: $border-radius-full;
   background: $color-brand-primary-dark;
   color: $color-text-on-brand;
-  font-size: 20rpx;
+  font-size: $typography-font-size-xs;
   font-weight: $typography-font-weight-semibold;
   line-height: 1.6;
 }

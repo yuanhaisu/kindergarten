@@ -7,7 +7,7 @@
  * 没有新增接口 —— 三态（未入园 / 在园中 / 已接走）全部由当天记录派生。
  */
 import { computed, ref } from "vue"
-import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onShow, onHide, onUnload, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { syncTabBar } from "@/utils/tabbar"
@@ -23,8 +23,8 @@ const ICON = {
   sprout: "", // seedling-line
   check: "", // check-line
   qr: "", // qr-code-line
-  refresh: "\u{f064}", // refresh-line
-  chevron: "\u{ea6e}", // arrow-right-s-line
+  login: "", // login-box-line
+  logout: "", // logout-box-r-line
   error: "" // error-warning-line
 }
 
@@ -33,7 +33,6 @@ const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "�
 const records = ref([])
 const loading = ref(false)
 const retrying = ref(false)
-const refreshingDay = ref("")
 const hasLoaded = ref(false)
 const loadError = ref("")
 const student = ref({ name: "", class_name: "" })
@@ -87,6 +86,9 @@ const dayState = computed(() => {
 })
 
 const statusMain = computed(() => ({ pre: "未入园", in: "在园中", picked: "已接走" }[dayState.value]))
+const nowClock = ref(formatClock(new Date()))
+// 「未入园」必须带时间上下文：早上 8 点看到是正常，上午 10 点看到才值得担心。
+const statusSubText = computed(() => (dayState.value === "pre" ? `截至 ${nowClock.value || "--:--"} 未入园` : ""))
 
 const timelineRecords = computed(() => {
   if (dayState.value === "pre") return []
@@ -122,8 +124,8 @@ const historyGroups = computed(() => {
         id: r.id,
         typeLabel: r.type_label || (Number(r.type) === 2 ? "接走" : "入园"),
         isOut: Number(r.type) === 2,
-        name: r.pickup_name || "—",
-        relation: relationLabel(r.pickup_relation),
+        name: r.pickup_name || "",
+        relation: relationLabel(r.pickup_relation) || "其他关系",
         time: formatClock(r.recorded_at),
         abnormal: Boolean(r.is_abnormal)
       }))
@@ -182,16 +184,6 @@ async function handleRetry() {
   }
 }
 
-// 接口只有整页 GET：组级刷新实际重拉整页，只让被点的那一组图标转圈，
-// 避免所有日期组同时转起来造成「各刷各的」的错觉。
-async function handleDayRefresh(group) {
-  if (loading.value) return
-  refreshingDay.value = group.key
-  const ok = await loadData()
-  refreshingDay.value = ""
-  uni.showToast({ title: ok ? "已刷新接送记录" : "刷新失败，请稍后再试", icon: "none" })
-}
-
 function goQRCode() {
   if (loading.value) return
   uni.navigateTo({ url: "/pages/pickup/qrcode" })
@@ -199,10 +191,27 @@ function goQRCode() {
 
 // tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad，切完孩子会看不到变化。
 // 同时把原生底栏高亮校正到「接送」（index 2）——组件内算不准当前 tab，见 utils/tabbar.js。
+let clockTimer = 0
+function syncClock() {
+  nowClock.value = formatClock(new Date())
+}
+
 onShow(() => {
+  syncClock()
+  if (!clockTimer) clockTimer = setInterval(syncClock, 60000)
   syncTabBar(2)
   loadData()
 })
+
+function stopClock() {
+  if (clockTimer) {
+    clearInterval(clockTimer)
+    clockTimer = 0
+  }
+}
+
+onHide(stopClock)
+onUnload(stopClock)
 
 // 刷新粒度是整页：接口只有整页 GET，历史日期组不再单独提供刷新。
 onPullDownRefresh(loadData)
@@ -293,10 +302,10 @@ onPullDownRefresh(loadData)
                   <text class="status-time">{{ formatClock(lastToday && lastToday.recorded_at) }}</text>
                   <text class="status-dot">·</text>
                   <text class="status-who">
-                    {{ (lastToday && lastToday.pickup_name) || "—" }}{{ dayState === "in" ? " 送入" : "" }}
+                    {{ (lastToday && lastToday.pickup_name) || "接送人未记录" }}{{ dayState === "in" ? " 送入" : "" }}
                   </text>
                 </template>
-                <text v-else class="status-who">今天还没有入园记录</text>
+                <text v-else class="status-who">{{ statusSubText }}</text>
               </view>
             </view>
           </view>
@@ -315,9 +324,11 @@ onPullDownRefresh(loadData)
                     {{ item.type_label || (Number(item.type) === 2 ? "接走" : "入园") }}
                   </text>
                   <text class="track-time">{{ formatClock(item.recorded_at) }}</text>
-                  <text class="track-rel">{{ relationLabel(item.pickup_relation) }}</text>
+                  <text v-if="relationLabel(item.pickup_relation) !== (item.pickup_name || '')" class="track-rel">
+                    {{ relationLabel(item.pickup_relation) }}
+                  </text>
                 </view>
-                <text class="track-who">{{ item.pickup_name || "—" }}</text>
+                <text class="track-who">{{ item.pickup_name || "接送人未记录" }}</text>
               </view>
             </view>
           </view>
@@ -327,7 +338,10 @@ onPullDownRefresh(loadData)
           <!-- 已接走是终态：再出示二维码会与「今日接送已完成」自相矛盾 -->
           <view v-if="dayState === 'picked'" class="done-note">
             <text class="done-icon">{{ ICON.check }}</text>
-            <text>今日接送已完成</text>
+            <text>
+              今日接送已完成 · {{ formatClock(lastToday && lastToday.recorded_at) }}
+              {{ (lastToday && lastToday.pickup_name) || "接送人未记录" }} 接走
+            </text>
           </view>
           <template v-else>
             <button class="qr-cta" :disabled="loading" @click="goQRCode">
@@ -352,26 +366,21 @@ onPullDownRefresh(loadData)
             <view class="day-head">
               <text class="day-title">{{ group.label }}</text>
               <text v-if="group.weekday" class="day-week">{{ group.weekday }}</text>
-              <view
-                class="day-refresh"
-                :class="{ 'is-spinning': refreshingDay === group.key }"
-                @click="handleDayRefresh(group)"
-              >
-                <text class="day-refresh-glyph">{{ ICON.refresh }}</text>
-              </view>
             </view>
             <view v-for="row in group.rows" :key="row.id" class="rec-row">
-              <text class="rec-type" :class="row.isOut ? 'rec-type--out' : 'rec-type--in'">{{ row.typeLabel }}</text>
+              <view class="rec-type" :class="row.isOut ? 'rec-type--out' : 'rec-type--in'">
+                <text class="rec-type-icon">{{ row.isOut ? ICON.logout : ICON.login }}</text>
+                <text>{{ row.typeLabel }}</text>
+              </view>
               <view class="rec-main">
                 <view class="rec-name-row">
-                  <text class="rec-name">{{ row.name }}</text>
+                  <text class="rec-name" :class="{ 'is-missing': !row.name }">{{ row.name || "接送人未记录" }}</text>
                   <text v-if="row.abnormal" class="abnormal-tag">异常</text>
                 </view>
-                <text class="rec-rel">{{ row.relation }}</text>
+                <text v-if="row.relation && row.relation !== row.name" class="rec-rel">{{ row.relation }}</text>
               </view>
               <view class="rec-end">
                 <text class="rec-time">{{ row.time }}</text>
-                <text class="rec-chev">{{ ICON.chevron }}</text>
               </view>
             </view>
           </view>
@@ -575,11 +584,11 @@ onPullDownRefresh(loadData)
 }
 
 .track-dot--in {
-  background: $color-semantic-success;
+  background: $color-brand-primary-dark;
 }
 
 .track-dot--out {
-  background: $color-brand-primary;
+  background: $color-brand-primary-dark;
 }
 
 .track-content {
@@ -600,17 +609,10 @@ onPullDownRefresh(loadData)
 }
 
 .track-type {
+  color: $color-brand-primary-dark;
   font-size: $typography-font-size-sm;
   font-weight: $typography-font-weight-medium;
   line-height: 1.35;
-}
-
-.track-type--in {
-  color: $color-semantic-success;
-}
-
-.track-type--out {
-  color: $color-brand-primary-dark;
 }
 
 .track-time {
@@ -760,41 +762,6 @@ onPullDownRefresh(loadData)
   line-height: 1.35;
 }
 
-.day-refresh {
-  flex: none;
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: $border-radius-full;
-  color: $color-text-muted;
-}
-
-.day-refresh:active {
-  background: $color-bg-page;
-}
-
-.day-refresh-glyph {
-  font-family: remixicon;
-  font-size: $typography-font-size-2xl;
-  line-height: 1;
-}
-
-.day-refresh.is-spinning .day-refresh-glyph {
-  animation: pickup-spin 600ms $animation-easing-default;
-}
-
-@keyframes pickup-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .day-week {
   padding: 4rpx 14rpx;
   border-radius: $border-radius-full;
@@ -818,25 +785,23 @@ onPullDownRefresh(loadData)
 .rec-type {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 88rpx;
-  height: 48rpx;
-  padding: 0 16rpx;
+  gap: $spacing-xs;
+  // 与首页动态分类标签同高同圆角，避免历史行里出现另一套胶囊尺寸
+  min-height: 36rpx;
+  padding: 2rpx $spacing-sm;
   border-radius: $border-radius-full;
-  font-size: $typography-font-size-sm;
+  // 送入/接走是事件方向，不是状态；统一暖橙单色，用图标区分
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
+  font-size: $typography-font-size-xs;
   font-weight: $typography-font-weight-medium;
   line-height: 1;
 }
 
-.rec-type--in {
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
-}
-
-// 接走在今日轨迹与历史里统一用品牌色，避免同一动作两套语义色。
-.rec-type--out {
-  background: $color-brand-primary-bg;
-  color: $color-brand-primary-dark;
+.rec-type-icon {
+  font-family: remixicon;
+  font-size: $typography-font-size-xs;
+  line-height: 1;
 }
 
 .rec-main {
@@ -860,6 +825,11 @@ onPullDownRefresh(loadData)
   font-weight: $typography-font-weight-medium;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.rec-name.is-missing {
+  color: $color-semantic-warning;
+  font-weight: $typography-font-weight-semibold;
 }
 
 .rec-rel {
@@ -1166,10 +1136,6 @@ onPullDownRefresh(loadData)
   .sk {
     animation: none;
     opacity: 0.7;
-  }
-
-  .day-refresh.is-spinning .day-refresh-glyph {
-    animation: none;
   }
 }
 </style>

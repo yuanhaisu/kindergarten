@@ -19,6 +19,8 @@ import { ensureLogin } from "@/utils/login"
 import { formatCommentTime, formatRecordTime } from "@/utils/time"
 import { relationLabel } from "@/utils/relation"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => ((record.value.id ? loadDetail(record.value.id) : undefined)))
 
 const record = ref({})
 const comments = ref([])
@@ -634,7 +636,7 @@ onShow(() => {
           <!-- 作者行 -->
           <view class="record-author">
             <view class="avatar">
-              <image
+              <image @error="onMediaError"
                 v-if="record.creator?.avatar"
                 class="avatar-img"
                 :src="record.creator.avatar"
@@ -740,7 +742,7 @@ onShow(() => {
             <text class="section-title">相关孩子<span class="section-count">（{{ relatedCount }}人）</span></text>
             <view class="kid-list">
               <view v-for="student in relatedShown" :key="student.id" class="kid-pill">
-                <image
+                <image @error="onMediaError"
                   v-if="student.avatar"
                   class="kid-avatar-img"
                   :src="student.avatar"
@@ -791,7 +793,7 @@ onShow(() => {
               :class="{ 'is-selected': grant.achievement_id === achievement.id }"
               @click="selectAchievement(achievement.id)"
             >
-              <image v-if="achievement.icon" class="badge-choice-icon" :src="achievement.icon" mode="aspectFit" />
+              <image @error="onMediaError" v-if="achievement.icon" class="badge-choice-icon" :src="achievement.icon" mode="aspectFit" />
               <text class="badge-choice-label">{{ achievement.name }}</text>
             </view>
           </view>
@@ -836,7 +838,7 @@ onShow(() => {
 
           <view v-else class="comment-list">
             <view v-for="comment in comments" :key="comment.id" class="comment">
-              <image
+              <image @error="onMediaError"
                 v-if="comment.user?.avatar"
                 class="comment-avatar-img"
                 :src="comment.user.avatar"
@@ -933,7 +935,7 @@ onShow(() => {
         </view>
         <swiper class="preview-swiper" :current="previewIndex" @change="onPreviewChange">
           <swiper-item v-for="(mediaItem, index) in media" :key="mediaItem.id || index">
-            <image class="preview-img" :src="mediaItem.file_url || mediaItem.thumb_url" mode="aspectFit" />
+            <image @error="onMediaError" class="preview-img" :src="mediaItem.file_url || mediaItem.thumb_url" mode="aspectFit" />
           </swiper-item>
         </swiper>
         <text class="preview-meta">{{ previewMeta }}</text>

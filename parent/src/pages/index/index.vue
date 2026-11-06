@@ -7,16 +7,16 @@ import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, setCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { bindParentPhone } from "@/api/auth"
 import { parseSceneTaskId } from "@/utils/taskScene"
-import { formatYmd } from "@/utils/time"
+import { formatDateLabel, formatYmd } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
-import AppIcon from "@/components/AppIcon.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadHome()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局加载。
-// 沿用旧首页的字形映射，不为示意图新增位图；4 个入口仍走 AppIcon + PNG。
+// 全部图标统一为线性字形，不再混用 PNG 位图。
 const ICON = {
-  settings: "", // settings-line
   user: "", // user-line
-  attendance: "", // checkbox-circle-line
+  attendance: "", // time-line（未入园时用时钟，不用对勾）
   meal: "", // bowl-line
   sleep: "", // moon-line
   mood: "", // emotion-happy-line
@@ -24,6 +24,7 @@ const ICON = {
   book: "", // book-open-line
   chevron: "", // arrow-right-s-line
   leaf: "", // leaf-line
+  notice: "", // notification-3-line
   error: "" // error-warning-line
 }
 
@@ -66,7 +67,6 @@ const todayStatuses = computed(() => [
   {
     key: "attendance",
     label: "出勤",
-    tone: "success",
     icon: ICON.attendance,
     value: summary.value.attendance_label || "—",
     sub: summary.value.arrive_time || ""
@@ -74,7 +74,6 @@ const todayStatuses = computed(() => [
   {
     key: "meal",
     label: "进餐",
-    tone: "info",
     icon: ICON.meal,
     value: summary.value.meal_label || "—",
     sub: ""
@@ -82,7 +81,6 @@ const todayStatuses = computed(() => [
   {
     key: "sleep",
     label: "午睡",
-    tone: "warning",
     icon: ICON.sleep,
     value: summary.value.sleep_label || "—",
     sub: summary.value.nap_duration ? summary.value.nap_duration + "分钟" : ""
@@ -90,7 +88,6 @@ const todayStatuses = computed(() => [
   {
     key: "mood",
     label: "情绪",
-    tone: "accent",
     icon: ICON.mood,
     value: summary.value.mood_label || "—",
     sub: ""
@@ -100,11 +97,12 @@ const todayStatuses = computed(() => [
 // 顺序与文案按设计稿 parent/01-home：通知公告 / 接送管理 / 亲子任务 / 我要请假。
 // tab=true 的入口在 pages.json 的 tabBar.list 里，必须 switchTab；
 // 其余是普通页面，用 navigateTo 保持页面栈语义。成长不放入口，只走空态 CTA。
+// 图标统一走 remixicon 线性字形（与站内其他页面同一家族），不再使用 PNG 位图。
 const quickActions = computed(() => [
   {
     key: "notice",
     title: "通知公告",
-    icon: "notice",
+    glyph: "\u{ef94}", // notification-3-line
     path: "/pages/notice/index",
     tab: false,
     badge: Number(summary.value.new_notice_count) || 0
@@ -112,7 +110,7 @@ const quickActions = computed(() => [
   {
     key: "pickup",
     title: "接送管理",
-    icon: "pickup",
+    glyph: "\u{eb39}", // car-line
     path: "/pages/pickup/index",
     tab: true,
     badge: 0
@@ -120,7 +118,7 @@ const quickActions = computed(() => [
   {
     key: "task",
     title: "亲子任务",
-    icon: "task",
+    glyph: "\u{f1e8}", // task-line
     path: "/pages/tasks/index",
     tab: false,
     badge: Number(summary.value.pending_tasks) || 0
@@ -128,7 +126,7 @@ const quickActions = computed(() => [
   {
     key: "leave",
     title: "我要请假",
-    icon: "leave",
+    glyph: "\u{eb23}", // calendar-check-line
     path: "/pages/leave/create",
     tab: false,
     badge: 0
@@ -281,10 +279,6 @@ function handleAction(action) {
   }
 }
 
-function goSettings() {
-  uni.navigateTo({ url: "/pages/settings/index" })
-}
-
 function goTask(id) {
   uni.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
 }
@@ -314,7 +308,8 @@ function formatTime(ts) {
   if (diff >= 0 && diff < 3600000) return Math.max(1, Math.floor(diff / 60000)) + "分钟前"
   if (diff >= 0 && diff < 86400000) return Math.floor(diff / 3600000) + "小时前"
   // 早于 24 小时按本地日期显示；直接用 ISO 串切片会取到 UTC 日期。
-  return formatYmd(d)
+  const ymd = formatYmd(d)
+  return formatDateLabel(ymd) || ymd
 }
 
 // onShow：tabBar 页 switchTab 切回来不会重跑 onLoad，从详情返回也要刷新。
@@ -334,7 +329,7 @@ onPullDownRefresh(() => loadHome())
     <!-- ===== 孩子 hero：整页唯一的暖色块 ===== -->
     <view class="hero">
       <view class="hero-avatar">
-        <image v-if="currentStudent.avatar" class="hero-avatar-img" :src="currentStudent.avatar" mode="aspectFill" />
+        <image @error="onMediaError" v-if="currentStudent.avatar" class="hero-avatar-img" :src="currentStudent.avatar" mode="aspectFill" />
         <text v-else-if="currentStudent.name" class="hero-avatar-initial">{{ heroInitial }}</text>
         <text v-else class="hero-avatar-icon">{{ ICON.user }}</text>
       </view>
@@ -344,9 +339,6 @@ onPullDownRefresh(() => loadHome())
           <text v-if="currentStudent.class_name" class="class-pill">{{ currentStudent.class_name }}</text>
         </view>
         <text class="hero-greeting">{{ relationLabel }} 您好~</text>
-      </view>
-      <view class="settings-btn" aria-label="设置" @click="goSettings">
-        <text class="settings-icon">{{ ICON.settings }}</text>
       </view>
     </view>
 
@@ -404,7 +396,7 @@ onPullDownRefresh(() => loadHome())
 
         <view v-else class="today-grid">
           <view v-for="st in todayStatuses" :key="st.key" class="today-col" :aria-label="st.label">
-            <view :class="['stat-orb', 'stat-orb--' + st.tone]">
+            <view class="stat-orb">
               <text class="stat-orb-icon">{{ st.icon }}</text>
             </view>
             <text class="stat-value">{{ st.value }}</text>
@@ -440,7 +432,7 @@ onPullDownRefresh(() => loadHome())
           @click="handleAction(action)"
         >
           <view class="quick-icon">
-            <AppIcon :name="action.icon" :size="64" :label="action.title" />
+            <text class="quick-glyph" :aria-label="action.title">{{ action.glyph }}</text>
             <view v-if="action.badge > 0" class="quick-badge">
               <text class="quick-badge-text">{{ badgeText(action.badge) }}</text>
             </view>
@@ -502,9 +494,10 @@ onPullDownRefresh(() => loadHome())
             @click="goFeed(feed)"
           >
             <view class="feed-top">
-              <text :class="['type-chip', feed.type === 'notice' ? 'type-chip--notice' : 'type-chip--growth']">
-                {{ feed.type === "notice" ? "通知" : "成长" }}
-              </text>
+              <view :class="['type-chip', feed.type === 'notice' ? 'type-chip--notice' : 'type-chip--growth']">
+                <text class="type-chip-icon">{{ feed.type === "notice" ? ICON.notice : ICON.leaf }}</text>
+                <text>{{ feed.type === "notice" ? "通知" : "成长" }}</text>
+              </view>
             </view>
 
             <view v-if="feed.type === 'notice'" class="feed-title-row">
@@ -626,32 +619,6 @@ onPullDownRefresh(() => loadHome())
   line-height: 1.5;
 }
 
-.settings-btn {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: $component-input-height;
-  height: $component-input-height;
-  border-radius: $border-radius-full;
-  background: $color-bg-card;
-  color: $color-text-body;
-  box-shadow: $shadow-sm;
-  transition: transform $animation-duration-fast $animation-easing-default,
-    background $animation-duration-fast $animation-easing-default;
-
-  &:active {
-    transform: scale(0.94);
-    background: $color-brand-primary-bg;
-  }
-}
-
-.settings-icon {
-  font-family: remixicon;
-  font-size: $typography-font-size-2xl;
-  line-height: 1;
-}
-
 // ---- 今日在校情况 ----------------------------------------------
 .today-card {
   margin-top: $spacing-lg;
@@ -709,24 +676,8 @@ onPullDownRefresh(() => loadHome())
   width: 76rpx;
   height: 76rpx;
   border-radius: $border-radius-full;
-}
-
-.stat-orb--success {
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
-}
-
-.stat-orb--info {
-  background: $color-semantic-info-bg;
-  color: $color-semantic-info;
-}
-
-.stat-orb--warning {
-  background: $color-semantic-warning-bg;
-  color: $color-semantic-warning;
-}
-
-.stat-orb--accent {
+  // 四宫格统一暖橙语气，不再使用绿/蓝/黄/红四色；
+  // 与快捷入口、我的页图标同属一个线性图标家族。
   background: $color-brand-primary-bg;
   color: $color-brand-primary-dark;
 }
@@ -929,13 +880,13 @@ onPullDownRefresh(() => loadHome())
 }
 
 .child-pill.is-active {
-  border-color: $color-brand-primary-light;
+  border-color: $color-brand-primary-dark;
   background: $color-brand-primary-bg;
   color: $color-text-primary;
   box-shadow: none;
 
   &::before {
-    background: $color-brand-primary;
+    background: $color-brand-primary-dark;
   }
 
   &:active {
@@ -982,6 +933,13 @@ onPullDownRefresh(() => loadHome())
   border-radius: $border-radius-xl;
   background: $color-brand-primary-bg;
   transition: transform $animation-duration-fast $animation-easing-default;
+}
+
+.quick-glyph {
+  font-family: remixicon;
+  font-size: 44rpx;
+  line-height: 1;
+  color: $color-brand-primary-dark;
 }
 
 .quick-label {
@@ -1161,6 +1119,7 @@ onPullDownRefresh(() => loadHome())
 .type-chip {
   display: inline-flex;
   align-items: center;
+  gap: $spacing-xs;
   // 设计稿 18px 胶囊
   min-height: 36rpx;
   // 设计稿 1px 垂直内边距
@@ -1171,14 +1130,17 @@ onPullDownRefresh(() => loadHome())
   line-height: 1.45;
 }
 
-.type-chip--notice {
-  background: $color-semantic-info-bg;
-  color: $color-semantic-info;
+// 分类不是状态，不占用语义色；统一暖橙语气，用图标区分通知/成长。
+.type-chip--notice,
+.type-chip--growth {
+  background: $color-brand-primary-bg;
+  color: $color-brand-primary-dark;
 }
 
-.type-chip--growth {
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
+.type-chip-icon {
+  font-family: remixicon;
+  font-size: $typography-font-size-xs;
+  line-height: 1;
 }
 
 .feed-title-row {
