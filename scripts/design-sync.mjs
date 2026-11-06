@@ -255,6 +255,57 @@ function generateTokens() {
   }
 }
 
+// 这些 utils 是登录/请求/格式化等基础设施，几乎每页都引用；放进逐页指纹只会制造噪声。
+// 内容型 utils（leave / relation / tasks / notice / calendar / albums…）才逐页归因。
+const DEP_DENY = new Set([
+  'utils/auth', 'utils/login', 'utils/mediaRefresh', 'utils/time', 'utils/tabbar',
+  'utils/currentStudent', 'utils/pendingRoute', 'utils/media', 'utils/nav',
+]);
+
+function resolveModule(base) {
+  const candidates = [base, `${base}.js`, `${base}.ts`, path.join(base, 'index.js'), path.join(base, 'index.ts')];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  }
+  return null;
+}
+
+function collectUtilDeps(file, surface, seen = new Set()) {
+  if (seen.has(file)) return seen;
+  seen.add(file);
+  const text = fs.readFileSync(file, 'utf8');
+  const srcRoot = path.join(repoRoot, surface, 'src');
+  for (const match of text.matchAll(/(?:from\s+|import\s+)["']([^"']+)["']/g)) {
+    const spec = match[1];
+    let base = null;
+    if (spec.startsWith('@/')) base = path.join(srcRoot, spec.slice(2));
+    else if (spec.startsWith('./') || spec.startsWith('../')) base = path.resolve(path.dirname(file), spec);
+    if (!base) continue;
+
+    const relPath = path.relative(srcRoot, base).split(path.sep).join('/').replace(/\.(js|ts)$/, '');
+    if (!relPath.startsWith('utils/')) continue;
+    if (DEP_DENY.has(relPath)) continue;
+
+    const resolved = resolveModule(base);
+    if (resolved && (resolved.endsWith('.js') || resolved.endsWith('.ts'))) {
+      collectUtilDeps(resolved, surface, seen);
+    }
+  }
+  return seen;
+}
+
+function depsSha(entry) {
+  const deps = [...collectUtilDeps(path.join(repoRoot, entry.path), entry.surface)].sort();
+  const hash = crypto.createHash('sha256');
+  for (const dep of deps) {
+    hash.update(rel(dep));
+    hash.update('\0');
+    hash.update(normalize(fs.readFileSync(dep, 'utf8')));
+    hash.update('\n');
+  }
+  return hash.digest('hex');
+}
+
 function lockKey(entry) {
   return `${entry.surface}/${entry.slug}`;
 }
@@ -274,6 +325,7 @@ function lockEntry(entry) {
   return {
     source: entry.path,
     sha256: sha256File(path.join(repoRoot, entry.path)),
+    depsSha: depsSha(entry),
     title: entry.title,
     tabbar: entry.tabbar,
     reviewedAt: TODAY,
@@ -287,6 +339,8 @@ function staleReasons(entry, saved) {
   if (!saved.reviewedAt) reasons.push('新页面未复核');
   if (saved.source !== entry.path) reasons.push(`source 从 ${saved.source} 变为 ${entry.path}`);
   if (saved.sha256 !== sha256File(path.join(repoRoot, entry.path))) reasons.push('页面源码变了');
+  if (saved.depsSha === undefined) reasons.push('依赖指纹未登记');
+  else if (saved.depsSha !== depsSha(entry)) reasons.push('依赖的 utils 变了');
   if (saved.title !== entry.title) reasons.push(`导航标题变了: ${saved.title ?? '(空)'} → ${entry.title}`);
   if (saved.tabbar !== entry.tabbar) reasons.push('tabBar 归属变了');
   return reasons;
@@ -418,6 +472,7 @@ function commandSync() {
     lock.pages[key] = {
       source: entry.path,
       sha256: null,
+      depsSha: null,
       title: null,
       tabbar: null,
       reviewedAt: null,
