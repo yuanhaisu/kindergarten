@@ -181,4 +181,4 @@ tokens.css 已由流程提供，不要重写，不要覆盖。
 - 页面源码 / 依赖的内容型 utils / 导航标题 / tabBar 改动后：`npm run design:sync` → 复核受影响原型 → `npm run design:accept -- <surface>/<slug>` → `npm run design:check`。
 - 新增页面先在 `design.config.json` 登记 `slug / n / tabbar`，再补原型目录；`sync` 只写入“待复核”条目，必须显式 `accept`。
 - `accept --all` 默认拒绝，只有确认没有任何页面内容变化或显式 `--force` 才执行；`shared-ui / utils / api / components` 变更用 `accept --shared` 单独确认。
-- `preview.png` 比页面资源旧时 `check` 给 warning，运行 `npm run design:shots` 重出截图。
+- `design.preview.lock.json` 记录的截图基线与原型内容不一致时，`check` 给 warning，运行 `npm run design:shots` 重出截图。

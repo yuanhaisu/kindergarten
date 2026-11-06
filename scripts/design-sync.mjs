@@ -34,6 +34,7 @@ const BATCH = path.join(repoRoot, 'docs/design-previews/2026-10-25-full-redesign
 const CONFIG = path.join(BATCH, 'design.config.json');
 const MANIFEST = path.join(BATCH, '_shared/pages.json');
 const LOCK = path.join(BATCH, 'design.lock.json');
+const PREVIEW_LOCK = path.join(BATCH, 'design.preview.lock.json');
 const GALLERY = path.join(BATCH, 'index.html');
 const README = path.join(BATCH, 'README.md');
 const SURFACES = ['teacher', 'parent'];
@@ -420,15 +421,30 @@ function checkGallery(entries) {
   return errors;
 }
 
-function previewIsStale(entry) {
+function prototypeAssetsSha(entry) {
   const dir = prototypeDir(entry);
-  const preview = path.join(dir, 'preview.png');
-  if (!fs.existsSync(preview)) return true;
-  const previewMtime = fs.statSync(preview).mtimeMs;
-  const assets = ['index.html', 'styles.css', 'app.js', 'tokens.css']
-    .map((name) => path.join(dir, name))
-    .filter((file) => fs.existsSync(file));
-  return assets.some((file) => fs.statSync(file).mtimeMs > previewMtime + 2000);
+  const hash = crypto.createHash('sha256');
+  for (const name of ['index.html', 'styles.css', 'app.js', 'notes.md', 'tokens.css']) {
+    const file = path.join(dir, name);
+    if (!fs.existsSync(file)) continue;
+    hash.update(name);
+    hash.update('\0');
+    hash.update(normalize(fs.readFileSync(file, 'utf8')));
+    hash.update('\n');
+  }
+  return hash.digest('hex');
+}
+
+function loadPreviewLock() {
+  if (!fs.existsSync(PREVIEW_LOCK)) return { version: 1, pages: {} };
+  return readJson(PREVIEW_LOCK);
+}
+
+function previewIsStale(entry, previewLock) {
+  const saved = previewLock.pages?.[lockKey(entry)];
+  if (!saved) return true;
+  if (!fs.existsSync(path.join(prototypeDir(entry), 'preview.png'))) return true;
+  return saved.assetsSha !== prototypeAssetsSha(entry);
 }
 
 function regenerateGallery() {
@@ -578,9 +594,10 @@ function commandCheck() {
     warnings.push('shared-ui / utils / api / components 已变更：复核影响后运行 npm run design:accept -- --shared');
   }
 
-  const staleShots = entries.filter(previewIsStale);
+  const previewLock = loadPreviewLock();
+  const staleShots = entries.filter((entry) => previewIsStale(entry, previewLock));
   if (staleShots.length) {
-    warnings.push(`${staleShots.length} 页原型资源比 preview.png 新：运行 npm run design:shots 重出截图`);
+    warnings.push(`${staleShots.length} 页截图与原型内容不一致：运行 npm run design:shots 重出截图`);
   }
 
   for (const warning of warnings) console.warn(`[design-sync] 警告: ${warning}`);
@@ -640,20 +657,43 @@ function commandAccept() {
   }
 }
 
-switch (command) {
-  case 'sync':
-    commandSync();
-    break;
-  case 'check':
-    commandCheck();
-    break;
-  case 'accept':
-    commandAccept();
-    break;
-  case '--help':
-  case 'help':
-    console.log('用法: node scripts/design-sync.mjs <sync|check|accept> [--quick|--all|--force|--shared] [slug]');
-    break;
-  default:
-    fail(`未知命令: ${command}\n用法: node scripts/design-sync.mjs <sync|check|accept>`, 2);
+function main() {
+  switch (command) {
+    case 'sync':
+      commandSync();
+      break;
+    case 'check':
+      commandCheck();
+      break;
+    case 'accept':
+      commandAccept();
+      break;
+    case '--help':
+    case 'help':
+      console.log('用法: node scripts/design-sync.mjs <sync|check|accept> [--quick|--all|--force|--shared] [slug]');
+      break;
+    default:
+      fail(`未知命令: ${command}\n用法: node scripts/design-sync.mjs <sync|check|accept>`, 2);
+  }
 }
+
+const invokedDirectly = process.argv[1] &&
+  path.resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase();
+
+if (invokedDirectly) {
+  main();
+}
+
+export {
+  BATCH,
+  buildManifest,
+  manifestText,
+  sha256File,
+  prototypeTitle,
+  codeTabbarRoutes,
+  staleReasons,
+  loadLock,
+  loadPreviewLock,
+  prototypeAssetsSha,
+  depsSha,
+};

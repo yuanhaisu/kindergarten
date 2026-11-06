@@ -9,7 +9,8 @@
     "design:sync": "node scripts/design-sync.mjs sync",
     "design:check": "node scripts/design-sync.mjs check",
     "design:accept": "node scripts/design-sync.mjs accept",
-    "design:shots": "node scripts/od-shots.mjs docs/design-previews/2026-10-25-full-redesign --width 390 --dsf 2"
+    "design:shots": "node scripts/design-shots.mjs",
+    "design:test": "node --test scripts/design-sync.test.mjs"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

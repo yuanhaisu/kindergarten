@@ -109,3 +109,5 @@ jobs:
           node-version: '24'
       - name: Check tokens / manifest / source lock
         run: node scripts/design-sync.mjs check
+      - name: Self-test design-sync
+        run: node --test scripts/design-sync.test.mjs
