@@ -7,7 +7,7 @@
 - 共享约束：[_shared/brief.md](_shared/brief.md)
 - 设计系统：`user:nurture-planet-local`
 
-### 老师端（23）
+### 老师端（22）
 
 | # | 页面 | slug | 原型 | 说明 |
 |---|---|---|---|---|
@@ -32,10 +32,9 @@
 | 19 | 我的 | `19-profile-index` | [打开](teacher/19-profile-index/index.html) | [notes](teacher/19-profile-index/notes.md) |
 | 20 | 入园晨检 | `20-doctor-checkin` | [打开](teacher/20-doctor-checkin/index.html) | [notes](teacher/20-doctor-checkin/notes.md) |
 | 21 | 园级事件 | `21-doctor-calendar` | [打开](teacher/21-doctor-calendar/index.html) | [notes](teacher/21-doctor-calendar/notes.md) |
-| 22 | 内嵌网页 | `22-webview` | [打开](teacher/22-webview/index.html) | [notes](teacher/22-webview/notes.md) |
-| 23 | 通知列表 | `23-notice-index` | [打开](teacher/23-notice-index/index.html) | [notes](teacher/23-notice-index/notes.md) |
+| 22 | 通知列表 | `23-notice-index` | [打开](teacher/23-notice-index/index.html) | [notes](teacher/23-notice-index/notes.md) |
 
-### 家长端（28）
+### 家长端（29）
 
 | # | 页面 | slug | 原型 | 说明 |
 |---|---|---|---|---|
@@ -66,4 +65,5 @@
 | 25 | 设置 | `25-settings` | [打开](parent/25-settings/index.html) | [notes](parent/25-settings/notes.md) |
 | 26 | 消息 | `26-messages` | [打开](parent/26-messages/index.html) | [notes](parent/26-messages/notes.md) |
 | 27 | 我的 | `27-profile` | [打开](parent/27-profile/index.html) | [notes](parent/27-profile/notes.md) |
-| 28 | 内嵌网页 | `28-webview` | [打开](parent/28-webview/index.html) | [notes](parent/28-webview/notes.md) |
+| 28 | album-list | `28-album-list` | [打开](parent/28-album-list/index.html) | [notes](parent/28-album-list/notes.md) |
+| 29 | album-detail | `29-album-detail` | [打开](parent/29-album-detail/index.html) | [notes](parent/29-album-detail/notes.md) |

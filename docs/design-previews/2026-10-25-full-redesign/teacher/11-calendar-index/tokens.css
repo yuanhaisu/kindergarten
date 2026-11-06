@@ -6,45 +6,45 @@
  */
 
 :root {
-  --bg: #F8FAFC;
-  --bg-gradient: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
-  --surface: #FFFFFF;
+  --bg: #F7F3EA;
+  --bg-gradient: linear-gradient(180deg, #F7F3EA 0%, #FFFAF0 100%);
+  --surface: #FFFAF0;
   --surface-warm: #fffaf0;
   --accent-gradient-soft: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
   --fg: #1E293B;
   --fg-2: #334155;
-  --muted: #64748B;
+  --muted: #5F6E84;
   --hint: #94A3B8;
   --on-brand: #FFFFFF;
   --on-accent: #FFFFFF;
   --border: #CBD5E1;
   --accent: #F97316;
   --accent-soft: #FB923C;
-  --accent-deep: #EA580C;
+  --accent-deep: #C2410C;
   --accent-wash: #FFF7ED;
-  --accent-gradient: linear-gradient(135deg, #FB923C 0%, #F97316 100%);
+  --accent-gradient: linear-gradient(135deg, #EA580C 0%, #C2410C 100%);
   --brand-teacher: #ff8a3d;
   --brand-parent: #F97316;
   --brand-admin: #3B82F6;
-  --success: #16A34A;
+  --success: #15803D;
   --success-wash: #DCFCE7;
-  --warning: #CA8A04;
+  --warning: #A16207;
   --warning-wash: #FEF9C3;
-  --danger: #EF4444;
+  --danger: #B91C1C;
   --danger-wash: #FEE2E2;
-  --info: #2563EB;
+  --info: #1D4ED8;
   --info-wash: #DBEAFE;
   --sidebar: #1E293B;
   --sidebar-hover: #334155;
-  --font-sans: "Noto Sans SC", system-ui, -apple-system, sans-serif;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-base: 13px;
-  --text-md: 14px;
-  --text-lg: 15px;
-  --text-xl: 16px;
-  --text-2xl: 18px;
-  --text-3xl: 20px;
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 16px;
+  --text-lg: 17px;
+  --text-xl: 18px;
+  --text-2xl: 20px;
+  --text-3xl: 22px;
   --weight-normal: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
@@ -89,17 +89,30 @@
   --accent-wash: #fff7f0;
   --accent-gradient: linear-gradient(135deg, #ffa866 0%, #ff8a3d 100%);
   --accent-gradient-soft: linear-gradient(135deg, #fff7f0 0%, #ffe8d6 100%);
+  --muted: #64748B;
+  --success: #16A34A;
+  --warning: #CA8A04;
+  --danger: #EF4444;
+  --info: #2563EB;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 16px;
+  --text-2xl: 18px;
+  --text-3xl: 20px;
 }
 
 :root[data-surface="parent"] {
-  --bg: #F8FAFC;
-  --bg-gradient: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
-  --surface: #FFFFFF;
+  --bg: #F7F3EA;
+  --bg-gradient: linear-gradient(180deg, #F7F3EA 0%, #FFFAF0 100%);
+  --surface: #FFFAF0;
   --accent: #F97316;
   --accent-soft: #FB923C;
-  --accent-deep: #EA580C;
+  --accent-deep: #C2410C;
   --accent-wash: #FFF7ED;
-  --accent-gradient: linear-gradient(135deg, #FB923C 0%, #F97316 100%);
+  --accent-gradient: linear-gradient(135deg, #EA580C 0%, #C2410C 100%);
   --accent-gradient-soft: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
 }
 

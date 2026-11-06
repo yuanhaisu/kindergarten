@@ -20,7 +20,6 @@
   { "n": 19, "surface": "teacher", "slug": "19-profile-index", "path": "teacher/src/pages/profile/index.vue", "title": "我的", "tabbar": true },
   { "n": 20, "surface": "teacher", "slug": "20-doctor-checkin", "path": "teacher/src/pages/doctor/checkin.vue", "title": "入园晨检", "tabbar": false },
   { "n": 21, "surface": "teacher", "slug": "21-doctor-calendar", "path": "teacher/src/pages/doctor/calendar.vue", "title": "园级事件", "tabbar": false },
-  { "n": 22, "surface": "teacher", "slug": "22-webview", "path": "teacher/src/pages/webview/index.vue", "title": "内嵌网页", "tabbar": false },
   { "n": 23, "surface": "teacher", "slug": "23-notice-index", "path": "teacher/src/pages/notice/index.vue", "title": "通知列表", "tabbar": false },
 
   { "n": 1, "surface": "parent", "slug": "01-home", "path": "parent/src/pages/index/index.vue", "title": "家长首页", "tabbar": true },
@@ -50,5 +49,6 @@
   { "n": 25, "surface": "parent", "slug": "25-settings", "path": "parent/src/pages/settings/index.vue", "title": "设置", "tabbar": false },
   { "n": 26, "surface": "parent", "slug": "26-messages", "path": "parent/src/pages/messages/index.vue", "title": "消息", "tabbar": false },
   { "n": 27, "surface": "parent", "slug": "27-profile", "path": "parent/src/pages/profile/index.vue", "title": "我的", "tabbar": true },
-  { "n": 28, "surface": "parent", "slug": "28-webview", "path": "parent/src/pages/webview/index.vue", "title": "内嵌网页", "tabbar": false }
+  { "n": 28, "surface": "parent", "slug": "28-album-list", "path": "parent/src/pages/album/index.vue", "title": "班级相册", "tabbar": false },
+  { "n": 29, "surface": "parent", "slug": "29-album-detail", "path": "parent/src/pages/album/detail.vue", "title": "相册详情", "tabbar": false }
 ]

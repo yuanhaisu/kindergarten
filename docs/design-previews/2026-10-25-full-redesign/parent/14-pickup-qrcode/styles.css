@@ -862,3 +862,57 @@ body {
     animation-duration: 1.6s;
   }
 }
+
+/* ── 已核验（代码核验后轮询到接走记录） ───────────────── */
+.status-pill--verified { display: none; color: var(--success); background: var(--success-wash); }
+
+.verified-note,
+.verified-sub { display: none; text-align: center; }
+.verified-note {
+  margin-top: var(--space-sm);
+  color: var(--accent-deep);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.verified-sub { color: var(--muted); font-size: var(--text-xs); }
+
+.qr-verified-mask {
+  position: absolute;
+  inset: 16px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.qr-verified-check {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--success-wash);
+  color: var(--success);
+}
+
+.qr-verified-label {
+  color: var(--success);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.mp-app[data-state="verified"] .status-pill--valid,
+.mp-app[data-state="verified"] .status-pill--expired,
+.mp-app[data-state="verified"] .status-pill--refresh { display: none; }
+.mp-app[data-state="verified"] .status-pill--verified { display: inline-flex; }
+
+.mp-app[data-state="verified"] .qr-svg { opacity: .12; }
+.mp-app[data-state="verified"] .qr-expired,
+.mp-app[data-state="verified"] .qr-refreshing { display: none; }
+.mp-app[data-state="verified"] .qr-verified-mask { display: flex; }
+.mp-app[data-state="verified"] .pass-tip { display: none; }
+.mp-app[data-state="verified"] .verified-note,
+.mp-app[data-state="verified"] .verified-sub { display: block; }

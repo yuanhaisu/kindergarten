@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="parent">
+<head>
+  <script src="../../_shared/theme.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>班级相册 · 养成星球</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="mp-app" data-state="normal">
+<div class="mp-statusbar" aria-hidden="true">
+<span class="mp-time">9:41</span>
+<span class="mp-status-icons">
+<svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+<svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+<svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+</span>
+</div>
+<header class="mp-navbar">
+<button class="mp-back" id="backButton" type="button" aria-label="返回成长时光">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+</button>
+<h1 class="mp-title">班级相册</h1>
+<div class="mp-capsule" aria-hidden="true">
+<span class="mp-capsule-dots">···</span>
+<span class="mp-capsule-divider"></span>
+<span class="mp-capsule-ring">◎</span>
+</div>
+</header>
+
+<main class="mp-main">
+<div class="page">
+
+<!-- 全班视图：只有服务端下发 classwide_enabled 才出现 -->
+<div class="scope-switch">
+<div class="scope-seg" role="tablist" aria-label="相册范围">
+<button class="scope-btn is-active" type="button" role="tab" aria-selected="true">我的孩子</button>
+<button class="scope-btn" type="button" role="tab" aria-selected="false">全班</button>
+</div>
+</div>
+
+<!-- 正常态 -->
+<section class="album-list" aria-label="相册列表">
+<div class="list-head">
+<h2 class="list-title">全部相册</h2>
+<span class="list-meta">共 6 本</span>
+</div>
+
+<a class="album-card" href="../29-album-detail/index.html">
+<div class="album-cover album-cover--3">
+<span class="cover-cell cover-a"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="8" r="2.2"/><path d="m3.5 18 5-5 3.4 3.4 3.2-3.2L20.5 18Z"/></svg></span>
+<span class="cover-cell cover-b"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 20c4.4 0 8-3.6 8-8 0-4.4-3.6-7-8-9-4.4 2-8 4.6-8 9 0 4.4 3.6 8 8 8Z"/><path d="M12 8v8"/></svg></span>
+<span class="cover-cell cover-c"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3.5 14.7 9l6 .7-4.5 4.1 1.3 6L12 16.9l-5.5 2.9 1.3-6L3.3 9.7l6-.7Z"/></svg></span>
+</div>
+<div class="album-info">
+<div class="album-line">
+<span class="album-name">秋日郊游</span>
+<span class="album-count">32 张照片</span>
+</div>
+<div class="album-line album-meta">
+<span class="album-date">10月24日</span>
+<span class="tag">户外活动</span>
+</div>
+</div>
+</a>
+
+<a class="album-card" href="../29-album-detail/index.html">
+<div class="album-cover album-cover--2">
+<span class="cover-cell cover-d"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6.5h16v13H4Z"/><path d="M8 6.5V4h8v2.5"/><path d="M8 12h8"/></svg></span>
+<span class="cover-cell cover-e"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 19c0-6 3-10 7-14 4 4 7 8 7 14"/><path d="M9 19c0-4 1.4-6.6 3-9 1.6 2.4 3 5 3 9"/></svg></span>
+</div>
+<div class="album-info">
+<div class="album-line">
+<span class="album-name">手工小课堂</span>
+<span class="album-count">18 张照片</span>
+</div>
+<div class="album-line album-meta">
+<span class="album-date">10月20日</span>
+<span class="tag">班级活动</span>
+</div>
+</div>
+</a>
+
+<a class="album-card" href="../29-album-detail/index.html">
+<div class="album-cover album-cover--1">
+<span class="cover-cell cover-f"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 17c2-4 4-6 8-6s6 2 8 6"/><circle cx="12" cy="7" r="3"/></svg></span>
+</div>
+<div class="album-info">
+<div class="album-line">
+<span class="album-name">午睡时光</span>
+<span class="album-count">9 张照片</span>
+</div>
+<div class="album-line album-meta">
+<span class="album-date">10月18日</span>
+<span class="tag">生活照护</span>
+</div>
+</div>
+</a>
+
+<div class="load-more">
+<span class="load-more-hint">已展示 3 本 · 共 6 本</span>
+<button class="load-more-btn" type="button">加载更多</button>
+</div>
+</section>
+
+<!-- 加载态 -->
+<section class="skeleton" aria-hidden="true">
+<div class="sk-card">
+<div class="sk-covers"><span class="sk sk-square"></span><span class="sk sk-square"></span><span class="sk sk-square"></span></div>
+<div class="sk-lines"><span class="sk sk-line sk-line--title"></span><span class="sk sk-line sk-line--meta"></span></div>
+</div>
+<div class="sk-card">
+<div class="sk-covers"><span class="sk sk-square"></span><span class="sk sk-square"></span><span class="sk sk-square"></span></div>
+<div class="sk-lines"><span class="sk sk-line sk-line--title"></span><span class="sk sk-line sk-line--meta"></span></div>
+</div>
+<div class="sk-card">
+<div class="sk-covers"><span class="sk sk-square"></span><span class="sk sk-square"></span><span class="sk sk-square"></span></div>
+<div class="sk-lines"><span class="sk sk-line sk-line--title"></span><span class="sk sk-line sk-line--meta"></span></div>
+</div>
+</section>
+
+<!-- 空态 -->
+<section class="empty-state">
+<div class="empty-art"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.4-4.2 3.4 3.2 2.4-2.4L19 17"/></svg></div>
+<p class="empty-title">本班还没有已发布相册</p>
+<p class="empty-desc">老师发布后，照片会按日期整理在这里</p>
+<button class="link-btn" type="button">刷新看看</button>
+</section>
+
+<!-- 失败态 -->
+<section class="error-state">
+<div class="error-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3.5 21 20H3Z"/><path d="M12 9v5"/><circle cx="12" cy="17" r=".8" fill="currentColor"/></svg></div>
+<p class="error-title">班级相册加载失败</p>
+<p class="error-desc">网络不太稳定，请稍后再试</p>
+<button class="state-action" type="button"><span class="state-action-text">重试</span></button>
+</section>
+
+</div>
+</main>
+
+<div class="mp-demo" data-open="false">
+<div class="mp-demo-chips" role="group" aria-label="原型状态">
+<button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
+<button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
+<button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
+<button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+</div>
+<button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+</div>
+
+</div>
+<script src="../../_shared/shell.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

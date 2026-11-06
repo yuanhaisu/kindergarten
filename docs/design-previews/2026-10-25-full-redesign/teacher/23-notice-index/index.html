@@ -40,14 +40,14 @@
       <div class="hero-top">
         <div class="hero-copy">
           <p class="hero-eyebrow">小一班 · 王老师</p>
-          <h2 class="hero-title" id="noticeTitle">通知中心</h2>
+          <h2 class="hero-title" id="noticeTitle">通知管理</h2>
           <p class="hero-sub">发布通知，跟进家长已读与确认</p>
         </div>
         <a class="publish-btn" href="../03-notice-create/index.html" data-od-id="publish-notice">发布通知</a>
       </div>
       <div class="hero-stats">
-        <div class="hero-stat"><b>36</b><span>全部通知</span></div>
-        <div class="hero-stat"><b>28</b><span>已发布</span></div>
+        <div class="hero-stat"><b>36</b><span>通知数</span></div>
+        <div class="hero-stat"><b>28</b><span>已加载</span></div>
         <div class="hero-stat"><b>84%</b><span>平均已读</span></div>
       </div>
     </section>
@@ -191,22 +191,11 @@
 
     </section>
 
-    <div class="filter-empty" id="filterEmpty" hidden>
-      <span class="empty-icon" aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v10.2a1.3 1.3 0 0 1-1.3 1.3H5.3A1.3 1.3 0 0 1 4 16.7Z"/><path d="m4.5 7.2 7.5 5.4 7.5-5.4"/></svg>
-      </span>
-      <h2 class="empty-title">这个筛选下没有通知</h2>
-      <p class="empty-copy">换个状态或类型看看，或者清除筛选。</p>
-      <button class="empty-btn" type="button" id="emptyReset">清除筛选</button>
-    </div>
-
     <div class="empty-state" id="emptyState">
       <span class="empty-icon" aria-hidden="true">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v10.2a1.3 1.3 0 0 1-1.3 1.3H5.3A1.3 1.3 0 0 1 4 16.7Z"/><path d="m4.5 7.2 7.5 5.4 7.5-5.4"/></svg>
       </span>
-      <h2 class="empty-title">还没有发布过通知</h2>
-      <p class="empty-copy">发布第一条通知，家长会在微信里收到提醒。</p>
-      <a class="empty-btn" href="../03-notice-create/index.html">去发布通知</a>
+      <h2 class="empty-title">暂无通知</h2>
     </div>
 
     <div class="loading-state" id="loadingState" aria-hidden="true">
