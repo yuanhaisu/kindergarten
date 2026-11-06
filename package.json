@@ -5,9 +5,16 @@
     "check-tokens:parent": "node scripts/check-tokens.mjs parent",
     "check-tokens:admin": "node scripts/check-tokens.mjs admin",
     "audit-calicat": "node scripts/audit-calicat.mjs",
-    "audit-calicat:summary": "node scripts/audit-calicat.mjs --summary"
+    "audit-calicat:summary": "node scripts/audit-calicat.mjs --summary",
+    "design:sync": "node scripts/design-sync.mjs sync",
+    "design:check": "node scripts/design-sync.mjs check",
+    "design:accept": "node scripts/design-sync.mjs accept",
+    "design:shots": "node scripts/od-shots.mjs docs/design-previews/2026-10-25-full-redesign --width 390 --dsf 2"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "gif-encoder": "^0.7.2",
+    "pngjs": "^7.0.0",
     "remixicon": "^4.9.1"
   }
 }

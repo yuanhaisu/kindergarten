@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: 凭据与 token 检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Secret scan (changed files)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+          else
+            base="HEAD~1"
+          fi
+          files=$(git diff --name-only "$base"...HEAD 2>/dev/null || true)
+          if [ -n "$files" ]; then
+            node scripts/check-secrets.mjs --files $files
+          fi
+      - name: Token lint (admin)
+        run: node scripts/check-tokens.mjs admin
+
+  backend:
+    name: 后端编译 / vet / lint / 单测
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Build
+        run: cd server && go build ./...
+      - name: Vet
+        run: cd server && go vet ./...
+      - name: Lint (new issues only)
+        if: github.event_name == 'pull_request'
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: server
+          args: --new-from-rev=origin/${{ github.base_ref }}
+      - name: Lint (new issues only, push)
+        if: github.event_name != 'pull_request'
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: server
+          args: --new-from-rev=HEAD~1
+      - name: Unit tests (DB-free packages)
+        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... -count=1
+
+  admin:
+    name: 管理端静态构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install design tokens
+        run: cd shared-design-tokens && npm ci && npm run build
+      - name: Build admin
+        run: cd admin && npm ci && npm run generate
+
+  miniprogram:
+    name: 小程序构建 (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [teacher, parent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install design tokens
+        run: cd shared-design-tokens && npm ci && npm run build
+      - name: Build ${{ matrix.app }}
+        run: cd ${{ matrix.app }} && npm ci && npm run build:mp-weixin
+
+  design-sync:
+    name: 设计稿同步检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check tokens / manifest / source lock
+        run: node scripts/design-sync.mjs check

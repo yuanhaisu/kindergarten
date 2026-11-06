@@ -110,6 +110,20 @@ make check             # vet + lint + test
 
 Config file path via env: `CONFIG_PATH=configs/app.local.ini make run`. Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
 
+### 数据库迁移（`server/`）
+
+```bash
+make migrate           # goose up（连接 configs/app.ini）
+make seedbase          # 幂等初始化字典 / 膳食 / 园长角色
+go run ./cmd/migrate status
+go run ./cmd/migrate -database <db> up
+```
+
+- `server/migrations/00001_baseline.sql` 由 `cmd/schemadump` 从**实际开发库**导出，**不要手改**。
+- 任何 schema 变更都要新增 `server/migrations/0000N_xxx.sql`（goose `-- +goose Up` / `-- +goose Down`）；生产不再依赖 `AutoMigrate`。
+- 新环境首次部署顺序：`make migrate` → `make seedbase`。
+- `cmd/dbcheck` 仍是迁移后核对索引与行数的只读工具。
+
 ### Admin web (`admin/`)
 
 ```bash
@@ -216,7 +230,7 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
 | 形态 | 双端同时在线 | 可自动化 | 适用 |
 |---|---|---|---|
 | **双 IDE 实例 + 双微信账号** | ✅ | ✅ 两端都能 MCP 驱动 | 跨端数据流自动化验证 |
-| 单 IDE 双项目窗口 | ✅ | ❌ 只能串行 MCP | 人工对照观察 |
+| 单 IDE 双项目窗口 | ✅ | ⚠️ 截图可按 `--target-id` 精确指定；导航与交互仍串行 | 逐端截图对照 |
 | 一端 MCP + 一端真机预览 | ✅ | 半 | 一端自动化、一端人工点 |
 
 #### 双 IDE 实例方案（已实测可行，2026-10-05）
@@ -261,9 +275,25 @@ powershell -ExecutionPolicy Bypass -File scripts/dual-ide.ps1 -Status # 看端�
 - 两端 `page_data` 返回的字段应明显不同（老师端有「发布通知/成长记录」，家长端有「我要请假/接送管理」）
 - 探独有页面：老师端 `pages/more/index`，家长端 `pages/points/index`
 
-#### 单 IDE 双项目窗口（人工对照）
+#### 单 IDE 双项目窗口（可按 target 精确截图）
 
-同一 IDE 实例可同时打开两个项目窗口（窗口标题分别显示「幼儿园老师端」「幼儿园家长端」）。适合人工对照观察，但 MCP 一次只能驱动一个窗口。
+同一 IDE 实例可同时打开两个项目窗口（窗口标题分别显示「幼儿园老师端」「幼儿园家长端」）。
+
+**2026-11-04 实测**：两个项目会各占一组 `__pageframe__` target，**共用同一个 CDP 端口**（默认 9222）。因此「一次只能驱动一个」只对**导航与交互**成立，**截图和读 DOM 可以按 `--target-id` 精确指定**：
+
+```bash
+# 1. 列出全部 pageframe（同一项目的 pageframe 共享一个端口前缀，用它区分端）
+python -c "import json,urllib.request; [print(t['id'], t['url']) for t in json.load(urllib.request.urlopen('http://127.0.0.1:9222/json/list')) if '__pageframe__' in t['url']]"
+
+# 2. 按 id 截图（不要用 --title 猜端口）
+python scripts\shot.py out.png --port 9222 --target-id <id>
+```
+
+判别归属：看 `url` 里的端口前缀（如 `64495/...` 与 `56245/...`），或看页面文案。实测中**同一项目的所有 pageframe 共用一个内部端口**，不同项目用不同端口。
+
+⚠️ `shot.py --title 老师端` 会按窗口标题猜端口，双窗口下容易猜错并报 `ConnectionRefused`——**始终显式传 `--port` 与 `--target-id`**。
+
+⚠️ 导航仍会串：`cdp.py nav` 只会命中它找到的那个 route 的 pageframe，无法指定端。要驱动指定端，用双实例方案。
 
 打开方式：IDE 菜单或项目列表里打开第二个项目即可（`cli open-other --project X` **无效**——它忽略 `--project` 参数，只弹项目选择界面）。
 
@@ -326,13 +356,13 @@ pkg/
 >
 > `initcheck` 的连接串已改为读 `configs/app.ini`（可用 `MYSQL_DSN` 覆盖），管理员口令改为读环境变量 `INIT_ADMIN_PASSWORD`（未设置则直接退出）。**不要再把凭据写回源码**——即使后续删除，git 历史仍可追溯。
 
-> 🔧 **`dbcheck` 的用途**：本仓库**没有迁移工具**（只有 `AutoMigrate`，而它只增不改——同名索引已存在就会被跳过）。所以手工迁移后需要一个核实手段：
+> 🔧 **`dbcheck` 的用途**：schema 由 **goose** 版本化迁移管理（`server/migrations/`），应用启动不再执行 `AutoMigrate`。手工核对某张表的索引与行数：
 >
 > ```bash
 > go run ./cmd/dbcheck task_check_ins
 > ```
 >
-> 会打印该表的全部索引（标注唯一/普通、列出列序）与行数。改完 struct tag 或跑完 `docs/migrations/` 下的 SQL 后，用它确认线上库真的变了，而不是假设 `AutoMigrate` 会处理。
+> 会打印该表的全部索引（标注唯一/普通、列出列序）与行数。跑完 `make migrate` 或手工 SQL 后，用它确认线上库真的变了，而不是假设迁移会按预期执行。
 
 **Middleware chain**: `gin.Recovery → CORS → RequestID → RequestContextLogger → [AuthJWT → CasbinRBAC on authed groups]`
 
@@ -347,7 +377,7 @@ pkg/
 >
 > **为什么必须拆开**：openid 是「用户×小程序」二元的。共用 AppID 会让同一人在两端拿到同一个 openid，`FindByOpenID` 只命中一条 User → 另一端角色丢失 → 接口全 403。
 >
-> **老师端是个人号的两个后果**：`teacher/src/pages/webview/index.vue` 的 `<web-view>` 会白屏（个人号不支持，**已划出验收范围**）；`code2session` 不返回 `unionid`，跨端同人只能靠手机号关联。
+> **老师端是个人号的两个后果**：个人号不支持 `<web-view>`（原 `webview/index` 占位页已删除，老师端不再保留内嵌网页入口）；`code2session` 不返回 `unionid`，跨端同人只能靠手机号关联。
 >
 > **跨端同人是两条 User + 关联**（不是一条 User 多角色）：unionid 优先、手机号兜底，见 `server/internal/service/cross_end_identity.go`。
 >
@@ -406,7 +436,7 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 ### Teacher mini-program structure (`teacher/`)
 
-- `src/pages.json` — uni-app page routing (**23 pages**, 无 `tabBar` 字段；工作台/班级/消息/我的 4 页用自绘底栏):
+- `src/pages.json` — uni-app page routing (**22 pages**, 无 `tabBar` 字段；工作台/班级/消息/我的 4 页用自绘底栏):
 
   | 模块 | 页面 |
   | --------- | ------------------------------------------------------ |
@@ -415,15 +445,14 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
   | 通知      | `notice/index`、`notice/create`                        |
   | 成长记录  | `growth/index`、`growth/create`、`growth/detail`       |
   | 接送      | `pickup/index`、`pickup/records`                       |
-  | 亲子任务  | `tasks/index`                                          |
+  | 亲子任务  | `tasks/index`、`tasks/detail`                          |
   | 班级日历  | `calendar/index`、`calendar/create`、`calendar/detail` |
   | 请假      | `leave/index`                                          |
   | 班级      | `class/index`                                          |
   | 相册      | `album/index`                                          |
   | 消息      | `messages/index`                                       |
   | 我的/更多 | `profile/index`、`more/index`                          |
-  | 晨检      | `doctor/checkin`                                       |
-  | 内嵌网页  | `webview/index`                                        |
+  | 晨检      | `doctor/checkin`、`doctor/calendar`                    |
 
 - `src/utils/login.js` — 导出 `silentLogin` / `bindPhoneLogin` / `ensureLogin`；`ensureLogin()` 调 `uni.login()` 拿 code，转交 `src/api/auth.js` 的 `wxCodeLogin`（`role` 在此处硬编码为 `"teacher"`）
 - `src/utils/auth.js` — localStorage-based token storage (uni.setStorageSync)
@@ -434,9 +463,9 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 与老师端同构（同版本 uni-app、同样的 `utils/`+`api/` 分层与静默登录），差异如下：
 
-- `src/pages.json` — **26 pages，有 tabBar**（老师端没有）
+- `src/pages.json` — **29 pages，有 tabBar**（老师端没有）
 - tabBar 4 项：`index/index` 首页、`growth/index` 成长时光、`pickup/index` 接送、`profile/index` 我的
-- 页面模块：首页、登录/绑定（`auth/login`、`auth/bind`）、通知（列表+详情）、请假（列表+新建+详情）、成长（列表+详情+相册+**报告**）、接送（+**二维码**、**授权人管理**）、亲子任务（列表+详情）、**积分**、班级、日历、**幼儿档案**、**反馈**、设置、消息、我的、webview
+- 页面模块：首页、登录/绑定（`auth/login`、`auth/bind`）、通知（列表+详情）、请假（列表+新建+详情）、成长（列表+详情+相册+**报告**）、接送（+**二维码**、**授权人管理**）、亲子任务（列表+详情）、**积分**、班级、日历、**幼儿档案**、**反馈**、设置、消息、我的
 - 相对老师端多出的能力：绑定关系、成长报告、接送二维码与授权人、积分、反馈
 - 登录同样静默：`App.vue` `onLaunch` → `ensureLogin()`，`role` 在 `src/api/auth.js` 硬编码为 `"parent"`
 
@@ -444,7 +473,7 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 ## ⚠️ Known Issues（已知问题，动手前先看）
 
-1. **阿里云 RDS 凭据已随 git 历史泄漏（源码已修，历史未清）** — 初始提交 `1611c61` 中，`server/cmd/initcheck/main.go` 硬编码了 RDS 连接串（账号 `test24yangshi` + 明文密码 + 实例地址 `rm-bp1w012d612w344y7po`）。
+1. **阿里云 RDS 凭据已随 git 历史泄漏（源码已修，历史未清）** — 初始提交 `1611c61` 中，`server/cmd/initcheck/main.go` 硬编码了 RDS 连接串（账号、明文密码与实例地址均已从当前文档中打码；具体值只存在于 git 历史与既有泄漏记录中）。
    - ✅ **源码已修复**：改为 `config.Load()` 读 `configs/app.ini`，口令走 `INIT_ADMIN_PASSWORD` 环境变量。
    - ❌ **仍未处理**：该凭据**依然存在于 git 历史中**（`git log -S` 可查到），克隆仓库即可读到。
    - **待办（需人工执行）**：
@@ -606,6 +635,27 @@ node scripts/check-tokens.mjs teacher  # 只扫描老师端
 ```
 
 在提交代码前运行，确保无 token 违规。
+
+### 设计稿同步门禁（必读）
+
+代码是 UI 的唯一真相源；`docs/design-previews/2026-10-25-full-redesign` 是派生的视觉参考。**不要手改 `tokens.css` 或 `_shared/pages.json`**，它们由脚本生成。
+
+改动 `parent/src/pages/**`、`teacher/src/pages/**`、`shared-design-tokens/tokens.json` 或 `shared-ui/**` 后：
+
+```bash
+npm run design:sync                                  # 重生成 tokens.css / pages.json / 画廊，并列出需复核的页面
+npm run design:accept -- parent/13-pickup-index      # 复核完一页后登记指纹
+npm run design:accept -- --shared                   # 只确认 shared-ui 变更，不逐页接受
+npm run design:shots                                 # 重出 51 页 preview.png（需要 Chrome）
+npm run design:check                                 # 必须通过；CI 的 design-sync job 会跑同一检查
+```
+
+- `design.lock.json` 记录每页 `.vue` 的 sha256、导航标题与 tabBar 归属；源码/标题/tabBar 变了但没 `accept`，`check` 会失败并列出原因。
+- 新增页面必须先在 `design.config.json` 登记 `slug / n / tabbar` 并补原型目录；`sync` 只会写“待复核”条目，必须显式 `accept`。
+- 纯 token 改动由 `design:sync` 自动覆盖；`accept --all` 默认拒绝，只有确认没有任何页面内容变化或显式加 `--force` 才执行。
+- `shared-ui/` 变更不会阻断，但会持续告警，直到 `accept --shared`。
+- `preview.png` 比页面资源旧时 `check` 会给 warning，跑 `design:shots` 重出。
+- pre-commit 只做提醒；真正的阻断在 CI。
 
 ## Key constraints
 

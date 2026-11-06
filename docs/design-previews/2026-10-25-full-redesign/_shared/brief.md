@@ -174,3 +174,11 @@ tokens.css 已由流程提供，不要重写，不要覆盖。
 - **页面清单**：删除两端 webview 原型（源码已删），新增家长端 `28-album-list` / `29-album-detail`；总数仍为 51（老师 22 / 家长 29）。
 - **内容差异**：通知页标题与空态、请假状态文案、家长「我的」退出登录、设置页空态、首页动态 chip / 状态球 / 日期、接送完成态与二维码已核验态，均按代码现状更新。
 - **保留差异**：原型图标仍用内联 SVG，代码用 remixicon 字体图标；原型用演示数据，代码按接口渲染。这两项属于呈现介质差异，不做逐像素复刻。
+
+## 同步门禁（2026-11-06 起）
+
+- `_shared/pages.json`、各页 `tokens.css`、`design.lock.json`、`index.html` / `README.md` 由 `scripts/design-sync.mjs` 生成，不要手改。
+- 页面源码 / 导航标题 / tabBar 改动后：`npm run design:sync` → 复核受影响原型 → `npm run design:accept -- <surface>/<slug>` → `npm run design:check`。
+- 新增页面先在 `design.config.json` 登记 `slug / n / tabbar`，再补原型目录；`sync` 只写入“待复核”条目，必须显式 `accept`。
+- `accept --all` 默认拒绝，只有确认没有任何页面内容变化或显式 `--force` 才执行；`shared-ui/` 变更用 `accept --shared` 单独确认。
+- `preview.png` 比页面资源旧时 `check` 给 warning，运行 `npm run design:shots` 重出截图。

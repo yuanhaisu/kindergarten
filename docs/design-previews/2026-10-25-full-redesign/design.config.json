@@ -1,0 +1,261 @@
+{
+  "teacher": {
+    "pages/index/index": {
+      "n": 1,
+      "slug": "01-workbench",
+      "tabbar": true
+    },
+    "pages/auth/login": {
+      "n": 2,
+      "slug": "02-login",
+      "tabbar": false
+    },
+    "pages/notice/create": {
+      "n": 3,
+      "slug": "03-notice-create",
+      "tabbar": false
+    },
+    "pages/growth/index": {
+      "n": 4,
+      "slug": "04-growth-index",
+      "tabbar": false
+    },
+    "pages/growth/create": {
+      "n": 5,
+      "slug": "05-growth-create",
+      "tabbar": false
+    },
+    "pages/growth/detail": {
+      "n": 6,
+      "slug": "06-growth-detail",
+      "tabbar": false
+    },
+    "pages/pickup/index": {
+      "n": 7,
+      "slug": "07-pickup-index",
+      "tabbar": false
+    },
+    "pages/pickup/records": {
+      "n": 8,
+      "slug": "08-pickup-records",
+      "tabbar": false
+    },
+    "pages/tasks/index": {
+      "n": 9,
+      "slug": "09-tasks-index",
+      "tabbar": false
+    },
+    "pages/tasks/detail": {
+      "n": 10,
+      "slug": "10-tasks-detail",
+      "tabbar": false
+    },
+    "pages/calendar/index": {
+      "n": 11,
+      "slug": "11-calendar-index",
+      "tabbar": false
+    },
+    "pages/calendar/create": {
+      "n": 12,
+      "slug": "12-calendar-create",
+      "tabbar": false
+    },
+    "pages/calendar/detail": {
+      "n": 13,
+      "slug": "13-calendar-detail",
+      "tabbar": false
+    },
+    "pages/leave/index": {
+      "n": 14,
+      "slug": "14-leave-index",
+      "tabbar": false
+    },
+    "pages/class/index": {
+      "n": 15,
+      "slug": "15-class-index",
+      "tabbar": true
+    },
+    "pages/album/index": {
+      "n": 16,
+      "slug": "16-album-index",
+      "tabbar": false
+    },
+    "pages/more/index": {
+      "n": 17,
+      "slug": "17-more-index",
+      "tabbar": false
+    },
+    "pages/messages/index": {
+      "n": 18,
+      "slug": "18-messages-index",
+      "tabbar": true
+    },
+    "pages/profile/index": {
+      "n": 19,
+      "slug": "19-profile-index",
+      "tabbar": true
+    },
+    "pages/doctor/checkin": {
+      "n": 20,
+      "slug": "20-doctor-checkin",
+      "tabbar": false
+    },
+    "pages/doctor/calendar": {
+      "n": 21,
+      "slug": "21-doctor-calendar",
+      "tabbar": false
+    },
+    "pages/notice/index": {
+      "n": 23,
+      "slug": "23-notice-index",
+      "tabbar": false
+    }
+  },
+  "parent": {
+    "pages/index/index": {
+      "n": 1,
+      "slug": "01-home",
+      "tabbar": true
+    },
+    "pages/auth/login": {
+      "n": 2,
+      "slug": "02-login",
+      "tabbar": false
+    },
+    "pages/auth/bind": {
+      "n": 3,
+      "slug": "03-bind",
+      "tabbar": false
+    },
+    "pages/notice/index": {
+      "n": 4,
+      "slug": "04-notice-index",
+      "tabbar": false
+    },
+    "pages/notice/detail": {
+      "n": 5,
+      "slug": "05-notice-detail",
+      "tabbar": false
+    },
+    "pages/leave/index": {
+      "n": 6,
+      "slug": "06-leave-index",
+      "tabbar": false
+    },
+    "pages/leave/create": {
+      "n": 7,
+      "slug": "07-leave-create",
+      "tabbar": false
+    },
+    "pages/leave/detail": {
+      "n": 8,
+      "slug": "08-leave-detail",
+      "tabbar": false
+    },
+    "pages/growth/index": {
+      "n": 9,
+      "slug": "09-growth-index",
+      "tabbar": true
+    },
+    "pages/growth/detail": {
+      "n": 10,
+      "slug": "10-growth-detail",
+      "tabbar": false
+    },
+    "pages/growth/album": {
+      "n": 11,
+      "slug": "11-growth-album",
+      "tabbar": false
+    },
+    "pages/growth/report": {
+      "n": 12,
+      "slug": "12-growth-report",
+      "tabbar": false
+    },
+    "pages/pickup/index": {
+      "n": 13,
+      "slug": "13-pickup-index",
+      "tabbar": true
+    },
+    "pages/pickup/qrcode": {
+      "n": 14,
+      "slug": "14-pickup-qrcode",
+      "tabbar": false
+    },
+    "pages/pickup/authorized": {
+      "n": 15,
+      "slug": "15-pickup-authorized",
+      "tabbar": false
+    },
+    "pages/pickup/authorized-create": {
+      "n": 16,
+      "slug": "16-pickup-authorized-create",
+      "tabbar": false
+    },
+    "pages/tasks/index": {
+      "n": 17,
+      "slug": "17-tasks-index",
+      "tabbar": false
+    },
+    "pages/tasks/detail": {
+      "n": 18,
+      "slug": "18-tasks-detail",
+      "tabbar": false
+    },
+    "pages/tasks/wall": {
+      "n": 19,
+      "slug": "19-tasks-wall",
+      "tabbar": false
+    },
+    "pages/points/index": {
+      "n": 20,
+      "slug": "20-points",
+      "tabbar": false
+    },
+    "pages/class/index": {
+      "n": 21,
+      "slug": "21-class-index",
+      "tabbar": false
+    },
+    "pages/calendar/index": {
+      "n": 22,
+      "slug": "22-calendar-index",
+      "tabbar": false
+    },
+    "pages/student/index": {
+      "n": 23,
+      "slug": "23-student-index",
+      "tabbar": false
+    },
+    "pages/feedback/index": {
+      "n": 24,
+      "slug": "24-feedback",
+      "tabbar": false
+    },
+    "pages/settings/index": {
+      "n": 25,
+      "slug": "25-settings",
+      "tabbar": false
+    },
+    "pages/messages/index": {
+      "n": 26,
+      "slug": "26-messages",
+      "tabbar": false
+    },
+    "pages/profile/index": {
+      "n": 27,
+      "slug": "27-profile",
+      "tabbar": true
+    },
+    "pages/album/index": {
+      "n": 28,
+      "slug": "28-album-list",
+      "tabbar": false
+    },
+    "pages/album/detail": {
+      "n": 29,
+      "slug": "29-album-detail",
+      "tabbar": false
+    }
+  }
+}

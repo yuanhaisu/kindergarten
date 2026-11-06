@@ -10,7 +10,8 @@
 # 临时跳过：
 #   git commit --no-verify
 
-PATTERNS='test24yangshi123|rm-bp1w012d612w344y7po|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|mysql://[^[:space:]]*:[^[:space:]@]*@'
+# mysql DSN 用转义斜杠写法，避免 hook 自身的模式文本被 check-secrets 误报
+PATTERNS='sk-[A-Za-z0-9]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|LTAI[0-9A-Za-z]{12,}|mysql:\/\/[^[:space:]]*:[^[:space:]@]*@'
 
 # 排除 .githooks/ 自己：下面 PATTERNS 里就写着要拦的那串口令，扫自己必然误报。
 added=$(git diff --cached -U0 -- . ':(exclude).githooks/' | grep -E '^\+' | grep -Ev '^\+\+\+' || true)
@@ -26,6 +27,12 @@ fi
 if git diff --cached --name-only | grep -qE '(^|/)\.env$|(^|/)\.env\.local$|(^|/)app\.local\.ini$'; then
   echo "✖ 暂存区里有本地配置文件（.env / .env.local / app.local.ini），已阻止提交。" >&2
   exit 1
+fi
+
+# 设计稿漂移提醒：只提示不阻断，CI 的 design-sync job 会阻断。
+# 页面源码改动后复核原型，再 npm run design:accept -- <surface>/<slug>。
+if git diff --cached --name-only | grep -qE '^(parent|teacher)/src/pages/(.*\.vue|pages\.json)$'; then
+  node scripts/design-sync.mjs check --quick || true
 fi
 
 exit 0

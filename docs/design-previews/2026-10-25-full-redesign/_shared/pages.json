@@ -20,9 +20,9 @@
   { "n": 19, "surface": "teacher", "slug": "19-profile-index", "path": "teacher/src/pages/profile/index.vue", "title": "我的", "tabbar": true },
   { "n": 20, "surface": "teacher", "slug": "20-doctor-checkin", "path": "teacher/src/pages/doctor/checkin.vue", "title": "入园晨检", "tabbar": false },
   { "n": 21, "surface": "teacher", "slug": "21-doctor-calendar", "path": "teacher/src/pages/doctor/calendar.vue", "title": "园级事件", "tabbar": false },
-  { "n": 23, "surface": "teacher", "slug": "23-notice-index", "path": "teacher/src/pages/notice/index.vue", "title": "通知列表", "tabbar": false },
+  { "n": 23, "surface": "teacher", "slug": "23-notice-index", "path": "teacher/src/pages/notice/index.vue", "title": "通知", "tabbar": false },
 
-  { "n": 1, "surface": "parent", "slug": "01-home", "path": "parent/src/pages/index/index.vue", "title": "家长首页", "tabbar": true },
+  { "n": 1, "surface": "parent", "slug": "01-home", "path": "parent/src/pages/index/index.vue", "title": "养成星球", "tabbar": true },
   { "n": 2, "surface": "parent", "slug": "02-login", "path": "parent/src/pages/auth/login.vue", "title": "家长登录", "tabbar": false },
   { "n": 3, "surface": "parent", "slug": "03-bind", "path": "parent/src/pages/auth/bind.vue", "title": "绑定孩子", "tabbar": false },
   { "n": 4, "surface": "parent", "slug": "04-notice-index", "path": "parent/src/pages/notice/index.vue", "title": "通知公告", "tabbar": false },
