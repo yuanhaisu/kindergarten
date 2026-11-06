@@ -27,6 +27,7 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { renderThemesCss, writeThemesCss } from './build-theme-css.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BATCH = path.join(repoRoot, 'docs/design-previews/2026-10-25-full-redesign');
@@ -97,6 +98,18 @@ function codePages(surface) {
   return pages;
 }
 
+function codeTabbarRoutes(surface) {
+  if (surface === 'parent') {
+    const json = readJson(path.join(repoRoot, 'parent/src/pages.json'));
+    return new Set((json.tabBar?.list || []).map((item) => item.pagePath));
+  }
+  // 老师端 pages.json 没有 tabBar，4 个常驻页由 BottomNav 决定。
+  const file = path.join(repoRoot, 'teacher/src/components/BottomNav.vue');
+  if (!fs.existsSync(file)) return new Set();
+  const text = fs.readFileSync(file, 'utf8');
+  return new Set([...text.matchAll(/path:\s*["']\/?(pages\/[^"']+)["']/g)].map((match) => match[1]));
+}
+
 function buildManifest() {
   const config = readJson(CONFIG);
   const entries = [];
@@ -105,12 +118,17 @@ function buildManifest() {
   for (const surface of SURFACES) {
     const pages = codePages(surface);
     const meta = config[surface] || {};
+    const tabbarRoutes = codeTabbarRoutes(surface);
     const seenSlugs = new Set();
     const seenNumbers = new Set();
 
     for (const [route, item] of Object.entries(meta)) {
       if (seenSlugs.has(item.slug)) errors.push(`slug 重复: ${surface}/${item.slug}`);
       if (seenNumbers.has(item.n)) errors.push(`编号重复: ${surface}/${item.n}`);
+      if (Boolean(item.tabbar) !== tabbarRoutes.has(route)) {
+        errors.push(`design.config.json 的 tabbar 与代码不一致: ${surface}/${route}` +
+          `（代码 ${tabbarRoutes.has(route)}）`);
+      }
       seenSlugs.add(item.slug);
       seenNumbers.add(item.n);
     }
@@ -131,7 +149,7 @@ function buildManifest() {
         slug: item.slug,
         path: source,
         title: pages.get(route),
-        tabbar: Boolean(item.tabbar),
+        tabbar: tabbarRoutes.has(route),
       });
     }
 
@@ -187,8 +205,15 @@ function walkFiles(dir, base = dir) {
   return out;
 }
 
-function sharedUiHash() {
-  const files = walkFiles(path.join(repoRoot, 'shared-ui')).sort();
+function supportHash() {
+  // 页面表现不只由 .vue 决定：共享组件、utils 里的状态文案、api 层的字段映射都会影响原型。
+  // 这些目录跨页面复用，逐页归因噪声太大，因此做一个全局指纹并只告警。
+  const roots = [
+    'shared-ui',
+    'parent/src/utils', 'parent/src/api', 'parent/src/components', 'parent/src/custom-tab-bar',
+    'teacher/src/utils', 'teacher/src/api', 'teacher/src/components',
+  ];
+  const files = roots.flatMap((root) => walkFiles(path.join(repoRoot, root))).sort();
   const hash = crypto.createHash('sha256');
   for (const file of files) {
     hash.update(file);
@@ -199,11 +224,19 @@ function sharedUiHash() {
   return { hash: hash.digest('hex'), files: files.length };
 }
 
-function headCommit() {
+function sourceCommit(file) {
   try {
-    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim();
+    return execFileSync('git', ['log', '-1', '--format=%h', '--', file], { cwd: repoRoot, encoding: 'utf8' }).trim();
   } catch {
     return '';
+  }
+}
+
+function isDirty(file) {
+  try {
+    return execFileSync('git', ['status', '--porcelain', '--', file], { cwd: repoRoot, encoding: 'utf8' }).trim() !== '';
+  } catch {
+    return false;
   }
 }
 
@@ -227,23 +260,24 @@ function lockKey(entry) {
 }
 
 function loadLock() {
-  if (!fs.existsSync(LOCK)) return { version: 1, sharedUiHash: '', pages: {} };
+  if (!fs.existsSync(LOCK)) return { version: 1, supportHash: '', pages: {} };
   return readJson(LOCK);
 }
 
 function writeLock(lock) {
   const pages = Object.fromEntries(Object.entries(lock.pages).sort(([a], [b]) => a.localeCompare(b)));
-  fs.writeFileSync(LOCK, JSON.stringify({ version: 1, sharedUiHash: lock.sharedUiHash, pages }, null, 2) + '\n');
+  fs.writeFileSync(LOCK, JSON.stringify({ version: 1, supportHash: lock.supportHash, pages }, null, 2) + '\n');
 }
 
-function lockEntry(entry, commit) {
+function lockEntry(entry) {
+  const commit = sourceCommit(entry.path);
   return {
     source: entry.path,
     sha256: sha256File(path.join(repoRoot, entry.path)),
     title: entry.title,
     tabbar: entry.tabbar,
     reviewedAt: TODAY,
-    codeCommit: commit,
+    codeCommit: commit ? (isDirty(entry.path) ? `${commit}-dirty` : commit) : '',
   };
 }
 
@@ -273,7 +307,10 @@ function checkPrototypeInventory(entries) {
     const root = path.join(BATCH, surface);
     if (!fs.existsSync(root)) continue;
     for (const name of fs.readdirSync(root)) {
-      if (!/^\d{2}-/.test(name)) continue;
+      const dir = path.join(root, name);
+      if (!fs.statSync(dir).isDirectory()) continue;
+      // 只有带 index.html 的目录才算页面原型，避免把 .file-versions 等辅助目录误报。
+      if (!fs.existsSync(path.join(dir, 'index.html'))) continue;
       if (!known.has(`${surface}/${name}`)) {
         errors.push(`设计稿有页面但代码清单没有: ${surface}/${name}`);
       }
@@ -316,10 +353,15 @@ function checkGallery(entries) {
   if (!fs.existsSync(GALLERY)) return ['缺少画廊 index.html → 运行 npm run design:sync'];
   const html = fs.readFileSync(GALLERY, 'utf8');
   const readme = fs.existsSync(README) ? fs.readFileSync(README, 'utf8') : '';
+  const known = new Set(entries.map((entry) => `${entry.surface}/${entry.slug}`));
   for (const entry of entries) {
     const needle = `${entry.surface}/${entry.slug}/`;
     if (!html.includes(needle)) errors.push(`画廊缺少页面: ${entry.surface}/${entry.slug}`);
     if (readme && !readme.includes(needle)) errors.push(`README 缺少页面: ${entry.surface}/${entry.slug}`);
+  }
+  for (const match of html.matchAll(/href="(teacher|parent)\/([^/"]+)\/index\.html"/g)) {
+    const key = `${match[1]}/${match[2]}`;
+    if (!known.has(key)) errors.push(`画廊有不存在页面: ${key}`);
   }
   return errors;
 }
@@ -358,6 +400,8 @@ function commandSync() {
     }
   }
 
+  const themeCount = writeThemesCss({ quiet: true });
+
   const lock = loadLock();
   const known = new Set(entries.map(lockKey));
   let pruned = 0;
@@ -395,6 +439,7 @@ function commandSync() {
 
   console.log(`[design-sync] manifest: ${entries.length} 页`);
   console.log(`[design-sync] tokens.css: 更新 ${written} 个`);
+  console.log(`[design-sync] themes.css: 更新 ${themeCount} 份`);
   console.log(`[design-sync] lock: 新增 ${added} 页（未复核），清理 ${pruned} 条失效条目`);
   console.log('[design-sync] 画廊: 已重建');
   const titleDrift = checkPrototypeTitles(entries);
@@ -465,11 +510,17 @@ function commandCheck() {
     errors.push(`tokens.css 与 tokens.json 不一致（${tokenDrift.length} 页）→ 运行 npm run design:sync`);
   }
 
-  const ui = sharedUiHash();
-  if (!lock.sharedUiHash) {
-    warnings.push('shared-ui/ 尚未登记基线：运行 npm run design:accept -- --shared');
-  } else if (lock.sharedUiHash !== ui.hash) {
-    warnings.push('shared-ui/ 已变更：复核共享组件影响后运行 npm run design:accept -- --shared');
+  const themesFile = path.join(BATCH, '_shared/themes.css');
+  if (!fs.existsSync(themesFile) ||
+      normalize(fs.readFileSync(themesFile, 'utf8')) !== normalize(renderThemesCss())) {
+    errors.push('_shared/themes.css 与 themes.json 不一致 → 运行 npm run design:sync');
+  }
+
+  const support = supportHash();
+  if (!lock.supportHash) {
+    warnings.push('支撑代码尚未登记基线：运行 npm run design:accept -- --shared');
+  } else if (lock.supportHash !== support.hash) {
+    warnings.push('shared-ui / utils / api / components 已变更：复核影响后运行 npm run design:accept -- --shared');
   }
 
   const staleShots = entries.filter(previewIsStale);
@@ -492,9 +543,9 @@ function commandAccept() {
 
   // --shared alone只确认共享组件；与 --all 同时出现时走批量分支，避免静默忽略 --all。
   if (flags.has('--shared') && !flags.has('--all')) {
-    lock.sharedUiHash = sharedUiHash().hash;
+    lock.supportHash = supportHash().hash;
     writeLock(lock);
-    console.log('[design-sync] 已登记 shared-ui 当前状态');
+    console.log('[design-sync] 已登记支撑代码（shared-ui / utils / api / components）当前状态');
     return;
   }
 
@@ -503,10 +554,10 @@ function commandAccept() {
     const changed = entries
       .map((entry) => ({ entry, reasons: staleReasons(entry, lock.pages[lockKey(entry)]) }))
       .filter((item) => item.reasons.length);
-    const ui = sharedUiHash();
-    const uiChanged = Boolean(lock.sharedUiHash) && lock.sharedUiHash !== ui.hash;
+    const support = supportHash();
+    const supportChanged = Boolean(lock.supportHash) && lock.supportHash !== support.hash;
     const blockers = changed.map((item) => `- ${lockKey(item.entry)}: ${item.reasons.join('；')}`);
-    if (uiChanged && !flags.has('--shared')) blockers.push('- shared-ui/ 已变更');
+    if (supportChanged && !flags.has('--shared')) blockers.push('- shared-ui / utils / api / components 已变更');
     if (blockers.length && !flags.has('--force')) {
       fail('[design-sync] 拒绝 --all：以下内容需要显式确认。\n' + blockers.join('\n') +
         '\n  页面变化请逐页 accept；只确认 shared-ui 加 --shared；确需覆盖全部加 --force。');
@@ -521,17 +572,16 @@ function commandAccept() {
     fail('用法: npm run design:accept -- <surface>/<slug>  或  --all / --shared');
   }
 
-  const commit = headCommit();
   for (const entry of targets) {
-    lock.pages[lockKey(entry)] = lockEntry(entry, commit);
+    lock.pages[lockKey(entry)] = lockEntry(entry);
   }
-  if (all) lock.sharedUiHash = sharedUiHash().hash;
+  if (all) lock.supportHash = supportHash().hash;
   writeLock(lock);
 
   console.log(`[design-sync] 已登记 ${targets.length} 页:`);
   for (const entry of targets) console.log(`  - ${lockKey(entry)}`);
   if (all) {
-    console.log('  --all 已同时登记 shared-ui 当前状态。');
+    console.log('  --all 已同时登记支撑代码（shared-ui / utils / api / components）当前状态。');
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sharedUiHash": "1149aec995b14d7010f5fb9264cf0566790585cb884831e6e519fb92bcf05bb7",
+  "supportHash": "7f3cbb3ad6d1694767e52dc57c2314752ddca4a7182709470e26346a7fa9e30b",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -8,7 +8,7 @@
       "title": "养成星球",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/02-login": {
       "source": "parent/src/pages/auth/login.vue",
@@ -16,7 +16,7 @@
       "title": "家长登录",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     },
     "parent/03-bind": {
       "source": "parent/src/pages/auth/bind.vue",
@@ -24,7 +24,7 @@
       "title": "绑定孩子",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     },
     "parent/04-notice-index": {
       "source": "parent/src/pages/notice/index.vue",
@@ -32,7 +32,7 @@
       "title": "通知公告",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/05-notice-detail": {
       "source": "parent/src/pages/notice/detail.vue",
@@ -40,7 +40,7 @@
       "title": "通知详情",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "a7bd080"
     },
     "parent/06-leave-index": {
       "source": "parent/src/pages/leave/index.vue",
@@ -48,7 +48,7 @@
       "title": "请假记录",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     },
     "parent/07-leave-create": {
       "source": "parent/src/pages/leave/create.vue",
@@ -56,7 +56,7 @@
       "title": "请假申请",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/08-leave-detail": {
       "source": "parent/src/pages/leave/detail.vue",
@@ -64,7 +64,7 @@
       "title": "请假详情",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     },
     "parent/09-growth-index": {
       "source": "parent/src/pages/growth/index.vue",
@@ -72,7 +72,7 @@
       "title": "成长时光",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/10-growth-detail": {
       "source": "parent/src/pages/growth/detail.vue",
@@ -80,7 +80,7 @@
       "title": "成长详情",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/11-growth-album": {
       "source": "parent/src/pages/growth/album.vue",
@@ -88,7 +88,7 @@
       "title": "成长相册",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/12-growth-report": {
       "source": "parent/src/pages/growth/report.vue",
@@ -96,7 +96,7 @@
       "title": "成长报告",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
@@ -104,7 +104,7 @@
       "title": "接送记录",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/14-pickup-qrcode": {
       "source": "parent/src/pages/pickup/qrcode.vue",
@@ -112,7 +112,7 @@
       "title": "接送二维码",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/15-pickup-authorized": {
       "source": "parent/src/pages/pickup/authorized.vue",
@@ -120,7 +120,7 @@
       "title": "授权接送人",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "f8a1eda"
     },
     "parent/16-pickup-authorized-create": {
       "source": "parent/src/pages/pickup/authorized-create.vue",
@@ -128,7 +128,7 @@
       "title": "添加授权接送人",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "f8a1eda"
     },
     "parent/17-tasks-index": {
       "source": "parent/src/pages/tasks/index.vue",
@@ -136,7 +136,7 @@
       "title": "亲子任务",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/18-tasks-detail": {
       "source": "parent/src/pages/tasks/detail.vue",
@@ -144,7 +144,7 @@
       "title": "任务详情",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/19-tasks-wall": {
       "source": "parent/src/pages/tasks/wall.vue",
@@ -152,7 +152,7 @@
       "title": "班级墙",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/20-points": {
       "source": "parent/src/pages/points/index.vue",
@@ -160,7 +160,7 @@
       "title": "积分与成就",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/21-class-index": {
       "source": "parent/src/pages/class/index.vue",
@@ -168,7 +168,7 @@
       "title": "班级信息",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/22-calendar-index": {
       "source": "parent/src/pages/calendar/index.vue",
@@ -176,7 +176,7 @@
       "title": "班级日历",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "85c0104"
     },
     "parent/23-student-index": {
       "source": "parent/src/pages/student/index.vue",
@@ -184,7 +184,7 @@
       "title": "孩子信息",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/24-feedback": {
       "source": "parent/src/pages/feedback/index.vue",
@@ -192,7 +192,7 @@
       "title": "意见反馈",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "05f409a"
     },
     "parent/25-settings": {
       "source": "parent/src/pages/settings/index.vue",
@@ -200,7 +200,7 @@
       "title": "设置",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "f4785d7"
     },
     "parent/26-messages": {
       "source": "parent/src/pages/messages/index.vue",
@@ -208,7 +208,7 @@
       "title": "消息",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "698964d"
     },
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
@@ -216,7 +216,7 @@
       "title": "我的",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "e3f315d"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
@@ -224,7 +224,7 @@
       "title": "班级相册",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "parent/29-album-detail": {
       "source": "parent/src/pages/album/detail.vue",
@@ -232,7 +232,7 @@
       "title": "相册详情",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
@@ -240,7 +240,7 @@
       "title": "老师工作台",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
@@ -248,7 +248,7 @@
       "title": "老师登录",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "58ccbae"
     },
     "teacher/03-notice-create": {
       "source": "teacher/src/pages/notice/create.vue",
@@ -256,7 +256,7 @@
       "title": "发布通知",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/04-growth-index": {
       "source": "teacher/src/pages/growth/index.vue",
@@ -264,7 +264,7 @@
       "title": "成长记录",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/05-growth-create": {
       "source": "teacher/src/pages/growth/create.vue",
@@ -272,7 +272,7 @@
       "title": "添加成长记录",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/06-growth-detail": {
       "source": "teacher/src/pages/growth/detail.vue",
@@ -280,7 +280,7 @@
       "title": "成长记录详情",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/07-pickup-index": {
       "source": "teacher/src/pages/pickup/index.vue",
@@ -288,7 +288,7 @@
       "title": "接送管理",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     },
     "teacher/08-pickup-records": {
       "source": "teacher/src/pages/pickup/records.vue",
@@ -296,7 +296,7 @@
       "title": "接送记录",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "b808659"
     },
     "teacher/09-tasks-index": {
       "source": "teacher/src/pages/tasks/index.vue",
@@ -304,7 +304,7 @@
       "title": "亲子任务",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "eab4a55"
     },
     "teacher/10-tasks-detail": {
       "source": "teacher/src/pages/tasks/detail.vue",
@@ -312,7 +312,7 @@
       "title": "任务回应",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/11-calendar-index": {
       "source": "teacher/src/pages/calendar/index.vue",
@@ -320,7 +320,7 @@
       "title": "班级日历",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "1e5a38c"
     },
     "teacher/12-calendar-create": {
       "source": "teacher/src/pages/calendar/create.vue",
@@ -328,7 +328,7 @@
       "title": "添加活动",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "1e5a38c"
     },
     "teacher/13-calendar-detail": {
       "source": "teacher/src/pages/calendar/detail.vue",
@@ -336,7 +336,7 @@
       "title": "活动详情",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     },
     "teacher/14-leave-index": {
       "source": "teacher/src/pages/leave/index.vue",
@@ -344,7 +344,7 @@
       "title": "请假审批",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "f0fbda4"
     },
     "teacher/15-class-index": {
       "source": "teacher/src/pages/class/index.vue",
@@ -352,7 +352,7 @@
       "title": "我的班级",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "f4785d7"
     },
     "teacher/16-album-index": {
       "source": "teacher/src/pages/album/index.vue",
@@ -360,7 +360,7 @@
       "title": "班级相册",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
@@ -368,7 +368,7 @@
       "title": "更多功能",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "01e8365"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",
@@ -376,7 +376,7 @@
       "title": "消息",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "01e8365"
     },
     "teacher/19-profile-index": {
       "source": "teacher/src/pages/profile/index.vue",
@@ -384,7 +384,7 @@
       "title": "我的",
       "tabbar": true,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "01e8365"
     },
     "teacher/20-doctor-checkin": {
       "source": "teacher/src/pages/doctor/checkin.vue",
@@ -392,7 +392,7 @@
       "title": "入园晨检",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "dfcb18b"
     },
     "teacher/21-doctor-calendar": {
       "source": "teacher/src/pages/doctor/calendar.vue",
@@ -400,7 +400,7 @@
       "title": "园级事件",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "decf16b"
     },
     "teacher/23-notice-index": {
       "source": "teacher/src/pages/notice/index.vue",
@@ -408,7 +408,7 @@
       "title": "通知",
       "tabbar": false,
       "reviewedAt": "2026-11-06",
-      "codeCommit": "831775d"
+      "codeCommit": "8087ae3"
     }
   }
 }

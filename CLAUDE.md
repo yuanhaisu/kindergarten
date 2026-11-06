@@ -653,7 +653,7 @@ npm run design:check                                 # 必须通过；CI 的 des
 - `design.lock.json` 记录每页 `.vue` 的 sha256、导航标题与 tabBar 归属；源码/标题/tabBar 变了但没 `accept`，`check` 会失败并列出原因。
 - 新增页面必须先在 `design.config.json` 登记 `slug / n / tabbar` 并补原型目录；`sync` 只会写“待复核”条目，必须显式 `accept`。
 - 纯 token 改动由 `design:sync` 自动覆盖；`accept --all` 默认拒绝，只有确认没有任何页面内容变化或显式加 `--force` 才执行。
-- `shared-ui/` 变更不会阻断，但会持续告警，直到 `accept --shared`。
+- `shared-ui / utils / api / components` 变更不会阻断，但会持续告警，直到 `accept --shared`。
 - `preview.png` 比页面资源旧时 `check` 会给 warning，跑 `design:shots` 重出。
 - pre-commit 只做提醒；真正的阻断在 CI。
 
