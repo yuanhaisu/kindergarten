@@ -35,6 +35,13 @@ export default {
       "purple": "#9333EA",
       "purpleBg": "#F3E8FF"
     },
+    "identity": {
+      "ink": "#1B2A41",
+      "inkMuted": "#566275",
+      "amber": "#E8A23A",
+      "cream": "#F7F3E8",
+      "rule": "#DED5C4"
+    },
     "brand": {
       "primary": "#3B82F6",
       "primaryLight": "#60A5FA",
@@ -63,6 +70,8 @@ export default {
   },
   "fontFamily": {
     "sans": [
+      "PingFang SC",
+      "Microsoft YaHei",
       "Noto Sans SC",
       "system-ui",
       "-apple-system",
@@ -77,7 +86,10 @@ export default {
     "lg": "15px",
     "xl": "16px",
     "2xl": "18px",
-    "3xl": "20px"
+    "3xl": "20px",
+    "display3": "28px",
+    "display2": "40px",
+    "display1": "56px"
   },
   "fontWeight": {
     "normal": "400",
@@ -90,6 +102,12 @@ export default {
     "sm": "6px",
     "md": "8px",
     "lg": "12px",
-    "xl": "16px"
+    "xl": "16px",
+    "2xl": "24px",
+    "3xl": "32px",
+    "4xl": "48px",
+    "5xl": "64px",
+    "6xl": "96px",
+    "7xl": "128px"
   }
 } as const;
