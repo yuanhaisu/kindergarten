@@ -131,12 +131,6 @@
       }
     },
     {
-      "path": "pages/webview/index",
-      "style": {
-        "navigationBarTitleText": "详情"
-      }
-    },
-    {
       "path": "pages/doctor/checkin",
       "style": {
         "navigationBarTitleText": "入园晨检"
