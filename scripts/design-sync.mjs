@@ -423,11 +423,21 @@ function checkGallery(entries) {
 
 function prototypeAssetsSha(entry) {
   const dir = prototypeDir(entry);
+  const files = [
+    path.join(dir, 'index.html'),
+    path.join(dir, 'styles.css'),
+    path.join(dir, 'app.js'),
+    path.join(dir, 'tokens.css'),
+    // 外壳与主题由所有页面共享；它们变了，截图同样过期。
+    path.join(BATCH, '_shared/shell.css'),
+    path.join(BATCH, '_shared/themes.css'),
+    path.join(BATCH, '_shared/shell.js'),
+    path.join(BATCH, '_shared/theme.js'),
+  ];
   const hash = crypto.createHash('sha256');
-  for (const name of ['index.html', 'styles.css', 'app.js', 'notes.md', 'tokens.css']) {
-    const file = path.join(dir, name);
+  for (const file of files) {
     if (!fs.existsSync(file)) continue;
-    hash.update(name);
+    hash.update(rel(file));
     hash.update('\0');
     hash.update(normalize(fs.readFileSync(file, 'utf8')));
     hash.update('\n');
@@ -443,7 +453,10 @@ function loadPreviewLock() {
 function previewIsStale(entry, previewLock) {
   const saved = previewLock.pages?.[lockKey(entry)];
   if (!saved) return true;
-  if (!fs.existsSync(path.join(prototypeDir(entry), 'preview.png'))) return true;
+  const preview = path.join(prototypeDir(entry), 'preview.png');
+  if (!fs.existsSync(preview)) return true;
+  // 图片被手工替换/回滚时 previewSha 会失配，不只依赖原型资源哈希。
+  if (saved.previewSha !== sha256Buffer(fs.readFileSync(preview))) return true;
   return saved.assetsSha !== prototypeAssetsSha(entry);
 }
 
@@ -695,5 +708,6 @@ export {
   loadLock,
   loadPreviewLock,
   prototypeAssetsSha,
+  previewIsStale,
   depsSha,
 };

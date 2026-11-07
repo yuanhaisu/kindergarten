@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,8 @@ import {
   loadLock,
   loadPreviewLock,
   prototypeAssetsSha,
+  previewIsStale,
+  staleReasons,
   depsSha,
 } from './design-sync.mjs';
 
@@ -69,4 +72,36 @@ test('preview screenshots match the current prototype assets', () => {
     assert.ok(saved, `missing preview baseline: ${entry.surface}/${entry.slug}`);
     assert.equal(saved.assetsSha, prototypeAssetsSha(entry), `stale screenshot: ${entry.surface}/${entry.slug}`);
   }
+});
+
+test('staleReasons accepts the current state and rejects every drift kind', () => {
+  const entry = entries[0];
+  const current = {
+    source: entry.path,
+    sha256: sha256File(path.join(repoRoot, entry.path)),
+    depsSha: depsSha(entry),
+    title: entry.title,
+    tabbar: entry.tabbar,
+    reviewedAt: '2026-11-06',
+  };
+  assert.deepEqual(staleReasons(entry, current), []);
+  assert.ok(staleReasons(entry, { ...current, sha256: 'x' }).includes('页面源码变了'));
+  assert.ok(staleReasons(entry, { ...current, depsSha: 'x' }).includes('依赖的 utils 变了'));
+  assert.ok(staleReasons(entry, { ...current, title: 'x' }).some((reason) => reason.startsWith('导航标题变了')));
+  assert.ok(staleReasons(entry, { ...current, tabbar: !entry.tabbar }).includes('tabBar 归属变了'));
+  assert.ok(staleReasons(entry, { ...current, reviewedAt: null }).includes('新页面未复核'));
+  assert.deepEqual(staleReasons(entry, null), ['未登记']);
+});
+
+test('previewIsStale detects both asset and image drift', () => {
+  const entry = entries[0];
+  const key = `${entry.surface}/${entry.slug}`;
+  const previewFile = path.join(BATCH, entry.surface, entry.slug, 'preview.png');
+  const current = {
+    assetsSha: prototypeAssetsSha(entry),
+    previewSha: crypto.createHash('sha256').update(fs.readFileSync(previewFile)).digest('hex'),
+  };
+  assert.equal(previewIsStale(entry, { pages: { [key]: current } }), false);
+  assert.equal(previewIsStale(entry, { pages: { [key]: { ...current, assetsSha: 'x' } } }), true);
+  assert.equal(previewIsStale(entry, { pages: { [key]: { ...current, previewSha: 'x' } } }), true);
 });
