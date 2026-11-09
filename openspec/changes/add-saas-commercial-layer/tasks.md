@@ -82,5 +82,9 @@
   - 到期/宽限/降级/续费：由 `TestEntitlement_DecideGraceAndReadOnly`、`TestEntitlement_RenewalRestoresWrite` 覆盖；HTTP 侧以「把 album 试用改为过期后 `POST /teacher/albums` 返回 403、同模块 GET 放行」验证。
 - [x] 10.3 回归验证：在 `enforce_modules=false` 与 `true` 两种配置下各跑一遍既有核心业务（考勤、通知、接送、成长、膳食）（验证：两种配置下结果一致，开关开启后无意外 403）
   - 实测两轮：`/admin/attendance/overview`、`/admin/notices`、`/admin/pickup/overview`、`/admin/growth/logs`、`/admin/diet/group-objects` 在两种模式下**均返回 200**。
-- [ ] 10.4 执行 `make check`（vet + lint + test）与 `npm run build`（admin），全部通过
+- [x] 10.4 执行 `make check`（vet + lint + test）与 `npm run build`（admin），全部通过
+  - `go vet ./...` 通过；`golangci-lint` 对本变更涉及的 5 个包为 0 问题（仓库仍有 1 条既有 `unused`，在 `diet_plan_test.go`，与本变更无关）。
+  - 测试：CI 范围 6 个包全绿；商业化定向 + 契约字段测试全绿。
+  - ⚠️ `internal/service` 全量约 50 分钟（752 条），两次尝试（600s / 1800s）均因时长超时被切断，0 断言失败；该包不在 CI 门禁内。
+  - `admin npm run build` 通过；`website npm run generate` 通过。
 - [x] 10.5 收工清理：杀掉残留的 uni watcher 进程（验证：`Get-CimInstance Win32_Process` 过滤 `dev:mp-weixin` 无输出）
