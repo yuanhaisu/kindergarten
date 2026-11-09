@@ -23,6 +23,7 @@
 | PERM | 权限强制 | TBL | 课表 |
 | ALB | 班级相册 | | |
 | DIE | 膳食管理 | | |
+| DEP | 部署发布 | OPS | 运行运维 |
 
 ---
 
@@ -596,6 +597,9 @@
 | TC-NEW-MAS-0009 | 跨业务可见性各自生效 | P0 | Integration | 🔲 |
 | TC-NEW-MAS-0010 | 文件层不提供可见性开关 | P1 | Unit | 🔲 |
 | TC-NEW-MAS-0011 | 新业务复用统一通道 | P0 | Integration | 🔲 |
+| TC-NEW-MAS-0012 | 读取返回短期签名 URL | P0 | Integration | 🚧 签名/响应层单测通过；真实 OSS 私有桶待联调 |
+| TC-NEW-MAS-0013 | 过期 URL 被拒绝并可重新获取 | P0 | Integration | 🚧 客户端刷新逻辑已接入；真实过期联调待私有桶 |
+| TC-NEW-MAS-0014 | 未签名公共 URL 不可访问 | P0 | Integration | 🚧 fake bucket 单测通过；真实桶 ACL 待验证 |
 
 ### 成长记录媒体上传（对应 OpenSpec 变更 `wire-growth-media-upload`，首个遵循媒体基线的接入方）
 
@@ -1259,3 +1263,124 @@
 | TC-NEW-DIE-0075 | 对象改名后旧食谱仍显示原名 | P0 | 单测 | ✅ `TestDietPlanDetailKeepsSnapshotObjectNameAfterRename` |
 | TC-NEW-DIE-0076 | DRIs 只统计集体对象内的班级 | P0 | 单测 | ✅ `TestDietPlanDriWeightsFollowGroupObjectClasses` |
 | TC-NEW-DIE-0077 | 就餐班级选项来自班级列表（按年级分组/全选） | P0 | E2E | ✅ DGO-S6 E2E：新增对话框按小班/中班/大班分组，年级全选生效 |
+
+---
+
+## 部署与运行（DEP / OPS）
+
+> 来源：`openspec/changes/establish-deployment-pipeline/specs/release-pipeline/spec.md`、
+> `specs/runtime-operations/spec.md`、`specs/media-assets/spec.md`。
+> 状态说明：🔲 未验证 · 🚧 代码/单测已覆盖、真实环境待联调 · ✅ 已验证。
+
+### 发布流水线（DEP）
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-DEP-0001 | tag 触发构建并产出唯一版本 | P0 | Integration | 🔲 待首次 tag 发布 |
+| TC-NEW-DEP-0002 | 重复 tag 被拒绝/不覆盖 | P0 | Integration | 🔲 待首次 tag 发布 |
+| TC-NEW-DEP-0003 | tag 构建成功后自动部署预发 | P0 | Integration | 🔲 待 staging 资源 |
+| TC-NEW-DEP-0004 | 未批准不进入生产 | P0 | Integration | 🔲 待 GitHub Environment |
+| TC-NEW-DEP-0005 | `/ready` 失败自动回滚 | P0 | Integration | 🚧 `deploy.sh` 已实现回滚分支；待 staging 演练 |
+| TC-NEW-DEP-0006 | 回滚后旧版本可服务 | P0 | Integration | 🚧 同上 |
+| TC-NEW-DEP-0007 | 旧版小程序调用新后端仍可用 | P0 | Integration | 🔲 待兼容性测试 |
+| TC-NEW-DEP-0008 | 破坏性变更拆两次发布 | P0 | Review | 🔲 契约评审门 |
+| TC-NEW-DEP-0009 | 快照失败中止发布 | P0 | Integration | 🚧 `snapshot-rds.sh` 失败即退出；待真实 RDS |
+| TC-NEW-DEP-0010 | 快照成功后继续 | P0 | Integration | 🚧 同上 |
+
+### 运行与恢复（OPS）
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-OPS-0001 | 依赖不可用时 `/ready` 失败、`/health` 存活 | P0 | Unit | ✅ `health_test.go` |
+| TC-NEW-OPS-0002 | 依赖恢复后 `/ready` 成功 | P0 | Unit | ✅ `health_test.go` |
+| TC-NEW-OPS-0003 | SIGTERM 后在途请求完成 | P0 | Unit | ✅ `server_test.go` |
+| TC-NEW-OPS-0004 | 超时后强制退出 | P0 | Unit | ✅ `server_test.go` |
+| TC-NEW-OPS-0005 | 迁移失败中止发布 | P0 | Integration | 🚧 `migrate` 失败返回非零；流水线断言待 staging |
+| TC-NEW-OPS-0006 | 启动期不执行 AutoMigrate/种子 | P0 | Integration | ✅ DML-only 账号启动 + `/ready` 200，无 DDL 日志 |
+| TC-NEW-OPS-0007 | 请求日志带 request_id | P1 | Unit | 🚧 中间件已挂载；待 SLS 检索 |
+| TC-NEW-OPS-0008 | 日志敏感信息脱敏 | P0 | Unit | ✅ `log_test.go` |
+| TC-NEW-OPS-0009 | 单实例部署 | P1 | Config | 🚧 compose 单副本；无自动化检查 |
+| TC-NEW-OPS-0010 | 阻止水平扩展 | P1 | Config | 🔲 发布检查待实现 |
+| TC-NEW-OPS-0011 | 每日备份存在 | P0 | Ops | 🔲 待 RDS 配置 |
+| TC-NEW-OPS-0012 | 季度恢复演练通过 | P0 | Ops | 🔲 待首次演练 |
+
+---
+## 商业化（变更 `add-saas-commercial-layer`）
+
+| 缩写 | 模块 |
+|---|---|
+| PLT | 平台运营 |
+| CAT | 套餐目录 |
+| ORD | 订单收款 |
+| ENT | 功能授权 |
+| DST | 分销佣金 |
+
+### 平台运营 (PLT)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-PLT-0001 | 园所凭证调用平台接口被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0002 | 平台凭证调用园所接口被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0003 | 开通后园长可登录 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0004 | 重复手机号被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0005 | 停用后园所管理员无法登录 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0006 | 重新启用后恢复 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0007 | 两所园所都出现在平台列表 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0008 | 停用操作可追溯 | P0 | Unit / Contract | 🔲 |
+
+### 套餐目录 (CAT)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-CAT-0001 | 新建套餐引用已注册模块 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0002 | 引用未注册模块被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0003 | 套餐新增模块后老园所不获得 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0004 | 套餐调价后老订单金额不变 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0005 | 改价后新订单使用新价 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0006 | 按幼儿数落入对应档位 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0007 | 学期中人数变动不改档位 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0008 | 可查询可售模块清单 | P0 | Unit / Contract | 🔲 |
+
+### 订单收款 (ORD)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-ORD-0001 | 确认后目录变更不影响订单 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0002 | 首付后进入部分收款 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0003 | 收清后进入已收清 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0004 | 退款后已收金额回落 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0005 | 退款冲回佣金 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0006 | 订单生效即发放授权 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0007 | 取消订单后授权失效 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0008 | 保存开票信息 | P0 | Unit / Contract | 🔲 |
+
+### 功能授权 (ENT)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-ENT-0001 | 一模块在期另一模块已过期 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0002 | 同一模块叠加时取并集 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0003 | 未购模块接口被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0004 | base 模块始终可用 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0005 | 未购模块入口不可见 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0006 | 授权变更后入口即时更新 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0007 | 宽限期内仍可写入 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0008 | 降级后新增被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0009 | 降级后历史仍可读 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0010 | 收款后立刻可写 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0011 | 新开通园所获得试用 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | 🔲 |
+
+### 分销佣金 (DST)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-DST-0001 | 订单确认后改归因被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0002 | 分销商无登录入口 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0003 | 部分收款只按已收部分计佣 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0004 | 收款退款后佣金冲回 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0005 | 未满三十天不可结算 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0006 | 满三十天后可结算 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0007 | 台账金额不可手工改写 | P0 | Unit / Contract | 🔲 |
+

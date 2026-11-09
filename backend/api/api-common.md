@@ -251,6 +251,10 @@ Content-Type: multipart/form-data
 }
 ```
 
+> **媒体 URL 语义**：`file_url` / `thumb_url` 为**短期签名 URL**（默认 1 小时有效），
+> 不是长期公开地址。客户端应以 `id` / `file_id` 作为媒体身份；URL 过期后重新拉取。
+> 数据库内部保存 object key，响应层统一签名。
+
 ---
 
 ### POST `/common/upload/batch`
@@ -491,3 +495,47 @@ Content-Type: multipart/form-data
   "marked_count": 5
 }
 ```
+
+---
+
+## 8.1 自助改密
+
+### PUT `/common/user/password`
+
+> 修改当前账号密码。平台方开通园所时创建的园长账号，登录响应中
+> `user.must_change_password` 为 `true`，改密成功后清零。
+
+```json
+// Request
+{
+  "old_password": "初始密码",
+  "new_password": "新密码（含大写、小写与数字，至少 8 位）"
+}
+
+// Response
+{
+  "must_change_password": false
+}
+```
+
+> 原密码错误返回 422；新密码不满足强度要求返回 422。
+
+---
+
+## 9. 功能授权
+
+### GET `/common/entitlements`
+
+> 读取当前园所的功能模块授权。两端小程序在启动时调用，用于隐藏未购买的模块入口。
+
+```json
+// Response
+{
+  "modules": ["attendance", "notice", "pickup", "calendar", "growth"],
+  "expires_at": "2027-05-05"
+}
+```
+
+> 只返回当前可用的模块；已到期并超过宽限期的 premium 模块不会出现在 `modules` 中。
+> `expires_at` 取所有在期授权中最早的到期日，仅用于展示提醒；为 `null` 表示无在期授权。
+> 客户端隐藏入口**不能替代**服务端校验：直接调用未授权模块的接口仍会被拒绝。

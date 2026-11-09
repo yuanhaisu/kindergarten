@@ -2,6 +2,9 @@ package domain
 
 type Kindergarten struct {
 	BaseModel
+	// Status 园所状态：active 在营 / suspended 停用（商业化变更引入）。
+	// 用 json:"-" 避免影响既有的园所信息接口；平台端显式序列化。
+	Status  string `gorm:"size:16;not null;default:'active'" json:"-"`
 	Name    string `gorm:"size:128;not null" json:"name"`
 	Address string `gorm:"size:256" json:"address"`
 
@@ -19,11 +22,11 @@ func (Kindergarten) TableName() string { return "kindergartens" }
 type Class struct {
 	BaseModel
 	KindergartenID uint64 `gorm:"index;not null" json:"kindergarten_id"`
-	Name             string `gorm:"size:64;not null" json:"name"`
-	Grade            string `gorm:"size:16;not null;default:''" json:"grade"`
-	AcademicYear     string `gorm:"size:32;not null;default:''" json:"academic_year"`
-	Capacity         int    `gorm:"not null;default:30" json:"capacity"`
-	Status           int8   `gorm:"not null;default:1" json:"status"`
+	Name           string `gorm:"size:64;not null" json:"name"`
+	Grade          string `gorm:"size:16;not null;default:''" json:"grade"`
+	AcademicYear   string `gorm:"size:32;not null;default:''" json:"academic_year"`
+	Capacity       int    `gorm:"not null;default:30" json:"capacity"`
+	Status         int8   `gorm:"not null;default:1" json:"status"`
 	// PickupDeadline 班级放学时刻，格式 "HH:mm"。空串表示未配置，判定时回退缺省 16:00
 	// （产品决策 2026-10-07：班级可配、默认 16:00；design-data 无出处，见 proposal 阻塞清单）。
 	// 用于「提前接走须填理由」与「超时未接」两处判定。

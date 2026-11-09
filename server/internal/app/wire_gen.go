@@ -111,15 +111,30 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	dietPlanRepo := repository.NewDietPlanRepo(db)
 	dietPlanService := service.NewDietPlanService(dietPlanRepo, dietTemplateRepo, dietFoodRepo, classRepo, academicYearRepo, dietDriRepo, dietGroupObjectService)
 	dietAnalysisService := service.NewDietAnalysisService(dietPlanRepo, dietFoodRepo)
-	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService, faceRegistryService, gardenCalendarService, timetableService, dietGroupObjectService, dietFoodService, dietRecipeService, dietPlanService, dietAnalysisService)
+	platformAdminRepo := repository.NewPlatformAdminRepo(db)
+	entitlementRepo := repository.NewEntitlementRepo(db)
+	orderRepo := repository.NewOrderRepo(db)
+	platformLogRepo := repository.NewPlatformLogRepo(db)
+	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, platformLogRepo, dietSeedService, jwtSecret, accessTTL)
+	planRepo := repository.NewPlanRepo(db)
+	planService := service.NewPlanService(planRepo, platformLogRepo)
+	paymentRepo := repository.NewPaymentRepo(db)
+	distributorRepo := repository.NewDistributorRepo(db)
+	commissionRepo := repository.NewCommissionRepo(db)
+	entitlementCache := service.NewEntitlementCache(client)
+	orderService := service.NewOrderService(db, orderRepo, paymentRepo, planRepo, kindergartenRepo, entitlementRepo, distributorRepo, commissionRepo, platformLogRepo, entitlementCache)
+	distributorService := service.NewDistributorService(distributorRepo, commissionRepo, orderRepo, kindergartenRepo, platformLogRepo)
+	billingEnforceModules := ProvideBillingEnforceModules(cfg)
+	entitlementService := ProvideEntitlementService(entitlementRepo, orderRepo, entitlementCache, billingEnforceModules)
+	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService, faceRegistryService, gardenCalendarService, timetableService, dietGroupObjectService, dietFoodService, dietRecipeService, dietPlanService, dietAnalysisService, platformService, planService, orderService, distributorService, entitlementService)
 	noticeScheduler := ProvideNoticeScheduler(db)
-	appHandler := NewAppHandlerWithBackgroundWorkers(handlerHandler, noticeScheduler)
+	appHandler := NewAppHandlerWithBackgroundWorkers(handlerHandler, noticeScheduler, cfg, db, client)
 	casbinConfig := ProvideCasbinConfig(cfg)
 	enforcer, err := rbac.NewEnforcer(casbinConfig)
 	if err != nil {
 		return nil, err
 	}
-	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService)
+	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService)
 	if err != nil {
 		return nil, err
 	}

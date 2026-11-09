@@ -41,6 +41,8 @@ export interface AuthUser {
   nickname: string
   avatar?: string
   gender: number
+  /** 平台方开通园所时创建的园长账号为 true，改密后清零 */
+  must_change_password?: boolean
   roles: UserRoleItem[]
 }
 

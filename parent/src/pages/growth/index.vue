@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { hasModule, loadEntitlements } from "@/utils/entitlements"
 import { fetchGrowthFeed, likeGrowth, unlikeGrowth } from "@/api/parent-growth"
 import { fetchParentHomeOverview } from "@/api/parent-home"
 import { fetchAchievements } from "@/api/parent-points"
@@ -32,6 +33,8 @@ const refreshing = ref(false)
 const retrying = ref(false)
 const hasLoaded = ref(false)
 const loadError = ref("")
+// 成长模块未开通时整页显示锁定态；tabBar 不能按租户隐藏，只能在页面内拦。
+const locked = ref(false)
 const viewMode = ref("child")
 const currentStudentId = ref(getCurrentStudentId())
 
@@ -234,6 +237,14 @@ async function loadData() {
   loadError.value = ""
   try {
     await ensureLogin()
+    await loadEntitlements()
+    if (!hasModule("growth")) {
+      locked.value = true
+      hasLoaded.value = true
+      loading.value = false
+      return
+    }
+    locked.value = false
     const sid = getCurrentStudentId()
     currentStudentId.value = sid || null
     // 成就数是次要指标，失败不连累 feed——单独吞错，按 0 显示。
@@ -315,7 +326,12 @@ onPullDownRefresh(loadData)
 
 <template>
   <PageShell flush-top max-width="430px" :safe-bottom="false">
+    <view v-if="locked" class="locked-state">
+      <text class="locked-title">成长时光未开通</text>
+      <text class="locked-desc">本园暂未开通成长记录功能，请联系园所老师。</text>
+    </view>
     <scroll-view
+      v-else
       scroll-y
       class="feed-scroll"
       :refresher-enabled="true"
@@ -553,6 +569,30 @@ onPullDownRefresh(loadData)
 
 .tabbar-space {
   height: calc(140rpx + env(safe-area-inset-bottom));
+}
+
+// ---- 未开通 ----------------------------------------------------
+.locked-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-3xl $spacing-xl;
+}
+
+.locked-title {
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.locked-desc {
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+  text-align: center;
+  line-height: 1.6;
 }
 
 // ---- 孩子卡 ----------------------------------------------------

@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { getUser } from "@/utils/auth"
 import { ensureLogin } from "@/utils/login"
+import { hasModule, loadEntitlements } from "@/utils/entitlements"
 import { goTab } from "@/utils/nav"
 import PageShell from "@/components/PageShell.vue"
 
@@ -41,8 +42,8 @@ const GROUPS = [
     key: "growth",
     title: "成长与相册",
     items: [
-      { title: "成长记录", desc: "查看与添加成长记录", icon: ICONS.sprout, path: "/pages/growth/index" },
-      { title: "班级相册", desc: "班级照片集", icon: ICONS.album, path: "/pages/album/index" }
+      { title: "成长记录", desc: "查看与添加成长记录", icon: ICONS.sprout, path: "/pages/growth/index", module: "growth" },
+      { title: "班级相册", desc: "班级照片集", icon: ICONS.album, path: "/pages/album/index", module: "album" }
     ]
   },
   {
@@ -80,7 +81,18 @@ const roles = ref([])
 // /api/v1/doctor/* 权限（见 server/configs/rbac_policy.csv），
 // 给普通老师显示这个入口只会让他们撞 403；整组隐藏，不置灰。
 const isDoctor = computed(() => roles.value.some((item) => item && item.role === "doctor"))
-const groups = computed(() => GROUPS.filter((group) => !group.doctorOnly || isDoctor.value))
+
+// 授权缓存非响应式；加载完成后 bump 一次触发重算。
+const entVersion = ref(0)
+const groups = computed(() => {
+  entVersion.value
+  return GROUPS.filter((group) => !group.doctorOnly || isDoctor.value)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => hasModule(item.module))
+    }))
+    .filter((group) => group.items.length > 0)
+})
 
 const viewState = computed(() => {
   if (loading.value) return "loading"
@@ -94,6 +106,9 @@ async function loadEntries() {
   loadError.value = false
   try {
     await ensureLogin()
+    await loadEntitlements().finally(() => {
+      entVersion.value += 1
+    })
     const user = getUser() || {}
     roles.value = Array.isArray(user.roles) ? user.roles : []
   } catch (err) {

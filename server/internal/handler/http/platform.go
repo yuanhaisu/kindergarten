@@ -1,0 +1,260 @@
+package handler
+
+import (
+	"errors"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/response"
+)
+
+// operatorOf 取当前平台账号的用户名，用于操作留痕。
+func (h *Handler) operatorOf(c *gin.Context) string {
+	idStr := middleware.GetPlatformAdminID(c)
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		return idStr
+	}
+	return h.platformSvc.AdminUsername(c.Request.Context(), id)
+}
+
+// PlatformLogin 平台方登录。
+func (h *Handler) PlatformLogin(c *gin.Context) {
+	var req struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	res, err := h.platformSvc.Login(c.Request.Context(), req.Username, req.Password)
+	if err != nil {
+		if err.Error() == "INVALID_CREDENTIALS" {
+			response.ErrUnauthorized(c, "用户名或密码错误")
+			return
+		}
+		response.ErrInternal(c, "登录失败")
+		return
+	}
+	response.OK(c, res)
+}
+
+// PlatformLogout 注销平台会话。
+func (h *Handler) PlatformLogout(c *gin.Context) {
+	auth := c.GetHeader("Authorization")
+	if token, ok := strings.CutPrefix(auth, "Bearer "); ok {
+		_ = h.authSvc.Logout(c.Request.Context(), token, "")
+	}
+	response.OK(c, gin.H{})
+}
+
+// PlatformListKindergartens 园所列表（跨园）。
+func (h *Handler) PlatformListKindergartens(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	keyword := c.Query("keyword")
+	status := c.Query("status")
+	list, total, err := h.platformSvc.ListKindergartens(c.Request.Context(), page, pageSize, keyword, status)
+	if err != nil {
+		response.ErrInternal(c, "获取园所列表失败")
+		return
+	}
+	response.OKList(c, list, total, page, pageSize)
+}
+
+// PlatformGetKindergarten 园所详情。
+func (h *Handler) PlatformGetKindergarten(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.ErrValidation(c, "园所 ID 不合法")
+		return
+	}
+	detail, err := h.platformSvc.GetKindergarten(c.Request.Context(), id)
+	if err != nil {
+		if err.Error() == "KINDERGARTEN_NOT_FOUND" {
+			response.ErrNotFound(c, "园所不存在")
+			return
+		}
+		response.ErrInternal(c, "获取园所详情失败")
+		return
+	}
+	response.OK(c, detail)
+}
+
+// PlatformOnboardKindergarten 开通园所并创建园长账号。
+func (h *Handler) PlatformOnboardKindergarten(c *gin.Context) {
+	var req service.OnboardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	operator := h.operatorOf(c)
+	res, err := h.platformSvc.Onboard(c.Request.Context(), req, operator, c.ClientIP())
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrPhoneExists):
+			response.ErrConflict(c, "该手机号已有账号")
+		case strings.HasPrefix(err.Error(), "INVALID_PHONE:"):
+			response.ErrValidation(c, "手机号格式不正确")
+		case strings.HasPrefix(err.Error(), "WEAK_PASSWORD:"):
+			response.ErrValidation(c, "初始密码强度不足")
+		default:
+			response.ErrInternal(c, "开通园所失败")
+		}
+		return
+	}
+	response.Created(c, res)
+}
+
+// PlatformSetKindergartenStatus 启用或停用园所。
+func (h *Handler) PlatformSetKindergartenStatus(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.ErrValidation(c, "园所 ID 不合法")
+		return
+	}
+	var req struct {
+		Status string `json:"status" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	if err := h.platformSvc.SetKindergartenStatus(c.Request.Context(), id, req.Status, h.operatorOf(c), c.ClientIP()); err != nil {
+		switch err.Error() {
+		case "KINDERGARTEN_NOT_FOUND":
+			response.ErrNotFound(c, "园所不存在")
+		case "INVALID_STATUS":
+			response.ErrValidation(c, "状态取值不合法")
+		default:
+			response.ErrInternal(c, "更新园所状态失败")
+		}
+		return
+	}
+	response.OK(c, gin.H{"updated_at": time.Now().Format(time.RFC3339)})
+}
+
+// PlatformListLogs 平台操作留痕。
+func (h *Handler) PlatformListLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	module := c.Query("module")
+	list, total, err := h.platformSvc.ListLogs(c.Request.Context(), page, pageSize, module)
+	if err != nil {
+		response.ErrInternal(c, "获取操作记录失败")
+		return
+	}
+	response.OKList(c, list, total, page, pageSize)
+}
+
+// ==================== 套餐目录 ====================
+
+func (h *Handler) PlatformListModules(c *gin.Context) {
+	response.OK(c, gin.H{"list": h.planSvc.ListModules()})
+}
+
+func (h *Handler) PlatformListPlans(c *gin.Context) {
+	status := c.Query("status")
+	list, total, err := h.planSvc.ListPlans(c.Request.Context(), status)
+	if err != nil {
+		response.ErrInternal(c, "获取套餐列表失败")
+		return
+	}
+	response.OKList(c, list, total, 1, int(total))
+}
+
+func (h *Handler) PlatformCreatePlan(c *gin.Context) {
+	var req service.PlanRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	plan, err := h.planSvc.Create(c.Request.Context(), req, h.operatorOf(c), c.ClientIP())
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "UNKNOWN_MODULE") || strings.HasPrefix(err.Error(), "PLAN_") ||
+			strings.HasPrefix(err.Error(), "INVALID_") {
+			if err.Error() == "PLAN_CODE_EXISTS" {
+				response.ErrConflict(c, "套餐编码已存在")
+				return
+			}
+			response.ErrValidation(c, "套餐参数不合法")
+			return
+		}
+		response.ErrInternal(c, "创建套餐失败")
+		return
+	}
+	response.Created(c, gin.H{"id": plan.ID})
+}
+
+func (h *Handler) PlatformUpdatePlan(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.ErrValidation(c, "套餐 ID 不合法")
+		return
+	}
+	var req service.PlanRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	if err := h.planSvc.Update(c.Request.Context(), id, req, h.operatorOf(c), c.ClientIP()); err != nil {
+		switch {
+		case err.Error() == "PLAN_NOT_FOUND":
+			response.ErrNotFound(c, "套餐不存在")
+		case strings.HasPrefix(err.Error(), "UNKNOWN_MODULE"), strings.HasPrefix(err.Error(), "INVALID_"):
+			response.ErrValidation(c, "套餐参数不合法")
+		default:
+			response.ErrInternal(c, "更新套餐失败")
+		}
+		return
+	}
+	response.OK(c, gin.H{"updated_at": time.Now().Format(time.RFC3339)})
+}
+
+func (h *Handler) PlatformListPlanTiers(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.ErrValidation(c, "套餐 ID 不合法")
+		return
+	}
+	tiers, err := h.planSvc.ListTiers(c.Request.Context(), id)
+	if err != nil {
+		response.ErrInternal(c, "获取档位失败")
+		return
+	}
+	response.OK(c, gin.H{"list": tiers})
+}
+
+func (h *Handler) PlatformReplacePlanTiers(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.ErrValidation(c, "套餐 ID 不合法")
+		return
+	}
+	var req struct {
+		List []domain.PlanTier `json:"list" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	if err := h.planSvc.ReplaceTiers(c.Request.Context(), id, req.List, h.operatorOf(c), c.ClientIP()); err != nil {
+		switch err.Error() {
+		case "PLAN_NOT_FOUND":
+			response.ErrNotFound(c, "套餐不存在")
+		case "INVALID_TIER", "DUPLICATE_TIER", "INVALID_TIER_RANGE":
+			response.ErrValidation(c, "档位配置不合法")
+		default:
+			response.ErrInternal(c, "保存档位失败")
+		}
+		return
+	}
+	response.OK(c, gin.H{"updated_at": time.Now().Format(time.RFC3339)})
+}

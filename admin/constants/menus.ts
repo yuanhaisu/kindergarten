@@ -27,6 +27,7 @@ import {
   UserFilled,
   Van,
   View,
+  Wallet,
 } from '@element-plus/icons-vue'
 
 export interface AdminMenuEntry {
@@ -108,6 +109,7 @@ export const ADMIN_MENU_GROUPS: MenuGroup[] = [
       { title: '角色管理', path: '/roles', icon: Key, permission: 'admin:role' },
       { title: '管理员', path: '/admins', icon: Stamp, permission: 'admin:view' },
       { title: '操作日志', path: '/logs', icon: Clock, permission: 'system:log' },
+      { title: '我的套餐', path: '/billing', icon: Wallet, permission: 'system:kindergarten' },
     ],
   },
 ]

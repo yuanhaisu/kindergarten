@@ -38,7 +38,11 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		// face.Provider 由 ProvideFaceProvider 直接返回接口，无需 Bind
 		// NewRouter 的细闸中间件按接口收依赖（middleware.PermissionResolver）
 		wire.Bind(new(middleware.PermissionResolver), new(*service.AdminAuthzService)),
+		wire.Bind(new(service.ModuleAuthorizer), new(*service.EntitlementService)),
 		ProvideAuthService,
+		ProvidePlatformService,
+		ProvideBillingEnforceModules,
+		ProvideEntitlementService,
 		// 定时通知发布 worker：显式依赖到 AppHandler 装配，启动见 NewAppHandlerWithBackgroundWorkers
 		ProvideNoticeScheduler,
 		service.Set,

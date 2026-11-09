@@ -16,6 +16,7 @@ import (
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/storage/oss"
 	"kindergarten-server/pkg/log"
 )
 
@@ -98,12 +99,13 @@ type LoginResult struct {
 }
 
 type UserInfo struct {
-	ID       uint64     `json:"id"`
-	Phone    string     `json:"phone"`
-	Nickname string     `json:"nickname"`
-	Avatar   string     `json:"avatar"`
-	Gender   int        `json:"gender"`
-	Roles    []RoleInfo `json:"roles"`
+	ID                 uint64     `json:"id"`
+	Phone              string     `json:"phone"`
+	Nickname           string     `json:"nickname"`
+	Avatar             string     `json:"avatar"`
+	Gender             int        `json:"gender"`
+	MustChangePassword bool       `json:"must_change_password"`
+	Roles              []RoleInfo `json:"roles"`
 }
 
 type RoleInfo struct {
@@ -139,13 +141,40 @@ func (s *AuthService) buildUserInfo(ctx context.Context, user *domain.User) (*Us
 	}
 
 	return &UserInfo{
-		ID:       user.ID,
-		Phone:    maskPhone(user.Phone),
-		Nickname: user.Nickname,
-		Avatar:   user.Avatar,
-		Gender:   user.Gender,
-		Roles:    roleInfos,
+		ID:                 user.ID,
+		Phone:              maskPhone(user.Phone),
+		Nickname:           user.Nickname,
+		Avatar:             user.Avatar,
+		Gender:             user.Gender,
+		MustChangePassword: user.MustChangePassword,
+		Roles:              roleInfos,
 	}, nil
+}
+
+// ChangePassword 自助改密。平台开通园所时创建的园长账号首次登录后必须走这里，
+// 改密成功后清除 must_change_password。
+func (s *AuthService) ChangePassword(ctx context.Context, userID uint64, oldPassword, newPassword string) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return fmt.Errorf("USER_NOT_FOUND")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return fmt.Errorf("PASSWORD_INCORRECT")
+	}
+	if err := validatePassword(newPassword); err != nil {
+		return fmt.Errorf("WEAK_PASSWORD: %w", err)
+	}
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	return s.userRepo.UpdateFields(ctx, userID, map[string]any{
+		"password_hash":        hash,
+		"must_change_password": false,
+	})
 }
 
 // issueTokens 签发 access + refresh；access claims 含 kindergarten_id（由 user_roles 推导）
@@ -724,6 +753,7 @@ func (s *AuthService) BindParentPhone(ctx context.Context, currentUserID uint64,
 }
 
 func (s *AuthService) UpdateAvatar(ctx context.Context, userID uint64, avatar string) (string, error) {
+	avatar = oss.NormalizeRef(avatar)
 	if err := s.userRepo.UpdateFields(ctx, userID, map[string]any{"avatar": avatar}); err != nil {
 		return "", err
 	}

@@ -60,8 +60,10 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 21 | [`21-calendar.md`](./21-calendar.md) | 园级日历与课表 | `admin/pages/calendar/index.vue`、`admin/pages/timetable/index.vue` | 11 | 🔲 未实现（变更 `align-class-calendar`） |
 | 22 | [`22-albums.md`](./22-albums.md) | 班级相册（只读/下架） | `admin/pages/albums/index.vue` | 3 | 🔲 未实现（变更 `class-album-parent-sharing`） |
 | 23 | [`23-diet.md`](./23-diet.md) | 膳食管理（带量食谱） | `admin/pages/diet/*` | 31 | ✅ 已实现（变更 `add-diet-group-objects`） |
+| 24 | [`24-billing.md`](./24-billing.md) | 我的套餐（只读） | `admin/pages/billing/index.vue` | 1 | 🔲 未实现（变更 `add-saas-commercial-layer`） |
 
 **合计：** `PROGRESS.md` 表内共 **95** 行 Admin API；完成数以该文件顶部「总体进度」为准。
+变更 `add-saas-commercial-layer` 新增的 `24-billing` 端点尚未计入 `PROGRESS.md`，实施时需补登并同步顶部计数。
 
 > **后端缺失对照（最新）**：[`admin/tests/playwright-reports/20260422/BACKEND_MISSING_APIS.md`](../../../admin/tests/playwright-reports/20260422/BACKEND_MISSING_APIS.md)（结案：**0** 缺失，以 `PROGRESS.md` 为准）  
 > 历史基线（2026-04-20）：[`admin/tests/playwright-reports/20260420/BACKEND_MISSING_APIS.md`](../../../admin/tests/playwright-reports/20260420/BACKEND_MISSING_APIS.md)

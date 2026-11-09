@@ -10,6 +10,8 @@ type User struct {
 	Gender       int    `gorm:"default:0" json:"gender"`
 	PasswordHash string `gorm:"size:128" json:"-"`
 	IDCardNumber string `gorm:"size:32" json:"id_card_number,omitempty"`
+	// MustChangePassword 平台方开通园所时创建的园长账号为 true，改密后清零。
+	MustChangePassword bool `gorm:"not null;default:false" json:"must_change_password"`
 }
 
 func (User) TableName() string { return "users" }
@@ -19,7 +21,7 @@ func (User) TableName() string { return "users" }
 // 同一端内一个用户可挂多个角色（如老师兼管理员）。
 // 但「同时是老师和家长」不再由本表聚合：两端 AppID 不同、openid 不同，
 // 同一自然人在家长端与老师端是**两条独立的 User**，靠 unionid / 手机号关联
-//（见 specs/cross-end-identity）。不要假设一条 User 能同时承载两端身份。
+// （见 specs/cross-end-identity）。不要假设一条 User 能同时承载两端身份。
 type UserRole struct {
 	BaseModel
 	UserID           uint64  `gorm:"index;not null" json:"user_id"`

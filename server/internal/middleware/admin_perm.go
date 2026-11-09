@@ -25,6 +25,9 @@ type PermissionResolver interface {
 // 无独立码的资源组沿用其查看码（leaves→attendance:view、health→dashboard:view，
 // 属已登记的近似处理，待权限码补全后收紧）。
 var adminRoutePermission = map[string]string{
+	// billing —— 园所端「我的套餐」只读
+	"GET /api/v1/admin/billing/subscription": "system:kindergarten",
+
 	// dashboard —— 看板全部只读
 	"GET /api/v1/admin/dashboard/overview":         "dashboard:view",
 	"GET /api/v1/admin/dashboard/attendance-trend": "dashboard:view",

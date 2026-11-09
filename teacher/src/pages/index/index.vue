@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh, onShareAppMessage } from "@dcloudio/uni-app"
 import { fetchTeacherHomeOverview, fetchTeacherTodos, updateTeacherTodoAction } from "@/api/teacher-home"
 import { ensureLogin } from "@/utils/login"
+import { entitlementExpiresAt, hasModule, loadEntitlements } from "@/utils/entitlements"
 import { goTab } from "@/utils/nav"
 import BottomNav from "@/components/BottomNav.vue"
 import PageShell from "@/components/PageShell.vue"
@@ -37,14 +38,31 @@ const todayDate = computed(() => {
 // 页面只记图标名，路径与降级由 AppIcon 统一处理。
 const quickActions = [
   { title: "发布通知", icon: "notice", path: "/pages/notice/create" },
-  { title: "成长记录", icon: "growth", path: "/pages/growth/index" },
+  { title: "成长记录", icon: "growth", path: "/pages/growth/index", module: "growth" },
   { title: "接送管理", icon: "pickup", path: "/pages/pickup/index" },
   { title: "亲子任务", icon: "task", path: "/pages/tasks/index" },
   { title: "班级日历", icon: "calendar", path: "/pages/calendar/index" },
   { title: "请假审批", icon: "leave", path: "/pages/leave/index" },
-  { title: "班级相册", icon: "album", path: "/pages/album/index" },
+  { title: "班级相册", icon: "album", path: "/pages/album/index", module: "album" },
   { title: "更多", icon: "more", path: "/pages/more/index" }
 ]
+
+// 授权缓存不是响应式的；加载完成后 bump 一次，让过滤与到期提示重新计算。
+const entVersion = ref(0)
+const visibleQuickActions = computed(() => {
+  entVersion.value
+  return quickActions.filter((action) => hasModule(action.module))
+})
+
+const expiryHint = computed(() => {
+  entVersion.value
+  const at = entitlementExpiresAt()
+  if (!at) return ""
+  const days = Math.ceil((new Date(at).getTime() - Date.now()) / 86400000)
+  if (days < 0) return "套餐已到期，部分功能仅可查看，请联系园所管理员续费"
+  if (days <= 7) return `套餐将于 ${String(at).slice(0, 10)} 到期，请提醒园所管理员续费`
+  return ""
+})
 
 const todoIconMap = {
   approve: "审",
@@ -59,6 +77,9 @@ async function loadHome() {
 
   try {
     await ensureLogin()
+    await loadEntitlements().finally(() => {
+      entVersion.value += 1
+    })
     const [overviewRes, todosRes] = await Promise.all([fetchTeacherHomeOverview(), fetchTeacherTodos()])
     overview.value = overviewRes.data || {}
     const todoList = todosRes.data?.list ?? todosRes.data
@@ -189,6 +210,10 @@ onShareAppMessage((res) => {
       </view>
     </view>
 
+    <view v-if="expiryHint" class="expiry-banner">
+      <text class="expiry-banner-text">{{ expiryHint }}</text>
+    </view>
+
     <!-- 今日概况数字带：只有「待审批」带强调色 -->
     <view class="section-head">
       <text class="section-title">今日班级概况</text>
@@ -228,7 +253,7 @@ onShareAppMessage((res) => {
     <!-- 功能入口 4 × 2 -->
     <view class="entries">
       <view
-        v-for="action in quickActions"
+        v-for="action in visibleQuickActions"
         :key="action.title"
         class="entry"
         :class="{ 'entry--more': action.title === '更多' }"
@@ -404,6 +429,20 @@ onShareAppMessage((res) => {
   border-radius: $border-radius-full;
   background: $color-semantic-danger;
   outline: 4rpx solid $color-bg-card;
+}
+
+// ===== 到期提示 =====
+.expiry-banner {
+  margin: $spacing-md 0 0;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-md;
+  background: $color-semantic-warning-bg;
+}
+
+.expiry-banner-text {
+  font-size: $typography-font-size-sm;
+  color: $color-semantic-warning;
+  line-height: 1.5;
 }
 
 // ===== 区块标题 =====

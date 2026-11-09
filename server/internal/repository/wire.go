@@ -39,4 +39,12 @@ var Set = wire.NewSet(
 	NewDietPlanRepo,
 	NewDietTemplateRepo,
 	NewDietDriRepo,
+	NewPlatformAdminRepo,
+	NewPlatformLogRepo,
+	NewPlanRepo,
+	NewDistributorRepo,
+	NewOrderRepo,
+	NewPaymentRepo,
+	NewEntitlementRepo,
+	NewCommissionRepo,
 )
