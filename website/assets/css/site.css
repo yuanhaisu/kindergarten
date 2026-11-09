@@ -1134,3 +1134,60 @@ a {
     flex-direction: column;
   }
 }
+
+/* ---------- 滚动条 ----------
+   Firefox/Chrome 走标准属性，WebKit 走伪元素，两处同源取色。
+   拇指用 ink-muted（对 cream 约 6:1），不用 rule：后者在浅底上不足 3:1，
+   高对比下等于没有滑块。 */
+html {
+  scrollbar-color: var(--color-identity-ink-muted) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-identity-ink-muted);
+  border: 2px solid transparent;
+  border-radius: var(--border-radius-full);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-identity-ink);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ---------- 强制高对比（Windows 高对比模式 / forced-colors） ----------
+   强制色会抹掉 background 与 box-shadow。凡是「靠底色表达边界或状态」的地方，
+   在这里改用系统色或边框，保证信息不丢失。 */
+@media (forced-colors: active) {
+  /* 主按钮原本是纯色块，强制色下会与页面同底；补系统边框保住可点击区域。
+     ghost 按钮的边界原本来自 inset box-shadow，也会被抹掉，同一条规则覆盖。 */
+  .btn {
+    border: 1px solid ButtonText;
+  }
+
+  /* 当前导航项的琥珀短线是 background，改为系统高亮色。 */
+  .nav__links a.is-active::after {
+    background: Highlight;
+  }
+
+  /* 时间线的连接线与节点都靠背景色，强制色下改用 CanvasText。 */
+  .record__steps::before {
+    background: CanvasText;
+  }
+
+  .record__dot {
+    background: CanvasText;
+    box-shadow: none;
+  }
+}

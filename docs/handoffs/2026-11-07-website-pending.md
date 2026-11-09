@@ -43,9 +43,11 @@
 - ✅ 导航当前区块高亮（2026-11-09 完成：`SiteNav.vue` 用 IntersectionObserver 观察
   `#product` / `#privacy` / `#contact`，窄带中线判定；无头 Chrome 实测三段高亮与
   `/privacy` 页无残留均通过）。
-- `forced-colors` 与自定义滚动条主题化。
+- ✅ `forced-colors` 与自定义滚动条主题化（2026-11-09 完成：`site.css` 末尾新增滚动条
+  与 `@media (forced-colors: active)` 块；无头 Chrome 模拟强制色实测按钮边框、导航
+  高亮线、时间线节点均保留，滚动条为 ink-muted + thin）。
 - 未建 OpenSpec change；决策记录在 ADR-0017、`GLOSSARY.md`（「官网」词条）、`.impeccable/surfaces/website-pages-index-vue.md`。
-- 工作区改动尚未提交。
+- 官网与部署改动已提交（`c4dd0d4` / `ef3da6a` / `3a1e289`）；商业化变更的改动仍在工作区。
 
 ## 已完成的验证
 
