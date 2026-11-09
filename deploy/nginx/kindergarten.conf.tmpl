@@ -215,6 +215,9 @@ server {
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_session_cache   shared:SSL:10m;
 
+    # 预发与生产共用同一份静态产物：用响应头挡住收录，避免 test-www 与 www 重复。
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
     root  /opt/kindergarten/staging/website/current;
     index index.html;
     gzip on;
