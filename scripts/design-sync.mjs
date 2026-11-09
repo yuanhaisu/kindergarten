@@ -138,6 +138,7 @@ function buildManifest() {
     const seenNumbers = new Set();
 
     for (const [route, item] of Object.entries(meta)) {
+      if (item.prototype === false) continue;
       if (seenSlugs.has(item.slug)) errors.push(`slug 重复: ${surface}/${item.slug}`);
       if (seenNumbers.has(item.n)) errors.push(`编号重复: ${surface}/${item.n}`);
       if (Boolean(item.tabbar) !== tabbarRoutes.has(route)) {
@@ -156,6 +157,10 @@ function buildManifest() {
       const source = `${surface}/src/${route}.vue`;
       if (!fs.existsSync(path.join(repoRoot, source))) {
         errors.push(`pages.json 登记了 ${surface}/${route}，但源码 ${source} 不存在`);
+        continue;
+      }
+      if (item.prototype === false) {
+        if (!item.why) errors.push(`prototype:false 缺少 why: ${surface}/${route}`);
         continue;
       }
       entries.push({

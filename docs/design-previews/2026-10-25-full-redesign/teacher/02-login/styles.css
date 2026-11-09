@@ -387,3 +387,5 @@ button {
     transition-duration: 1ms !important;
   }
 }
+
+.agree-link { color: var(--accent-deep); }

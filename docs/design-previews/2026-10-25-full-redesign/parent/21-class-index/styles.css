@@ -716,3 +716,6 @@ a:focus-visible {
     transform: none;
   }
 }
+
+/* ---- entitlements：相册未开通时入口不渲染 -------------------- */
+[data-state="partial"] .entry-cell[data-module="album"] { display: none; }

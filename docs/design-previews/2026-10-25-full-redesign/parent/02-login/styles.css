@@ -489,3 +489,5 @@ input {
     border-color: var(--accent-deep);
   }
 }
+
+.agree-link { color: var(--accent-deep); }

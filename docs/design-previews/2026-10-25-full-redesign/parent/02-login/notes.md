@@ -75,3 +75,7 @@
 5. **「空态」含义需产品确认**：登录页没有列表可"空"，映射为「协议未勾选」（本页唯一真实的缺一项形态），与 teacher 原型同问。
 6. **批次 `index.html` 需重跑** `node scripts/od-gallery.mjs docs/design-previews/2026-10-25-full-redesign` 才会登记本页（未动，避免与其他页并发写冲突）。
 7. **预览截图**：用 `scripts/od-shot.mjs`（CDP `setDeviceMetricsOverride` + `captureScreenshot`），已确认 `cssViewport=390 / cssWidth=390`，无缩放裁切。
+
+## 与代码同步（2026-11-09）
+
+- 协议名改为可点链接样式（`.agree-link`）；代码中点击打开 `pages/auth/policy` 全文页。登录后若 `consent_required` 会先跳 `pages/auth/consent`。

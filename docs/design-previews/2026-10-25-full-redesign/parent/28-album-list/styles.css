@@ -338,3 +338,31 @@ svg { display: block; }
 .mp-app[data-state="error"] .skeleton,
 .mp-app[data-state="error"] .empty-state { display: none; }
 .mp-app[data-state="error"] .error-state { display: flex; }
+
+/* ---- 未开通（billing entitlements） ---------------------------- */
+.locked-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 64px var(--space-xl) 40px;
+  text-align: center;
+}
+[data-state="locked"] .locked-state { display: flex; }
+[data-state="locked"] .scope-switch,
+[data-state="locked"] .album-list,
+[data-state="locked"] .skeleton,
+[data-state="locked"] .empty-state,
+[data-state="locked"] .error-state { display: none; }
+.locked-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-sm);
+  border-radius: 50%;
+  background: var(--accent-wash);
+  color: var(--accent-deep);
+}
+.locked-title { font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--fg); }
+.locked-desc { max-width: 260px; font-size: var(--text-sm); line-height: 1.6; color: var(--muted); }

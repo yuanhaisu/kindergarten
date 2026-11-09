@@ -6,8 +6,8 @@
       "previewSha": "f2c9d65fc27a1203b598cf4bdae41f563e8775a053e10ee50748548e3d9f5a03"
     },
     "parent/02-login": {
-      "assetsSha": "9a810053a46d05e22d3be28138bcbcaf33adb4e4c303183291e29b9d42a0d3de",
-      "previewSha": "729d1dadcb4b9dca771391b38f2479bc31e6c4b80c666a7bb009d52ddbf49616"
+      "assetsSha": "1304543accb5ac040177518d887b88540b15b889a47a1bdaf1393e90e24ba2ad",
+      "previewSha": "79f8efd0c71fd0d9f58fef439d1c013ba6ea64ded5914bd4624682a14032c3b6"
     },
     "parent/03-bind": {
       "assetsSha": "4d6b0053cb778dc3e9316065201894b19e7dc2af20613feffaab0314b22bb5e9",
@@ -46,7 +46,7 @@
       "previewSha": "b353a3475c530bbbdfc42bd58d9aa1f4ec0cb19de9f924f21d656c2505ae668a"
     },
     "parent/12-growth-report": {
-      "assetsSha": "28925c7b683bb72099a65985070615ef740d434ca4551d17e38e9c760f8ab7d2",
+      "assetsSha": "c1872424f87267894265f532d57f22baced667d37c22e5619fa99b1f08b2c86c",
       "previewSha": "1509059676fd9c8dc3d354c9947fb50525aba6c9a58c0cda046f72004aee8107"
     },
     "parent/13-pickup-index": {
@@ -82,7 +82,7 @@
       "previewSha": "553f2d387095ba114005e93eb57f344bee18f648ef867ef1a4ead8b5004f2766"
     },
     "parent/21-class-index": {
-      "assetsSha": "c5c64b20536de390f2d7a69cf0646ee4e2399301132b87d015bc5f090a260231",
+      "assetsSha": "55ad37f535012591f5ebced346d6f0209468300bfec8d904dd129e896ecd0c1e",
       "previewSha": "05cb84e895f4630ff2468e7dda6a43b372fd4bdf0d3f9896959780f7c1ca69bc"
     },
     "parent/22-calendar-index": {
@@ -106,11 +106,11 @@
       "previewSha": "fee7f369c0aba327500eaeb9aca58a1742e5fcbecbc1aef7dcebeaf18e9d3336"
     },
     "parent/27-profile": {
-      "assetsSha": "e55a8b80d5664df08407e37b7f27774ff7f6cf6ef771bcf96fad43ec3c0e5229",
+      "assetsSha": "51f4c0a203fef328480eacc49a650e4c77735f85dd070c197d070e8783f94dc3",
       "previewSha": "e67fc579c07581203e54f23f54b30525b2c0b2cebb19ce35ae88e83fa98be521"
     },
     "parent/28-album-list": {
-      "assetsSha": "8f7c5541061b653d72d9054127d9043878830c48cbeffb7ca5786b92c9787c59",
+      "assetsSha": "71027bba87f5437bf13f92ec504bb2147acd3cfcef4e84d07fab70b5d600b128",
       "previewSha": "3169b3fd77438834269a2867ab71ff4a732bd3e39790894e0ad74589d56ed6ac"
     },
     "parent/29-album-detail": {
@@ -122,8 +122,8 @@
       "previewSha": "827e531b5af1a6a84846644835d26d1b21f6006029822815979c28b6017fe837"
     },
     "teacher/02-login": {
-      "assetsSha": "11f3d9bdb03ef69f307d6d39e561c2470b655b162a8088db79f0649fef28bea6",
-      "previewSha": "b8d99723bb27bcae913f3daaafbeaf4375c0ea79eaf826da48d6c667bbe88069"
+      "assetsSha": "b85f2860c3e0383c6ace7028e8a5f907078374b2fa57c18488b0d535d9147679",
+      "previewSha": "f212fe45c58b1b63de4a53d3006a5d78c155473ae23af811da79a3b62c782a8c"
     },
     "teacher/03-notice-create": {
       "assetsSha": "29b8e1477351e4895034eb681eeb3621c2e412391f8e136bfc93199a1f46e77f",

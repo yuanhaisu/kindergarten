@@ -45,7 +45,7 @@
 </div>
 
 <!-- 正常态 -->
-<section class="album-list" aria-label="相册列表">
+<section class="locked-state" aria-labelledby="locked-title" data-od-id="album-locked"><span class="locked-icon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><h2 class="locked-title" id="locked-title">班级相册未开通</h2><p class="locked-desc">本园暂未开通班级相册功能，请联系园所老师。</p></section><section class="album-list" aria-label="相册列表">
 <div class="list-head">
 <h2 class="list-title">全部相册</h2>
 <span class="list-meta">共 6 本</span>
@@ -148,7 +148,7 @@
 <button class="mp-demo-chip" data-mp-state="normal" aria-pressed="true">正常</button>
 <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
 <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
-<button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+<button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button><button class="mp-demo-chip" data-mp-state="locked" aria-pressed="false">未开通</button>
 </div>
 <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
 </div>

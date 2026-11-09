@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "e6d8369c69cdb586b240d9eb2af3efe5946f49bc67bdb301c1c94b8d62315f7e",
+  "supportHash": "d30674c161950c0f663512c6a3a647ed564691c8fa69a18943e5f7bcde6b7bde",
   "supportReviewedAt": "2026-11-09",
-  "supportReason": "2026-11-09-entitlement-ui：entitlements utils/api 已纳入支撑代码基线",
+  "supportReason": "2026-11-09-entitlement-ui：entitlements / consent 支撑代码已纳入基线",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -15,12 +15,13 @@
     },
     "parent/02-login": {
       "source": "parent/src/pages/auth/login.vue",
-      "sha256": "2cfec52471943a3b0eb8eadb20e5dbe54076d180d4a85c65d1e208606b822b19",
-      "depsSha": "f77d87588107128192e279ce83e5178259297252bda8c45f49c53ce71f5a65bc",
+      "sha256": "b7a1e4eec2b7c5ee16a32a4114a6fd2812a314a3273f89662fc33746a3d32009",
+      "depsSha": "bf522af504bc3a79deb5d63e6d2bab42e8157973b24acd00555084a8ad9213b6",
       "title": "家长登录",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "8087ae3"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "d6733c7",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "parent/03-bind": {
       "source": "parent/src/pages/auth/bind.vue",
@@ -84,7 +85,7 @@
       "tabbar": true,
       "reviewedAt": "2026-11-09",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 的锁定态/到期横幅/入口过滤已同步到原型"
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "parent/10-growth-detail": {
       "source": "parent/src/pages/growth/detail.vue",
@@ -106,12 +107,13 @@
     },
     "parent/12-growth-report": {
       "source": "parent/src/pages/growth/report.vue",
-      "sha256": "a2f7abfcdb34e0c3b0e14cda9977b953f6c7ef22166722e1071632bd9da2937c",
-      "depsSha": "343d198baa884d9d6c018dd06957360e09bf89857ddad0f5d9d2ad241c87cc19",
+      "sha256": "4a4ae1a138fc59716b71531a786246d7f9b74506dbefcd23fa1ec5424ff154fc",
+      "depsSha": "1d0702a5f4f0ba7c3da310623f490bd52de553155f38de8914ec933c6f1542da",
       "title": "成长报告",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "d6733c7",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
@@ -187,12 +189,13 @@
     },
     "parent/21-class-index": {
       "source": "parent/src/pages/class/index.vue",
-      "sha256": "b90f64a127fd2b734b1841b9a062c92007a50633e41aae00e105e4e2ccfdca1b",
-      "depsSha": "780dca85c58c13a79df051e2ff74f33f4a04e18980325f9cf42a88e62ac5efdb",
+      "sha256": "3cbec6f195136aa382ef6c702519e6ff5e5ce3ee16af5b3e5ef306cbe846ccac",
+      "depsSha": "dc194ff2892cbe17401bbc60eec12ff473d1e7673be366ed540e7f16ce0bda3a",
       "title": "班级信息",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "d6733c7",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "parent/22-calendar-index": {
       "source": "parent/src/pages/calendar/index.vue",
@@ -241,21 +244,23 @@
     },
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
-      "sha256": "220fd890260ae7de82cad220b694b06da2dc7d9faa2e905a1e0421165562b585",
-      "depsSha": "dc07802d9f99b84d20aff1b9c197eeeea73784872aef93f88ddb57bc995e307d",
+      "sha256": "7bcc148a76d3a9183b8c29613bbd9026a15f0df03111f3c8c3e3e3eaedb2a2da",
+      "depsSha": "f5726b6dcfac643024f802eb2330d16e473c4290669358dd416262f5fe6b1dbf",
       "title": "我的",
       "tabbar": true,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "e3f315d"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "d6733c7",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
-      "sha256": "eb54ff59b62f58dbca1540b7aba76ca77bdedd72922837c65be692d2b1f4ba59",
-      "depsSha": "f4f07af2f514d578a74f4a18a0c5d3d846e04b9aa79779997e0e2fe864771e31",
+      "sha256": "92e6c043a8c0941a24e036c21834041dd12e0b0650a419ffa4f06f019dcd3902",
+      "depsSha": "49d9b0410376599bc42bd516dc6b85c6b06390e796121bd850d7319862fb59aa",
       "title": "班级相册",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "d6733c7",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "parent/29-album-detail": {
       "source": "parent/src/pages/album/detail.vue",
@@ -274,16 +279,17 @@
       "tabbar": true,
       "reviewedAt": "2026-11-09",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 的锁定态/到期横幅/入口过滤已同步到原型"
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
-      "sha256": "3f11932c4dbbd0f74a5211a341e68b3a858f80b2817c78a4cee35cad28e063b4",
-      "depsSha": "428f534230774833f21686021feb4c3346b016b64b12d51f2bf81bc0b2f87bc4",
+      "sha256": "051c329e0748ed0a88bb6365117aaa91e4563fee62a0f18c9937693f108660de",
+      "depsSha": "146fd80faf45810977611e8c7fe786dd13b6246bee2ebeab63930f24bd8984ca",
       "title": "老师登录",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "58ccbae"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "d6733c7",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "teacher/03-notice-create": {
       "source": "teacher/src/pages/notice/create.vue",
@@ -419,7 +425,7 @@
       "tabbar": false,
       "reviewedAt": "2026-11-09",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 的锁定态/到期横幅/入口过滤已同步到原型"
+      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",

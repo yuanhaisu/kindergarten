@@ -48,6 +48,22 @@ test('every page has a lock entry with current source and dependency hashes', ()
   }
 });
 
+test('prototype:false entries stay out of the manifest and explain why', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(BATCH, 'design.config.json'), 'utf8'));
+  const skipped = [];
+  for (const [surface, meta] of Object.entries(config)) {
+    for (const [route, item] of Object.entries(meta)) {
+      if (item.prototype !== false) continue;
+      assert.ok(item.why, `prototype:false missing why: ${surface}/${route}`);
+      skipped.push({ surface, route });
+    }
+  }
+  assert.ok(skipped.length > 0);
+  for (const { surface, route } of skipped) {
+    assert.ok(!entries.some((entry) => entry.surface === surface && entry.path === `${surface}/src/${route}.vue`));
+  }
+});
+
 test('prototype navigation titles match pages.json', () => {
   for (const entry of entries) {
     assert.equal(prototypeTitle(entry), entry.title, `${entry.surface}/${entry.slug}`);
