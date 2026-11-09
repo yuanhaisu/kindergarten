@@ -13,7 +13,7 @@ import (
 	"kindergarten-server/internal/service"
 )
 
-func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer) (*gin.Engine, error) {
+func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker) (*gin.Engine, error) {
 	r := gin.New()
 	// 只在宿主机 Nginx 反代（127.0.0.1 / ::1）时信任 X-Forwarded-For；
 	// 直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
@@ -74,6 +74,8 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		// 需要认证的接口
 		authed := v1.Group("")
 		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker))
+		// 停用园所：凭证有效也一律拒绝（PLT-0005/0006）。
+		authed.Use(middleware.RequireActiveKindergarten(kgStatus))
 		authed.Use(middleware.CasbinRBAC(e))
 		// 功能授权裁剪：只对 premium 模块生效，base 路由直接放行（ADR-0012）。
 		authed.Use(middleware.ModuleGate(moduleAuthz))

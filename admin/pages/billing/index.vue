@@ -19,6 +19,19 @@
         </template>
       </el-alert>
 
+      <el-alert
+        v-if="view?.over_limit"
+        type="warning"
+        :closable="false"
+        show-icon
+        title="在园幼儿数已超过所购档位上限"
+      >
+        <template #default>
+          当前在园 {{ view.student_count }} 人，所购档位上限 {{ view.tier_max_students }} 人。
+          现有考勤、成长、接送等功能不受影响；如需扩展规模，请联系平台方升级套餐。
+        </template>
+      </el-alert>
+
       <div class="grid grid-cols-3 gap-3">
         <div class="rounded-lg bg-bg-card p-4 shadow-sm">
           <div class="text-xs text-text-muted">当前套餐</div>

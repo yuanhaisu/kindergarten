@@ -24,7 +24,7 @@ func newBillingFlowServices(t *testing.T, db *gorm.DB) (*PlanService, *OrderServ
 		repository.NewEntitlementRepo(db), repository.NewDistributorRepo(db),
 		repository.NewCommissionRepo(db), repository.NewPlatformLogRepo(db), nil,
 	)
-	entSvc := NewEntitlementService(repository.NewEntitlementRepo(db), repository.NewOrderRepo(db), nil, true)
+	entSvc := NewEntitlementService(repository.NewEntitlementRepo(db), repository.NewOrderRepo(db), repository.NewKindergartenRepo(db), nil, true)
 	return planSvc, orderSvc, entSvc
 }
 
@@ -39,6 +39,8 @@ func cleanupBillingFlow(t *testing.T, db *gorm.DB) {
 	del("DELETE FROM payments WHERE kindergarten_id IN (SELECT id FROM kindergartens WHERE name LIKE 'S1B订单测试%')")
 	del("DELETE FROM entitlements WHERE kindergarten_id IN (SELECT id FROM kindergartens WHERE name LIKE 'S1B订单测试%')")
 	del("DELETE FROM orders WHERE kindergarten_id IN (SELECT id FROM kindergartens WHERE name LIKE 'S1B订单测试%')")
+	del("DELETE FROM students WHERE kindergarten_id IN (SELECT id FROM kindergartens WHERE name LIKE 'S1B订单测试%')")
+	del("DELETE FROM classes WHERE kindergarten_id IN (SELECT id FROM kindergartens WHERE name LIKE 'S1B订单测试%')")
 	del("DELETE FROM kindergartens WHERE name LIKE 'S1B订单测试%'")
 	del("DELETE FROM plans WHERE code LIKE 's1b_%'")
 	del("DELETE FROM distributors WHERE name LIKE 'S1B分销%'")
@@ -234,7 +236,7 @@ func TestBillingContract_SubscriptionFieldSet(t *testing.T) {
 	var top map[string]any
 	require.NoError(t, json.Unmarshal(raw, &top))
 	assert.Equal(t,
-		[]string{"expires_at", "grace_until", "modules", "plan_name", "state"},
+		[]string{"expires_at", "grace_until", "modules", "over_limit", "plan_name", "state", "student_count", "tier_max_students"},
 		sortedKeys(top))
 
 	modules := top["modules"].([]any)
@@ -259,4 +261,50 @@ func sortedKeys(m map[string]any) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// 超档只提示、不阻断：快照记录档位上限，Subscription 据此给出升级线索。
+func TestSubscription_OverLimit(t *testing.T) {
+	db := openPlatformTestDB(t)
+	planSvc, orderSvc, entSvc := newBillingFlowServices(t, db)
+	ctx := context.Background()
+	cleanupBillingFlow(t, db)
+	t.Cleanup(func() { cleanupBillingFlow(t, db) })
+
+	kg := &domain.Kindergarten{Name: "S1B订单测试园G", Status: domain.KindergartenStatusActive}
+	require.NoError(t, repository.NewKindergartenRepo(db).Create(ctx, kg))
+
+	plan, err := planSvc.Create(ctx, PlanRequest{
+		Code: "s1b_tier", Name: "S1B档位版", Tier: 1, PriceCents: 100000, TermMonths: 6,
+		ModuleCodes: []string{"base", "growth"},
+	}, "s1b_ops", "127.0.0.1")
+	require.NoError(t, err)
+	require.NoError(t, planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
+		{Tier: 1, MinStudents: 0, MaxStudents: 2, PriceMultiplier: 100},
+	}, "s1b_ops", "127.0.0.1"))
+
+	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1b_ops", "127.0.0.1")
+	require.NoError(t, err)
+	var snap PlanSnapshot
+	require.NoError(t, json.Unmarshal([]byte(order.PlanSnapshot), &snap))
+	assert.Equal(t, 2, snap.TierMaxStudents, "快照必须记录档位上限")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "s1b_ops", "127.0.0.1")
+	require.NoError(t, err)
+
+	// 3 名在园幼儿，超过上限 2
+	class := &domain.Class{KindergartenID: kg.ID, Name: "S1B超档测试班", Capacity: 30, Status: 1}
+	require.NoError(t, db.Create(class).Error)
+	for range 3 {
+		require.NoError(t, db.Create(&domain.Student{
+			KindergartenID: kg.ID, ClassID: class.ID, Name: "S1B超档测试幼儿", Status: 1,
+			Birthday: time.Now(), EnrollDate: time.Now(),
+		}).Error)
+	}
+
+	view, err := entSvc.Subscription(ctx, kg.ID)
+	require.NoError(t, err)
+	assert.EqualValues(t, 3, view.StudentCount)
+	assert.Equal(t, 2, view.TierMaxStudents)
+	assert.True(t, view.OverLimit, "超过档位上限必须标记 over_limit")
+	assert.Equal(t, "S1B档位版", view.PlanName)
 }

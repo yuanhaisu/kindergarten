@@ -27,12 +27,14 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	teacherInvitationRepo := repository.NewTeacherInvitationRepo(db)
 	adminRepo := repository.NewAdminRepo(db)
 	adminAuthzService := service.NewAdminAuthzService(adminRepo, userRoleRepo)
+	kindergartenRepo := repository.NewKindergartenRepo(db)
 	client := ProvideRedis(cfg)
+	kindergartenStatusService := service.NewKindergartenStatusService(kindergartenRepo, client)
 	weChatClient := ProvideWeChatClient(cfg, client)
 	jwtSecret := ProvideJWTSecret(cfg)
 	accessTTL := ProvideAccessTTL(cfg)
 	refreshTTL := ProvideRefreshTTL(cfg)
-	authService := ProvideAuthService(db, userRepo, userRoleRepo, teacherInvitationRepo, adminAuthzService, client, weChatClient, jwtSecret, accessTTL, refreshTTL)
+	authService := ProvideAuthService(db, userRepo, userRoleRepo, teacherInvitationRepo, adminAuthzService, kindergartenStatusService, client, weChatClient, jwtSecret, accessTTL, refreshTTL)
 	fileRepo := repository.NewFileRepo(db)
 	storage, err := ProvideOSSStorage(cfg)
 	if err != nil {
@@ -41,7 +43,6 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	fileService := service.NewFileService(fileRepo, storage)
 	messageRepo := repository.NewMessageRepo(db)
 	messageService := service.NewMessageService(messageRepo)
-	kindergartenRepo := repository.NewKindergartenRepo(db)
 	dietFoodRepo := repository.NewDietFoodRepo(db)
 	dietTemplateRepo := repository.NewDietTemplateRepo(db)
 	dietDriRepo := repository.NewDietDriRepo(db)
@@ -115,7 +116,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	entitlementRepo := repository.NewEntitlementRepo(db)
 	orderRepo := repository.NewOrderRepo(db)
 	platformLogRepo := repository.NewPlatformLogRepo(db)
-	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, platformLogRepo, dietSeedService, jwtSecret, accessTTL)
+	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, platformLogRepo, dietSeedService, kindergartenStatusService, jwtSecret, accessTTL)
 	planRepo := repository.NewPlanRepo(db)
 	planService := service.NewPlanService(planRepo, platformLogRepo)
 	paymentRepo := repository.NewPaymentRepo(db)
@@ -125,7 +126,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	orderService := service.NewOrderService(db, orderRepo, paymentRepo, planRepo, kindergartenRepo, entitlementRepo, distributorRepo, commissionRepo, platformLogRepo, entitlementCache)
 	distributorService := service.NewDistributorService(distributorRepo, commissionRepo, orderRepo, kindergartenRepo, platformLogRepo)
 	billingEnforceModules := ProvideBillingEnforceModules(cfg)
-	entitlementService := ProvideEntitlementService(entitlementRepo, orderRepo, entitlementCache, billingEnforceModules)
+	entitlementService := ProvideEntitlementService(entitlementRepo, orderRepo, kindergartenRepo, entitlementCache, billingEnforceModules)
 	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService, faceRegistryService, gardenCalendarService, timetableService, dietGroupObjectService, dietFoodService, dietRecipeService, dietPlanService, dietAnalysisService, platformService, planService, orderService, distributorService, entitlementService)
 	noticeScheduler := ProvideNoticeScheduler(db)
 	appHandler := NewAppHandlerWithBackgroundWorkers(handlerHandler, noticeScheduler, cfg, db, client)
@@ -134,7 +135,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService)
+	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService, kindergartenStatusService)
 	if err != nil {
 		return nil, err
 	}

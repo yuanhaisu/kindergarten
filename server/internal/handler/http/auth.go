@@ -93,6 +93,8 @@ func (h *Handler) WeChatLogin(c *gin.Context) {
 			response.ErrBadRequest(c, 40020, "邀请码无效或已过期")
 		case "INVITE_USER_NOT_FOUND":
 			response.ErrBadRequest(c, 40021, "邀请码关联的教师账号不存在")
+		case "KINDERGARTEN_SUSPENDED":
+			response.ErrForbidden(c, "园所已停用，请联系平台方")
 		default:
 			// 微信侧/凭据/网络的原因绝不能只回一句「登录失败」：排障时必须能看到
 			// code2session 的 errcode；对外文案仍保持模糊，避免泄漏配置细节。
@@ -125,6 +127,8 @@ func (h *Handler) PasswordLogin(c *gin.Context) {
 			response.ErrBadRequest(c, 40003, "账号或密码错误")
 		case "NOT_ADMIN":
 			response.ErrForbidden(c, "该账号无管理后台权限")
+		case "KINDERGARTEN_SUSPENDED":
+			response.ErrForbidden(c, "园所已停用，请联系平台方")
 		default:
 			response.ErrInternal(c, "登录失败")
 		}

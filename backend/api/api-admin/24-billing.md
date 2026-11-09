@@ -34,11 +34,16 @@
   ],
   "expires_at": "2027-04-20",
   "grace_until": "2027-05-05",
-  "state": "grace"
+  "state": "grace",
+  "student_count": 180,
+  "tier_max_students": 150,
+  "over_limit": true
 }
 ```
 
 > `state` 取值：`active` 在期 / `grace` 宽限期 / `expired` 已降级。
+> `student_count` 为当前在园幼儿数；`tier_max_students` 为最近一张生效订单所购档位的上限（0 表示无上限）。
+> `over_limit` 为 `student_count > tier_max_students`，**只作提示，不阻断任何业务**。
 > 园所级 `state` 取最紧急的模块状态（降级 > 宽限 > 在期），`expires_at` 取最早到期日。
 > `grace_until` 仅在宽限期或降级状态下有值。
 > 降级状态下 `modules[].state` 为 `expired`，页面需提示「可查看历史，暂不可新增」。

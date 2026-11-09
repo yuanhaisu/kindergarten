@@ -16,6 +16,8 @@ export interface PlatformKindergartenRow {
   active_plan_name: string
   soonest_expire_at: string | null
   created_at: string
+  tier_max_students: number
+  over_limit: boolean
 }
 
 export interface PlatformEntitlementRow {
@@ -126,6 +128,9 @@ export interface SubscriptionView {
   expires_at: string | null
   grace_until: string | null
   state: 'active' | 'grace' | 'expired'
+  student_count: number
+  tier_max_students: number
+  over_limit: boolean
 }
 
 export function platformLogin(username: string, password: string) {

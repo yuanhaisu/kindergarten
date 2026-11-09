@@ -24,7 +24,9 @@
       "student_count": 180,
       "active_plan_name": "旗舰版",
       "soonest_expire_at": "2027-06-30",
-      "created_at": "2026-11-06T10:00:00+08:00"
+      "created_at": "2026-11-06T10:00:00+08:00",
+      "tier_max_students": 150,
+      "over_limit": true
     }
   ],
   "total": 1,
@@ -35,6 +37,8 @@
 
 > `student_count` 为当前在园幼儿数，用于判断档位是否超限。
 > `soonest_expire_at` 取该园所有在期授权中最早的到期日；无授权时为 `null`。
+> `tier_max_students` 来自最近一张生效订单的快照（0 = 无上限）；`over_limit` 为
+> `student_count > tier_max_students`，只作升级线索，不阻断园所业务。
 
 ---
 

@@ -31,6 +31,7 @@ type PlatformService struct {
 	adminRoleRepo *repository.AdminRepo
 	logRepo       *repository.PlatformLogRepo
 	dietSeed      *DietSeedService
+	kgStatus      *KindergartenStatusService
 	secret        []byte
 	atTTL         time.Duration
 }
@@ -46,13 +47,14 @@ func NewPlatformService(
 	adminRoleRepo *repository.AdminRepo,
 	logRepo *repository.PlatformLogRepo,
 	dietSeed *DietSeedService,
+	kgStatus *KindergartenStatusService,
 	secret []byte,
 	atTTL time.Duration,
 ) *PlatformService {
 	return &PlatformService{
 		db: db, adminRepo: adminRepo, kgRepo: kgRepo, entRepo: entRepo, orderRepo: orderRepo,
 		userRepo: userRepo, userRoleRepo: userRoleRepo, adminRoleRepo: adminRoleRepo,
-		logRepo: logRepo, dietSeed: dietSeed, secret: secret, atTTL: atTTL,
+		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, secret: secret, atTTL: atTTL,
 	}
 }
 
@@ -100,6 +102,9 @@ type PlatformKindergartenRow struct {
 	ActivePlanName  string     `json:"active_plan_name"`
 	SoonestExpireAt *time.Time `json:"soonest_expire_at"`
 	CreatedAt       time.Time  `json:"created_at"`
+	// 超档提示：只展示，不阻断（ENT-0013）。
+	TierMaxStudents int  `json:"tier_max_students"`
+	OverLimit       bool `json:"over_limit"`
 }
 
 func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize int, keyword, status string) ([]PlatformKindergartenRow, int64, error) {
@@ -130,6 +135,11 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		}
 		if o, err := s.orderRepo.FindLatestActiveByKindergarten(ctx, kg.ID); err == nil && o != nil {
 			row.ActivePlanName = snapshotPlanName(o.PlanSnapshot)
+			var snap PlanSnapshot
+			if err := json.Unmarshal([]byte(o.PlanSnapshot), &snap); err == nil && snap.TierMaxStudents > 0 {
+				row.TierMaxStudents = snap.TierMaxStudents
+				row.OverLimit = row.StudentCount > int64(snap.TierMaxStudents)
+			}
 		}
 		out = append(out, row)
 	}
@@ -332,6 +342,12 @@ func (s *PlatformService) SetKindergartenStatus(ctx context.Context, id uint64, 
 	}
 	if err := s.kgRepo.UpdateByID(ctx, id, map[string]any{"status": status}); err != nil {
 		return err
+	}
+	// 立即失效状态缓存：停用后第一次请求就要被拦下，而不是等 60 秒 TTL。
+	if s.kgStatus != nil {
+		if err := s.kgStatus.Invalidate(ctx, id); err != nil {
+			return fmt.Errorf("invalidate kindergarten status cache: %w", err)
+		}
 	}
 	return s.logPlatform(ctx, operator, "kindergarten", "update_status", "kindergarten", id,
 		fmt.Sprintf("%s -> %s", kg.Status, status), ip)

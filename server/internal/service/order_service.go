@@ -55,6 +55,9 @@ type PlanSnapshot struct {
 	TermMonths   int      `json:"term_months"`
 	Tier         int      `json:"tier"`
 	StudentCount int64    `json:"student_count"`
+	// TierMaxStudents 成交时该档位的幼儿数上限（0 = 无上限）。
+	// 用于日后判断园所是否超档——超限只提示，不阻断。
+	TierMaxStudents int `json:"tier_max_students"`
 }
 
 type CreateOrderRequest struct {
@@ -90,7 +93,7 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	if err != nil {
 		return nil, err
 	}
-	tier, multiplier, err := s.resolveTier(ctx, plan.ID, studentCount)
+	tier, multiplier, tierMax, err := s.resolveTier(ctx, plan.ID, studentCount)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +114,7 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	snapshot, err := json.Marshal(PlanSnapshot{
 		PlanCode: plan.Code, PlanName: plan.Name, ModuleCodes: modules,
 		PriceCents: plan.PriceCents, TermMonths: plan.TermMonths,
-		Tier: tier, StudentCount: studentCount,
+		Tier: tier, StudentCount: studentCount, TierMaxStudents: tierMax,
 	})
 	if err != nil {
 		return nil, err
@@ -146,11 +149,11 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	return order, nil
 }
 
-// resolveTier 按在园幼儿数找档位；没有配置档位时返回 1 / 100。
-func (s *OrderService) resolveTier(ctx context.Context, planID uint64, studentCount int64) (int, int, error) {
+// resolveTier 按在园幼儿数找档位；没有配置档位时返回 1 / 100 / 无上限。
+func (s *OrderService) resolveTier(ctx context.Context, planID uint64, studentCount int64) (int, int, int, error) {
 	tiers, err := s.plans.ListTiers(ctx, planID)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	for _, t := range tiers {
 		if studentCount >= int64(t.MinStudents) && (t.MaxStudents == 0 || studentCount <= int64(t.MaxStudents)) {
@@ -158,10 +161,10 @@ func (s *OrderService) resolveTier(ctx context.Context, planID uint64, studentCo
 			if mult <= 0 {
 				mult = 100
 			}
-			return t.Tier, mult, nil
+			return t.Tier, mult, t.MaxStudents, nil
 		}
 	}
-	return 1, 100, nil
+	return 1, 100, 0, nil
 }
 
 func (s *OrderService) Confirm(ctx context.Context, id uint64, operator, ip string) (*domain.Order, []domain.Entitlement, error) {

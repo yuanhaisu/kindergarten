@@ -22,7 +22,12 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="student_count" label="幼儿数" width="90" align="right" />
+      <el-table-column label="幼儿数" width="130" align="right">
+        <template #default="{ row }">
+          <span>{{ row.student_count }}</span>
+          <el-tag v-if="row.over_limit" type="warning" size="small" class="ml-1">超档</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="active_plan_name" label="当前套餐" width="130">
         <template #default="{ row }">{{ row.active_plan_name || '—' }}</template>
       </el-table-column>

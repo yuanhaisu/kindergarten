@@ -20,6 +20,7 @@ func ProvideAuthService(
 	userRoleRepo *repository.UserRoleRepo,
 	invitationRepo *repository.TeacherInvitationRepo,
 	adminAuthz *service.AdminAuthzService,
+	kgStatus *service.KindergartenStatusService,
 	rdb *redis.Client,
 	wx *auth.WeChatClient,
 	secret JWTSecret,
@@ -32,6 +33,7 @@ func ProvideAuthService(
 		userRoleRepo,
 		invitationRepo,
 		adminAuthz,
+		kgStatus,
 		rdb,
 		wx,
 		[]byte(secret),
@@ -52,6 +54,7 @@ func ProvidePlatformService(
 	adminRoleRepo *repository.AdminRepo,
 	logRepo *repository.PlatformLogRepo,
 	dietSeed *service.DietSeedService,
+	kgStatus *service.KindergartenStatusService,
 	secret JWTSecret,
 	atTTL AccessTTL,
 ) *service.PlatformService {
@@ -60,7 +63,7 @@ func ProvidePlatformService(
 	_ = atTTL
 	return service.NewPlatformService(
 		db, adminRepo, kgRepo, entRepo, orderRepo, userRepo, userRoleRepo,
-		adminRoleRepo, logRepo, dietSeed, []byte(secret), 24*time.Hour,
+		adminRoleRepo, logRepo, dietSeed, kgStatus, []byte(secret), 24*time.Hour,
 	)
 }
 
@@ -75,8 +78,9 @@ func ProvideBillingEnforceModules(*config.Config) BillingEnforceModules {
 func ProvideEntitlementService(
 	ents *repository.EntitlementRepo,
 	orders *repository.OrderRepo,
+	kgs *repository.KindergartenRepo,
 	cache *service.EntitlementCache,
 	enforce BillingEnforceModules,
 ) *service.EntitlementService {
-	return service.NewEntitlementService(ents, orders, cache, bool(enforce))
+	return service.NewEntitlementService(ents, orders, kgs, cache, bool(enforce))
 }

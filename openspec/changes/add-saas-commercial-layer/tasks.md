@@ -88,3 +88,5 @@
   - ⚠️ `internal/service` 全量约 50 分钟（752 条），两次尝试（600s / 1800s）均因时长超时被切断，0 断言失败；该包不在 CI 门禁内。
   - `admin npm run build` 通过；`website npm run generate` 通过。
 - [x] 10.5 收工清理：杀掉残留的 uni watcher 进程（验证：`Get-CimInstance Win32_Process` 过滤 `dev:mp-weixin` 无输出）
+- [x] 10.6 园所停用拦截（spec PLT-0005/0006）：`KindergartenStatusService` 读状态（Redis 60s + 平台启停时失效），登录/刷新在 `issueTokensFromRoles` 拒绝签发，`RequireActiveKindergarten` 中间件拦截全部园所端请求（验证：中间件表驱动测试、状态服务测试、HTTP 实测停用后请求与登录均 403、启用后恢复 200）
+- [x] 10.7 幼儿数超档提示（spec ENT-0013）：订单快照记录 `tier_max_students`；`Subscription` 与平台园所列表返回 `student_count / tier_max_students / over_limit`；园所端与平台端各一处提示，不阻断任何业务（验证：`TestSubscription_OverLimit`，3 名幼儿 > 上限 2 → `over_limit=true`）

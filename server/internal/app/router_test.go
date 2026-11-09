@@ -32,7 +32,7 @@ const testJWTSecret = "b09-test-secret"
 func newRouterForTest(t *testing.T) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	engine, err := NewRouter(NewAppHandler(&handler.Handler{}), nil, JWTSecret(testJWTSecret), nil)
+	engine, err := NewRouter(NewAppHandler(&handler.Handler{}), nil, JWTSecret(testJWTSecret), nil, nil, nil)
 	require.NoError(t, err)
 	return engine
 }
@@ -388,15 +388,21 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 		1: {BaseModel: domain.BaseModel{ID: 1}, Nickname: "家长A", Phone: "13800000001"},
 		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002"},
 	}}
-	svc := service.NewAuthService(nil, users, fakeRoleRepo{}, nil, nil, rdb, nil,
+	svc := service.NewAuthService(nil, users, fakeRoleRepo{}, nil, nil, nil, rdb, nil,
 		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour)
 
 	// NewHandler 只接位置参数；本测试只需要 authSvc，其余服务传 nil。
 	h := handler.NewHandler(svc,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, // platform
+		nil, // plan
+		nil, // order
+		nil, // distributor
+		nil, // entitlement
+	)
 
-	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil)
+	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil, nil, nil)
 	require.NoError(t, err)
 	return engine
 }

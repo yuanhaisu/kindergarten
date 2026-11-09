@@ -56,6 +56,7 @@ type AuthService struct {
 	userRoleRepo   AuthRoleRepository
 	invitationRepo InvitationRepository
 	adminPerms     AdminPermissionResolver
+	kgStatus       KindergartenStatusChecker
 	rdb            *redis.Client
 	revoker        auth.TokenRevoker
 	wx             *auth.WeChatClient
@@ -70,6 +71,7 @@ func NewAuthService(
 	userRoleRepo AuthRoleRepository,
 	invitationRepo InvitationRepository,
 	adminPerms AdminPermissionResolver,
+	kgStatus KindergartenStatusChecker,
 	rdb *redis.Client,
 	wx *auth.WeChatClient,
 	secret []byte,
@@ -82,6 +84,7 @@ func NewAuthService(
 		userRoleRepo:   userRoleRepo,
 		invitationRepo: invitationRepo,
 		adminPerms:     adminPerms,
+		kgStatus:       kgStatus,
 		rdb:            rdb,
 		revoker:        auth.NewTokenRevoker(rdb),
 		wx:             wx,
@@ -189,6 +192,17 @@ func (s *AuthService) issueTokens(ctx context.Context, user *domain.User) (*Logi
 func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
 	roleNames := roleNamesFromUserRoles(roles)
 	kgID := kindergartenIDFromUserRoles(roles)
+
+	// 停用园所不签发新凭证：登录与刷新都会走到这里。
+	if kgID > 0 && s.kgStatus != nil {
+		suspended, err := s.kgStatus.Suspended(ctx, kgID)
+		if err != nil {
+			return nil, err
+		}
+		if suspended {
+			return nil, ErrKindergartenSuspended
+		}
+	}
 
 	uid := fmt.Sprintf("%d", user.ID)
 	accessToken, err := auth.SignAccess(s.secret, uid, roleNames, kgID, s.atTTL)
@@ -467,6 +481,8 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 var (
 	ErrTokenRevoked           = errors.New("TOKEN_REVOKED")
 	ErrAuthStorageUnavailable = errors.New("AUTH_STORAGE_UNAVAILABLE")
+	// ErrKindergartenSuspended 园所被平台方停用，不签发凭证。
+	ErrKindergartenSuspended = errors.New("KINDERGARTEN_SUSPENDED")
 )
 
 // RefreshToken 刷新令牌

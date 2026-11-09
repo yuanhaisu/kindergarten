@@ -39,6 +39,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		// NewRouter 的细闸中间件按接口收依赖（middleware.PermissionResolver）
 		wire.Bind(new(middleware.PermissionResolver), new(*service.AdminAuthzService)),
 		wire.Bind(new(service.ModuleAuthorizer), new(*service.EntitlementService)),
+		wire.Bind(new(service.KindergartenStatusChecker), new(*service.KindergartenStatusService)),
 		ProvideAuthService,
 		ProvidePlatformService,
 		ProvideBillingEnforceModules,

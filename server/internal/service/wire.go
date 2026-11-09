@@ -43,6 +43,7 @@ var Set = wire.NewSet(
 	NewDietSeedService,
 	NewPlanService,
 	NewEntitlementCache,
+	NewKindergartenStatusService,
 	NewOrderService,
 	NewDistributorService,
 

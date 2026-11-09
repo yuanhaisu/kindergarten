@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"time"
 
@@ -24,6 +25,7 @@ type ModuleDecision struct {
 type EntitlementService struct {
 	ents    *repository.EntitlementRepo
 	orders  *repository.OrderRepo
+	kgs     *repository.KindergartenRepo
 	cache   *EntitlementCache
 	enforce bool
 	now     func() time.Time
@@ -32,10 +34,11 @@ type EntitlementService struct {
 func NewEntitlementService(
 	ents *repository.EntitlementRepo,
 	orders *repository.OrderRepo,
+	kgs *repository.KindergartenRepo,
 	cache *EntitlementCache,
 	enforce bool,
 ) *EntitlementService {
-	return &EntitlementService{ents: ents, orders: orders, cache: cache, enforce: enforce, now: time.Now}
+	return &EntitlementService{ents: ents, orders: orders, kgs: kgs, cache: cache, enforce: enforce, now: time.Now}
 }
 
 // Resolve 返回园所每个模块的可用性。base 始终可用，不查库。
@@ -125,6 +128,10 @@ type SubscriptionView struct {
 	ExpiresAt  *time.Time               `json:"expires_at"`
 	GraceUntil *time.Time               `json:"grace_until"`
 	State      string                   `json:"state"`
+	// 超档提示：只展示，不阻断（ENT-0013）。
+	StudentCount    int64 `json:"student_count"`
+	TierMaxStudents int   `json:"tier_max_students"`
+	OverLimit       bool  `json:"over_limit"`
 }
 
 func (s *EntitlementService) Subscription(ctx context.Context, kindergartenID uint64) (*SubscriptionView, error) {
@@ -134,9 +141,19 @@ func (s *EntitlementService) Subscription(ctx context.Context, kindergartenID ui
 		return nil, err
 	}
 	view := &SubscriptionView{Modules: make([]PlatformEntitlementRow, 0, len(rows))}
+	if s.kgs != nil {
+		if count, err := s.kgs.CountStudents(ctx, kindergartenID); err == nil {
+			view.StudentCount = count
+		}
+	}
 	if s.orders != nil {
 		if o, err := s.orders.FindLatestActiveByKindergarten(ctx, kindergartenID); err == nil && o != nil {
 			view.PlanName = snapshotPlanName(o.PlanSnapshot)
+			var snap PlanSnapshot
+			if err := json.Unmarshal([]byte(o.PlanSnapshot), &snap); err == nil && snap.TierMaxStudents > 0 {
+				view.TierMaxStudents = snap.TierMaxStudents
+				view.OverLimit = view.StudentCount > int64(snap.TierMaxStudents)
+			}
 		}
 	}
 	// 同一模块可能同时有试用与订阅两条授权；页面按模块展示一行，
