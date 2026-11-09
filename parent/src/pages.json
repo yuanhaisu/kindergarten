@@ -20,6 +20,18 @@
       }
     },
     {
+      "path": "pages/auth/consent",
+      "style": {
+        "navigationBarTitleText": "隐私政策与用户协议"
+      }
+    },
+    {
+      "path": "pages/auth/policy",
+      "style": {
+        "navigationBarTitleText": "政策全文"
+      }
+    },
+    {
       "path": "pages/notice/index",
       "style": {
         "navigationBarTitleText": "通知公告",

@@ -1,15 +1,17 @@
 <script setup>
 import { onLaunch } from "@dcloudio/uni-app"
-import { ensureLogin } from "@/utils/login"
+import { ensureConsent, ensureLogin } from "@/utils/login"
 
 onLaunch(() => {
   const options = uni.getLaunchOptionsSync()
   if (options?.query?.invite_code) {
     uni.setStorageSync('invite_code', options.query.invite_code)
   }
-  ensureLogin().catch(() => {
-    // 启动阶段静默登录失败时，业务页会继续引导用户授权。
-  })
+  ensureLogin()
+    .then(() => ensureConsent())
+    .catch(() => {
+      // 启动阶段静默登录失败时，业务页会继续引导用户授权。
+    })
 })
 </script>
 

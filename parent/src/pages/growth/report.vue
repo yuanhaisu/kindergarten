@@ -2,11 +2,14 @@
 import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { hasModule, loadEntitlements } from "@/utils/entitlements"
 import { fetchGrowthReport } from "@/api/parent-growth"
 import { createMediaErrorHandler } from "@/utils/mediaRefresh"
 const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 const report = ref({})
+// 成长报告是独立售卖模块：未开通时整页锁定，入口也会在「我的」页隐藏。
+const locked = ref(false)
 const loading = ref(false)
 const error = ref("")
 const reportType = ref("weekly")
@@ -135,6 +138,13 @@ async function loadData() {
   error.value = ""
   try {
     await ensureLogin()
+    await loadEntitlements()
+    if (!hasModule("growth_report")) {
+      locked.value = true
+      loading.value = false
+      return
+    }
+    locked.value = false
     const res = await fetchGrowthReport({ type: reportType.value, date: todayParam() })
     report.value = normalize(res.data)
   } catch (e) {
@@ -178,7 +188,11 @@ onLoad(() => loadData(false))
 </script>
 
 <template>
-  <view class="page">
+  <view v-if="locked" class="locked-state">
+    <text class="locked-title">成长报告未开通</text>
+    <text class="locked-desc">本园暂未开通成长报告功能，请联系园所老师。</text>
+  </view>
+  <view v-else class="page">
     <!-- 周期切换 -->
     <view class="segmented">
       <view
@@ -308,6 +322,30 @@ onLoad(() => loadData(false))
 </template>
 
 <style scoped lang="scss">
+// ---- 未开通 ----------------------------------------------------
+.locked-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  min-height: 60vh;
+  padding: $spacing-3xl $spacing-xl;
+}
+
+.locked-title {
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.locked-desc {
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+  text-align: center;
+  line-height: 1.6;
+}
+
 .page {
   min-height: 100vh;
   padding: $component-page-padding-y $component-page-padding-x calc(56rpx + env(safe-area-inset-bottom));

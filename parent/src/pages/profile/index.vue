@@ -8,6 +8,7 @@
 import { computed, ref } from "vue"
 import { onShow } from "@dcloudio/uni-app"
 import { clearAuth, getUser, setUser } from "@/utils/auth"
+import { hasModule, loadEntitlements } from "@/utils/entitlements"
 import { ensureLogin } from "@/utils/login"
 import { fetchCurrentUser } from "@/api/auth"
 import { syncTabBar } from "@/utils/tabbar"
@@ -43,7 +44,7 @@ const menuGroups = [
       { title: "亲子任务", glyph: ICON.task, path: "/pages/tasks/index" },
       { title: "积分成就", glyph: ICON.points, path: "/pages/points/index" },
       { title: "班级日历", glyph: ICON.calendar, path: "/pages/calendar/index" },
-      { title: "成长报告", glyph: ICON.report, path: "/pages/growth/report" }
+      { title: "成长报告", glyph: ICON.report, path: "/pages/growth/report", module: "growth_report" }
     ]
   },
   {
@@ -74,6 +75,18 @@ const menuGroups = [
     ]
   }
 ]
+
+// 未购 premium 模块的菜单项不出现；授权缓存非响应式，加载后 bump 一次。
+const entVersion = ref(0)
+const visibleMenuGroups = computed(() => {
+  entVersion.value
+  return menuGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.module || hasModule(item.module))
+    }))
+    .filter((group) => group.items.length > 0)
+})
 
 const user = ref(getUser())
 // 初始即视为加载中：无缓存时首帧直接是骨架，不会闪一下「家长 / 微信用户」兜底卡。
@@ -113,6 +126,9 @@ async function loadProfile() {
   loading.value = true
   try {
     await ensureLogin()
+    await loadEntitlements().finally(() => {
+      entVersion.value += 1
+    })
     const res = await fetchCurrentUser()
     if (seq !== loadSeq) return
     const profile = res?.data && res.data.id ? res.data : null
@@ -239,7 +255,7 @@ onShow(() => {
 
       <!-- 菜单 · 四组 -->
       <view v-else class="menu-groups">
-        <view v-for="group in menuGroups" :key="group.key" class="menu-group">
+        <view v-for="group in visibleMenuGroups" :key="group.key" class="menu-group">
           <text class="group-title">{{ group.title }}</text>
           <view class="menu-card">
             <view

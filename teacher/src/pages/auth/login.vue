@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { bindPhoneLogin, toLoginError } from "@/utils/login"
 import { getToken } from "@/utils/auth"
+import config from "@/config/env"
 import BrandBlock from "@/components/BrandBlock.vue"
 
 // remixicon PUA 字形（App.vue 已加载字体）。设计稿的微信气泡与对勾是内联 SVG，
@@ -27,6 +28,17 @@ function toggleAgreed() {
   agreed.value = !agreed.value
 }
 
+// 老师端个人号不支持 web-view：复制官网链接到浏览器阅读。
+function copyPolicy(type) {
+  const url = `${config.siteURL}/${type === "terms" ? "terms" : "privacy"}`
+  uni.setClipboardData({
+    data: url,
+    success() {
+      uni.showToast({ title: "链接已复制，请在浏览器打开", icon: "none" })
+    }
+  })
+}
+
 async function handleWxLogin() {
   if (submitting.value) return
   if (!agreed.value) {
@@ -39,7 +51,12 @@ async function handleWxLogin() {
   submitting.value = true
 
   try {
-    await bindPhoneLogin()
+    const data = await bindPhoneLogin()
+    // 已登录但未同意当前政策：先完成同意，不进入工作台。
+    if (data && data.consent_required) {
+      uni.reLaunch({ url: "/pages/auth/consent" })
+      return
+    }
     uni.showToast({ title: "登录成功", icon: "success" })
     uni.reLaunch({ url: "/pages/index/index" })
   } catch (err) {
@@ -85,13 +102,18 @@ onLoad(() => {
         <text class="login-btn__label">{{ buttonLabel }}</text>
       </button>
 
-      <!-- 主动勾选：整行可点（88rpx 命中区）。协议名在协议页落地前保持纯文本，
-           不做「页面开发中」的死链。 -->
+      <!-- 主动勾选：整行可点（88rpx 命中区）。老师端不支持 web-view，
+           协议名点击后复制官网链接到浏览器打开。 -->
       <view class="agree-row" :class="{ 'is-loading': submitting }" @click="toggleAgreed">
         <view class="agree-box" :class="{ 'is-checked': agreed }">
           <text class="agree-check">{{ ICON_CHECK }}</text>
         </view>
-        <text class="agree-text">我已阅读并同意《用户协议》和《隐私政策》</text>
+        <view class="agree-text">
+          我已阅读并同意
+          <text class="agree-link" @click.stop="copyPolicy('terms')">《用户协议》</text>
+          和
+          <text class="agree-link" @click.stop="copyPolicy('privacy')">《隐私政策》</text>
+        </view>
       </view>
     </view>
 
@@ -304,6 +326,11 @@ onLoad(() => {
   font-weight: $typography-font-weight-normal;
   line-height: 1.65;
   color: $color-text-muted;
+}
+
+.agree-link {
+  color: $color-brand-primary-dark;
+  text-decoration: underline;
 }
 
 /* ---------- 脚注 ---------- */

@@ -10,6 +10,7 @@
 import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { hasModule, loadEntitlements } from "@/utils/entitlements"
 import { getCurrentStudentId } from "@/utils/currentStudent"
 import { fetchClassInfo } from "@/api/parent-class"
 import PageShell from "@/components/PageShell.vue"
@@ -68,6 +69,9 @@ async function loadData(options = {}) {
   }
   try {
     await ensureLogin()
+    await loadEntitlements().finally(() => {
+      entVersion.value += 1
+    })
     const res = await fetchClassInfo(getCurrentStudentId() || undefined)
     info.value = res.data || {}
     hasLoaded.value = true
@@ -91,6 +95,17 @@ async function handleRetry() {
     icon: "none"
   })
 }
+
+// 授权缓存非响应式；加载完成后 bump 一次，让入口显隐重算。
+const entVersion = ref(0)
+const showClassAlbum = computed(() => {
+  entVersion.value
+  return hasModule("album")
+})
+const showGrowthAlbum = computed(() => {
+  entVersion.value
+  return hasModule("growth")
+})
 
 // 三个入口都不是 tabBar 页（tabBar 只有首页/成长/接送/我的），用 navigateTo。
 function goGrowthAlbum() {
@@ -234,14 +249,14 @@ onLoad(() => {
           <text class="section-title">班级相关</text>
         </view>
         <view class="group-card">
-          <view class="entry-cell" @click="goClassAlbum">
+          <view v-if="showClassAlbum" class="entry-cell" @click="goClassAlbum">
             <view class="entry-icon">
               <text class="entry-glyph">{{ ICON.gallery }}</text>
             </view>
             <text class="entry-title">班级相册</text>
             <text class="entry-arrow">{{ ICON.chevron }}</text>
           </view>
-          <view class="entry-cell" @click="goGrowthAlbum">
+          <view v-if="showGrowthAlbum" class="entry-cell" @click="goGrowthAlbum">
             <view class="entry-icon">
               <text class="entry-glyph">{{ ICON.album }}</text>
             </view>

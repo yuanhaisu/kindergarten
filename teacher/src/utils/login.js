@@ -1,4 +1,5 @@
 import { wxCodeLogin } from "@/api/auth"
+import { getConsentStatus } from "@/api/consent"
 import { getToken, setRefreshToken, setToken, setUser } from "@/utils/auth"
 
 let loginPromise = null
@@ -43,8 +44,22 @@ export async function ensureLogin() {
     })
   }
 
-  await loginPromise
-  return true
+  return loginPromise
+}
+
+// 已登录用户启动时检查隐私政策同意状态；缺同意时进入阻断页。
+// 网络/服务异常不在这里阻断，交给后续业务请求的 403 兜底。
+export async function ensureConsent() {
+  if (!getToken()) return true
+  try {
+    const res = await getConsentStatus()
+    const data = res.data || {}
+    if (data.consented) return true
+    uni.reLaunch({ url: "/pages/auth/consent" })
+    return false
+  } catch (err) {
+    return true
+  }
 }
 
 // 登录失败原因分档，供登录页渲染内联错误态（取代转瞬即逝的 toast）。
