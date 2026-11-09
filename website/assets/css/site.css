@@ -178,6 +178,7 @@ a {
 }
 
 .nav__links a {
+  position: relative;
   color: var(--color-text-body);
   font-size: var(--typography-font-size-sm);
   letter-spacing: 0.04em;
@@ -186,6 +187,23 @@ a {
 
 .nav__links a:hover {
   color: var(--color-identity-ink);
+}
+
+/* 当前区块：墨色文字 + 琥珀短线。用绝对定位而不是 ::after 撑高，
+   避免高亮切换时导航行高跳动。 */
+.nav__links a.is-active {
+  color: var(--color-identity-ink);
+}
+
+.nav__links a.is-active::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -6px;
+  left: 0;
+  height: 2px;
+  border-radius: var(--border-radius-full);
+  background: var(--color-identity-amber);
 }
 
 .nav__cta {
