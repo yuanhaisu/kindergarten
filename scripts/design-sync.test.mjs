@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   BATCH,
@@ -20,6 +21,7 @@ import {
 } from './design-sync.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SCRIPT = path.join(repoRoot, 'scripts/design-sync.mjs');
 const MANIFEST = path.join(BATCH, '_shared/pages.json');
 const GALLERY = path.join(BATCH, 'index.html');
 
@@ -91,6 +93,15 @@ test('staleReasons accepts the current state and rejects every drift kind', () =
   assert.ok(staleReasons(entry, { ...current, tabbar: !entry.tabbar }).includes('tabBar 归属变了'));
   assert.ok(staleReasons(entry, { ...current, reviewedAt: null }).includes('新页面未复核'));
   assert.deepEqual(staleReasons(entry, null), ['未登记']);
+});
+
+test('accept requires an explicit reason', () => {
+  const result = spawnSync(process.execPath, [SCRIPT, 'accept', 'parent/01-home'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--reason/);
 });
 
 test('previewIsStale detects both asset and image drift', () => {

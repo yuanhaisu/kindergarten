@@ -41,8 +41,22 @@ const SURFACES = ['teacher', 'parent'];
 
 const argv = process.argv.slice(2);
 const command = argv[0] || 'check';
-const flags = new Set(argv.filter((a) => a.startsWith('--')));
-const positional = argv.slice(1).filter((a) => !a.startsWith('--'));
+const VALUE_FLAGS = new Set(['--reason']);
+const flags = new Set();
+const positional = [];
+for (let index = 1; index < argv.length; index += 1) {
+  const arg = argv[index];
+  if (VALUE_FLAGS.has(arg)) {
+    index += 1;
+    continue;
+  }
+  if (arg.startsWith('--')) flags.add(arg);
+  else positional.push(arg);
+}
+const REASON = (() => {
+  const index = argv.indexOf('--reason');
+  return index > -1 ? String(argv[index + 1] || '') : '';
+})();
 
 function localDate() {
   const date = new Date();
@@ -312,16 +326,22 @@ function lockKey(entry) {
 }
 
 function loadLock() {
-  if (!fs.existsSync(LOCK)) return { version: 1, supportHash: '', pages: {} };
+  if (!fs.existsSync(LOCK)) {
+    return { version: 1, supportHash: '', supportReviewedAt: '', supportReason: '', pages: {} };
+  }
   return readJson(LOCK);
 }
 
 function writeLock(lock) {
-  const pages = Object.fromEntries(Object.entries(lock.pages).sort(([a], [b]) => a.localeCompare(b)));
-  fs.writeFileSync(LOCK, JSON.stringify({ version: 1, supportHash: lock.supportHash, pages }, null, 2) + '\n');
+  const root = { version: 1 };
+  if (lock.supportHash) root.supportHash = lock.supportHash;
+  if (lock.supportReviewedAt) root.supportReviewedAt = lock.supportReviewedAt;
+  if (lock.supportReason) root.supportReason = lock.supportReason;
+  root.pages = Object.fromEntries(Object.entries(lock.pages).sort(([a], [b]) => a.localeCompare(b)));
+  fs.writeFileSync(LOCK, JSON.stringify(root, null, 2) + '\n');
 }
 
-function lockEntry(entry) {
+function lockEntry(entry, reason) {
   const commit = sourceCommit(entry.path);
   return {
     source: entry.path,
@@ -331,6 +351,7 @@ function lockEntry(entry) {
     tabbar: entry.tabbar,
     reviewedAt: TODAY,
     codeCommit: commit ? (isDirty(entry.path) ? `${commit}-dirty` : commit) : '',
+    reason,
   };
 }
 
@@ -625,12 +646,21 @@ function commandCheck() {
 function commandAccept() {
   const entries = buildManifest();
   const lock = loadLock();
+  const reason = REASON.trim();
+  if (!reason) {
+    fail('accept 需要 --reason "<为什么可以接受：实现 commit / 变更单 / 差异原因>"');
+  }
+  if (reason.length > 200) {
+    fail('--reason 最多 200 字，写清楚依据即可');
+  }
 
   // --shared alone只确认共享组件；与 --all 同时出现时走批量分支，避免静默忽略 --all。
   if (flags.has('--shared') && !flags.has('--all')) {
     lock.supportHash = supportHash().hash;
+    lock.supportReviewedAt = TODAY;
+    lock.supportReason = reason;
     writeLock(lock);
-    console.log('[design-sync] 已登记支撑代码（shared-ui / utils / api / components）当前状态');
+    console.log(`[design-sync] 已登记支撑代码当前状态：${reason}`);
     return;
   }
 
@@ -658,12 +688,16 @@ function commandAccept() {
   }
 
   for (const entry of targets) {
-    lock.pages[lockKey(entry)] = lockEntry(entry);
+    lock.pages[lockKey(entry)] = lockEntry(entry, reason);
   }
-  if (all) lock.supportHash = supportHash().hash;
+  if (all) {
+    lock.supportHash = supportHash().hash;
+    lock.supportReviewedAt = TODAY;
+    lock.supportReason = reason;
+  }
   writeLock(lock);
 
-  console.log(`[design-sync] 已登记 ${targets.length} 页:`);
+  console.log(`[design-sync] 已登记 ${targets.length} 页，理由：${reason}`);
   for (const entry of targets) console.log(`  - ${lockKey(entry)}`);
   if (all) {
     console.log('  --all 已同时登记支撑代码（shared-ui / utils / api / components）当前状态。');
@@ -683,10 +717,10 @@ function main() {
       break;
     case '--help':
     case 'help':
-      console.log('用法: node scripts/design-sync.mjs <sync|check|accept> [--quick|--all|--force|--shared] [slug]');
+      console.log('用法: node scripts/design-sync.mjs <sync|check|accept> [--quick|--all|--force|--shared] [--reason "..."] [slug]');
       break;
     default:
-      fail(`未知命令: ${command}\n用法: node scripts/design-sync.mjs <sync|check|accept>`, 2);
+      fail(`未知命令: ${command}\n用法: node scripts/design-sync.mjs <sync|check|accept> [--reason "..."]`, 2);
   }
 }
 

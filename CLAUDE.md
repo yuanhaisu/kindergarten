@@ -644,8 +644,9 @@ node scripts/check-tokens.mjs teacher  # 只扫描老师端
 
 ```bash
 npm run design:sync                                  # 重生成 tokens.css / pages.json / 画廊，并列出需复核的页面
-npm run design:accept -- parent/13-pickup-index      # 复核完一页后登记指纹
-npm run design:accept -- --shared                   # 只确认 shared-ui 变更，不逐页接受
+npm run design:change -- pickup-polish "接送页三态收口"  # 设计领先的改版：生成变更单
+npm run design:accept -- parent/13-pickup-index --reason "2026-11-09-pickup-polish 已实现 <commit>"
+npm run design:accept -- --shared --reason "共享组件变更说明"
 npm run design:shots                                 # 重出 51 页 preview.png（需要 Chrome）
 npm run design:check                                 # 必须通过；CI 的 design-sync job 会跑同一检查
 npm run design:test                                  # 门禁自身的结构断言（node --test）
@@ -654,6 +655,7 @@ npm run design:test                                  # 门禁自身的结构断�
 - `design.lock.json` 记录每页 `.vue` 的 sha256、依赖的内容型 utils、导航标题与 tabBar 归属；源码/依赖/标题/tabBar 变了但没 `accept`，`check` 会失败并列出原因。
 - 新增页面必须先在 `design.config.json` 登记 `slug / n / tabbar` 并补原型目录；`sync` 只会写“待复核”条目，必须显式 `accept`。
 - 纯 token 改动由 `design:sync` 自动覆盖；`accept --all` 默认拒绝，只有确认没有任何页面内容变化或显式加 `--force` 才执行。
+- `accept` 必须带 `--reason`，指向变更单或实现 commit；设计领先的改版走 `docs/design-changes/`。
 - `shared-ui / utils / api / components` 变更不会阻断，但会持续告警，直到 `accept --shared`。
 - `design.preview.lock.json` 记录的截图基线与原型内容不一致时，`check` 会给 warning，跑 `design:shots` 重出。
 - pre-commit 只做提醒；真正的阻断在 CI。
