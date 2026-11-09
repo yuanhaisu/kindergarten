@@ -592,3 +592,19 @@ textarea:focus-visible,
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---- entitlements（billing） ---------------------------------- */
+.expiry-banner {
+  display: none;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--warning-wash);
+  color: var(--warning);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+[data-state="expiring"] .expiry-banner { display: block; }
+
+/* 未开通 growth / album 时，工作台快捷入口按 hasModule 过滤 */
+[data-state="partial"] .entry[data-module] { display: none; }

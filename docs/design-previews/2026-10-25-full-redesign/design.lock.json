@@ -1,6 +1,8 @@
 {
   "version": 1,
-  "supportHash": "7f3cbb3ad6d1694767e52dc57c2314752ddca4a7182709470e26346a7fa9e30b",
+  "supportHash": "e6d8369c69cdb586b240d9eb2af3efe5946f49bc67bdb301c1c94b8d62315f7e",
+  "supportReviewedAt": "2026-11-09",
+  "supportReason": "2026-11-09-entitlement-ui：entitlements utils/api 已纳入支撑代码基线",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -76,12 +78,13 @@
     },
     "parent/09-growth-index": {
       "source": "parent/src/pages/growth/index.vue",
-      "sha256": "a87ceb1edabf1360d83a27671d041444d6e9931d43ec372d5d01a2f40ef91735",
-      "depsSha": "a13a5963dc241f033a90dbd8ea55b7c4a16ec4a1b2fc2618502fcbc62957e79a",
+      "sha256": "33085fefe3d0d603abea2efbcd13424ec06fbf8f2d50d2a2e4893f9e89cea6aa",
+      "depsSha": "94e97852ec6c57e05a190a1a6aad287a07d3c6f508487f86bd3169ed6c3f4d0d",
       "title": "成长时光",
       "tabbar": true,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "7d71f06",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 的锁定态/到期横幅/入口过滤已同步到原型"
     },
     "parent/10-growth-detail": {
       "source": "parent/src/pages/growth/detail.vue",
@@ -265,12 +268,13 @@
     },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
-      "sha256": "b6ee28609594ec7d952274b74c7ecba5e07108be9cfe952ac88e6da29aeb8b11",
-      "depsSha": "66a27ff5ac2f772a165769c5c46aa7bc2bae41c19f713005bb11358fa118093c",
+      "sha256": "5ae0edfdd3515772764dd9ec44e2ca51a93d8988f480be25d20a25243578baa3",
+      "depsSha": "4f2a07885ab49add98f60a217588a1bc05d4b8122aabdaecddb4bc226221df96",
       "title": "老师工作台",
       "tabbar": true,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "8087ae3"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "7d71f06",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 的锁定态/到期横幅/入口过滤已同步到原型"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
@@ -409,12 +413,13 @@
     },
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
-      "sha256": "23ba5f4881a4043edca85810d17765224ff9ccad6f4e51eba96939dcbae8fe74",
-      "depsSha": "5d6cacc85126aed50c7649b0b9f57dc80ec04943dd2dbb7d3791cf40d2a28323",
+      "sha256": "4c625a2acaf8c1940747dd9e1b5fceaf744ebe416f571b1113ea9b33710f17a4",
+      "depsSha": "63640577ee99fac44ac90b8409f0c94f394aaf8e6cf061e7499f4698d29b9c44",
       "title": "更多功能",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "01e8365"
+      "reviewedAt": "2026-11-09",
+      "codeCommit": "7d71f06",
+      "reason": "2026-11-09-entitlement-ui：7d71f06 的锁定态/到期横幅/入口过滤已同步到原型"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",

@@ -43,6 +43,14 @@
 
     <main class="mp-main">
       <div class="page" data-od-id="growth-page">
+        <section class="locked-state" aria-labelledby="lockedTitle" data-od-id="growth-locked">
+          <span class="locked-icon" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+          </span>
+          <h2 class="locked-title" id="lockedTitle">成长时光未开通</h2>
+          <p class="locked-desc">本园暂未开通成长记录功能，请联系园所老师。</p>
+        </section>
+
         <section class="child-card" aria-labelledby="childName" data-od-id="growth-child-card">
           <div class="child-top">
             <span class="child-avatar" aria-hidden="true">乐</span>
@@ -373,6 +381,7 @@
         <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
         <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
         <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+        <button class="mp-demo-chip" data-mp-state="locked" aria-pressed="false">未开通</button>
       </div>
       <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
     </div>
