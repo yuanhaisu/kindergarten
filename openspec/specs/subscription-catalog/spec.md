@@ -1,10 +1,9 @@
-# Spec Delta
+# subscription-catalog Specification
 
 ## Purpose
+定义可售卖的商品结构：套餐由功能模块组合而成，价格与周期可配置，且已成交合同不随目录变更而改变。目录的任何变更只对之后创建的订单生效。
 
-定义可售卖的商品结构：套餐由功能模块组合而成，价格与周期可配置，且已成交合同不随目录变更而改变。
-
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 套餐由功能模块组成
 
