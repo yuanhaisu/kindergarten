@@ -90,12 +90,8 @@ const nowClock = ref(formatClock(new Date()))
 // 「未入园」必须带时间上下文：早上 8 点看到是正常，上午 10 点看到才值得担心。
 const statusSubText = computed(() => (dayState.value === "pre" ? `截至 ${nowClock.value || "--:--"} 未入园` : ""))
 
-const timelineRecords = computed(() => {
-  if (dayState.value === "pre") return []
-  // 「在园中」不带接走节点，避免尚未发生的动作出现在轨迹里。
-  if (dayState.value === "in") return todayRecords.value.filter(r => Number(r.type) !== 2)
-  return todayRecords.value
-})
+const inRecord = computed(() => todayRecords.value.find(r => Number(r.type) === 1) || null)
+const outRecord = computed(() => todayRecords.value.find(r => Number(r.type) === 2) || null)
 
 const historyGroups = computed(() => {
   const groups = []
@@ -297,39 +293,34 @@ onPullDownRefresh(loadData)
             </view>
             <view class="status-copy">
               <text class="status-main">{{ statusMain }}</text>
-              <view class="status-sub">
-                <template v-if="dayState !== 'pre'">
-                  <text class="status-time">{{ formatClock(lastToday && lastToday.recorded_at) }}</text>
-                  <text class="status-dot">·</text>
-                  <text class="status-who">
-                    {{ (lastToday && lastToday.pickup_name) || "接送人未记录" }}{{ dayState === "in" ? " 送入" : "" }}
-                  </text>
-                </template>
-                <text v-else class="status-who">{{ statusSubText }}</text>
+              <view v-if="dayState === 'pre'" class="status-sub">
+                <text class="status-who">{{ statusSubText }}</text>
               </view>
             </view>
           </view>
         </view>
 
-        <view v-if="dayState !== 'pre'" class="pass-body">
-          <text class="track-label">今日轨迹</text>
-          <view class="track">
-            <view v-for="item in timelineRecords" :key="item.id" class="track-item">
-              <view class="track-mark">
-                <view class="track-dot" :class="Number(item.type) === 2 ? 'track-dot--out' : 'track-dot--in'" />
-              </view>
-              <view class="track-content">
-                <view class="track-top">
-                  <text class="track-type" :class="Number(item.type) === 2 ? 'track-type--out' : 'track-type--in'">
-                    {{ item.type_label || (Number(item.type) === 2 ? "接走" : "入园") }}
-                  </text>
-                  <text class="track-time">{{ formatClock(item.recorded_at) }}</text>
-                  <text v-if="relationLabel(item.pickup_relation) !== (item.pickup_name || '')" class="track-rel">
-                    {{ relationLabel(item.pickup_relation) }}
-                  </text>
-                </view>
-                <text class="track-who">{{ item.pickup_name || "接送人未记录" }}</text>
-              </view>
+        <view v-if="dayState !== 'pre'" class="pass-rail" aria-label="今日接送进度">
+          <view class="rail-step rail-step--in is-done">
+            <view class="rail-dot"><text class="rail-glyph">{{ ICON.check }}</text></view>
+            <view class="rail-copy">
+              <text class="rail-label">送入</text>
+              <text class="rail-meta">
+                {{ formatClock(inRecord && inRecord.recorded_at) }} · {{ (inRecord && inRecord.pickup_name) || "接送人未记录" }}
+              </text>
+            </view>
+          </view>
+          <view class="rail-line" :class="{ 'is-done': dayState === 'picked' }" />
+          <view class="rail-step rail-step--out" :class="{ 'is-done': dayState === 'picked' }">
+            <view class="rail-dot">
+              <text class="rail-glyph">{{ dayState === "picked" ? ICON.check : ICON.clock }}</text>
+            </view>
+            <view class="rail-copy">
+              <text class="rail-label">接走</text>
+              <text v-if="dayState === 'picked'" class="rail-meta">
+                {{ formatClock(outRecord && outRecord.recorded_at) }} · {{ (outRecord && outRecord.pickup_name) || "接送人未记录" }}
+              </text>
+              <text v-else class="rail-meta">等待接走</text>
             </view>
           </view>
         </view>
@@ -512,19 +503,6 @@ onPullDownRefresh(loadData)
   margin-top: 6rpx;
 }
 
-.status-time {
-  color: $color-text-primary;
-  font-size: $typography-font-size-xl;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
-}
-
-.status-dot {
-  color: $color-text-muted;
-  font-size: $typography-font-size-sm;
-  line-height: 1;
-}
-
 .status-who {
   color: $color-text-body;
   font-size: $typography-font-size-md;
@@ -532,120 +510,83 @@ onPullDownRefresh(loadData)
   overflow-wrap: anywhere;
 }
 
-.pass-body {
+.pass-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
   padding: 28rpx 32rpx 0;
 }
 
-.track-label {
+.rail-step {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 1 0;
+  gap: 16rpx;
+  min-width: 0;
+}
+
+.rail-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $border-radius-full;
+  background: $color-semantic-success-bg;
+  color: $color-semantic-success;
+}
+
+.rail-step--out:not(.is-done) .rail-dot {
+  background: $color-bg-page;
+  color: $color-text-muted;
+}
+
+.rail-glyph {
+  font-family: remixicon;
+  font-size: 26rpx;
+  line-height: 1;
+}
+
+.rail-line {
+  flex: 0 0 32rpx;
+  height: 0;
+  margin-top: 23rpx;
+  border-top: 2rpx dashed $color-border-subtle;
+}
+
+.rail-line.is-done {
+  border-top-style: solid;
+  border-top-color: $color-semantic-success;
+}
+
+.rail-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.rail-label {
   color: $color-text-muted;
   font-size: $typography-font-size-xs;
   font-weight: $typography-font-weight-medium;
   line-height: 1.4;
 }
 
-.track {
-  margin-top: $spacing-xs;
-}
-
-.track-item {
-  display: grid;
-  grid-template-columns: 28rpx minmax(0, 1fr);
-  column-gap: 20rpx;
-}
-
-.track-mark {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  padding-top: 16rpx;
-}
-
-.track-mark::after {
-  content: "";
-  position: absolute;
-  top: 34rpx;
-  bottom: -24rpx;
-  left: 50%;
-  width: 1rpx;
-  background: $color-border-hairline;
-  transform: translateX(-50%);
-}
-
-.track-item:last-child .track-mark::after {
-  display: none;
-}
-
-.track-dot {
-  position: relative;
-  z-index: 1;
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: $border-radius-full;
-}
-
-.track-dot--in {
-  background: $color-brand-primary-dark;
-}
-
-.track-dot--out {
-  background: $color-brand-primary-dark;
-}
-
-.track-content {
-  min-width: 0;
-  padding: 4rpx 0 28rpx;
-}
-
-.track-item:last-child .track-content {
-  padding-bottom: 0;
-}
-
-.track-top {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-  min-width: 0;
-}
-
-.track-type {
-  color: $color-brand-primary-dark;
-  font-size: $typography-font-size-sm;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1.35;
-}
-
-.track-time {
-  color: $color-text-primary;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.35;
-}
-
-.track-rel {
-  margin-left: auto;
-  padding: 2rpx 16rpx;
-  border-radius: $border-radius-full;
-  background: $color-bg-page;
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1.5;
-}
-
-.track-who {
-  display: block;
-  margin-top: 4rpx;
+.rail-meta {
   color: $color-text-body;
-  font-size: $typography-font-size-base;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
+  font-size: $typography-font-size-sm;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .pass-foot {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: $spacing-sm;
   margin-top: 28rpx;
   padding: 28rpx 32rpx 32rpx;
@@ -688,7 +629,8 @@ onPullDownRefresh(loadData)
 
 .pass-note {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  gap: $spacing-sm;
   color: $color-text-muted;
   font-size: $typography-font-size-xs;
   font-weight: $typography-font-weight-medium;
@@ -696,7 +638,6 @@ onPullDownRefresh(loadData)
 }
 
 .done-note {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
