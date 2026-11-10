@@ -100,6 +100,14 @@ func (r *CommissionRepo) CreateBatch(ctx context.Context, tx *gorm.DB, rows []do
 	return tx.WithContext(ctx).Create(&rows).Error
 }
 
+// PromoteEligible 把「到账已满 30 天且未冲回」的待结算佣金推进为可结算。
+// 没有定时任务，所以在读取台账前惰性推进；幂等。
+func (r *CommissionRepo) PromoteEligible(ctx context.Context, now time.Time) error {
+	return r.db.WithContext(ctx).Model(&domain.CommissionLedger{}).
+		Where("status = ? AND eligible_at <= ? AND reversal_of IS NULL", domain.CommissionStatusPending, now).
+		Update("status", domain.CommissionStatusSettleable).Error
+}
+
 func (r *CommissionRepo) FindByID(ctx context.Context, id uint64) (*domain.CommissionLedger, error) {
 	var c domain.CommissionLedger
 	err := r.db.WithContext(ctx).First(&c, id).Error

@@ -88,21 +88,25 @@ func (s *DistributorService) UpdateDistributor(ctx context.Context, id uint64, r
 }
 
 type CommissionRow struct {
-	ID              uint64    `json:"id"`
-	OrderNo         string    `json:"order_no"`
-	KindergartenName string   `json:"kindergarten_name"`
-	DistributorName string    `json:"distributor_name"`
-	PaymentID       uint64    `json:"payment_id"`
-	BaseAmountCents int64     `json:"base_amount_cents"`
-	Rate            int       `json:"rate"`
-	AmountCents     int64     `json:"amount_cents"`
-	Status          string    `json:"status"`
-	ReceivedAt      time.Time `json:"received_at"`
-	EligibleAt      time.Time `json:"eligible_at"`
-	ReversalOf      *uint64   `json:"reversal_of"`
+	ID               uint64    `json:"id"`
+	OrderNo          string    `json:"order_no"`
+	KindergartenName string    `json:"kindergarten_name"`
+	DistributorName  string    `json:"distributor_name"`
+	PaymentID        uint64    `json:"payment_id"`
+	BaseAmountCents  int64     `json:"base_amount_cents"`
+	Rate             int       `json:"rate"`
+	AmountCents      int64     `json:"amount_cents"`
+	Status           string    `json:"status"`
+	ReceivedAt       time.Time `json:"received_at"`
+	EligibleAt       time.Time `json:"eligible_at"`
+	ReversalOf       *uint64   `json:"reversal_of"`
 }
 
 func (s *DistributorService) ListCommissions(ctx context.Context, f repository.CommissionFilter) ([]CommissionRow, int64, map[string]int64, error) {
+	// 惰性结算：读取前把已满 30 天的待结算佣金推进为可结算。
+	if err := s.comm.PromoteEligible(ctx, time.Now()); err != nil {
+		return nil, 0, nil, err
+	}
 	rows, total, err := s.comm.List(ctx, f)
 	if err != nil {
 		return nil, 0, nil, err
@@ -119,6 +123,9 @@ func (s *DistributorService) ListCommissions(ctx context.Context, f repository.C
 }
 
 func (s *DistributorService) GetCommission(ctx context.Context, id uint64) (*CommissionRow, error) {
+	if err := s.comm.PromoteEligible(ctx, time.Now()); err != nil {
+		return nil, err
+	}
 	row, err := s.comm.FindByID(ctx, id)
 	if err != nil {
 		return nil, err

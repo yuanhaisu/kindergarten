@@ -93,3 +93,7 @@
 - [x] 10.5 收工清理：杀掉残留的 uni watcher 进程（验证：`Get-CimInstance Win32_Process` 过滤 `dev:mp-weixin` 无输出）
 - [x] 10.6 园所停用拦截（spec PLT-0005/0006）：`KindergartenStatusService` 读状态（Redis 60s + 平台启停时失效），登录/刷新在 `issueTokensFromRoles` 拒绝签发，`RequireActiveKindergarten` 中间件拦截全部园所端请求（验证：中间件表驱动测试、状态服务测试、HTTP 实测停用后请求与登录均 403、启用后恢复 200）
 - [x] 10.7 幼儿数超档提示（spec ENT-0013）：订单快照记录 `tier_max_students`；`Subscription` 与平台园所列表返回 `student_count / tier_max_students / over_limit`；园所端与平台端各一处提示，不阻断任何业务（验证：`TestSubscription_OverLimit`，3 名幼儿 > 上限 2 → `over_limit=true`）
+- [x] 10.8 补齐 8 条「已实现但无直接用例」的验收场景（CAT-0002/0005/0006/0007、ORD-0008、DST-0001/0006、ENT-0012）
+  - 新增 `internal/service/billing_archive_test.go`，7 个测试函数覆盖 8 条 TC；`TEST_CATALOG.md` 对应行已标 ✅ 并注明用例名。
+  - 补测 `DST-0006` 时发现真实缺陷：佣金状态只在创建时判定一次，到账满 30 天不会自动变成「可结算」。新增 `CommissionRepo.PromoteEligible`，`ListCommissions` / `GetCommission` 读取前惰性推进（幂等，无定时任务）。
+  - 验证：`go test ./internal/service -run "TestPlan_RejectsUnknownModule|TestOrder_|TestCommission_PromotedAfter30Days|TestEntitlement_TrialExpiryKeepsData" -count=1` 全绿；`golangci-lint` 在 `internal/service` / `internal/repository` 仅剩既有 `diet_plan_test.go` 的 unused，与本变更无关。

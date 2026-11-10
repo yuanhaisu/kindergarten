@@ -1333,12 +1333,12 @@
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
 | TC-NEW-CAT-0001 | 新建套餐引用已注册模块 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-CAT-0002 | 引用未注册模块被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0002 | 引用未注册模块被拒 | P0 | Unit / Contract | ✅ (`TestPlan_RejectsUnknownModule`) |
 | TC-NEW-CAT-0003 | 套餐新增模块后老园所不获得 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-CAT-0004 | 套餐调价后老订单金额不变 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-CAT-0005 | 改价后新订单使用新价 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-CAT-0006 | 按幼儿数落入对应档位 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-CAT-0007 | 学期中人数变动不改档位 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0005 | 改价后新订单使用新价 | P0 | Unit / Contract | ✅ (`TestOrder_NewOrdersUseCurrentPrice`) |
+| TC-NEW-CAT-0006 | 按幼儿数落入对应档位 | P0 | Unit / Contract | ✅ (`TestOrder_TierByStudentCountAndFrozen`) |
+| TC-NEW-CAT-0007 | 学期中人数变动不改档位 | P0 | Unit / Contract | ✅ (`TestOrder_TierByStudentCountAndFrozen`) |
 | TC-NEW-CAT-0008 | 可查询可售模块清单 | P0 | Unit / Contract | 🔲 |
 
 ### 订单收款 (ORD)
@@ -1352,7 +1352,7 @@
 | TC-NEW-ORD-0005 | 退款冲回佣金 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-ORD-0006 | 订单生效即发放授权 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-ORD-0007 | 取消订单后授权失效 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ORD-0008 | 保存开票信息 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0008 | 保存开票信息 | P0 | Unit / Contract | ✅ (`TestOrder_InvoiceInfoRoundTrip`) |
 
 ### 功能授权 (ENT)
 
@@ -1369,18 +1369,18 @@
 | TC-NEW-ENT-0009 | 降级后历史仍可读 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-ENT-0010 | 收款后立刻可写 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-ENT-0011 | 新开通园所获得试用 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | ✅ (`TestEntitlement_TrialExpiryKeepsData`) |
 | TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | 🔲 |
 
 ### 分销佣金 (DST)
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
-| TC-NEW-DST-0001 | 订单确认后改归因被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0001 | 订单确认后改归因被拒 | P0 | Unit / Contract | ✅ (`TestOrder_AttributionFrozen`) |
 | TC-NEW-DST-0002 | 分销商无登录入口 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-DST-0003 | 部分收款只按已收部分计佣 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-DST-0004 | 收款退款后佣金冲回 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-DST-0005 | 未满三十天不可结算 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-DST-0006 | 满三十天后可结算 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0006 | 满三十天后可结算 | P0 | Unit / Contract | ✅ (`TestCommission_PromotedAfter30Days`) |
 | TC-NEW-DST-0007 | 台账金额不可手工改写 | P0 | Unit / Contract | 🔲 |
 
