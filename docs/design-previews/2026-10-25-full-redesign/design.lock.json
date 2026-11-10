@@ -117,12 +117,13 @@
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
-      "sha256": "5b126571df45d2f782cfaaa66691dfb925106f16bbc94ac2e3f0f678bbccc504",
-      "depsSha": "6eebc649e6b606e5ed9f644f03e2a2fcf5a0ebd6adfe04d85339d6b0a07c14b8",
+      "sha256": "be975a5f3f3863f8d92ef1f489e3db2cb0c113668bcf1afbcdc64b1f1fd76ec8",
+      "depsSha": "f0b7f1f9d2d4bcb61f96cb7baa54e9affb19a6914cbb53a344de44fe9a837781",
       "title": "接送记录",
       "tabbar": true,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-10",
+      "codeCommit": "e8b7373",
+      "reason": "2026-11-10-pickup-polish 已实现 e8b7373；在园中状态已在开发者工具验证"
     },
     "parent/14-pickup-qrcode": {
       "source": "parent/src/pages/pickup/qrcode.vue",

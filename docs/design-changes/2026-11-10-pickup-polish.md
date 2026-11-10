@@ -1,6 +1,6 @@
 # 接送页三态与完成态收口
 
-- status: approved
+- status: implemented
 - date: 2026-11-10
 - pages:
   - parent/13-pickup-index
@@ -39,13 +39,14 @@
 
 ## 实现
 
-- code commit：待实现
-- accepted pages：待实现
-- accept reason：待实现
+- code commit：`e8b7373`
+- accepted pages：`parent/13-pickup-index`
+- accept reason：`2026-11-10-pickup-polish 已实现 e8b7373；在园中状态已在开发者工具验证`
+- 运行验证：开发者工具 CDP 读取到「在园中 / 送入 07:55 · 家长小俊彦 / 接走 等待接走」，二维码入口存在
 
 ## 差异
 
-待实现后填写。
+无。原型与代码结构一致；已接走分支由同一模板按 `dayState` 切换。
 
 ## 后续
 
