@@ -59,44 +59,52 @@
         </ol>
 
         <div class="rail-line" aria-hidden="true"><span></span></div>
+
+        <div class="pass-foot">
+          <button class="btn btn--primary btn--block" type="button">出示接送码</button>
+          <p class="pass-note">核验后一次有效</p>
+        </div>
       </section>
 
-      <section class="qr-card card card--soft" aria-labelledby="qr-title">
-        <div>
-          <h2 id="qr-title">到园时出示接送码</h2>
-          <p class="muted qr-note">老师扫码核验后，接走记录会自动写入。</p>
-        </div>
-        <button class="btn btn--primary qr-btn" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><path d="M13.5 13.5h3v3h-3zM20.5 13.5v2M13.5 20.5h2M18.5 18.5h2v2"/></svg>
-          出示接送码
-        </button>
-      </section>
-
-      <section class="people" aria-labelledby="people-title">
-        <div class="row between people-head">
-          <h2 id="people-title">可接送人</h2>
-          <button class="link-btn" type="button">管理</button>
-        </div>
-        <div class="card people-card">
-          <div class="row-item">
-            <div class="row">
-              <span class="avatar avatar--sm" aria-hidden="true">妈</span>
-              <div>
-                <b class="person-name">妈妈</b>
-                <p class="person-sub">本人 · 138****6721</p>
-              </div>
+      <section class="history" aria-labelledby="history-title">
+        <h2 id="history-title" class="history-title">历史记录</h2>
+        <div class="ledger">
+          <div class="day">
+            <div class="day-head">
+              <span class="day-title">11 月 10 日</span>
+              <span class="day-week">周二</span>
             </div>
-            <span class="chip chip--xs">默认</span>
+            <div class="rec-row">
+              <span class="rec-type">送入</span>
+              <div class="rec-main">
+                <b class="rec-name">家长小俊彦</b>
+                <span class="rec-rel">其他关系</span>
+              </div>
+              <span class="rec-time">07:55</span>
+            </div>
           </div>
-          <div class="row-item">
-            <div class="row">
-              <span class="avatar avatar--sm" aria-hidden="true">奶</span>
-              <div>
-                <b class="person-name">奶奶</b>
-                <p class="person-sub">授权人 · 已通过审核</p>
-              </div>
+
+          <div class="day">
+            <div class="day-head">
+              <span class="day-title">11 月 5 日</span>
+              <span class="day-week">周四</span>
             </div>
-            <span class="chev" aria-hidden="true">›</span>
+            <div class="rec-row">
+              <span class="rec-type">送入</span>
+              <div class="rec-main">
+                <b class="rec-name">爸爸</b>
+                <span class="rec-rel">父亲</span>
+              </div>
+              <span class="rec-time">08:00</span>
+            </div>
+            <div class="rec-row">
+              <span class="rec-type rec-type--out">接走</span>
+              <div class="rec-main">
+                <b class="rec-name">妈妈</b>
+                <span class="rec-rel">母亲</span>
+              </div>
+              <span class="rec-time">17:32</span>
+            </div>
           </div>
         </div>
       </section>
