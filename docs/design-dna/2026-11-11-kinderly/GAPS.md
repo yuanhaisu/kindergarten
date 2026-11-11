@@ -92,6 +92,7 @@
 - **Today 卡片双入口** ✅ Read / Picks / Recipes 每张卡都是「主区域 + 底部文字链」两个独立链接，目标相同；底部链高仅 18px，低于 44px 触控建议
 - **B2 空态（部分）** ✅ 按天无打卡：「Nothing was shared about Monday…」，白卡 20px/18px 内边距
 - **H1/H5（部分）** ✅ Recipes：Saved/List 胶囊 tab、48px 搜索胶囊、28px 筛选胶囊（选中态 sage 20% + 1px 描边）、2 列卡片网格
+- **筛选选中态** ✅ Learn：年龄用 sage 底，分类用松绿实底 + 骨白字；两套并存
 - **集合页** ✅ Lunchbox ideas / After-school snacks：路由不变（客户端状态）、返回是按钮、筛选按集合定制且全部带 1px 描边、卡片与主列表同规格、每集合 20 张
 - **详情页** ✅ Oven chicken tenders：客户端状态、无卡片容器、H2 24/20 两级、步骤序号圆、主按钮白字、保存 48 圆形描边
 

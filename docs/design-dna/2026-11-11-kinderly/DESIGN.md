@@ -183,7 +183,10 @@ Milo  6 years old · ADHD
 - **H1 40px 衬线**——比 Detail/Recipes 的 30px 更大，应用内 h1 实际在 30–40 之间按页面变化。
 - 返回「Today」36px；导语 14px/21px。
 - **Browse / Saved**：两个等宽胶囊，36px 高、`#FCFAF4` 底、13px/500。
-- **筛选**：年龄 `All ages / 2 to 4 / 5 to 7 / 8 to 10`（选中 `#CFD9C5` 底、32px）；分类 `All / Sleep / Routines / Transitions / Feelings / School / Play`（`#FCFAF4` 底、36px）。
+- **筛选（两套选中态）**：
+  - 年龄 `All ages / 2 to 4 / 5 to 7 / 8 to 10`：未选透明，选中 `#CFD9C5` 底 + 松绿字，32px。
+  - 分类 `All / Sleep / Routines / Transitions / Feelings / School / Play`：未选 `#FCFAF4` 底，选中**松绿实底 + 骨白字**，36px、内边距 0 16。
+  - 筛选后整页内容（Featured / Tip / 列表）一起换，不是局部过滤。
 - **Featured 卡**：`#5C7359` 底、26px 圆角、335×300；标签 12px marigold，标题 28px 骨白，元信息 12px 骨白。
 - **Tip of the day**：松绿底、22px 圆角、内边距 18/20；标签 12px marigold，引语 24px 骨白，说明 13px `#C7D0C0`。
 - **Quick tips**：横向 carousel，卡片 248×226、`#FCFAF4` 底、22px 圆角、1px 发丝线、内边距 14/12/14/18；左右箭头 32×32 圆形描边。
