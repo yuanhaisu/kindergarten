@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>养成星球 · 请假 · DNA 验证</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../_shared/dna.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <button class="back" type="button" aria-label="返回">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        返回
+      </button>
+
+      <header class="screen-head">
+        <div>
+          <p class="overline">乐乐 · 小一班</p>
+          <h1>请假</h1>
+        </div>
+      </header>
+
+      <form class="form" novalidate>
+        <section class="card">
+          <p class="field-label">请假类型</p>
+          <div class="type-row" role="group" aria-label="请假类型">
+            <button class="chip" type="button">事假</button>
+            <button class="chip is-on" type="button">病假</button>
+            <button class="chip" type="button">其他</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <p class="field-label">请假时间</p>
+          <div class="date-row">
+            <div class="date-field">
+              <span class="date-label">开始</span>
+              <b>11 月 12 日</b>
+              <small>周三 · 上午</small>
+            </div>
+            <span class="date-arrow" aria-hidden="true">→</span>
+            <div class="date-field">
+              <span class="date-label">结束</span>
+              <b>11 月 12 日</b>
+              <small>周三 · 全天</small>
+            </div>
+          </div>
+          <p class="muted note">共 1 天，提交后老师会收到提醒。</p>
+        </section>
+
+        <section class="card">
+          <label class="field-label" for="reason">请假事由</label>
+          <textarea id="reason" class="textarea" rows="3" placeholder="简单说明一下原因，老师好安排当天的活动">孩子有点低烧，需要在家休息观察一天。</textarea>
+          <p class="counter muted" aria-hidden="true">18 / 200</p>
+        </section>
+
+        <section class="hint card card--soft">
+          <p class="hint-title">需要附上病历吗？</p>
+          <p class="hint-text">病假超过 3 天时，老师可能会请你在返校时补交。现在可以直接提交。</p>
+        </section>
+
+        <button class="btn btn--primary btn--block submit" type="submit">提交请假</button>
+        <p class="muted foot-note">提交后可在「请假记录」里查看老师处理状态。</p>
+      </form>
+    </main>
+
+    <nav class="mp-nav" aria-label="主导航">
+      <a class="is-on" href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></svg>
+        首页
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+        成长
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+        接送
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.4"/><path d="M4.8 20c.7-3.9 3.6-6 7.2-6s6.5 2.1 7.2 6"/></svg>
+        我的
+      </a>
+    </nav>
+  </div>
+</body>
+</html>

@@ -1,0 +1,112 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.screen-head { margin-top: 0; margin-bottom: 18px; }
+
+/* focused form: no global nav, primary action stays in the flow */
+.mp-nav { display: none; }
+.mp-main { padding-bottom: 24px; }
+
+.form { display: grid; gap: 10px; }
+
+.field-label {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.type-row { display: flex; gap: 8px; }
+
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-field {
+  position: relative;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  padding: 12px 30px 12px 14px;
+  border: 1px solid var(--hair-strong);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.date-field::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--ink-soft);
+  border-bottom: 1.5px solid var(--ink-soft);
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.date-label { font-size: 11px; color: var(--ink-soft); }
+.date-field b { font-size: 15px; font-weight: 600; }
+.date-field small { font-size: 11.5px; color: var(--ink-soft); }
+
+.date-arrow { color: var(--ink-soft); }
+
+.note {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.textarea {
+  width: 100%;
+  resize: none;
+  padding: 12px 14px;
+  border: 1px solid var(--hair-strong);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--pine);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(23, 50, 32, 0.12);
+}
+
+.counter {
+  margin: 6px 0 0;
+  text-align: right;
+  font-size: 11px;
+}
+
+.hint-title { margin: 0; font-size: 13.5px; font-weight: 600; }
+
+.hint-text {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-mid);
+}
+
+.submit { margin-top: 4px; }
+
+.foot-note {
+  margin: 0;
+  text-align: center;
+  font-size: 11.5px;
+}

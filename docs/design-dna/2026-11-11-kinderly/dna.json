@@ -1,0 +1,333 @@
+{
+  "meta": {
+    "name": "Kinderly / Kin — warm editorial parenting companion",
+    "description": "Design DNA extracted from the Kinderly (Kin) product: the logged-in application (24 screens crawled), the login screen, the marketing site, and nine additional app screens rendered in the marketing 'See Kinderly in action' section. Characterised by a warm bone canvas, deep pine ink, Instrument Serif display and prose type over Geist UI type, pill controls, hairline-bordered white surfaces, a floating pill bottom navigation, and calm slow motion.",
+    "source_references": [
+      "https://app.kinderly.ai — authenticated session, 2026-11-11, 24 screens crawled: children list, child onboarding, Kin chat, Today/forecast, Stories list + detail + create, Settings + personal/email/password/two-step/invite/family/calendar, Learn library + article, Recipes, Kin Picks, calming tools (breathing), child baseline",
+      "https://app.kinderly.ai/children/add?from=onboarding (login / sign-up screen, logged out)",
+      "https://www.kinderly.ai/ (marketing site, hero, voices, product section)",
+      "https://www.kinderly.ai/ 'See Kinderly in action' — 9 app screens: profile, ask Kin chat, voice & text, visual story, calming tools, visual schedule, weekly forecast, printables library, celebration jar",
+      "CSS custom properties exposed on app.kinderly.ai (:root, 51 tokens)",
+      "Computed styles sampled from the live DOM (buttons, inputs, cards, rows, bubbles, chips, bottom nav)"
+    ],
+    "created_at": "2026-11-11"
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "analogous",
+      "primary": { "hex": "#173220", "role": "Deep pine. All body text on the app, primary button fill, brand mark, logo wordmark." },
+      "secondary": { "hex": "#C36540", "role": "Terracotta. Warm action accent: microphone orb, active dots, illustration fills, occasional emphasis." },
+      "accent": { "hex": "#DDB14A", "role": "Marigold. Celebration and positive highlight: jar marbles, tag highlights, background wash tint." },
+      "neutral": {
+        "scale": ["#F2EDDE", "#ECE6D7", "#E2D9C5", "#CFD9C5", "#8DA386", "#728173", "#3D5141", "#2B4630", "#173220", "#0D2014"],
+        "usage": "Lightest three are page and card surfaces (bone). Mid sages carry chips and illustration fills. #728173 is secondary/muted text, #3D5141 is mid ink, #173220 is body text and controls, #0D2014 is the phone-frame near-black."
+      },
+      "semantic": {
+        "success": "#5C7359",
+        "warning": "#A88324",
+        "error": "#A04D2A",
+        "info": "#3D5141"
+      },
+      "surface": {
+        "background": "#ECE6D7",
+        "card": "#FFFFFF",
+        "elevated": "#FCFAF4"
+      },
+      "contrast_strategy": "Dark-on-light dominant. Deep pine ink over warm bone; no pure black or pure white in text surfaces. Surface separation comes from small value steps plus 1px hairlines, not heavy shadows.",
+      "measurement": {
+        "k": 8,
+        "sampling": {
+          "method": "deterministic_stratified",
+          "max_pixels": 160000,
+          "sampled_pixels": 160000
+        }
+      },
+      "measured_palette": [
+        { "hex": "#f2ede2", "coverage": 0.9667, "role": "background" },
+        { "hex": "#879387", "coverage": 0.0162, "role": "text" },
+        { "hex": "#d5dcd1", "coverage": 0.0074, "role": "unassigned" },
+        { "hex": "#1d3323", "coverage": 0.0046, "role": "accent" },
+        { "hex": "#3e5f77", "coverage": 0.0017, "role": "unassigned" },
+        { "hex": "#72b5e0", "coverage": 0.0012, "role": "unassigned" },
+        { "hex": "#e6b770", "coverage": 0.0011, "role": "unassigned" },
+        { "hex": "#9f653b", "coverage": 0.001, "role": "unassigned" }
+      ]
+    },
+    "typography": {
+      "type_scale": {
+        "display": { "size": "80px", "weight": 400, "line_height": 0.95, "tracking": "-0.04em" },
+        "heading_1": { "size": "56px", "weight": 400, "line_height": 1.0, "tracking": "-0.03em" },
+        "heading_2": { "size": "36px", "weight": 400, "line_height": 1.15, "tracking": "-0.02em" },
+        "heading_3": { "size": "20px", "weight": 400, "line_height": 1.4, "tracking": "-0.01em" },
+        "body": { "size": "16px", "weight": 400, "line_height": 1.6, "tracking": "0" },
+        "body_small": { "size": "14px", "weight": 400, "line_height": 1.5, "tracking": "0" },
+        "caption": { "size": "12px", "weight": 400, "line_height": 1.3, "tracking": "0.14em" },
+        "overline": { "size": "12px", "weight": 600, "line_height": 1.3, "tracking": "0.14em" }
+      },
+      "font_families": {
+        "heading": "Instrument Serif, Georgia, serif",
+        "body": "Geist, ui-sans-serif, system-ui, -apple-system, sans-serif",
+        "mono": "Geist Mono, ui-monospace, monospace"
+      },
+      "font_style_notes": "Display headings are a high-contrast, slightly condensed serif set at 400 weight — never bolded. In the logged-in app the serif is also used for reflective prose (18px/1.5), while all controls, labels and metadata use Geist at 13–16px with weights 400/500/600. App h1 runs 34–40px, not the 56–80px marketing scale. A third accent face, Gochi Hand, appears for hand-drawn labels in product illustrations. The serif/sans pairing is the primary identity carrier; do not substitute a geometric display sans."
+    },
+    "spacing": {
+      "base_unit": "8px",
+      "scale": ["4px", "8px", "12px", "16px", "24px", "32px", "48px", "64px", "96px"],
+      "content_density": "comfortable",
+      "section_rhythm": "96px vertical section padding on marketing; 24px mobile gutter and 80px desktop gutter. App screens keep a single left axis with 20–24px side padding and 24–32px between groups."
+    },
+    "layout": {
+      "grid_system": "App: a single mobile-first column ~880px wide centred on desktop (measured 914px incl. gutters), bottom nav floating over it. Marketing: single centered column capped at 1120px, splitting into text plus a horizontally scrolling phone row (gap 36px).",
+      "max_content_width": "880px app column / 1120px marketing",
+      "columns": "1 (reading), 2 (text + phones), 3 (printable/tag grids)",
+      "gutter": "80px desktop / 24px mobile",
+      "breakpoints": ["640px", "768px", "1024px", "1280px"],
+      "alignment_tendency": "App column centered on desktop but content strictly left-aligned inside it; marketing hero centered with the same left-aligned content blocks."
+    },
+    "shape": {
+      "border_radius": {
+        "small": "12px",
+        "medium": "18px",
+        "large": "26px",
+        "pill": "999px"
+      },
+      "border_usage": "1px hairline rgba(23,50,32,.1) on inputs, list rows, chips and cards; 1px solid pine on secondary buttons. App cards cluster at 20px, feature cards at 22–26px, avatars at 32px or 50%. Hairlines are the default separator — never 2px+ borders.",
+      "divider_style": "1px rgba(23,50,32,.1), full-bleed or inset, very low contrast."
+    },
+    "elevation": {
+      "shadow_style": "Soft diffused; shadows are rare and reserved for floating objects (phone frames). Cards rely on white fill + hairline instead of shadow.",
+      "levels": {
+        "low": "0 0 0 3px rgba(23,50,32,.12) — focus halo on inputs",
+        "medium": "0 8px 24px rgba(23,50,32,.08) — floating panels",
+        "high": "0 28px 60px -22px rgba(0,0,0,.55) — phone frame over the marketing surface"
+      },
+      "depth_cues": "Color value steps and hairlines first; shadows only for physically floating objects."
+    },
+    "iconography": {
+      "style": "Minimal inline SVG line icons plus occasional flat illustrative SVG (jar, sprout mark). Icons are secondary to type.",
+      "stroke_weight": "1.5–2px",
+      "size_scale": ["16px", "20px", "24px"],
+      "preferred_set": "Custom inline SVG; brand marks for Google/Apple auth; no icon font."
+    },
+    "motion": {
+      "easing": "cubic-bezier(0.16, 0.68, 0.22, 1)",
+      "duration_scale": {
+        "micro": "150–200ms",
+        "normal": "300–400ms",
+        "macro": "1150ms"
+      },
+      "entrance_pattern": "Fade + rise: opacity 0→1 with translateY 64px→0 and scale .98→1 over 1.15s. Chat bubbles, schedule ticks, forecast bars and jar marbles each have their own staggered keyframe.",
+      "exit_pattern": "Fade out only; no scale or slide exits observed.",
+      "philosophy": "Calm, slow and breathing. Nothing bouncy, no spring physics, no attention-seeking loops; 36s linear marquees are the only continuous motion."
+    },
+    "components": {
+      "button_style": "App: pill (999px), 48px tall, 14.5px/500 Geist, padding 12px 20px; primary is pine fill with bone label, secondary is a sage-tinted pill or a text link with a chevron. Marketing: the same pill at 56px / 17px/600. Shadows only on the floating nav, never on buttons.",
+      "input_style": "52px tall, 14px radius, white fill, 1px rgba(23,50,32,.22) border, 16px pine text; focus adds a 3px rgba(23,50,32,.12) halo instead of changing the border colour. Search/filter fields are pill-shaped with a leading icon.",
+      "card_style": "App cards are white (#FFFFFF) or bone-cool (#FCFAF4), 20px radius by default and 22–26px for feature cards, 1px hairline border, no shadow, 20–24px padding. A card may invert to pine or sage-deep for emphasis, keeping the same radius.",
+      "navigation_pattern": "Floating white pill bottom nav, 5 items (Kin, Children, Today, Stories, Settings), pinned near the bottom with a soft shadow rgba(23,50,32,.35) 0 10px 30px -14px. Inactive items are ink-soft (#728173) icon + 16px label; the active item gets a sage pill background behind icon and label. A circular pine FAB with a terracotta glyph sits bottom-right above it. Screen headers are a left-aligned serif h1 plus an optional pill action on the right.",
+      "modal_style": "Not captured in the crawl (no dialog opened). Closest observed pattern is the floating white card with a large top radius — treat sheets as 24px top-radius white surfaces over a dimmed bone backdrop.",
+      "list_style": "Settings and profile sections are bone-cool (#FCFAF4) cards at 20px radius containing hairline-separated rows; actionable rows are white at 16–20px radius with a chevron. Rows run ~56–64px with 14–16px Geist labels and 12–13px muted metadata. Schedule rows pair a 16px square checkbox (3px radius, sage fill, sage-deep border) with 16px text.",
+      "component_notes": "Signature devices observed in the authenticated app: (1) mood is captured as a weather trio — Sunny / Cloudy / Stormy cards — instead of a numeric scale; (2) tags are inline text highlights (sage or marigold behind words), not pill chips; (3) chat bubbles use asymmetric tail radii (white 18px 18px 18px 5px for Kin, pine 10px 3px 10px 10px for the parent); (4) a three-segment dashed progress line communicates '3 check-ins to unlock' without a progress bar; (5) overline labels are 12px uppercase with 0.14em tracking."
+    }
+  },
+  "design_style": {
+    "aesthetic": {
+      "mood": ["calm", "warm", "human", "trustworthy", "unhurried"],
+      "visual_metaphor": "Warm paper, pressed botanicals and a well-kept notebook — clinical knowledge delivered like a letter, not a dashboard.",
+      "era_influence": "Contemporary editorial wellness (2020s), with a serif revival and earthy 1970s palette.",
+      "genre": "editorial wellness SaaS",
+      "personality_traits": ["patient", "attentive", "non-judgmental", "meticulous", "quietly confident"],
+      "adjectives": ["earthy", "editorial", "soft", "quiet", "precise"]
+    },
+    "visual_language": {
+      "complexity": "minimal",
+      "ornamentation": "subtle accents",
+      "whitespace_usage": "Generous and structural. App screens place content in the top half and leave the lower third empty; whitespace is what makes the product feel calm rather than the palette alone.",
+      "visual_weight_distribution": "Top-heavy with a strong left axis; large type carries the weight, secondary content stays small and muted.",
+      "focal_strategy": "single hero element",
+      "contrast_level": "High text contrast, low surface contrast — pine on bone is strong; adjacent surfaces differ by only a few value steps.",
+      "texture_usage": "No noise or patterns. Depth comes from layered radial washes (marigold at 16%, sage at 50%) behind the hero."
+    },
+    "composition": {
+      "hierarchy_method": "typographic hierarchy",
+      "balance_type": "asymmetric",
+      "flow_direction": "top-to-bottom on a left axis; marketing hero centres the same content",
+      "grouping_strategy": "whitespace plus hairline separators; almost no boxes",
+      "negative_space_role": "carries the emotional message — space is the product's calm"
+    },
+    "imagery": {
+      "photo_treatment": "Natural-light, candid child photography, warm and slightly desaturated; rounded rectangles (16–24px), no duotone or heavy filters.",
+      "illustration_style": "Hand-drawn flat SVG with muted earthy fills, visible line work, intentionally imperfect — jar, marbles, small marks.",
+      "graphic_elements": "Circular brand mark, inline text highlights, marble/jar metaphor, hairline rules.",
+      "pattern_usage": "none",
+      "image_shape": "Rounded rectangle 16–24px; avatar circular with a 2px sage-deep ring."
+    },
+    "interaction_feel": {
+      "feedback_style": "Quiet. Colour and opacity shifts; state changes are confirmed by content, not by animation.",
+      "hover_behavior": "Subtle opacity/lift on marketing links and pills; no colour inversion.",
+      "transition_personality": "smooth glide, slow",
+      "loading_style": "Breathing/pulse (kinBreathe, kin-v2-pulse) rather than spinners.",
+      "microinteraction_density": "low-moderate"
+    },
+    "brand_voice_in_ui": {
+      "tone": "warm, plain-spoken, reassuring",
+      "formality": "informal",
+      "cta_style": "friendly invitation",
+      "empty_state_approach": "Gentle reassurance plus one concrete next step; never a bare 'no data'.",
+      "error_tone": "non-blaming and practical — state what happened, then what to try."
+    }
+  },
+  "visual_effects": {
+    "overview": {
+      "effect_intensity": "subtle-accent",
+      "performance_tier": "lightweight",
+      "fallback_strategy": "CSS gradients and keyframes only; degrades to static surfaces with no functionality loss.",
+      "primary_technology": "CSS only"
+    },
+    "background_effects": {
+      "type": "mesh-gradient",
+      "description": "Layered radial washes behind the hero: marigold rgba(221,177,74,.16) at top centre, sage rgba(207,217,196,.5) at lower left, over a bone base. Static, not animated.",
+      "technology": "CSS radial-gradient stack on a pseudo-element",
+      "params": {
+        "color_palette": ["#DDB14A", "#CFD9C5", "#ECE6D7"],
+        "speed": "static",
+        "density": "low",
+        "opacity": "0.16–0.5",
+        "blend_mode": "normal"
+      }
+    },
+    "particle_systems": {
+      "enabled": false,
+      "type": "none",
+      "description": "No particle systems observed.",
+      "technology": "none",
+      "params": {
+        "count": "0",
+        "shape": "none",
+        "size_range": "none",
+        "movement_pattern": "none",
+        "color_behavior": "none",
+        "interaction": "none",
+        "spawn_area": "none"
+      }
+    },
+    "3d_elements": {
+      "enabled": false,
+      "type": "none",
+      "description": "No 3D rendering observed.",
+      "technology": "none",
+      "params": {
+        "renderer": "none",
+        "lighting": "none",
+        "camera": "none",
+        "materials": "none",
+        "geometry": "none",
+        "post_processing": "none",
+        "interaction_model": "none"
+      }
+    },
+    "shader_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "No shaders or WebGL.",
+      "technology": "none",
+      "params": {
+        "uniforms": "none",
+        "vertex_manipulation": "none",
+        "fragment_output": "none",
+        "noise_type": "none",
+        "distortion": "none"
+      }
+    },
+    "scroll_effects": {
+      "parallax": {
+        "enabled": false,
+        "layers": "0",
+        "depth_range": "none",
+        "speed_curve": "none"
+      },
+      "scroll_triggered_animations": {
+        "enabled": true,
+        "trigger_points": "Each section on enter (v2-reveal on IntersectionObserver)",
+        "animation_type": "fade-up",
+        "scrub_behavior": "none — one-shot transition, not scrubbed"
+      },
+      "scroll_morphing": {
+        "enabled": false,
+        "description": "No morphing between sections."
+      }
+    },
+    "text_effects": {
+      "type": "none",
+      "description": "No per-character or gradient text animation.",
+      "technology": "none",
+      "params": {
+        "split_strategy": "none",
+        "animation_per_unit": "none",
+        "stagger": "none",
+        "effect_style": "none"
+      }
+    },
+    "cursor_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "Native cursor only.",
+      "params": {
+        "shape": "native",
+        "size": "native",
+        "blend_mode": "none",
+        "trail": "none",
+        "interaction_zone": "none"
+      }
+    },
+    "image_effects": {
+      "type": "none",
+      "description": "No filters or reveal animations on photography; images are static and simply rounded.",
+      "technology": "none",
+      "params": {
+        "filter_pipeline": "none",
+        "hover_transform": "none",
+        "reveal_animation": "none",
+        "distortion_type": "none"
+      }
+    },
+    "glassmorphism_neumorphism": {
+      "enabled": false,
+      "style": "none",
+      "params": {
+        "blur_radius": "0",
+        "transparency": "0",
+        "border_treatment": "none",
+        "shadow_type": "none",
+        "light_source_angle": "none"
+      }
+    },
+    "canvas_drawings": {
+      "enabled": false,
+      "type": "none",
+      "description": "The jar illustration is inline SVG, not canvas.",
+      "technology": "none",
+      "params": {
+        "draw_method": "none",
+        "animation_loop": "none",
+        "color_scheme": "none",
+        "responsiveness": "none",
+        "interaction": "none"
+      }
+    },
+    "svg_animations": {
+      "enabled": true,
+      "type": "decorative-loop",
+      "description": "Inline SVG jar with marbles that drop into place (kin-v2-drop); small breathing/pulse keyframes elsewhere. All decorative, never required to understand content.",
+      "technology": "CSS keyframes targeting SVG elements",
+      "params": {
+        "animation_method": "CSS keyframes",
+        "path_morphing": "none",
+        "stroke_animation": "none",
+        "filter_effects": "none"
+      }
+    },
+    "composite_notes": "Layered effects are limited to the marketing hero (gradient washes + scroll fade-up + a 36s horizontal phone marquee). The app screens themselves are effect-free by design: flat bone canvas, hairline surfaces, one accent colour. Note that the measured login screenshot reports #f2ede2 as background while the CSS token is #ece6d7 — the difference is the login page's lighter card surface and anti-aliasing, not a second palette. Element-level CSS variables (51 tokens) are the authoritative source for exact values."
+  }
+}

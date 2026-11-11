@@ -1,0 +1,95 @@
+.filters {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filters::-webkit-scrollbar { display: none; }
+
+.g-card {
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.g-photo {
+  position: relative;
+  height: 168px;
+  border-radius: 16px;
+}
+
+.g-photo--sage {
+  background:
+    radial-gradient(150px 100px at 25% 30%, rgba(239, 212, 133, 0.7), transparent 70%),
+    radial-gradient(180px 140px at 80% 75%, rgba(92, 115, 89, 0.75), transparent 72%),
+    var(--card-soft);
+}
+
+.photo-label {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.photo-tag {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 11px;
+  color: var(--ink-mid);
+}
+
+.g-body { padding: 14px 8px 6px; }
+
+.g-body--plain { padding: 10px 8px; }
+
+.g-title {
+  margin: 4px 0 6px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.28;
+  letter-spacing: -0.2px;
+}
+
+.g-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-mid);
+}
+
+.g-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.g-foot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hair);
+}
+
+.g-meta {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.g-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}

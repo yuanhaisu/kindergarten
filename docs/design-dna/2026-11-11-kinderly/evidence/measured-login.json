@@ -1,0 +1,58 @@
+{
+  "source": {
+    "file": "kinderly-login-2026-11-11T03-41-31-563Z.png",
+    "width": 1440,
+    "height": 988
+  },
+  "measurement": {
+    "k": 8,
+    "sampling": {
+      "method": "deterministic_stratified",
+      "max_pixels": 160000,
+      "sampled_pixels": 160000
+    }
+  },
+  "palette": [
+    {
+      "hex": "#f2ede2",
+      "coverage": 0.9667,
+      "role": "background"
+    },
+    {
+      "hex": "#879387",
+      "coverage": 0.0162,
+      "role": "text"
+    },
+    {
+      "hex": "#d5dcd1",
+      "coverage": 0.0074,
+      "role": "unassigned"
+    },
+    {
+      "hex": "#1d3323",
+      "coverage": 0.0046,
+      "role": "accent"
+    },
+    {
+      "hex": "#3e5f77",
+      "coverage": 0.0017,
+      "role": "unassigned"
+    },
+    {
+      "hex": "#72b5e0",
+      "coverage": 0.0012,
+      "role": "unassigned"
+    },
+    {
+      "hex": "#e6b770",
+      "coverage": 0.0011,
+      "role": "unassigned"
+    },
+    {
+      "hex": "#9f653b",
+      "coverage": 0.001,
+      "role": "unassigned"
+    }
+  ],
+  "measured": true
+}
