@@ -127,18 +127,18 @@ Milo  6 years old · ADHD
 
 ## 补充：覆盖层、状态与主题（第二轮采集，2026-11-11）
 
-### Today 的可点击入口（实测）
+### Today 的可点击入口（实测，逐卡）
 
-| 入口 | 行为 |
-|---|---|
-| 周切换 `‹ ›` | 切周；**未来周禁用**，按钮 `opacity .35` |
-| 星期 `M/T/W…` | 切换当天卡片，标题变为 `JUNYAN'S MONDAY CHECK-IN` |
-| 卡片 `i`（aria-label "What is a forecast?"） | 展开行内 tooltip，不是弹窗 |
-| Sunny / Cloudy / Stormy | 打卡输入（会写数据，未点击） |
-| Today's Read 卡 | `/learn/<slug>?from=today` |
-| Browse all reads | `/learn?from=today` |
-| Picks / Recipes 卡与文字链 | `/picks`、`/recipes` |
-| 底栏 5 项 | 5 个 tab |
+顶部日期条：`‹ ›` 切周（未来周禁用 `opacity .35`）；`M/T/W…` 切换当天，卡片标题随之变成 `JUNYAN'S MONDAY CHECK-IN`。
+
+| 卡片 | 主区域 | 底部文字链 | 备注 |
+|---|---|---|---|
+| Junyan's check-in | `i` 展开 tooltip；Sunny/Cloudy/Stormy 选天气；Send 提交；「That's all for today」 | — | 天气与 Send 会写记录，未点击；「That's all for today」未点 |
+| Today's Read | 整卡（368px 高）→ `/learn/<slug>?from=today` | 「Browse all reads in Learn ›」→ `/learn?from=today` | 卡内还有「Read it ›」，与整卡同一目标 |
+| Kinderly Picks | 图标行（96px 高）→ `/picks` | 「See the picks ›」→ `/picks` | **主区域链接没有可读文本**（只有图标），依赖 aria/上下文 |
+| Kinderly Recipes | 「Open Kinderly Recipes」（102px）→ `/recipes` | 「See the recipes ›」→ `/recipes` | 主区域与文字链同目标 |
+
+**触控尺寸问题**：三张卡底部文字链高度只有 **18px**，宽度 93–166px，远低于 44px 的触控建议；主区域卡片是 96–368px，安全。参考产品在这点上并不符合它自己的其他规格，不要照搬。
 
 ### 行内 tooltip
 

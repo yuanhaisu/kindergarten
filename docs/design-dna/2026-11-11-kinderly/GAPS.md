@@ -88,7 +88,8 @@
 - **C2** ✅ 不支持深色（模拟后 body 仍为浅色）
 - **E2** ✅ 破坏性色 `#A8323A`；E1 success 仍未观察到
 - **G1** ✅ 参考只有英/法界面，没有中文排版证据——中文衬线是自定决策
-- **Today 入口** ✅ 周切换（未来周禁用 .35）、星期切换、`i` 行内 tooltip、天气三选一（未点击，会写数据）、Read/Picks/Recipes 链接、底栏 5 项
+- **Today 入口** ✅ 周切换（未来周禁用 .35）、星期切换、`i` 行内 tooltip、天气三选一（未点击，会写数据）、check-in 的 Send 与「That's all for today」、底栏 5 项
+- **Today 卡片双入口** ✅ Read / Picks / Recipes 每张卡都是「主区域 + 底部文字链」两个独立链接，目标相同；底部链高仅 18px，低于 44px 触控建议
 - **B2 空态（部分）** ✅ 按天无打卡：「Nothing was shared about Monday…」，白卡 20px/18px 内边距
 
 仍未完成：
