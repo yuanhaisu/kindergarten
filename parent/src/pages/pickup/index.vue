@@ -214,7 +214,7 @@ onPullDownRefresh(loadData)
 </script>
 
 <template>
-  <PageShell bottom-space="140rpx" max-width="430px">
+  <PageShell background="#ece6d7" bottom-space="140rpx" max-width="430px">
     <!-- ===== 加载：凭证卡骨架 + 3 行列表骨架 ===== -->
     <view v-if="isFirstLoading" class="loading-state">
       <view class="sk-pass">
@@ -273,30 +273,28 @@ onPullDownRefresh(loadData)
 
     <!-- ===== 正常 ===== -->
     <template v-else>
-      <!-- 今日接送凭证：全页唯一的大面积暖色块 -->
+      <!-- 大标题与日期：DNA 里标题承担层级，不再放进卡片 -->
+      <view class="pickup-head">
+        <view class="pickup-head-copy">
+          <text class="pickup-overline">{{ todayDateText }}<text v-if="todayWeekday"> · {{ todayWeekday }}</text></text>
+          <text class="pickup-title">接送</text>
+        </view>
+        <button class="head-cta" @click="goQRCode">接送码</button>
+      </view>
+
+      <!-- 今日接送凭证：白面 + 发丝线，状态与进度轨都在卡内 -->
       <view class="pass">
         <view class="pass-head">
-          <view class="pass-head-top">
+          <view class="pass-copy">
             <text class="pass-eyebrow">今日接送凭证</text>
-            <view v-if="childLabel" class="child-chip"><text>{{ childLabel }}</text></view>
+            <text class="pass-state">{{ statusMain }}</text>
+            <text v-if="dayState === 'pre'" class="pass-sub">{{ statusSubText }}</text>
+            <text v-else-if="childLabel" class="pass-sub">{{ childLabel }}</text>
           </view>
-          <view class="pass-date-row">
-            <text class="pass-date">{{ todayDateText }}</text>
-            <text v-if="todayWeekday" class="pass-week">{{ todayWeekday }}</text>
-          </view>
-
-          <view class="pass-status">
-            <view class="seal" :class="'seal--' + dayState">
-              <text class="seal-glyph">
-                {{ dayState === "picked" ? ICON.check : dayState === "in" ? ICON.sprout : ICON.clock }}
-              </text>
-            </view>
-            <view class="status-copy">
-              <text class="status-main">{{ statusMain }}</text>
-              <view v-if="dayState === 'pre'" class="status-sub">
-                <text class="status-who">{{ statusSubText }}</text>
-              </view>
-            </view>
+          <view class="seal" :class="'seal--' + dayState">
+            <text class="seal-glyph">
+              {{ dayState === "picked" ? ICON.check : dayState === "in" ? ICON.sprout : ICON.clock }}
+            </text>
           </view>
         </view>
 
@@ -383,145 +381,172 @@ onPullDownRefresh(loadData)
 
 <style scoped lang="scss">
 // ============================================================
-// 接送记录 · 今日凭证 + 历史流水
-// 冷雾白底；暖色只落在凭证头部、主按钮与「接走」节点上。
+// 接送记录 · Kinderly DNA 迁移验证
+// 暖纸底 + 深松绿；白面靠 1rpx 发丝线分层，不用阴影。
+// 数值按 750rpx 设计基准（1px = 2rpx），字体只用系统可用族。
 // ============================================================
 
+$dna-bone: #ece6d7;
+$dna-card: #ffffff;
+$dna-card-soft: #fcfaf4;
+$dna-pine: #173220;
+$dna-ink-mid: #3d5141;
+$dna-ink-soft: #728173;
+$dna-sage-deep: #5c7359;
+$dna-sage-soft: #cfd9c5;
+$dna-marigold-soft: #efd485;
+$dna-terracotta: #c36540;
+$dna-terracotta-soft: #e5bca1;
+$dna-hair: rgba(23, 50, 32, 0.1);
+$dna-hair-strong: rgba(23, 50, 32, 0.22);
+// 小程序拿不到 Instrument Serif；中文回落宋体，Android 无宋体时退到无衬线。
+$dna-serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+$dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+// ---- 页头 ----------------------------------------------------
+.pickup-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24rpx;
+  margin: 8rpx 0 28rpx;
+}
+
+.pickup-head-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pickup-overline {
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+}
+
+.pickup-title {
+  margin-top: 8rpx;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 68rpx;
+  font-weight: 400;
+  letter-spacing: -1rpx;
+  line-height: 1.05;
+}
+
+.head-cta {
+  flex: none;
+  height: 64rpx;
+  padding: 0 24rpx;
+  margin: 0;
+  border: 1rpx solid $dna-hair-strong;
+  border-radius: 999rpx;
+  background: $dna-card;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  font-weight: 500;
+  line-height: 62rpx;
+}
+
+.head-cta::after {
+  border: none;
+}
+
+// ---- 凭证卡 --------------------------------------------------
 .pass {
-  margin-top: $spacing-lg;
+  margin-bottom: 28rpx;
   overflow: hidden;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .pass-head {
-  padding: 28rpx 32rpx 32rpx;
-  background: $gradient-brand-soft;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 32rpx 32rpx 0;
 }
 
-.pass-head-top {
+.pass-copy {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $spacing-md;
+  flex-direction: column;
   min-width: 0;
 }
 
 .pass-eyebrow {
-  flex: 1;
-  min-width: 0;
-  color: $color-text-body;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   line-height: 1.4;
 }
 
-.child-chip {
-  flex: none;
-  max-width: 300rpx;
-  padding: 6rpx 18rpx;
-  overflow: hidden;
-  border-radius: $border-radius-full;
-  background: $color-bg-card;
-  color: $color-text-body;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+.pass-state {
+  margin-top: 10rpx;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 60rpx;
+  font-weight: 400;
+  letter-spacing: -1rpx;
+  line-height: 1.1;
+}
+
+.pass-sub {
+  margin-top: 8rpx;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 26rpx;
   line-height: 1.5;
-  box-shadow: $shadow-sm;
-}
-
-.pass-date-row {
-  display: flex;
-  align-items: baseline;
-  gap: $spacing-sm;
-  margin-top: $spacing-sm;
-}
-
-.pass-date {
-  color: $color-text-primary;
-  font-size: $typography-font-size-3xl;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.35;
-}
-
-.pass-week {
-  color: $color-text-body;
-  font-size: $typography-font-size-sm;
-  font-weight: $typography-font-weight-medium;
-}
-
-.pass-status {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-lg;
-  margin-top: $spacing-lg;
 }
 
 .seal {
-  flex: none;
-  width: 88rpx;
-  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: $border-radius-full;
-  background: $color-bg-card;
-  color: $color-brand-primary-dark;
-  box-shadow: $shadow-sm;
+  flex: none;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 999rpx;
+  background: $dna-sage-soft;
+  color: $dna-sage-deep;
 }
 
 .seal--pre {
-  color: $color-text-muted;
+  background: $dna-bone;
+  color: $dna-ink-soft;
+}
+
+.seal--picked {
+  background: $dna-marigold-soft;
+  color: $dna-pine;
 }
 
 .seal-glyph {
   font-family: remixicon;
-  font-size: 44rpx;
+  font-size: 40rpx;
   line-height: 1;
 }
 
-.status-copy {
-  min-width: 0;
-  padding-top: 2rpx;
-}
-
-// 设计稿 24–26px，超出 token 上限 40rpx；仅此一处状态标题使用。
-.status-main {
-  display: block;
-  color: $color-text-primary;
-  font-size: 48rpx;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
-}
-
-.status-sub {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: $spacing-sm;
-  margin-top: 6rpx;
-}
-
-.status-who {
-  color: $color-text-body;
-  font-size: $typography-font-size-md;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
+// ---- 进度轨 --------------------------------------------------
 .pass-rail {
   display: flex;
   align-items: flex-start;
-  gap: 16rpx;
-  padding: 28rpx 32rpx 0;
+  gap: 12rpx;
+  padding: 32rpx 32rpx 8rpx;
 }
 
 .rail-step {
   display: flex;
   align-items: flex-start;
   flex: 1 1 0;
-  gap: 16rpx;
+  gap: 14rpx;
   min-width: 0;
 }
 
@@ -530,34 +555,36 @@ onPullDownRefresh(loadData)
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 48rpx;
-  height: 48rpx;
-  border-radius: $border-radius-full;
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
+  width: 30rpx;
+  height: 30rpx;
+  margin-top: 2rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid $dna-hair-strong;
+  background: $dna-card;
+  color: $dna-card;
 }
 
-.rail-step--out:not(.is-done) .rail-dot {
-  background: $color-bg-page;
-  color: $color-text-muted;
+.rail-step.is-done .rail-dot {
+  border-color: $dna-sage-deep;
+  background: $dna-sage-deep;
 }
 
 .rail-glyph {
   font-family: remixicon;
-  font-size: 26rpx;
+  font-size: 18rpx;
   line-height: 1;
 }
 
 .rail-line {
-  flex: 0 0 32rpx;
+  flex: 0 0 48rpx;
   height: 0;
-  margin-top: 23rpx;
-  border-top: 2rpx dashed $color-border-subtle;
+  margin-top: 15rpx;
+  border-top: 2rpx dashed $dna-hair-strong;
 }
 
 .rail-line.is-done {
   border-top-style: solid;
-  border-top-color: $color-semantic-success;
+  border-top-color: $dna-sage-deep;
 }
 
 .rail-copy {
@@ -568,48 +595,51 @@ onPullDownRefresh(loadData)
 }
 
 .rail-label {
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 24rpx;
+  font-weight: 600;
   line-height: 1.4;
 }
 
 .rail-meta {
-  color: $color-text-body;
-  font-size: $typography-font-size-sm;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 24rpx;
   line-height: 1.4;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
+// ---- 卡底操作 ------------------------------------------------
 .pass-foot {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: $spacing-sm;
-  margin-top: 28rpx;
-  padding: 28rpx 32rpx 32rpx;
-  border-top: 1rpx solid $color-border-subtle;
+  gap: 12rpx;
+  margin-top: 24rpx;
+  padding: 24rpx 32rpx 32rpx;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .qr-cta {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-md;
+  gap: 12rpx;
   width: 100%;
-  height: $component-input-height;
+  height: 96rpx;
   padding: 0 28rpx;
   margin: 0;
   border: none;
-  border-radius: $border-radius-full;
-  background: $gradient-brand;
-  color: $color-text-on-brand;
-  font-size: $typography-font-size-lg;
-  font-weight: $typography-font-weight-semibold;
+  border-radius: 999rpx;
+  background: $dna-pine;
+  color: $dna-bone;
+  font-family: $dna-sans;
+  font-size: 29rpx;
+  font-weight: 500;
   line-height: 1.3;
-  box-shadow: $shadow-md;
 }
 
 .qr-cta::after {
@@ -618,135 +648,138 @@ onPullDownRefresh(loadData)
 
 .qr-cta[disabled] {
   opacity: 0.45;
-  box-shadow: none;
 }
 
 .qr-cta-icon {
   font-family: remixicon;
-  font-size: 38rpx;
+  font-size: 34rpx;
   line-height: 1;
 }
 
 .pass-note {
   display: flex;
   justify-content: center;
-  gap: $spacing-sm;
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1.45;
+  gap: 12rpx;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 
 .done-note {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-md;
-  min-height: $component-input-height;
-  border-radius: $border-radius-full;
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
+  gap: 12rpx;
+  min-height: 96rpx;
+  border-radius: 999rpx;
+  background: rgba(141, 163, 134, 0.18);
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .done-icon {
   font-family: remixicon;
-  font-size: $typography-font-size-2xl;
+  font-size: 30rpx;
   line-height: 1;
 }
 
 // ---- 历史 ----------------------------------------------------
 .history {
-  margin-top: 40rpx;
+  margin-top: 8rpx;
 }
 
 .history-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: $spacing-md;
   padding: 0 4rpx 16rpx;
 }
 
 .history-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-xl;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.35;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 40rpx;
+  font-weight: 400;
+  letter-spacing: -0.5rpx;
+  line-height: 1.3;
 }
 
 .ledger {
   overflow: hidden;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-sm;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .day + .day {
-  border-top: 1rpx solid $color-border-hairline;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .day-head {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
-  min-height: $component-input-height;
-  padding: 4rpx $spacing-md 4rpx 32rpx;
+  gap: 14rpx;
+  min-height: 88rpx;
+  padding: 8rpx 32rpx;
 }
 
 .day-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-lg;
-  font-weight: $typography-font-weight-semibold;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 32rpx;
+  font-weight: 400;
   line-height: 1.35;
 }
 
 .day-week {
   padding: 4rpx 14rpx;
-  border-radius: $border-radius-full;
-  background: $color-bg-page;
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+  border-radius: 999rpx;
+  background: $dna-card-soft;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
   line-height: 1.5;
 }
 
 .rec-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  column-gap: $spacing-lg;
+  gap: 20rpx;
   min-height: 116rpx;
-  padding: 18rpx 44rpx 18rpx 32rpx;
-  border-top: 1rpx solid $color-border-hairline;
+  padding: 18rpx 32rpx;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .rec-type {
   display: inline-flex;
   align-items: center;
-  gap: $spacing-xs;
-  // 与首页动态分类标签同高同圆角，避免历史行里出现另一套胶囊尺寸
-  min-height: 36rpx;
-  padding: 2rpx $spacing-sm;
-  border-radius: $border-radius-full;
-  // 送入/接走是事件方向，不是状态；统一暖橙单色，用图标区分
-  background: $color-brand-primary-bg;
-  color: $color-brand-primary-dark;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1;
+  flex: none;
+  gap: 6rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  background: $dna-sage-soft;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.rec-type--out {
+  background: $dna-marigold-soft;
 }
 
 .rec-type-icon {
   font-family: remixicon;
-  font-size: $typography-font-size-xs;
+  font-size: 22rpx;
   line-height: 1;
 }
 
 .rec-main {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2rpx;
   min-width: 0;
@@ -756,60 +789,55 @@ onPullDownRefresh(loadData)
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: $spacing-sm;
+  gap: 12rpx;
   min-width: 0;
 }
 
 .rec-name {
-  color: $color-text-primary;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 28rpx;
+  font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
 .rec-name.is-missing {
-  color: $color-semantic-warning;
-  font-weight: $typography-font-weight-semibold;
+  color: $dna-terracotta;
+  font-weight: 600;
 }
 
 .rec-rel {
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
   line-height: 1.5;
 }
 
 .abnormal-tag {
   flex: none;
   padding: 2rpx 12rpx;
-  border-radius: $border-radius-full;
-  background: $color-semantic-warning-bg;
-  color: $color-semantic-warning;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-semibold;
+  border-radius: 999rpx;
+  background: $dna-terracotta-soft;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 500;
   line-height: 1.5;
 }
 
 .rec-end {
   display: flex;
   align-items: center;
-  gap: 6rpx;
   flex: none;
 }
 
 .rec-time {
-  color: $color-text-body;
-  font-size: $typography-font-size-base;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-ink-mid;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  font-weight: 500;
   line-height: 1.35;
-}
-
-.rec-chev {
-  color: $color-text-muted;
-  font-family: remixicon;
-  font-size: $typography-font-size-xl;
-  line-height: 1;
 }
 
 // ---- 空态 / 错误态 ------------------------------------------
@@ -822,95 +850,67 @@ onPullDownRefresh(loadData)
   text-align: center;
 }
 
-.empty-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 192rpx;
-  height: 192rpx;
-  margin-bottom: 36rpx;
-  border-radius: $border-radius-full;
-  background: $gradient-brand-soft;
-  color: $color-brand-primary-dark;
-  box-shadow: $shadow-sm;
-}
-
-.empty-glyph {
-  font-family: remixicon;
-  font-size: 116rpx;
-  line-height: 1;
-}
-
-.empty-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-2xl;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.35;
-}
-
-.empty-desc {
-  max-width: 520rpx;
-  margin-top: $spacing-md;
-  color: $color-text-muted;
-  font-size: $typography-font-size-base;
-  line-height: 1.7;
-}
-
-.empty-cta {
-  width: auto;
-  min-width: 400rpx;
-  margin-top: 44rpx;
-  padding: 0 56rpx;
-}
-
+.empty-art,
 .error-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 104rpx;
-  height: 104rpx;
-  margin-bottom: 28rpx;
-  border-radius: $border-radius-full;
-  background: $color-semantic-danger-bg;
-  color: $color-semantic-danger;
+  width: 176rpx;
+  height: 176rpx;
+  margin-bottom: 36rpx;
+  border-radius: 999rpx;
+  background: $dna-sage-soft;
+  color: $dna-sage-deep;
 }
 
+.error-icon {
+  background: $dna-terracotta-soft;
+  color: $dna-pine;
+}
+
+.empty-glyph,
 .error-glyph {
   font-family: remixicon;
-  font-size: 52rpx;
+  font-size: 64rpx;
   line-height: 1;
 }
 
+.empty-title,
 .error-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-xl;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.35;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 40rpx;
+  font-weight: 400;
+  line-height: 1.3;
 }
 
+.empty-desc,
 .error-desc {
-  margin-top: $spacing-sm;
-  color: $color-text-muted;
-  font-size: $typography-font-size-base;
-  line-height: 1.6;
+  margin-top: 10rpx;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.empty-cta {
+  width: auto;
+  min-width: 360rpx;
+  margin-top: 32rpx;
+  padding: 0 40rpx;
 }
 
 .retry-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 320rpx;
-  height: $component-input-height;
-  margin-top: 40rpx;
-  padding: 0 48rpx;
-  border: 1rpx solid $color-border-hairline;
-  border-radius: $border-radius-full;
-  background: $color-bg-card;
-  color: $color-text-primary;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
-  box-shadow: $shadow-sm;
+  height: 88rpx;
+  margin-top: 32rpx;
+  padding: 0 56rpx;
+  border: none;
+  border-radius: 999rpx;
+  background: $dna-pine;
+  color: $dna-bone;
+  font-family: $dna-sans;
+  font-size: 28rpx;
+  line-height: 88rpx;
 }
 
 .retry-btn::after {
@@ -918,165 +918,140 @@ onPullDownRefresh(loadData)
 }
 
 .retry-btn[disabled] {
-  opacity: 0.55;
-  box-shadow: none;
+  opacity: 0.5;
 }
 
 // ---- 骨架 ----------------------------------------------------
+.loading-state {
+  padding-top: 8rpx;
+}
+
+.sk {
+  border-radius: 999rpx;
+  background: rgba(23, 50, 32, 0.07);
+}
+
 .sk-pass {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  padding: $spacing-xl;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-sm;
+  padding: 32rpx;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .sk-top {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: $spacing-md;
-}
-
-.sk {
-  display: block;
-  border-radius: $border-radius-full;
-  background: $color-border-subtle;
-  animation: pickup-sk 1.5s $animation-easing-default infinite;
+  margin-bottom: 24rpx;
 }
 
 .sk-chip {
-  width: 168rpx;
-  height: 24rpx;
+  width: 120rpx;
+  height: 20rpx;
 }
 
 .sk-chip--sm {
-  width: 128rpx;
+  width: 80rpx;
 }
 
 .sk-title {
-  width: 264rpx;
-  height: 44rpx;
-  margin-top: 2rpx;
+  width: 300rpx;
+  height: 56rpx;
+  margin-bottom: 28rpx;
 }
 
 .sk-status {
   display: flex;
   align-items: center;
-  gap: $spacing-lg;
+  gap: 24rpx;
+  margin-bottom: 32rpx;
 }
 
 .sk-seal {
-  flex: none;
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: $border-radius-full;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 999rpx;
 }
 
 .sk-lines {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: $spacing-sm;
+  gap: 12rpx;
 }
 
 .sk-line {
   width: 100%;
-  height: 24rpx;
+  height: 20rpx;
 }
 
 .sk-line--lg {
   width: 60%;
-  height: 40rpx;
+  height: 28rpx;
 }
 
 .sk-kicker {
-  width: 96rpx;
-  height: 20rpx;
+  width: 40%;
+  height: 16rpx;
+  margin-bottom: 16rpx;
 }
 
 .sk-track {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-}
-
-.sk-track .sk-line {
-  width: 62%;
-}
-
-.sk-line--track {
-  height: 24rpx;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
 }
 
 .sk-dot {
-  flex: none;
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: $border-radius-full;
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 999rpx;
+}
+
+.sk-line--track {
+  width: 120rpx;
+  height: 4rpx;
+  border-radius: 0;
 }
 
 .sk-cta {
   width: 100%;
-  height: $component-input-height;
-  margin-top: 4rpx;
-  border-radius: $border-radius-full;
+  height: 96rpx;
 }
 
 .sk-list {
-  margin-top: $spacing-lg;
-  overflow: hidden;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-sm;
+  margin-top: 40rpx;
+  padding: 0 32rpx;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .sk-item {
-  display: grid;
-  grid-template-columns: 88rpx minmax(0, 1fr) 88rpx;
+  display: flex;
   align-items: center;
-  gap: $spacing-lg;
-  min-height: 116rpx;
-  padding: 20rpx 32rpx;
+  gap: 20rpx;
+  min-height: 112rpx;
 }
 
 .sk-item + .sk-item {
-  border-top: 1rpx solid $color-border-subtle;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .sk-pill {
   width: 88rpx;
-  height: 44rpx;
+  height: 34rpx;
 }
 
 .sk-line--name {
-  width: 72%;
-  height: 24rpx;
+  width: 40%;
+  height: 20rpx;
 }
 
 .sk-time {
-  width: 80rpx;
-  height: 24rpx;
-  justify-self: end;
-}
-
-@keyframes pickup-sk {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.95;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sk {
-    animation: none;
-    opacity: 0.7;
-  }
+  width: 60rpx;
+  height: 20rpx;
+  margin-left: auto;
 }
 </style>
+

@@ -3,27 +3,26 @@
  * 图标字体由 app.wxss 里的 @font-face 全局注册（App.vue 引 remixicon.css），
  * 组件 options.styleIsolation = "apply-shared" 即可用。
  * 不要在本文件里引入 remixicon.css：WXSS 不支持导入 .css，编译期静默失败会让所有 tab 页白屏。
- * 下面的大写常量与 shared-design-tokens/build/scss/tokens-parent.scss 一一对应：
- *   #FFFAF0 = $color-bg-card（家长端暖白）
- *   #64748B = $color-text-muted
- *   #C2410C = $color-brand-primary-dark（家长端，白字对比度 5.2:1）
- * 24rpx = $spacing-lg，48rpx = 图标字号，24rpx = $typography-font-size-xs（家长端 12px）。
- * 改动这些数值时请同步 tokens，保持底栏与设计一致。
+ *
+ * DNA 迁移验证：悬浮白色胶囊底栏。数值对应 docs/design-dna/2026-11-11-kinderly：
+ *   #FFFFFF 卡片面 / #173220 深松绿 / #728173 次级文字 / sage 激活底。
+ * 高度约 96rpx，加上下留白仍小于原 126rpx，页面 bottom-space 不需要改。
  */
 .ctb {
   position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: 24rpx;
+  bottom: calc(8rpx + env(safe-area-inset-bottom));
+  left: 24rpx;
   z-index: 999;
   display: flex;
   justify-content: space-around;
   align-items: center;
   box-sizing: border-box;
-  /* 内容 78rpx（图标 48 + gap 4 + 文字 26）+ 上下各 24rpx ≈ 126rpx，不含安全区 */
-  padding: 24rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
-  background: #FFFAF0;
-  border-top: 1rpx solid rgba(106, 77, 42, 0.12);
+  padding: 12rpx 8rpx;
+  border: 1rpx solid rgba(23, 50, 32, 0.1);
+  border-radius: 999rpx;
+  background: #FFFFFF;
+  box-shadow: 0 20rpx 48rpx -24rpx rgba(23, 50, 32, 0.35);
 }
 
 .ctb__item {
@@ -33,26 +32,32 @@
   align-items: center;
   justify-content: center;
   gap: 4rpx;
+  padding: 2rpx 0;
+  border-radius: 999rpx;
+}
+
+.ctb__item.is-active {
+  background: rgba(141, 163, 134, 0.22);
 }
 
 .ctb__icon {
   font-family: remixicon;
-  font-size: 48rpx;
+  font-size: 44rpx;
   line-height: 1;
-  color: #64748B;
+  color: #728173;
 }
 
 .ctb__label {
   font-size: 24rpx;
   line-height: 1.2;
-  color: #64748B;
+  color: #728173;
 }
 
 .ctb__item.is-active .ctb__icon {
-  color: #C2410C;
+  color: #173220;
 }
 
 .ctb__item.is-active .ctb__label {
-  color: #C2410C;
+  color: #173220;
   font-weight: 500;
 }
