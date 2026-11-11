@@ -145,7 +145,8 @@ function audit(file) {
         issues.push(`填充色 ${fill} 不在白名单 [${rule.fills.join(', ')}]`);
       }
     }
-    if (fills.size > 3) issues.push(`填充色 ${fills.size} 个，超过 3 个`);
+    const colorFills = [...fills].filter((f) => f !== 'none');
+    if (colorFills.length > 3) issues.push(`填充色 ${colorFills.length} 个，超过 3 个`);
   }
 
   for (const el of elements) {
