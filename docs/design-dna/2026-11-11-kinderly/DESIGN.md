@@ -178,6 +178,16 @@ Milo  6 years old · ADHD
 - **更多推荐**：复用 162×266 卡片，收藏按钮 32×32 圆形、`#ECE6D7` 底。
 - 页面没有卡片容器，所有板块直接排在暖纸底上——长文型页面不需要一层层白卡。
 
+### Picks 列表页（390 实测）
+
+- 顶部 `Saved / Today`：Saved 是 32px 胶囊、`#F6F3EB` 底；Today 是 10.5px/500 的次级文字。
+- H1 30px 衬线；导语 14px `#3D5141`。
+- **Browse 分类是马赛克网格**：2 列、gap 8，色块按钮圆角 12、内边距 16；高度不齐——前两块 126px，后两块 143px，最后「Play & social connection」整行 331×64。
+  - 配色：Sensory `#CFD9C5`、Homework `#EFD485`、Sleep **`#EBEFF9`（淡蓝，第二个冷色）**、Routines `#E5BCA1`、Play `#E2D9C5`。
+- 分区标题 `Sensory / Homework / Sleep` 右侧有 `See all`（12px/600）。
+- **商品卡**：白底、**12px 圆角**、162×226、内边距 8；只有标题文字 14px/600，其余全是插画。
+- 收藏按钮 32×32 圆形。
+
 ### Picks 商品详情（390 实测）
 
 - **路由带上下文**：`/picks?item=p16&from=learn&back=%2Flearn%2Fbedtime-after-a-big-day`，返回目标由 `back` 参数决定（按钮）。
