@@ -91,6 +91,7 @@
 - **Today 入口** ✅ 周切换（未来周禁用 .35）、星期切换、`i` 行内 tooltip、天气三选一（未点击，会写数据）、check-in 的 Send 与「That's all for today」、底栏 5 项
 - **Today 卡片双入口** ✅ Read / Picks / Recipes 每张卡都是「主区域 + 底部文字链」两个独立链接，目标相同；底部链高仅 18px，低于 44px 触控建议
 - **B2 空态（部分）** ✅ 按天无打卡：「Nothing was shared about Monday…」，白卡 20px/18px 内边距
+- **H1/H5（部分）** ✅ Recipes：Saved/List 胶囊 tab、48px 搜索胶囊、28px 筛选胶囊（选中态 sage 20% + 1px 描边）、2 列卡片网格
 
 仍未完成：
 
