@@ -178,6 +178,18 @@ Milo  6 years old · ADHD
 - **更多推荐**：复用 162×266 卡片，收藏按钮 32×32 圆形、`#ECE6D7` 底。
 - 页面没有卡片容器，所有板块直接排在暖纸底上——长文型页面不需要一层层白卡。
 
+### Learn 列表页（390 实测）
+
+- **H1 40px 衬线**——比 Detail/Recipes 的 30px 更大，应用内 h1 实际在 30–40 之间按页面变化。
+- 返回「Today」36px；导语 14px/21px。
+- **Browse / Saved**：两个等宽胶囊，36px 高、`#FCFAF4` 底、13px/500。
+- **筛选**：年龄 `All ages / 2 to 4 / 5 to 7 / 8 to 10`（选中 `#CFD9C5` 底、32px）；分类 `All / Sleep / Routines / Transitions / Feelings / School / Play`（`#FCFAF4` 底、36px）。
+- **Featured 卡**：`#5C7359` 底、26px 圆角、335×300；标签 12px marigold，标题 28px 骨白，元信息 12px 骨白。
+- **Tip of the day**：松绿底、22px 圆角、内边距 18/20；标签 12px marigold，引语 24px 骨白，说明 13px `#C7D0C0`。
+- **Quick tips**：横向 carousel，卡片 248×226、`#FCFAF4` 底、22px 圆角、1px 发丝线、内边距 14/12/14/18；左右箭头 32×32 圆形描边。
+- **More to read**：行式条目，109px 高、`padding 12px 0`，标题 15/500、元信息 12/400。
+- 全文 2949px，无统一卡片容器。
+
 ### Learn 文章页（390 实测）
 
 - **返回**是 `<a href="/forecast">`「Today」；**Save** 是 76×40 半透明松绿胶囊（`rgba(23,50,32,.55)`），浮在页头。
