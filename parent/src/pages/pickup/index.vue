@@ -262,7 +262,9 @@ onPullDownRefresh(loadData)
 
     <!-- ===== 空：今天没记录且没有任何历史 ===== -->
     <view v-else-if="showEmpty" class="empty-state">
-      <view class="empty-art"><text class="empty-glyph">{{ ICON.qr }}</text></view>
+      <view class="empty-art">
+        <image class="empty-illustration" src="/static/illustrations/pickup-empty.svg" mode="aspectFit" />
+      </view>
       <text class="empty-title">今天还没有接送记录</text>
       <text class="empty-desc">老师核验接送码后，记录会出现在这里</text>
       <button class="qr-cta empty-cta" @click="goQRCode">
@@ -861,6 +863,15 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   border-radius: 999rpx;
   background: $dna-sage-soft;
   color: $dna-sage-deep;
+}
+
+.empty-art {
+  background: $dna-card-soft;
+}
+
+.empty-illustration {
+  width: 148rpx;
+  height: 148rpx;
 }
 
 .error-icon {

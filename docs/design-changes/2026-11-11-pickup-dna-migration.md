@@ -39,6 +39,7 @@ DNA 验证集只有 HTML 原型。原型里用了内联 SVG、语义标签、Goo
 - **底栏安全区**：计算值 `bottom: 38px` = 8rpx(4px) + `env(safe-area-inset-bottom)` 34px，未压 home indicator。
 - **滚动留白**：滚到底时 `ledger` 底部 647px < 底栏顶部 661px，不遮挡。
 - **共享底栏**：首页切换后仍正常，激活项为「首页」，未破坏其它 tab。
+- **空态插画**：新增 `static/illustrations/pickup-empty.svg`（120 网格、pine 3px 描边、marigold 夹子、sage 未填），WXML 用 `<image>` 承载；实测资源加载 603B / 1184ms，尺寸 148rpx。
 - **未验证**：已接走状态（需要今天一条 type=2 记录）、Android 真机字形。
 
 ## 必须提前决策的问题
