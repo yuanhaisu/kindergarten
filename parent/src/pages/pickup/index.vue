@@ -250,8 +250,8 @@ onPullDownRefresh(loadData)
 
     <!-- ===== 错误：先于空态判定，避免把加载失败误读成「没有记录」 ===== -->
     <view v-else-if="showError" class="error-state">
-      <view class="error-icon">
-        <image class="error-glyph" src="/static/icons/dna/pine/icon-error.svg" mode="aspectFit" />
+      <view class="error-art">
+        <image class="error-illustration" src="/static/illustrations/pickup-error.svg" mode="aspectFit" />
       </view>
       <text class="error-title">接送记录加载失败</text>
       <text class="error-desc">网络好像不太稳定</text>
@@ -301,7 +301,7 @@ onPullDownRefresh(loadData)
         <view v-if="dayState !== 'pre'" class="pass-rail" aria-label="今日接送进度">
           <view class="rail-step rail-step--in is-done">
             <view class="rail-dot">
-              <image class="rail-glyph" src="/static/icons/dna/pine/icon-check.svg" mode="aspectFit" />
+              <image class="rail-glyph" src="/static/icons/dna/bone/icon-check.svg" mode="aspectFit" />
             </view>
             <view class="rail-copy">
               <text class="rail-label">送入</text>
@@ -315,7 +315,7 @@ onPullDownRefresh(loadData)
             <view class="rail-dot">
               <image
                 class="rail-glyph"
-                :src="iconSrc(dayState === 'picked' ? 'check' : 'clock', dayState === 'picked' ? 'pine' : 'muted')"
+                :src="iconSrc(dayState === 'picked' ? 'check' : 'clock', dayState === 'picked' ? 'bone' : 'muted')"
                 mode="aspectFit"
               />
             </view>
@@ -564,9 +564,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 30rpx;
-  height: 30rpx;
-  margin-top: 2rpx;
+  width: 44rpx;
+  height: 44rpx;
+  margin-top: 0;
   border-radius: 999rpx;
   border: 2rpx solid $dna-hair-strong;
   background: $dna-card;
@@ -575,18 +575,18 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .rail-step.is-done .rail-dot {
   border-color: $dna-sage-deep;
-  background: $dna-sage-soft;
+  background: $dna-sage-deep;
 }
 
 .rail-glyph {
-  width: 18rpx;
-  height: 18rpx;
+  width: 28rpx;
+  height: 28rpx;
 }
 
 .rail-line {
   flex: 0 0 48rpx;
   height: 0;
-  margin-top: 15rpx;
+  margin-top: 21rpx;
   border-top: 2rpx dashed $dna-hair-strong;
 }
 
@@ -778,8 +778,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .rec-type-icon {
-  width: 22rpx;
-  height: 22rpx;
+  width: 28rpx;
+  height: 28rpx;
 }
 
 .rec-main {
@@ -856,7 +856,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .empty-art,
-.error-icon {
+.error-art {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -864,28 +864,13 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   height: 176rpx;
   margin-bottom: 36rpx;
   border-radius: 999rpx;
-  background: $dna-sage-soft;
-  color: $dna-sage-deep;
-}
-
-.empty-art {
   background: $dna-card-soft;
 }
 
-.empty-illustration {
+.empty-illustration,
+.error-illustration {
   width: 148rpx;
   height: 148rpx;
-}
-
-.error-icon {
-  background: $dna-terracotta-soft;
-  color: $dna-pine;
-}
-
-.empty-glyph,
-.error-glyph {
-  width: 64rpx;
-  height: 64rpx;
 }
 
 .empty-title,

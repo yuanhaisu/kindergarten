@@ -42,6 +42,10 @@ DNA 验证集只有 HTML 原型。原型里用了内联 SVG、语义标签、Goo
 - **空态（真实数据）**：清空 kg4 的接送记录后重载，接口返回 0 条，页面渲染「今天还没有接送记录」+ 插画，无错误态；插画资源请求 119B，渲染尺寸 148rpx。
 - **空态插画**：新增 `static/illustrations/pickup-empty.svg`（120 网格、pine 3px 描边、marigold 夹子、sage 未填），WXML 用 `<image>` 承载。
 - **图标替换**：页面内 8 处 remixicon 字形全部换成 DNA 图标 `<image>`；按色调导出 pine / muted / bone 三套（bone 仅用于 pine 实底）。实测加载 muted/clock、pine/sprout、pine/check、bone/qr 四个变体，渲染尺寸 20 / 9 / 17px，正确的 variant 与状态对应。
+- **底栏图标**：`custom-tab-bar` 的 4 个字体码位同步换成 DNA 图标（未激活 muted / 激活 pine），实测 22px，不再出现同屏两套图标语言。
+- **错误态**：改用 `pickup-error.svg`；停掉后端触发真实错误态，插画自动取到 src 并加载，渲染 74px。
+- **进度轨尺寸**：圆点放大到 44rpx，图标 28rpx（14px），完成态改回 sage-deep 底 + bone 勾，与等待态的差异恢复。
+- **audit 增强**：新增 bbox 检查（图标 2–22 安全区、插画 4–116 与主体 40–90/30–90），13 个素材全部 PASS。
 - **数据恢复**：验证后已用 `cmd/seedpickup` 恢复 30 条当日演示记录；此前库中另有约 170 条历史演示数据被清空且未备份（dev 库，非生产）。
 - **已接走**：补一条当日 type=2 记录后重载，状态「已接走」，两步进度轨均完成（送入 07:55 / 接走 20:43 · 妈妈），二维码 CTA 隐藏，出现「今日接送已完成 · 20:43 妈妈 接走」；验证后已删除该记录，页面回到「在园中」。
 - **未验证**：Android 真机字形。

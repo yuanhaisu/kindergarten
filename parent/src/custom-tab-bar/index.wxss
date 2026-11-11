@@ -41,10 +41,8 @@
 }
 
 .ctb__icon {
-  font-family: remixicon;
-  font-size: 44rpx;
-  line-height: 1;
-  color: #728173;
+  width: 44rpx;
+  height: 44rpx;
 }
 
 .ctb__label {
@@ -54,7 +52,7 @@
 }
 
 .ctb__item.is-active .ctb__icon {
-  color: #173220;
+  /* 颜色由 pine 变体文件本身决定，不再依赖字体色 */
 }
 
 .ctb__item.is-active .ctb__label {

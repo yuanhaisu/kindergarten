@@ -75,9 +75,11 @@ function collect(file) {
       continue;
     }
     if (closing) continue;
-    const merged = { ...stack[stack.length - 1], ...parseAttrs(rawAttrs) };
+    const own = parseAttrs(rawAttrs);
+    const merged = { ...stack[stack.length - 1], ...own };
     elements.push({
       tag,
+      attrs: own,
       stroke: merged.stroke || 'none',
       strokeWidth: merged['stroke-width'] || null,
       fill: merged.fill === undefined ? '#000000' : merged.fill,
@@ -86,6 +88,136 @@ function collect(file) {
     });
   }
   return { root, elements };
+}
+
+// Approximate geometry bbox. Path parsing covers M/L/H/V/C/S/Q/T/A with
+// absolute and relative commands; control points are included, so curves may
+// overestimate by a pixel or two — acceptable for a range check.
+function pathBBox(d) {
+  const tokens = String(d).match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
+  let i = 0;
+  let cmd = '';
+  let cx = 0;
+  let cy = 0;
+  let sx = 0;
+  let sy = 0;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const add = (x, y) => {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  };
+  const num = () => Number(tokens[i++]);
+  const isCmd = (t) => /^[a-zA-Z]$/.test(t);
+  while (i < tokens.length) {
+    if (isCmd(tokens[i])) cmd = tokens[i++];
+    if (!cmd) break;
+    const rel = cmd === cmd.toLowerCase();
+    const C = cmd.toUpperCase();
+    if (C === 'M' || C === 'L') {
+      const x = num() + (rel ? cx : 0);
+      const y = num() + (rel ? cy : 0);
+      cx = x;
+      cy = y;
+      if (C === 'M') {
+        sx = x;
+        sy = y;
+        cmd = rel ? 'l' : 'L';
+      }
+      add(x, y);
+    } else if (C === 'H') {
+      cx = num() + (rel ? cx : 0);
+      add(cx, cy);
+    } else if (C === 'V') {
+      cy = num() + (rel ? cy : 0);
+      add(cx, cy);
+    } else if (C === 'C' || C === 'S' || C === 'Q') {
+      const pairs = C === 'C' ? 3 : 2;
+      const points = [];
+      for (let p = 0; p < pairs; p += 1) {
+        points.push([num() + (rel ? cx : 0), num() + (rel ? cy : 0)]);
+      }
+      for (const [x, y] of points) add(x, y);
+      [cx, cy] = points[points.length - 1];
+    } else if (C === 'T') {
+      cx = num() + (rel ? cx : 0);
+      cy = num() + (rel ? cy : 0);
+      add(cx, cy);
+    } else if (C === 'A') {
+      num();
+      num();
+      num();
+      num();
+      num();
+      const x = num() + (rel ? cx : 0);
+      const y = num() + (rel ? cy : 0);
+      add(cx, cy);
+      add(x, y);
+      cx = x;
+      cy = y;
+    } else if (C === 'Z') {
+      cx = sx;
+      cy = sy;
+    } else if (i < tokens.length && !isCmd(tokens[i])) {
+      i += 1;
+    }
+  }
+  if (minX === Infinity) return null;
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+function geometryBBox(element) {
+  const attrs = element.attrs || {};
+  if (element.tag === 'path') return pathBBox(attrs.d);
+  if (element.tag === 'rect') {
+    const x = Number(attrs.x || 0);
+    const y = Number(attrs.y || 0);
+    return { x, y, w: Number(attrs.width || 0), h: Number(attrs.height || 0) };
+  }
+  if (element.tag === 'circle') {
+    const cx = Number(attrs.cx || 0);
+    const cy = Number(attrs.cy || 0);
+    const r = Number(attrs.r || 0);
+    return { x: cx - r, y: cy - r, w: r * 2, h: r * 2 };
+  }
+  if (element.tag === 'line') {
+    const x1 = Number(attrs.x1 || 0);
+    const y1 = Number(attrs.y1 || 0);
+    const x2 = Number(attrs.x2 || 0);
+    const y2 = Number(attrs.y2 || 0);
+    return { x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1) };
+  }
+  if (element.tag === 'polyline' || element.tag === 'polygon') {
+    const nums = (attrs.points || '').match(/-?\d*\.?\d+/g)?.map(Number) || [];
+    const xs = [];
+    const ys = [];
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      xs.push(nums[i]);
+      ys.push(nums[i + 1]);
+    }
+    if (xs.length === 0) return null;
+    return {
+      x: Math.min(...xs),
+      y: Math.min(...ys),
+      w: Math.max(...xs) - Math.min(...xs),
+      h: Math.max(...ys) - Math.min(...ys),
+    };
+  }
+  return null;
+}
+
+function unionBBox(boxes) {
+  const valid = boxes.filter(Boolean);
+  if (valid.length === 0) return null;
+  const x = Math.min(...valid.map((b) => b.x));
+  const y = Math.min(...valid.map((b) => b.y));
+  const maxX = Math.max(...valid.map((b) => b.x + b.w));
+  const maxY = Math.max(...valid.map((b) => b.y + b.h));
+  return { x, y, w: maxX - x, h: maxY - y };
 }
 
 function audit(file) {
@@ -118,8 +250,30 @@ function audit(file) {
     fills.add(fill);
   }
 
+  const bbox = unionBBox(elements.map(geometryBBox));
+
   if (elements.length < rule.elements.min || elements.length > rule.elements.max) {
     issues.push(`元素数 ${elements.length} 超出 ${rule.elements.min}–${rule.elements.max}`);
+  }
+
+  if (!bbox) {
+    issues.push('无法计算几何范围（bbox）');
+  } else if (type === 'icon') {
+    if (bbox.x < 1.5 || bbox.y < 1.5 || bbox.x + bbox.w > 22.5 || bbox.y + bbox.h > 22.5) {
+      issues.push(
+        `内容 bbox ${bbox.x.toFixed(1)},${bbox.y.toFixed(1)} ${bbox.w.toFixed(1)}×${bbox.h.toFixed(1)} 超出 2–22 安全区`
+      );
+    }
+    if (bbox.w < 8 || bbox.h < 8) {
+      issues.push(`内容过小：${bbox.w.toFixed(1)}×${bbox.h.toFixed(1)}，至少 8×8`);
+    }
+  } else {
+    if (bbox.x < 4 || bbox.y < 4 || bbox.x + bbox.w > 116 || bbox.y + bbox.h > 116) {
+      issues.push(`插画 bbox 超出 4–116 网格留白`);
+    }
+    if (bbox.w < 40 || bbox.w > 90 || bbox.h < 30 || bbox.h > 90) {
+      issues.push(`插画主体 ${bbox.w.toFixed(1)}×${bbox.h.toFixed(1)} 超出实测区间（宽 40–90 / 高 30–90）`);
+    }
   }
 
   if (type === 'icon') {
@@ -168,6 +322,14 @@ function audit(file) {
       elements: elements.length,
       strokeWidths: [...new Set(strokeWidths)].sort((a, b) => a - b),
       fills: [...fills],
+      bbox: bbox
+        ? {
+            x: Number(bbox.x.toFixed(1)),
+            y: Number(bbox.y.toFixed(1)),
+            w: Number(bbox.w.toFixed(1)),
+            h: Number(bbox.h.toFixed(1)),
+          }
+        : null,
     },
     issues,
     warnings,
@@ -198,7 +360,7 @@ if (json) {
     console.log(`${mark}  ${path.relative(process.cwd(), r.file)}  [${r.label || r.type}]`);
     if (r.stats) {
       console.log(
-        `      viewBox=${r.stats.viewBox}  elements=${r.stats.elements}  stroke=${r.stats.strokeWidths.join('/')}  fills=${r.stats.fills.join(',')}`
+        `      viewBox=${r.stats.viewBox}  elements=${r.stats.elements}  stroke=${r.stats.strokeWidths.join('/')}  fills=${r.stats.fills.join(',')}  bbox=${r.stats.bbox ? `${r.stats.bbox.x},${r.stats.bbox.y} ${r.stats.bbox.w}×${r.stats.bbox.h}` : 'n/a'}`
       );
     }
     for (const issue of r.issues) console.log(`      ✗ ${issue}`);
