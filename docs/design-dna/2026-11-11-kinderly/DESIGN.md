@@ -163,7 +163,7 @@ Milo  6 years old · ADHD
 - **路由不变**：从 `/recipes` 进入集合后 URL 仍是 `/recipes`，集合是客户端状态，不是独立路由。
 - **返回**：`Recipes` 是按钮（无 href），客户端回退。
 - **页头**：H1「Lunchbox ideas」30px 衬线；说明 14px/21px，颜色 `#3D5141`。
-- **筛选**：`All / No-cook / Make ahead / Build your own`，28px 高、12px 字、**全部带 1px `rgba(23,50,32,.2)` 描边**；选中态再加 sage 20% 底 + 松绿描边。
+- **筛选**：每个集合有自己的词表——Lunchbox 是 `All / No-cook / Make ahead / Build your own`，After-school 是 `All / Crunchy / Cool / Sweet`；统一 28px 高、12px 字、**全部带 1px `rgba(23,50,32,.2)` 描边**，选中态再加 sage 20% 底 + 松绿描边。
 - **卡片**：与主列表相同——162×266、`#F2EDDE`、18px 圆角、8px 内边距；标题 14px/600；蛋白/纤维 12px/400 `#3D5141`；口感标签 12px/400 `#728173`（纯文字，不是胶囊）。
 - 一页 20 张（`20 RECIPES`）。
 
