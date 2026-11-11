@@ -127,6 +127,27 @@ Milo  6 years old · ADHD
 
 ## 补充：覆盖层、状态与主题（第二轮采集，2026-11-11）
 
+### Today 的可点击入口（实测）
+
+| 入口 | 行为 |
+|---|---|
+| 周切换 `‹ ›` | 切周；**未来周禁用**，按钮 `opacity .35` |
+| 星期 `M/T/W…` | 切换当天卡片，标题变为 `JUNYAN'S MONDAY CHECK-IN` |
+| 卡片 `i`（aria-label "What is a forecast?"） | 展开行内 tooltip，不是弹窗 |
+| Sunny / Cloudy / Stormy | 打卡输入（会写数据，未点击） |
+| Today's Read 卡 | `/learn/<slug>?from=today` |
+| Browse all reads | `/learn?from=today` |
+| Picks / Recipes 卡与文字链 | `/picks`、`/recipes` |
+| 底栏 5 项 | 5 个 tab |
+
+### 行内 tooltip
+
+`role="tooltip"`：松绿底 `#173220` + 骨白字，圆角 12px，内边距 `10px 12px`，字号 12.5px，最大宽 305px，绝对定位，阴影 `rgba(23,50,32,.4) 0 8px 24px -12px`。触发按钮 16×16、1px 描边圆形。
+
+### 空态（按天）
+
+某天没有打卡时，卡片显示「Nothing was shared about Monday. That's okay, every day doesn't need a note.」——**不施压**的文案基调。卡片：白底、20px 圆角、18px 内边距、发丝线；overline 10.5px、正文 14.5px。
+
 ### 弹窗体系
 
 - **底部抽屉**（Stories 的 `···`）：白色面板贴底，**上圆角 24px**，内边距 `14px 20px 24px`，顶部有拖拽把手；行高 84px、文字 16px/400，底部 Cancel 是 14.5px 胶囊；遮罩 `rgba(23,50,32,.55)`。
