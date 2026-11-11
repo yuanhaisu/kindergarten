@@ -107,6 +107,12 @@
 
 证据：`evidence/gaps/`（bottom-sheet、destructive-confirm、mobile-*、dark-attempt）
 
+## 已定决策
+
+- **字体**：Noto Serif SC 400（自托管子集 + `wx.loadFontFace`）
+- **品牌主色**：松绿 `#173220`；橙色 `#F97316` 降级，角色待定
+- 未定：中文标题字号/行高、拉丁字体是否保留 Instrument Serif、暗色模式
+
 ## 采集总览（2026-11-11 完成）
 
 已覆盖的页面/状态：
