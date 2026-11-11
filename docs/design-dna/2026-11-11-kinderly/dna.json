@@ -25,7 +25,7 @@
       "semantic": {
         "success": "#5C7359",
         "warning": "#A88324",
-        "error": "#A04D2A",
+        "error": "#A8323A",
         "info": "#3D5141"
       },
       "surface": {
@@ -69,7 +69,7 @@
         "body": "Geist, ui-sans-serif, system-ui, -apple-system, sans-serif",
         "mono": "Geist Mono, ui-monospace, monospace"
       },
-      "font_style_notes": "Display headings are a high-contrast, slightly condensed serif set at 400 weight — never bolded. In the logged-in app the serif is also used for reflective prose (18px/1.5), while all controls, labels and metadata use Geist at 13–16px with weights 400/500/600. App h1 runs 34–40px, not the 56–80px marketing scale. A third accent face, Gochi Hand, appears for hand-drawn labels in product illustrations. The serif/sans pairing is the primary identity carrier; do not substitute a geometric display sans."
+      "font_style_notes": "Display headings are a high-contrast, slightly condensed serif set at 400 weight — never bolded. In the logged-in app the serif is also used for reflective prose (18px/1.5), while all controls, labels and metadata use Geist at 13–16px with weights 400/500/600. App h1 runs 34–40px, not the 56–80px marketing scale. A third accent face, Gochi Hand, appears for hand-drawn labels in product illustrations. The serif/sans pairing is the primary identity carrier; do not substitute a geometric display sans. The reference UI ships in English and French only, so it provides no evidence for Chinese typography — the Chinese serif decision is ours, not the reference's. Mobile h1 measures 36px/37.8px/-0.4px."
     },
     "spacing": {
       "base_unit": "8px",
@@ -122,11 +122,11 @@
       "philosophy": "Calm, slow and breathing. Nothing bouncy, no spring physics, no attention-seeking loops; 36s linear marquees are the only continuous motion."
     },
     "components": {
-      "button_style": "App: pill (999px), 48px tall, 14.5px/500 Geist, padding 12px 20px; primary is pine fill with bone label, secondary is a sage-tinted pill or a text link with a chevron. Marketing: the same pill at 56px / 17px/600. Shadows only on the floating nav, never on buttons.",
+      "button_style": "App: pill (999px), 48px tall, 14.5px/500 Geist, padding 12px 20px; primary is pine fill with bone label, secondary is a sage-tinted pill or a text link with a chevron. Marketing: the same pill at 56px / 17px/600. Shadows only on the floating nav, never on buttons. Disabled state is 60% opacity on the same fill; the product does not render inline validation errors — the CTA simply stays disabled until required fields are valid.",
       "input_style": "52px tall, 14px radius, white fill, 1px rgba(23,50,32,.22) border, 16px pine text; focus adds a 3px rgba(23,50,32,.12) halo instead of changing the border colour. Search/filter fields are pill-shaped with a leading icon.",
       "card_style": "App cards are white (#FFFFFF) or bone-cool (#FCFAF4), 20px radius by default and 22–26px for feature cards, 1px hairline border, no shadow, 20–24px padding. A card may invert to pine or sage-deep for emphasis, keeping the same radius.",
       "navigation_pattern": "Floating white pill bottom nav, 5 items (Kin, Children, Today, Stories, Settings), pinned near the bottom with a soft shadow rgba(23,50,32,.35) 0 10px 30px -14px. Inactive items are ink-soft (#728173) icon + 16px label; the active item gets a sage pill background behind icon and label. A circular pine FAB with a terracotta glyph sits bottom-right above it. Screen headers are a left-aligned serif h1 plus an optional pill action on the right.",
-      "modal_style": "Not captured in the crawl (no dialog opened). Closest observed pattern is the floating white card with a large top radius — treat sheets as 24px top-radius white surfaces over a dimmed bone backdrop.",
+      "modal_style": "Two observed patterns, no centred dialog. (1) Bottom sheet: white panel anchored to the bottom, top corners 24px, padding 14px 20px 24px, drag handle, scrim rgba(23,50,32,.55); rows are 16px/400 with a 14.5px pill cancel button. (2) Destructive confirmation is a dedicated full-page route (/settings/delete) with a #A8323A primary pill and a transparent 'Keep' secondary — not a modal.",
       "list_style": "Settings and profile sections are bone-cool (#FCFAF4) cards at 20px radius containing hairline-separated rows; actionable rows are white at 16–20px radius with a chevron. Rows run ~56–64px with 14–16px Geist labels and 12–13px muted metadata. Schedule rows pair a 16px square checkbox (3px radius, sage fill, sage-deep border) with 16px text.",
       "component_notes": "Signature devices observed in the authenticated app: (1) mood is captured as a weather trio — Sunny / Cloudy / Stormy cards — instead of a numeric scale; (2) tags are inline text highlights (sage or marigold behind words), not pill chips; (3) chat bubbles use asymmetric tail radii (white 18px 18px 18px 5px for Kin, pine 10px 3px 10px 10px for the parent); (4) a three-segment dashed progress line communicates '3 check-ins to unlock' without a progress bar; (5) overline labels are 12px uppercase with 0.14em tracking; (6) illustration tiles are a distinct asset class — 120-grid, pine outline, palette fills — never recoloured into a single mono tint."
     }
