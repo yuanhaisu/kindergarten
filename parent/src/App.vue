@@ -1,8 +1,35 @@
 <script setup>
 import { onLaunch } from "@dcloudio/uni-app"
 import { ensureConsent, ensureLogin } from "@/utils/login"
+import serifFontBase64 from "@/assets/fonts/noto-serif-sc-subset.js"
+
+// DNA 字体：Noto Serif SC 子集（仅静态标题字），以 data URI 注入。
+// 小程序不允许读包内文件、loadFontFace 也不接受本地路径，只能内联 base64。
+function loadSerifFont() {
+  // #ifdef MP-WEIXIN
+  try {
+    wx.loadFontFace({
+      global: true,
+      family: "Noto Serif SC",
+      source: `url("data:font/woff2;base64,${serifFontBase64.trim()}")`,
+      success: () => {
+        const app = getApp()
+        if (app) app.globalData.serifFont = "loaded"
+      },
+      fail: (err) => {
+        const app = getApp()
+        if (app) app.globalData.serifFont = "failed"
+        console.warn("[font] Noto Serif SC load failed:", err?.errMsg || err)
+      }
+    })
+  } catch (e) {
+    console.warn("[font] read subset failed:", e?.message || e)
+  }
+  // #endif
+}
 
 onLaunch(() => {
+  loadSerifFont()
   ensureLogin()
     .then(() => ensureConsent())
     .catch(() => {

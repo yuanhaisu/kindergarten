@@ -410,7 +410,7 @@ $dna-terracotta-soft: #e5bca1;
 $dna-hair: rgba(23, 50, 32, 0.1);
 $dna-hair-strong: rgba(23, 50, 32, 0.22);
 // 小程序拿不到 Instrument Serif；中文回落宋体，Android 无宋体时退到无衬线。
-$dna-serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+$dna-serif: "Noto Serif SC", "Songti SC", "STSong", serif;
 $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 // ---- 页头 ----------------------------------------------------

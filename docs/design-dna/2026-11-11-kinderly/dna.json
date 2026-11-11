@@ -65,11 +65,11 @@
         "overline": { "size": "12px", "weight": 600, "line_height": 1.3, "tracking": "0.14em" }
       },
       "font_families": {
-        "heading": "Instrument Serif, Georgia, serif",
+        "heading": "Noto Serif SC (subset, 400), Songti SC, STSong, serif",
         "body": "Geist, ui-sans-serif, system-ui, -apple-system, sans-serif",
         "mono": "Geist Mono, ui-monospace, monospace"
       },
-      "font_style_notes": "Display headings are a high-contrast, slightly condensed serif set at 400 weight — never bolded. In the logged-in app the serif is also used for reflective prose (18px/1.5), while all controls, labels and metadata use Geist at 13–16px with weights 400/500/600. App h1 runs 30–40px depending on the surface (Recipes/Detail 30, Settings/Children 34–36, Learn 40), not the 56–80px marketing scale. A third accent face, Gochi Hand, appears for hand-drawn labels in product illustrations. The serif/sans pairing is the primary identity carrier; do not substitute a geometric display sans. The reference UI ships in English and French only, so it provides no evidence for Chinese typography — the Chinese serif decision is ours, not the reference's. Mobile h1 measures 36px/37.8px/-0.4px. Long-form Learn articles use Geist at 17px/300 for body and 17px/600 for section headings — serif is reserved for reflective summaries and display, not article body."
+      "font_style_notes": "Display headings are a high-contrast, slightly condensed serif set at 400 weight — never bolded. In the logged-in app the serif is also used for reflective prose (18px/1.5), while all controls, labels and metadata use Geist at 13–16px with weights 400/500/600. App h1 runs 30–40px depending on the surface (Recipes/Detail 30, Settings/Children 34–36, Learn 40), not the 56–80px marketing scale. A third accent face, Gochi Hand, appears for hand-drawn labels in product illustrations. The serif/sans pairing is the primary identity carrier; do not substitute a geometric display sans. The reference UI ships in English and French only, so it provides no evidence for Chinese typography — the Chinese serif decision is ours, not the reference's. Mobile h1 measures 36px/37.8px/-0.4px. Long-form Learn articles use Geist at 17px/300 for body and 17px/600 for section headings — serif is reserved for reflective summaries and display, not article body. Chinese serif decision (2026-11-11): Noto Serif SC 400, self-hosted as a subset and loaded with wx.loadFontFace; Songti/STSong remain as fallbacks."
     },
     "spacing": {
       "base_unit": "8px",

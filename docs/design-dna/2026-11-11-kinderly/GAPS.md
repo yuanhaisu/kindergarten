@@ -96,6 +96,7 @@
 - **集合页** ✅ Lunchbox ideas / After-school snacks：路由不变（客户端状态）、返回是按钮、筛选按集合定制且全部带 1px 描边、卡片与主列表同规格、每集合 20 张
 - **详情页** ✅ Oven chicken tenders：客户端状态、无卡片容器、H2 24/20 两级、步骤序号圆、主按钮白字、保存 48 圆形描边
 - **Picks 详情** ✅ 同一模板可带 `?item=&back=` 参数，也可纯客户端状态；元信息行动态（Brand 可选）
+- **字体决策** ✅ 选定 A（Noto Serif SC 400）：子集 183KB（1097 字）→ base64 249KB，`wx.loadFontFace` global 加载成功；webview `document.fonts` 确认已加载
 
 仍未完成：
 
