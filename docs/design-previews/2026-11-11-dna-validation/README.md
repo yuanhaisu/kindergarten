@@ -15,11 +15,13 @@ Kinderly / Kin 设计 DNA 在家园沟通场景下的可迁移性验证。**不�
 | 04 | 请假表单 | [`parent/04-leave-create/`](parent/04-leave-create/) |
 | 05 | 成长详情 | [`parent/05-growth-detail/`](parent/05-growth-detail/) |
 
-画廊：[`index.html`](index.html)
+画廊：[`index.html`](index.html)（用 `preview.png` 铺成，可直接双击打开）
 
 ## 怎么用
 
-直接双击 `index.html`，或单独打开任一 `parent/*/index.html`。页面按 390×844 的手机壳渲染，**桌面浏览器**下居中显示。
+直接双击 `index.html` 看五页缩略图，点任一页进入独立原型；也可以单独打开 `parent/*/index.html`。页面按 390×844 的手机壳渲染，**桌面浏览器**下居中显示。
+
+> 画廊不再用 iframe：`file://` 下 Chrome 会把同目录 iframe 视为跨源并渲染空白，改用静态截图更稳。
 
 ## 规则落点
 
