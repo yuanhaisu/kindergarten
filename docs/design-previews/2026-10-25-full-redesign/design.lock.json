@@ -117,13 +117,13 @@
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
-      "sha256": "be975a5f3f3863f8d92ef1f489e3db2cb0c113668bcf1afbcdc64b1f1fd76ec8",
-      "depsSha": "f0b7f1f9d2d4bcb61f96cb7baa54e9affb19a6914cbb53a344de44fe9a837781",
+      "sha256": "8c081d2a07fe65c9105020a35a52368646ba19b443fbdbe7afb1fdeff1081438",
+      "depsSha": "5754af1c7642cede8b19dd1a8717a46563ee4fb8837eac561ef016eaf0ce4938",
       "title": "接送记录",
       "tabbar": true,
-      "reviewedAt": "2026-11-10",
-      "codeCommit": "e8b7373",
-      "reason": "2026-11-10-pickup-polish 已实现 e8b7373；在园中状态已在开发者工具验证"
+      "reviewedAt": "2026-11-11",
+      "codeCommit": "503a63e",
+      "reason": "503a63e 中文排版方案 B：H1 30/1.35/0，接送页衬线标题统一行高与字距"
     },
     "parent/14-pickup-qrcode": {
       "source": "parent/src/pages/pickup/qrcode.vue",
