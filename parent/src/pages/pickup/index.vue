@@ -441,10 +441,10 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   margin-top: 8rpx;
   color: $dna-pine;
   font-family: $dna-serif;
-  font-size: 68rpx;
+  font-size: 60rpx;
   font-weight: 400;
-  letter-spacing: -1rpx;
-  line-height: 1.05;
+  letter-spacing: 0;
+  line-height: 1.35;
 }
 
 .head-cta {
@@ -504,8 +504,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-family: $dna-serif;
   font-size: 60rpx;
   font-weight: 400;
-  letter-spacing: -1rpx;
-  line-height: 1.1;
+  letter-spacing: 0;
+  line-height: 1.35;
 }
 
 .pass-sub {
@@ -708,8 +708,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-family: $dna-serif;
   font-size: 40rpx;
   font-weight: 400;
-  letter-spacing: -0.5rpx;
-  line-height: 1.3;
+  letter-spacing: 0;
+  line-height: 1.35;
 }
 
 .ledger {
@@ -879,7 +879,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-family: $dna-serif;
   font-size: 40rpx;
   font-weight: 400;
-  line-height: 1.3;
+  letter-spacing: 0;
+  line-height: 1.35;
 }
 
 .empty-desc,
