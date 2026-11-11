@@ -105,10 +105,10 @@
       "depth_cues": "Color value steps and hairlines first; shadows only for physically floating objects."
     },
     "iconography": {
-      "style": "Minimal inline SVG line icons plus occasional flat illustrative SVG (jar, sprout mark). Icons are secondary to type.",
-      "stroke_weight": "1.5–2px",
-      "size_scale": ["16px", "20px", "24px"],
-      "preferred_set": "Custom inline SVG; brand marks for Google/Apple auth; no icon font."
+      "style": "Two explicit tiers. (1) UI icons: 24×24 viewBox, currentColor, no fill, line only, 1.6–2 stroke. (2) Illustration tiles: 120×120 viewBox, hand-drawn flat shapes with a 3px pine outline (round caps and joins), rounded rects (rx 10), and solid palette fills (terracotta / sage / marigold). No gradients, no shadows, no multi-tone shading. The /picks page uses 12 such tiles at 128×128 inside soft circular or rounded-square backdrops.",
+      "stroke_weight": "1.6–2px on the 24 viewBox for UI icons; 3px on the 120 viewBox for illustrations",
+      "size_scale": ["14px", "18px", "22px", "128px illustration tile"],
+      "preferred_set": "Custom inline SVG only. UI icons inherit currentColor; illustrations keep pine outlines and palette fills. No third-party icon set, no icon font in the reference product."
     },
     "motion": {
       "easing": "cubic-bezier(0.16, 0.68, 0.22, 1)",
@@ -128,7 +128,7 @@
       "navigation_pattern": "Floating white pill bottom nav, 5 items (Kin, Children, Today, Stories, Settings), pinned near the bottom with a soft shadow rgba(23,50,32,.35) 0 10px 30px -14px. Inactive items are ink-soft (#728173) icon + 16px label; the active item gets a sage pill background behind icon and label. A circular pine FAB with a terracotta glyph sits bottom-right above it. Screen headers are a left-aligned serif h1 plus an optional pill action on the right.",
       "modal_style": "Not captured in the crawl (no dialog opened). Closest observed pattern is the floating white card with a large top radius — treat sheets as 24px top-radius white surfaces over a dimmed bone backdrop.",
       "list_style": "Settings and profile sections are bone-cool (#FCFAF4) cards at 20px radius containing hairline-separated rows; actionable rows are white at 16–20px radius with a chevron. Rows run ~56–64px with 14–16px Geist labels and 12–13px muted metadata. Schedule rows pair a 16px square checkbox (3px radius, sage fill, sage-deep border) with 16px text.",
-      "component_notes": "Signature devices observed in the authenticated app: (1) mood is captured as a weather trio — Sunny / Cloudy / Stormy cards — instead of a numeric scale; (2) tags are inline text highlights (sage or marigold behind words), not pill chips; (3) chat bubbles use asymmetric tail radii (white 18px 18px 18px 5px for Kin, pine 10px 3px 10px 10px for the parent); (4) a three-segment dashed progress line communicates '3 check-ins to unlock' without a progress bar; (5) overline labels are 12px uppercase with 0.14em tracking."
+      "component_notes": "Signature devices observed in the authenticated app: (1) mood is captured as a weather trio — Sunny / Cloudy / Stormy cards — instead of a numeric scale; (2) tags are inline text highlights (sage or marigold behind words), not pill chips; (3) chat bubbles use asymmetric tail radii (white 18px 18px 18px 5px for Kin, pine 10px 3px 10px 10px for the parent); (4) a three-segment dashed progress line communicates '3 check-ins to unlock' without a progress bar; (5) overline labels are 12px uppercase with 0.14em tracking; (6) illustration tiles are a distinct asset class — 120-grid, pine outline, palette fills — never recoloured into a single mono tint."
     }
   },
   "design_style": {
@@ -158,7 +158,7 @@
     },
     "imagery": {
       "photo_treatment": "Natural-light, candid child photography, warm and slightly desaturated; rounded rectangles (16–24px), no duotone or heavy filters.",
-      "illustration_style": "Hand-drawn flat SVG with muted earthy fills, visible line work, intentionally imperfect — jar, marbles, small marks.",
+      "illustration_style": "Hand-drawn flat SVG on a 120×120 grid: 3px pine outline (#173220), round line caps and joins, rounded rectangles (rx 10), solid fills from the earth palette (#C36540 terracotta, #8DA386 sage, #DDB14A marigold). No gradients, no shading, no clipart gloss. Rendered at 128×128 on a soft sage/marigold circular or rounded-square backdrop.",
       "graphic_elements": "Circular brand mark, inline text highlights, marble/jar metaphor, hairline rules.",
       "pattern_usage": "none",
       "image_shape": "Rounded rectangle 16–24px; avatar circular with a 2px sage-deep ring."
