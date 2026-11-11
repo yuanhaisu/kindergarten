@@ -188,6 +188,17 @@ Milo  6 years old · ADHD
 - **商品卡**：白底、**12px 圆角**、162×226、内边距 8；只有标题文字 14px/600，其余全是插画。
 - 收藏按钮 32×32 圆形。
 
+### Calming tools（呼吸引导，390 实测）
+
+- 页面仍在暖纸底上，但**没有卡片容器**，整屏就是工具本身。
+- 页头 overline「Calming tools」12px **`#8A94A3`**——说明这个灰蓝不是 Picks 专属，而是「次级标签色」。
+- H1 30px 衬线。
+- **工具切换胶囊**：30px 高、12px 字；选中松绿实底 + 骨白字 + 松绿描边；未选白底 + 1px `rgba(23,50,32,.2)`。
+- **呼吸方块**：280×280 的 SVG（viewBox 280），底层 rect 描边 `rgba(23,50,32,.2)` 2px，进度 rect 描边 **terracotta `#C36540` 2.5px**，跟随点也是 terracotta 实心圆。
+- 引导语「Breathe in」30px/400 **衬线**，颜色 `#3D5141`；计时 12px `#728173`。
+- Resume 是 96×42 胶囊（松绿底、骨白字 14/600）；「Add voice」是 14/600 松绿文字按钮。
+- 返回「Profile」指向 `/children?child=<id>`。
+
 ### Picks 分类页（Sensory & calm，390 实测）
 
 - 返回是 `Picks` 按钮；H1 30px 衬线；导语 14px。
