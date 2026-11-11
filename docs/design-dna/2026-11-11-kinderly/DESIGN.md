@@ -190,7 +190,8 @@ Milo  6 years old · ADHD
 
 ### Picks 商品详情（390 实测）
 
-- **路由带上下文**：`/picks?item=p16&from=learn&back=%2Flearn%2Fbedtime-after-a-big-day`，返回目标由 `back` 参数决定（按钮）。
+- **两种进入方式**：带参数时是 `/picks?item=p16&from=learn&back=…`（返回目标由 `back` 决定）；从列表点进来时 URL 仍是 `/picks`，详情是客户端状态。
+- **元信息行是动态的**：`Brand / Ages / Helps with / Sold by`，Brand 不是每个商品都有。
 - **页头 overline 是可点击按钮**：12px、颜色 **`#8A94A3`（灰蓝，不在土色板里）**，这是全站第一次出现的冷色。
 - H1 30/33/-0.6；插画 200×200。
 - **主 CTA**：`View on Amazon` 275×48、松绿底、**纯白字** 14/600、圆角 100px、内边距 8 16。
