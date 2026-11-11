@@ -11,7 +11,8 @@
     "design:accept": "node scripts/design-sync.mjs accept",
     "design:shots": "node scripts/design-shots.mjs",
     "design:test": "node --test scripts/design-sync.test.mjs",
-    "design:change": "node scripts/design-change.mjs"
+    "design:change": "node scripts/design-change.mjs",
+    "design:svg": "node scripts/design-svg-audit.mjs"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
