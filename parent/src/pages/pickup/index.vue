@@ -17,16 +17,12 @@ import { relationLabel } from "@/utils/relation"
 import { formatClock, formatDateLabel } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
 
-// remixicon 字形（App.vue 已全局注册字体）；小程序 WXML 不允许内联 SVG。
-const ICON = {
-  clock: "", // time-line
-  sprout: "", // seedling-line
-  check: "", // check-line
-  qr: "", // qr-code-line
-  login: "", // login-box-line
-  logout: "", // logout-box-r-line
-  error: "" // error-warning-line
+// DNA 图标按色调导出（WXML 的 image 不能继承 currentColor）：
+// pine 用于浅底，muted 用于次级，bone 只用于 pine 实底上的图标。
+function iconSrc(name, tone = "pine") {
+  return `/static/icons/dna/${tone}/icon-${name}.svg`
 }
+
 
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
 
@@ -86,6 +82,8 @@ const dayState = computed(() => {
 })
 
 const statusMain = computed(() => ({ pre: "未入园", in: "在园中", picked: "已接走" }[dayState.value]))
+const sealIcon = computed(() => (dayState.value === "picked" ? "check" : dayState.value === "in" ? "sprout" : "clock"))
+const sealTone = computed(() => (dayState.value === "pre" ? "muted" : "pine"))
 const nowClock = ref(formatClock(new Date()))
 // 「未入园」必须带时间上下文：早上 8 点看到是正常，上午 10 点看到才值得担心。
 const statusSubText = computed(() => (dayState.value === "pre" ? `截至 ${nowClock.value || "--:--"} 未入园` : ""))
@@ -252,7 +250,9 @@ onPullDownRefresh(loadData)
 
     <!-- ===== 错误：先于空态判定，避免把加载失败误读成「没有记录」 ===== -->
     <view v-else-if="showError" class="error-state">
-      <view class="error-icon"><text class="error-glyph">{{ ICON.error }}</text></view>
+      <view class="error-icon">
+        <image class="error-glyph" src="/static/icons/dna/pine/icon-error.svg" mode="aspectFit" />
+      </view>
       <text class="error-title">接送记录加载失败</text>
       <text class="error-desc">网络好像不太稳定</text>
       <button class="retry-btn" :disabled="retrying" @click="handleRetry">
@@ -268,7 +268,7 @@ onPullDownRefresh(loadData)
       <text class="empty-title">今天还没有接送记录</text>
       <text class="empty-desc">老师核验接送码后，记录会出现在这里</text>
       <button class="qr-cta empty-cta" @click="goQRCode">
-        <text class="qr-cta-icon">{{ ICON.qr }}</text>
+        <image class="qr-cta-icon" src="/static/icons/dna/bone/icon-qr.svg" mode="aspectFit" />
         <text>出示接送二维码</text>
       </button>
     </view>
@@ -294,15 +294,15 @@ onPullDownRefresh(loadData)
             <text v-else-if="childLabel" class="pass-sub">{{ childLabel }}</text>
           </view>
           <view class="seal" :class="'seal--' + dayState">
-            <text class="seal-glyph">
-              {{ dayState === "picked" ? ICON.check : dayState === "in" ? ICON.sprout : ICON.clock }}
-            </text>
+            <image class="seal-glyph" :src="iconSrc(sealIcon, sealTone)" mode="aspectFit" />
           </view>
         </view>
 
         <view v-if="dayState !== 'pre'" class="pass-rail" aria-label="今日接送进度">
           <view class="rail-step rail-step--in is-done">
-            <view class="rail-dot"><text class="rail-glyph">{{ ICON.check }}</text></view>
+            <view class="rail-dot">
+              <image class="rail-glyph" src="/static/icons/dna/pine/icon-check.svg" mode="aspectFit" />
+            </view>
             <view class="rail-copy">
               <text class="rail-label">送入</text>
               <text class="rail-meta">
@@ -313,7 +313,11 @@ onPullDownRefresh(loadData)
           <view class="rail-line" :class="{ 'is-done': dayState === 'picked' }" />
           <view class="rail-step rail-step--out" :class="{ 'is-done': dayState === 'picked' }">
             <view class="rail-dot">
-              <text class="rail-glyph">{{ dayState === "picked" ? ICON.check : ICON.clock }}</text>
+              <image
+                class="rail-glyph"
+                :src="iconSrc(dayState === 'picked' ? 'check' : 'clock', dayState === 'picked' ? 'pine' : 'muted')"
+                mode="aspectFit"
+              />
             </view>
             <view class="rail-copy">
               <text class="rail-label">接走</text>
@@ -328,7 +332,7 @@ onPullDownRefresh(loadData)
         <view class="pass-foot">
           <!-- 已接走是终态：再出示二维码会与「今日接送已完成」自相矛盾 -->
           <view v-if="dayState === 'picked'" class="done-note">
-            <text class="done-icon">{{ ICON.check }}</text>
+            <image class="done-icon" src="/static/icons/dna/pine/icon-check.svg" mode="aspectFit" />
             <text>
               今日接送已完成 · {{ formatClock(lastToday && lastToday.recorded_at) }}
               {{ (lastToday && lastToday.pickup_name) || "接送人未记录" }} 接走
@@ -336,7 +340,7 @@ onPullDownRefresh(loadData)
           </view>
           <template v-else>
             <button class="qr-cta" :disabled="loading" @click="goQRCode">
-              <text class="qr-cta-icon">{{ ICON.qr }}</text>
+              <image class="qr-cta-icon" src="/static/icons/dna/bone/icon-qr.svg" mode="aspectFit" />
               <text>出示接送二维码</text>
             </button>
             <view class="pass-note">
@@ -360,7 +364,11 @@ onPullDownRefresh(loadData)
             </view>
             <view v-for="row in group.rows" :key="row.id" class="rec-row">
               <view class="rec-type" :class="row.isOut ? 'rec-type--out' : 'rec-type--in'">
-                <text class="rec-type-icon">{{ row.isOut ? ICON.logout : ICON.login }}</text>
+                <image
+                  class="rec-type-icon"
+                  :src="row.isOut ? '/static/icons/dna/pine/icon-logout.svg' : '/static/icons/dna/pine/icon-login.svg'"
+                  mode="aspectFit"
+                />
                 <text>{{ row.typeLabel }}</text>
               </view>
               <view class="rec-main">
@@ -531,9 +539,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .seal-glyph {
-  font-family: remixicon;
-  font-size: 40rpx;
-  line-height: 1;
+  width: 40rpx;
+  height: 40rpx;
 }
 
 // ---- 进度轨 --------------------------------------------------
@@ -568,13 +575,12 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .rail-step.is-done .rail-dot {
   border-color: $dna-sage-deep;
-  background: $dna-sage-deep;
+  background: $dna-sage-soft;
 }
 
 .rail-glyph {
-  font-family: remixicon;
-  font-size: 18rpx;
-  line-height: 1;
+  width: 18rpx;
+  height: 18rpx;
 }
 
 .rail-line {
@@ -653,9 +659,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .qr-cta-icon {
-  font-family: remixicon;
-  font-size: 34rpx;
-  line-height: 1;
+  width: 34rpx;
+  height: 34rpx;
 }
 
 .pass-note {
@@ -685,9 +690,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .done-icon {
-  font-family: remixicon;
-  font-size: 30rpx;
-  line-height: 1;
+  width: 30rpx;
+  height: 30rpx;
 }
 
 // ---- 历史 ----------------------------------------------------
@@ -774,9 +778,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .rec-type-icon {
-  font-family: remixicon;
-  font-size: 22rpx;
-  line-height: 1;
+  width: 22rpx;
+  height: 22rpx;
 }
 
 .rec-main {
@@ -881,9 +884,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .empty-glyph,
 .error-glyph {
-  font-family: remixicon;
-  font-size: 64rpx;
-  line-height: 1;
+  width: 64rpx;
+  height: 64rpx;
 }
 
 .empty-title,
