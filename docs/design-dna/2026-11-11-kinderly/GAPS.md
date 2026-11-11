@@ -106,6 +106,28 @@
 
 证据：`evidence/gaps/`（bottom-sheet、destructive-confirm、mobile-*、dark-attempt）
 
+## 采集总览（2026-11-11 完成）
+
+已覆盖的页面/状态：
+
+- **Today**：默认、按天切换、未来周禁用、`i` tooltip、按天无打卡空态、筛选后的内容
+- **Children**：列表、添加孩子表单、空提交禁用态
+- **Stories**：列表、详情、新建、`···` 底部抽屉
+- **Settings**：首页、个人、邮箱、密码、两步验证、邀请、家庭、日历、导出、删除确认页
+- **Learn**：列表、筛选（两套选中态）、文章页
+- **Recipes**：主列表、Lunchbox / After-school 集合、商品详情
+- **Picks**：列表（马赛克分类）、分类页、两个商品详情
+- **Tools**：呼吸引导
+- **登录/onboarding**：登录页、添加孩子页
+
+仍未覆盖（不阻塞规则提炼）：
+
+- Learn 的 Saved 空态、Stories 无故事空态（需要空数据账号）
+- 组件过渡时长、页面转场、reduced motion（P2）
+- 全站图标/插画全量清单（P2）
+- 深色模式（已确认不支持）
+- 中文排版（参考产品无中文界面，需自定）
+
 ## 采完后的验收
 
 - `dna.json` 的 `components.modal_style` 不再是「未观察」
