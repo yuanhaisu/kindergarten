@@ -1,7 +1,7 @@
 # Kinderly DNA 缺口清单
 
 - 日期：2026-11-11
-- 状态：待采集
+- 状态：**2026-11-12 已冻结（v1）**；剩余未覆盖项见文末，冻结后不再新增决策
 - 采集方式：干净 Chrome（`--remote-debugging-port=9333`，`navigator.webdriver=false`）登录后，用 CDP 读取计算样式 + 截图；结果回写 `dna.json` / `DESIGN.md`
 - 优先级：**P0** 阻断 DNA 冻结；**P1** 影响组件复用；**P2** 可随页面推进增量补
 

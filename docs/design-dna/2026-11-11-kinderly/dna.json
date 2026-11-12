@@ -1,6 +1,8 @@
 {
   "meta": {
     "name": "Kinderly / Kin — warm editorial parenting companion",
+    "version": "1.0",
+    "frozen_at": "2026-11-12",
     "description": "Design DNA extracted from the Kinderly (Kin) product: the logged-in application (24 screens crawled), the login screen, the marketing site, and nine additional app screens rendered in the marketing 'See Kinderly in action' section. Characterised by a warm bone canvas, deep pine ink, Instrument Serif display and prose type over Geist UI type, pill controls, hairline-bordered white surfaces, a floating pill bottom navigation, and calm slow motion.",
     "source_references": [
       "https://app.kinderly.ai — authenticated session, 2026-11-11, 24 screens crawled: children list, child onboarding, Kin chat, Today/forecast, Stories list + detail + create, Settings + personal/email/password/two-step/invite/family/calendar, Learn library + article, Recipes, Kin Picks, calming tools (breathing), child baseline",

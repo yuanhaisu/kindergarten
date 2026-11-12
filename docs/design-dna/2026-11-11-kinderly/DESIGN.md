@@ -1,6 +1,7 @@
 # Kinderly / Kin — Design DNA 规则手册
 
 - 日期：2026-11-11
+- 状态：**2026-11-12 已冻结（v1）**；冻结后规则只做缺陷修正，不再新增决策
 - 来源：`https://app.kinderly.ai` **登录后真实应用（24 屏）**、登录页、`https://www.kinderly.ai` 官网、官网「See Kinderly in action」9 个应用界面
 - 采集方式：干净 Chrome + CDP 逐页抓取 DOM 计算样式与整页截图（`evidence/app/`）
 - 机器可读：[`dna.json`](./dna.json)
