@@ -117,13 +117,13 @@
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
-      "sha256": "8c081d2a07fe65c9105020a35a52368646ba19b443fbdbe7afb1fdeff1081438",
-      "depsSha": "5754af1c7642cede8b19dd1a8717a46563ee4fb8837eac561ef016eaf0ce4938",
+      "sha256": "c8bf80ad17298d0d123a5dedfab8ab6c85842ab190e2371a0a2ad7cb8ae70743",
+      "depsSha": "654d2d28c9c6e68f7e8115584b28f59839b82818be1295f9133ba2c2460bf3ca",
       "title": "接送记录",
       "tabbar": true,
-      "reviewedAt": "2026-11-11",
-      "codeCommit": "503a63e",
-      "reason": "503a63e 中文排版方案 B：H1 30/1.35/0，接送页衬线标题统一行高与字距"
+      "reviewedAt": "2026-11-12",
+      "codeCommit": "503a63e-dirty",
+      "reason": "拉丁/数字改用 Instrument Serif（App.vue 双字体加载 + 字体栈更新）"
     },
     "parent/14-pickup-qrcode": {
       "source": "parent/src/pages/pickup/qrcode.vue",

@@ -409,8 +409,8 @@ $dna-terracotta: #c36540;
 $dna-terracotta-soft: #e5bca1;
 $dna-hair: rgba(23, 50, 32, 0.1);
 $dna-hair-strong: rgba(23, 50, 32, 0.22);
-// 小程序拿不到 Instrument Serif；中文回落宋体，Android 无宋体时退到无衬线。
-$dna-serif: "Noto Serif SC", "Songti SC", "STSong", serif;
+// 拉丁/数字走 Instrument Serif，中文自动回落 Noto Serif SC；两者都在 App.vue 里自托管加载。
+$dna-serif: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", serif;
 $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 // ---- 页头 ----------------------------------------------------

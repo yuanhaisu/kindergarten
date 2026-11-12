@@ -1,35 +1,53 @@
+<script>
+// getApp().globalData 需要先声明；字体加载状态写入这里，便于排查「字体没生效」。
+export default {
+  globalData: {
+    serifFont: "",
+    latinSerifFont: ""
+  }
+}
+</script>
+
 <script setup>
 import { onLaunch } from "@dcloudio/uni-app"
 import { ensureConsent, ensureLogin } from "@/utils/login"
 import serifFontBase64 from "@/assets/fonts/noto-serif-sc-subset.js"
+import latinSerifFontBase64 from "@/assets/fonts/instrument-serif-subset.js"
 
-// DNA 字体：Noto Serif SC 子集（仅静态标题字），以 data URI 注入。
+// DNA 字体：中文标题 Noto Serif SC，拉丁/数字 Instrument Serif，均以 data URI 注入。
 // 小程序不允许读包内文件、loadFontFace 也不接受本地路径，只能内联 base64。
-function loadSerifFont() {
+const DNA_FONTS = [
+  { family: "Noto Serif SC", base64: serifFontBase64, statusKey: "serifFont" },
+  { family: "Instrument Serif", base64: latinSerifFontBase64, statusKey: "latinSerifFont" }
+]
+
+function loadDnaFonts() {
   // #ifdef MP-WEIXIN
-  try {
-    wx.loadFontFace({
-      global: true,
-      family: "Noto Serif SC",
-      source: `url("data:font/woff2;base64,${serifFontBase64.trim()}")`,
-      success: () => {
-        const app = getApp()
-        if (app) app.globalData.serifFont = "loaded"
-      },
-      fail: (err) => {
-        const app = getApp()
-        if (app) app.globalData.serifFont = "failed"
-        console.warn("[font] Noto Serif SC load failed:", err?.errMsg || err)
-      }
-    })
-  } catch (e) {
-    console.warn("[font] read subset failed:", e?.message || e)
-  }
+  DNA_FONTS.forEach(({ family, base64, statusKey }) => {
+    try {
+      wx.loadFontFace({
+        global: true,
+        family,
+        source: `url("data:font/woff2;base64,${base64.trim()}")`,
+        success: () => {
+          const app = getApp()
+          if (app) app.globalData[statusKey] = "loaded"
+        },
+        fail: (err) => {
+          const app = getApp()
+          if (app) app.globalData[statusKey] = "failed"
+          console.warn(`[font] ${family} load failed:`, err?.errMsg || err)
+        }
+      })
+    } catch (e) {
+      console.warn(`[font] ${family} load failed:`, e?.message || e)
+    }
+  })
   // #endif
 }
 
 onLaunch(() => {
-  loadSerifFont()
+  loadDnaFonts()
   ensureLogin()
     .then(() => ensureConsent())
     .catch(() => {
