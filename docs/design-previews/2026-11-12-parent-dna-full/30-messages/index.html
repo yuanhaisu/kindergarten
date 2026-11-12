@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 消息</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__pad { width: 36px; height: 36px; }
+
+    .head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 14px; }
+    .head-row h1 { margin: 0; }
+    .head-meta { font-size: 11.5px; color: var(--ink-bone); }
+
+    .seg { margin-bottom: 14px; }
+
+    .msg {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 14px 0;
+      border: 0;
+      border-bottom: 1px solid var(--hair-soft);
+      background: transparent;
+      font-family: var(--sans);
+      text-align: left;
+      cursor: pointer;
+    }
+    .msg:last-child { border-bottom: 0; }
+    .msg .avatar { width: 40px; height: 40px; font-size: 18px; }
+    .msg .orb { width: 40px; height: 40px; }
+    .msg__body { flex: 1; min-width: 0; }
+    .msg__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .msg__who { font-size: 15px; font-weight: 500; color: var(--pine); }
+    .msg.is-unread .msg__who { font-weight: 600; }
+    .msg time { flex: 0 0 auto; font-size: 11.5px; color: var(--ink-card); font-variant-numeric: tabular-nums; }
+    .msg__line {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--ink-card);
+    }
+    .msg__dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: transparent; }
+    .msg.is-unread .msg__dot { background: var(--orange); }
+
+    .foot-note { margin: 18px 0 0; text-align: center; font-size: 11.5px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+        </button>
+        <span class="page-bar__title">消息</span>
+        <span class="page-bar__pad" aria-hidden="true"></span>
+      </header>
+
+      <div class="head-row">
+        <h1>消息</h1>
+        <span class="head-meta">2 条未读</span>
+      </div>
+
+      <div class="seg" role="group" aria-label="消息筛选">
+        <button class="is-on" type="button" aria-pressed="true">全部</button>
+        <button type="button" aria-pressed="false">系统</button>
+        <button type="button" aria-pressed="false">老师</button>
+      </div>
+
+      <div class="card card--flush" aria-label="消息列表">
+        <button class="msg is-unread" type="button">
+          <span class="avatar avatar--sage" aria-hidden="true">李</span>
+          <span class="msg__body">
+            <span class="msg__head">
+              <span class="msg__who">李老师</span>
+              <time datetime="2026-11-12T09:24">09:24</time>
+            </span>
+            <span class="msg__line">乐乐今天午睡很好，起来自己叠了小被子</span>
+          </span>
+          <span class="msg__dot" role="img" aria-label="未读"></span>
+        </button>
+
+        <button class="msg is-unread" type="button">
+          <span class="orb orb--ink" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>
+          </span>
+          <span class="msg__body">
+            <span class="msg__head">
+              <span class="msg__who">系统</span>
+              <time datetime="2026-11-11T16:40">昨天 16:40</time>
+            </span>
+            <span class="msg__line">接送码已更新，可在接送页查看本学期的接送码</span>
+          </span>
+          <span class="msg__dot" role="img" aria-label="未读"></span>
+        </button>
+
+        <button class="msg" type="button">
+          <span class="avatar avatar--clay" aria-hidden="true">王</span>
+          <span class="msg__body">
+            <span class="msg__head">
+              <span class="msg__who">王老师</span>
+              <time datetime="2026-11-11T08:10">昨天 08:10</time>
+            </span>
+            <span class="msg__line">明天请带水彩笔，美术课要画秋天的树</span>
+          </span>
+          <span class="msg__dot" aria-hidden="true"></span>
+        </button>
+
+        <button class="msg" type="button">
+          <span class="orb orb--ink" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>
+          </span>
+          <span class="msg__body">
+            <span class="msg__head">
+              <span class="msg__who">系统</span>
+              <time datetime="2026-11-10">11-10</time>
+            </span>
+            <span class="msg__line">成长报告已生成，看看乐乐这学期的四个发展维度</span>
+          </span>
+          <span class="msg__dot" aria-hidden="true"></span>
+        </button>
+
+        <button class="msg" type="button">
+          <span class="avatar" aria-hidden="true">园</span>
+          <span class="msg__body">
+            <span class="msg__head">
+              <span class="msg__who">园长</span>
+              <time datetime="2026-11-09">11-09</time>
+            </span>
+            <span class="msg__line">11 月 21 日上午 9 点，多功能厅秋季家长会</span>
+          </span>
+          <span class="msg__dot" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <p class="foot-note">已显示全部消息</p>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 成长时光</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .week-card { padding: 16px 20px; }
+    .week-stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .week-stat { display: grid; gap: 3px; }
+    .week-stat + .week-stat { border-left: 1px solid var(--hair); padding-left: 16px; }
+    .week-stat b { font-family: var(--serif); font-size: 26px; font-weight: 400; line-height: 1; }
+    .week-stat span { font-size: 11px; color: var(--ink-card); }
+
+    .filters { display: flex; gap: 8px; margin: 16px 0 14px; overflow-x: auto; scrollbar-width: none; }
+    .filters::-webkit-scrollbar { display: none; }
+
+    .entry { padding: 18px 18px 16px; }
+    .entry + .entry { margin-top: 12px; }
+    .entry-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .entry-title { margin: 8px 0 0; }
+    .entry-body { margin: 7px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--ink-mid); }
+    .entry-quote { margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--sage); font-family: var(--serif); font-size: 16px; line-height: 1.8; color: var(--pine); }
+
+    .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+    .media-grid .thumb { aspect-ratio: 1 / 1; border-radius: 12px; }
+    .media-more {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(23, 50, 32, 0.42);
+      color: var(--bone);
+      font-family: var(--serif);
+      font-size: 19px;
+    }
+
+    .entry-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+    .author { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-card); }
+    .entry-actions { display: flex; align-items: center; gap: 16px; font-size: 11.5px; color: var(--ink-card); }
+    .entry-actions span { display: inline-flex; align-items: center; gap: 4px; }
+    .entry-actions .is-liked { color: var(--terracotta-text); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main mp-main--tab">
+      <header class="screen-head">
+        <div>
+          <p class="overline">乐乐 · 小一班</p>
+          <h1>成长时光</h1>
+        </div>
+        <button class="icon-btn" type="button" aria-label="成长相册">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="4.6" width="16.8" height="14.8" rx="2.6"/><circle cx="8.7" cy="9.4" r="1.5"/><path d="m4.6 16.4 4.6-4.2 3.4 3 2.6-2.2 4.2 3.6"/></svg>
+        </button>
+      </header>
+
+      <section class="week-card card card--soft" aria-label="本周概况">
+        <div class="week-stats">
+          <div class="week-stat"><b>5</b><span>条成长记录</span></div>
+          <div class="week-stat"><b>12</b><span>张照片</span></div>
+          <div class="week-stat"><b>3</b><span>句老师寄语</span></div>
+        </div>
+      </section>
+
+      <div class="filters" role="tablist" aria-label="筛选">
+        <button class="chip is-on" type="button">全部</button>
+        <button class="chip" type="button">本月</button>
+        <button class="chip" type="button">有照片</button>
+        <button class="chip" type="button">老师寄语</button>
+      </div>
+
+      <article class="entry card">
+        <div class="entry-head">
+          <p class="overline" style="margin: 0;">今天 · 11 月 12 日</p>
+          <span class="tag tag--ok">已阅读</span>
+        </div>
+        <h2 class="entry-title">第一次自己系好了鞋带</h2>
+        <p class="entry-body">
+          午睡起床后，乐乐坐在床边试了很久，最后自己系好了鞋带，还转头给老师看。他今天的<span class="hl">专注力</span>比往常更久。
+        </p>
+        <div class="media-grid" aria-label="照片">
+          <div class="thumb thumb--sage"></div>
+          <div class="thumb thumb--gold"></div>
+          <div class="thumb thumb--pine"><span class="media-more">+4</span></div>
+        </div>
+        <div class="entry-foot">
+          <span class="author">
+            <span class="avatar avatar--sm avatar--sage" aria-hidden="true">王</span>
+            王老师 · 12:10
+          </span>
+          <span class="entry-actions">
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.6a7.6 7.6 0 0 1-8 7.6 8.7 8.7 0 0 1-3.2-.6L4 20l1.3-3.6A7.4 7.4 0 0 1 4 11.6 7.6 7.6 0 0 1 12 4a7.6 7.6 0 0 1 8 7.6Z"/></svg>
+              2
+            </span>
+            <span class="is-liked">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.3s-7.7-4.6-7.7-10A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.7 2.9c0 5.4-7.7 10-7.7 10Z"/></svg>
+              8
+            </span>
+          </span>
+        </div>
+      </article>
+
+      <article class="entry card">
+        <div class="entry-head">
+          <p class="overline" style="margin: 0;">昨天 · 11 月 11 日</p>
+          <span class="tag tag--muted">自动归档</span>
+        </div>
+        <h2 class="entry-title">午餐时的一次主动</h2>
+        <p class="entry-body">他注意到旁边的小朋友没有勺子，自己起身去拿了一把递过去。</p>
+        <p class="entry-quote">“老师，他需要这个。” —— 乐乐</p>
+        <div class="entry-foot">
+          <span class="author">
+            <span class="avatar avatar--sm avatar--clay" aria-hidden="true">李</span>
+            李老师 · 12:40
+          </span>
+          <span class="entry-actions">
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.6a7.6 7.6 0 0 1-8 7.6 8.7 8.7 0 0 1-3.2-.6L4 20l1.3-3.6A7.4 7.4 0 0 1 4 11.6 7.6 7.6 0 0 1 12 4a7.6 7.6 0 0 1 8 7.6Z"/></svg>
+              写一句
+            </span>
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19.6s-7.7-4.6-7.7-10A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 7.7 2.9c0 5.4-7.7 10-7.7 10Z"/></svg>
+              6
+            </span>
+          </span>
+        </div>
+      </article>
+
+      <article class="entry card">
+        <div class="entry-head">
+          <p class="overline" style="margin: 0;">11 月 8 日 · 周五</p>
+          <span class="tag tag--wait">有更新</span>
+        </div>
+        <h2 class="entry-title">户外活动：第一次爬过攀爬架</h2>
+        <p class="entry-body">在老师的保护下，他爬到最高一格，停下来看了看下面，然后自己下来了。</p>
+        <div class="media-grid" aria-label="照片">
+          <div class="thumb thumb--blue"></div>
+          <div class="thumb thumb--sage"></div>
+          <div class="thumb thumb--gold"></div>
+        </div>
+        <div class="entry-foot">
+          <span class="author">
+            <span class="avatar avatar--sm" aria-hidden="true">张</span>
+            张老师 · 16:20
+          </span>
+          <span class="entry-actions">
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.6a7.6 7.6 0 0 1-8 7.6 8.7 8.7 0 0 1-3.2-.6L4 20l1.3-3.6A7.4 7.4 0 0 1 4 11.6 7.6 7.6 0 0 1 12 4a7.6 7.6 0 0 1 8 7.6Z"/></svg>
+              写一句
+            </span>
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19.6s-7.7-4.6-7.7-10A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 7.7 2.9c0 5.4-7.7 10-7.7 10Z"/></svg>
+              3
+            </span>
+          </span>
+        </div>
+      </article>
+    </main>
+
+    <nav class="mp-nav" aria-label="主导航">
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></svg>
+        首页
+      </a>
+      <a class="is-on" href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+        成长
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+        接送
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.4"/><path d="M4.8 20c.7-3.9 3.6-6 7.2-6s6.5 2.1 7.2 6"/></svg>
+        我的
+      </a>
+    </nav>
+  </div>
+</body>
+</html>

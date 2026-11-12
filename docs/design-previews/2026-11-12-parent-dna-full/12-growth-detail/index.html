@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 成长详情</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .bar-spacer { width: 36px; height: 36px; }
+
+    .hero { width: 100%; height: 220px; margin-top: 4px; }
+    .hero .thumb__badge { top: 12px; left: 12px; }
+
+    .detail-head { margin-top: 18px; }
+    .detail-head .overline { margin-bottom: 6px; }
+
+    .story { margin-top: 12px; }
+    .story p + p { margin-top: 12px; }
+
+    .media-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 18px; }
+    .media-grid .thumb { aspect-ratio: 1 / 1; border-radius: 12px; }
+    .media-more {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(23, 50, 32, 0.42);
+      color: var(--bone);
+      font-family: var(--serif);
+      font-size: 19px;
+    }
+
+    .observe { margin-top: 22px; }
+    .observe .serif-body { margin-top: 8px; }
+    .observe-sign { margin-top: 12px; }
+
+    .comments { margin-top: 26px; }
+    .comments-head { margin-bottom: 2px; }
+    .comment { display: flex; align-items: flex-start; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--hair-soft); }
+    .comment:last-child { border-bottom: 0; }
+    .comment--reply { margin-left: 24px; }
+    .c-head { display: flex; align-items: baseline; gap: 8px; margin: 0 0 3px; }
+    .c-name { font-size: 13px; font-weight: 600; line-height: 1.4; }
+    .c-time { font-size: 11.5px; line-height: 1.4; color: var(--ink-bone); }
+    .c-text { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--ink-mid); }
+
+    .action-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin-top: 20px;
+      background: var(--card);
+      border: 1px solid var(--hair);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+    .act {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 54px;
+      border: 0;
+      background: transparent;
+      font-family: var(--sans);
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--pine);
+      cursor: pointer;
+    }
+    .act + .act { border-left: 1px solid var(--hair); }
+    .act .num { font-size: 17px; margin-left: 2px; }
+    .act__heart { color: var(--terracotta-text); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回成长时光">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">成长时光</span>
+        <span class="bar-spacer" aria-hidden="true"></span>
+      </header>
+
+      <div class="thumb thumb--sage hero" role="img" aria-label="乐乐在教室门口系鞋带">
+        <span class="thumb__badge">09:20 · 教室门口</span>
+      </div>
+
+      <header class="detail-head">
+        <p class="overline">今天 · 11 月 12 日 · 王老师</p>
+        <h1>第一次自己系好了鞋带</h1>
+      </header>
+
+      <article class="story">
+        <p class="body">午睡起床后，乐乐坐在床边试了很久。第一次鞋带滑开了，他皱了皱眉，低头重来。</p>
+        <p class="body">第三次系好以后，他抬头看着老师，说「老师你看」。这两周我们一直在练，今天他没有等人帮忙，也<span class="hl">没有放弃</span>。</p>
+        <p class="body">对他来说，把一件小事做完，比做得快更重要。</p>
+      </article>
+
+      <div class="media-grid" role="group" aria-label="这条记录的照片">
+        <span class="thumb thumb--sage"></span>
+        <span class="thumb thumb--gold"></span>
+        <span class="thumb thumb--clay"></span>
+        <span class="thumb thumb--pine"><span class="media-more">+2</span></span>
+      </div>
+
+      <section class="card card--soft observe" aria-labelledby="observe-title">
+        <p class="overline" id="observe-title">老师的观察</p>
+        <p class="serif-body">他今天愿意多试几次，而不是立刻求助。对一个五岁的孩子来说，这比「系好了」本身更重要。</p>
+        <p class="tiny muted observe-sign">王老师 · 12:10</p>
+      </section>
+
+      <section class="comments" aria-labelledby="comments-title">
+        <div class="row row--between comments-head">
+          <h2 id="comments-title">家人的回应</h2>
+          <span class="tiny muted">2 条</span>
+        </div>
+
+        <article class="comment">
+          <span class="avatar avatar--sm avatar--clay" aria-hidden="true">妈</span>
+          <div class="grow">
+            <p class="c-head"><span class="c-name">妈妈</span><span class="c-time">12:26</span></p>
+            <p class="c-text">在家也练了好几天，今天居然自己系上了。晚上回来给爸爸演示一遍？</p>
+          </div>
+        </article>
+
+        <article class="comment comment--reply">
+          <span class="avatar avatar--sm avatar--sage" aria-hidden="true">王</span>
+          <div class="grow">
+            <p class="c-head"><span class="c-name">王老师</span><span class="c-time">12:32</span></p>
+            <p class="c-text">好呀，明天早上再练一次，让他教教旁边的小朋友。</p>
+          </div>
+        </article>
+      </section>
+
+      <div class="action-bar" role="group" aria-label="互动">
+        <button class="act" type="button" aria-pressed="true">
+          <svg class="act__heart" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.3s-7.7-4.6-7.7-10A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.7 2.9c0 5.4-7.7 10-7.7 10Z"/></svg>
+          点赞<b class="num">8</b>
+        </button>
+        <button class="act" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a7.6 7.6 0 0 1-8 7.6 8.7 8.7 0 0 1-3.2-.6L4 20l1.3-3.6A7.4 7.4 0 0 1 4 11.6 7.6 7.6 0 0 1 12 4a7.6 7.6 0 0 1 8 7.6Z"/></svg>
+          评论<b class="num">2</b>
+        </button>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

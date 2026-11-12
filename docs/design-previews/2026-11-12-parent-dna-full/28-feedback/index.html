@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 意见反馈</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__pad { width: 36px; height: 36px; }
+    .page-title { margin: 0 0 5px; }
+    .page-sub { margin: 0 0 14px; font-size: 13px; line-height: 1.6; color: var(--ink-bone); }
+
+    .form-card { display: grid; gap: 12px; padding: 16px 18px; }
+    .form-card .field { gap: 5px; }
+    .form-card .hairline { margin: 0; }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip-row .chip { padding: 0 12px; }
+
+    .input--area textarea { height: 72px; line-height: 1.65; }
+    .field-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 16px; }
+    .counter { margin-left: auto; font-size: 11.5px; color: var(--ink-card); font-variant-numeric: tabular-nums; }
+
+    .photo-field { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .photo-copy { display: grid; gap: 4px; }
+    .photo-row { display: flex; gap: 10px; }
+    .up {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      padding: 0;
+      border: 1px dashed var(--hair-strong);
+      border-radius: var(--r-md);
+      background: transparent;
+      color: var(--ink-soft);
+      cursor: pointer;
+    }
+
+    .faq .list-row {
+      width: 100%;
+      min-height: 44px;
+      padding: 7px 0;
+      border: 0;
+      border-bottom: 1px solid var(--hair-soft);
+      background: transparent;
+      font-family: var(--sans);
+      text-align: left;
+      cursor: pointer;
+    }
+    .faq .list-row:last-child { border-bottom: 0; }
+    .faq .list-row__title { font-size: 14px; }
+    .faq .chev { color: var(--ink-soft); }
+
+    .faq-label { margin: 16px 4px 6px; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+        </button>
+        <span class="page-bar__title">意见反馈</span>
+        <span class="page-bar__pad" aria-hidden="true"></span>
+      </header>
+
+      <h1 class="page-title">意见反馈</h1>
+      <p class="page-sub">你的建议会直接发送给园所管理员</p>
+
+      <form class="stack" novalidate>
+        <section class="card form-card" aria-label="反馈内容">
+          <div class="field">
+            <span class="field__label">反馈类型</span>
+            <div class="chip-row" role="group" aria-label="反馈类型">
+              <button class="chip is-on" type="button" aria-pressed="true">功能建议</button>
+              <button class="chip" type="button" aria-pressed="false">使用问题</button>
+              <button class="chip" type="button" aria-pressed="false">内容投诉</button>
+              <button class="chip" type="button" aria-pressed="false">其他</button>
+            </div>
+          </div>
+
+          <hr class="hairline" />
+
+          <div class="field">
+            <label class="field__label" for="content">问题描述</label>
+            <div class="input input--area">
+              <textarea id="content" placeholder="请描述你遇到的问题或建议"></textarea>
+            </div>
+            <div class="field-foot">
+              <span class="field__hint">尽量写清操作步骤，方便我们定位</span>
+              <span class="counter">0 / 500</span>
+            </div>
+          </div>
+
+          <hr class="hairline" />
+
+          <div class="field photo-field">
+            <div class="photo-copy">
+              <span class="field__label">上传照片</span>
+              <span class="field__hint">选填 · 最多 3 张</span>
+            </div>
+            <div class="photo-row">
+              <button class="up" type="button" aria-label="添加照片">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5v13"/><path d="M5.5 12h13"/></svg>
+              </button>
+              <button class="up" type="button" aria-label="添加照片">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5v13"/><path d="M5.5 12h13"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <hr class="hairline" />
+
+          <div class="field">
+            <label class="field__label" for="contact">联系方式（选填）</label>
+            <div class="input">
+              <input id="contact" type="tel" value="138 0013 6721" />
+            </div>
+          </div>
+        </section>
+
+        <button class="btn btn--primary btn--lg btn--block" type="button">提交反馈</button>
+      </form>
+
+      <section aria-labelledby="faq-title">
+        <p class="overline faq-label" id="faq-title">常见问题</p>
+        <div class="card card--flush faq">
+          <button class="list-row" type="button">
+            <span class="list-row__body"><span class="list-row__title">如何绑定第二个孩子</span></span>
+            <span class="chev" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5.5 6.5 6.5L9 18.5"/></svg>
+            </span>
+          </button>
+          <button class="list-row" type="button">
+            <span class="list-row__body"><span class="list-row__title">如何修改接送人</span></span>
+            <span class="chev" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5.5 6.5 6.5L9 18.5"/></svg>
+            </span>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

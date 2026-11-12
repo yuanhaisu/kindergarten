@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 班级日历</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__pad { width: 36px; height: 36px; }
+    .bar-action { height: 36px; padding: 0 4px; font-size: 13px; }
+
+    .cal-card { margin-top: 2px; padding: 14px 8px 12px; }
+    .week { display: grid; grid-template-columns: repeat(7, 1fr); padding-bottom: 8px; }
+    .week span { text-align: center; font-size: 11px; font-weight: 500; color: var(--ink-bone); }
+    .grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 5px; }
+    .day { display: grid; justify-items: center; align-content: start; gap: 3px; height: 46px; }
+    .day__n {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      color: var(--pine);
+    }
+    .day--out .day__n { color: var(--ink-bone); }
+    .day.is-today .day__n { background: var(--pine); color: var(--bone); }
+    .day__dots { display: flex; gap: 3px; height: 5px; }
+    .ev-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+    .ev-dot--activity { background: var(--marigold); }
+    .ev-dot--meeting { background: var(--sage-deep); }
+    .ev-dot--holiday { background: var(--terracotta); }
+
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 24px 0 8px; }
+    .section-head h2 { font-size: 18px; }
+
+    .ev { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--hair-soft); }
+    .ev:first-child { border-top: 0; padding-top: 4px; }
+    .ev:last-child { padding-bottom: 4px; }
+    .ev-time {
+      flex: 0 0 44px;
+      padding-top: 1px;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--pine);
+    }
+    .ev-title { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.4; }
+    .ev-meta { margin: 4px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-card); }
+
+    .legend { display: flex; gap: 18px; margin: 14px 2px 0; font-size: 11.5px; color: var(--ink-card); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend .ev-dot { width: 6px; height: 6px; }
+
+    .foot-note { margin: 22px 0 0; text-align: center; font-size: 11.5px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+        </button>
+        <span class="page-bar__title">班级日历</span>
+        <button class="btn btn--text bar-action" type="button">今天</button>
+      </header>
+
+      <header class="screen-head">
+        <div>
+          <h1>2026 年 11 月</h1>
+        </div>
+      </header>
+
+      <section class="card cal-card" aria-label="2026 年 11 月月历">
+        <div class="week" aria-hidden="true">
+          <span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span>
+        </div>
+        <div class="grid" role="grid" aria-label="2026 年 11 月日期">
+          <div class="day day--out"><span class="day__n">26</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">27</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">28</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">29</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">30</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">31</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">1</span><span class="day__dots"></span></div>
+
+          <div class="day"><span class="day__n">2</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">3</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">4</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">5</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">6</span><span class="day__dots"><i class="ev-dot ev-dot--holiday"></i></span></div>
+          <div class="day"><span class="day__n">7</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">8</span><span class="day__dots"></span></div>
+
+          <div class="day"><span class="day__n">9</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">10</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">11</span><span class="day__dots"></span></div>
+          <div class="day is-today"><span class="day__n">12</span><span class="day__dots"><i class="ev-dot ev-dot--activity"></i><i class="ev-dot ev-dot--activity"></i></span></div>
+          <div class="day"><span class="day__n">13</span><span class="day__dots"><i class="ev-dot ev-dot--activity"></i></span></div>
+          <div class="day"><span class="day__n">14</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">15</span><span class="day__dots"></span></div>
+
+          <div class="day"><span class="day__n">16</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">17</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">18</span><span class="day__dots"><i class="ev-dot ev-dot--meeting"></i></span></div>
+          <div class="day"><span class="day__n">19</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">20</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">21</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">22</span><span class="day__dots"></span></div>
+
+          <div class="day"><span class="day__n">23</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">24</span><span class="day__dots"><i class="ev-dot ev-dot--activity"></i></span></div>
+          <div class="day"><span class="day__n">25</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">26</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">27</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">28</span><span class="day__dots"></span></div>
+          <div class="day"><span class="day__n">29</span><span class="day__dots"></span></div>
+
+          <div class="day"><span class="day__n">30</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">1</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">2</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">3</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">4</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">5</span><span class="day__dots"></span></div>
+          <div class="day day--out"><span class="day__n">6</span><span class="day__dots"></span></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="today-title">
+        <div class="section-head">
+          <h2 id="today-title">今天</h2>
+          <span class="tiny muted">11 月 12 日 · 2 个安排</span>
+        </div>
+        <div class="card card--flush">
+          <div class="ev">
+            <span class="ev-time">09:00</span>
+            <div class="grow">
+              <p class="ev-title">亲子运动会报名截止</p>
+              <p class="ev-meta">线上提交回执 · <span class="hl hl--gold">活动</span></p>
+            </div>
+          </div>
+          <div class="ev">
+            <span class="ev-time">15:30</span>
+            <div class="grow">
+              <p class="ev-title">班级生日会</p>
+              <p class="ev-meta">小一班教室 · <span class="hl hl--gold">班级活动</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="legend" aria-label="事件类型图例">
+        <span><i class="ev-dot ev-dot--activity" aria-hidden="true"></i>活动</span>
+        <span><i class="ev-dot ev-dot--meeting" aria-hidden="true"></i>家长会</span>
+        <span><i class="ev-dot ev-dot--holiday" aria-hidden="true"></i>假期</span>
+      </div>
+
+      <p class="foot-note">本月还有 2 场活动</p>
+    </main>
+  </div>
+</body>
+</html>

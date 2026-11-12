@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 绑定孩子</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; height: 36px; }
+
+    .bind-head { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; }
+    .bind-head h1 { flex: 1; min-width: 0; padding-top: 6px; }
+    .bind-art { flex: 0 0 auto; margin: -2px -4px 0 0; }
+    .bind-art svg { display: block; }
+
+    .bind-lead { margin: 12px 0 0; }
+
+    .bind-form { display: grid; gap: 14px; margin-top: 20px; }
+    .code-input { font-family: var(--serif); font-size: 19px; letter-spacing: 0.22em; }
+    .bind-submit { height: 48px; margin-top: 8px; font-size: 15.5px; }
+    .bind-help { margin-top: 2px; color: var(--ink-bone); font-weight: 500; }
+    .bind-note { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <div class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">绑定孩子</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </div>
+
+      <header class="bind-head">
+        <h1>找到你的孩子</h1>
+        <span class="bind-art" aria-hidden="true">
+          <svg width="92" height="92" viewBox="0 0 120 120" fill="none">
+            <circle cx="60" cy="60" r="52" fill="#E5EFE9" />
+            <circle cx="50" cy="60" r="20" stroke="#C36540" stroke-width="3.4" />
+            <circle cx="70" cy="60" r="20" stroke="#173220" stroke-width="3" />
+            <circle cx="60" cy="60" r="4.6" fill="#DDB14A" stroke="#173220" stroke-width="2.2" />
+            <circle cx="24" cy="34" r="2.2" fill="#173220" />
+            <circle cx="98" cy="80" r="1.8" fill="#173220" />
+            <path d="M88 28c.6-5.4 4-8.8 9.4-9.4-.6 5.4-4 8.8-9.4 9.4Z" fill="#8DA386" stroke="#173220" stroke-width="2.2" stroke-linejoin="round" />
+          </svg>
+        </span>
+      </header>
+
+      <p class="body muted bind-lead">绑定码由班级老师在入园时提供，一共 6 位。绑定后，孩子的通知、成长与接送都会出现在这里。</p>
+
+      <form class="bind-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="child-name">幼儿姓名</label>
+          <div class="input">
+            <input id="child-name" name="child-name" type="text" value="乐乐" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label" id="relation-label">与孩子关系</span>
+          <button class="picker" type="button" aria-labelledby="relation-label">
+            <span>母亲</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 9.5 6.5 6.5 6.5-6.5"/></svg>
+            </span>
+          </button>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="bind-code">绑定码</label>
+          <div class="input code-input">
+            <input id="bind-code" name="bind-code" type="text" inputmode="numeric" value="384216" maxlength="6" autocomplete="off" />
+          </div>
+          <p class="field__hint">由园所老师在入园时提供</p>
+        </div>
+
+        <button class="btn btn--primary btn--block bind-submit" type="submit">绑定孩子</button>
+        <button class="btn btn--text btn--block bind-help" type="button">没有绑定码？联系园所老师</button>
+      </form>
+
+      <div class="banner banner--info bind-note">
+        <span class="banner__icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 10.8v5"/><path d="M12 7.8h.01"/></svg>
+        </span>
+        <span>孩子信息只用于家园沟通，不会对外公开。</span>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

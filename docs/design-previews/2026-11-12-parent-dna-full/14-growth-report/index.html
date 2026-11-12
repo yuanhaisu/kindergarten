@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 成长报告</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .bar-spacer { width: 36px; height: 36px; }
+
+    .report-period { margin-top: 10px; }
+
+    .lede-card { margin-top: 14px; padding: 22px 20px; }
+    .lede-title { font-size: 26px; line-height: 1.4; }
+    .lede-note { margin: 10px 0 0; font-size: 14px; line-height: 1.7; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 24px;
+      padding: 14px 0 13px;
+      border-top: 1px solid var(--hair-soft);
+      border-bottom: 1px solid var(--hair-soft);
+    }
+    .stat { display: grid; justify-items: center; gap: 6px; }
+    .stat + .stat { border-left: 1px solid var(--hair-soft); }
+    .stat__num { font-size: 21px; color: var(--pine); }
+    .stat__num i { font-style: normal; font-size: 13px; color: var(--ink-bone); }
+    .stat__label { font-size: 11.5px; line-height: 1.3; color: var(--ink-bone); }
+
+    .dims { margin-top: 26px; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .dim + .dim { margin-top: 16px; }
+    .dim-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+    .dim-name { font-size: 14px; font-weight: 600; line-height: 1.4; }
+    .dim-score { font-size: 20px; }
+    .dim-note { margin: 7px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-bone); }
+
+    .highlights { margin-top: 26px; }
+    .hl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+    .hl-grid .thumb { aspect-ratio: 3 / 4; border-radius: 12px; }
+    .hl-caption { margin-top: 8px; }
+
+    .teacher-note { margin-top: 26px; }
+    .quote { margin: 12px 0 0; padding-left: 14px; border-left: 2px solid var(--sage); }
+    .quote-sign { margin-top: 10px; }
+
+    .report-cta { margin-top: 26px; display: grid; gap: 10px; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回成长时光">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">成长时光</span>
+        <span class="bar-spacer" aria-hidden="true"></span>
+      </header>
+
+      <h1>本学期成长报告</h1>
+      <p class="overline report-period">2026 秋季学期 · 小一班</p>
+
+      <section class="card card--sage lede-card" aria-labelledby="lede-title">
+        <h2 class="lede-title" id="lede-title">乐乐，正在长成他自己</h2>
+        <p class="body lede-note">这个学期他学会了自己穿外套、系鞋带，也开始在集体里主动说话。比起「学会了什么」，我们更高兴看到他愿意试一试。</p>
+      </section>
+
+      <section class="stats" aria-label="本学期概览">
+        <div class="stat">
+          <span class="stat__num num">48<i>/50</i></span>
+          <span class="stat__label">出勤（天）</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num num">+128</span>
+          <span class="stat__label">本期积分</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num num">10<i>/12</i></span>
+          <span class="stat__label">任务完成</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num num">32</span>
+          <span class="stat__label">成长记录</span>
+        </div>
+      </section>
+
+      <section class="dims" aria-labelledby="dims-title">
+        <div class="section-head">
+          <h2 id="dims-title">发展维度</h2>
+          <span class="tiny muted">满分 100</span>
+        </div>
+
+        <div class="dim">
+          <div class="dim-head">
+            <span class="dim-name">语言表达</span>
+            <span class="dim-score num">88</span>
+          </div>
+          <div class="bar"><i style="width: 88%"></i></div>
+          <p class="dim-note">能用完整的句子讲清一件事，最近总爱追问「为什么」。</p>
+        </div>
+
+        <div class="dim">
+          <div class="dim-head">
+            <span class="dim-name">社交交往</span>
+            <span class="dim-score num">82</span>
+          </div>
+          <div class="bar"><i style="width: 82%"></i></div>
+          <p class="dim-note">开始主动邀请同伴一起玩，遇到争执会先说自己的想法。</p>
+        </div>
+
+        <div class="dim">
+          <div class="dim-head">
+            <span class="dim-name">大动作</span>
+            <span class="dim-score num">76</span>
+          </div>
+          <div class="bar"><i style="width: 76%"></i></div>
+          <p class="dim-note">跑跳稳了，攀爬时还是会在最高一格停下来看看。</p>
+        </div>
+
+        <div class="dim">
+          <div class="dim-head">
+            <span class="dim-name">自理能力</span>
+            <span class="dim-score num">90</span>
+          </div>
+          <div class="bar"><i style="width: 90%"></i></div>
+          <p class="dim-note">自己穿外套、系鞋带，午睡后会把被子叠好。</p>
+        </div>
+      </section>
+
+      <section class="highlights" aria-labelledby="highlights-title">
+        <h2 id="highlights-title">高光时刻</h2>
+        <div class="hl-grid" role="group" aria-label="本学期的照片">
+          <span class="thumb thumb--gold"></span>
+          <span class="thumb thumb--sage"></span>
+          <span class="thumb thumb--clay"></span>
+        </div>
+        <p class="tiny muted hl-caption">从本学期的成长记录中选出的 3 张照片</p>
+      </section>
+
+      <section class="teacher-note" aria-labelledby="note-title">
+        <h2 id="note-title">老师想对你说</h2>
+        <p class="serif-body quote">乐乐，你系鞋带的时候特别认真。老师希望你知道，慢一点没关系，愿意再试一次就很了不起。</p>
+        <p class="tiny muted quote-sign">王老师 · 11 月 12 日</p>
+      </section>
+
+      <div class="report-cta">
+        <button class="btn btn--primary btn--lg btn--block" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10"/><path d="m7.5 9.5 4.5 4.5 4.5-4.5"/><path d="M5 19.5h14"/></svg>
+          导出报告 PDF
+        </button>
+        <button class="btn btn--ghost btn--block" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="17.5" cy="6.5" r="2.4"/><circle cx="17.5" cy="17.5" r="2.4"/><path d="m8.2 10.9 7.1-3.3M8.2 13.1l7.1 3.3"/></svg>
+          分享给家人
+        </button>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 相册详情</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .bar-spacer { width: 36px; height: 36px; }
+
+    .page-head { margin-top: 2px; }
+    .album-meta { margin: 7px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-bone); }
+    .album-desc { margin: 14px 0 0; }
+
+    .ph-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 18px; }
+    .ph-grid .thumb { aspect-ratio: 1 / 1; border-radius: 12px; }
+    .ph-play {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 40px;
+      height: 40px;
+      margin: -20px 0 0 -20px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--pine);
+    }
+
+    .actions { display: flex; gap: 10px; margin-top: 22px; }
+    .actions .btn--primary { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回班级相册">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">班级相册</span>
+        <span class="bar-spacer" aria-hidden="true"></span>
+      </header>
+
+      <header class="page-head">
+        <h1>秋日远足</h1>
+        <p class="album-meta">10 月 24 日 · 32 张照片 · 李老师</p>
+      </header>
+
+      <p class="body album-desc">秋游那天，孩子们在公园里捡了满满一袋<span class="hl">落叶</span>。回园后，每个人挑出最喜欢的一片，贴成了教室后墙上的秋天。</p>
+
+      <div class="ph-grid" role="group" aria-label="这个相册的照片">
+        <span class="thumb thumb--sage"></span>
+        <span class="thumb thumb--gold"></span>
+        <span class="thumb thumb--clay"></span>
+        <span class="thumb thumb--blue"></span>
+        <span class="thumb thumb--sage"></span>
+        <span class="thumb thumb--clay"></span>
+        <span class="thumb thumb--pine">
+          <span class="thumb__badge">00:24</span>
+          <span class="ph-play" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 7.2v9.6l7.8-4.8Z"/></svg>
+          </span>
+        </span>
+        <span class="thumb thumb--gold"></span>
+        <span class="thumb thumb--blue"></span>
+        <span class="thumb thumb--sage"></span>
+        <span class="thumb thumb--gold"></span>
+        <span class="thumb thumb--clay"></span>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn--primary" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10"/><path d="m7.5 9.5 4.5 4.5 4.5-4.5"/><path d="M5 19.5h14"/></svg>
+          保存全部
+        </button>
+        <button class="btn btn--ghost" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="17.5" cy="6.5" r="2.4"/><circle cx="17.5" cy="17.5" r="2.4"/><path d="m8.2 10.9 7.1-3.3M8.2 13.1l7.1 3.3"/></svg>
+          分享
+        </button>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

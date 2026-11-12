@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 接送</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .pass { padding: 20px; }
+    .pass-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .pass-state { margin-top: 2px; font-size: 32px; line-height: 1.25; }
+    .pass-sub { margin: 6px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-card); }
+    .pass-orb {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--sage-pale);
+      color: var(--pine);
+    }
+
+    .rail { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 16px; }
+    .rail-step { position: relative; display: flex; gap: 12px; }
+    .rail-step::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 15px;
+      bottom: -15px;
+      width: 1px;
+      background: var(--hair-strong);
+    }
+    .rail-step:last-child::before { display: none; }
+    .rail-dot {
+      width: 11px;
+      height: 11px;
+      margin-top: 4px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      border: 1.5px solid var(--pine);
+      background: var(--bone);
+    }
+    .rail-step.is-done .rail-dot { background: var(--pine); }
+    .rail-body { display: grid; gap: 1px; }
+    .rail-body b { font-size: 14px; font-weight: 600; line-height: 1.4; }
+    .rail-body span { font-size: 11.5px; color: var(--ink-card); }
+
+    .pass-foot { margin-top: 20px; }
+    .pass-note { margin: 8px 0 0; text-align: center; font-size: 11px; color: var(--ink-card); }
+
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 26px 0 8px; }
+    .section-head h2 { font-size: 20px; }
+
+    .day { padding: 12px 0 4px; }
+    .day + .day { border-top: 1px solid var(--hair-soft); }
+    .day-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+    .day-title { font-size: 13px; font-weight: 600; }
+    .day-week { font-size: 11px; color: var(--ink-bone); }
+    .rec { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 10px; padding: 9px 0; }
+    .rec-type { font-size: 11.5px; font-weight: 600; color: var(--sage-deep); }
+    .rec-type--out { color: var(--terracotta-text); }
+    .rec-name { font-size: 14px; font-weight: 500; line-height: 1.35; }
+    .rec-rel { margin-left: 6px; font-size: 11px; color: var(--ink-card); }
+    .rec-time { font-size: 12px; color: var(--ink-card); font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main mp-main--tab">
+      <header class="screen-head">
+        <div>
+          <p class="overline">乐乐 · 小一班</p>
+          <h1>接送</h1>
+        </div>
+        <button class="btn btn--ghost btn--sm" type="button">接送码</button>
+      </header>
+
+      <!-- 三态：?state=parked（默认，在园中）/ away（未入园）/ done（已接走） -->
+      <section class="pass card" data-state="parked" aria-labelledby="pass-title">
+        <div class="pass-top">
+          <div>
+            <p class="overline">今天 · 11 月 12 日</p>
+            <h2 id="pass-title" class="pass-state">在园中</h2>
+            <p class="pass-sub">07:52 由妈妈送入，下午 17:00 后可接。</p>
+          </div>
+          <span class="pass-orb" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>
+          </span>
+        </div>
+
+        <ol class="rail">
+          <li class="rail-step is-done">
+            <span class="rail-dot" aria-hidden="true"></span>
+            <div class="rail-body"><b>送入</b><span>07:52 · 妈妈 · 已核验</span></div>
+          </li>
+          <li class="rail-step">
+            <span class="rail-dot" aria-hidden="true"></span>
+            <div class="rail-body"><b>接走</b><span>等待接走 · 预计 17:00</span></div>
+          </li>
+        </ol>
+
+        <div class="pass-foot">
+          <button class="btn btn--primary btn--block" type="button">出示接送码</button>
+          <p class="pass-note">核验后一次有效，刷新即可更新</p>
+        </div>
+      </section>
+
+      <section class="pass card" data-state="away" hidden aria-labelledby="pass-title-away">
+        <div class="pass-top">
+          <div>
+            <p class="overline">今天 · 11 月 12 日</p>
+            <h2 id="pass-title-away" class="pass-state">未入园</h2>
+            <p class="pass-sub">今天还没到园，请在 08:30 前送入。</p>
+          </div>
+          <span class="pass-orb" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.8"/></svg>
+          </span>
+        </div>
+
+        <ol class="rail">
+          <li class="rail-step">
+            <span class="rail-dot" aria-hidden="true"></span>
+            <div class="rail-body"><b>送入</b><span>等待送入 · 到园后老师扫码核验</span></div>
+          </li>
+          <li class="rail-step">
+            <span class="rail-dot" aria-hidden="true"></span>
+            <div class="rail-body"><b>接走</b><span>今天 17:00 后可接</span></div>
+          </li>
+        </ol>
+
+        <div class="pass-foot">
+          <button class="btn btn--primary btn--block" type="button">出示接送码</button>
+          <p class="pass-note">到园时在门口出示，老师扫码后自动记录</p>
+        </div>
+      </section>
+
+      <section class="pass card" data-state="done" hidden aria-labelledby="pass-title-done">
+        <div class="pass-top">
+          <div>
+            <p class="overline">今天 · 11 月 12 日</p>
+            <h2 id="pass-title-done" class="pass-state">已接走</h2>
+            <p class="pass-sub">17:12 由妈妈接走，今天在园 9 小时 20 分。</p>
+          </div>
+          <span class="pass-orb" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4.2 4.2 8.8-9.4"/></svg>
+          </span>
+        </div>
+
+        <ol class="rail">
+          <li class="rail-step is-done">
+            <span class="rail-dot" aria-hidden="true"></span>
+            <div class="rail-body"><b>送入</b><span>07:52 · 妈妈 · 已核验</span></div>
+          </li>
+          <li class="rail-step is-done">
+            <span class="rail-dot" aria-hidden="true"></span>
+            <div class="rail-body"><b>接走</b><span>17:12 · 妈妈 · 已核验</span></div>
+          </li>
+        </ol>
+
+        <div class="pass-foot">
+          <button class="btn btn--primary btn--block" type="button">看看今天的成长记录</button>
+          <p class="pass-note">已离开园区，今日接送码已失效</p>
+        </div>
+      </section>
+
+      <div class="card card--flush" style="margin-top: 12px;">
+        <a class="list-row" href="#" style="text-decoration: none;">
+          <span class="orb orb--mint" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="3.1"/><path d="M3.4 19c.6-3.4 2.9-5.3 5.6-5.3s5 1.9 5.6 5.3"/><path d="M16.2 6.2a3 3 0 0 1 0 5.9"/><path d="M17.6 13.9c2 .5 3.3 2.1 3.7 4.6"/></svg>
+          </span>
+          <span class="list-row__body">
+            <span class="list-row__title">可接送人</span>
+            <span class="list-row__sub">妈妈、爸爸、外婆，共 3 位</span>
+          </span>
+          <span class="chev">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </a>
+      </div>
+
+      <div class="banner banner--info" style="margin-top: 12px;">
+        <span class="banner__icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 10.6v5.2"/><path d="M12 7.6h.01"/></svg>
+        </span>
+        <span>临时更换接送人，请提前在「可接送人」中添加，并告知班级老师。</span>
+      </div>
+
+      <section aria-labelledby="history-title">
+        <div class="section-head">
+          <h2 id="history-title">历史记录</h2>
+          <span class="tiny muted">近 30 天</span>
+        </div>
+
+        <div class="ledger">
+          <div class="day">
+            <div class="day-head"><span class="day-title">11 月 11 日</span><span class="day-week">周二</span></div>
+            <div class="rec">
+              <span class="rec-type">送入</span>
+              <span><span class="rec-name">妈妈</span><span class="rec-rel">母亲</span></span>
+              <span class="rec-time">07:55</span>
+            </div>
+            <div class="rec">
+              <span class="rec-type rec-type--out">接走</span>
+              <span><span class="rec-name">爸爸</span><span class="rec-rel">父亲</span></span>
+              <span class="rec-time">17:32</span>
+            </div>
+          </div>
+
+          <div class="day">
+            <div class="day-head"><span class="day-title">11 月 10 日</span><span class="day-week">周一</span></div>
+            <div class="rec">
+              <span class="rec-type">送入</span>
+              <span><span class="rec-name">妈妈</span><span class="rec-rel">母亲</span></span>
+              <span class="rec-time">08:01</span>
+            </div>
+            <div class="rec">
+              <span class="rec-type rec-type--out">接走</span>
+              <span><span class="rec-name">外婆</span><span class="rec-rel">外祖母 · 授权人</span></span>
+              <span class="rec-time">16:48</span>
+            </div>
+          </div>
+
+          <div class="day">
+            <div class="day-head"><span class="day-title">11 月 7 日</span><span class="day-week">周五</span></div>
+            <div class="rec">
+              <span class="rec-type">送入</span>
+              <span><span class="rec-name">爸爸</span><span class="rec-rel">父亲</span></span>
+              <span class="rec-time">07:47</span>
+            </div>
+            <div class="rec">
+              <span class="rec-type rec-type--out">接走</span>
+              <span><span class="rec-name">妈妈</span><span class="rec-rel">母亲</span></span>
+              <span class="rec-time">17:10</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mp-nav" aria-label="主导航">
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></svg>
+        首页
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+        成长
+      </a>
+      <a class="is-on" href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+        接送
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.4"/><path d="M4.8 20c.7-3.9 3.6-6 7.2-6s6.5 2.1 7.2 6"/></svg>
+        我的
+      </a>
+    </nav>
+  </div>
+  <script>
+    // 仅用于设计稿预览：?state=away / done 切换接送三态
+    const state = new URLSearchParams(location.search).get("state");
+    if (state) {
+      document.querySelectorAll("[data-state]").forEach((el) => {
+        el.hidden = el.dataset.state !== state;
+      });
+    }
+  </script>
+</body>
+</html>

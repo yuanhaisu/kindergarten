@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 首页</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .child-card { background: var(--card-soft); padding: 16px 18px; }
+    .child-name { font-size: 20px; line-height: 1.3; }
+    .child-sub { margin: 2px 0 0; font-size: 12px; color: var(--ink-card); }
+    .today-line { margin: 14px 0 0; font-size: 14px; line-height: 1.6; color: var(--pine); }
+    .chip--xs { height: 28px; padding: 0 12px; font-size: 12px; }
+
+    .today-card { padding: 16px 18px 18px; }
+    .today-head { margin-bottom: 14px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .stat { display: grid; justify-items: center; gap: 6px; text-align: center; }
+    .stat b { font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+    .stat small { font-size: 10.5px; color: var(--ink-card); line-height: 1.3; }
+
+    .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 18px 0 4px; }
+    .quick-item {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 7px;
+      padding: 4px 0;
+      border: 0;
+      background: transparent;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--pine);
+      cursor: pointer;
+    }
+    .quick-icon {
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 1px solid var(--hair);
+      color: var(--pine);
+    }
+    .quick-item .badge { position: absolute; top: 0; right: 20px; }
+
+    .tonight { padding: 18px 20px; }
+    .tonight-desc { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: rgba(236, 230, 215, 0.78); }
+    .tonight-foot { margin-top: 16px; }
+    .tonight-foot .muted { font-size: 12px; color: rgba(236, 230, 215, 0.65); }
+    .tonight-cta { font-size: 13px; font-weight: 600; }
+
+    .feed { margin-top: 24px; }
+    .feed-head { margin-bottom: 4px; }
+    .feed-item { padding: 15px 0; border-bottom: 1px solid var(--hair-soft); }
+    .feed-item:last-child { border-bottom: 0; }
+    .feed-title { font-size: 18px; line-height: 1.45; margin: 0; }
+    .feed-sub { margin: 6px 0 0; font-size: 13px; line-height: 1.6; color: var(--ink-bone); }
+    .feed-meta { margin: 8px 0 0; font-size: 11.5px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main mp-main--tab">
+      <header class="screen-head">
+        <div>
+          <p class="overline">11 月 12 日 · 周三 · 晴</p>
+          <h1>早上好，妈妈</h1>
+        </div>
+        <span class="avatar" aria-hidden="true">乐</span>
+      </header>
+
+      <section class="child-card card" aria-label="孩子信息">
+        <div class="row">
+          <span class="avatar avatar--lg" aria-hidden="true">乐</span>
+          <div class="grow">
+            <h2 class="child-name">乐乐</h2>
+            <p class="child-sub">小一班 · 5 岁 2 个月</p>
+          </div>
+          <span class="chip chip--xs">切换孩子</span>
+        </div>
+        <p class="today-line">
+          今天 <span class="hl">已入园</span>，07:52 到园，<span class="hl hl--gold">情绪很好</span>，早餐吃了一碗粥。
+        </p>
+      </section>
+
+      <section class="today-card card" aria-labelledby="today-title" style="margin-top: 12px;">
+        <div class="row row--between today-head">
+          <h2 id="today-title" style="font-size: 18px;">今日在园</h2>
+          <span class="tiny muted">10:20 更新</span>
+        </div>
+        <div class="stat-grid">
+          <div class="stat">
+            <span class="orb orb--sage" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 12.3 3.6 3.6 7.4-8"/></svg>
+            </span>
+            <b>已入园</b><small>07:52</small>
+          </div>
+          <div class="stat">
+            <span class="orb orb--gold" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.8 11h16.4"/><path d="M5.6 11a6.5 6.5 0 0 0 12.8 0"/><path d="M9.6 7.6c0-.9.7-1.4.7-2.4"/><path d="M13.6 7.6c0-.9.7-1.4.7-2.4"/></svg>
+            </span>
+            <b>进餐</b><small>很好</small>
+          </div>
+          <div class="stat">
+            <span class="orb orb--clay" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.4 14.3A8.5 8.5 0 0 1 9.7 3.6a8.6 8.6 0 1 0 10.7 10.7Z"/></svg>
+            </span>
+            <b>午睡</b><small>进行中</small>
+          </div>
+          <div class="stat">
+            <span class="orb orb--ink" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.3"/><path d="M8.7 14.1c.8 1.2 1.9 1.8 3.3 1.8s2.5-.6 3.3-1.8"/><path d="M9.3 9.8h.01"/><path d="M14.7 9.8h.01"/></svg>
+            </span>
+            <b>情绪</b><small>很好</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="quick" aria-label="快捷入口">
+        <button class="quick-item" type="button">
+          <span class="quick-icon" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="5.4" width="16.4" height="14.8" rx="2.6"/><path d="M7.8 3.2v4.2"/><path d="M16.2 3.2v4.2"/><path d="M3.8 10h16.4"/></svg>
+          </span>
+          请假
+        </button>
+        <button class="quick-item" type="button">
+          <span class="quick-icon" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+          </span>
+          接送码
+        </button>
+        <button class="quick-item" type="button">
+          <span class="quick-icon" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+          </span>
+          成长
+        </button>
+        <button class="quick-item" type="button">
+          <span class="quick-icon" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>
+          </span>
+          通知
+          <span class="badge">1</span>
+        </button>
+      </section>
+
+      <section class="tonight card card--pine" aria-labelledby="tonight-title">
+        <p class="overline">今晚一件事</p>
+        <h2 id="tonight-title">亲子阅读 15 分钟</h2>
+        <p class="tonight-desc">和孩子一起读《好饿的毛毛虫》，聊聊毛毛虫都吃了什么。</p>
+        <div class="row row--between tonight-foot">
+          <span class="muted">约 15 分钟 · 已完成 1 天</span>
+          <span class="tonight-cta">去完成 →</span>
+        </div>
+      </section>
+
+      <section class="feed" aria-labelledby="feed-title">
+        <div class="row row--between feed-head">
+          <h2 id="feed-title">最新动态</h2>
+          <span class="tiny muted">全部</span>
+        </div>
+
+        <article class="feed-item">
+          <p class="overline">通知 · 未读</p>
+          <h3 class="feed-title">秋季亲子运动会报名</h3>
+          <p class="feed-sub">本周五下午在园内操场举行，请在本周四前完成报名。</p>
+          <p class="feed-meta">李老师 · 今天 08:30</p>
+        </article>
+
+        <article class="feed-item">
+          <p class="overline">成长记录</p>
+          <h3 class="feed-title">乐乐主动帮小朋友分餐具</h3>
+          <p class="feed-sub">午餐时他注意到同伴需要帮助，自己走过去递了勺子。</p>
+          <p class="feed-meta">王老师 · 昨天 12:10</p>
+        </article>
+      </section>
+    </main>
+
+    <nav class="mp-nav" aria-label="主导航">
+      <a class="is-on" href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></svg>
+        首页
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+        成长
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+        接送
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.4"/><path d="M4.8 20c.7-3.9 3.6-6 7.2-6s6.5 2.1 7.2 6"/></svg>
+        我的
+      </a>
+    </nav>
+  </div>
+</body>
+</html>

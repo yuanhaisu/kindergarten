@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 开始之前</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; height: 36px; }
+
+    .consent-lead { margin: 14px 0 0; color: var(--ink-mid); }
+
+    .consent-card { margin-top: 24px; padding: 2px 16px; }
+    .consent-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 15px 0;
+      border: 0;
+      border-bottom: 1px solid var(--hair-soft);
+      background: transparent;
+      text-align: left;
+      font-family: var(--sans);
+      color: var(--pine);
+      cursor: pointer;
+    }
+    .consent-row:last-child { border-bottom: 0; }
+    .consent-copy { flex: 1; min-width: 0; }
+    .consent-copy b { display: block; font-size: 15px; font-weight: 600; line-height: 1.4; }
+    .consent-copy span { display: block; margin-top: 3px; font-size: 11.5px; line-height: 1.45; color: var(--ink-card); }
+
+    .check {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--hair-strong);
+      border-radius: 4px;
+      background: var(--card);
+      color: var(--bone);
+    }
+    .check.is-on { background: var(--pine); border-color: var(--pine); }
+
+    .consent-submit { margin-top: 24px; }
+    .consent-decline { margin-top: 6px; color: var(--ink-bone); font-weight: 500; }
+    .consent-foot { margin: 10px auto 0; max-width: 320px; text-align: center; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <div class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">隐私与协议</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </div>
+
+      <h1>开始之前</h1>
+      <p class="serif-body consent-lead">在开始之前，有三份约定需要你确认。它们说明我们会怎样使用你和孩子的信息，以及你随时可以收回哪些授权。</p>
+
+      <section class="card consent-card" aria-label="同意项">
+        <button class="consent-row" type="button">
+          <span class="check is-on" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4.2 4.2 8.8-9.4"/></svg>
+          </span>
+          <span class="consent-copy">
+            <b>隐私政策</b>
+            <span>我们如何收集、使用与保护你的信息</span>
+          </span>
+          <span class="chev" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </button>
+
+        <button class="consent-row" type="button">
+          <span class="check is-on" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4.2 4.2 8.8-9.4"/></svg>
+          </span>
+          <span class="consent-copy">
+            <b>未成年人个人信息保护规则</b>
+            <span>孩子的信息如何被专门保护</span>
+          </span>
+          <span class="chev" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </button>
+
+        <button class="consent-row" type="button">
+          <span class="check is-on" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4.2 4.2 8.8-9.4"/></svg>
+          </span>
+          <span class="consent-copy">
+            <b>用户协议</b>
+            <span>使用养成星球服务的约定</span>
+          </span>
+          <span class="chev" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </button>
+      </section>
+
+      <button class="btn btn--primary btn--lg btn--block consent-submit" type="button">同意并继续</button>
+      <button class="btn btn--text btn--block consent-decline" type="button">暂不同意</button>
+
+      <p class="tiny consent-foot">随时可以在「我的 · 隐私与协议」中查看全文或撤回授权。</p>
+    </main>
+  </div>
+</body>
+</html>

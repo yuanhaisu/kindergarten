@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 接送码</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; height: 36px; }
+    .page-sub { margin: 8px 0 12px; font-size: 13px; line-height: 1.55; color: var(--ink-bone); }
+
+    .pass-card { display: grid; justify-items: center; padding: 16px 20px 14px; }
+    .qr-svg { display: block; width: 220px; height: 220px; color: var(--pine); }
+    .pass-child { margin: 14px 0 0; font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--pine); }
+    .pass-code {
+      margin: 2px 0 0;
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 400;
+      line-height: 1.25;
+      letter-spacing: 0.08em;
+      font-variant-numeric: tabular-nums;
+      color: var(--pine);
+    }
+    .pass-code-label { margin-right: 7px; font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; color: var(--ink-card); vertical-align: 3px; }
+    .pass-refresh {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      margin-top: 12px;
+      padding-top: 9px;
+      border-top: 1px solid var(--hair);
+    }
+    .pass-refresh > span { font-size: 12px; color: var(--ink-card); font-variant-numeric: tabular-nums; }
+
+    .how { margin-top: 18px; }
+    .step-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+    .step { display: flex; align-items: flex-start; gap: 11px; }
+    .step__num {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      flex: 0 0 auto;
+      margin-top: 1px;
+      border-radius: 50%;
+      background: var(--sage-pale);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--pine);
+    }
+    .step p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--pine); }
+
+    .pass-foot-note { margin: 18px 0 0; text-align: center; font-size: 11.5px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回接送">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6 6.5 6 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">接送</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </header>
+
+      <h1>接送码</h1>
+      <p class="page-sub">在园门口出示给老师核验</p>
+
+      <section class="pass-card card" aria-label="乐乐的今日接送码">
+        <svg class="qr-svg" viewBox="0 0 24 24" width="220" height="220" role="img" aria-label="乐乐今日接送二维码（原型占位）">
+          <rect width="24" height="24" fill="#ffffff"/>
+          <path d="M0 0h7v1h-7zM8 0h2v1h-2zM12 0h2v1h-2zM15 0h1v1h-1zM17 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM10 1h4v1h-4zM17 1h1v1h-1zM23 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM8 2h1v1h-1zM10 2h1v1h-1zM12 2h2v1h-2zM17 2h1v1h-1zM19 2h3v1h-3zM23 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM8 3h2v1h-2zM11 3h1v1h-1zM13 3h1v1h-1zM15 3h1v1h-1zM17 3h1v1h-1zM19 3h3v1h-3zM23 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM12 4h1v1h-1zM15 4h1v1h-1zM17 4h1v1h-1zM19 4h3v1h-3zM23 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h2v1h-2zM12 5h4v1h-4zM17 5h1v1h-1zM23 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM17 6h7v1h-7zM9 7h1v1h-1zM11 7h5v1h-5zM0 8h1v1h-1zM3 8h1v1h-1zM6 8h2v1h-2zM9 8h3v1h-3zM14 8h1v1h-1zM17 8h1v1h-1zM21 8h2v1h-2zM2 9h1v1h-1zM4 9h1v1h-1zM8 9h2v1h-2zM12 9h1v1h-1zM15 9h4v1h-4zM20 9h3v1h-3zM1 10h9v1h-9zM14 10h2v1h-2zM17 10h1v1h-1zM19 10h1v1h-1zM22 10h1v1h-1zM1 11h1v1h-1zM8 11h2v1h-2zM12 11h1v1h-1zM16 11h1v1h-1zM18 11h2v1h-2zM21 11h2v1h-2zM2 12h1v1h-1zM4 12h1v1h-1zM6 12h3v1h-3zM12 12h1v1h-1zM18 12h1v1h-1zM20 12h2v1h-2zM23 12h1v1h-1zM2 13h1v1h-1zM4 13h1v1h-1zM10 13h1v1h-1zM14 13h4v1h-4zM20 13h1v1h-1zM3 14h2v1h-2zM6 14h1v1h-1zM8 14h1v1h-1zM13 14h1v1h-1zM17 14h1v1h-1zM20 14h2v1h-2zM0 15h1v1h-1zM3 15h2v1h-2zM8 15h1v1h-1zM10 15h2v1h-2zM14 15h1v1h-1zM16 15h2v1h-2zM19 15h1v1h-1zM10 16h2v1h-2zM13 16h1v1h-1zM15 16h7v1h-7zM0 17h7v1h-7zM8 17h3v1h-3zM13 17h1v1h-1zM16 17h1v1h-1zM20 17h1v1h-1zM0 18h1v1h-1zM6 18h1v1h-1zM8 18h1v1h-1zM10 18h1v1h-1zM12 18h5v1h-5zM18 18h1v1h-1zM20 18h4v1h-4zM0 19h1v1h-1zM2 19h3v1h-3zM6 19h1v1h-1zM9 19h8v1h-8zM20 19h2v1h-2zM0 20h1v1h-1zM2 20h3v1h-3zM6 20h1v1h-1zM9 20h1v1h-1zM13 20h1v1h-1zM15 20h6v1h-6zM22 20h1v1h-1zM0 21h1v1h-1zM2 21h3v1h-3zM6 21h1v1h-1zM10 21h2v1h-2zM13 21h2v1h-2zM17 21h1v1h-1zM19 21h2v1h-2zM0 22h1v1h-1zM6 22h1v1h-1zM9 22h1v1h-1zM12 22h1v1h-1zM14 22h1v1h-1zM16 22h1v1h-1zM18 22h1v1h-1zM21 22h1v1h-1zM0 23h7v1h-7zM10 23h2v1h-2zM14 23h2v1h-2z" fill="currentColor" shape-rendering="crispEdges"/>
+        </svg>
+
+        <p class="pass-child">乐乐 · 小一班</p>
+        <p class="pass-code"><span class="pass-code-label">核验码</span>A7K2-9F3D</p>
+
+        <div class="pass-refresh">
+          <span>58 秒后自动刷新</span>
+          <button class="btn btn--text btn--sm" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 9A8 8 0 1 0 20 14"/><path d="M19.5 4.5V9H15"/></svg>
+            立即刷新
+          </button>
+        </div>
+      </section>
+
+      <div class="banner banner--warning" style="margin-top: 12px;">
+        <span class="banner__icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.3 3.6 16.4a1.7 1.7 0 0 0 1.5 2.5h13.8a1.7 1.7 0 0 0 1.5-2.5L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 16.6h.01"/></svg>
+        </span>
+        <span>截图不可用，请在门口实时出示</span>
+      </div>
+
+      <section class="how" aria-label="使用步骤">
+        <p class="overline">使用步骤</p>
+        <ol class="step-list">
+          <li class="step">
+            <span class="step__num" aria-hidden="true">1</span>
+            <p>到园门口打开本页，把屏幕调亮一点。</p>
+          </li>
+          <li class="step">
+            <span class="step__num" aria-hidden="true">2</span>
+            <p>把二维码或下方核验码出示给老师。</p>
+          </li>
+          <li class="step">
+            <span class="step__num" aria-hidden="true">3</span>
+            <p>老师核验通过后，接送记录会自动生成。</p>
+          </li>
+        </ol>
+      </section>
+
+      <p class="pass-foot-note">一次有效 · 核验后自动失效</p>
+    </main>
+  </div>
+</body>
+</html>

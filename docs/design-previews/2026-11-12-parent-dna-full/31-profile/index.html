@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 我的</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .me-card { padding: 18px 20px; }
+    .me-name { font-family: var(--serif); font-size: 24px; font-weight: 400; line-height: 1.3; }
+    .me-phone { margin: 3px 0 0; font-size: 12px; color: var(--ink-card); }
+    .me-edit { font-size: 12px; color: var(--ink-card); }
+
+    .child-line { display: flex; align-items: center; gap: 12px; padding: 14px 0 2px; border-top: 1px solid var(--hair); margin-top: 14px; }
+    .child-line b { font-size: 14px; font-weight: 600; }
+    .child-line span { font-size: 11.5px; color: var(--ink-card); }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 16px 20px; }
+    .stat-item { display: grid; gap: 3px; }
+    .stat-item + .stat-item { border-left: 1px solid var(--hair); padding-left: 18px; }
+    .stat-item b { font-family: var(--serif); font-size: 26px; font-weight: 400; line-height: 1; }
+    .stat-item span { font-size: 11px; color: var(--ink-card); }
+
+    .group { margin-top: 20px; }
+    .group-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 4px 8px; }
+    .group-head h2 { font-size: 17px; }
+    .group-head span { font-size: 11px; color: var(--ink-bone); }
+
+    .logout { display: block; width: 100%; height: 48px; margin-top: 22px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--ink-card); font-family: var(--sans); font-size: 13.5px; }
+    .version { margin: 10px 0 0; text-align: center; font-size: 11px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main mp-main--tab">
+      <header class="screen-head">
+        <div>
+          <p class="overline">账号与家庭</p>
+          <h1>我的</h1>
+        </div>
+      </header>
+
+      <section class="me-card card" aria-label="账号信息">
+        <div class="row">
+          <span class="avatar avatar--lg" aria-hidden="true">妈</span>
+          <div class="grow">
+            <p class="me-name">李静</p>
+            <p class="me-phone">138****6721 · 妈妈</p>
+          </div>
+          <span class="me-edit">编辑</span>
+        </div>
+        <div class="child-line">
+          <span class="avatar avatar--sm avatar--clay" aria-hidden="true">乐</span>
+          <div class="grow">
+            <b>乐乐</b>
+            <div><span>小一班 · 阳光幼儿园</span></div>
+          </div>
+          <span class="chip chip--sm">切换</span>
+        </div>
+      </section>
+
+      <section class="stats card card--soft" style="margin-top: 12px;" aria-label="本学期数据">
+        <div class="stat-item"><b>42</b><span>接送记录</span></div>
+        <div class="stat-item"><b>48</b><span>成长记录</span></div>
+        <div class="stat-item"><b>320</b><span>可用积分</span></div>
+      </section>
+
+      <section class="group" aria-labelledby="service-title">
+        <div class="group-head">
+          <h2 id="service-title">我的服务</h2>
+        </div>
+        <div class="card card--flush">
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--mint" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="3.4"/><path d="M4.8 20c.7-3.9 3.6-6 7.2-6s6.5 2.1 7.2 6"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">幼儿信息</span><span class="list-row__sub">档案、健康与紧急联系人</span></span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--gold" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">班级信息</span><span class="list-row__sub">小一班 · 李老师、王老师</span></span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--clay" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="5.4" width="16.4" height="14.8" rx="2.6"/><path d="M7.8 3.2v4.2"/><path d="M16.2 3.2v4.2"/><path d="M3.8 10h16.4"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">班级日历</span><span class="list-row__sub">本月 2 个活动待参加</span></span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--gold" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.6 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.3l5.4-.8Z"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">积分与成就</span><span class="list-row__sub">已获得 6 枚徽章</span></span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--ink" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.6a7.6 7.6 0 0 1-8 7.6 8.7 8.7 0 0 1-3.2-.6L4 20l1.3-3.6A7.4 7.4 0 0 1 4 11.6 7.6 7.6 0 0 1 12 4a7.6 7.6 0 0 1 8 7.6Z"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">意见反馈</span><span class="list-row__sub">问题和建议都可以告诉我们</span></span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="settings-title">
+        <div class="group-head">
+          <h2 id="settings-title">设置</h2>
+        </div>
+        <div class="card card--flush">
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--blue" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">消息通知</span></span>
+            <span class="tag tag--muted">已开启</span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--mint" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.2" y="4.2" width="15.6" height="15.6" rx="3.2"/><path d="M8.4 12.2 10.8 14.6l4.8-5"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">隐私与协议</span><span class="list-row__sub">用户协议、隐私政策、儿童信息授权</span></span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+          <a class="list-row" href="#" style="text-decoration: none;">
+            <span class="orb orb--ink" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 11v5.4"/><path d="M12 7.8h.01"/></svg>
+            </span>
+            <span class="list-row__body"><span class="list-row__title">关于养成星球</span></span>
+            <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></span>
+          </a>
+        </div>
+      </section>
+
+      <button class="logout" type="button">退出登录</button>
+      <p class="version">养成星球 · 家长端 v1.0.0</p>
+    </main>
+
+    <nav class="mp-nav" aria-label="主导航">
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></svg>
+        首页
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+        成长
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+        接送
+      </a>
+      <a class="is-on" href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.4"/><path d="M4.8 20c.7-3.9 3.6-6 7.2-6s6.5 2.1 7.2 6"/></svg>
+        我的
+      </a>
+    </nav>
+  </div>
+</body>
+</html>

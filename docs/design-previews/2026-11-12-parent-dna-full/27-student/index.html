@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 幼儿信息</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__pad { width: 36px; height: 36px; }
+    .bar-action { height: 36px; padding: 0 4px; font-size: 13px; }
+
+    .profile-head { display: flex; align-items: center; gap: 16px; margin: 8px 2px 4px; }
+    .profile-head h1 { font-size: 30px; }
+    .head-sub { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-bone); }
+    .head-meta { margin: 3px 0 0; font-size: 11.5px; color: var(--ink-bone); }
+
+    .group-title { margin: 18px 4px 8px; font-size: 18px; }
+
+    .fact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px 18px; }
+    .fg { display: grid; gap: 4px; min-width: 0; }
+    .fg span { font-size: 11.5px; line-height: 1.3; color: var(--ink-card); }
+    .fg b { font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .fg--wide { grid-column: 1 / -1; }
+
+    .health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+    .hcell { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+    .hcell span { flex: 0 0 auto; font-size: 12.5px; color: var(--ink-card); }
+    .hcell b { font-family: var(--serif); font-size: 20px; font-weight: 400; line-height: 1.2; white-space: nowrap; }
+    .hcell small { margin-left: 2px; font-family: var(--sans); font-size: 11.5px; font-weight: 400; color: var(--ink-card); }
+
+    .call {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 1px solid var(--hair-strong);
+      border-radius: 50%;
+      background: var(--card);
+      color: var(--pine);
+      cursor: pointer;
+    }
+
+    .banner-wrap { margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+        </button>
+        <span class="page-bar__title">幼儿信息</span>
+        <button class="btn btn--text bar-action" type="button">编辑</button>
+      </header>
+
+      <section class="profile-head" aria-label="幼儿档案">
+        <span class="avatar avatar--lg" aria-hidden="true">乐</span>
+        <div class="grow">
+          <h1>乐乐</h1>
+          <p class="head-sub">小一班 · <span class="hl hl--mint">5 岁 2 个月</span></p>
+          <p class="head-meta">2025 年 9 月入园</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="basic-title">
+        <h2 class="group-title" id="basic-title">基本信息</h2>
+        <div class="card">
+          <div class="fact-grid">
+            <div class="fg"><span>姓名</span><b>乐乐</b></div>
+            <div class="fg"><span>性别</span><b>女</b></div>
+            <div class="fg"><span>生日</span><b>2021 年 9 月 8 日</b></div>
+            <div class="fg"><span>民族</span><b>汉族</b></div>
+            <div class="fg fg--wide"><span>户籍</span><b>湖南 · 湘潭</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="health-title">
+        <h2 class="group-title" id="health-title">健康信息</h2>
+        <div class="card">
+          <div class="health-grid">
+            <div class="hcell"><span>身高</span><b>108<small>cm</small></b></div>
+            <div class="hcell"><span>体重</span><b>18<small>kg</small></b></div>
+            <div class="hcell"><span>过敏史</span><b>无</b></div>
+            <div class="hcell"><span>特殊照护</span><b>无</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="contact-title">
+        <h2 class="group-title" id="contact-title">紧急联系人</h2>
+        <div class="card card--flush">
+          <div class="list-row">
+            <span class="avatar avatar--sm avatar--sage" aria-hidden="true">妈</span>
+            <span class="list-row__body">
+              <span class="list-row__title">妈妈 · 李静</span>
+              <span class="list-row__sub">138****6721</span>
+            </span>
+            <button class="call" type="button" aria-label="拨打妈妈李静的电话">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            </button>
+          </div>
+          <div class="list-row">
+            <span class="avatar avatar--sm avatar--clay" aria-hidden="true">爸</span>
+            <span class="list-row__body">
+              <span class="list-row__title">爸爸</span>
+              <span class="list-row__sub">138****9034</span>
+            </span>
+            <button class="call" type="button" aria-label="拨打爸爸的电话">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div class="banner banner--info banner-wrap" role="note">
+        <span class="banner__icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 10.8v5.2"/><path d="M12 7.6h.01"/></svg>
+        </span>
+        <span>信息有误请联系班级老师修改</span>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

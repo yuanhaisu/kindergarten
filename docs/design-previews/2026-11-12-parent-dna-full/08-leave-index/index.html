@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 请假记录</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; }
+
+    .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 2px 0 16px; }
+    .head h1 { flex: 1; min-width: 0; }
+
+    .stats { padding: 16px 20px; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; margin-top: 10px; }
+    .stat { display: grid; gap: 4px; }
+    .stat + .stat { border-left: 1px solid var(--hair); padding-left: 18px; }
+    .stat b { font-size: 28px; }
+    .stat span { font-size: 11.5px; color: var(--ink-card); }
+
+    .filters { display: flex; gap: 8px; margin: 14px 0 12px; }
+
+    .leave { display: block; padding: 16px 18px; text-decoration: none; color: inherit; }
+    .leave + .leave { margin-top: 10px; }
+    .leave-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .leave-head .overline { margin: 0; }
+    .leave-date { flex: 0 0 auto; font-size: 11.5px; color: var(--ink-card); font-variant-numeric: tabular-nums; }
+    .leave h3 { margin: 7px 0 0; }
+    .leave-reason {
+      margin: 5px 0 0;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--ink-card);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .leave-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 11px;
+      border-top: 1px solid var(--hair-soft);
+    }
+    .leave-meta { font-size: 11px; color: var(--ink-card); }
+
+    .list-foot { margin: 16px 0 0; text-align: center; font-size: 11px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">乐乐 · 小一班</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </header>
+
+      <div class="head">
+        <h1>请假</h1>
+        <a class="btn btn--ghost btn--sm" href="../09-leave-create/index.html">新建</a>
+      </div>
+
+      <section class="stats card card--soft" aria-labelledby="stats-title">
+        <p class="overline" id="stats-title">本学期</p>
+        <div class="stat-grid">
+          <div class="stat">
+            <b class="num">3</b>
+            <span>次 · 请假记录</span>
+          </div>
+          <div class="stat">
+            <b class="num">2</b>
+            <span>次 · 已同意</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="filters" role="tablist" aria-label="按状态筛选">
+        <button class="chip is-on" type="button" aria-pressed="true">全部</button>
+        <button class="chip" type="button" aria-pressed="false">待审批</button>
+        <button class="chip" type="button" aria-pressed="false">已同意</button>
+        <button class="chip" type="button" aria-pressed="false">已拒绝</button>
+      </div>
+
+      <section aria-label="请假记录">
+        <a class="leave card" href="../10-leave-detail/index.html">
+          <div class="leave-head">
+            <p class="overline">病假</p>
+            <span class="leave-date">11 月 12 日 · 1 天</span>
+          </div>
+          <h3>因发烧请假一天</h3>
+          <p class="leave-reason">凌晨烧到 38.4℃，吃过药还没完全退，需要在家观察一天。</p>
+          <div class="leave-foot">
+            <span class="leave-meta">提交于 11 月 12 日 08:20</span>
+            <span class="tag tag--wait">待审批</span>
+          </div>
+        </a>
+
+        <a class="leave card" href="../10-leave-detail/index.html">
+          <div class="leave-head">
+            <p class="overline">病假</p>
+            <span class="leave-date">10 月 20 日 – 10 月 21 日 · 2 天</span>
+          </div>
+          <h3>咳嗽加重，在家休养两天</h3>
+          <p class="leave-reason">夜里咳得厉害，医生建议休息两天，周四再返园。</p>
+          <div class="leave-foot">
+            <span class="leave-meta">提交于 10 月 19 日 20:05</span>
+            <span class="tag tag--ok">已同意</span>
+          </div>
+        </a>
+
+        <a class="leave card" href="../10-leave-detail/index.html">
+          <div class="leave-head">
+            <p class="overline">事假</p>
+            <span class="leave-date">10 月 9 日 · 1 天</span>
+          </div>
+          <h3>回老家给外婆过生日</h3>
+          <p class="leave-reason">一早出发，当天下午返程，第二天正常入园。</p>
+          <div class="leave-foot">
+            <span class="leave-meta">提交于 10 月 7 日 19:20</span>
+            <span class="tag tag--ok">已同意</span>
+          </div>
+        </a>
+      </section>
+
+      <p class="list-foot">共 3 条请假记录</p>
+    </main>
+  </div>
+</body>
+</html>
