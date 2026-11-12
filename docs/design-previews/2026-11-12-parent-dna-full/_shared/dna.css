@@ -294,6 +294,11 @@ h3, .h3 {
 
 .card--pine h2, .card--sage h2, .card--pine h3, .card--sage h3 { color: var(--bone); }
 
+/* sage-deep 上 bone 正文仅 4.19:1，正文/小字改用更亮的 #FCFAF4（约 5.0:1） */
+.card--sage { color: var(--card-soft); }
+.card--sage h2, .card--sage h3 { color: var(--card-soft); }
+.card--sage .muted, .card--sage .overline { color: rgba(252, 250, 244, 0.82); }
+
 .stack { display: grid; gap: 14px; }
 .stack--sm { display: grid; gap: 8px; }
 .stack--lg { display: grid; gap: 22px; }
