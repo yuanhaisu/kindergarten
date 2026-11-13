@@ -179,7 +179,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 10. MCP 运维凭据（alibaba-cloud-ops-mcp-server）
 
-阿里云运维 MCP 配置在**用户级**（`~/.claude.json`，通过 `claude mcp add --scope user` 写入），**不进入仓库**：项目 `.mcp.json` 是 git 跟踪文件，且被 `scripts/check-secrets.mjs` 的 `sensitive-file` 规则整文件拦截。版本固定在 `0.9.27`，`--visible-tools` 只开放只读工具（ECS/VPC/RDS 查询、OSS 列举、CMS 指标）。**配置本身不存任何 AK。**
+阿里云运维 MCP 配置在**用户级**（`~/.claude.json`，通过 `claude mcp add --scope user` 写入），**不进入仓库**：项目 `.mcp.json` 是 git 跟踪文件，且被 `scripts/check-secrets.mjs` 的 `sensitive-file` 规则整文件拦截。版本固定在 `0.9.27`，`--visible-tools` 只开放只读工具（ECS/RDS 查询、OSS 列举、CMS 指标）。**配置本身不存任何 AK。**
 
 ### 10.1 凭据来源
 
@@ -193,20 +193,26 @@ sudo nginx -t && sudo systemctl reload nginx
 ### 10.2 本机（Claude Code）配置
 
 1. 创建专用 RAM 用户（如 `mcp-ops-readonly`）：仅编程访问，不开控制台登录；只授只读策略，写操作按需单独加并限定资源 ARN。
-2. 在用户级注册 MCP（只需执行一次，配置写入 `~/.claude.json`，不进仓库）：
+2. 安装固定版本（不要用 `uvx`：每次启动都要解析/下载，冷启动会超过 30 秒的 MCP 握手超时）：
+   ```bash
+   uv tool install alibaba-cloud-ops-mcp-server==0.9.27
+   ```
+3. 在用户级注册 MCP（只需执行一次，配置写入 `~/.claude.json`，不进仓库）：
    ```bash
    claude mcp add --scope user alibaba-cloud-ops-mcp-server -- \
-     uvx alibaba-cloud-ops-mcp-server@0.9.27 \
+     "C:/Users/<你>/.local/bin/alibaba-cloud-ops-mcp-server.exe" \
      --services ecs,rds,oss,vpc \
-     --visible-tools "ECS_DescribeInstances,ECS_DescribeRegions,ECS_DescribeZones,ECS_DescribeImages,ECS_DescribeSecurityGroups,VPC_DescribeVpcs,VPC_DescribeVSwitches,RDS_DescribeDBInstances,OSS_ListBuckets,OSS_ListObjects,CMS_GetCpuUsageData,CMS_GetCpuLoadavgData,CMS_GetMemUsageData,CMS_GetDiskUsageData"
+     --visible-tools "ECS_DescribeInstances,RDS_DescribeDBInstances,OSS_ListBuckets,OSS_ListObjects,CMS_GetCpuUsageData,CMS_GetCpuLoadavgData,CMS_GetMemUsageData,CMS_GetDiskUsageData"
    ```
-3. AK 写入 **Windows 用户环境变量**，不要写进项目文件：
+4. AK 写入 **Windows 用户环境变量**，不要写进项目文件：
    ```powershell
    setx ALIBABA_CLOUD_ACCESS_KEY_ID "LTAI..."
    setx ALIBABA_CLOUD_ACCESS_KEY_SECRET "..."
    ```
-4. 重启终端与 Claude Code（`setx` 只对新进程生效），在 Claude Code 里用 `/mcp` 确认服务器已连接。
-5. 验证：调用 `ECS_DescribeInstances`，能返回 `cn-guangzhou` 的实例列表即通。
+5. 重启终端与 Claude Code（`setx` 只对新进程生效），在 Claude Code 里用 `/mcp` 确认服务器已连接。
+6. 验证：调用 `ECS_DescribeInstances`，能返回 `cn-guangzhou` 的实例列表即通。
+
+> 动态 API 工具（`ECS_*` / `RDS_*`）启动时会从 `api.aliyun.com/meta/v1` 拉取 API 元数据，每个约 4 次请求；白名单里的动态工具越多，握手越慢，超过 30 秒就会被判为连接失败。当前只保留 `ECS_DescribeInstances` 和 `RDS_DescribeDBInstances`。需要更多工具时逐个加，并用 `/mcp` 验证启动时间；必要时用 `MCP_TIMEOUT`（毫秒）放宽 Claude Code 的启动超时。
 
 > ⚠️ 项目 `.mcp.json` 是 git 跟踪文件，且被 secret 扫描器整文件拦截；本 MCP 使用用户级配置，**不要改项目 `.mcp.json`**。**禁止**把真实 AK 写入 `.mcp.json` 或任何被跟踪文件。`scripts/check-secrets.mjs` 的 `LTAI` 规则只扫变更文件，不能当兜底。
 >
