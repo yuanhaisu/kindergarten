@@ -1,0 +1,25 @@
+{
+  "slug": "parent-v2-task-points-21-tasks",
+  "surface": "parent",
+  "title": "亲子任务 · 积分提案",
+  "projectId": "431e0a99-e6a1-4ab6-8a9f-7ed47fc1b121",
+  "conversationId": "07efd365-349a-4b70-b037-2ba4cb8094d1",
+  "runId": "4ae1855a-bfc7-4425-a087-d1e403cdb1d1",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 627,
+  "files": [
+    ".file-versions/6db0d8d548bfe1c8be329db8/0001-6163a669-842b-4ba5-b10a-7c1a4d4c91b9.html",
+    ".file-versions/6db0d8d548bfe1c8be329db8/manifest.json",
+    "parent-variants/v2-task-points/21-tasks/app.js",
+    "parent-variants/v2-task-points/21-tasks/fonts/noto-serif-sc-subset.woff2",
+    "parent-variants/v2-task-points/21-tasks/fonts/README.md",
+    "parent-variants/v2-task-points/21-tasks/index.html",
+    "parent-variants/v2-task-points/21-tasks/index.html.artifact.json",
+    "parent-variants/v2-task-points/21-tasks/README.md",
+    "parent-variants/v2-task-points/21-tasks/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/431e0a99-e6a1-4ab6-8a9f-7ed47fc1b121"
+}

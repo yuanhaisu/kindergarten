@@ -1,0 +1,20 @@
+{
+  "slug": "parent-18-pickup-qrcode",
+  "surface": "parent",
+  "title": "接送码",
+  "projectId": "cc60d89f-0ef3-4e63-b963-9da15f15e91b",
+  "conversationId": "2c9df839-ff48-4331-9e8d-c9d7af5f6d41",
+  "runId": "4f1ace70-1049-4531-aa44-3e753e6934a9",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 266,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/cc60d89f-0ef3-4e63-b963-9da15f15e91b",
+  "previewRendered": true
+}

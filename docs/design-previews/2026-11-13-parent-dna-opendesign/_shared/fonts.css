@@ -1,0 +1,19 @@
+/* 养成星球 DNA v1 · 自托管字体（Instrument Serif + Noto Serif SC）
+ * 与手工批次一致；仅在设计稿预览与画廊中使用。
+ */
+
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("fonts/instrument-serif-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Noto Serif SC";
+  src: url("fonts/noto-serif-sc-subset.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

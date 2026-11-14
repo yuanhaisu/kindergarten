@@ -1,0 +1,20 @@
+{
+  "slug": "parent-21-tasks",
+  "surface": "parent",
+  "title": "亲子任务",
+  "projectId": "1e6fbf52-b50d-483d-816d-367a9ca21b27",
+  "conversationId": "58fc9b5b-d9a5-44e5-a13f-4fdaf94d400f",
+  "runId": "07df9f41-388e-4c46-a3c5-5e529b7eabab",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 377,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/1e6fbf52-b50d-483d-816d-367a9ca21b27",
+  "previewRendered": true
+}

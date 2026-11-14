@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>家长端 · 8 组变体对照</title>
+  <link rel="stylesheet" href="_shared/fonts.css" />
+  <style>
+    :root { --bg:#ECE6D7; --surface:#fff; --fg:#173220; --muted:#55616F; --muted-card:#5E6B7A; --hair:rgba(23,50,32,.1); --serif:"Instrument Serif","Noto Serif SC","Songti SC","STSong","SimSun",Georgia,serif; --sans:"Geist","Inter",-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+    body { padding:48px 40px 80px; }
+    .top { max-width:1100px; margin:0 auto 40px; }
+    .eyebrow { margin:0 0 8px; font-size:11px; font-weight:600; letter-spacing:.16em; color:var(--muted); }
+    .top h1 { margin:0; font-family:var(--serif); font-size:40px; font-weight:400; line-height:1.2; }
+    .lede { margin:12px 0 0; max-width:680px; font-family:var(--serif); font-size:17px; line-height:1.8; color:#3D5141; }
+    .lede a { color:var(--fg); }
+    .group { max-width:1100px; margin:48px auto 0; padding-top:18px; border-top:1px solid var(--hair); }
+    .group-head h2 { margin:0; font-family:var(--serif); font-size:26px; font-weight:400; }
+    .group-head p { margin:6px 0 0; font-size:12px; color:var(--muted-card); }
+    .pair { margin-top:18px; }
+    .pair-head { display:flex; align-items:baseline; gap:10px; }
+    .pair-head h3 { margin:0; font-family:var(--serif); font-size:20px; font-weight:400; }
+    .pair-head span { font-size:11px; color:var(--muted-card); }
+    .shots { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:10px; }
+    figure { margin:0; }
+    .shot { display:block; max-width:390px; border:1px solid var(--hair); border-radius:24px; overflow:hidden; background:#DED6C6; }
+    .shot img { display:block; width:100%; }
+    figcaption { margin-top:7px; font-size:11.5px; color:var(--muted); }
+    footer { max-width:1100px; margin:64px auto 0; padding-top:16px; border-top:1px solid var(--hair); font-size:11px; color:var(--muted-card); }
+    @media (max-width:760px) { body { padding:28px 18px 56px; } .top h1 { font-size:30px; } .shots { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <p class="eyebrow">养成星球 · 家长端 · VARIANTS</p>
+    <h1>8 组变体对照</h1>
+    <p class="lede">左边是 31 页 baseline，右边是同一页的变体/提案。变体不替换 baseline；带“提案”的页面需要先改后端契约。共 8 组 / 10 页。<a href="index.html">31 页 baseline 画廊 →</a></p>
+  </header>
+  
+    <section class="group" id="v1-leave-day">
+      <div class="group-head">
+        <h2>V1 · 11/12 请假在家</h2>
+        <p>乐乐发烧请假在家（待审批）；01/17 改请假态，与 baseline 的“在园”并存。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>首页</h3><span>请假态</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/01-home/index.html"><img src="parent/01-home/preview.png" alt="baseline 首页" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v1-leave-day/01-home/index.html"><img src="parent-variants/v1-leave-day/01-home/preview.png" alt="V1 · 11/12 请假在家 首页" loading="lazy" /></a>
+                <figcaption>V1 · 11/12 请假在家</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="pair">
+            <div class="pair-head"><h3>接送</h3><span>请假中</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/17-pickup/index.html"><img src="parent/17-pickup/preview.png" alt="baseline 接送" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v1-leave-day/17-pickup/index.html"><img src="parent-variants/v1-leave-day/17-pickup/preview.png" alt="V1 · 11/12 请假在家 接送" loading="lazy" /></a>
+                <figcaption>V1 · 11/12 请假在家</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+    <section class="group" id="v2-task-points">
+      <div class="group-head">
+        <h2>V2 · 任务积分提案</h2>
+        <p>恢复 +10/+15 与连续打卡；需 06-task 契约同步，标“未来提案”。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>亲子任务</h3><span>积分提案</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/21-tasks/index.html"><img src="parent/21-tasks/preview.png" alt="baseline 亲子任务" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v2-task-points/21-tasks/index.html"><img src="parent-variants/v2-task-points/21-tasks/preview.png" alt="V2 · 任务积分提案 亲子任务" loading="lazy" /></a>
+                <figcaption>V2 · 任务积分提案</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="pair">
+            <div class="pair-head"><h3>积分与成就</h3><span>任务打卡 +10</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/24-points/index.html"><img src="parent/24-points/preview.png" alt="baseline 积分与成就" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v2-task-points/24-points/index.html"><img src="parent-variants/v2-task-points/24-points/preview.png" alt="V2 · 任务积分提案 积分与成就" loading="lazy" /></a>
+                <figcaption>V2 · 任务积分提案</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+    <section class="group" id="v3-notice-signup">
+      <div class="group-head">
+        <h2>V3 · 通知报名提案</h2>
+        <p>“我要报名/已报名”；需新增报名 API，标“未来提案”。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>通知详情</h3><span>报名提案</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/07-notice-detail/index.html"><img src="parent/07-notice-detail/preview.png" alt="baseline 通知详情" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v3-notice-signup/07-notice-detail/index.html"><img src="parent-variants/v3-notice-signup/07-notice-detail/preview.png" alt="V3 · 通知报名提案 通知详情" loading="lazy" /></a>
+                <figcaption>V3 · 通知报名提案</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+    <section class="group" id="v4-settings-simple">
+      <div class="group-head">
+        <h2>V4 · 设置简化版</h2>
+        <p>2 个通用开关 + 免打扰；免打扰需后端补字段。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>设置</h3><span>简化版</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/29-settings/index.html"><img src="parent/29-settings/preview.png" alt="baseline 设置" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v4-settings-simple/29-settings/index.html"><img src="parent-variants/v4-settings-simple/29-settings/preview.png" alt="V4 · 设置简化版 设置" loading="lazy" /></a>
+                <figcaption>V4 · 设置简化版</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+    <section class="group" id="v5-report-month">
+      <div class="group-head">
+        <h2>V5 · 报告月度版</h2>
+        <p>本月 +180，与 24 的“本月获得”一致。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>成长报告</h3><span>本月版</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/14-growth-report/index.html"><img src="parent/14-growth-report/preview.png" alt="baseline 成长报告" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v5-report-month/14-growth-report/index.html"><img src="parent-variants/v5-report-month/14-growth-report/preview.png" alt="V5 · 报告月度版 成长报告" loading="lazy" /></a>
+                <figcaption>V5 · 报告月度版</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+    <section class="group" id="v6-female-child">
+      <div class="group-head">
+        <h2>V6 · 女性 / 5 岁数据集</h2>
+        <p>27 性别女、5 岁 2 个月、小一班；11/12 的“她”为同数据集说明。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>幼儿信息</h3><span>女 / 5 岁</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/27-student/index.html"><img src="parent/27-student/preview.png" alt="baseline 幼儿信息" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v6-female-child/27-student/index.html"><img src="parent-variants/v6-female-child/27-student/preview.png" alt="V6 · 女性 / 5 岁数据集 幼儿信息" loading="lazy" /></a>
+                <figcaption>V6 · 女性 / 5 岁数据集</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+    <section class="group" id="v7-age5-class">
+      <div class="group-head">
+        <h2>V7 · 5 岁 / 中班数据集</h2>
+        <p>27 5 岁 2 个月、中一班；01/25/31 的班级标签为同数据集说明。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>幼儿信息</h3><span>5 岁 / 中班</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/27-student/index.html"><img src="parent/27-student/preview.png" alt="baseline 幼儿信息" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v7-age5-class/27-student/index.html"><img src="parent-variants/v7-age5-class/27-student/preview.png" alt="V7 · 5 岁 / 中班数据集 幼儿信息" loading="lazy" /></a>
+                <figcaption>V7 · 5 岁 / 中班数据集</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+    <section class="group" id="v8-single-child">
+      <div class="group-head">
+        <h2>V8 · 单孩子</h2>
+        <p>只显示乐乐，隐藏“切换”；31 的统计改用累计口径。</p>
+      </div>
+      
+          <article class="pair">
+            <div class="pair-head"><h3>我的</h3><span>单孩子</span></div>
+            <div class="shots">
+              <figure>
+                <a class="shot" href="parent/31-profile/index.html"><img src="parent/31-profile/preview.png" alt="baseline 我的" loading="lazy" /></a>
+                <figcaption>baseline</figcaption>
+              </figure>
+              <figure>
+                <a class="shot" href="parent-variants/v8-single-child/31-profile/index.html"><img src="parent-variants/v8-single-child/31-profile/preview.png" alt="V8 · 单孩子 我的" loading="lazy" /></a>
+                <figcaption>V8 · 单孩子</figcaption>
+              </figure>
+            </div>
+          </article>
+    </section>
+  <footer>来源：docs/design-previews/2026-11-13-parent-dna-opendesign · 变体 brief：briefs-variants/ · 生成器：_shared/run-variants.mjs</footer>
+</body>
+</html>

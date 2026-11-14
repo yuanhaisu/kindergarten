@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>成长相册 · 成长时光</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" aria-label="养成星球家长端，成长相册">
+    <div class="statusbar" aria-hidden="true">
+      <span class="statusbar__time">9:41</span>
+      <span class="statusbar__icons">
+        <svg class="statusbar__signal" viewBox="0 0 18 12" fill="none" aria-hidden="true">
+          <rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" />
+          <rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor" />
+          <rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor" />
+          <rect x="15" y="0.5" width="3" height="11.5" rx="1" fill="currentColor" />
+        </svg>
+        <svg class="statusbar__wifi" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+          <path d="M1.1 4.2a10.4 10.4 0 0 1 13.8 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <path d="M3.7 6.9a6.7 6.7 0 0 1 8.6 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <path d="M6.2 9.3a3.1 3.1 0 0 1 3.6 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <circle cx="8" cy="11" r="1.1" fill="currentColor" />
+        </svg>
+        <svg class="statusbar__battery" viewBox="0 0 23 12" fill="none" aria-hidden="true">
+          <rect x="0.75" y="1.25" width="18.5" height="9.5" rx="2.6" stroke="currentColor" stroke-width="1.5" />
+          <rect x="2.5" y="3" width="13" height="6" rx="1.4" fill="currentColor" />
+          <path d="M21.2 4.2v3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+    </div>
+
+    <div class="page-bar" data-od-id="album-topbar">
+      <button class="back-button" type="button" aria-label="返回成长时光" data-od-id="album-back">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M15 5.5 8.5 12 15 18.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <span class="page-bar__title">成长时光</span>
+      <span class="page-bar__slot" aria-hidden="true"></span>
+    </div>
+
+    <main class="mp-main" data-od-id="album-main">
+      <header class="album-head">
+        <h1 class="album-title" data-od-id="album-title">成长相册</h1>
+        <p class="album-summary" data-od-id="album-summary">乐乐 · 共 48 张照片 · 6 段视频</p>
+      </header>
+
+      <div class="filter-row" role="group" aria-label="筛选相册内容" data-od-id="album-filters">
+        <button class="filter-chip" type="button" data-filter="all" aria-pressed="true" data-od-id="album-filter-all">全部</button>
+        <button class="filter-chip" type="button" data-filter="photo" aria-pressed="false" data-od-id="album-filter-photo">照片</button>
+        <button class="filter-chip" type="button" data-filter="video" aria-pressed="false" data-od-id="album-filter-video">视频</button>
+      </div>
+
+      <section class="album-month" data-month="november" aria-labelledby="month-nov-title" data-od-id="album-month-november">
+        <div class="month-head">
+          <h2 class="month-title" id="month-nov-title" data-od-id="album-month-november-title">11 月</h2>
+          <p class="month-meta">18 张照片 · 2 段视频</p>
+        </div>
+        <div class="album-grid">
+          <button class="album-tile tile--sage" type="button" aria-label="查看 11 月第 1 张照片" data-kind="photo" data-od-id="album-nov-photo-1"></button>
+          <button class="album-tile tile--gold" type="button" aria-label="查看 11 月第 2 张照片" data-kind="photo" data-od-id="album-nov-photo-2"></button>
+          <button class="album-tile tile--clay" type="button" aria-label="查看 11 月第 3 张照片" data-kind="photo" data-od-id="album-nov-photo-3"></button>
+          <button class="album-tile tile--blue" type="button" aria-label="查看 11 月第 4 张照片" data-kind="photo" data-od-id="album-nov-photo-4"></button>
+          <button class="album-tile tile--sage" type="button" aria-label="查看 11 月第 5 张照片" data-kind="photo" data-od-id="album-nov-photo-5"></button>
+          <button class="album-tile album-tile--video" type="button" aria-label="打开 11 月视频，时长 18 秒" data-kind="video" data-od-id="album-nov-video-1">
+            <span class="play-mark" aria-hidden="true">
+              <svg viewBox="0 0 15 16" aria-hidden="true">
+                <path d="M2.6 2.16c0-.83.91-1.34 1.62-.91l8.05 5.13a1.08 1.08 0 0 1 0 1.83l-8.05 5.13c-.71.43-1.62-.08-1.62-.91V2.16Z" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="duration" aria-hidden="true">00:18</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="album-month" data-month="october" aria-labelledby="month-oct-title" data-od-id="album-month-october">
+        <div class="month-head">
+          <h2 class="month-title" id="month-oct-title" data-od-id="album-month-october-title">10 月</h2>
+          <p class="month-meta">20 张照片 · 3 段视频</p>
+        </div>
+        <div class="album-grid">
+          <button class="album-tile tile--gold" type="button" aria-label="查看 10 月第 1 张照片" data-kind="photo" data-od-id="album-oct-photo-1"></button>
+          <button class="album-tile tile--sage" type="button" aria-label="查看 10 月第 2 张照片" data-kind="photo" data-od-id="album-oct-photo-2"></button>
+          <button class="album-tile album-tile--video" type="button" aria-label="打开 10 月视频，时长 32 秒" data-kind="video" data-od-id="album-oct-video-1">
+            <span class="play-mark" aria-hidden="true">
+              <svg viewBox="0 0 15 16" aria-hidden="true">
+                <path d="M2.6 2.16c0-.83.91-1.34 1.62-.91l8.05 5.13a1.08 1.08 0 0 1 0 1.83l-8.05 5.13c-.71.43-1.62-.08-1.62-.91V2.16Z" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="duration" aria-hidden="true">00:32</span>
+          </button>
+          <button class="album-tile tile--clay" type="button" aria-label="查看 10 月第 3 张照片" data-kind="photo" data-od-id="album-oct-photo-3"></button>
+          <button class="album-tile tile--sage" type="button" aria-label="查看 10 月第 4 张照片" data-kind="photo" data-od-id="album-oct-photo-4"></button>
+          <button class="album-tile tile--blue" type="button" aria-label="查看 10 月第 5 张照片" data-kind="photo" data-od-id="album-oct-photo-5"></button>
+        </div>
+      </section>
+
+      <section class="album-month" data-month="september" aria-labelledby="month-sep-title" data-od-id="album-month-september">
+        <div class="month-head">
+          <h2 class="month-title" id="month-sep-title" data-od-id="album-month-september-title">9 月</h2>
+          <p class="month-meta">10 张照片 · 1 段视频</p>
+        </div>
+        <div class="album-grid">
+          <button class="album-tile tile--clay" type="button" aria-label="查看 9 月第 1 张照片" data-kind="photo" data-od-id="album-sep-photo-1"></button>
+          <button class="album-tile tile--sage" type="button" aria-label="查看 9 月第 2 张照片" data-kind="photo" data-od-id="album-sep-photo-2"></button>
+          <button class="album-tile tile--gold" type="button" aria-label="查看 9 月第 3 张照片" data-kind="photo" data-od-id="album-sep-photo-3"></button>
+          <button class="album-tile tile--blue" type="button" aria-label="查看 9 月第 4 张照片" data-kind="photo" data-od-id="album-sep-photo-4"></button>
+          <button class="album-tile tile--sage" type="button" aria-label="查看 9 月第 5 张照片" data-kind="photo" data-od-id="album-sep-photo-5"></button>
+          <button class="album-tile tile--clay" type="button" aria-label="查看 9 月第 6 张照片" data-kind="photo" data-od-id="album-sep-photo-6"></button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

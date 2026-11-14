@@ -1,0 +1,237 @@
+/* 养成星球 · 小程序外壳（canonical shell）
+ * 所有原型页面共用。只依赖 tokens.css 的变量，不含裸色值。
+ * 用法见同目录 shell.md。页面自己的 styles.css 里不要再定义这些类。
+ */
+
+/* 1. 应用容器 ------------------------------------------------------------ */
+.mp-app {
+  width: 100%;
+  max-width: 390px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  position: relative;
+  /* No overflow-x here: it would create a scroll container and break the
+   * sticky chrome. Horizontal overflow is caught by scripts/od-check.mjs. */
+}
+
+/* 2. 状态栏 20px（吸顶）------------------------------------------------ */
+.mp-statusbar {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  height: 20px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  color: var(--fg);
+  flex: none;
+}
+.mp-time {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1;
+}
+.mp-status-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.mp-status-icons svg { display: block; }
+
+/* 3. 导航栏 44px ------------------------------------------------------- */
+.mp-navbar {
+  position: sticky;
+  top: 20px;
+  z-index: 11;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  background: var(--bg);
+}
+.mp-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--fg);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mp-back {
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--fg);
+  border-radius: var(--radius-pill);
+}
+.mp-back:active { background: var(--accent-wash); }
+.mp-back svg { display: block; }
+.mp-back[hidden] { display: none; }
+
+/* 4. 微信胶囊 87×32 ---------------------------------------------------- */
+.mp-capsule {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 87px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--fg-2);
+}
+.mp-capsule-dots {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+.mp-capsule-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+}
+.mp-capsule-ring {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-pill);
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* 5. 内容区 ------------------------------------------------------------ */
+.mp-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+}
+.mp-main--scroll { overflow-y: auto; }
+
+/* 6. 底部 tabBar（仅家长端 4 个 tab 页）--------------------------------- */
+.mp-tabbar {
+  position: sticky;
+  bottom: 0;
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: calc(50px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.mp-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+.mp-tab svg { width: 22px; height: 22px; display: block; }
+.mp-tab[aria-current="page"] { color: var(--accent); }
+
+/* 7. 原型演示状态条（仅原型可见）-------------------------------------- */
+.mp-demo {
+  position: fixed;
+  /* Stay inside the 390px phone frame when the window is wider. */
+  right: max(12px, calc(50vw - 195px + 12px));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.mp-demo-toggle {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.mp-demo-chips {
+  display: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 240px;
+}
+.mp-demo[data-open="true"] .mp-demo-chips { display: flex; }
+.mp-demo-chip {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--fg-2);
+  font-size: 11px;
+  box-shadow: var(--shadow-sm);
+}
+.mp-demo-chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent-deep);
+}
+
+/* 8. 通用行/区块（可选，用于统一密度）--------------------------------- */
+.mp-section {
+  margin: var(--space-lg) var(--page-pad-x);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.mp-section-title {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+}
+.mp-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  min-height: 52px;
+  padding: var(--space-md) var(--space-xl);
+}
+.mp-cell + .mp-cell { border-top: 1px solid var(--border); }
+.mp-cell-main { flex: 1; min-width: 0; }
+.mp-cell-value { color: var(--muted); font-size: var(--text-base); }
+.mp-cell-arrow { color: var(--hint); flex: none; }

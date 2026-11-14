@@ -1,0 +1,25 @@
+{
+  "group": "B",
+  "results": [
+    {
+      "slug": "02-login",
+      "status": "succeeded",
+      "elapsedSec": 384
+    },
+    {
+      "slug": "03-bind",
+      "status": "succeeded",
+      "elapsedSec": 540
+    },
+    {
+      "slug": "04-consent",
+      "status": "succeeded",
+      "elapsedSec": 263
+    },
+    {
+      "slug": "05-policy",
+      "status": "succeeded",
+      "elapsedSec": 273
+    }
+  ]
+}

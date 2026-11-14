@@ -1,0 +1,20 @@
+{
+  "slug": "parent-07-notice-detail",
+  "surface": "parent",
+  "title": "通知详情",
+  "projectId": "4d055396-1a4c-46ca-8ae4-501373470715",
+  "conversationId": "60ca109a-f381-4253-aed2-cbeb9ef5fad6",
+  "runId": "baebdf3f-bd60-436d-b62b-93ed9d601c61",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 397,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/4d055396-1a4c-46ca-8ae4-501373470715",
+  "previewRendered": true
+}

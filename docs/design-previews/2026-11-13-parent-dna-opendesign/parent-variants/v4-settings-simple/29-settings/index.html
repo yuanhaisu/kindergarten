@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-variant="simple">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>设置 · 养成星球</title>
+  <link rel="stylesheet" href="../../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-chev" viewBox="0 0 16 16"><path d="m6 3.5 4.5 4.5L6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.8" fill="none" stroke="currentColor" stroke-width="1.7" /><path d="M12 7.8V12l2.9 1.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.2 21 20H3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><path d="M12 9.4v4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /><circle cx="12" cy="17.2" r="1" fill="currentColor" /></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+  </svg>
+
+  <div class="mp-app" id="app" data-od-id="settings-screen">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="status-time">10:20</span>
+      <div class="status-icons">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="none" aria-hidden="true">
+          <rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" />
+          <rect x="4.7" y="5.8" width="3" height="6.2" rx="1" fill="currentColor" />
+          <rect x="9.4" y="3.4" width="3" height="8.6" rx="1" fill="currentColor" />
+          <rect x="14.1" y="1" width="3" height="11" rx="1" fill="currentColor" />
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true">
+          <rect x="0.75" y="0.75" width="21.5" height="10.5" rx="3.25" stroke="currentColor" stroke-opacity="0.38" stroke-width="1.5" />
+          <rect x="2.75" y="2.75" width="17.5" height="6.5" rx="1.75" fill="currentColor" />
+          <path d="M23.5 4.2v3.6c1-.4 1.5-1 1.5-1.8s-.5-1.4-1.5-1.8Z" fill="currentColor" fill-opacity="0.45" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="mp-view" id="view-settings">
+      <header class="page-bar" data-od-id="settings-page-bar">
+        <button class="back-button" type="button" aria-label="返回" data-action="back-settings" data-od-id="settings-back">
+          <svg class="icon icon--back" aria-hidden="true"><use href="#i-back" /></svg>
+        </button>
+        <span class="page-bar__title">设置</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </header>
+
+      <main class="mp-main" id="settings-main" data-od-id="settings-content">
+        <header class="settings-head">
+          <p class="proposal-mark" data-od-id="proposal-mark">V4 · 简化提案</p>
+          <h1 class="page-title" data-od-id="settings-title">设置</h1>
+        </header>
+
+        <section class="settings-group" aria-labelledby="message-heading" data-od-id="message-settings-group">
+          <h2 class="group-title" id="message-heading" data-od-id="message-settings-heading">消息设置</h2>
+          <div class="settings-card" data-od-id="message-settings-card">
+            <button class="setting-row" type="button" data-action="notify-school" data-od-id="notify-school-row">
+              <span class="setting-row__label">接收园所通知</span>
+              <span class="setting-row__trailing">
+                <span class="state-tag" id="row-school-tag">已开启</span>
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+            <button class="setting-row" type="button" data-action="notify-teacher" data-od-id="notify-teacher-row">
+              <span class="setting-row__label">接收老师消息</span>
+              <span class="setting-row__trailing">
+                <span class="state-tag" id="row-teacher-tag">已开启</span>
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+            <button class="setting-row" type="button" data-action="quiet" data-od-id="quiet-hours-row">
+              <span class="setting-row__label">免打扰时段</span>
+              <span class="setting-row__trailing">
+                <span class="row-value" id="row-quiet-value">20:00–07:30</span>
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+          </div>
+          <p class="card-note" data-od-id="quiet-proposal-note">
+            <span class="card-note__dot" aria-hidden="true"></span>
+            提案：需后端补字段
+          </p>
+        </section>
+
+        <section class="settings-group" aria-labelledby="privacy-heading" data-od-id="privacy-account-group">
+          <h2 class="group-title" id="privacy-heading" data-od-id="privacy-settings-heading">隐私与账号</h2>
+          <div class="settings-card" data-od-id="privacy-account-card">
+            <button class="setting-row" type="button" data-action="policy" data-od-id="privacy-policy-row">
+              <span class="setting-row__label">隐私政策</span>
+              <span class="setting-row__trailing">
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+            <button class="setting-row" type="button" data-action="terms" data-od-id="user-agreement-row">
+              <span class="setting-row__label">用户协议</span>
+              <span class="setting-row__trailing">
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+            <button class="setting-row" type="button" data-action="child" data-od-id="child-info-auth-row">
+              <span class="setting-row__label">儿童信息授权管理</span>
+              <span class="setting-row__trailing">
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+            <button class="setting-row setting-row--danger" type="button" data-action="delete" data-od-id="delete-account-row">
+              <span class="setting-row__label">注销账号</span>
+              <span class="setting-row__trailing">
+                <span class="phase-tag">Phase 2</span>
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="about-heading" data-od-id="about-group">
+          <h2 class="group-title" id="about-heading" data-od-id="about-settings-heading">关于</h2>
+          <div class="settings-card" data-od-id="about-card">
+            <div class="setting-row setting-row--static" data-od-id="current-version-row">
+              <span class="setting-row__label">当前版本</span>
+              <span class="row-value">v1.0.0</span>
+            </div>
+            <button class="setting-row" type="button" data-action="check-update" id="check-update-row" data-od-id="check-update-row">
+              <span class="setting-row__label">检查更新</span>
+              <span class="setting-row__trailing">
+                <span class="row-value" id="update-status">已是最新</span>
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <button class="logout-button" type="button" data-action="logout" data-od-id="logout-button">退出登录</button>
+
+        <footer class="spec-note" data-od-id="proposal-note">
+          <p><span class="spec-note__label">简化提案</span> · 当前 API 共 9 项（6 通知 + 2 隐私 + 1 未展示）。<br />免打扰时段为提案：需后端补字段。</p>
+        </footer>
+      </main>
+    </div>
+
+    <div class="mp-view" id="view-doc" hidden>
+      <header class="page-bar" data-od-id="doc-page-bar">
+        <button class="back-button" type="button" aria-label="返回设置" data-action="back-doc" data-od-id="doc-back">
+          <svg class="icon icon--back" aria-hidden="true"><use href="#i-back" /></svg>
+        </button>
+        <span class="page-bar__title">隐私与协议</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </header>
+
+      <main class="mp-main doc-main" id="doc-main" data-od-id="doc-content">
+      </main>
+    </div>
+
+    <div class="sheet-layer" id="sheet-layer" hidden>
+      <div class="sheet-scrim" data-action="close-sheet" aria-hidden="true"></div>
+
+      <section class="sheet" id="sheet-notify" role="dialog" aria-modal="true" aria-labelledby="notify-sheet-title" tabindex="-1" data-od-id="notify-sheet" hidden>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="notify-sheet-title">园所通知</h2>
+        <p class="sheet-desc" id="notify-sheet-desc">园所公告、活动与审批结果会通过微信服务通知送达。关闭后仍可在消息页查看。</p>
+        <div class="sheet-block">
+          <div class="toggle-row">
+            <span class="toggle-row__label" id="notify-switch-label">接收园所通知</span>
+            <button class="switch" id="notify-switch" type="button" role="switch" aria-checked="true" aria-labelledby="notify-switch-label"></button>
+          </div>
+          <p class="sheet-note">简化提案 · 原 6 个通知细分项按来源合并为两个总开关。</p>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn btn--secondary" type="button" data-action="close-sheet">取消</button>
+          <button class="btn btn--primary" type="button" id="notify-save">保存</button>
+        </div>
+      </section>
+
+      <section class="sheet" id="sheet-quiet" role="dialog" aria-modal="true" aria-labelledby="quiet-sheet-title" tabindex="-1" data-od-id="quiet-sheet" hidden>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="quiet-sheet-title">免打扰时段</h2>
+        <p class="sheet-desc">开启后，这段时间内不推送新的消息通知；消息仍会保留，打开小程序就能看到。</p>
+        <div class="toggle-row">
+          <span class="toggle-row__label" id="quiet-switch-label">开启免打扰</span>
+          <button class="switch" id="quiet-switch" type="button" role="switch" aria-checked="true" aria-labelledby="quiet-switch-label"></button>
+        </div>
+        <div class="time-range" id="quiet-range">
+          <label class="time-field">
+            <span class="field-label">开始</span>
+            <span class="time-input">
+              <svg class="time-input__icon" aria-hidden="true"><use href="#i-clock" /></svg>
+              <input id="quiet-start" type="time" value="20:00" step="300" />
+            </span>
+          </label>
+          <span class="time-sep" aria-hidden="true">—</span>
+          <label class="time-field">
+            <span class="field-label">结束</span>
+            <span class="time-input">
+              <svg class="time-input__icon" aria-hidden="true"><use href="#i-clock" /></svg>
+              <input id="quiet-end" type="time" value="07:30" step="300" />
+            </span>
+          </label>
+        </div>
+        <div class="preset-group">
+          <span class="field-label">常用时段</span>
+          <div class="presets" id="quiet-presets">
+            <button class="preset" type="button" data-start="20:00" data-end="07:30" aria-pressed="true">20:00–07:30</button>
+            <button class="preset" type="button" data-start="21:00" data-end="07:00" aria-pressed="false">21:00–07:00</button>
+            <button class="preset" type="button" data-start="22:00" data-end="08:00" aria-pressed="false">22:00–08:00</button>
+          </div>
+        </div>
+        <p class="field-error" id="quiet-error" role="alert" hidden>开始和结束时间不能相同</p>
+        <p class="phase-note" data-od-id="quiet-phase-note"><span class="phase-note__dot" aria-hidden="true"></span>提案：免打扰时段需后端补字段，当前 API 尚未提供。</p>
+        <div class="sheet-actions">
+          <button class="btn btn--secondary" type="button" data-action="close-sheet">取消</button>
+          <button class="btn btn--primary" type="button" id="quiet-save">保存</button>
+        </div>
+      </section>
+
+      <section class="sheet" id="sheet-child" role="dialog" aria-modal="true" aria-labelledby="child-sheet-title" tabindex="-1" data-od-id="child-auth-sheet" hidden>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="child-sheet-title">儿童信息授权管理</h2>
+        <div class="sheet-state">
+          <span class="state-tag">已授权</span>
+          <span class="sheet-state__date">2026 年 9 月 1 日</span>
+        </div>
+        <p class="sheet-desc">孩子与在园信息由你授权园所使用，仅用于家园沟通与照护。</p>
+        <dl class="scope-list">
+          <div><dt>孩子基本信息</dt><dd>姓名、班级、入园日期</dd></div>
+          <div><dt>在园记录</dt><dd>通知、请假、接送与成长记录</dd></div>
+          <div><dt>接送授权人</dt><dd>姓名、关系与联系方式</dd></div>
+        </dl>
+        <p class="sheet-note">授权范围由园所维护；如需变更或撤回，请联系班主任。</p>
+        <button class="btn btn--secondary btn--block" type="button" data-action="open-policy">查看隐私政策</button>
+        <button class="text-btn" type="button" data-action="close-sheet">关闭</button>
+      </section>
+
+      <section class="sheet" id="sheet-delete" role="dialog" aria-modal="true" aria-labelledby="delete-sheet-title" tabindex="-1" data-od-id="delete-account-sheet" hidden>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="delete-sheet-title">注销账号</h2>
+        <div class="danger-banner">
+          <svg class="icon icon--alert" aria-hidden="true"><use href="#i-alert" /></svg>
+          <span>注销后无法恢复</span>
+        </div>
+        <p class="sheet-desc">账号注销后，账号数据与孩子的在园记录会一并删除。</p>
+        <ul class="consequences">
+          <li>账号将无法登录，成长记录、通知与消息会一并删除</li>
+          <li>接送授权人与亲属绑定关系将失效</li>
+          <li>如孩子仍在园，需要重新注册并绑定才能接收通知</li>
+        </ul>
+        <label class="ack" for="delete-ack">
+          <input class="ack__input" id="delete-ack" type="checkbox" />
+          <span class="ack__box" aria-hidden="true"><svg class="icon icon--check"><use href="#i-check" /></svg></span>
+          <span class="ack__text">我已了解以上后果</span>
+        </label>
+        <p class="phase-inline"><span class="phase-tag">Phase 2</span><span>账号注销接口尚未接入，本页只展示确认流程。</span></p>
+        <button class="btn btn--danger btn--block" id="delete-submit" type="button" disabled>申请注销</button>
+        <p class="sheet-status" id="delete-status" role="status" aria-live="polite" hidden>Phase 2 接口未接入 · 本次未提交</p>
+        <button class="text-btn" type="button" data-action="close-sheet">再想想</button>
+      </section>
+
+      <section class="sheet" id="sheet-logout" role="dialog" aria-modal="true" aria-labelledby="logout-sheet-title" tabindex="-1" data-od-id="logout-sheet" hidden>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="logout-sheet-title">退出登录</h2>
+        <p class="sheet-desc">退出后，需要重新登录才能查看孩子的在园信息。</p>
+        <div class="sheet-actions">
+          <button class="btn btn--secondary" type="button" data-action="close-sheet">取消</button>
+          <button class="btn btn--primary" type="button" id="logout-confirm">退出登录</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

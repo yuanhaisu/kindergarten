@@ -1,0 +1,20 @@
+{
+  "slug": "parent-09-leave-create",
+  "surface": "parent",
+  "title": "新建请假",
+  "projectId": "50b2a49f-6286-4f93-a619-b6fd181820fd",
+  "conversationId": "cd191f26-058e-4146-b207-051e1137ec43",
+  "runId": "74804030-99b9-4810-8b1c-391dbcdd1aef",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 291,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/50b2a49f-6286-4f93-a619-b6fd181820fd",
+  "previewRendered": true
+}

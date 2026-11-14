@@ -1,0 +1,23 @@
+{
+  "slug": "parent-v1-leave-day-01-home",
+  "surface": "parent",
+  "title": "首页 · 请假变体",
+  "projectId": "009061c8-33b5-4bc6-ada8-ed53b56a63be",
+  "conversationId": "f2996d90-890d-4b26-bcc7-3be6bf5a0195",
+  "runId": "8d4b59c5-97ee-4cda-a44a-ae27ddd8f439",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 552,
+  "files": [
+    ".file-versions/4c9e74efd3649aa8975dd538/0001-a9578dc9-0b00-4023-9835-e93ea5495855.html",
+    ".file-versions/4c9e74efd3649aa8975dd538/manifest.json",
+    "parent-variants/v1-leave-day/01-home/app.js",
+    "parent-variants/v1-leave-day/01-home/fonts/instrument-serif-regular.woff2",
+    "parent-variants/v1-leave-day/01-home/fonts/noto-serif-sc-subset.woff2",
+    "parent-variants/v1-leave-day/01-home/index.html",
+    "parent-variants/v1-leave-day/01-home/index.html.artifact.json",
+    "parent-variants/v1-leave-day/01-home/styles.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/009061c8-33b5-4bc6-ada8-ed53b56a63be"
+}

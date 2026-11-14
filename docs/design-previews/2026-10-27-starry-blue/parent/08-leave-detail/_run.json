@@ -1,0 +1,23 @@
+{
+  "slug": "parent-leave-detail",
+  "surface": "parent",
+  "title": "请假详情",
+  "projectId": "1ee1ae9b-d15f-4a94-ad57-0553c450fa21",
+  "conversationId": "3f700b1a-df75-4fe9-ada8-b3777d3134c1",
+  "runId": "c55cb43d-7dda-4b49-a441-b1a3b6cbed64",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 253,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "previewRendered": true,
+  "handAuthored": false,
+  "collectedAfterRun": true,
+  "collectNote": "包装脚本在 index.html 稳定 30s 时提前输出 RESULT，只拷到 index.html + tokens.css；styles.css / app.js 在 run 结束后从项目目录 1ee1ae9b-d15f-4a94-ad57-0553c450fa21 补齐。补齐后人工修了两处：删除状态头与审批卡重复的 review_remark、重试按钮文字色改 --on-brand，另加对话框确定按钮危险色。",
+  "daemonUrl": "http://127.0.0.1:7456/projects/1ee1ae9b-d15f-4a94-ad57-0553c450fa21"
+}

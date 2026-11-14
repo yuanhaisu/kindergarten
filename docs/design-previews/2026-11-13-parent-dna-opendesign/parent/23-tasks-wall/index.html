@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>班级墙 · 养成星球</title>
+<link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="mp-app" data-od-id="class-wall-page">
+
+  <div class="mp-statusbar" aria-hidden="true">
+    <span class="sb-time">9:41</span>
+    <span class="sb-icons">
+      <svg class="sb-icon" width="17" height="12" viewBox="0 0 17 12" fill="currentColor">
+        <rect x="0" y="8" width="3" height="4" rx="1"/>
+        <rect x="4.5" y="6" width="3" height="6" rx="1"/>
+        <rect x="9" y="3" width="3" height="9" rx="1"/>
+        <rect x="13.5" y="0" width="3" height="12" rx="1"/>
+      </svg>
+      <svg class="sb-icon" width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M1.2 4.3a10.4 10.4 0 0 1 13.6 0"/>
+        <path d="M3.8 7.1a6.6 6.6 0 0 1 8.4 0"/>
+        <path d="M6.4 9.7a2.9 2.9 0 0 1 3.2 0"/>
+      </svg>
+      <svg class="sb-icon" width="25" height="12" viewBox="0 0 25 12" fill="none">
+        <rect x="0.6" y="0.6" width="20.8" height="10.8" rx="3" stroke="currentColor" stroke-opacity="0.45"/>
+        <rect x="2.4" y="2.4" width="16.4" height="7.2" rx="1.8" fill="currentColor"/>
+        <path d="M23.2 4.2v3.6a2 2 0 0 0 0-3.6Z" fill="currentColor" fill-opacity="0.45"/>
+      </svg>
+    </span>
+  </div>
+
+  <main class="mp-main">
+
+    <div class="page-bar" data-od-id="page-bar">
+      <button class="back" type="button" aria-label="返回亲子任务" data-od-id="back-button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.5 5.5 8 12l6.5 6.5"/>
+        </svg>
+      </button>
+      <span class="page-bar-title">乐乐 · 小一班</span>
+    </div>
+
+    <header class="wall-head" data-od-id="wall-header">
+      <h1 class="wall-title" data-od-id="wall-title">班级墙</h1>
+      <p class="wall-summary" data-od-id="wall-summary">今天有 <span class="hl">18 位小朋友</span>完成了任务</p>
+    </header>
+
+    <div class="wall-filters" role="group" aria-label="筛选打卡" data-od-id="wall-filters">
+      <button class="chip is-on" type="button" data-filter="all" aria-pressed="true" data-od-id="filter-all">全部</button>
+      <button class="chip" type="button" data-filter="class" aria-pressed="false" data-od-id="filter-class">小一班</button>
+      <button class="chip" type="button" data-filter="mine" aria-pressed="false" data-od-id="filter-mine">我的</button>
+    </div>
+
+    <section class="wall-grid" aria-label="今天的班级打卡" data-od-id="wall-grid">
+
+      <button class="wall-card" type="button" data-name="乐乐" data-task="给家人讲一件今天开心的事" data-likes="12"
+        data-tone="sage" data-mine="true" aria-haspopup="dialog"
+        aria-label="乐乐，给家人讲一件今天开心的事，12 个赞，查看打卡" data-od-id="card-lele">
+        <span class="photo tone--sage" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">乐乐</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">12</span>
+            </span>
+          </span>
+          <span class="card-task">给家人讲一件今天开心的事</span>
+        </span>
+      </button>
+
+      <button class="wall-card" type="button" data-name="豆豆" data-task="给家人讲一件今天开心的事" data-likes="9"
+        data-tone="gold" data-flip="true" aria-haspopup="dialog"
+        aria-label="豆豆，给家人讲一件今天开心的事，9 个赞，老师点赞，查看打卡" data-od-id="card-doudou">
+        <span class="photo tone--gold photo--flip" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+          <span class="photo-note">老师点赞</span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">豆豆</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">9</span>
+            </span>
+          </span>
+          <span class="card-task">给家人讲一件今天开心的事</span>
+        </span>
+      </button>
+
+      <button class="wall-card" type="button" data-name="朵朵" data-task="睡前整理书包" data-likes="7"
+        data-tone="clay" aria-haspopup="dialog"
+        aria-label="朵朵，睡前整理书包，7 个赞，查看打卡" data-od-id="card-duoduo">
+        <span class="photo tone--clay" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">朵朵</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">7</span>
+            </span>
+          </span>
+          <span class="card-task">睡前整理书包</span>
+        </span>
+      </button>
+
+      <button class="wall-card" type="button" data-name="小宇" data-task="给家人讲一件今天开心的事" data-likes="5"
+        data-tone="blue" data-flip="true" aria-haspopup="dialog"
+        aria-label="小宇，给家人讲一件今天开心的事，5 个赞，查看打卡" data-od-id="card-xiaoyu">
+        <span class="photo tone--blue photo--flip" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">小宇</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">5</span>
+            </span>
+          </span>
+          <span class="card-task">给家人讲一件今天开心的事</span>
+        </span>
+      </button>
+
+      <button class="wall-card" type="button" data-name="安然" data-task="帮忙摆碗筷" data-likes="4"
+        data-tone="pine" aria-haspopup="dialog"
+        aria-label="安然，帮忙摆碗筷，4 个赞，查看打卡" data-od-id="card-anran">
+        <span class="photo tone--pine" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">安然</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">4</span>
+            </span>
+          </span>
+          <span class="card-task">帮忙摆碗筷</span>
+        </span>
+      </button>
+
+      <button class="wall-card" type="button" data-name="辰辰" data-task="给家人讲一件今天开心的事" data-likes="3"
+        data-tone="sage" data-flip="true" aria-haspopup="dialog"
+        aria-label="辰辰，给家人讲一件今天开心的事，3 个赞，查看打卡" data-od-id="card-chenchen">
+        <span class="photo tone--sage photo--flip" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">辰辰</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">3</span>
+            </span>
+          </span>
+          <span class="card-task">给家人讲一件今天开心的事</span>
+        </span>
+      </button>
+
+      <button class="wall-card" type="button" data-name="果果" data-task="帮忙摆碗筷" data-likes="2"
+        data-tone="gold" aria-haspopup="dialog"
+        aria-label="果果，帮忙摆碗筷，2 个赞，查看打卡" data-od-id="card-guoguo">
+        <span class="photo tone--gold" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">果果</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">2</span>
+            </span>
+          </span>
+          <span class="card-task">帮忙摆碗筷</span>
+        </span>
+      </button>
+
+      <button class="wall-card" type="button" data-name="阳阳" data-task="睡前整理书包" data-likes="1"
+        data-tone="clay" data-flip="true" aria-haspopup="dialog"
+        aria-label="阳阳，睡前整理书包，1 个赞，查看打卡" data-od-id="card-yangyang">
+        <span class="photo tone--clay photo--flip" aria-hidden="true">
+          <span class="orb orb-a"></span>
+          <span class="orb orb-b"></span>
+        </span>
+        <span class="card-body">
+          <span class="card-row">
+            <span class="card-name">阳阳</span>
+            <span class="likes">
+              <svg class="heart" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="like-count">1</span>
+            </span>
+          </span>
+          <span class="card-task">睡前整理书包</span>
+        </span>
+      </button>
+
+    </section>
+
+    <p class="wall-foot" data-od-id="wall-footnote">只展示家长公开、老师审核通过的打卡</p>
+
+  </main>
+
+  <div class="sheet-layer" id="sheet-layer" hidden>
+    <div class="sheet-mask" data-close aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-name" data-od-id="card-sheet">
+      <span class="sheet-handle" aria-hidden="true"></span>
+      <button class="sheet-close" id="sheet-close" type="button" aria-label="关闭" data-od-id="sheet-close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18"/>
+        </svg>
+      </button>
+      <div class="photo sheet-photo tone--sage" id="sheet-photo" aria-hidden="true">
+        <span class="orb orb-a"></span>
+        <span class="orb orb-b"></span>
+      </div>
+      <div class="sheet-head">
+        <h2 class="sheet-name" id="sheet-name">乐乐</h2>
+        <span class="likes" id="sheet-likes" aria-label="12 个赞">
+          <svg class="heart" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          <span class="like-count">12</span>
+        </span>
+      </div>
+      <p class="sheet-meta">小一班 · 今天的打卡</p>
+      <p class="sheet-task" id="sheet-task">给家人讲一件今天开心的事</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

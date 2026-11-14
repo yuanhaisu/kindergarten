@@ -1,0 +1,20 @@
+{
+  "slug": "parent-settings",
+  "surface": "parent",
+  "title": "设置",
+  "projectId": "ccc4a2c6-f1ae-497a-aed4-56a746082865",
+  "conversationId": "74725961-d2e2-44e5-9fdc-1847ef2e1642",
+  "runId": "fec20ac4-4f02-4a95-9ed4-13ae3876d15e",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 569,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/ccc4a2c6-f1ae-497a-aed4-56a746082865",
+  "previewRendered": true
+}

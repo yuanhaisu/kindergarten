@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "parent-variants/v2-task-points/24-points/index.html",
+  "entry": "parent-variants/v2-task-points/24-points/index.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-11-14T08:50:50.435Z",
+  "updatedAt": "2026-11-14T08:50:50.435Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

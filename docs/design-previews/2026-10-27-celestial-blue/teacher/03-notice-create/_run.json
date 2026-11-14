@@ -1,0 +1,15 @@
+{
+  "slug": "teacher-notice-create",
+  "surface": "teacher",
+  "title": "发布通知",
+  "status": "succeeded",
+  "files": [
+    "app.js",
+    "index.html",
+    "notes.md",
+    "styles.css",
+    "tokens.css"
+  ],
+  "previewRendered": true,
+  "theme": "celestial"
+}

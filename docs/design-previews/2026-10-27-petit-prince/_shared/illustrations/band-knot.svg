@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 84" fill="none">
+  <g stroke="#141414" fill="none">
+    <path d="M0 76 Q195 56 390 76" stroke-width="1.4" opacity=".55"/>
+    <path d="M0 76 Q195 88 390 76" stroke-width="1" opacity=".25"/>
+    <circle cx="62" cy="54" r="10" stroke-width="1.2" opacity=".5"/>
+  </g>
+  <g fill="#141414" stroke="#141414">
+    <circle cx="142" cy="20" r="1.6"/>
+    <circle cx="198" cy="40" r="1.2" fill="none" stroke-width=".8"/>
+    <circle cx="250" cy="18" r="1.5"/>
+  </g>
+  <g transform="translate(300 26) scale(.75)" fill="none" stroke="#141414">
+    <path d="M10,30 Q20,10 40,20 Q50,30 40,40 Q20,50 10,30" stroke-width="2.2" opacity=".8"/>
+    <path d="M8,28 Q30,30 42,38" stroke-width="2" opacity=".6"/>
+    <path d="M12,32 Q30,26 38,22" stroke-width="2" opacity=".6"/>
+    <path d="M15,38 Q12,50 14,58" stroke-width="1.8"/>
+    <path d="M35,42 Q38,52 36,60" stroke-width="1.8"/>
+    <line x1="12" y1="58" x2="10" y2="62" stroke-width="1"/>
+    <line x1="14" y1="58" x2="16" y2="62" stroke-width="1"/>
+    <line x1="34" y1="60" x2="32" y2="64" stroke-width="1"/>
+    <line x1="36" y1="60" x2="38" y2="64" stroke-width="1"/>
+    <circle cx="26" cy="28" r="1.5" fill="#141414" stroke="none"/>
+  </g>
+  <circle cx="319.5" cy="47" r="2.4" fill="#C0392B" stroke="none"/>
+</svg>

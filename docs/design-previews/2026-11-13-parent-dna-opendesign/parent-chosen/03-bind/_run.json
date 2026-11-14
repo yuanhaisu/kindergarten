@@ -1,0 +1,20 @@
+{
+  "slug": "parent-03-bind",
+  "surface": "parent",
+  "title": "绑定孩子",
+  "projectId": "bdc16583-a49f-4b14-9694-cf7ae4cfe32e",
+  "conversationId": "6418f8b9-ad14-471a-a477-b117d6b492c2",
+  "runId": "9b54c158-5c9c-4648-bed5-26f3c256bea8",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 492,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/bdc16583-a49f-4b14-9694-cf7ae4cfe32e",
+  "previewRendered": true
+}

@@ -1,0 +1,20 @@
+{
+  "slug": "parent-27-student",
+  "surface": "parent",
+  "title": "幼儿信息",
+  "projectId": "20d4c44f-dab3-4449-9834-587e4df2dbcc",
+  "conversationId": "a1f877ad-7d1c-47a5-9bde-c06a6b478e36",
+  "runId": "2eb7f8ee-e830-48e5-9014-28d75cb71a78",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 247,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/20d4c44f-dab3-4449-9834-587e4df2dbcc",
+  "previewRendered": true
+}

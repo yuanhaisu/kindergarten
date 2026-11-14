@@ -1,0 +1,24 @@
+{
+  "slug": "teacher-workbench",
+  "surface": "teacher",
+  "title": "老师工作台",
+  "projectId": "e51513fe-ff4d-4ca7-970f-67c7342d68c0",
+  "conversationId": "b3e78635-ad4e-439f-9cbe-378b3ec3f7ce",
+  "runId": "e66cff4b-21e2-4618-b8a5-bc425736166d",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 309,
+  "files": [
+    ".file-versions/0eb547304658805aad788d32/0001-2408179e-e4d4-4d03-9931-dd06a6b5c39e.html",
+    ".file-versions/0eb547304658805aad788d32/manifest.json",
+    ".mcp.json",
+    "app.js",
+    "index.html",
+    "index.html.artifact.json",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/e51513fe-ff4d-4ca7-970f-67c7342d68c0",
+  "previewRendered": true
+}

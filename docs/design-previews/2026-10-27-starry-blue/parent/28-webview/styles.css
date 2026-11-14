@@ -1,0 +1,528 @@
+/* 养成星球 · 家长端 · 内嵌网页容器 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg-2);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+.page > * {
+  max-width: 100%;
+}
+
+/* 打开前确认 ----------------------------------------------------------- */
+/* web-view 铺满整页并覆盖其他组件，来源信息只能出现在它挂载之前。 */
+.confirm-state {
+  display: none;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0 var(--page-pad-x);
+  padding: 28px 16px calc(28px + env(safe-area-inset-bottom));
+  text-align: center;
+  animation: state-enter var(--motion-base) var(--ease) both;
+}
+
+.mp-app[data-state="confirm"] .confirm-state {
+  display: flex;
+}
+
+.source-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  max-width: 300px;
+  min-width: 0;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+}
+
+.source-domain {
+  color: var(--fg);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.source-url {
+  display: -webkit-box;
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.confirm-state .primary-button {
+  margin-top: 22px;
+}
+
+.confirm-state .state-note {
+  max-width: 300px;
+}
+
+/* 网页画布 ------------------------------------------------------------- */
+/* 对应真机的 <web-view>：挂载后独占导航栏以下的整块页面。 */
+.web-canvas {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.canvas-inner {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-xl);
+}
+
+.canvas-state {
+  display: none;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  animation: state-enter var(--motion-base) var(--ease) both;
+}
+
+.mp-app[data-state="normal"] .state-normal,
+.mp-app[data-state="loading"] .state-loading,
+.mp-app[data-state="error"] .state-error {
+  display: flex;
+}
+
+/* 正常态：中性占位 */
+.state-normal {
+  min-height: 0;
+}
+
+.web-placeholder {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 28px 22px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg);
+  text-align: center;
+}
+
+.placeholder-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.placeholder-icon svg {
+  display: block;
+}
+
+.placeholder-title {
+  margin: 0;
+  color: var(--fg);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+}
+
+.placeholder-note {
+  max-width: 300px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* 加载态 --------------------------------------------------------------- */
+.state-loading {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.loading-block {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  max-width: 260px;
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: web-spin 850ms linear infinite;
+}
+
+.loading-text {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  line-height: 1.6;
+}
+
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.skeleton-bar {
+  display: block;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--border) 45%, var(--surface));
+  animation: skeleton-breathe 1.6s var(--ease) infinite alternate;
+}
+
+.skeleton-bar:nth-child(1) {
+  width: 78%;
+}
+
+.skeleton-bar:nth-child(2) {
+  width: 92%;
+  animation-delay: 120ms;
+}
+
+.skeleton-bar:nth-child(3) {
+  width: 60%;
+  animation-delay: 240ms;
+}
+
+/* 失败态 --------------------------------------------------------------- */
+.state-error {
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  text-align: center;
+}
+
+.state-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.state-icon svg {
+  display: block;
+}
+
+.state-icon--error {
+  border: 0;
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+.state-icon--accent {
+  border: 0;
+  background: var(--accent-wash);
+  color: var(--accent-deep);
+}
+
+.state-title {
+  margin: 16px 0 0;
+  color: var(--fg);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+}
+
+.state-note {
+  max-width: 260px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  line-height: 1.7;
+  text-align: center;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 168px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--fg);
+  color: var(--on-brand);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: 0.02em;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.primary-button:hover {
+  background: color-mix(in srgb, var(--fg) 91%, var(--surface));
+}
+
+.primary-button:active {
+  background: color-mix(in srgb, var(--fg) 85%, var(--surface));
+  transform: scale(0.98);
+}
+
+.primary-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.state-error .primary-button {
+  margin-top: 22px;
+}
+
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 132px;
+  min-height: 44px;
+  margin-top: 2px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.text-button:hover {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--fg);
+}
+
+.text-button:active {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg);
+  transform: scale(0.97);
+}
+
+.text-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 空态 ----------------------------------------------------------------- */
+.empty-state {
+  display: none;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 var(--page-pad-x);
+  padding: 28px 16px calc(28px + env(safe-area-inset-bottom));
+  text-align: center;
+  animation: state-enter var(--motion-base) var(--ease) both;
+}
+
+.mp-app[data-state="confirm"] .web-canvas,
+.mp-app[data-state="empty"] .web-canvas {
+  display: none;
+}
+
+.mp-app[data-state="empty"] .empty-state {
+  display: flex;
+}
+
+.empty-state .primary-button {
+  margin-top: 24px;
+}
+
+/* 轻提示 --------------------------------------------------------------- */
+.toast {
+  position: fixed;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 70;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--fg);
+  color: var(--on-brand);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease),
+    visibility var(--motion-fast) var(--ease);
+}
+
+.toast.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+/* 动效 ----------------------------------------------------------------- */
+@keyframes state-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes web-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes skeleton-breathe {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-state,
+  .confirm-state,
+  .empty-state {
+    animation: none;
+  }
+
+  .loading-spinner,
+  .skeleton-bar {
+    animation: none;
+  }
+
+  .skeleton-bar {
+    opacity: 1;
+  }
+
+  .primary-button,
+  .text-button,
+  .toast {
+    transition: none;
+  }
+}

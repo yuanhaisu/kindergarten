@@ -1,0 +1,20 @@
+{
+  "slug": "parent-24-points",
+  "surface": "parent",
+  "title": "积分与成就",
+  "projectId": "23e103fa-2c6a-43e7-aa48-c25231a6bfe8",
+  "conversationId": "2eb3bb72-c83f-4057-b013-8c861431c255",
+  "runId": "1c035771-791c-41bd-be59-34b07aa62f03",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 349,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/23e103fa-2c6a-43e7-aa48-c25231a6bfe8",
+  "previewRendered": true
+}

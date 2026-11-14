@@ -1,0 +1,33 @@
+{
+  "slug": "parent-home",
+  "surface": "parent",
+  "title": "家长首页",
+  "projectId": "53898640-e627-43d7-843d-0554342143ce",
+  "conversationId": "6a751799-3ab4-40f3-b45e-22692eacaab7",
+  "runId": "5dbdf503-0b2b-499c-82d4-652838df61a1",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 406,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/53898640-e627-43d7-843d-0554342143ce",
+  "previewRendered": true,
+  "attempt": 2,
+  "attempts": [
+    {
+      "slug": "parent-home",
+      "status": "incomplete",
+      "note": "首次 run 仅产出 index.html，缺 styles.css / app.js"
+    },
+    {
+      "slug": "parent-home-2",
+      "status": "succeeded",
+      "note": "缩短 brief 后重跑，四件套齐全"
+    }
+  ]
+}

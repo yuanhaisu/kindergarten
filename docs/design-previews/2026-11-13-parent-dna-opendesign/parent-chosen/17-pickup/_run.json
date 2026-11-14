@@ -1,0 +1,20 @@
+{
+  "slug": "parent-pickup",
+  "surface": "parent",
+  "title": "家长接送",
+  "projectId": "f8d2a68d-4fc1-46a2-928a-a72ae6466d34",
+  "conversationId": "2df7f8fb-a6f6-4575-8355-a802530b0464",
+  "runId": "02014ece-2e69-4d09-97a1-0309cdda83e2",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 372,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/f8d2a68d-4fc1-46a2-928a-a72ae6466d34",
+  "previewRendered": true
+}

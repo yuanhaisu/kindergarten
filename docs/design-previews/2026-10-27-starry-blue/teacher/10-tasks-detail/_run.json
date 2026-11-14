@@ -1,0 +1,57 @@
+{
+  "slug": "teacher-tasks-detail",
+  "surface": "teacher",
+  "title": "任务回应",
+  "handAuthored": true,
+  "handAuthoredReason": "OpenDesign 两次 run 都未产出完整三件套：run #1 只有 index.html + tokens.css；run #2 只有 index.html + tokens.css（另复制了 _shared/）。styles.css 与 app.js 两次均缺失，按 subagent-task.md 的回退条款手写整页。",
+  "projectId": "031b87aa-884b-478d-adf6-52594ae8dd13",
+  "conversationId": "1806a0f6-7104-4af3-8bf6-b95e447803f6",
+  "runId": "1ceffdd0-3b16-4e55-bd4f-27f2e5e7c3e0",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 652,
+  "files": [
+    ".mcp.json",
+    "index.html",
+    "tokens.css",
+    "_shared/shell.css",
+    "_shared/shell.js"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/031b87aa-884b-478d-adf6-52594ae8dd13",
+  "previewRendered": true,
+  "attempts": [
+    {
+      "projectId": "c9869a84-55ad-4fd0-89f6-8f286f6db0e6",
+      "runId": "0f367c01-8325-4bd7-a010-af3cabee5c2e",
+      "status": "succeeded",
+      "elapsedSec": 482,
+      "files": [
+        ".mcp.json",
+        "index.html",
+        "tokens.css"
+      ],
+      "missing": [
+        "styles.css",
+        "app.js"
+      ]
+    },
+    {
+      "projectId": "031b87aa-884b-478d-adf6-52594ae8dd13",
+      "runId": "1ceffdd0-3b16-4e55-bd4f-27f2e5e7c3e0",
+      "status": "succeeded",
+      "elapsedSec": 652,
+      "files": [
+        ".mcp.json",
+        "index.html",
+        "tokens.css",
+        "_shared/shell.css",
+        "_shared/shell.js"
+      ],
+      "missing": [
+        "styles.css",
+        "app.js"
+      ]
+    }
+  ]
+}
