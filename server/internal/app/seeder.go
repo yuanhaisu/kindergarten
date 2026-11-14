@@ -67,6 +67,10 @@ func seedPerformanceTag(db *gorm.DB, kgID uint64) error {
 	}
 
 	for i := range items {
+		// extra 是 MySQL JSON 列，空字符串不是合法 JSON；未显式设置的项统一写 {}。
+		if items[i].Extra == "" {
+			items[i].Extra = "{}"
+		}
 		if err := db.Create(&items[i]).Error; err != nil {
 			return err
 		}
@@ -106,6 +110,10 @@ func seedCalendarEventType(db *gorm.DB, kgID uint64) error {
 	}
 
 	for i := range items {
+		// extra 是 MySQL JSON 列，空字符串不是合法 JSON；未显式设置的项统一写 {}。
+		if items[i].Extra == "" {
+			items[i].Extra = "{}"
+		}
 		if err := db.Create(&items[i]).Error; err != nil {
 			return err
 		}
@@ -128,7 +136,7 @@ func SeedDictsForAll(db *gorm.DB) error {
 	return SeedDicts(db, 0)
 }
 
-// SeedDictsAfterMigration should be called after AutoMigrate in provider.go.
+// SeedDictsAfterMigration 由 cmd/seedbase 在 goose 迁移之后调用。
 func SeedDictsAfterMigration(db *gorm.DB) {
 	ctx := context.Background()
 	_ = db.WithContext(ctx) // satisfy the context pattern
@@ -138,10 +146,11 @@ func SeedDictsAfterMigration(db *gorm.DB) {
 	}
 }
 
-// SeedDietAfterMigration 是膳食模块的启动种子（openspec: add-quantified-recipe, design D10）。
+// SeedDietAfterMigration 是膳食模块的初始化种子（由 cmd/seedbase 调用；
+// openspec: add-quantified-recipe, design D10）。
 //
 // 独立于 SeedDictsAfterMigration：先种全局分类 + DRIs，再遍历园所按 preset_key
-// 复制 kg=0 预置食物、种模板。任何错误只记录，不阻断启动——食物数据依赖
+// 复制 kg=0 预置食物、种模板。任何错误只记录，不阻断后续步骤——食物数据依赖
 // 另行导入的授权 CSV，未导入时园所没有食物是合法状态（跳过模板并告警）。
 func SeedDietAfterMigration(db *gorm.DB) {
 	ctx := context.Background()

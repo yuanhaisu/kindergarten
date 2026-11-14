@@ -1,4 +1,4 @@
-.PHONY: run build wire tidy lint test clean migrate help
+.PHONY: run build wire tidy lint test clean migrate seedbase help
 
 APP_NAME   := kindergarten-server
 CMD_DIR    := cmd/api
@@ -15,6 +15,12 @@ run: ## 启动开发服务（热加载需配合 air）
 build: ## 编译为二进制文件 → bin/
 	@mkdir -p $(BIN_DIR)
 	go build -o $(BIN_DIR)/$(APP_NAME) $(CMD_DIR)/main.go
+
+migrate: ## 执行 goose 版本化迁移（CONFIG_PATH 可覆盖）
+	CONFIG_PATH=$(CONFIG) go run ./cmd/migrate up
+
+seedbase: ## 幂等初始化字典/膳食/园长角色（首次部署或新环境）
+	CONFIG_PATH=$(CONFIG) go run ./cmd/seedbase
 
 wire: ## 重新生成 Wire 依赖注入代码
 	cd internal/app && wire
