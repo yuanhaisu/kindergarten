@@ -1,0 +1,526 @@
+/* 养成星球 · 家长端 DNA v1 — binding token contract (frozen 2026-11-12)
+ * Source of truth: kindergarten/docs/design-dna/2026-11-11-kinderly/DESIGN.md
+ *
+ * Paste the unscoped :root block below verbatim into the first <style> of every
+ * artifact. Do not invent tokens, do not redefine values, do not write raw hex
+ * outside this block. Serif weights are 400 only — never bold a serif.
+ */
+
+:root {
+  /* ---------- surfaces ---------- */
+  --bg: #ECE6D7;               /* bone canvas — every page background */
+  --surface: #FFFFFF;          /* raised card */
+  --surface-soft: #FCFAF4;     /* quiet section card */
+  --surface-muted: #F2EDDE;    /* tracks, inactive fill, secondary panels */
+  --skeleton: #E4E2D6;         /* static skeleton block, no animation */
+
+  /* ---------- ink ---------- */
+  --fg: #173220;               /* pine — primary text, primary button, icons */
+  --fg-deep: #0D2014;          /* deepest ink, sparing */
+  --fg-soft: #3D5141;          /* long-form secondary body on bone */
+  --muted: #55616F;            /* secondary text on bone — 5.07:1 */
+  --muted-on-surface: #5E6B7A; /* secondary text on white card — 5.44:1 */
+  --icon-soft: #728173;        /* icons, dividers, or text >= 24px ONLY */
+  --decor-blue: #8A94A3;       /* decoration only — never text */
+
+  /* ---------- accents ---------- */
+  --accent: #173220;           /* primary CTA = pine, never orange */
+  --accent-contrast: #ECE6D7;  /* bone text on pine */
+  --sage: #8DA386;
+  --sage-deep: #5C7359;
+  --sage-soft: #CFD9C5;
+  --sage-pale: #E5EFE9;
+  --marigold: #DDB14A;         /* reward / completed / celebration */
+  --marigold-soft: #EFD485;
+  --terracotta: #C36540;       /* icon, illustration fill, soft ground only */
+  --terracotta-text: #A64E2E;  /* terracotta as text — 4.5:1 on bone */
+  --terracotta-soft: #E5BCA1;  /* "异常" tag ground; text on it is pine */
+  --orange: #F97316;           /* attention layer ONLY: dot, badge, warning icon */
+  --orange-wash: rgba(249, 115, 22, 0.12);
+  --orange-text: #A2480A;      /* text on orange wash — 5.06:1 */
+  --danger: #A8323A;
+  --danger-wash: rgba(168, 50, 58, 0.09);
+  --info: #5E6B7A;
+  --info-wash: rgba(138, 148, 163, 0.14);
+
+  /* ---------- hairlines (no shadows on cards) ---------- */
+  --hair: rgba(23, 50, 32, 0.10);
+  --hair-strong: rgba(23, 50, 32, 0.22);
+  --hair-soft: rgba(23, 50, 32, 0.07);
+
+  /* ---------- typography ---------- */
+  --font-display: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+  --font-serif: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+  --font-sans: "Geist", "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --text-h1: 30px;
+  --leading-h1: 1.35;
+  --tracking-h1: 0;
+  --text-h2: 21px;
+  --leading-h2: 1.4;
+  --text-h3: 18px;
+  --leading-h3: 1.4;
+  --text-serif-body: 17px;
+  --leading-serif-body: 1.8;
+  --tracking-serif-body: 0;
+  --text-body: 15px;
+  --leading-body: 1.65;
+  --text-small: 13px;
+  --leading-small: 1.6;
+  --text-caption: 11.5px;
+  --leading-caption: 1.5;
+  --text-overline: 11px;
+  --tracking-overline: 0.14em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* ---------- spacing ---------- */
+  --page-x: 20px;
+  --page-top: 8px;
+  --section-gap: 26px;
+  --card-gap: 12px;
+  --card-pad-x: 20px;
+  --card-pad-y: 18px;
+  --row-gap: 10px;
+
+  /* ---------- shape ---------- */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-card: 20px;
+  --radius-lg: 26px;
+  --radius-pill: 999px;
+
+  /* ---------- elevation: cards have none ---------- */
+  --shadow-card: none;
+  --shadow-float: 0 10px 30px -14px rgba(23, 50, 32, 0.35); /* floating tab bar only */
+
+  /* ---------- motion ---------- */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-press: 150ms;
+  --motion-sheet-in: 300ms;
+  --motion-sheet-out: 200ms;
+}
+
+/* ---------- 班级相册 · 本页布局 ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+}
+
+.mp-app {
+  position: relative;
+  flex: 0 0 auto;
+  width: 390px;
+  height: 844px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* ---------- 系统状态栏与返回栏 ---------- */
+
+.mp-chrome {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  background: var(--bg);
+}
+
+.mp-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 var(--page-x);
+}
+
+.status-time {
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg);
+}
+
+.status-icons svg {
+  display: block;
+  height: 12px;
+  width: auto;
+}
+
+.page-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--hair-soft);
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 44px;
+  height: 44px;
+  padding-left: 5px;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  transition: background-color var(--motion-press) var(--ease-out);
+}
+
+.back-btn svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.back-btn:active {
+  background: var(--surface-muted);
+}
+
+.page-bar-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.page-bar-spacer {
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+}
+
+/* ---------- 页面滚动区 ---------- */
+
+.mp-main {
+  position: absolute;
+  inset: 88px 0 0 0;
+  padding: 8px var(--page-x) 44px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.mp-main::-webkit-scrollbar {
+  display: none;
+}
+
+.page-head {
+  padding-top: 4px;
+}
+
+.page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--tracking-h1);
+  color: var(--fg);
+}
+
+.page-sub {
+  margin: 6px 0 0;
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  color: var(--muted);
+}
+
+/* ---------- 本月精选 ---------- */
+
+.feature-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 200px;
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-lg);
+  background: var(--marigold);
+  text-align: left;
+  transition: filter var(--motion-press) var(--ease-out);
+}
+
+.feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 46%,
+    color-mix(in srgb, var(--fg) 25%, transparent) 56%,
+    color-mix(in srgb, var(--fg) 68%, transparent) 68%,
+    color-mix(in srgb, var(--fg) 90%, transparent) 80%,
+    color-mix(in srgb, var(--fg) 96%, transparent) 100%
+  );
+}
+
+.feature-card:active {
+  filter: brightness(0.95);
+}
+
+.feature-tag {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  display: inline-block;
+  padding: 5px 8px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-soft);
+  color: var(--fg);
+  font-size: var(--text-overline);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.08em;
+}
+
+.feature-body {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  z-index: 1;
+  display: block;
+}
+
+.feature-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: var(--weight-regular);
+  line-height: 1.25;
+  color: var(--accent-contrast);
+}
+
+.feature-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--accent-contrast);
+  opacity: 0.84;
+}
+
+/* ---------- 全部相册 ---------- */
+
+.album-section-title {
+  margin: 30px 0 12px;
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h2);
+  color: var(--fg);
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.album-card {
+  display: block;
+  width: 100%;
+  padding: 8px 8px 12px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+  text-align: left;
+  transition: background-color var(--motion-press) var(--ease-out);
+}
+
+.album-card:active {
+  background: color-mix(in srgb, var(--surface-muted) 94%, var(--fg));
+}
+
+.album-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+}
+
+.cover--gold {
+  background: var(--marigold);
+}
+
+.cover--pine {
+  background: var(--fg);
+}
+
+.cover--blue {
+  background: var(--decor-blue);
+}
+
+.cover--clay {
+  background: var(--terracotta);
+}
+
+.cover--sage {
+  background: var(--sage);
+}
+
+.album-text {
+  display: block;
+  padding: 10px 6px 0;
+}
+
+.album-name {
+  display: block;
+  font-size: 14.5px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+.album-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--muted);
+}
+
+/* ---------- 空态 ---------- */
+
+.album-empty {
+  display: none;
+  padding-top: 64px;
+}
+
+.mp-app[data-state="empty"] .album-default {
+  display: none;
+}
+
+.mp-app[data-state="empty"] .page-sub {
+  display: none;
+}
+
+.mp-app[data-state="empty"] .album-empty {
+  display: block;
+}
+
+.empty-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 136px;
+  height: 136px;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--fg);
+}
+
+.empty-art svg {
+  display: block;
+  width: 128px;
+  height: 128px;
+}
+
+.empty-art .empty-sun {
+  fill: var(--marigold);
+}
+
+.empty-title {
+  margin: 26px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+.empty-note {
+  margin: 8px 0 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--muted);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  margin-top: 24px;
+  padding: 0 32px;
+  border-radius: var(--radius-pill);
+  background: var(--fg);
+  color: var(--accent-contrast);
+  font-size: 17px;
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  transition: filter var(--motion-press) var(--ease-out);
+}
+
+.btn-primary:active {
+  filter: brightness(0.9);
+}

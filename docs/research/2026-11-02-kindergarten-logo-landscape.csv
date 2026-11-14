@@ -1,0 +1,61 @@
+layer,brand,category,market,site_url,logo_url,notes
+L1,掌通家园,家园共育 SaaS,中国大陆,https://www.ztjy.cn/,https://www.ztjy.cn/img/logo.png,横版 PNG；站点另有 favicon Upload/swhz/favicon-09405323307.ico
+L1,智慧树,家园共育 SaaS,中国大陆,https://www.hybbtree.com/,https://www.hybbtree.com/image/new_index_logo.png,横版 PNG；页面以 CSS 背景图引用（显示尺寸 134×55），非 img 标签
+L1,微家园,家园共育 SaaS,中国大陆,http://www.weijiayuan.im/,,官网 502；weijiayuan.com 403；Apple 中国区与腾讯应用宝均无官方应用
+L1,幼师口袋,家园共育 SaaS,中国大陆,https://www.youshikoudai.com/,https://www.youshikoudai.com/image/icon-180.png,仅 app icon（180px），未见横版字标
+L1,一起长大,家园共育 SaaS,中国大陆,https://www.kid17.com/,https://www.kid17.com/static/kid17-web/kid17_logo01.svg,横版 SVG；同目录另有 kid17_logo03.svg
+L1,贝聊,家园共育 SaaS,中国大陆,http://www.ibeiliao.com/,,官网 404；beiliao.com 显示「网站建设中」；Apple 中国区与腾讯应用宝均无官方应用
+L1,晓黑板,家校沟通,中国大陆,https://www.xiaoheiban.com/,,官网返回 1 字节空页，http 备用域 502；Apple 中国区与腾讯应用宝均无官方应用
+L1,班级优化大师,园务/课堂管理,中国大陆,https://apps.apple.com/cn/app/id989685406,https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e7/b6/48/e7b648d4-8115-f162-1246-011c558cb054/TeacherAppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg,App icon；官网 care.seewo.com 为产品落地页，无品牌 logo 图
+L1,希沃,园务/教学硬件,中国大陆,https://www.seewo.com/,https://www.seewo.com/images/logo.svg,横版 SVG；母品牌站，另有 logo1.svg
+L1,壹点壹滴,家园共育 SaaS,中国大陆,http://www.1d1d100.com/,http://www.1d1d100.com/static/nav.logo-6ffc7a939bfb5615a4e577f408ba5843.png,横版 PNG（构建哈希文件名，改版可能失效）
+L1,幼视通,接送/监控 SaaS,中国大陆,https://www.mingcloud.net/,https://www.mingcloud.net/images/logo.png,横版 PNG
+L1,阿童目,晨检机器人/园务,中国大陆,https://www.atongmu.net/,https://www.atongmu.net/images/logo.png,横版 PNG；另有 images/icon.png
+L1,校讯通,家校沟通,中国大陆,https://www.xxt.cn/,https://www.xxt.cn/xxt_index/image/only-logo.png,横版 PNG；同目录另有 zxq-logo1.png、zxjy-logo1.png
+L1,掌心宝贝,园务/成长档案,中国大陆,https://ancda.com/,https://ancda.com/assets/common/logo-dark.png,横版深色版 PNG；另有 apple-touch-icon-180x180.png
+L1,幼安宝,接送/家园共育,中国大陆,http://www.youanbao.com.cn/,https://www.youanbao.com.cn/content/img/yab_logo.png,官网横版 PNG（200 image/png）；页面另引用 favicon yab_logo_icon.ico
+L2,红黄蓝幼儿园,幼儿园品牌,中国大陆,https://www.rybbaby.com/,https://www.rybbaby.com/Uploads/Picture/2017/11/07/s5a01638989bb8_3913_869_224_7.png,横版 PNG（869×224）；页面以 .logo CSS 背景图引用
+L2,金色摇篮,幼儿园品牌,中国大陆,http://www.mamababy.com/,http://www.mamababy.com/static/home/images/logo.png,横版 PNG；页脚另有 footer_logo.png
+L2,伊顿国际幼儿园,幼儿园品牌,中国大陆,https://www.etonkids.com/,https://www.etonkids.com/_nuxt/img/logo.25bf869.png,横版 PNG（Nuxt 构建哈希名）；另有 footer_logo.798de78.png
+L2,小金星国际幼儿园,幼儿园品牌,中国大陆,https://www.lgs.cn/,https://www.lgs.cn/static/img/logo.09a5e48.png,Vue SPA；横版 371×54；备选 logo2.133200b.png（371×54），图形标 logo-m.424364c.png（89×71）
+L2,伟才幼儿园,幼儿园品牌,中国大陆,http://www.21gm.com/,http://www.21gm.com/assets/2020/images/public/wap_logo.png,移动端横版 PNG（wap_logo）
+L2,吉的堡,幼儿园品牌,中国大陆（台资）,https://www.kidcastle.com.cn/,https://assets.kidcastle.com.cn/websiteguanwang/html/static/icon/logo_h.png,横版 PNG；直连 403（防盗链），官网页面内正常引用
+L2,大地幼儿园,幼儿园品牌,中国大陆,http://www.dadikid.net/,http://www.dadikid.net/images/logo.png,横版 PNG；另有 copyright_logo.png
+L2,诺亚舟,幼儿园品牌,中国大陆,https://www.noaheducation.com/,https://www.noaheducation.com/img/logo.jpg,横版 JPG
+L2,博苑幼儿园,幼儿园品牌,中国大陆,https://www.boyuankids.com/,http://aimg4.dlszywz.com/ev_user_module_content_tmp/2016_03_14/tmp1457948631_1011328_s.jpg,站点有 js_clearance 反爬，带 cookie 回放后取到 alt=博苑LOGO；JPEG 22250 B
+L2,跨世纪幼儿园,幼儿园品牌,中国大陆,http://www.ksjjy.com/,http://www.ksjjy.com/theme/images/logo.png,横版 PNG；另有 logo2.png
+L2,三之三,幼儿园品牌,中国台湾,https://www.3-3edu.com.tw/,,frameset 站点；仅 img/idxTTL.gif，经图像核验为「最新活動訊息」装饰图，非品牌标
+L2,红缨幼儿园,幼儿园品牌,中国大陆,http://www.hoing.net/,http://www.hoing.net/cms/templets/guanw/images/logo.png,横版 PNG
+L2,青苗幼儿园,幼儿园品牌,中国大陆,https://www.bibs.com.cn/,https://www.bibs.com.cn/Images/logo.png?t=20260916092009,横版 PNG（带版本参数）；另有 Images/logo.ico
+L2,协和幼儿园,幼儿园品牌,中国大陆,http://www.xieheedu.cn/,http://www.xieheedu.cn/wp-content/uploads/2018/04/logo@1x.png,横版 PNG；页脚另有 logo-foot.png
+L2,东方剑桥幼儿园,幼儿园品牌,中国大陆,http://www.dfjq.com.cn/,,抓取时官网 502，无可用资源
+L3,亿童,课程/装备,中国大陆,https://www.yitong.com/,https://public.yitong.com/images/logo_v2.png,横版 PNG（CDN 域）
+L3,小康轩,课程/教材,中国大陆（台资康轩）,http://www.xiaokangxuan.com/,http://www.xiaokangxuan.com/images/logo.jpg,横版 JPG；母公司站 knsh.com.cn
+L3,爱立方,课程/绘本,中国大陆,https://www.alfedu.com/,https://www.alfedu.com/theme/default/images/logo1.svg,横版 SVG；另有 logo2.png
+L3,东方娃娃,绘本/杂志,中国大陆,http://www.dfwwedu.cn/,,dfwwedu.cn 502、dfww.com.cn 404、dfww.cn 403、dfww.com 502；官网未确认
+L3,巧虎,早教内容/IP,中国大陆（日本倍乐生授权）,https://apps.apple.com/cn/app/id1260322025,https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/33/d9/9e/33d99ea9-4cd8-0c98-f69e-a9dabb485919/AppIcon-1x_U007emarketing-0-6-0-sRGB-85-220-0.png/512x512bb.jpg,App icon；官网 qiaohu.com 为 Vue SPA，未暴露横版字标
+L3,洪恩,早教 App/内容,中国大陆,https://www.hongen.com/,https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/cd/4d/cc/cd4dccbb-e5a4-b300-2058-00b1cf2f8708/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg,官网 200，但 logo 资源直连 403；改用「洪恩识字」App icon（Apple 中国区 id1139733348）
+L3,斑马,AI 启蒙内容,中国大陆,https://apps.apple.com/cn/app/id1279609813,https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/09/cd/57/09cd5782-a1bb-0e8a-4e34-6e0e9e06d4e0/AppIcon-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg,App icon；官网 banmaapp.com 仅 favicon
+L3,叽里呱啦,英语启蒙,中国大陆,https://www.jiliguala.com/,https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/37/6d/ac/376dacc3-676e-143b-8109-4698100e1009/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg,官网 200；站内曾引用的 /static/logo.png 已 404；App icon 来自 Apple 中国区 id928864273
+L3,宝宝巴士,儿歌/动画,中国大陆,https://www.babybus.com/,https://www.babybus.com/_nuxt/img/logo-header.8a74a74.png,官网头部横版 PNG
+L3,凯叔讲故事,音频故事,中国大陆,http://www.kaishustory.com/,http://www.kaishustory.com/logo_new.png,官网主标 PNG
+L3,贝瓦,儿歌,中国大陆,https://apps.apple.com/cn/app/id716603240,https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/34/0f/76/340f7605-ea98-cb46-e416-c3ff846a7c4d/AppIcon-0-0-1x_U007emarketing-0-8-0-0-sRGB-85-220.png/512x512bb.jpg,App icon；官网 beva.com 仅 JS 入口
+L3,火火兔,故事机,中国大陆,http://www.alilo.com.cn/,http://www.alilo.com.cn/static/img/index/logo.png,官网横版 PNG
+L3,逻辑狗,思维教具,中国大陆,https://www.zaojiao.net/,,站点标题为「逻辑狗官网」，但 HTML 内无独立 logo 资源（仅功能图标）
+L3,蒲蒲兰,绘本出版,中国大陆,https://www.poplar.com.cn/,http://www.poplar.com.cn/images/front/logo.jpg,官网横版 JPG
+L3,信谊,绘本出版,中国大陆,https://www.xinyituhuashu.com/,https://wifa2025.oss-cn-shanghai.aliyuncs.com/image/20250707/02877494ebaf87651094bc4abc5bfed9.png,站内 class=headerLogo 主标 PNG
+L3,乐乐趣,童书/立体书,中国大陆,https://www.lelequ.com/,https://26571969.s21i.faiusr.com/4/1/ABUIABAEGAAgvOmAnAYoks6ntgEwqgE4MA.png,站点标题为母品牌「荣信文化」，该图为母品牌标，非乐乐趣自有标
+L4,Brightwheel,园务 SaaS,美国,https://brightwheel.com/,https://brightwheel.com/wp-content/uploads/2021/06/cropped-Untitled-design.png,官网图标裁切版 PNG
+L4,Procare,园务 SaaS,美国,https://www.procaresoftware.com/,https://www.procaresoftware.com/wp-content/uploads/2025/03/cropped-ProcareSolutions-RLogo-FullColor-Horiz-RGB.png,官网横版全彩 PNG
+L4,Lillio（原 HiMama）,家园共育,加拿大,https://www.lillio.com/,https://images.ctfassets.net/x4nvfpejxuu4/12O04RxNlc9v6CaRqNE4hq/04c7047ed8b555ce679d8b223b1c99d8/Group_5.svg,页头预加载 SVG
+L4,Tadpoles,家园共育,美国,https://www.tadpoles.com/,https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/72/97/51/72975147-30ae-5206-054d-75080b84cbbc/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/512x512bb.jpg,官网 200，页面无独立 logo 资源；App icon 来自 Apple 美国区 id428376881（Tadpoles Parent，卖家 Teaching Strategies）
+L4,Kaymbu,成长档案,美国,https://www.kaymbu.com/,https://www.kaymbu.com/hubfs/Logos/logo.jpg,官网 JPG
+L4,Bloomz,家校沟通,美国,https://www.bloomz.com/,https://www.bloomz.com/images/logo-wide-white.webp,仅白字版 WebP（深色底用）
+L4,ClassDojo,行为记录,美国,https://www.classdojo.com/,https://static.classdojo.com/img/classdojo-logo.svg,官方静态资源 SVG
+L4,Seesaw,成长档案,美国,https://seesaw.com/,https://seesaw.com/wp-content/uploads/2024/01/seesaw-logo.svg,官网 SVG
+L4,Famly,园务 SaaS,丹麦,https://www.famly.co/,https://cdn.prod.website-files.com/5f64c1a06bfbf4ea417a71af/66e5b094dfc47c83c2381d47_Famly-logo-nav.webp,导航栏 WebP
+L4,Storypark,成长档案,新西兰,https://www.storypark.com/,https://cdn.prod.website-files.com/69715f3b73e530ee6e53eb06/69715f3b73e530ee6e53eca6_Logotype%20Storypark.svg,文字标识（Logotype）SVG，无独立图形标
+L4,Educa,成长档案,新西兰,https://geteduca.com/,https://geteduca.com/wp-content/uploads/2023/10/Educa-logo.svg,官网 SVG
+L4,Kinderpedia,园务 SaaS,罗马尼亚,https://www.kinderpedia.com/,https://www.kinderpedia.com/images/logo.gif,官网旧格式 GIF
+L4,Smartcare,签到/家园,美国,https://smartcareos.com/,https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0a/4d/d2/0a4dd2e5-0157-8802-f0c4-35c03a1e2e92/AppIcon-0-1x_U007emarketing-0-8-0-sRGB-85-220-0.png/512x512bb.jpg,官网 200 但未抽出独立 logo 资源；App icon 来自 Apple 美国区 id1045682704（Smartcare for Parents，卖家 SmartCareOS）
+L4,ChildPlus,Head Start 管理,美国,https://www.childplus.com/,https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/37/57/33/375733c8-1547-c960-f103-02f1da0fa852/AppIcon-production-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg,官网已 301 至 procaresoftware.com 的 ChildPlus 产品页；App icon 来自 Apple 美国区 id6741083432（卖家 Procare Software）

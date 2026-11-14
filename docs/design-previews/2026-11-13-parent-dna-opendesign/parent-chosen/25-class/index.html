@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>班级信息 · 小一班</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" data-od-id="class-info-page">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="statusbar__time">10:20</span>
+      <svg class="statusbar__icons" width="66" height="14" viewBox="0 0 66 14" fill="none">
+        <rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" />
+        <rect x="5" y="6.2" width="3" height="5.8" rx="1" fill="currentColor" />
+        <rect x="10" y="4.2" width="3" height="7.8" rx="1" fill="currentColor" />
+        <rect x="15" y="2.2" width="3" height="9.8" rx="1" fill="currentColor" />
+        <path d="M23.8 5.6c4.1-3.7 10.7-3.7 14.8 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        <path d="M26.8 8.6c2.6-2.4 6.7-2.4 9.3 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        <circle cx="31.5" cy="11.5" r="1.2" fill="currentColor" />
+        <rect x="45.2" y="3.2" width="18.8" height="9" rx="2.5" stroke="currentColor" stroke-width="1.2" />
+        <rect x="47.1" y="5.1" width="13.2" height="5.2" rx="1.2" fill="currentColor" />
+        <path d="M65.2 6.2v3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+      </svg>
+    </div>
+
+    <header class="page-bar" data-od-id="class-page-bar">
+      <button class="page-bar__back" type="button" data-action="back" aria-label="返回上一页" data-od-id="back-button">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.5 5 7.5 12l7 7" />
+        </svg>
+      </button>
+      <p class="page-bar__title">班级信息</p>
+    </header>
+
+    <main class="mp-main">
+      <header class="page-head" data-od-id="class-heading">
+        <h1 class="page-head__title" data-od-id="class-name">小一班</h1>
+        <p class="page-head__meta">阳光幼儿园 · 28 名幼儿</p>
+      </header>
+
+      <section class="info-card" data-od-id="class-info-card" aria-label="班级基本信息">
+        <dl class="info-list">
+          <div class="info-row">
+            <dt class="info-label">班级</dt>
+            <dd class="info-value">小一班</dd>
+          </div>
+          <div class="info-row">
+            <dt class="info-label">教室</dt>
+            <dd class="info-value">教学楼 2 层 203</dd>
+          </div>
+          <div class="info-row">
+            <dt class="info-label">在园时间</dt>
+            <dd class="info-value info-value--nums">08:00–17:00</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="teachers" data-od-id="teachers-section" aria-labelledby="teachers-heading">
+        <div class="section-head">
+          <h2 class="section-head__title" id="teachers-heading" data-od-id="teachers-heading">班级老师</h2>
+          <span class="section-head__count">2 位</span>
+        </div>
+
+        <ul class="teacher-card">
+          <li class="teacher" data-od-id="teacher-li">
+            <span class="teacher__avatar teacher__avatar--sage" aria-hidden="true">李</span>
+            <div class="teacher__identity">
+              <span class="teacher__name">李老师</span>
+              <span class="teacher__role">主班 · 语言</span>
+            </div>
+            <button class="call-button" type="button" data-call="李老师" aria-label="拨打李老师电话" data-od-id="call-li">
+              <span class="call-button__face" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+              </span>
+            </button>
+          </li>
+          <li class="teacher" data-od-id="teacher-wang">
+            <span class="teacher__avatar teacher__avatar--terracotta" aria-hidden="true">王</span>
+            <div class="teacher__identity">
+              <span class="teacher__name">王老师</span>
+              <span class="teacher__role">配班 · 艺术</span>
+            </div>
+            <button class="call-button" type="button" data-call="王老师" aria-label="拨打王老师电话" data-od-id="call-wang">
+              <span class="call-button__face" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <section class="notice-section" data-od-id="class-notice" aria-labelledby="notice-title">
+        <article class="notice-card" data-od-id="notice-autumn-trip">
+          <p class="notice__eyebrow">秋游通知</p>
+          <h2 class="notice__title" id="notice-title" data-od-id="notice-title">本周五去城市公园</h2>
+          <p class="notice__body">定于 <span class="hl">11 月 13 日（周五）</span>上午组织秋游，请给孩子准备轻便水壶和遮阳帽，周四前交回执。</p>
+          <p class="notice__sign">李老师 · 11 月 10 日</p>
+        </article>
+      </section>
+
+      <footer class="page-foot" data-od-id="page-footer">有疑问请先联系班级老师</footer>
+    </main>
+
+    <div class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

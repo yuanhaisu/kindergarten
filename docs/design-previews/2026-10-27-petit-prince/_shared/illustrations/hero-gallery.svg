@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" font-family="'Ma Shan Zheng','Noto Serif SC',Georgia,serif">
+  <rect width="640" height="420" fill="#fbfaf6"/>
+
+  <!-- 星空：10 -->
+  <g fill="#141414" stroke="#141414">
+    <circle cx="80" cy="60" r="2"/>
+    <circle cx="160" cy="110" r="1.3" fill="none" stroke-width=".9"/>
+    <circle cx="250" cy="48" r="1.8"/>
+    <circle cx="350" cy="90" r="1.4" fill="none" stroke-width=".9"/>
+    <circle cx="560" cy="60" r="2"/>
+    <circle cx="600" cy="150" r="1.4" fill="none" stroke-width=".9"/>
+    <circle cx="80" cy="210" r="1.6"/>
+    <circle cx="300" cy="180" r="1.2" fill="none" stroke-width=".8"/>
+    <g stroke-width=".9" opacity=".7"><line x1="420" y1="130" x2="420" y2="144"/><line x1="413" y1="137" x2="427" y2="137"/></g>
+    <circle cx="560" cy="250" r="18" fill="none" stroke-width="1.2" opacity=".4"/>
+    <circle cx="540" cy="230" r="24" fill="none" stroke-width=".9" opacity=".18"/>
+  </g>
+
+  <!-- 指路星：彗星（唯一朱砂焦点） -->
+  <g fill="none" stroke="#C0392B">
+    <circle cx="480" cy="80" r="3.4" fill="#C0392B" stroke="none"/>
+    <path d="M474 86 L428 132 M480 87 L444 142" stroke-width="1.3" opacity=".8"/>
+  </g>
+
+  <!-- 星球表面 -->
+  <g fill="none" stroke="#141414">
+    <path d="M20 366 Q320 300 620 366" stroke-width="2.2"/>
+    <path d="M20 366 Q320 400 620 366" stroke-width="1.2" opacity=".35"/>
+    <path d="M120 344 Q150 338 180 344" stroke-width=".9" opacity=".5"/>
+    <path d="M420 338 Q455 332 490 338" stroke-width=".9" opacity=".5"/>
+    <circle cx="280" cy="352" r="2.6" stroke-width=".9" opacity=".45"/>
+  </g>
+
+  <!-- 小王子（0.55x，脚落在弧线上） -->
+  <g transform="translate(200,340) scale(0.55) translate(-235,-610)">
+    <g id="prince" fill="none" stroke="#141414">
+      <circle cx="235" cy="470" r="15" stroke-width="2.2"/>
+      <path d="M220 461 Q234 445 250 461 M220 461 Q215 478 221 495 M250 461 Q255 478 249 495" stroke-width="1.4"/>
+      <circle cx="230" cy="471" r="1.7" fill="#141414" stroke="none"/>
+      <circle cx="240" cy="471" r="1.7" fill="#141414" stroke="none"/>
+      <path d="M233 476 q1.5 2 3 0" stroke-width=".8"/>
+      <path d="M230 479 q5 2.5 9 0" stroke-width=".8"/>
+      <path d="M222 486 q13 6 26 0" stroke-width="1.6"/>
+      <path d="M247 486 q6 3 9 9" stroke-width="1.4"/>
+      <path d="M235 489 Q210 506 206 588" stroke-width="2"/>
+      <path d="M235 489 Q260 506 264 588" stroke-width="2"/>
+      <path d="M206 588 q29 6 58 0" stroke-width="1.6"/>
+      <line x1="235" y1="491" x2="235" y2="585" stroke-width="1" opacity=".5"/>
+      <circle cx="235" cy="518" r="1" fill="#141414" stroke="none"/>
+      <circle cx="235" cy="536" r="1" fill="#141414" stroke="none"/>
+      <circle cx="235" cy="554" r="1" fill="#141414" stroke="none"/>
+      <path d="M212 504 q-5 16 -3 30" stroke-width="1.8"/>
+      <path d="M258 504 q7 13 11 23" stroke-width="1.8"/>
+      <path d="M223 588 q-1 14 0 22" stroke-width="1.8"/>
+      <path d="M247 588 q1 14 0 22" stroke-width="1.8"/>
+      <path d="M215 608 q8 4 14 0" stroke-width="1.4"/>
+      <path d="M240 608 q8 4 14 0" stroke-width="1.4"/>
+    </g>
+  </g>
+
+  <rect x="12" y="12" width="616" height="396" fill="none" stroke="#141414" stroke-width="1.1" opacity=".2"/>
+</svg>

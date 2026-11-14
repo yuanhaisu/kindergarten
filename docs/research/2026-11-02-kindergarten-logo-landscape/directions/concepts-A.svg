@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="840" viewBox="0 0 1600 840"><defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="1600" height="840" fill="#f7f7f4"/><text x="60" y="78" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#161616">A · 守护弧</text><text x="60" y="116" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20" fill="#6b6b6b">品类求同：借幼教的信任，不用吉祥物/星球/嫩芽</text><rect x="60" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="90" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title id="c0-title">A1 弧巢</title>
+  <path d="M 128 44 A 84 84 0 1 1 44 128" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="80" cy="80" r="18" fill="#111111"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="90" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title id="s064-title">A1 弧巢</title>
+  <path d="M 128 44 A 84 84 0 1 1 44 128" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="80" cy="80" r="18" fill="#111111"/>
+</svg>
+</g><text x="122" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="180" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title id="s032-title">A1 弧巢</title>
+  <path d="M 128 44 A 84 84 0 1 1 44 128" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="80" cy="80" r="18" fill="#111111"/>
+</svg>
+</g><text x="196" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="238" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title id="s016-title">A1 弧巢</title>
+  <path d="M 128 44 A 84 84 0 1 1 44 128" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="80" cy="80" r="18" fill="#111111"/>
+</svg>
+</g><text x="246" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="90.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">A · 弧巢</text><text x="90.0" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">单弧托住一颗种子。</text><rect x="562.667" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#161616" stroke-width="2"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="592.667" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title id="c1-title">A2 双弧守护</title>
+  <path d="M 96 56 A 72 72 0 0 0 96 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 160 56 A 72 72 0 0 1 160 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M128 108 Q131.6 124.4 148 128 Q131.6 131.6 128 148 Q124.4 131.6 108 128 Q124.4 124.4 128 108 Z" fill="#111111"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="592.667" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title id="s164-title">A2 双弧守护</title>
+  <path d="M 96 56 A 72 72 0 0 0 96 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 160 56 A 72 72 0 0 1 160 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M128 108 Q131.6 124.4 148 128 Q131.6 131.6 128 148 Q124.4 131.6 108 128 Q124.4 124.4 128 108 Z" fill="#111111"/>
+</svg>
+</g><text x="624.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="682.667" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title id="s132-title">A2 双弧守护</title>
+  <path d="M 96 56 A 72 72 0 0 0 96 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 160 56 A 72 72 0 0 1 160 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M128 108 Q131.6 124.4 148 128 Q131.6 131.6 128 148 Q124.4 131.6 108 128 Q124.4 124.4 128 108 Z" fill="#111111"/>
+</svg>
+</g><text x="698.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="740.667" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title id="s116-title">A2 双弧守护</title>
+  <path d="M 96 56 A 72 72 0 0 0 96 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 160 56 A 72 72 0 0 1 160 200" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M128 108 Q131.6 124.4 148 128 Q131.6 131.6 128 148 Q124.4 131.6 108 128 Q124.4 124.4 128 108 Z" fill="#111111"/>
+</svg>
+</g><text x="748.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="592.6666666666667" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">B · 双弧守护</text><text x="592.6666666666667" y="664" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#161616" letter-spacing="1.5">RECOMMENDED</text><text x="592.6666666666667" y="698" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">双弧把星护在中间。</text><rect x="1065.33" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1095.33" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title id="c2-title">A3 环 + 星</title>
+  <path d="M 170 55 A 84 84 0 1 1 86 55" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <path d="M128 20 Q130.88 33.12 144 36 Q130.88 38.88 128 52 Q125.12 38.88 112 36 Q125.12 33.12 128 20 Z" fill="#111111"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1095.33" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title id="s264-title">A3 环 + 星</title>
+  <path d="M 170 55 A 84 84 0 1 1 86 55" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <path d="M128 20 Q130.88 33.12 144 36 Q130.88 38.88 128 52 Q125.12 38.88 112 36 Q125.12 33.12 128 20 Z" fill="#111111"/>
+</svg>
+</g><text x="1127.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1185.33" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title id="s232-title">A3 环 + 星</title>
+  <path d="M 170 55 A 84 84 0 1 1 86 55" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <path d="M128 20 Q130.88 33.12 144 36 Q130.88 38.88 128 52 Q125.12 38.88 112 36 Q125.12 33.12 128 20 Z" fill="#111111"/>
+</svg>
+</g><text x="1201.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1243.33" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title id="s216-title">A3 环 + 星</title>
+  <path d="M 170 55 A 84 84 0 1 1 86 55" fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round"/>
+  <path d="M128 20 Q130.88 33.12 144 36 Q130.88 38.88 128 52 Q125.12 38.88 112 36 Q125.12 33.12 128 20 Z" fill="#111111"/>
+</svg>
+</g><text x="1251.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="1095.3333333333335" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">C · 环 + 星</text><text x="1095.3333333333335" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">环留一个缺口，星从缺口长出来。</text></svg>

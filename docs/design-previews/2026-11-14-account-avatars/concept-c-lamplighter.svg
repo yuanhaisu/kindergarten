@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>养成星球 · 点灯人（住客肖像）</title>
+  <rect width="256" height="256" fill="#F7F3E8"/>
+  <circle cx="128" cy="128" r="116" fill="none" stroke="#1B2A41" stroke-width="6"/>
+  <g fill="#1B2A41">
+    <path d="M100 146 C90 160 84 186 82 214 L158 214 C156 186 150 160 140 146 Z"/>
+    <circle cx="120" cy="124" r="15"/>
+    <rect x="98" y="104" width="44" height="6" rx="3"/>
+    <path d="M106 106 C106 96 112 90 120 90 C128 90 134 96 134 106 Z"/>
+    <path d="M138 160 L168 122" fill="none" stroke="#1B2A41" stroke-width="11" stroke-linecap="round"/>
+  </g>
+  <g fill="#1B2A41">
+    <circle cx="184" cy="84" r="4"/>
+    <path d="M168 92 L200 92 L194 102 L174 102 Z"/>
+    <rect x="170" y="120" width="28" height="7" rx="3.5"/>
+    <rect x="184" y="102" width="4" height="18"/>
+  </g>
+  <rect x="172" y="102" width="24" height="18" rx="3" fill="#E8A23A"/>
+  <path d="M184 106 C189 111 189 116 184 118 C179 116 179 111 184 106 Z" fill="#F7F3E8"/>
+</svg>

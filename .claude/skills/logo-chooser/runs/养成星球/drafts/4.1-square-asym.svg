@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 方 + 右侧开口，点偏向开口一侧 -->
+  <path d="M 100 36 L 100 20 L 20 20 L 20 100 L 100 100 L 100 84" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="76" cy="60" r="8" fill="#000"/>
+</svg>

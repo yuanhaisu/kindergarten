@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-dataset="female-5y">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>幼儿信息 · 乐乐 — 养成星球</title>
+  <link rel="stylesheet" href="../../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12 11.2v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /><circle cx="12" cy="8" r="1.05" fill="currentColor" /></symbol>
+  </svg>
+
+  <div class="mp-app" id="app" data-od-id="student-screen">
+    <div class="mp-statusbar" aria-hidden="true" data-od-id="status-bar">
+      <span class="status-time">10:20</span>
+      <span class="status-icons">
+        <svg class="status-signal" viewBox="0 0 18 12" fill="currentColor">
+          <rect x="0" y="8" width="3" height="4" rx="1"></rect>
+          <rect x="5" y="6" width="3" height="6" rx="1"></rect>
+          <rect x="10" y="3.5" width="3" height="8.5" rx="1"></rect>
+          <rect x="15" y="1" width="3" height="11" rx="1"></rect>
+        </svg>
+        <svg class="status-wifi" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M1.25 4.4C3.1 2.7 5.45 1.8 8 1.8s4.9.9 6.75 2.6"></path>
+          <path d="M3.7 6.9C4.95 5.8 6.4 5.25 8 5.25s3.05.55 4.3 1.65"></path>
+          <circle cx="8" cy="9.7" r="1.15" fill="currentColor" stroke="none"></circle>
+        </svg>
+        <svg class="status-battery" viewBox="0 0 25 12" fill="none">
+          <rect x="0.75" y="1.5" width="19.5" height="9" rx="2.5" stroke="currentColor" stroke-width="1.2"></rect>
+          <rect x="3" y="3.5" width="13.5" height="5" rx="1" fill="currentColor"></rect>
+          <path d="M22.4 4.4v3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        </svg>
+      </span>
+    </div>
+
+    <div class="mp-view" id="view-student">
+      <header class="page-bar" data-od-id="student-page-bar">
+        <button class="back-button" type="button" aria-label="返回" data-action="back" data-od-id="student-back">
+          <svg class="icon icon--back" aria-hidden="true"><use href="#i-back" /></svg>
+        </button>
+        <span class="page-bar__title">幼儿信息</span>
+        <button class="page-bar__action" type="button" data-action="edit" data-od-id="student-edit-button">编辑</button>
+      </header>
+
+      <main class="mp-main" id="student-main" data-od-id="student-content">
+        <p class="dataset-mark" data-od-id="dataset-mark">女性 / 5 岁数据集</p>
+
+        <header class="profile" data-od-id="student-profile">
+          <div class="avatar avatar--lg" id="profile-avatar" aria-hidden="true">乐</div>
+          <div class="profile__text">
+            <h1 class="profile__name" data-od-id="student-name">乐乐</h1>
+            <p class="profile__sub">小一班 · <span class="hl">5 岁 2 个月</span></p>
+            <p class="profile__meta">2025 年 9 月入园</p>
+          </div>
+        </header>
+
+        <section class="section" aria-labelledby="basic-heading" data-od-id="basic-info-section">
+          <h2 class="section-title" id="basic-heading" data-od-id="basic-info-heading">基本信息</h2>
+          <div class="card" data-od-id="basic-info-card">
+            <dl class="fact-grid">
+              <div class="fact">
+                <dt>姓名</dt>
+                <dd>乐乐</dd>
+              </div>
+              <div class="fact">
+                <dt>性别</dt>
+                <dd>女</dd>
+              </div>
+              <div class="fact">
+                <dt>生日</dt>
+                <dd>2021 年 9 月 8 日</dd>
+              </div>
+              <div class="fact">
+                <dt>民族</dt>
+                <dd>汉族</dd>
+              </div>
+              <div class="fact fact--wide">
+                <dt>户籍</dt>
+                <dd>湖南 · 湘潭</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="health-heading" data-od-id="health-info-section">
+          <h2 class="section-title" id="health-heading" data-od-id="health-info-heading">健康信息</h2>
+          <div class="card" data-od-id="health-info-card">
+            <dl class="fact-grid">
+              <div class="fact">
+                <dt>身高</dt>
+                <dd><span class="figure">108</span><span class="unit">cm</span></dd>
+              </div>
+              <div class="fact">
+                <dt>体重</dt>
+                <dd><span class="figure">18</span><span class="unit">kg</span></dd>
+              </div>
+              <div class="fact">
+                <dt>过敏史</dt>
+                <dd>无</dd>
+              </div>
+              <div class="fact" id="care-fact">
+                <dt>特殊照护</dt>
+                <dd id="care-value">无</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="contact-heading" data-od-id="emergency-section">
+          <h2 class="section-title" id="contact-heading" data-od-id="emergency-heading">紧急联系人</h2>
+          <div class="card card--list" data-od-id="emergency-contacts-card">
+            <ul class="contact-list">
+              <li class="contact" data-od-id="contact-mother">
+                <span class="avatar avatar--sm" aria-hidden="true">妈</span>
+                <span class="contact__text">
+                  <span class="contact__name">妈妈 · 李静</span>
+                  <span class="contact__phone">138****6721</span>
+                </span>
+              </li>
+              <li class="contact" data-od-id="contact-father">
+                <span class="avatar avatar--sm avatar--clay" aria-hidden="true">爸</span>
+                <span class="contact__text">
+                  <span class="contact__name">爸爸 · 王磊</span>
+                  <span class="contact__phone">139****2035</span>
+                </span>
+              </li>
+            </ul>
+          </div>
+          <p class="card-note">号码已脱敏，如需完整号码请联系班级老师。</p>
+        </section>
+
+        <div class="info-strip" data-od-id="student-info-strip">
+          <svg class="icon icon--info" aria-hidden="true"><use href="#i-info" /></svg>
+          <p>信息有误请联系班级老师修改</p>
+        </div>
+      </main>
+    </div>
+
+    <div class="sheet-layer" id="sheet-layer" hidden>
+      <div class="sheet-scrim" data-action="close-sheet"></div>
+      <section class="sheet" id="edit-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-describedby="sheet-desc" tabindex="-1" data-od-id="edit-sheet">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="sheet-title">编辑资料</h2>
+        <p class="sheet-desc" id="sheet-desc">仅可修改头像与健康备注。姓名、生日等园所登记信息，请联系班级老师。</p>
+
+        <div class="avatar-editor" data-od-id="avatar-editor">
+          <div class="avatar avatar--md" id="edit-avatar" aria-hidden="true">乐</div>
+          <div class="avatar-editor__text">
+            <p class="field-label" id="avatar-label">头像</p>
+            <div class="avatar-editor__actions">
+              <button class="btn-mini" type="button" data-action="pick-avatar" aria-describedby="avatar-label" data-od-id="avatar-pick">更换头像</button>
+              <button class="text-action" type="button" data-action="reset-avatar" aria-label="恢复默认头像" hidden data-od-id="avatar-reset">恢复默认</button>
+            </div>
+          </div>
+          <input type="file" id="avatar-input" accept="image/*" tabindex="-1" aria-hidden="true" hidden />
+        </div>
+
+        <div class="field" data-od-id="care-note-field">
+          <label class="field-label" for="care-note">健康备注</label>
+          <textarea class="textarea" id="care-note" rows="4" maxlength="60" placeholder="写下需要老师留意的照护信息"></textarea>
+          <div class="field-foot">
+            <span class="field-hint">保存后会更新「特殊照护」</span>
+            <span class="counter" id="care-count">0/60</span>
+          </div>
+        </div>
+
+        <div class="sheet-actions">
+          <button class="btn btn--secondary" type="button" data-action="close-sheet">取消</button>
+          <button class="btn btn--primary" type="button" data-action="save" data-od-id="sheet-save">保存</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

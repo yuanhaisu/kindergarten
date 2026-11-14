@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>可接送人 · 接送</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-od-id="authorized-pickup-page">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-statusbar__time">9:41</span>
+      <svg class="mp-statusbar__icons" viewBox="0 0 73 16" focusable="false">
+        <rect x="0" y="10" width="3" height="4.5" rx="0.8" fill="currentColor"/>
+        <rect x="5" y="8" width="3" height="6.5" rx="0.8" fill="currentColor"/>
+        <rect x="10" y="5.5" width="3" height="9" rx="0.8" fill="currentColor"/>
+        <rect x="15" y="3" width="3" height="11.5" rx="0.8" fill="currentColor"/>
+        <path d="M27 5.8c3.6-3 8.4-3 12 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M29.3 8.7c2.3-1.9 5.1-1.9 7.4 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M31.8 11.5c.9-.8 2.2-.8 3.1 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="33.4" cy="14" r="1.1" fill="currentColor"/>
+        <rect x="51" y="3" width="19" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <rect x="53" y="5" width="13" height="6" rx="1.5" fill="currentColor"/>
+        <path d="M71.5 6.2v3.6c1-.4 1.6-1 1.6-1.8s-.6-1.4-1.6-1.8Z" fill="currentColor"/>
+      </svg>
+    </div>
+
+    <main class="mp-main">
+      <div class="page-bar" data-od-id="pickup-page-bar">
+        <button class="back-button" type="button" aria-label="返回接送页" data-od-id="back-to-pickup">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7"/>
+          </svg>
+        </button>
+        <span class="page-bar__title">接送</span>
+        <span class="page-bar__tail" aria-hidden="true"></span>
+      </div>
+
+      <header class="page-header" data-od-id="authorized-pickup-header">
+        <h1>可接送人</h1>
+        <p class="page-subtitle">只有<span class="hl">名单内</span>的家人可以接走孩子</p>
+      </header>
+
+      <div class="page-view" data-view="default">
+        <section class="person-card" aria-label="可接送人名单" data-od-id="authorized-pickup-list">
+          <button class="person-row" type="button" data-od-id="authorized-person-li-jing">
+            <span class="avatar avatar--default" aria-hidden="true">李</span>
+            <span class="person-row__body">
+              <span class="person-row__head">
+                <span class="person-row__name">李静</span>
+                <span class="tag tag--approved">已通过</span>
+              </span>
+              <span class="person-row__meta">妈妈 · 长期授权 · 138****6721</span>
+            </span>
+            <svg class="person-row__chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6"/>
+            </svg>
+          </button>
+
+          <button class="person-row" type="button" data-od-id="authorized-person-wang-lei">
+            <span class="avatar avatar--sage" aria-hidden="true">王</span>
+            <span class="person-row__body">
+              <span class="person-row__head">
+                <span class="person-row__name">王磊</span>
+                <span class="tag tag--approved">已通过</span>
+              </span>
+              <span class="person-row__meta">爸爸 · 长期授权 · 139****2035</span>
+            </span>
+            <svg class="person-row__chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6"/>
+            </svg>
+          </button>
+
+          <button class="person-row" type="button" data-od-id="authorized-person-chen-xiulan">
+            <span class="avatar avatar--clay" aria-hidden="true">陈</span>
+            <span class="person-row__body">
+              <span class="person-row__head">
+                <span class="person-row__name">陈秀兰</span>
+                <span class="tag tag--pending">待审核</span>
+              </span>
+              <span class="person-row__meta">外婆 · 137****4418</span>
+            </span>
+            <svg class="person-row__chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6"/>
+            </svg>
+          </button>
+
+          <button class="person-row" type="button" data-od-id="authorized-person-zhao-guoqiang">
+            <span class="avatar avatar--plain" aria-hidden="true">赵</span>
+            <span class="person-row__body">
+              <span class="person-row__head">
+                <span class="person-row__name">赵国强</span>
+                <span class="tag tag--rejected">已拒绝</span>
+              </span>
+              <span class="person-row__meta">叔叔 · 135****8890</span>
+            </span>
+            <svg class="person-row__chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6"/>
+            </svg>
+          </button>
+        </section>
+
+        <button class="primary-button" type="button" data-od-id="add-authorizer">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>添加授权人</span>
+        </button>
+
+        <aside class="info-note" role="note" data-od-id="authorized-pickup-note">
+          <svg class="info-note__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 11v5"/>
+            <path d="M12 7.8h.01"/>
+          </svg>
+          <span>名单有变更时会通知班级老师；新添加的家人需审核通过后才能接走孩子。</span>
+        </aside>
+      </div>
+
+      <section class="page-view empty-state" data-view="empty" aria-labelledby="empty-state-title" data-od-id="authorized-pickup-empty" hidden>
+        <div class="empty-state__illustration" aria-hidden="true">
+          <svg viewBox="0 0 120 120" width="128" height="128" focusable="false">
+            <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path class="ill--ground" d="M28 98h64" stroke-width="2"/>
+              <circle class="ill--sage" cx="46" cy="38" r="10.5" stroke-width="3"/>
+              <path class="ill--sage" d="M36.8 35.6c1.3-5.7 4.4-9 9.2-9 4.5 0 7.5 3 8.8 8" stroke-width="2"/>
+              <path class="ill--sage" d="M46 48.5v4" stroke-width="3"/>
+              <path class="ill--sage" d="M46 52.5c-7.5 0-12.5 7.3-12.5 18.5V82h25V71c0-11.2-5-18.5-12.5-18.5Z" stroke-width="3"/>
+              <path class="ill--sage" d="M39.5 82v10M52.5 82v10" stroke-width="2.5"/>
+              <path class="ill--sage" d="M36 92.5h6M50 92.5h6" stroke-width="2.5"/>
+              <path class="ill--sage" d="M56.5 61.5c4 1.4 7.2 3.8 9.6 7.5" stroke-width="3"/>
+              <circle class="ill--clay" cx="82" cy="56" r="8.5" stroke-width="3"/>
+              <path class="ill--clay" d="M74.4 53.7c.9-4.3 3.3-6.7 7.6-6.7 3.8 0 6.3 2.2 7.4 5.9" stroke-width="2"/>
+              <path class="ill--clay" d="M82 64.5v3" stroke-width="3"/>
+              <path class="ill--clay" d="M82 67.5c-5.6 0-9.5 5-9.5 13V89h19V80.5c0-8-3.9-13-9.5-13Z" stroke-width="3"/>
+              <path class="ill--clay" d="M77 89v7M87 89v7" stroke-width="2.5"/>
+              <path class="ill--clay" d="M74.5 95.5h5M84.5 95.5h5" stroke-width="2.5"/>
+              <path class="ill--clay" d="M74 73.5c-2.8-.1-5.4-.9-7.7-2.4" stroke-width="3"/>
+              <path class="ill--marigold" d="M73.5 70c4.8 1.8 10 1.8 14.8 0" stroke-width="4.5"/>
+              <circle class="ill-fill--marigold" cx="65" cy="70.5" r="2.4"/>
+            </g>
+          </svg>
+        </div>
+        <h2 class="empty-state__title" id="empty-state-title">还没有添加其他接送人</h2>
+        <p class="empty-state__copy">添加后，家人可在园门口凭码接走乐乐。</p>
+        <button class="primary-button empty-state__cta" type="button" data-od-id="add-authorizer-empty">添加授权人</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

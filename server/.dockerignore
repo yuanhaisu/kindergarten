@@ -1,0 +1,11 @@
+# 构建上下文只需要源码、go.mod/go.sum 与 Casbin 配置。
+.git
+.gitignore
+bin/
+*.exe
+*.exe*
+*.log
+tmp/
+docs/
+configs/*.ini
+configs/*.local.ini

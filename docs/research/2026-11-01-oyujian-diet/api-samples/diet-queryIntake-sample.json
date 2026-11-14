@@ -1,0 +1,33 @@
+{
+  "_note": "POST /diet/queryIntake.do  body: {\"dietID\":\"1017248\"}（第九周）。营养评价接口：每个营养素一条，comment 为服务端判定的 合格/低/高。为保持证据纯度，仅前两条保留完整原始字段；其余 9 条只保留实际观测到的 percent/comment（intake/fullRecom/recomIntake 未逐条抄录，不臆造）。",
+  "_derived": {
+    "percents": "= intake / recomIntake × 100（用前两条验证）",
+    "recomIntake": "= fullRecom × 0.95（能量 1484.26→1410.05、蛋白质 50.7→48.17 两例精确吻合；其余未核对）",
+    "阈值实测": "66 条周食谱记录（跨多个学年）× 11 项 = 726 个样本：低 = 27.34–79.98（93 个）／合格 = 80.00–120.00（505 个）／高 = 120.07–211.23（128 个）→ 判定规则为 <80% 低、80%–120% 合格（含端点）、>120% 高"
+  },
+  "body": {
+    "nutrition": [
+      {
+        "nutritionID": 1, "nutritionName": "能量", "labels": "energy", "unit": "千卡",
+        "intake": 1274.66, "fullRecom": 1484.26, "recomIntake": 1410.05,
+        "percents": 90.4, "comment": "合格", "alias": ""
+      },
+      {
+        "nutritionID": 3, "nutritionName": "蛋白质", "labels": "protein", "unit": "克",
+        "intake": 49.84, "fullRecom": 50.7, "recomIntake": 48.17,
+        "percents": 103.47, "comment": "合格"
+      },
+      { "nutritionName": "碳水化合物", "percents": 94.02,  "comment": "合格" },
+      { "nutritionName": "脂肪",       "percents": 86.38,  "comment": "合格" },
+      { "nutritionName": "钙",         "percents": 32.9,   "comment": "低" },
+      { "nutritionName": "铁",         "percents": 124.82, "comment": "高" },
+      { "nutritionName": "锌",         "percents": 77.91,  "comment": "低" },
+      { "nutritionName": "维生素A",    "percents": 101.3,  "comment": "合格" },
+      { "nutritionName": "维生素B1",   "percents": 101.56, "comment": "合格" },
+      { "nutritionName": "维生素B2",   "percents": 82.81,  "comment": "合格" },
+      { "nutritionName": "维生素C",    "percents": 95.4,   "comment": "合格" }
+    ]
+  },
+  "msg": "请求成功",
+  "success": true
+}

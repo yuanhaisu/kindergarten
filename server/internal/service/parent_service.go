@@ -13,6 +13,7 @@ import (
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
+	"kindergarten-server/pkg/redact"
 )
 
 type ParentService struct {
@@ -180,17 +181,17 @@ type parentDetailChild struct {
 }
 
 type parentDetailResp struct {
-	ID           uint64              `json:"id"`
-	Nickname     string              `json:"nickname"`
-	RealName     string              `json:"real_name"`
-	Avatar       string              `json:"avatar"`
-	Phone        string              `json:"phone"`
-	Gender       int                 `json:"gender"`
-	Children     []parentDetailChild `json:"children"`
-	Status       int8                `json:"status"`
-	StatusLabel  string              `json:"status_label"`
-	LastLoginAt  string              `json:"last_login_at"`
-	CreatedAt    string              `json:"created_at"`
+	ID          uint64              `json:"id"`
+	Nickname    string              `json:"nickname"`
+	RealName    string              `json:"real_name"`
+	Avatar      string              `json:"avatar"`
+	Phone       string              `json:"phone"`
+	Gender      int                 `json:"gender"`
+	Children    []parentDetailChild `json:"children"`
+	Status      int8                `json:"status"`
+	StatusLabel string              `json:"status_label"`
+	LastLoginAt string              `json:"last_login_at"`
+	CreatedAt   string              `json:"created_at"`
 }
 
 func (s *ParentService) GetParent(ctx context.Context, kindergartenID, parentUserID uint64) (*parentDetailResp, error) {
@@ -254,11 +255,11 @@ type studentBindingItem struct {
 }
 
 type CreateParentReq struct {
-	RealName         string               `json:"real_name" binding:"required"`
-	Nickname         string               `json:"nickname" binding:"required"`
-	Phone            string               `json:"phone" binding:"required"`
-	Gender           int                  `json:"gender"`
-	StudentBindings  []studentBindingItem `json:"student_bindings" binding:"required,min=1,dive"`
+	RealName        string               `json:"real_name" binding:"required"`
+	Nickname        string               `json:"nickname" binding:"required"`
+	Phone           string               `json:"phone" binding:"required"`
+	Gender          int                  `json:"gender"`
+	StudentBindings []studentBindingItem `json:"student_bindings" binding:"required,min=1,dive"`
 }
 
 type createParentResp struct {
@@ -392,7 +393,7 @@ func (s *ParentService) CreateParent(
 		return nil, err
 	}
 	s.logOp(ctx, kindergartenID, adminUserID, "parents", "create", "parent", parentID,
-		fmt.Sprintf(`{"phone":%q,"nickname":%q}`, req.Phone, req.Nickname), ip, ua)
+		fmt.Sprintf(`{"phone":%q,"nickname":%q}`, redact.Phone(req.Phone), redact.Name(req.Nickname)), ip, ua)
 	u2, err := s.users.FindByID(ctx, parentID)
 	if err != nil || u2 == nil {
 		return &createParentResp{ID: parentID, CreatedAt: time.Now().UTC().Format(time.RFC3339)}, nil
@@ -468,7 +469,7 @@ func (s *ParentService) UpdateParent(
 		updated = u3.UpdatedAt.UTC().Format(time.RFC3339)
 	}
 	s.logOp(ctx, kindergartenID, adminUserID, "parents", "update", "parent", parentUserID,
-		fmt.Sprintf(`{"nickname":%q}`, u.Nickname), ip, ua)
+		fmt.Sprintf(`{"nickname":%q}`, redact.Name(u.Nickname)), ip, ua)
 	return &updateParentResp{ID: parentUserID, UpdatedAt: updated}, nil
 }
 

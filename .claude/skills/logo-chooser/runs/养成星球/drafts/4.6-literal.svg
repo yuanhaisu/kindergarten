@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>养成星球 · literalness=literal</title>
+  <!-- literal · 弧形茎（18 宽）+ 一高一低两片叶，茎与弧带比例对齐 -->
+  <path d="M 86 197 A 86 86 0 1 1 170 197" fill="none" stroke="#000" stroke-width="24" stroke-linecap="round"/>
+  <path d="M 126 206 C 124 184 127 156 130 126" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 130 138 C 137 122 152 110 172 108 C 169 128 150 142 130 138 Z" fill="#000"/>
+  <path d="M 126 146 C 118 136 106 131 94 135 C 98 151 112 157 126 146 Z" fill="#000"/>
+</svg>

@@ -1,0 +1,63 @@
+{
+  "_note": "POST /diet/recipe/getOrgRecipeInfo.do  body: {\"orgRecipeID\":\"109969260\"}。菜谱库单条详情：infos 是配方（食物+一人均量克数），foods 是该配方的完整营养记录。此处仅保留 foods[0] 全字段，其余省略。orgID 保留（43957 为本租户）。",
+  "body": {
+    "alias": "鲜菇鲜肉云吞",
+    "orgRecipeID": 109969260,
+    "orgID": 43957,
+    "status": 1,
+    "addMethod": 5,
+    "writeCode": "XGXRYT",
+    "infos": [
+      { "orgRecipeInfoID": 196967681, "orgRecipeID": 109969260, "orgFoodID": 55775465, "alias": "小麦粉(标准粉)", "foodGram": 10, "status": 1 },
+      { "orgRecipeInfoID": 196967682, "orgRecipeID": 109969260, "orgFoodID": 55775838, "alias": "香菇(鲜)", "foodGram": 5, "status": 1 },
+      { "orgRecipeInfoID": 196967683, "orgRecipeID": 109969260, "orgFoodID": 55776077, "alias": "猪瘦肉", "foodGram": 5, "status": 1 }
+    ],
+    "foods": [
+      {
+        "addMethod": 1,
+        "alias": "小麦粉(标准粉)",
+        "eatPart": 100,
+        "foodID": 29,
+        "orgFoodID": 55775465,
+        "orgID": 43957,
+        "status": 1,
+        "writeCode": "XMFBZF",
+        "typeIDOne": 1,
+        "typeIDTwo": 21,
+        "typeStringOne": "谷类及制品",
+        "typeStringTwo": "小麦",
+        "typeStringThree": "-",
+        "nutriEnergy": 349,
+        "nutriHeat": 1460.914,
+        "nutriProtein": 11.2,
+        "nutriFats": 1.5,
+        "nutriCarbohydrate": 73.6,
+        "nutriDietaryFiber": 2.1,
+        "nutriAsh": 1,
+        "nutriWater": 12.7,
+        "nutriCholesterol": 0,
+        "nutriRetinol": 0,
+        "nutriCarotin": 0,
+        "nutriVitaminA": 0,
+        "nutriVitaminB1": 0.28,
+        "nutriVitaminB2": 0.08,
+        "nutriNicotinicAcid": 2,
+        "nutriVitaminC": 0,
+        "nutriVitaminE": 1.8,
+        "nutriCa": 31,
+        "nutriP": 188,
+        "nutriK": 190,
+        "nutriNa": 3.1,
+        "nutriMg": 50,
+        "nutriFe": 3.5,
+        "nutriZn": 1.64,
+        "nutriSe": 5.36,
+        "nutriCu": 0.42,
+        "nutriMn": 1.56
+      }
+    ]
+  },
+  "msg": "请求成功",
+  "success": true,
+  "_note2": "/diet/food/getOrgFoodListPaged.do 返回的食物记录不含 typeStringOne 之外更细的 foodTypeOne（膳食构成分类 37–48）；该字段只出现在 dietInfo 行里。"
+}

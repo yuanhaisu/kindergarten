@@ -11,13 +11,16 @@
 [app]
 http_addr = :8080
 gin_mode  = debug
+; 允许跨域的来源，逗号分隔；留空则不下发 CORS 头。
+; 管理端生产通过 Nginx 同源访问，不需要 CORS；本地 admin dev 走 Vite 代理。
+cors_origins = http://localhost:3000
 
 [log]
 level  = debug
 format = text
 
 [mysql]
-; 格式: user:password@tcp(host:port)/dbname?charset=utf8mb4&parseTime=True&loc=Local
+; 格式: 账号:口令@tcp(主机:端口)/库名?charset=utf8mb4&parseTime=True&loc=Local
 dsn = root:CHANGE_ME@tcp(127.0.0.1:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Local
 
 [redis]
@@ -66,3 +69,8 @@ daily_budget = 10000
 suggest_high = 80
 suggest_low  = 70
 group_photo_min_faces = 6
+
+[consent]
+; 未同意当前隐私政策的业务请求是否返回 403。
+; 默认 false：先发布三端带同意页的版本，确认旧版小程序已退出后再置 true。
+enforce = false

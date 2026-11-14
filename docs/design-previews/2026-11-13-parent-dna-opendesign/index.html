@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<title>养成星球 · 家长端全量设计稿</title>
+<style>
+  @font-face { font-family: "Instrument Serif"; src: url("./_shared/fonts/instrument-serif-regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Noto Serif SC"; src: url("./_shared/fonts/noto-serif-sc-subset.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+  :root {
+    --bone: #ece6d7; --bone-cool: #f2edde; --card: #fff; --pine: #173220; --ink: #55616f; --ink-card: #5e6b7a;
+    --sage: #8da386; --sage-soft: #cfd9c5; --marigold: #ddb14a; --terracotta: #c36540; --hair: rgba(23,50,32,.12);
+    --serif: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+    --sans: "Geist", "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bone); color: var(--pine); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { padding: 48px 40px 96px; }
+  header.top { max-width: 1360px; margin: 0 auto 56px; }
+  .eyebrow { margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .16em; color: #55616f; }
+  h1 { margin: 0; font-family: var(--serif); font-size: 46px; font-weight: 400; line-height: 1.25; letter-spacing: 0; }
+  .lede { margin: 14px 0 0; max-width: 620px; font-family: var(--serif); font-size: 17px; line-height: 1.8; color: #3d5141; }
+  .facts { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 30px; }
+  .fact b { display: block; font-family: var(--serif); font-size: 28px; font-weight: 400; line-height: 1; }
+  .fact span { display: block; margin-top: 5px; font-size: 11px; color: var(--ink-card); }
+  .swatches { display: flex; gap: 10px; margin-top: 26px; align-items: center; }
+  .swatch { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(23,50,32,.12); }
+  .swatch-note { margin-left: 6px; font-size: 11px; color: var(--ink-card); }
+  nav.toc { max-width: 1360px; margin: 0 auto 24px; display: flex; flex-wrap: wrap; gap: 8px; }
+  nav.toc a { display: inline-flex; height: 30px; align-items: center; padding: 0 13px; border: 1px solid rgba(23,50,32,.22); border-radius: 999px; font-size: 12px; color: var(--pine); text-decoration: none; }
+  nav.toc a:hover { background: var(--bone-cool); }
+  main { max-width: 1360px; margin: 0 auto; }
+  .group { margin-top: 64px; }
+  .group-head { display: flex; align-items: baseline; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--hair); margin-bottom: 22px; }
+  .group-num { font-family: var(--serif); font-size: 15px; color: #728173; }
+  .group-title { flex: 1; }
+  .group-title h2 { margin: 0; font-family: var(--serif); font-size: 26px; font-weight: 400; line-height: 1.2; }
+  .group-title p { margin: 4px 0 0; font-size: 11.5px; color: var(--ink-card); }
+  .group-count { font-size: 11px; color: var(--ink-card); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 26px; }
+  .card { background: transparent; }
+  .shot { display: block; aspect-ratio: 390 / 844; overflow: hidden; border-radius: 26px; border: 1px solid var(--hair); background: #ded6c6; box-shadow: 0 18px 36px -26px rgba(23,50,32,.45); }
+  .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .shot:hover img { transform: translateY(-4px); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .meta { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
+  .idx { font-family: var(--serif); font-size: 13px; color: #728173; }
+  .meta h3 { margin: 0; flex: 1; font-size: 14px; font-weight: 600; }
+  .meta p { margin: 0; font-size: 10.5px; color: var(--ink-card); }
+  .variants { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .variant { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; border: 1px solid var(--hair); border-radius: 999px; background: var(--card); font-size: 10.5px; color: var(--pine); text-decoration: none; }
+  .variant img { width: 22px; height: 40px; object-fit: cover; object-position: top; border-radius: 9px; }
+  footer { max-width: 1360px; margin: 80px auto 0; padding-top: 18px; border-top: 1px solid var(--hair); display: flex; justify-content: space-between; gap: 20px; font-size: 11px; color: var(--ink-card); }
+  @media (max-width: 720px) { body { padding: 28px 18px 64px; } h1 { font-size: 34px; } .cards { grid-template-columns: repeat(2, 1fr); gap: 14px; } .group { margin-top: 44px; } }
+</style>
+</head>
+<body>
+  <header class="top">
+    <p class="eyebrow">养成星球 · 家长端 · OPENDESIGN DNA PREVIEW</p>
+    <h1>家长端设计稿 · OpenDesign 版</h1>
+    <p class="lede">同一份 DNA v1 交给 OpenDesign 重新生成，用于与手工全量稿并排比较。本批只是探索稿，不替换手工稿，也不改产品代码。<a href="chosen.html">已选方案 →</a> · <a href="compare.html">逐页并排对照 →</a> · <a href="variants.html">8 组变体 →</a> · <a href="../2026-11-12-parent-dna-full/index.html">手工稿画廊 →</a></p>
+    <div class="facts">
+      <div class="fact"><b>31</b><span>页面</span></div>
+      <div class="fact"><b>10</b><span>状态变体</span></div>
+      <div class="fact"><b>390</b><span>设计宽度</span></div>
+      <div class="fact"><b>v1.0</b><span>DNA 版本</span></div>
+    </div>
+    <div class="swatches" aria-label="DNA 色板">
+      <span class="swatch" style="background:#ece6d7" title="bone"></span>
+      <span class="swatch" style="background:#173220" title="pine"></span>
+      <span class="swatch" style="background:#8da386" title="sage"></span>
+      <span class="swatch" style="background:#ddb14a" title="marigold"></span>
+      <span class="swatch" style="background:#c36540" title="terracotta"></span>
+      <span class="swatch" style="background:#f2edde" title="bone-cool"></span>
+      <span class="swatch-note">暖纸底 · 松绿墨 · 鼠尾草 / 金盏 / 赤陶</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="分组">
+    <a href="#g1">核心页面</a><a href="#g2">登录与协议</a><a href="#g3">通知与请假</a><a href="#g4">成长与相册</a><a href="#g5">接送与积分</a><a href="#g6">任务与班级</a><a href="#g7">档案与设置</a>
+  </nav>
+
+  <main>
+    <section class="group" id="g1">
+      <div class="group-head">
+        <span class="group-num">01</span>
+        <div class="group-title">
+          <h2>核心页面</h2>
+          <p>四个 tab，先看这四页的基调</p>
+        </div>
+        <span class="group-count">4 页</span>
+      </div>
+      <div class="cards">
+        
+          <article class="card">
+            <a class="shot" href="parent/01-home/index.html" aria-label="首页">
+              <img src="parent/01-home/preview.png" alt="首页" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">01</span>
+              <h3>首页</h3>
+              <p>tab 页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/11-growth/index.html" aria-label="成长时光">
+              <img src="parent/11-growth/preview.png" alt="成长时光" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">11</span>
+              <h3>成长时光</h3>
+              <p>tab 页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/11-growth/index.html?state=empty"><img src="parent/11-growth/preview-empty.png" alt="成长时光 · 空态" loading="lazy" /><span>空态</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/17-pickup/index.html" aria-label="接送">
+              <img src="parent/17-pickup/preview.png" alt="接送" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">17</span>
+              <h3>接送</h3>
+              <p>tab 页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/17-pickup/index.html?state=away"><img src="parent/17-pickup/preview-away.png" alt="接送 · 未入园" loading="lazy" /><span>未入园</span></a><a class="variant" href="parent/17-pickup/index.html?state=done"><img src="parent/17-pickup/preview-done.png" alt="接送 · 已接走" loading="lazy" /><span>已接走</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/31-profile/index.html" aria-label="我的">
+              <img src="parent/31-profile/preview.png" alt="我的" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">31</span>
+              <h3>我的</h3>
+              <p>tab 页</p>
+            </div>
+            
+          </article>
+      </div>
+    </section>
+    <section class="group" id="g2">
+      <div class="group-head">
+        <span class="group-num">02</span>
+        <div class="group-title">
+          <h2>登录与协议</h2>
+          <p>首次进入的完整路径</p>
+        </div>
+        <span class="group-count">4 页</span>
+      </div>
+      <div class="cards">
+        
+          <article class="card">
+            <a class="shot" href="parent/02-login/index.html" aria-label="登录">
+              <img src="parent/02-login/preview.png" alt="登录" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">02</span>
+              <h3>登录</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/03-bind/index.html" aria-label="绑定孩子">
+              <img src="parent/03-bind/preview.png" alt="绑定孩子" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">03</span>
+              <h3>绑定孩子</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/04-consent/index.html" aria-label="同意与协议">
+              <img src="parent/04-consent/preview.png" alt="同意与协议" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">04</span>
+              <h3>同意与协议</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/05-policy/index.html" aria-label="政策全文">
+              <img src="parent/05-policy/preview.png" alt="政策全文" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">05</span>
+              <h3>政策全文</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+      </div>
+    </section>
+    <section class="group" id="g3">
+      <div class="group-head">
+        <span class="group-num">03</span>
+        <div class="group-title">
+          <h2>通知与请假</h2>
+          <p>列表页含空态；表单含校验错误态</p>
+        </div>
+        <span class="group-count">5 页</span>
+      </div>
+      <div class="cards">
+        
+          <article class="card">
+            <a class="shot" href="parent/06-notice-index/index.html" aria-label="通知列表">
+              <img src="parent/06-notice-index/preview.png" alt="通知列表" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">06</span>
+              <h3>通知列表</h3>
+              <p>二级页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/06-notice-index/index.html?state=empty"><img src="parent/06-notice-index/preview-empty.png" alt="通知列表 · 空态" loading="lazy" /><span>空态</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/07-notice-detail/index.html" aria-label="通知详情">
+              <img src="parent/07-notice-detail/preview.png" alt="通知详情" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">07</span>
+              <h3>通知详情</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/08-leave-index/index.html" aria-label="请假记录">
+              <img src="parent/08-leave-index/preview.png" alt="请假记录" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">08</span>
+              <h3>请假记录</h3>
+              <p>二级页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/08-leave-index/index.html?state=empty"><img src="parent/08-leave-index/preview-empty.png" alt="请假记录 · 空态" loading="lazy" /><span>空态</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/09-leave-create/index.html" aria-label="新建请假">
+              <img src="parent/09-leave-create/preview.png" alt="新建请假" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">09</span>
+              <h3>新建请假</h3>
+              <p>二级页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/09-leave-create/index.html?state=error"><img src="parent/09-leave-create/preview-error.png" alt="新建请假 · 校验错误" loading="lazy" /><span>校验错误</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/10-leave-detail/index.html" aria-label="请假详情">
+              <img src="parent/10-leave-detail/preview.png" alt="请假详情" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">10</span>
+              <h3>请假详情</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+      </div>
+    </section>
+    <section class="group" id="g4">
+      <div class="group-head">
+        <span class="group-num">04</span>
+        <div class="group-title">
+          <h2>成长与相册</h2>
+          <p>记录、报告与影像</p>
+        </div>
+        <span class="group-count">5 页</span>
+      </div>
+      <div class="cards">
+        
+          <article class="card">
+            <a class="shot" href="parent/12-growth-detail/index.html" aria-label="成长详情">
+              <img src="parent/12-growth-detail/preview.png" alt="成长详情" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">12</span>
+              <h3>成长详情</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/13-growth-album/index.html" aria-label="成长相册">
+              <img src="parent/13-growth-album/preview.png" alt="成长相册" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">13</span>
+              <h3>成长相册</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/14-growth-report/index.html" aria-label="成长报告">
+              <img src="parent/14-growth-report/preview.png" alt="成长报告" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">14</span>
+              <h3>成长报告</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/15-album-index/index.html" aria-label="班级相册">
+              <img src="parent/15-album-index/preview.png" alt="班级相册" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">15</span>
+              <h3>班级相册</h3>
+              <p>二级页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/15-album-index/index.html?state=empty"><img src="parent/15-album-index/preview-empty.png" alt="班级相册 · 空态" loading="lazy" /><span>空态</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/16-album-detail/index.html" aria-label="相册详情">
+              <img src="parent/16-album-detail/preview.png" alt="相册详情" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">16</span>
+              <h3>相册详情</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+      </div>
+    </section>
+    <section class="group" id="g5">
+      <div class="group-head">
+        <span class="group-num">05</span>
+        <div class="group-title">
+          <h2>接送与积分</h2>
+          <p>门口场景与激励</p>
+        </div>
+        <span class="group-count">4 页</span>
+      </div>
+      <div class="cards">
+        
+          <article class="card">
+            <a class="shot" href="parent/18-pickup-qrcode/index.html" aria-label="接送二维码">
+              <img src="parent/18-pickup-qrcode/preview.png" alt="接送二维码" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">18</span>
+              <h3>接送二维码</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/19-pickup-authorized/index.html" aria-label="可接送人">
+              <img src="parent/19-pickup-authorized/preview.png" alt="可接送人" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">19</span>
+              <h3>可接送人</h3>
+              <p>二级页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/19-pickup-authorized/index.html?state=empty"><img src="parent/19-pickup-authorized/preview-empty.png" alt="可接送人 · 空态" loading="lazy" /><span>空态</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/20-pickup-authorized-create/index.html" aria-label="新增授权人">
+              <img src="parent/20-pickup-authorized-create/preview.png" alt="新增授权人" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">20</span>
+              <h3>新增授权人</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/24-points/index.html" aria-label="积分与成就">
+              <img src="parent/24-points/preview.png" alt="积分与成就" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">24</span>
+              <h3>积分与成就</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+      </div>
+    </section>
+    <section class="group" id="g6">
+      <div class="group-head">
+        <span class="group-num">06</span>
+        <div class="group-title">
+          <h2>任务与班级</h2>
+          <p>亲子任务、班级墙、班级信息与日历</p>
+        </div>
+        <span class="group-count">5 页</span>
+      </div>
+      <div class="cards">
+        
+          <article class="card">
+            <a class="shot" href="parent/21-tasks/index.html" aria-label="亲子任务">
+              <img src="parent/21-tasks/preview.png" alt="亲子任务" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">21</span>
+              <h3>亲子任务</h3>
+              <p>二级页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/21-tasks/index.html?state=empty"><img src="parent/21-tasks/preview-empty.png" alt="亲子任务 · 空态" loading="lazy" /><span>空态</span></a></div>
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/22-tasks-detail/index.html" aria-label="任务详情">
+              <img src="parent/22-tasks-detail/preview.png" alt="任务详情" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">22</span>
+              <h3>任务详情</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/23-tasks-wall/index.html" aria-label="班级墙">
+              <img src="parent/23-tasks-wall/preview.png" alt="班级墙" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">23</span>
+              <h3>班级墙</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/25-class/index.html" aria-label="班级信息">
+              <img src="parent/25-class/preview.png" alt="班级信息" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">25</span>
+              <h3>班级信息</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/26-calendar/index.html" aria-label="班级日历">
+              <img src="parent/26-calendar/preview.png" alt="班级日历" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">26</span>
+              <h3>班级日历</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+      </div>
+    </section>
+    <section class="group" id="g7">
+      <div class="group-head">
+        <span class="group-num">07</span>
+        <div class="group-title">
+          <h2>档案与设置</h2>
+          <p>资料、反馈与消息</p>
+        </div>
+        <span class="group-count">4 页</span>
+      </div>
+      <div class="cards">
+        
+          <article class="card">
+            <a class="shot" href="parent/27-student/index.html" aria-label="幼儿信息">
+              <img src="parent/27-student/preview.png" alt="幼儿信息" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">27</span>
+              <h3>幼儿信息</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/28-feedback/index.html" aria-label="意见反馈">
+              <img src="parent/28-feedback/preview.png" alt="意见反馈" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">28</span>
+              <h3>意见反馈</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/29-settings/index.html" aria-label="设置">
+              <img src="parent/29-settings/preview.png" alt="设置" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">29</span>
+              <h3>设置</h3>
+              <p>二级页</p>
+            </div>
+            
+          </article>
+          <article class="card">
+            <a class="shot" href="parent/30-messages/index.html" aria-label="消息">
+              <img src="parent/30-messages/preview.png" alt="消息" loading="lazy" />
+            </a>
+            <div class="meta">
+              <span class="idx">30</span>
+              <h3>消息</h3>
+              <p>二级页</p>
+            </div>
+            <div class="variants"><a class="variant" href="parent/30-messages/index.html?state=empty"><img src="parent/30-messages/preview-empty.png" alt="消息 · 空态" loading="lazy" /><span>空态</span></a></div>
+          </article>
+      </div>
+    </section></main>
+
+  <footer>
+    <span>来源：docs/design-previews/2026-11-13-parent-dna-opendesign · 基线：docs/design-dna/2026-11-11-kinderly/DESIGN.md</span>
+    <span>截图 390×844 · 字体 Instrument Serif + Noto Serif SC</span>
+  </footer>
+</body>
+</html>

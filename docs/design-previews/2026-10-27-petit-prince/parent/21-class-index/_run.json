@@ -1,0 +1,20 @@
+{
+  "slug": "parent-class-index",
+  "surface": "parent",
+  "title": "班级信息",
+  "projectId": "3bb17ad4-bb49-4903-be03-dfe5585e844a",
+  "conversationId": "0918bf81-bda9-4843-87b2-f1554799254f",
+  "runId": "8113d427-7980-40a2-ba63-0f8766211d0d",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 416,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/3bb17ad4-bb49-4903-be03-dfe5585e844a",
+  "previewRendered": true
+}

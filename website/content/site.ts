@@ -4,9 +4,14 @@
 export const site = {
   name: '养成星球',
   nameEn: 'Nurture Planet',
-  // 上线前必须替换的三项
-  legalEntity: '', // 营业执照主体全称
-  icp: '', // 例如 浙ICP备2026000000号-1
+  // 生产站点根地址：canonical、Open Graph 与结构化数据统一引用它。
+  siteUrl: 'https://www.nurtureplanet.cn',
+  // 主体全称（营业执照）
+  legalEntity: '湘潭市岳塘区稚序软件开发工作室',
+  // 工信部备案的网站名称（与产品品牌「养成星球」不同，页脚并列展示）
+  filingName: '稚序saas软件服务平台',
+  // 工信部 ICP 备案号
+  icp: '湘ICP备2026054245号-1',
   contact: {
     wecomQr: '', // 把二维码放到 public/contact/wecom-qr.png 后填 '/contact/wecom-qr.png'
     email: 'contact@nurtureplanet.cn', // 阿里企业邮箱（免费版）
@@ -46,35 +51,35 @@ export const day = {
       time: '07:40',
       title: '晨检',
       body: '体温与健康状态当场记录，异常情况直接进入园所看板。',
-      image: '/screens/teacher-checkin.png',
+      image: '/screens/teacher-checkin.webp',
       alt: '产品界面示意：老师端晨检记录',
     },
     {
       time: '08:30',
       title: '通知',
       body: '今天的活动和需要带的物品，分类发出；谁看了、谁没看，一目了然。',
-      image: '/screens/teacher-notice.png',
+      image: '/screens/teacher-notice.webp',
       alt: '产品界面示意：老师端班级通知',
     },
     {
       time: '10:20',
       title: '成长',
       body: '一张照片、一段观察，自动归到孩子名下；家长在自己的时间线里看见。',
-      image: '/screens/parent-growth.png',
+      image: '/screens/parent-growth.webp',
       alt: '产品界面示意：家长端成长时光',
     },
     {
       time: '14:00',
       title: '请假',
       body: '家长线上提交，老师审批，系统自动归档，月底不用再手工汇总。',
-      image: '/screens/teacher-leave.png',
+      image: '/screens/teacher-leave.webp',
       alt: '产品界面示意：老师端请假审批',
     },
     {
       time: '16:40',
       title: '接送',
       body: '授权人扫码交接，记录自动保存；谁接走的、几点接走的，都能回溯。',
-      image: '/screens/parent-pickup.png',
+      image: '/screens/parent-pickup.webp',
       alt: '产品界面示意：家长端接送',
     },
   ],

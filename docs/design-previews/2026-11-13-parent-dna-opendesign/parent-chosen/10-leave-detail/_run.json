@@ -1,0 +1,20 @@
+{
+  "slug": "parent-10-leave-detail",
+  "surface": "parent",
+  "title": "请假详情",
+  "projectId": "c87445f4-b1c1-4c73-9367-ccd0a564b7cc",
+  "conversationId": "2ed40078-f748-442a-8f2a-53342b16ce7e",
+  "runId": "73b460ae-543a-4b6c-b7ec-479836f00640",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 341,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/c87445f4-b1c1-4c73-9367-ccd0a564b7cc",
+  "previewRendered": true
+}

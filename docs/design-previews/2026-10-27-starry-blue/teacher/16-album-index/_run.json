@@ -1,0 +1,21 @@
+{
+  "slug": "teacher-album-index",
+  "surface": "teacher",
+  "title": "班级相册",
+  "projectId": "efa65364-fbe1-411e-ac27-aba2470c9bca",
+  "conversationId": "49489b39-4d21-4c13-a4ed-117312ba1b85",
+  "runId": "70a8156e-31b7-44b0-bf9e-4fe34e521028",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 507,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/efa65364-fbe1-411e-ac27-aba2470c9bca",
+  "previewRendered": true,
+  "note": "od-design-page 在 507s 时按 index.html 稳定性提前推断完成并只拷到 index.html + tokens.css；run 实际仍存活，约 295s 后才落盘 styles.css / app.js。已等 run 状态为 succeeded、校验三件套存在后手动补齐四个产物（未拷 .mcp.json / .file-versions）。"
+}

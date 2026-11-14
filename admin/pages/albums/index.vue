@@ -117,7 +117,7 @@
             </div>
             <div v-if="detail.photos.length" class="grid grid-cols-3 gap-2">
               <div v-for="(p, index) in detail.photos" :key="p.id">
-                <el-image
+                <el-image @error="onMediaError"
                   :src="p.thumb_url || p.file_url"
                   :preview-src-list="previewUrls"
                   :initial-index="previewIndex(index)"
@@ -180,6 +180,8 @@ import {
   type AlbumStatus,
 } from '~/api/albums'
 import { formatDateTime } from '~/utils/format'
+import { useMediaRefresh } from '~/composables/useMediaRefresh'
+const onMediaError = useMediaRefresh(() => (load()))
 
 type TagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
 

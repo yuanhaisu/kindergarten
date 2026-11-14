@@ -8,6 +8,7 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/pkg/pagination"
+	"kindergarten-server/pkg/redact"
 )
 
 type OperationLogRepo struct {
@@ -19,6 +20,9 @@ func NewOperationLogRepo(db *gorm.DB) *OperationLogRepo {
 }
 
 func (r *OperationLogRepo) Create(ctx context.Context, log *domain.OperationLog) error {
+	// 唯一写入点：自由文本里的手机号/身份证号在这里统一掩码；
+	// 姓名与学号由调用方在拼接 detail 前用 redact.Name/StudentNo 处理。
+	log.Detail = redact.Text(log.Detail)
 	return r.db.WithContext(ctx).Create(log).Error
 }
 

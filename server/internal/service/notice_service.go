@@ -9,6 +9,7 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/storage/oss"
 	"kindergarten-server/pkg/pagination"
 )
 
@@ -102,10 +103,10 @@ func (s *NoticeService) ListNotices(
 				"id":       row.CreatorID,
 				"nickname": row.CreatorNick,
 			},
-			"status":        int(row.Status),
-			"status_label":  noticeStatusLabel(st),
-			"read_rate":     formatPercent(row.ReadUsers, row.ParentTotal),
-			"created_at":    row.CreatedAt.UTC().Format(time.RFC3339),
+			"status":       int(row.Status),
+			"status_label": noticeStatusLabel(st),
+			"read_rate":    formatPercent(row.ReadUsers, row.ParentTotal),
+			"created_at":   row.CreatedAt.UTC().Format(time.RFC3339),
 		}
 		if row.PublishedAt != nil {
 			item["published_at"] = row.PublishedAt.UTC().Format(time.RFC3339)
@@ -318,14 +319,14 @@ type NoticeAttachmentInput struct {
 
 // CreateNoticeReq POST /admin/notices
 type CreateNoticeReq struct {
-	ClassIDs     []uint64                `json:"class_ids"`
-	Grades       []string                `json:"grades"`
-	Category     string                  `json:"category" binding:"required"`
-	Title        string                  `json:"title" binding:"required"`
-	Content      string                  `json:"content"`
-	NeedConfirm  bool                    `json:"need_confirm"`
-	ScheduledAt  *string                 `json:"scheduled_at"`
-	Attachments  []NoticeAttachmentInput `json:"attachments"`
+	ClassIDs    []uint64                `json:"class_ids"`
+	Grades      []string                `json:"grades"`
+	Category    string                  `json:"category" binding:"required"`
+	Title       string                  `json:"title" binding:"required"`
+	Content     string                  `json:"content"`
+	NeedConfirm bool                    `json:"need_confirm"`
+	ScheduledAt *string                 `json:"scheduled_at"`
+	Attachments []NoticeAttachmentInput `json:"attachments"`
 }
 
 // noticeGrades 年级取值溯源 class_service.validateGrade（小班/中班/大班），不新增枚举。
@@ -444,7 +445,7 @@ func (s *NoticeService) CreateNotice(
 	}
 	var attRows []domain.NoticeAttachment
 	for i, a := range req.Attachments {
-		url := strings.TrimSpace(a.FileURL)
+		url := oss.NormalizeRef(strings.TrimSpace(a.FileURL))
 		if url == "" {
 			continue
 		}
@@ -486,15 +487,15 @@ func (s *NoticeService) CreateNotice(
 // UpdateNoticeReq PUT /admin/notices/:id
 // ClassIDs/Grades 传了即为显式重选目标集（整体替换，不做增量）。
 type UpdateNoticeReq struct {
-	ClassIDs     *[]uint64                `json:"class_ids"`
-	Grades       *[]string                `json:"grades"`
-	Category     *string                  `json:"category"`
-	Title        *string                  `json:"title"`
-	Content      *string                  `json:"content"`
-	NeedConfirm  *bool                    `json:"need_confirm"`
-	ScheduledAt  *string                  `json:"scheduled_at"`
-	Status       *int8                    `json:"status"`
-	Attachments  *[]NoticeAttachmentInput `json:"attachments"`
+	ClassIDs    *[]uint64                `json:"class_ids"`
+	Grades      *[]string                `json:"grades"`
+	Category    *string                  `json:"category"`
+	Title       *string                  `json:"title"`
+	Content     *string                  `json:"content"`
+	NeedConfirm *bool                    `json:"need_confirm"`
+	ScheduledAt *string                  `json:"scheduled_at"`
+	Status      *int8                    `json:"status"`
+	Attachments *[]NoticeAttachmentInput `json:"attachments"`
 }
 
 func (s *NoticeService) UpdateNotice(
@@ -596,7 +597,7 @@ func (s *NoticeService) UpdateNotice(
 		}
 		var attRows []domain.NoticeAttachment
 		for i, a := range *req.Attachments {
-			url := strings.TrimSpace(a.FileURL)
+			url := oss.NormalizeRef(strings.TrimSpace(a.FileURL))
 			if url == "" {
 				continue
 			}

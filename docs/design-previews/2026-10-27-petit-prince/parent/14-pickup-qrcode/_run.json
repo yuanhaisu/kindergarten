@@ -1,0 +1,20 @@
+{
+  "slug": "parent-pickup-qrcode",
+  "surface": "parent",
+  "title": "接送二维码",
+  "projectId": "2bc82943-d799-4eae-9541-6daa4b0d63fe",
+  "conversationId": "a51ff491-0125-4055-9f4d-f86c100be353",
+  "runId": "f311f316-3260-4d04-9dcc-ccd8af15e5f3",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 441,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/2bc82943-d799-4eae-9541-6daa4b0d63fe",
+  "previewRendered": true
+}

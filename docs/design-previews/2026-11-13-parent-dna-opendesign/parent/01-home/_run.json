@@ -1,0 +1,20 @@
+{
+  "slug": "parent-home",
+  "surface": "parent",
+  "title": "家长首页",
+  "projectId": "9297ff75-9176-43d4-b9c2-ca8ae85b39b2",
+  "conversationId": "000a79b2-feab-44f2-85c7-b1ba3dc0fe5d",
+  "runId": "0650cea9-59a6-4c3a-b816-d2ac66608352",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 402,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/9297ff75-9176-43d4-b9c2-ca8ae85b39b2",
+  "previewRendered": true
+}

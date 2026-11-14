@@ -1,0 +1,73 @@
+/* Petit Prince theme surface adjustments.
+ * Loaded after page styles.css. Scoped by [data-theme="petitprince"] so
+ * ?theme=bright keeps the original orange rendering untouched.
+ *
+ * Three jobs:
+ * 1. Paper grain + serif display type, so the UI reads as a drawn page.
+ * 2. Style the story band that sits under the navbar on every page.
+ * 3. Keep rewards gold and gains green, and fix the two places where
+ *    dark-on-light-orange was fine but dark-on-vermilion is not.
+ */
+
+:root[data-theme="petitprince"] {
+  --pp-font-display: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  --pp-ink: #23201A;
+  --pp-vermilion: #B33A2B;
+}
+
+/* 1. 纸面与标题 ------------------------------------------------------- */
+:root[data-theme="petitprince"] .mp-app {
+  background-image: radial-gradient(rgba(35, 32, 26, 0.028) 0.6px, transparent 0.6px);
+  background-size: 13px 13px;
+}
+:root[data-theme="petitprince"] .mp-title,
+:root[data-theme="petitprince"] .section-title,
+:root[data-theme="petitprince"] .brand-name,
+:root[data-theme="petitprince"] .hero-title {
+  font-family: var(--pp-font-display);
+  letter-spacing: 0.02em;
+}
+
+/* 2. 页面故事带 ------------------------------------------------------- */
+.pp-band {
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  background: var(--bg);
+}
+.pp-band img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* ?theme=bright 是原稿对照：隐藏故事带，保持 2026-10-25 版的原样。 */
+html:not([data-theme]) .pp-band {
+  display: none;
+}
+
+/* 3. 奖励用金，成长用绿 ------------------------------------------------ */
+:root[data-theme="petitprince"] .perf-bar {
+  background: var(--star-wash);
+}
+:root[data-theme="petitprince"] .perf-bar svg {
+  color: var(--star);
+}
+:root[data-theme="petitprince"] .level-chip,
+:root[data-theme="petitprince"] .stat-num--pill {
+  background: var(--star-wash);
+  color: var(--star);
+}
+:root[data-theme="petitprince"] .ledger-amount.is-plus {
+  color: var(--success);
+}
+:root[data-theme="petitprince"] .badge.is-earned .badge-icon {
+  background: var(--star-wash);
+  border-color: var(--star);
+  color: var(--star);
+}
+:root[data-theme="petitprince"] .primary-button:not([aria-disabled="true"]) {
+  color: var(--on-brand);
+}
+:root[data-theme="petitprince"] .filter.is-active .filter-count {
+  color: var(--on-brand);
+}

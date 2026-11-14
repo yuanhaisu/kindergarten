@@ -31,8 +31,8 @@ website/
 - 不写未测量的效果数字、不写案例、不写价格数字。
 - 小程序尚未正式发布：官网不出现小程序码，也不写「立即使用」。
 - 所有产品截图下方标注「界面示意，数据为演示」。
-- 主体名称、ICP 备案号仍是占位，上线前在 `content/site.ts` 补齐；
-  联系邮箱已填 `contact@nurtureplanet.cn`。
+- ICP 备案号仍是占位，备案通过后在 `content/site.ts` 补 `icp`；主体已填
+  「湘潭市岳塘区稚序软件开发工作室」，联系邮箱已填 `contact@nurtureplanet.cn`。
 - 企业微信二维码暂缓（认证费 300 元），当前以邮件为唯一联系方式；认证后填
   `contact.wecomQr` 即可启用二维码。
 - `legalDraft` 改为 `false` 后法务页的初稿提示才会消失。

@@ -1,0 +1,222 @@
+<meta charset="utf-8">
+<title>落差判断卡</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* layout: same field-document shell, ochre accent, one-screen scannable card */
+:root{
+  --paper:#F7F6F1;
+  --paper-2:#FFFFFF;
+  --ink:#1B201D;
+  --ink-2:#4B554E;
+  --ink-3:#7A857D;
+  --line:#DBDCD2;
+  --accent:#8A5A2B;
+  --accent-soft:#F3E9DD;
+  --pine:#2C6A54;
+  --pine-soft:#E7EFE9;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"PingFang SC",monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141715; --paper-2:#1B1F1C; --ink:#E7EAE4; --ink-2:#B2BBB4; --ink-3:#828D85;
+    --line:#2C332E; --accent:#D9A76A; --accent-soft:#2A2118; --pine:#6FB79A; --pine-soft:#1D2C26;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141715; --paper-2:#1B1F1C; --ink:#E7EAE4; --ink-2:#B2BBB4; --ink-3:#828D85;
+  --line:#2C332E; --accent:#D9A76A; --accent-soft:#2A2118; --pine:#6FB79A; --pine-soft:#1D2C26;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);
+  font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:660px;margin:0 auto;padding-block:0 72px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.hero{padding-block:36px 18px}
+.kicker{font:600 11px/1.4 var(--font-mono);letter-spacing:.12em;color:var(--accent);margin:0 0 14px}
+h1{font-size:31px;line-height:1.25;letter-spacing:-.01em;font-weight:650;margin:0 0 14px}
+.lede{margin:0;color:var(--ink-2);font-size:15px;line-height:1.75;max-width:44ch}
+.lede strong{color:var(--ink);font-weight:600}
+
+.sec{padding-block:26px 4px;border-top:1px solid var(--line)}
+.sec-head{display:flex;gap:11px;align-items:flex-start;margin-bottom:8px}
+.gnum{flex:none;width:23px;height:23px;margin-top:3px;display:grid;place-items:center;border:1px solid var(--accent);color:var(--accent);font:600 11px/1 var(--font-mono)}
+.sec h2{font-size:17.5px;line-height:1.35;font-weight:650;margin:0}
+.why{margin:0 0 10px 34px;font-size:12.5px;line-height:1.65;color:var(--ink-3)}
+
+.split{display:grid;gap:10px;margin-left:34px}
+@media (min-width:560px){.split{grid-template-columns:1fr 1fr}}
+.box{background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:12px 13px}
+.box h3{font-size:13px;font-weight:650;margin:0 0 6px;color:var(--ink)}
+.box p{margin:0;font-size:13px;line-height:1.65;color:var(--ink-2)}
+.box .bad{color:var(--ink-3)}
+
+.ask{margin-left:34px}
+.ask .no,.ask .yes{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.65}
+.ask .no{border-bottom:0;padding-bottom:8px}
+.ask .lbl{font:600 10.5px/1.6 var(--font-mono);letter-spacing:.06em;display:inline-block;margin-right:6px}
+.ask .lbl.bad{color:var(--ink-3)}
+.ask .lbl.good{color:var(--accent)}
+.ask ol{margin:4px 0 0;padding-left:20px;font-size:14px;line-height:1.7}
+.ask li{margin-bottom:3px}
+
+.three{margin-left:34px;counter-reset:t;list-style:none;padding:0}
+.three li{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.65}
+.three li:last-child{border-bottom:0}
+.three li::before{counter-increment:t;content:counter(t);font:600 11px/1.9 var(--font-mono);color:var(--accent)}
+
+.quote{margin:14px 0 0 34px;padding:12px 14px;background:var(--accent-soft);font-size:14px;line-height:1.7;color:var(--ink)}
+.quote b{font-weight:650}
+
+.tool{margin-top:14px;margin-left:34px;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.tool textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:6px;color:var(--ink);font:inherit;font-size:13.5px;line-height:1.6;padding:9px 10px;resize:vertical;min-height:110px}
+.tool textarea::placeholder{color:var(--ink-3);opacity:.75}
+.tool textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
+.copy{width:100%;border:0;background:var(--accent);color:var(--paper-2);font:inherit;font-size:13.5px;font-weight:650;padding:10px;border-radius:8px;cursor:pointer;margin-top:9px}
+.status{font-size:12px;color:var(--accent);margin:7px 0 0;min-height:15px}
+
+.kinds{margin-left:34px;display:grid;gap:8px}
+.kind{display:grid;grid-template-columns:auto 1fr;gap:10px;font-size:13.5px;line-height:1.65;padding:8px 0;border-bottom:1px solid var(--line)}
+.kind:last-child{border-bottom:0}
+.kind .k{font-weight:650;color:var(--ink);white-space:nowrap}
+.kind .v{color:var(--ink-2)}
+
+.foot{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.7}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="kicker">2026.11.05 · 现场用</p>
+    <h1>落差判断卡</h1>
+    <p class="lede">看到差距时，先别问「你们为什么做得好」。先分清楚：这是<strong>钱</strong>造成的，还是<strong>时间</strong>造成的。</p>
+  </header>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">0</span><h2>先分钱和时间</h2></div>
+    <div class="split">
+      <div class="box">
+        <h3>钱造成的差距</h3>
+        <p>生均成本、场地、外教、专职岗位。<br><span class="bad">不学。学了就是烧钱，而且烧完也追不上。</span></p>
+      </div>
+      <div class="box">
+        <h3>时间造成的差距</h3>
+        <p>同一件事做了十几年，中间没断。<br><span class="bad">可追。只要问出「第 3 年做了什么」。</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">A</span><h2>看起来差不多时 · 问来历</h2></div>
+    <p class="why">这个情形更危险。环境、环创、活动照片高度同质化，差别藏在别处。</p>
+    <div class="ask">
+      <div class="no"><span class="lbl bad">别问</span>你们为什么做得好？<br>会得到「理念」「文化」「团队」——听着对，但没法验证，也没法搬。</div>
+      <div class="yes"><span class="lbl good">要问</span>
+        <ol>
+          <li>这件事你们做了几年？</li>
+          <li>中间断过吗？靠什么没断？</li>
+          <li>谁在维护它——人、制度，还是钱？</li>
+        </ol>
+      </div>
+    </div>
+    <p class="why" style="margin-top:10px">差距在<strong>持续性和维护者</strong>，不在做法本身。</p>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">B</span><h2>差距巨大时 · 问起点</h2></div>
+    <p class="why">你在拿结果比，该比的是输入。把高度换成起点，答案才可迁移。</p>
+    <div class="ask">
+      <div class="no"><span class="lbl bad">别问</span>你们怎么做到的？<br>会得到一堆你搬不动的东西。</div>
+      <div class="yes"><span class="lbl good">要问</span>
+        <ol>
+          <li>你们刚办园的时候什么样？</li>
+          <li>哪一年开始变的？</li>
+          <li>那一年具体做了什么？</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">C</span><h2>落地三问 · 任何心动的做法都过一遍</h2></div>
+    <ol class="three">
+      <li><span>最少要几个人？兼职能不能顶？</span></li>
+      <li><span>第一年最少要多少钱？</span></li>
+      <li><span>从决定到跑顺，最少要多久？</span></li>
+    </ol>
+    <div class="quote">三问里有一问你承受不了，就写进<strong>不学清单</strong>，今年不动。不是放弃，是排期。</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">D</span><h2>问代价，比问好处有用</h2></div>
+    <div class="quote" style="margin-left:34px">「做这件事，你们牺牲了什么？」<br><br>常见答案：老师加班、收费更高、招生更挑、班额更小。<strong>这才是你能判断的东西。</strong></div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">E</span><h2>开口的话术</h2></div>
+    <div class="quote" style="margin-left:34px">「我回去也想做这件事，但怕做不像。你们当时是怎么熬过第一年的？」<br><br>同行请教，不是审视。对方会更愿意讲真话。</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">F</span><h2>不学清单 · 今天写</h2></div>
+    <p class="why">把看到了、但明确不学的东西写下来，附一句为什么。没有这张单子，回来一定瞎折腾。</p>
+    <div class="tool">
+      <textarea id="noList" placeholder="例：森林课程 —— 没有场地，也没有两个专职户外老师，三年后再说&#10;例：外教全天带班 —— 单这一项就吃掉全部利润，不碰"></textarea>
+      <button type="button" class="copy" id="copy">复制，存到微信</button>
+      <p class="status" id="status" role="status"></p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">G</span><h2>三种卡点，三种打法</h2></div>
+    <div class="kinds">
+      <div class="kind"><span class="k">人手不够</span><span class="v">缩到一个班、一个环节先试，不要全园推</span></div>
+      <div class="kind"><span class="k">权限不够</span><span class="v">带回一个能证明有效的最小实验，用结果要资源，别带方案</span></div>
+      <div class="kind"><span class="k">老师抵触</span><span class="v">先找一个愿意试的人，让他先跑，别开会动员</span></div>
+    </div>
+  </section>
+
+  <p class="foot">配套：参访观察清单（松绿）· 园所发展深访（靛蓝）</p>
+</div>
+
+<script>
+(function(){
+  var KEY="kg-gap-2026-11-05-v1";
+  var ta=document.getElementById("noList");
+  var statusEl=document.getElementById("status");
+
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw) ta.value=raw;
+  }catch(e){}
+
+  ta.addEventListener("input",function(){
+    try{ localStorage.setItem(KEY, ta.value); }catch(e){}
+  });
+
+  document.getElementById("copy").addEventListener("click",function(){
+    var body=(ta.value||"").trim();
+    var text="【不学清单】\n"+(body?body:"（空）");
+    statusEl.textContent="";
+    function done(){ statusEl.textContent="已复制，去微信粘贴吧"; }
+    function fallback(){
+      try{
+        ta.focus(); ta.select();
+        statusEl.textContent="已选中，长按复制";
+      }catch(e){ statusEl.textContent="复制失败，请长按选中上面的文字"; }
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    }else{ fallback(); }
+  });
+})();
+</script>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 84" fill="none">
+  <g stroke="#141414" fill="none">
+    <path d="M0 76 Q195 56 390 76" stroke-width="1.4" opacity=".55"/>
+    <path d="M0 76 Q195 88 390 76" stroke-width="1" opacity=".25"/>
+    <circle cx="58" cy="56" r="9" stroke-width="1.1" opacity=".45"/>
+  </g>
+  <g fill="#141414" stroke="#141414">
+    <circle cx="140" cy="22" r="1.6"/>
+    <circle cx="196" cy="42" r="1.2" fill="none" stroke-width=".8"/>
+    <circle cx="250" cy="18" r="1.5"/>
+  </g>
+  <g stroke="#141414" fill="none">
+    <line x1="318" y1="74" x2="318" y2="36" stroke-width="1.4"/>
+    <rect x="311" y="22" width="14" height="14" stroke-width="1.2"/>
+    <line x1="308" y1="36" x2="328" y2="36" stroke-width="1"/>
+    <path d="M318 21 q3 -4.6 0 -8 q-3 3.4 0 8 Z" fill="#C0392B" stroke="none"/>
+    <line x1="318" y1="14" x2="318" y2="11" stroke-width=".8" opacity=".7"/>
+    <line x1="310" y1="18" x2="307" y2="17" stroke-width=".8" opacity=".7"/>
+    <line x1="326" y1="18" x2="329" y2="17" stroke-width=".8" opacity=".7"/>
+  </g>
+</svg>

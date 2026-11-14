@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>OpenDesign vs 手工稿 · 试点对照</title>
+  <link rel="stylesheet" href="_shared/fonts.css" />
+  <style>
+    :root {
+      --bg: #ECE6D7;
+      --surface: #FFFFFF;
+      --surface-soft: #FCFAF4;
+      --fg: #173220;
+      --muted: #55616F;
+      --muted-card: #5E6B7A;
+      --sage: #8DA386;
+      --marigold: #DDB14A;
+      --terracotta: #C36540;
+      --hair: rgba(23, 50, 32, .10);
+      --serif: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+      --sans: "Geist", "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    body { padding: 48px 40px 80px; }
+    header { max-width: 1180px; margin: 0 auto 40px; }
+    .eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: .16em; color: var(--muted); }
+    h1 { margin: 0; font-family: var(--serif); font-size: 40px; font-weight: 400; line-height: 1.2; }
+    .lede { margin: 12px 0 0; max-width: 680px; font-family: var(--serif); font-size: 17px; line-height: 1.8; color: #3D5141; }
+    main { max-width: 1180px; margin: 0 auto; }
+    .compare { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--hair); }
+    .compare h2 { margin: 0; font-family: var(--serif); font-size: 26px; font-weight: 400; }
+    .compare p { margin: 6px 0 0; font-size: 12.5px; color: var(--muted-card); }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; }
+    figure { margin: 0; }
+    .shot { width: 100%; max-width: 390px; border: 1px solid var(--hair); border-radius: 26px; overflow: hidden; background: #DED6C6; }
+    .shot img { display: block; width: 100%; }
+    figcaption { margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .states { display: flex; gap: 8px; margin-top: 10px; }
+    .states img { width: 64px; height: 138px; object-fit: cover; object-position: top; border: 1px solid var(--hair); border-radius: 12px; }
+    .states span { align-self: end; font-size: 11px; color: var(--muted-card); }
+    footer { max-width: 1180px; margin: 64px auto 0; padding-top: 16px; border-top: 1px solid var(--hair); font-size: 11px; color: var(--muted-card); }
+    @media (max-width: 760px) {
+      body { padding: 28px 18px 56px; }
+      h1 { font-size: 30px; }
+      .pair { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">养成星球 · 家长端 · PILOT REVIEW</p>
+    <h1>OpenDesign vs 手工稿</h1>
+    <p class="lede">同一份 DNA v1 与同一页内容，分别由手工与 OpenDesign 生成。先看这两页的差异，再决定批量是否继续。</p>
+  </header>
+
+  <main>
+    <section class="compare">
+      <h2>01 首页</h2>
+      <p>左：手工稿 · 右：OpenDesign</p>
+      <div class="pair">
+        <figure>
+          <div class="shot"><img src="../2026-11-12-parent-dna-full/01-home/preview.png" alt="手工版首页" /></div>
+          <figcaption>手工版：更紧凑、CTA 是文字链</figcaption>
+        </figure>
+        <figure>
+          <div class="shot"><img src="parent/01-home/preview.png" alt="OpenDesign 首页" /></div>
+          <figcaption>OpenDesign：数字层级更明确，额外做了切换孩子抽屉</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="compare">
+      <h2>17 接送</h2>
+      <p>左：手工稿 · 右：OpenDesign；下方为 OpenDesign 三态</p>
+      <div class="pair">
+        <figure>
+          <div class="shot"><img src="../2026-11-12-parent-dna-full/17-pickup/preview.png" alt="手工版接送" /></div>
+          <figcaption>手工版：状态卡 + 时间线 + 主 CTA</figcaption>
+        </figure>
+        <figure>
+          <div class="shot"><img src="parent/17-pickup/preview.png" alt="OpenDesign 接送" /></div>
+          <figcaption>OpenDesign：状态说明里加了行内高亮，状态图标更明确</figcaption>
+        </figure>
+      </div>
+      <div class="states">
+        <img src="parent/17-pickup/preview.png" alt="在园中" />
+        <img src="parent/17-pickup/preview-away.png" alt="未入园" />
+        <img src="parent/17-pickup/preview-done.png" alt="已接走" />
+        <span>在园中 / 未入园 / 已接走</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>规则：docs/design-dna/2026-11-11-kinderly/DESIGN.md · 手工版：2026-11-12-parent-dna-full · 本批：2026-11-13-parent-dna-opendesign</footer>
+</body>
+</html>

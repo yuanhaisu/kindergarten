@@ -1,0 +1,20 @@
+{
+  "slug": "parent-05-policy",
+  "surface": "parent",
+  "title": "隐私政策",
+  "projectId": "76bd9535-d189-43b6-bdea-bc440e17e722",
+  "conversationId": "9fdf910c-b886-48d1-8b6f-b549f3dc22f6",
+  "runId": "e000e4fe-4c71-492e-ac78-13055588fec7",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 226,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/76bd9535-d189-43b6-bdea-bc440e17e722",
+  "previewRendered": true
+}

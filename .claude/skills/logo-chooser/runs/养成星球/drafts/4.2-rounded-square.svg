@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>养成星球 · geometry=rounded-square</title>
+  <!-- geometry=rounded-square · 缝口固定 (86,197)-(170,197)，描边 24，芽与其余六格逐字同一段路径，统一 0.90 -->
+  <path d="M 86 197 L 80 197 Q 44 197 44 161 L 44 65 Q 44 29 80 29 L 176 29 Q 212 29 212 65 L 212 161 Q 212 197 176 197 L 170 197" fill="none" stroke="#000" stroke-width="24" stroke-linecap="round" stroke-linejoin="miter"/>
+  <g transform="translate(128 197) scale(0.9) translate(-128 -197)"><path d="M 128 217.2 L 128 153.4" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round"/><path d="M 128 157.8 C 130.2 135.8 148.9 116 181.9 107.2 C 181.9 135.8 158.8 155.6 128 157.8 Z" fill="#000"/><path d="M 128 153.4 C 125.8 135.8 111.5 120.4 82.9 111.6 C 82.9 135.8 101.6 151.2 128 153.4 Z" fill="#000"/></g>
+</svg>

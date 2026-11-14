@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">B3 向上折线</title>
+  <path d="M 48 192 H 80 Q 88 192 88 184 V 152 H 120 Q 128 152 128 144 V 104 H 160 Q 168 104 168 96 V 56 H 184"
+        fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M208 30 Q211.24 44.76 226 48 Q211.24 51.24 208 66 Q204.76 51.24 190 48 Q204.76 44.76 208 30 Z" fill="#111111"/>
+</svg>

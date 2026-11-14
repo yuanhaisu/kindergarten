@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一个圆，顶部收成一个尖，像屋顶：三角的檐比圆宽，角落才看得出来 -->
+  <circle cx="60" cy="74" r="40" fill="#000"/>
+  <path d="M 60 10 L 106 58 L 14 58 Z" fill="#000"/>
+</svg>

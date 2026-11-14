@@ -10,9 +10,9 @@
     "prebuild:mp-weixin:prod": "node ../scripts/sync-ui.js && cd ../shared-design-tokens && npm run build",
     "dev:h5": "uni",
     "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin",
-    "build:mp-weixin:test": "uni build -p mp-weixin --mode test",
-    "build:mp-weixin:prod": "uni build -p mp-weixin --mode production"
+    "build:mp-weixin": "uni build -p mp-weixin && node ../scripts/ensure-urlcheck.mjs dist/build/mp-weixin",
+    "build:mp-weixin:test": "uni build -p mp-weixin --mode test && node ../scripts/ensure-urlcheck.mjs dist/build/mp-weixin",
+    "build:mp-weixin:prod": "uni build -p mp-weixin --mode production && node ../scripts/ensure-urlcheck.mjs dist/build/mp-weixin"
   },
   "dependencies": {
     "@dcloudio/uni-app": "^3.0.0-alpha-5000820260420001",

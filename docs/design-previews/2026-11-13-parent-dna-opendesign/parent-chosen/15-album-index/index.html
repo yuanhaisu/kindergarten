@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>班级相册 · 小一班</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" data-state="default">
+    <div class="mp-chrome">
+      <div class="mp-statusbar" data-od-id="status-bar">
+        <span class="status-time">10:20</span>
+        <span class="status-icons" aria-hidden="true">
+          <svg viewBox="0 0 18 12" fill="currentColor">
+            <rect x="0.5" y="8" width="3" height="4" rx="1"></rect>
+            <rect x="5" y="6" width="3" height="6" rx="1"></rect>
+            <rect x="9.5" y="3.5" width="3" height="8.5" rx="1"></rect>
+            <rect x="14" y="1" width="3" height="11" rx="1"></rect>
+          </svg>
+          <svg viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M1.5 4.2 Q8 0 14.5 4.2"></path>
+            <path d="M4 6.7 Q8 3.6 12 6.7"></path>
+            <path d="M6.4 9.1 Q8 7.7 9.6 9.1"></path>
+            <circle cx="8" cy="10.6" r="0.9" fill="currentColor" stroke="none"></circle>
+          </svg>
+          <svg viewBox="0 0 25 12" fill="none">
+            <rect x="0.6" y="1.1" width="21.5" height="9.8" rx="2.6" stroke="currentColor" stroke-width="1.2"></rect>
+            <rect x="2.4" y="3" width="16.5" height="6" rx="1.4" fill="currentColor"></rect>
+            <path d="M23.4 4.2 V7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+          </svg>
+        </span>
+      </div>
+
+      <div class="page-bar" data-od-id="page-bar">
+        <button class="back-btn" type="button" aria-label="返回" data-od-id="back-button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14.5 5.5 8.5 12l6 6.5"></path>
+          </svg>
+        </button>
+        <span class="page-bar-title">小一班</span>
+        <span class="page-bar-spacer" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-head" data-od-id="page-head">
+        <h1 class="page-title" data-od-id="page-title">班级相册</h1>
+        <p class="page-sub" data-od-id="album-count">小一班 · 共 7 个相册</p>
+      </header>
+
+      <div class="album-default">
+        <button class="feature-card" type="button" data-od-id="featured-album" aria-label="本月精选：秋日远足，32 张照片，10 月 24 日">
+          <span class="feature-tag">本月精选</span>
+          <span class="feature-body">
+            <span class="feature-title">秋日远足</span>
+            <span class="feature-meta">32 张照片 · 10 月 24 日</span>
+          </span>
+        </button>
+
+        <h2 class="album-section-title" data-od-id="album-section-title">全部相册</h2>
+
+        <div class="album-grid" data-od-id="album-grid">
+          <button class="album-card" type="button" data-od-id="album-card-craft">
+            <span class="album-cover cover--gold" aria-hidden="true"></span>
+            <span class="album-text">
+              <span class="album-name">手工课</span>
+              <span class="album-meta">18 张照片 · 11 月 6 日</span>
+            </span>
+          </button>
+          <button class="album-card" type="button" data-od-id="album-card-music">
+            <span class="album-cover cover--pine" aria-hidden="true"></span>
+            <span class="album-text">
+              <span class="album-name">音乐课</span>
+              <span class="album-meta">12 张照片 · 11 月 1 日</span>
+            </span>
+          </button>
+          <button class="album-card" type="button" data-od-id="album-card-birthday">
+            <span class="album-cover cover--blue" aria-hidden="true"></span>
+            <span class="album-text">
+              <span class="album-name">生日会</span>
+              <span class="album-meta">24 张照片 · 10 月 30 日</span>
+            </span>
+          </button>
+          <button class="album-card" type="button" data-od-id="album-card-sports">
+            <span class="album-cover cover--clay" aria-hidden="true"></span>
+            <span class="album-text">
+              <span class="album-name">运动会</span>
+              <span class="album-meta">26 张照片 · 10 月 18 日</span>
+            </span>
+          </button>
+          <button class="album-card" type="button" data-od-id="album-card-garden">
+            <span class="album-cover cover--sage" aria-hidden="true"></span>
+            <span class="album-text">
+              <span class="album-name">种植角</span>
+              <span class="album-meta">15 张照片 · 9 月 26 日</span>
+            </span>
+          </button>
+          <button class="album-card" type="button" data-od-id="album-card-lunch">
+            <span class="album-cover cover--clay" aria-hidden="true"></span>
+            <span class="album-text">
+              <span class="album-name">午餐时光</span>
+              <span class="album-meta">20 张照片 · 9 月 18 日</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <section class="album-empty" data-od-id="empty-state" aria-labelledby="empty-title">
+        <div class="empty-art" aria-hidden="true">
+          <svg viewBox="0 0 128 128" fill="none">
+            <rect x="20" y="30" width="88" height="70" rx="12" stroke="currentColor" stroke-width="3"></rect>
+            <path d="M28 92 L48 66 L62 78 L80 56 L100 92" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            <circle class="empty-sun" cx="85" cy="47" r="5.5"></circle>
+          </svg>
+        </div>
+        <h2 class="empty-title" id="empty-title">还没有相册</h2>
+        <p class="empty-note">老师上传照片后会显示在这里</p>
+        <button class="btn-primary" type="button" data-od-id="empty-cta">回到首页</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

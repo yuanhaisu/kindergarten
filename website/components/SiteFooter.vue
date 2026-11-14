@@ -20,7 +20,7 @@ const year = new Date().getFullYear()
         </nav>
 
         <div class="footer__meta">
-          <span>{{ site.icp || 'ICP 备案号 · 待补充' }}</span>
+          <span>{{ site.filingName }} · {{ site.icp }}</span>
           <span>© {{ year }} {{ site.name }}</span>
         </div>
       </div>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="title">
+  <title id="title">C1 字标 + 星点</title>
+  <text x="480" y="168" text-anchor="middle" font-family="Microsoft YaHei, Source Han Sans SC, Noto Sans CJK SC, sans-serif" font-size="96" font-weight="700"
+        letter-spacing="8" fill="#111111">养成星球</text>
+  <path d="M532 41 Q534.7 53.3 547 56 Q534.7 58.7 532 71 Q529.3 58.7 517 56 Q529.3 53.3 532 41 Z" fill="#111111"/>
+</svg>

@@ -52,7 +52,7 @@
   "class_name": "小一班",
   "content": "今天的美术课主题是《我心中的春天》...",
   "media": [
-    { "id": 1, "file_url": "...", "thumb_url": "...", "file_type": "image" }
+    { "id": 1, "file_url": "...", "thumb_url": "...", "file_type": "image" } // URL 为 1 小时签名地址
   ],
   "media_count": 6,
   "likes_count": 28,

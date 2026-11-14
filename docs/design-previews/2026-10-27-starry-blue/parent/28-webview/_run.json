@@ -1,0 +1,23 @@
+{
+  "slug": "parent-webview",
+  "surface": "parent",
+  "title": "内嵌网页",
+  "projectId": "b999956e-2b21-453e-981a-d63ba2fffdc6",
+  "conversationId": "1343be99-60e9-4ed2-944e-1c0a9f7f4d00",
+  "runId": "7ee76c8b-7310-4b72-9389-314dc5bb073d",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 247,
+  "files": [
+    ".file-versions/0eb547304658805aad788d32/0001-4e733c91-0a4b-4719-8adf-6268a075b956.html",
+    ".file-versions/0eb547304658805aad788d32/manifest.json",
+    "app.js",
+    "index.html",
+    "index.html.artifact.json",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/b999956e-2b21-453e-981a-d63ba2fffdc6",
+  "previewRendered": true
+}

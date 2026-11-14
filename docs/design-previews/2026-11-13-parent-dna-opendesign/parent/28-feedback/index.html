@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>意见反馈 · 养成星球</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" data-od-id="feedback-page">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-statusbar__time">9:41</span>
+      <div class="mp-statusbar__icons">
+        <svg class="mp-statusbar__icon" viewBox="0 0 18 12" aria-hidden="true">
+          <rect x="0" y="8.2" width="2.7" height="3.2" rx="0.8" fill="currentColor" />
+          <rect x="4.7" y="6.1" width="2.7" height="5.3" rx="0.8" fill="currentColor" />
+          <rect x="9.4" y="3.8" width="2.7" height="7.6" rx="0.8" fill="currentColor" />
+          <rect x="14.1" y="1.2" width="2.7" height="10.2" rx="0.8" fill="currentColor" />
+        </svg>
+        <svg class="mp-statusbar__icon mp-statusbar__icon--wifi" viewBox="0 0 18 13" aria-hidden="true">
+          <path d="M1.4 4.2a11 11 0 0 1 15.2 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <path d="M4.4 7.2a6.8 6.8 0 0 1 9.2 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <path d="M7.3 10.1a3.1 3.1 0 0 1 3.4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <circle cx="9" cy="12.1" r="1" fill="currentColor" />
+        </svg>
+        <svg class="mp-statusbar__icon mp-statusbar__icon--battery" viewBox="0 0 23 12" aria-hidden="true">
+          <rect x="0.7" y="0.7" width="19.1" height="10.6" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" />
+          <rect x="2.6" y="2.6" width="14.7" height="6.8" rx="1.4" fill="currentColor" />
+          <path d="M21.4 4.2v3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+      </div>
+    </div>
+
+    <header class="page-bar">
+      <button class="page-bar__back" type="button" aria-label="返回" data-od-id="back-to-profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.5 5.5 8 12l6.5 6.5" />
+        </svg>
+      </button>
+      <span class="page-bar__title">意见反馈</span>
+      <span class="page-bar__placeholder" aria-hidden="true"></span>
+    </header>
+
+    <main class="mp-main">
+      <header class="page-head">
+        <h1 class="page-head__title" data-od-id="feedback-title">意见反馈</h1>
+        <p class="page-head__sub">你的建议会直接发送给<span class="hl">园所管理员</span></p>
+      </header>
+
+      <form class="feedback-form" id="feedback-form" novalidate>
+        <div class="feedback-card" data-od-id="feedback-form-card">
+          <section class="form-section" aria-labelledby="feedback-type-label">
+            <p class="field-label" id="feedback-type-label">反馈类型</p>
+            <div class="type-chips" role="group" aria-labelledby="feedback-type-label">
+              <button class="type-chip is-selected" type="button" data-feedback-type="feature" aria-pressed="true" data-od-id="feedback-type-feature">功能建议</button>
+              <button class="type-chip" type="button" data-feedback-type="issue" aria-pressed="false" data-od-id="feedback-type-issue">使用问题</button>
+              <button class="type-chip" type="button" data-feedback-type="content" aria-pressed="false" data-od-id="feedback-type-content">内容投诉</button>
+              <button class="type-chip" type="button" data-feedback-type="other" aria-pressed="false" data-od-id="feedback-type-other">其他</button>
+            </div>
+          </section>
+
+          <hr class="form-divider" />
+
+          <section class="form-section">
+            <label class="field-label" for="feedback-description">问题描述</label>
+            <textarea
+              class="description-input"
+              id="feedback-description"
+              name="description"
+              rows="5"
+              maxlength="500"
+              placeholder="请描述你遇到的问题或建议"
+              aria-describedby="description-hint description-error feedback-counter"
+              required
+              data-od-id="feedback-description"
+            ></textarea>
+            <div class="field-meta">
+              <p class="field-hint" id="description-hint">尽量写清操作步骤，方便我们定位</p>
+              <p class="char-count"><span id="feedback-counter" aria-live="polite">0 / 500</span></p>
+            </div>
+            <p class="field-error" id="description-error" hidden>请先写下遇到的问题或建议</p>
+          </section>
+
+          <hr class="form-divider" />
+
+          <section class="form-section upload-section" aria-labelledby="upload-label">
+            <div class="upload-copy">
+              <p class="field-label" id="upload-label">上传照片</p>
+              <p class="upload-hint" id="upload-hint">选填 · 最多 3 张</p>
+            </div>
+            <div class="upload-row" id="upload-row" role="group" aria-labelledby="upload-label" aria-describedby="upload-hint">
+              <button class="upload-slot" type="button" data-upload-trigger aria-label="上传照片">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                  <path d="M12 5.5v13M5.5 12h13" />
+                </svg>
+              </button>
+              <button class="upload-slot" type="button" data-upload-trigger aria-label="再添加一张照片">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                  <path d="M12 5.5v13M5.5 12h13" />
+                </svg>
+              </button>
+            </div>
+            <input id="photo-input" type="file" accept="image/*" multiple hidden />
+          </section>
+
+          <hr class="form-divider" />
+
+          <section class="form-section">
+            <label class="field-label" for="feedback-contact">联系方式（选填）</label>
+            <input
+              class="text-input"
+              id="feedback-contact"
+              name="contact"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel"
+              value="138 0013 6721"
+              data-od-id="feedback-contact"
+            />
+          </section>
+        </div>
+
+        <button class="submit-button" id="submit-feedback" type="submit" data-od-id="submit-feedback">提交反馈</button>
+      </form>
+
+      <section class="faq" aria-labelledby="faq-heading">
+        <p class="faq__overline" id="faq-heading">常见问题</p>
+        <div class="faq-card" data-od-id="faq-card">
+          <div class="faq-row" data-od-id="faq-bind-second-child">
+            <span>如何绑定第二个孩子</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+            </svg>
+          </div>
+          <div class="faq-row" data-od-id="faq-edit-pickup-person">
+            <span>如何修改接送人</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+            </svg>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m5.5 12.5 4.2 4.2 8.8-9.4" />
+      </svg>
+      <span class="toast__text"></span>
+    </div>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

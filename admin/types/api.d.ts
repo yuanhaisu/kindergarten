@@ -51,6 +51,8 @@ export interface LoginResult {
   refresh_token: string
   expires_at: string
   user: AuthUser
+  consent_required: boolean
+  current_policy_version: string
 }
 
 // ===== Dashboard 扩展类型 =====

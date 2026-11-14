@@ -4,6 +4,9 @@
 >
 > 所有接口均需 `Authorization: Bearer <token>`，且用户角色为 `admin`。
 >
+> 登录与刷新响应包含 `consent_required` 与 `current_policy_version`（见 `../api-common.md`）。
+> `consent_required=true` 时，管理端 MUST 先调用 `POST /common/consent` 完成同意，再访问业务接口。
+>
 > 以下 Response 均为 `data` 部分，省略外层 `{ "code": 0, "message": "success" }` 包装。
 
 ---

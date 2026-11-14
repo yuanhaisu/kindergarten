@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 开口旋到左下 120°，点落在它自己的角平分线上 -->
+  <path d="M 17.5 71.4 A 44 44 0 1 1 71.4 102.5" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="45" cy="86" r="8" fill="#000"/>
+</svg>

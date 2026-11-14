@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>设置 · 养成星球</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="mp-app" data-od-id="settings-screen">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="status-time">9:41</span>
+      <div class="status-icons">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="none" aria-hidden="true">
+          <rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" />
+          <rect x="4.7" y="5.8" width="3" height="6.2" rx="1" fill="currentColor" />
+          <rect x="9.4" y="3.4" width="3" height="8.6" rx="1" fill="currentColor" />
+          <rect x="14.1" y="1" width="3" height="11" rx="1" fill="currentColor" />
+        </svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+          <path d="M1.4 4.2a9.4 9.4 0 0 1 13.2 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <path d="M4.2 7.2a5.2 5.2 0 0 1 7.6 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <circle cx="8" cy="10.2" r="1" fill="currentColor" />
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true">
+          <rect x="0.75" y="0.75" width="21.5" height="10.5" rx="3.25" stroke="currentColor" stroke-opacity="0.38" stroke-width="1.5" />
+          <rect x="2.75" y="2.75" width="17.5" height="6.5" rx="1.75" fill="currentColor" />
+          <path d="M23.5 4.2v3.6c1-.4 1.5-1 1.5-1.8s-.5-1.4-1.5-1.8Z" fill="currentColor" fill-opacity="0.45" />
+        </svg>
+      </div>
+    </div>
+
+    <header class="page-bar" data-od-id="settings-page-bar">
+      <button class="back-button" type="button" aria-label="返回" data-od-id="settings-back">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M12.5 4.5 7 10l5.5 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <div class="page-bar-title">设置</div>
+      <span class="page-bar-spacer" aria-hidden="true"></span>
+    </header>
+
+    <main class="mp-main" data-od-id="settings-content">
+      <h1 class="page-title" data-od-id="settings-title">设置</h1>
+
+      <section class="settings-group" aria-labelledby="message-settings-heading" data-od-id="message-settings-group">
+        <h2 class="group-title" id="message-settings-heading" data-od-id="message-settings-heading">消息设置</h2>
+        <div class="settings-card" data-od-id="message-settings-card">
+          <button class="setting-row" type="button" data-od-id="notify-school-row">
+            <span class="row-label">接收园所通知</span>
+            <span class="row-trailing">
+              <span class="state-tag">已开启</span>
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+          <button class="setting-row" type="button" data-od-id="notify-teacher-row">
+            <span class="row-label">接收老师消息</span>
+            <span class="row-trailing">
+              <span class="state-tag">已开启</span>
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+          <button class="setting-row" type="button" data-od-id="quiet-hours-row">
+            <span class="row-label">免打扰时段</span>
+            <span class="row-trailing">
+              <span class="row-value">20:00–07:30</span>
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-group" aria-labelledby="privacy-settings-heading" data-od-id="privacy-account-group">
+        <h2 class="group-title" id="privacy-settings-heading" data-od-id="privacy-settings-heading">隐私与账号</h2>
+        <div class="settings-card" data-od-id="privacy-account-card">
+          <button class="setting-row" type="button" data-od-id="privacy-policy-row">
+            <span class="row-label">隐私政策</span>
+            <span class="row-trailing">
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+          <button class="setting-row" type="button" data-od-id="user-agreement-row">
+            <span class="row-label">用户协议</span>
+            <span class="row-trailing">
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+          <button class="setting-row" type="button" data-od-id="child-info-auth-row">
+            <span class="row-label">儿童信息授权管理</span>
+            <span class="row-trailing">
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+          <button class="setting-row setting-row--danger" type="button" data-od-id="delete-account-row">
+            <span class="row-label">注销账号</span>
+            <span class="row-trailing">
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-group" aria-labelledby="about-settings-heading" data-od-id="about-group">
+        <h2 class="group-title" id="about-settings-heading" data-od-id="about-settings-heading">关于</h2>
+        <div class="settings-card" data-od-id="about-card">
+          <div class="setting-row setting-row--static" data-od-id="current-version-row">
+            <span class="row-label">当前版本</span>
+            <span class="row-value">v1.0.0</span>
+          </div>
+          <button class="setting-row" type="button" data-od-id="check-update-row">
+            <span class="row-label">检查更新</span>
+            <span class="row-trailing">
+              <span class="row-value" id="update-status">已是最新</span>
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <button class="logout-button" type="button" data-od-id="logout-button">退出登录</button>
+    </main>
+
+    <div class="toast" role="status" aria-live="polite" aria-atomic="true" data-od-id="settings-toast"></div>
+  </div>
+</body>
+</html>

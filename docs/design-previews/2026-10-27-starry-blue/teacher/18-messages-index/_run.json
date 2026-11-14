@@ -1,0 +1,18 @@
+{
+  "slug": "teacher-messages-index",
+  "surface": "teacher",
+  "title": "消息",
+  "projectId": "ac92ea54-75e1-4343-a822-044b04649797",
+  "conversationId": "f3821793-d35a-4fae-9c11-664022c8bed4",
+  "runId": "84c90675-1ad1-4308-b44b-7e9908ef3b80",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 452,
+  "files": [
+    "index.html",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/ac92ea54-75e1-4343-a822-044b04649797",
+  "previewRendered": true
+}

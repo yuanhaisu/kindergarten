@@ -206,6 +206,14 @@ func (h *Handler) TokenRevoker() auth.TokenRevoker {
 	return h.authSvc.TokenRevoker()
 }
 
+// AuthService 暴露认证服务给路由装配的 consent 门禁使用；nil 时门禁直接放行。
+func (h *Handler) AuthService() *service.AuthService {
+	if h == nil {
+		return nil
+	}
+	return h.authSvc
+}
+
 type bindInviteReq struct {
 	InviteCode string `json:"invite_code" binding:"required"`
 }

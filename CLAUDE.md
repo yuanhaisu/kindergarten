@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Teacher mini-program | `teacher/` | uni-app + Vue 3 + Vite (WeChat)         | Active |
 | Admin web            | `admin/`   | Nuxt 3 + Element Plus + Pinia + ECharts | Active |
 | Parent mini-program  | `parent/`  | uni-app + Vue 3 + Vite (WeChat)         | Active |
+| Official website     | `website/` | Nuxt 3 SSG + design tokens              | Active |
 | Backend server       | `server/`  | Go + Gin + GORM + Redis + Casbin        | Active |
 
 API contracts live in `backend/api/` (spec-first). Data models live in `server/internal/domain/`（**不是** `backend/model/`，见下方说明）. Design data JSON files live in `design-data/`.
@@ -131,6 +132,20 @@ npm run dev            # Start dev server with HMR (Vite proxies /api/v1 to :808
 npm run build          # Production build
 npm run preview        # Preview production build
 ```
+
+### Official website (`website/`)
+
+```bash
+npm run dev            # http://localhost:3000
+npm run generate       # 静态产物 → .output/public，由 nginx 托管
+npm run preview        # 预览构建产物
+```
+
+- 纯静态营销站，只面向民办园园长；没有后端调用。
+- 文案集中在 `website/content/site.ts`；改文案不动模板。
+- 颜色/圆角/阴影/字号走 `shared-design-tokens`（Ink / Amber / Cream 已登记为 `shared.color.identity`）。
+- 首屏构图是「手机墙」：老师端、家长端、后台三块界面并置；唯一交互动效是一日五时刻的滚动切换。
+- ICP 号待备案后补；主体已是「湘潭市岳塘区稚序软件开发工作室」；联系邮箱已是 `contact@nurtureplanet.cn`；企业微信二维码暂缓（认证费 300 元），当前以邮件为唯一联系方式。
 
 Copy `.env.example` to `.env` to configure `NUXT_PUBLIC_API_BASE`. In production, use Nginx to reverse-proxy `/api/v1` to the Go backend.
 

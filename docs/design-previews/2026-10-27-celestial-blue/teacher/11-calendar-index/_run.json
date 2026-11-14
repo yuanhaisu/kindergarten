@@ -1,0 +1,33 @@
+{
+  "slug": "teacher-calendar-index",
+  "surface": "teacher",
+  "title": "班级日历",
+  "projectId": "94b0b07e-df1e-44db-850b-684c931523a4",
+  "conversationId": "e1b38506-ee4f-4c1e-bf1c-9e8da69846b8",
+  "runId": "7ddf29d4-1a45-43a3-ab6f-9747a1d5a5a1",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 502,
+  "files": [
+    "index.html",
+    "styles.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/94b0b07e-df1e-44db-850b-684c931523a4",
+  "previewRendered": true,
+  "handAuthored": true,
+  "handAuthoredReason": "OpenDesign 两次运行均只产出 index.html + styles.css，未生成 app.js；index.html 引用 app.js 导致日历网格与当日列表为空。按任务回退规则，用同一 tokens.css 与共享 shell 手写 index.html / styles.css / app.js。",
+  "previousRuns": [
+    {
+      "projectId": "27bcd6d8-5d52-4673-acd3-a901c3a564e6",
+      "conversationId": "65382c9f-8483-4591-8733-140a4b77cf45",
+      "runId": "90b8264f-248b-47ec-9acb-f214f5857dda",
+      "elapsedSec": 504,
+      "files": [
+        "index.html",
+        "styles.css",
+        "tokens.css"
+      ]
+    }
+  ]
+}

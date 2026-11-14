@@ -1,0 +1,19 @@
+{
+  "slug": "teacher-more-index-r2",
+  "surface": "teacher",
+  "title": "更多功能",
+  "projectId": "449c2f86-37ea-473b-827a-2fae7226e2da",
+  "conversationId": "857ae2b5-d871-4dd1-8de4-2b97501e09ae",
+  "runId": "4a5dbc3d-d032-4e69-a200-5686e05c1a6d",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 928,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/449c2f86-37ea-473b-827a-2fae7226e2da",
+  "previewRendered": true
+}

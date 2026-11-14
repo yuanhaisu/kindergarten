@@ -1,0 +1,15 @@
+{
+  "group": "A",
+  "results": [
+    {
+      "slug": "31-profile",
+      "status": "succeeded",
+      "elapsedSec": 408
+    },
+    {
+      "slug": "11-growth",
+      "status": "succeeded",
+      "elapsedSec": 574
+    }
+  ]
+}

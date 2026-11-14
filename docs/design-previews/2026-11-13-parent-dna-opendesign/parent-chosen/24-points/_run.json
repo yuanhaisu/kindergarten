@@ -1,0 +1,22 @@
+{
+  "slug": "parent-v2-task-points-24-points",
+  "surface": "parent",
+  "title": "积分与成就 · 积分提案",
+  "projectId": "f7022c52-3005-4a56-ae9a-b91c411779ef",
+  "conversationId": "30eec399-85c6-4ac8-8461-adacb55a0c08",
+  "runId": "6ea09da8-ad0e-49e1-bd2c-05b425dff0b9",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 918,
+  "files": [
+    ".file-versions/52a501ad6b00a37ce9573f0e/0001-a7467889-ae93-4317-a623-fb8b3d8cd378.html",
+    ".file-versions/52a501ad6b00a37ce9573f0e/manifest.json",
+    "parent-variants/v2-task-points/24-points/app.js",
+    "parent-variants/v2-task-points/24-points/index.html",
+    "parent-variants/v2-task-points/24-points/index.html.artifact.json",
+    "parent-variants/v2-task-points/24-points/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/f7022c52-3005-4a56-ae9a-b91c411779ef"
+}

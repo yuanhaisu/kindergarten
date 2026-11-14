@@ -12,12 +12,12 @@ import (
 )
 
 type listLeavesQuery struct {
-	Page       int    `form:"page"`
-	PageSize   int    `form:"page_size"`
-	ClassID    uint64 `form:"class_id"`
-	Status     *int8  `form:"status"`
-	StartDate  string `form:"start_date"`
-	EndDate    string `form:"end_date"`
+	Page      int    `form:"page"`
+	PageSize  int    `form:"page_size"`
+	ClassID   uint64 `form:"class_id"`
+	Status    *int8  `form:"status"`
+	StartDate string `form:"start_date"`
+	EndDate   string `form:"end_date"`
 }
 
 func (h *Handler) ListLeaves(c *gin.Context) {

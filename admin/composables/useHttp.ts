@@ -30,7 +30,7 @@ export function useHttp() {
     client = axios.create({
       baseURL: config.public.apiBase as string,
       timeout: 60000,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', terminal_from: 'admin' },
     })
 
     client.interceptors.request.use((req) => {
@@ -66,8 +66,22 @@ export function useHttp() {
             navigateTo('/login')
           }
         }
+        // 未同意当前隐私政策：服务端兜底 403 + 40301，先完成同意再回原页。
+        const bizCode = (data && typeof data === 'object' && 'code' in data)
+          ? (data as { code?: number }).code
+          : undefined
+        if (import.meta.client && err.response?.status === 403 && bizCode === 40301) {
+          const route = useRoute()
+          if (route.path !== '/consent') {
+            navigateTo({ path: '/consent', query: { redirect: route.fullPath } })
+          }
+        }
         // 保留 HTTP 状态码：调用方需要区分「无权限（403）」与真实故障
-        const wrapped = new Error(String(msg)) as Error & { status?: number; data?: unknown }
+        const wrapped = new Error(String(msg)) as Error & {
+          status?: number
+          data?: unknown
+          code?: number
+        }
         wrapped.status = err.response?.status
         // 保留业务错误里的 data（如取消订单被拒时的 unrefunded_amount_cents），
         // 调用方据此展示结构化信息，而不是解析文案。
@@ -75,6 +89,7 @@ export function useHttp() {
           data && typeof data === 'object' && 'data' in data
             ? (data as { data?: unknown }).data
             : undefined
+        wrapped.code = bizCode
         return Promise.reject(wrapped)
       },
     )

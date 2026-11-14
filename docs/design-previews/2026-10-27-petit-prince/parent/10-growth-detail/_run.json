@@ -1,0 +1,29 @@
+{
+  "slug": "parent-growth-detail",
+  "surface": "parent",
+  "title": "成长详情",
+  "projectId": "e5327297-a3eb-454a-affc-32fa66c331b1",
+  "conversationId": "0a41faef-dfc9-4317-9874-d16db64d850f",
+  "runId": "8ebb0b9a-8d77-4963-8d1b-c0ab2662165f",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 592,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css",
+    "preview.png",
+    "notes.md",
+    "_prompt.md"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/e5327297-a3eb-454a-affc-32fa66c331b1",
+  "previewRendered": true,
+  "handAuthored": false,
+  "finalArtifacts": {
+    "source": "D:/yuanhaisu/personal_projects/open-design/.od/projects/e5327297-a3eb-454a-affc-32fa66c331b1",
+    "copiedAt": "2026-10-26T20:19:00+08:00",
+    "note": "首次推断完成时拷到的是中间版本；run 终态 succeeded 后以项目目录终态 styles.css（20:15 压缩版）与 app.js（20:17）覆盖。未人工改动代码。"
+  }
+}

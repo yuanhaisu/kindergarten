@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>养成星球 · 狐狸（夜航剪影）</title>
+  <rect width="256" height="256" fill="#1B2A41"/>
+  <circle cx="128" cy="128" r="116" fill="none" stroke="#F7F3E8" stroke-width="6"/>
+  <path d="M36 194 Q128 178 220 194" fill="none" stroke="#F7F3E8" stroke-width="6" stroke-linecap="round"/>
+  <g fill="#F7F3E8">
+    <path d="M124 194 C118 172 120 152 132 142 C141 135 153 135 162 142 C174 152 176 172 170 194 Z"/>
+    <ellipse cx="147" cy="127" rx="19" ry="17"/>
+    <path d="M130 116 L120 86 L146 110 Z"/>
+    <path d="M150 110 L174 86 L164 116 Z"/>
+    <path d="M166 180 C194 190 208 176 202 164 C198 154 186 152 180 160" fill="none" stroke="#F7F3E8" stroke-width="20" stroke-linecap="round"/>
+  </g>
+  <path d="M78 196 L78 164" stroke="#F7F3E8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="78" cy="150" r="18" fill="#E8A23A"/>
+  <path d="M78 186 C64 180 58 168 58 160 C70 162 78 172 78 186 Z" fill="#F7F3E8"/>
+  <path d="M78 180 C92 174 98 162 98 154 C86 156 78 166 78 180 Z" fill="#F7F3E8"/>
+</svg>

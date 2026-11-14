@@ -1,0 +1,21 @@
+{
+  "slug": "teacher-tasks-index",
+  "surface": "teacher",
+  "title": "亲子任务",
+  "projectId": "31b1b63d-4700-4d02-99a5-46fc78522654",
+  "conversationId": "b06ab21f-221c-4809-bfaa-0402ad63378a",
+  "runId": "0ed7e862-c1c7-4141-ace1-a3a015e43019",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 571,
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/31b1b63d-4700-4d02-99a5-46fc78522654",
+  "previewRendered": true,
+  "note": "od-design-page 在 571s 时按产物稳定性提前推断完成（当时只发现 index.html）；随后等 styles.css / app.js 落盘并校验一致，手动取消仍在运行的 run 以冻结产物。"
+}

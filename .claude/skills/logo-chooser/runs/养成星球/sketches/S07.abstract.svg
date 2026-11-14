@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 抽象版换一条构造轴：实心盘从底部挖掉一个圆，空出来的缺口里放点 -->
+  <path fill="#000" fill-rule="evenodd"
+        d="M 60 8 A 52 52 0 1 0 60 112 A 52 52 0 1 0 60 8 Z
+           M 60 120 A 30 30 0 1 0 60 60 A 30 30 0 1 0 60 120 Z"/>
+  <circle cx="60" cy="100" r="7" fill="#000"/>
+</svg>

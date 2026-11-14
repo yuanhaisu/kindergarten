@@ -1,0 +1,71 @@
+{
+  "title": "养成星球 · 小王子主题画廊（2026-10-27）",
+  "heroTitle": "养成星球 · 小王子主题画廊",
+  "subtitle": "老师端 + 家长端全部页面 · 羊皮纸与墨线 · 8 幅小王子故事分镜",
+  "paletteLink": "_shared/palette.html",
+  "paletteLabel": "查看小王子配色与插图说明 →",
+  "themeNote": "主题入口：<code>shared-design-tokens/themes.json</code>（petitprince）。生成：<code>node scripts/build-theme-css.mjs</code>；截图：<code>node scripts/od-shots.mjs docs/design-previews/2026-10-27-petit-prince</code>。任意页面加 <code>?theme=bright</code> 可切回原亮橙。",
+  "themeFollowup": "本批为 2026-10-25 版原型的主题副本：先整批复制，再替换 token 层并注入 50 条故事带；页面布局、文案、状态与接口说明保持原样。",
+  "bg": "#F6F0E3",
+  "surface": "#FFFDF6",
+  "fg": "#23201A",
+  "fg2": "#4A4438",
+  "muted": "#6B6354",
+  "accent": "#B33A2B",
+  "accentDeep": "#8C2A1E",
+  "accentWash": "#F5E0D8",
+  "border": "#D9CBB2",
+  "teacher": "#B33A2B",
+  "parent": "#A63A45",
+  "ok": "#2E6B3F",
+  "bad": "#A32B22",
+  "shotBg": "#EFE5D2",
+  "shadow": "0 8px 24px rgba(74, 58, 32, .10)",
+  "teacherBadgeBg": "#F5E0D8",
+  "teacherBadgeFg": "#8C2A1E",
+  "parentBadgeBg": "#F4DEE1",
+  "parentBadgeFg": "#7E2833",
+  "teacherHint": "22 页 · 无 tabBar · 羊皮纸底",
+  "parentHint": "28 页 · 底部 tabBar · 暖纸底",
+  "readmeTitle": "小王子主题画廊（2026-10-27）",
+  "readmeLead": "这是 2026-10-25 全量页面原型的**小王子主题副本**：先整批复制原画廊，再替换 token 层并注入 50 条故事插图带；页面布局、文案、状态与接口说明保持原样。先看 [index.html](index.html) 画廊，配色与插图说明见 [_shared/palette.html](_shared/palette.html)。",
+  "readmeShared": "- 源批次：[../2026-10-27-starry-blue/](../2026-10-27-starry-blue/)\n- 配色与插图说明：[_shared/palette.html](_shared/palette.html)\n- 分镜与故事带源文件：[_shared/illustrations/](_shared/illustrations/)",
+  "designSystem": "user:nurture-planet-local / petitprince",
+  "heroImage": "_shared/illustrations/hero-gallery.svg",
+  "illustrations": [
+    {
+      "title": "小王子分镜 · 8 幕",
+      "note": "同一篇里每位客人只出现一次；每幕恰好一个朱砂焦点 · line 画风",
+      "layout": "scenes",
+      "items": [
+        { "src": "_shared/illustrations/scene-01-departure.svg", "title": "启程", "guest": "王子独行", "quote": "从这里出发" },
+        { "src": "_shared/illustrations/scene-02-rose.svg", "title": "玫瑰", "guest": "玫瑰", "quote": "你为它花的时间" },
+        { "src": "_shared/illustrations/scene-03-fox.svg", "title": "驯养", "guest": "狐狸", "quote": "用心去看" },
+        { "src": "_shared/illustrations/scene-04-letter.svg", "title": "来信", "guest": "飞行员", "quote": "有些话要写下来" },
+        { "src": "_shared/illustrations/scene-05-farewell.svg", "title": "告别", "guest": "蛇", "quote": "来去都有时辰" },
+        { "src": "_shared/illustrations/scene-06-watch.svg", "title": "值守", "guest": "点灯人", "quote": "到点就点灯" },
+        { "src": "_shared/illustrations/scene-07-keep.svg", "title": "收好", "guest": "王子独行", "quote": "把今天收好" },
+        { "src": "_shared/illustrations/scene-08-planet.svg", "title": "星球", "guest": "王子独行", "quote": "一个人也是星球" }
+      ]
+    },
+    {
+      "title": "页面故事带 · 12 条",
+      "note": "每条 390×84，按模块注入页面导航栏下方；同模块子页面复用同一条",
+      "layout": "bands",
+      "items": [
+        { "src": "_shared/illustrations/band-journey.svg", "title": "启程带", "guest": "工作台 · 首页" },
+        { "src": "_shared/illustrations/band-candle.svg", "title": "烛光带", "guest": "登录" },
+        { "src": "_shared/illustrations/band-letter.svg", "title": "来信带", "guest": "通知 · 消息" },
+        { "src": "_shared/illustrations/band-growth.svg", "title": "幼苗带", "guest": "成长记录" },
+        { "src": "_shared/illustrations/band-mirror.svg", "title": "镜面带", "guest": "相册 · 详情" },
+        { "src": "_shared/illustrations/band-knot.svg", "title": "绳结带", "guest": "请假 · 接送" },
+        { "src": "_shared/illustrations/band-kite.svg", "title": "风筝带", "guest": "亲子任务" },
+        { "src": "_shared/illustrations/band-bell.svg", "title": "铃铛带", "guest": "日历 · 审批" },
+        { "src": "_shared/illustrations/band-planets.svg", "title": "星球带", "guest": "班级 · 绑定" },
+        { "src": "_shared/illustrations/band-stars.svg", "title": "星空带", "guest": "更多 · 设置 · 网页" },
+        { "src": "_shared/illustrations/band-lamp.svg", "title": "灯柱带", "guest": "晨检" },
+        { "src": "_shared/illustrations/band-constellation.svg", "title": "星座带", "guest": "成长报告" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>消息 · 养成星球</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="mp-app" id="messages-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-statusbar__time">10:20</span>
+      <span class="mp-statusbar__icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" focusable="false">
+          <rect x="0" y="7.5" width="2.6" height="3.5" rx="1"></rect>
+          <rect x="4.8" y="5.4" width="2.6" height="5.6" rx="1"></rect>
+          <rect x="9.6" y="2.9" width="2.6" height="8.1" rx="1"></rect>
+          <rect x="14.4" y="0" width="2.6" height="11" rx="1"></rect>
+        </svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" focusable="false">
+          <path d="M1.2 4.3a10.3 10.3 0 0 1 13.6 0"></path>
+          <path d="M3.8 6.9a6.5 6.5 0 0 1 8.4 0"></path>
+          <path d="M6.4 9.4a2.8 2.8 0 0 1 3.2 0"></path>
+          <circle cx="8" cy="10.8" r="0.8" fill="currentColor" stroke="none"></circle>
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="none" focusable="false">
+          <rect x="0.6" y="0.7" width="21" height="10.6" rx="3.1" stroke="currentColor" stroke-width="1.2" opacity="0.45"></rect>
+          <rect x="2.5" y="2.6" width="17.2" height="6.8" rx="1.8" fill="currentColor"></rect>
+          <rect x="22.9" y="4.2" width="1.7" height="3.6" rx="0.85" fill="currentColor" opacity="0.45"></rect>
+        </svg>
+      </span>
+    </div>
+
+    <header class="page-bar">
+      <button class="page-bar__back" type="button" aria-label="返回" data-od-id="messages-back">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 5 8 12l7 7"></path>
+        </svg>
+      </button>
+      <span class="page-bar__title">消息</span>
+    </header>
+
+    <main class="mp-main" data-od-id="messages-main">
+      <div class="page-head" data-od-id="messages-header">
+        <h1 class="page-title" data-od-id="messages-title">消息</h1>
+        <p class="unread-count" aria-live="polite" data-od-id="messages-unread-count"><span data-unread-count>2</span> 条未读</p>
+      </div>
+
+      <div class="seg" role="group" aria-label="筛选消息" data-od-id="message-filter">
+        <button class="seg__item is-active" type="button" data-filter="all" aria-pressed="true" data-od-id="filter-all">全部</button>
+        <button class="seg__item" type="button" data-filter="system" aria-pressed="false" data-od-id="filter-system">系统</button>
+        <button class="seg__item" type="button" data-filter="teacher" aria-pressed="false" data-od-id="filter-teacher">老师</button>
+      </div>
+
+      <section class="inbox" aria-label="消息列表" data-od-id="message-list">
+        <button class="msg-row" type="button" data-category="teacher" data-unread="true" data-od-id="message-row-lilaoshi-sleep">
+          <span class="avatar avatar--sage" aria-hidden="true">李</span>
+          <span class="msg-body">
+            <span class="msg-head">
+              <span class="msg-sender">李老师</span>
+              <span class="unread-dot" aria-hidden="true"></span>
+              <span class="sr-only unread-label">未读</span>
+              <span class="msg-time">09:24</span>
+            </span>
+            <span class="msg-summary">乐乐今天午睡很好，起来自己叠了小被子</span>
+          </span>
+        </button>
+
+        <button class="msg-row has-separator" type="button" data-category="system" data-unread="true" data-od-id="message-row-system-pickup-code">
+          <span class="avatar avatar--system" aria-hidden="true">
+            <svg class="avatar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6.8 9.6a5.2 5.2 0 0 1 10.4 0c0 3.2 1.2 4.5 1.8 5.1.3.3.1.9-.4.9H5.4c-.5 0-.7-.6-.4-.9.6-.6 1.8-1.9 1.8-5.1Z"></path>
+              <path d="M10 18.3a2.2 2.2 0 0 0 4 0"></path>
+            </svg>
+          </span>
+          <span class="msg-body">
+            <span class="msg-head">
+              <span class="msg-sender">系统</span>
+              <span class="unread-dot" aria-hidden="true"></span>
+              <span class="sr-only unread-label">未读</span>
+              <span class="msg-time">昨天 16:40</span>
+            </span>
+            <span class="msg-summary">接送码已更新，可在接送页查看本学期的接送码</span>
+          </span>
+        </button>
+
+        <button class="msg-row has-separator" type="button" data-category="teacher" data-unread="false" data-od-id="message-row-wanglaoshi-art-class">
+          <span class="avatar avatar--terracotta" aria-hidden="true">王</span>
+          <span class="msg-body">
+            <span class="msg-head">
+              <span class="msg-sender">王老师</span>
+              <span class="msg-time">昨天 08:10</span>
+            </span>
+            <span class="msg-summary">明天请带水彩笔，美术课要画秋天的树</span>
+          </span>
+        </button>
+
+        <button class="msg-row has-separator" type="button" data-category="system" data-unread="false" data-od-id="message-row-system-growth-report">
+          <span class="avatar avatar--system" aria-hidden="true">
+            <svg class="avatar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6.8 9.6a5.2 5.2 0 0 1 10.4 0c0 3.2 1.2 4.5 1.8 5.1.3.3.1.9-.4.9H5.4c-.5 0-.7-.6-.4-.9.6-.6 1.8-1.9 1.8-5.1Z"></path>
+              <path d="M10 18.3a2.2 2.2 0 0 0 4 0"></path>
+            </svg>
+          </span>
+          <span class="msg-body">
+            <span class="msg-head">
+              <span class="msg-sender">系统</span>
+              <span class="msg-time">11-10</span>
+            </span>
+            <span class="msg-summary">成长报告已生成，看看乐乐这学期的四个发展维度</span>
+          </span>
+        </button>
+
+        <button class="msg-row has-separator" type="button" data-category="system" data-unread="false" data-od-id="message-row-principal-parent-meeting">
+          <span class="avatar avatar--default" aria-hidden="true">园</span>
+          <span class="msg-body">
+            <span class="msg-head">
+              <span class="msg-sender">园长</span>
+              <span class="msg-time">11-09</span>
+            </span>
+            <span class="msg-summary">11 月 21 日上午 9 点，多功能厅秋季家长会</span>
+          </span>
+        </button>
+      </section>
+
+      <p class="list-end" data-od-id="message-list-end">已显示全部消息</p>
+
+      <section class="empty-state" aria-labelledby="empty-title" data-od-id="messages-empty">
+        <svg class="empty-art" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-label="对话气泡线稿插画">
+          <circle cx="64" cy="64" r="64" fill="var(--sage-pale)"></circle>
+          <path d="M42 37h44c8.284 0 15 6.716 15 15v18c0 8.284-6.716 15-15 15H60.5L46.5 97V85H42c-8.284 0-15-6.716-15-15V52c0-8.284 6.716-15 15-15Z" fill="var(--surface-soft)" stroke="var(--fg)" stroke-width="2.4" stroke-linejoin="round"></path>
+          <path d="M44 55h32M44 65h22" stroke="var(--sage-deep)" stroke-width="2.4" stroke-linecap="round"></path>
+          <circle cx="82" cy="65" r="2.4" fill="var(--marigold)"></circle>
+        </svg>
+        <h2 class="empty-title" id="empty-title">暂时没有新消息</h2>
+        <p class="empty-desc">老师和园所的消息会出现在这里</p>
+        <button class="btn-primary" type="button" data-action="home" data-od-id="empty-home-cta">回到首页</button>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<meta charset="utf-8">
+<title>园所发展深访</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* layout: same field-document shell as the product card, indigo accent to tell them apart, 660px column */
+:root{
+  --paper:#F7F6F1;
+  --paper-2:#FFFFFF;
+  --ink:#1B201D;
+  --ink-2:#4B554E;
+  --ink-3:#7A857D;
+  --line:#DBDCD2;
+  --accent:#3D4E7A;
+  --accent-soft:#E7EAF3;
+  --clay:#9C5A2B;
+  --clay-soft:#F4E8DD;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"PingFang SC",monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141715; --paper-2:#1B1F1C; --ink:#E7EAE4; --ink-2:#B2BBB4; --ink-3:#828D85;
+    --line:#2C332E; --accent:#9DB0DE; --accent-soft:#1B2130; --clay:#D08C5C; --clay-soft:#2A211B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141715; --paper-2:#1B1F1C; --ink:#E7EAE4; --ink-2:#B2BBB4; --ink-3:#828D85;
+  --line:#2C332E; --accent:#9DB0DE; --accent-soft:#1B2130; --clay:#D08C5C; --clay-soft:#2A211B;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);
+  font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:660px;margin:0 auto;padding-block:0 72px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.hero{padding-block:36px 20px}
+.kicker{font:600 11px/1.4 var(--font-mono);letter-spacing:.12em;color:var(--accent);margin:0 0 14px}
+h1{font-size:31px;line-height:1.25;letter-spacing:-.01em;font-weight:650;margin:0 0 14px;text-wrap:balance}
+.lede{margin:0;color:var(--ink-2);font-size:15px;line-height:1.75;max-width:44ch}
+.lede strong{color:var(--ink);font-weight:600}
+.note{margin:18px 0 0;padding:12px 14px;background:var(--accent-soft);font-size:13px;line-height:1.7;color:var(--ink-2)}
+.note b{color:var(--ink);font-weight:650}
+
+.parkbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--paper);border-bottom:1px solid var(--line);padding-block:10px}
+.parkbar-in{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.parks{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;min-width:0;padding-bottom:2px}
+.parks::-webkit-scrollbar{display:none}
+.park{flex:none;border:1px solid var(--line);background:transparent;color:var(--ink-2);font:inherit;font-size:12.5px;padding:6px 11px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.park[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--paper-2);font-weight:600}
+.park-todo{opacity:.62}
+.count{flex:none;font:600 11px/1 var(--font-mono);color:var(--ink-3);letter-spacing:.04em}
+
+.sec{padding-block:30px 6px;border-top:1px solid var(--line)}
+.sec-head{display:flex;gap:11px;align-items:flex-start;margin-bottom:6px}
+.gnum{flex:none;width:23px;height:23px;margin-top:3px;display:grid;place-items:center;border:1px solid var(--accent);color:var(--accent);font:600 11px/1 var(--font-mono)}
+.sec h2{font-size:17.5px;line-height:1.35;font-weight:650;margin:0;text-wrap:balance}
+.why{margin:0 0 4px 34px;font-size:12.5px;line-height:1.65;color:var(--ink-3)}
+.why .mod{color:var(--accent);font-weight:600}
+
+.qs{list-style:none;margin:10px 0 0;padding:0}
+.q{display:grid;grid-template-columns:23px 1fr;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);min-width:0}
+.q:last-child{border-bottom:0}
+.q input[type=checkbox]{appearance:none;-webkit-appearance:none;width:19px;height:19px;margin:3px 0 0;border:1.5px solid var(--ink-3);border-radius:4px;background:transparent;cursor:pointer;position:relative;flex:none}
+.q input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+.q input[type=checkbox]:checked::after{content:"";position:absolute;left:5.5px;top:2px;width:5px;height:9px;border:solid var(--paper-2);border-width:0 2px 2px 0;transform:rotate(42deg)}
+.q label{font-size:14.5px;line-height:1.65;cursor:pointer;color:var(--ink);min-width:0}
+.q input:checked + label{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--line);text-decoration-thickness:1px}
+.tag{display:inline-block;font:600 10.5px/1.5 var(--font-mono);padding:1px 6px;margin-left:5px;border-radius:3px;white-space:nowrap;vertical-align:1px}
+.tag-keep{background:var(--clay-soft);color:var(--clay)}
+.tag-must{background:var(--clay);color:var(--paper-2)}
+
+.callout{margin:14px 0 0;background:var(--accent-soft);padding:11px 13px;font-size:13px;line-height:1.65;color:var(--ink-2)}
+.callout b{color:var(--ink);font-weight:650}
+
+.tool{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:16px}
+.tool h3{font-size:13px;font-weight:650;margin:0 0 3px}
+.tool .hint{font-size:12px;color:var(--ink-3);margin:0 0 14px}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+.field textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:6px;color:var(--ink);font:inherit;font-size:13.5px;line-height:1.6;padding:8px 10px;resize:vertical;min-height:40px}
+.field textarea::placeholder{color:var(--ink-3);opacity:.75}
+.field textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
+.out{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+pre.pv{margin:0 0 10px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px;font:12.5px/1.65 var(--font-mono);white-space:pre-wrap;word-break:break-word;color:var(--ink-2);max-height:260px;overflow:auto}
+.copy{width:100%;border:0;background:var(--accent);color:var(--paper-2);font:inherit;font-size:14px;font-weight:650;padding:11px;border-radius:8px;cursor:pointer}
+.copy:active{transform:translateY(1px)}
+.status{font-size:12px;color:var(--accent);margin:8px 0 0;min-height:16px}
+
+.rules{list-style:none;margin:10px 0 0;padding:0}
+.rules li{display:grid;grid-template-columns:23px 1fr;gap:11px;padding:9px 0;font-size:13.5px;line-height:1.65;color:var(--ink-2);border-bottom:1px solid var(--line)}
+.rules li:last-child{border-bottom:0}
+.rules li b{color:var(--ink);font-weight:650}
+.rules .rn{font:600 10.5px/1.9 var(--font-mono);color:var(--clay)}
+
+details.apx{margin-top:26px;border-top:1px solid var(--line);padding-top:18px}
+details.apx summary{cursor:pointer;font-size:13px;font-weight:650;color:var(--ink-2);list-style:none}
+details.apx summary::-webkit-details-marker{display:none}
+details.apx summary::before{content:"＋ ";color:var(--accent);font-family:var(--font-mono)}
+details.apx[open] summary::before{content:"− "}
+.pair{margin-top:12px;font-size:12.5px;line-height:1.75;color:var(--ink-3)}
+.pair b{color:var(--ink-2)}
+.foot{margin-top:28px;font-size:11.5px;color:var(--ink-3);line-height:1.7}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="kicker">2026.11.05 — 11.06 · 深访用</p>
+    <h1>园所发展深访</h1>
+    <p class="lede">这份不是每园都问的。挑<strong>一两家独立民办、园长愿意坐下来聊的园</strong>，二十分钟，问决策和取舍。</p>
+    <div class="note">
+      <b>和产品那份的分工：</b>产品清单问「机制和表格」——谁填、多久一次、交给谁；这份问「决策和取舍」——为什么这么定、当时放弃了什么、代价是什么。两份不要混着问。
+    </div>
+  </header>
+
+  <div class="parkbar">
+    <div class="parkbar-in">
+      <div class="parks" id="parks" role="group" aria-label="选择当前园所"></div>
+      <span class="count" id="count">已勾 0</span>
+    </div>
+  </div>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">0</span><h2>先判断这园值不值得深访</h2></div>
+    <p class="why">三个问题，两分钟。答案不对就换一家，别浪费这二十分钟。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="s1"><label for="s1">你们是独立办园，还是集团、学校下属的？</label></li>
+      <li class="q"><input type="checkbox" id="s2"><label for="s2">这几年你们园最大的变化是什么？</label></li>
+      <li class="q"><input type="checkbox" id="s3"><label for="s3">现在最头疼的一件事是什么？</label></li>
+    </ul>
+    <div class="callout">
+      高校或学校附属园（西浦、群星那一类）约束条件不同，经验未必搬得动。愿意讲「最头疼的事」的园长，才值得往下坐二十分钟。
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">A</span><h2>课程落地</h2></div>
+    <p class="why">课程决定家长凭什么多付钱。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="a1"><label for="a1">课程是引进的还是自己研发的？引进的那套，落地时改了多少、为什么改？</label></li>
+      <li class="q"><input type="checkbox" id="a2"><label for="a2">一周课表怎么排？领域是分开上，还是融进主题里？<span class="tag tag-must">要一张周计划</span></label></li>
+      <li class="q"><input type="checkbox" id="a3"><label for="a3">教研会多久开一次、谁主持？会上解决的是「课怎么上」还是「孩子怎么了」？有记录吗？</label></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">B</span><h2>师资</h2></div>
+    <p class="why">师资决定课程能不能落地。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="b1"><label for="b1">招老师最看重什么？招错的成本有多大——多久能发现、怎么处理？</label></li>
+      <li class="q"><input type="checkbox" id="b2"><label for="b2">新老师从入职到独立带班要多久？中间谁带、带什么？有带教制度吗？<span class="tag tag-keep">要一份</span></label></li>
+      <li class="q"><input type="checkbox" id="b3"><label for="b3">老师一般待几年？走得最多的是哪一类？你们靠什么留人？</label></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">C</span><h2>招生</h2></div>
+    <p class="why">招生决定愿意多付钱的人找不找得到你。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="c1"><label for="c1">家长主要从哪几个渠道来？转介绍大概占几成？（问比例，不问绝对数）</label></li>
+      <li class="q"><input type="checkbox" id="c2"><label for="c2">从第一次到访到交钱，中间经历哪几步？谁在跟、跟多久？</label></li>
+      <li class="q"><input type="checkbox" id="c3"><label for="c3">靠什么让家长相信你们值这个价？有没有试读或体验课？退费怎么处理？</label></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">D</span><h2>管理与督导</h2></div>
+    <p class="why">时间允许就问，问不完不勉强。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="d1"><label for="d1">你一周时间最多花在哪三件事上？听课占多少？</label></li>
+      <li class="q"><input type="checkbox" id="d2"><label for="d2">怎么判断一个班带得好不好？看什么、多久看一次、留痕吗？</label></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">E</span><h2>晚上十分钟 · 决策四问</h2></div>
+    <p class="why">不记流程，记「他为什么这么选」。填完复制，粘进微信。</p>
+
+    <div class="tool">
+      <h3 id="toolname">当前园所</h3>
+      <p class="hint">只写你亲耳听到的。没问到的留空。</p>
+
+      <div class="field">
+        <label for="n1">① 他们的做法（一句话）</label>
+        <textarea id="n1" rows="2" placeholder="例：课程引进后砍掉一半，只留主题框架，其余自己编"></textarea>
+      </div>
+      <div class="field">
+        <label for="n2">② 他们放弃了什么、没做的是什么</label>
+        <textarea id="n2" rows="2" placeholder="例：放弃了分科教学和外教全天带班"></textarea>
+      </div>
+      <div class="field">
+        <label for="n3">③ 代价或副作用</label>
+        <textarea id="n3" rows="2" placeholder="例：老师备课时间翻倍，第一年走了三个"></textarea>
+      </div>
+      <div class="field">
+        <label for="n4">④ 我们照做需要什么条件（人 / 钱 / 时间）</label>
+        <textarea id="n4" rows="2" placeholder="例：需要每班配一个教研组长，至少一年过渡"></textarea>
+      </div>
+      <div class="field">
+        <label for="n5">⑤ 一句原话（带上下文）</label>
+        <textarea id="n5" rows="2" placeholder="例：「家长不会为理念付钱，只会为看得见的东西付钱」"></textarea>
+      </div>
+
+      <div class="out">
+        <pre class="pv" id="pv" aria-live="polite"></pre>
+        <button type="button" class="copy" id="copy">复制这段，发微信</button>
+        <p class="status" id="status" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">F</span><h2>三条纪律</h2></div>
+    <ul class="rules">
+      <li><span class="rn">01</span><span><b>问结构，不问数字。</b>「老师分几档、按什么分」可以问；「一个月多少钱」不要问。数字对方会防，结构对方愿意讲。</span></li>
+      <li><span class="rn">02</span><span><b>问取舍，不问评价。</b>「你们为什么选了这条」有答案；「你们这个好不好」只有客套。</span></li>
+      <li><span class="rn">03</span><span><b>只挑一两家。</b>每园都问会变成走过场，也容易被对方察觉你在摸底盘。</span></li>
+    </ul>
+  </section>
+
+  <details class="apx">
+    <summary>两份清单怎么配合用</summary>
+    <p class="pair">
+      <b>产品清单</b>（松绿色）：五个园都用，边走边问，目标是带回表格和机制。<br>
+      <b>这份</b>（靛蓝色）：挑一到两家，坐下来聊二十分钟，目标是带回决策和代价。<br>
+      晚上回传时分成两条消息发，不要混在同一段里——混在一起，回来就分不清哪句是流程、哪句是取舍。
+    </p>
+  </details>
+
+  <p class="foot">配套：2026-11-04-高端园参访观察清单（产品向）</p>
+</div>
+
+<script>
+(function(){
+  var PARKS=[
+    {id:"lidesi",  short:"理德斯", full:"金华理德斯幼儿园"},
+    {id:"qunxing", short:"群星",   full:"义乌群星外国语附属幼儿园"},
+    {id:"sanglu",  short:"桑庐",   full:"杭州桑庐幼儿园"},
+    {id:"xipu",    short:"西浦",   full:"苏州西浦附属幼儿园"},
+    {id:"mengqi",  short:"蒙琪星", full:"无锡蒙琪星幼儿园（待定）", todo:true}
+  ];
+  var KEY="kg-devvisit-2026-11-05-v1-";
+  var ids=["s1","s2","s3","a1","a2","a3","b1","b2","b3","c1","c2","c3","d1","d2"];
+  var notes=["n1","n2","n3","n4","n5"];
+
+  var cur=PARKS[0].id;
+  var state={ticks:{},note:{}};
+
+  function blank(){return {ticks:{},note:{}};}
+  function load(id){
+    try{
+      var raw=localStorage.getItem(KEY+id);
+      if(!raw) return blank();
+      var o=JSON.parse(raw);
+      return {ticks:(o&&o.ticks)||{}, note:(o&&o.note)||{}};
+    }catch(e){ return blank(); }
+  }
+  function save(){ try{ localStorage.setItem(KEY+cur, JSON.stringify(state)); }catch(e){} }
+
+  var parksEl=document.getElementById("parks");
+  var countEl=document.getElementById("count");
+  var toolname=document.getElementById("toolname");
+  var pv=document.getElementById("pv");
+  var statusEl=document.getElementById("status");
+
+  PARKS.forEach(function(p){
+    var b=document.createElement("button");
+    b.type="button";
+    b.className="park"+(p.todo?" park-todo":"");
+    b.textContent=p.short;
+    b.setAttribute("aria-pressed", p.id===cur?"true":"false");
+    b.dataset.id=p.id;
+    b.addEventListener("click",function(){ switchTo(p.id); });
+    parksEl.appendChild(b);
+  });
+
+  function switchTo(id){
+    cur=id; state=load(id);
+    Array.prototype.forEach.call(parksEl.children,function(b){
+      b.setAttribute("aria-pressed", b.dataset.id===cur?"true":"false");
+    });
+    paint();
+  }
+
+  function paint(){
+    ids.forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.checked=!!state.ticks[id];
+    });
+    notes.forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.value=(state.note&&state.note[id])||"";
+    });
+    var p=PARKS.filter(function(x){return x.id===cur;})[0];
+    toolname.textContent=p?p.full:"";
+    updateCount();
+    renderPreview();
+  }
+
+  function updateCount(){
+    var n=0;
+    ids.forEach(function(id){ if(state.ticks[id]) n++; });
+    countEl.textContent="已勾 "+n;
+  }
+
+  function renderPreview(){
+    var p=PARKS.filter(function(x){return x.id===cur;})[0];
+    function v(s){ s=(s||"").trim(); return s?s:"—"; }
+    var lines=[
+      "【"+ (p?p.full:"") +"】园所发展深访",
+      "① 做法："+v(state.note.n1),
+      "② 放弃/没做："+v(state.note.n2),
+      "③ 代价："+v(state.note.n3),
+      "④ 我们照做的条件："+v(state.note.n4),
+      "⑤ 原话："+v(state.note.n5)
+    ];
+    pv.textContent=lines.join("\n");
+  }
+
+  document.addEventListener("change",function(e){
+    var t=e.target;
+    if(t && t.type==="checkbox" && ids.indexOf(t.id)>-1){
+      if(t.checked) state.ticks[t.id]=true; else delete state.ticks[t.id];
+      save(); updateCount();
+    }
+  });
+
+  document.addEventListener("input",function(e){
+    var t=e.target;
+    if(t && notes.indexOf(t.id)>-1){
+      if(!state.note) state.note={};
+      state.note[t.id]=t.value;
+      save(); renderPreview();
+    }
+  });
+
+  document.getElementById("copy").addEventListener("click",function(){
+    var text=pv.textContent||"";
+    statusEl.textContent="";
+    function done(){ statusEl.textContent="已复制，去微信粘贴吧"; }
+    function fallback(){
+      try{
+        var r=document.createRange(); r.selectNodeContents(pv);
+        var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        statusEl.textContent="已选中，长按复制";
+      }catch(e){ statusEl.textContent="复制失败，请长按选中上面的文字"; }
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    }else{ fallback(); }
+  });
+
+  switchTo(cur);
+})();
+</script>

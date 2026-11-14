@@ -1,0 +1,20 @@
+{
+  "slug": "parent-11-growth",
+  "surface": "parent",
+  "title": "成长时光",
+  "projectId": "7ac22b83-1ef7-435c-b567-80444dce7eb0",
+  "conversationId": "e7e20d0c-0bf1-46c9-89fc-c7f040c01637",
+  "runId": "a2ec2e54-28fd-43fe-96e4-a659983ca04a",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 527,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/7ac22b83-1ef7-435c-b567-80444dce7eb0",
+  "previewRendered": true
+}

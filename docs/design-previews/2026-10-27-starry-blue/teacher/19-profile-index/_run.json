@@ -1,0 +1,20 @@
+{
+  "slug": "teacher-profile-index",
+  "surface": "teacher",
+  "title": "我的",
+  "projectId": "ec08ca17-619d-4e60-8090-1ea2cda69799",
+  "conversationId": "02e6f51b-4837-4de1-9931-a26cfb2930e2",
+  "runId": "11971013-67f8-4f2a-a11c-9ecad3385026",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 727,
+  "files": [
+    "index.html",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/ec08ca17-619d-4e60-8090-1ea2cda69799",
+  "previewRendered": true,
+  "handAuthored": true,
+  "handAuthoredReason": "OpenDesign 两次 run 均只产出 index.html + tokens.css，缺 styles.css / app.js"
+}

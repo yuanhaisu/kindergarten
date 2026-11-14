@@ -21,7 +21,7 @@ import (
 
 func TestMaskPhone(t *testing.T) {
 	assert.Equal(t, "138****8000", maskPhone("13800138000"))
-	assert.Equal(t, "13", maskPhone("13"))           // short phone
+	assert.Equal(t, "13", maskPhone("13")) // short phone
 	assert.Equal(t, "130****0001", maskPhone("13000000001"))
 }
 

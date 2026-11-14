@@ -1,0 +1,554 @@
+/* 养成星球 · 家长端 DNA v1 — binding token contract (frozen 2026-11-12)
+ * Source of truth: kindergarten/docs/design-dna/2026-11-11-kinderly/DESIGN.md
+ *
+ * Paste the unscoped :root block below verbatim into the first <style> of every
+ * artifact. Do not invent tokens, do not redefine values, do not write raw hex
+ * outside this block. Serif weights are 400 only — never bold a serif.
+ */
+
+:root {
+  /* ---------- surfaces ---------- */
+  --bg: #ECE6D7;               /* bone canvas — every page background */
+  --surface: #FFFFFF;          /* raised card */
+  --surface-soft: #FCFAF4;     /* quiet section card */
+  --surface-muted: #F2EDDE;    /* tracks, inactive fill, secondary panels */
+  --skeleton: #E4E2D6;         /* static skeleton block, no animation */
+
+  /* ---------- ink ---------- */
+  --fg: #173220;               /* pine — primary text, primary button, icons */
+  --fg-deep: #0D2014;          /* deepest ink, sparing */
+  --fg-soft: #3D5141;          /* long-form secondary body on bone */
+  --muted: #55616F;            /* secondary text on bone — 5.07:1 */
+  --muted-on-surface: #5E6B7A; /* secondary text on white card — 5.44:1 */
+  --icon-soft: #728173;        /* icons, dividers, or text >= 24px ONLY */
+  --decor-blue: #8A94A3;       /* decoration only — never text */
+
+  /* ---------- accents ---------- */
+  --accent: #173220;           /* primary CTA = pine, never orange */
+  --accent-contrast: #ECE6D7;  /* bone text on pine */
+  --sage: #8DA386;
+  --sage-deep: #5C7359;
+  --sage-soft: #CFD9C5;
+  --sage-pale: #E5EFE9;
+  --marigold: #DDB14A;         /* reward / completed / celebration */
+  --marigold-soft: #EFD485;
+  --terracotta: #C36540;       /* icon, illustration fill, soft ground only */
+  --terracotta-text: #A64E2E;  /* terracotta as text — 4.5:1 on bone */
+  --terracotta-soft: #E5BCA1;  /* "异常" tag ground; text on it is pine */
+  --orange: #F97316;           /* attention layer ONLY: dot, badge, warning icon */
+  --orange-wash: rgba(249, 115, 22, 0.12);
+  --orange-text: #A2480A;      /* text on orange wash — 5.06:1 */
+  --danger: #A8323A;
+  --danger-wash: rgba(168, 50, 58, 0.09);
+  --info: #5E6B7A;
+  --info-wash: rgba(138, 148, 163, 0.14);
+
+  /* ---------- hairlines (no shadows on cards) ---------- */
+  --hair: rgba(23, 50, 32, 0.10);
+  --hair-strong: rgba(23, 50, 32, 0.22);
+  --hair-soft: rgba(23, 50, 32, 0.07);
+
+  /* ---------- typography ---------- */
+  --font-display: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+  --font-serif: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+  --font-sans: "Geist", "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --text-h1: 30px;
+  --leading-h1: 1.35;
+  --tracking-h1: 0;
+  --text-h2: 21px;
+  --leading-h2: 1.4;
+  --text-h3: 18px;
+  --leading-h3: 1.4;
+  --text-serif-body: 17px;
+  --leading-serif-body: 1.8;
+  --tracking-serif-body: 0;
+  --text-body: 15px;
+  --leading-body: 1.65;
+  --text-small: 13px;
+  --leading-small: 1.6;
+  --text-caption: 11.5px;
+  --leading-caption: 1.5;
+  --text-overline: 11px;
+  --tracking-overline: 0.14em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* ---------- spacing ---------- */
+  --page-x: 20px;
+  --page-top: 8px;
+  --section-gap: 26px;
+  --card-gap: 12px;
+  --card-pad-x: 20px;
+  --card-pad-y: 18px;
+  --row-gap: 10px;
+
+  /* ---------- shape ---------- */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-card: 20px;
+  --radius-lg: 26px;
+  --radius-pill: 999px;
+
+  /* ---------- elevation: cards have none ---------- */
+  --shadow-card: none;
+  --shadow-float: 0 10px 30px -14px rgba(23, 50, 32, 0.35); /* floating tab bar only */
+
+  /* ---------- motion ---------- */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-press: 150ms;
+  --motion-sheet-in: 300ms;
+  --motion-sheet-out: 200ms;
+}
+
+/* ---------- shell ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  color-scheme: light;
+}
+
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.mp-app {
+  width: 390px;
+  height: 844px;
+  max-width: 100vw;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ---------- status bar ---------- */
+
+.mp-statusbar {
+  flex: 0 0 44px;
+  height: 44px;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--fg);
+}
+
+.mp-statusbar__time {
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-statusbar__icons {
+  display: block;
+  width: 73px;
+  height: 16px;
+}
+
+/* ---------- page shell ---------- */
+
+.mp-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--page-top) var(--page-x) 48px;
+  scrollbar-width: none;
+}
+
+.mp-main::-webkit-scrollbar {
+  display: none;
+}
+
+.page-bar {
+  height: 44px;
+  margin: 0 -12px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+}
+
+.back-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--fg);
+  cursor: pointer;
+  transition: opacity var(--motion-press) var(--ease-out);
+}
+
+.back-button:active {
+  opacity: 0.58;
+}
+
+.back-button:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.page-bar__title {
+  overflow: hidden;
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-bar__tail {
+  width: 44px;
+  height: 44px;
+}
+
+/* ---------- page header ---------- */
+
+.page-header {
+  margin-top: 14px;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--tracking-h1);
+  font-synthesis: none;
+  text-wrap: balance;
+}
+
+.page-subtitle {
+  max-width: 340px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+  text-wrap: pretty;
+}
+
+.hl {
+  padding: 0 3px;
+  background: rgba(141, 163, 134, 0.28);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ---------- authorized people ---------- */
+
+.person-card {
+  margin-top: 24px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-card);
+}
+
+.person-row {
+  width: 100%;
+  min-height: 76px;
+  padding: 15px 16px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 18px;
+  column-gap: 12px;
+  align-items: center;
+  border-top: 1px solid var(--hair-soft);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-press) var(--ease-out);
+}
+
+.person-row:first-child {
+  border-top: 0;
+}
+
+.person-row:active {
+  background: var(--surface-soft);
+}
+
+.person-row:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -3px;
+  border-radius: 18px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: var(--weight-regular);
+  line-height: 1;
+  font-synthesis: none;
+}
+
+.avatar--default {
+  background: var(--surface-muted);
+}
+
+.avatar--sage {
+  background: var(--sage-soft);
+}
+
+.avatar--clay {
+  background: var(--terracotta-soft);
+}
+
+.avatar--plain {
+  background: var(--surface);
+  border: 1px solid var(--hair-strong);
+  color: var(--muted-on-surface);
+}
+
+.person-row__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.person-row__head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.person-row__name {
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+}
+
+.person-row__meta {
+  color: var(--muted-on-surface);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.person-row__chevron {
+  flex: none;
+  justify-self: end;
+  color: var(--icon-soft);
+}
+
+.tag {
+  flex: none;
+  height: 22px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tag--approved {
+  background: var(--sage-pale);
+}
+
+.tag--pending {
+  background: var(--orange-wash);
+}
+
+.tag--rejected {
+  background: var(--terracotta-soft);
+}
+
+/* ---------- primary action & note ---------- */
+
+.primary-button {
+  width: 100%;
+  height: 52px;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: opacity var(--motion-press) var(--ease-out);
+}
+
+.primary-button:active {
+  opacity: 0.84;
+}
+
+.primary-button:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+}
+
+.info-note {
+  margin-top: 14px;
+  padding: 14px 15px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid var(--hair-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  color: var(--muted-on-surface);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.info-note__icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--sage-deep);
+}
+
+/* ---------- empty state ---------- */
+
+.empty-state {
+  margin-top: 34px;
+}
+
+.empty-state__illustration {
+  width: 156px;
+  height: 156px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hair-soft);
+  border-radius: 50%;
+  background: var(--surface-soft);
+}
+
+.empty-state__illustration svg {
+  display: block;
+  width: 128px;
+  height: 128px;
+}
+
+.ill--ground {
+  stroke: var(--sage-deep);
+  opacity: 0.28;
+}
+
+.ill--sage {
+  stroke: var(--sage);
+}
+
+.ill--clay {
+  stroke: var(--terracotta);
+}
+
+.ill--marigold {
+  stroke: var(--marigold);
+}
+
+.ill-fill--marigold {
+  fill: var(--marigold);
+  stroke: none;
+}
+
+.empty-state__title {
+  margin: 24px 0 0;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h2);
+  letter-spacing: 0;
+  font-synthesis: none;
+  text-wrap: balance;
+}
+
+.empty-state__copy {
+  max-width: 310px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+  text-wrap: pretty;
+}
+
+.empty-state__cta {
+  margin-top: 28px;
+}
+
+/* ---------- motion preferences ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .back-button,
+  .person-row,
+  .primary-button {
+    transition-duration: 0.01ms;
+  }
+}

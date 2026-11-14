@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 抽象版：三道递减的横条——记录退成「一行行长出来」的进度感，不再有竖线 -->
+  <rect x="20" y="28" width="80" height="15" rx="7.5" fill="#000"/>
+  <rect x="20" y="52" width="60" height="15" rx="7.5" fill="#000"/>
+  <rect x="20" y="76" width="40" height="15" rx="7.5" fill="#000"/>
+</svg>

@@ -37,10 +37,10 @@ type CalendarEvent struct {
 	// ClassID 班级事件为真实班级 id；园级事件为 NULL（default:null 使 0 在插入时省略该列）。
 	// 表上有外键 fk_calendar_events_class（→ classes.id, RESTRICT），MySQL 外键对 NULL 不检查，
 	// 因此园级事件既不受班级约束、真实班级行仍受 RESTRICT 保护。
-	ClassID     uint64    `json:"class_id" gorm:"index;uniqueIndex:uk_calendar_slot,priority:1;default:null"`
+	ClassID uint64 `json:"class_id" gorm:"index;uniqueIndex:uk_calendar_slot,priority:1;default:null"`
 	// CreatorID 系统物化（课表同步）行可为 NULL（default:null 使 0 在插入时省略该列）；
 	// 表上有外键 fk_calendar_events_creator（→ users.id, RESTRICT），外键对 NULL 不检查。
-	CreatorID uint64 `json:"creator_id" gorm:"default:null"`
+	CreatorID   uint64    `json:"creator_id" gorm:"default:null"`
 	Title       string    `json:"title" gorm:"size:200;not null"`
 	Description string    `json:"description" gorm:"type:text"`
 	EventType   EventType `json:"event_type" gorm:"size:20;not null"`

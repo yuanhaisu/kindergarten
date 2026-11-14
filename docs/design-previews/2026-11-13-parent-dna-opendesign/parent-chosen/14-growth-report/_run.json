@@ -1,0 +1,20 @@
+{
+  "slug": "parent-14-growth-report",
+  "surface": "parent",
+  "title": "成长报告",
+  "projectId": "cfaf781d-047d-4fe7-ac3f-29eb92b35efa",
+  "conversationId": "ee0de42a-0a6b-4a8e-8702-13d1fb20f045",
+  "runId": "12ddff38-984f-4335-81f1-211c1c215624",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 462,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/cfaf781d-047d-4fe7-ac3f-29eb92b35efa",
+  "previewRendered": true
+}

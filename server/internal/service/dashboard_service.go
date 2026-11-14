@@ -74,11 +74,11 @@ type dashboardOverviewToday struct {
 }
 
 type dashboardOverviewThisMonth struct {
-	AvgAttendanceRate  string  `json:"avg_attendance_rate"`
-	TotalGrowthLogs    int64   `json:"total_growth_logs"`
-	TotalPointsAwarded int64   `json:"total_points_awarded"`
-	NewStudents        int64   `json:"new_students"`
-	NewParents         int64   `json:"new_parents"`
+	AvgAttendanceRate  string `json:"avg_attendance_rate"`
+	TotalGrowthLogs    int64  `json:"total_growth_logs"`
+	TotalPointsAwarded int64  `json:"total_points_awarded"`
+	NewStudents        int64  `json:"new_students"`
+	NewParents         int64  `json:"new_parents"`
 }
 
 type DashboardOverviewResp struct {
@@ -197,10 +197,10 @@ func (s *DashboardService) Overview(ctx context.Context, kindergartenID uint64) 
 // --- GET /admin/dashboard/attendance-trend ---
 
 type AttendanceTrendPoint struct {
-	Date   string `json:"date"`
-	Present int64 `json:"present"`
-	Leave   int64 `json:"leave"`
-	Absent  int64 `json:"absent"`
+	Date    string `json:"date"`
+	Present int64  `json:"present"`
+	Leave   int64  `json:"leave"`
+	Absent  int64  `json:"absent"`
 	Rate    string `json:"rate"`
 }
 
@@ -338,13 +338,13 @@ type GrowthStatsTopClass struct {
 }
 
 type GrowthStatsResp struct {
-	Period         string               `json:"period"`
-	TotalLogs      int64                `json:"total_logs"`
-	TotalMedia     int64                `json:"total_media"`
-	TotalLikes     int64                `json:"total_likes"`
-	TotalComments  int64                `json:"total_comments"`
-	DailyAvgLogs   float64              `json:"daily_avg_logs"`
-	TopClasses     []GrowthStatsTopClass `json:"top_classes"`
+	Period        string                `json:"period"`
+	TotalLogs     int64                 `json:"total_logs"`
+	TotalMedia    int64                 `json:"total_media"`
+	TotalLikes    int64                 `json:"total_likes"`
+	TotalComments int64                 `json:"total_comments"`
+	DailyAvgLogs  float64               `json:"daily_avg_logs"`
+	TopClasses    []GrowthStatsTopClass `json:"top_classes"`
 }
 
 func growthPeriodWindow(period string, loc *time.Location, now time.Time) (from, to time.Time) {

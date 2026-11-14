@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- v1 窄缝连通：环上 24° 的缝，茎从左切面长出来，右切面留一条看得见的缝 -->
+  <path d="M 110.1 202.1 A 86 86 0 1 1 145.9 202.1"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 111 204 L 127 157" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 127 161 C 129 141 146 123 176 115 C 176 141 155 159 127 161 Z" fill="#000"/>
+  <path d="M 127 157 C 125 141 112 127 86 119 C 86 141 103 155 127 157 Z" fill="#000"/>
+</svg>

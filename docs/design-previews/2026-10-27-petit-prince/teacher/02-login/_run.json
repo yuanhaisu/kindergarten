@@ -1,0 +1,24 @@
+{
+  "slug": "teacher-login",
+  "surface": "teacher",
+  "title": "老师登录",
+  "projectId": "c216dfe4-49bf-4c49-8aa5-fe27a4c08b02",
+  "conversationId": "2cb200e0-5a0f-4d76-a031-b3b71bd8baf4",
+  "runId": "c6550ca4-863e-46f9-a57e-d92c14284839",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 166,
+  "files": [
+    ".file-versions/0eb547304658805aad788d32/0001-026e25e0-9be0-43e1-8b58-7d30a291d948.html",
+    ".file-versions/0eb547304658805aad788d32/manifest.json",
+    ".mcp.json",
+    "app.js",
+    "index.html",
+    "index.html.artifact.json",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/c216dfe4-49bf-4c49-8aa5-fe27a4c08b02",
+  "previewRendered": true
+}

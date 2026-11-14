@@ -203,7 +203,7 @@ func (r *NoticeRepo) ListNotices(
 			n.published_at,
 			n.created_at,
 			(SELECT COUNT(DISTINCT rl.user_id) FROM notice_read_logs rl WHERE rl.notice_id = n.id) AS read_users,
-			`+noticeTargetParentTotalSQL+` AS parent_total`).
+			` + noticeTargetParentTotalSQL + ` AS parent_total`).
 		Order("n.created_at DESC, n.id DESC").
 		Offset(offset).Limit(limit)
 	var rows []NoticeListRow

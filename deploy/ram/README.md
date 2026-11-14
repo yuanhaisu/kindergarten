@@ -52,7 +52,7 @@ RAM 控制台 → 权限管理 → 权限策略 → 创建策略。
 | `<sls-project>` | SLS Project 名 |
 | `<acr-instance-id>` / `<acr-namespace>` | ACR 实例 ID 与命名空间 |
 | `<domain>` | 你的域名，例如 `nurtureplanet.cn` |
-| `<security-group-id>` | 两台 ECS 共用 `sg-7xvjc9ug5rtvox03hy6w`（已探明） |
+| `<security-group-id>` | 两台 ECS 共用同一个安全组（已探明） |
 
 ### 3. 绑定策略
 
@@ -121,7 +121,7 @@ icacls "$env:USERPROFILE\.aliyun\config.json" /inheritance:r /grant:r "$env:USER
 ```powershell
 aliyun sts GetCallerIdentity --profile mcp-readonly
 aliyun ecs DescribeInstances --RegionId cn-guangzhou `
-  --InstanceIds '["i-7xv06thh5tsvzwnigrjz","i-7xvbga12t596lzkbjt4r"]' `
+  --InstanceIds '["<ecs-instance-id-a>","<ecs-instance-id-b>"]' `
   --profile mcp-readonly
 ```
 
@@ -130,7 +130,7 @@ aliyun ecs DescribeInstances --RegionId cn-guangzhou `
 ```powershell
 # 1) 打标签
 aliyun ecs TagResources --RegionId cn-guangzhou --ResourceType instance `
-  --ResourceId.1 i-7xv06thh5tsvzwnigrjz --Tag.1.Key MCPVerify --Tag.1.Value 1 `
+  --ResourceId.1 <ecs-instance-id-a> --Tag.1.Key MCPVerify --Tag.1.Value 1 `
   --profile mcp-operator
 
 # 2) 用只读身份确认标签存在（应返回 TotalCount: 1）
@@ -139,7 +139,7 @@ aliyun ecs DescribeInstances --RegionId cn-guangzhou `
 
 # 3) 删标签
 aliyun ecs UntagResources --RegionId cn-guangzhou --ResourceType instance `
-  --ResourceId.1 i-7xv06thh5tsvzwnigrjz --TagKey.1 MCPVerify `
+  --ResourceId.1 <ecs-instance-id-a> --TagKey.1 MCPVerify `
   --profile mcp-operator
 
 # 4) 再次确认（应返回 TotalCount: 0）

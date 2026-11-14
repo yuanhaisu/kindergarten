@@ -42,11 +42,11 @@ func (h *Handler) GetAttendanceOverview(c *gin.Context) {
 }
 
 type attendanceRecordsQuery struct {
-	ClassID   uint64 `form:"class_id"`
-	Date      string `form:"date"`
-	Status    string `form:"status"`
-	Page      int    `form:"page"`
-	PageSize  int    `form:"page_size"`
+	ClassID  uint64 `form:"class_id"`
+	Date     string `form:"date"`
+	Status   string `form:"status"`
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
 }
 
 func (h *Handler) GetAttendanceRecords(c *gin.Context) {

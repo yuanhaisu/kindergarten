@@ -92,7 +92,7 @@
     "id": 1,
     "date": "2026-03-19",
     "content": "今天和爸爸一起读了《小王子》第三章",
-    "media_url": "https://cdn.example.com/task/checkin/1.jpg",
+    "media_url": "https://cdn.example.com/task/checkin/1.jpg", // 1 小时签名 URL
     "public_status": "pending",
     "public_visible": false,
     "created_at": "2026-03-19T20:30:00Z"
@@ -103,7 +103,7 @@
       "ritual": "voice",
       "sticker_key": "",
       "content": "今天读得真认真",
-      "media_url": "https://cdn.example.com/task/voice/10.mp3",
+      "media_url": "https://cdn.example.com/task/voice/10.mp3", // 1 小时签名 URL
       "response_type": "single",
       "teacher": { "nickname": "王老师" },
       "my_reaction": "",
@@ -204,7 +204,7 @@
       "id": 1,
       "date": "2026-03-19",
       "content": "今天和爸爸一起读了《小王子》第三章",
-      "media_url": "https://cdn.example.com/task/checkin/1.jpg",
+      "media_url": "https://cdn.example.com/task/checkin/1.jpg", // 1 小时签名 URL
       "response_id": 10,
       "student_name": "王小明",
       "is_public_requested": false,

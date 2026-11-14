@@ -1,0 +1,20 @@
+{
+  "slug": "parent-pickup-authorized",
+  "surface": "parent",
+  "title": "授权接送人",
+  "projectId": "b76ee413-c1e5-44ab-a5c4-c77d80f72d13",
+  "conversationId": "c5c422a9-b12b-4435-9d83-c7e104c5f62b",
+  "runId": "ab7f7732-193c-45c7-aecc-75b9da861b7b",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 542,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/b76ee413-c1e5-44ab-a5c4-c77d80f72d13",
+  "previewRendered": true
+}

@@ -1,0 +1,20 @@
+{
+  "slug": "parent-19-pickup-authorized",
+  "surface": "parent",
+  "title": "可接送人",
+  "projectId": "b9e7768c-5532-4e70-9bc1-3e1b838b21b7",
+  "conversationId": "99f6b4ae-a64d-479d-9f87-af18065425ef",
+  "runId": "0ed9b0eb-368b-441a-b476-443999f3d1b0",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 286,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/b9e7768c-5532-4e70-9bc1-3e1b838b21b7",
+  "previewRendered": true
+}

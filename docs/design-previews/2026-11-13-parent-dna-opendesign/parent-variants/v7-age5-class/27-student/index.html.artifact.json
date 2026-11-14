@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "parent-variants/v7-age5-class/27-student/index.html",
+  "entry": "parent-variants/v7-age5-class/27-student/index.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-11-14T09:42:33.539Z",
+  "updatedAt": "2026-11-14T09:42:33.539Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

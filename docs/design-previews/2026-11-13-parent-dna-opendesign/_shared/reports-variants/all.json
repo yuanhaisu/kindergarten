@@ -1,0 +1,55 @@
+{
+  "group": "all",
+  "results": [
+    {
+      "label": "v1-leave-day/01-home",
+      "status": "skipped",
+      "elapsedSec": 552
+    },
+    {
+      "label": "v1-leave-day/17-pickup",
+      "status": "succeeded",
+      "elapsedSec": 591
+    },
+    {
+      "label": "v2-task-points/21-tasks",
+      "status": "succeeded",
+      "elapsedSec": 651
+    },
+    {
+      "label": "v2-task-points/24-points",
+      "status": "succeeded",
+      "elapsedSec": 941
+    },
+    {
+      "label": "v3-notice-signup/07-notice-detail",
+      "status": "succeeded",
+      "elapsedSec": 466
+    },
+    {
+      "label": "v4-settings-simple/29-settings",
+      "status": "succeeded",
+      "elapsedSec": 1227
+    },
+    {
+      "label": "v5-report-month/14-growth-report",
+      "status": "succeeded",
+      "elapsedSec": 501
+    },
+    {
+      "label": "v6-female-child/27-student",
+      "status": "succeeded",
+      "elapsedSec": 663
+    },
+    {
+      "label": "v7-age5-class/27-student",
+      "status": "succeeded",
+      "elapsedSec": 372
+    },
+    {
+      "label": "v8-single-child/31-profile",
+      "status": "succeeded",
+      "elapsedSec": 641
+    }
+  ]
+}

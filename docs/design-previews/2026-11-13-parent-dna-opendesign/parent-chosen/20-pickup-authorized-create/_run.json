@@ -1,0 +1,20 @@
+{
+  "slug": "parent-20-pickup-authorized-create",
+  "surface": "parent",
+  "title": "添加授权人",
+  "projectId": "edf0f677-4e20-4667-a9a0-51c5836dde52",
+  "conversationId": "86e9bede-3685-41fd-bb6f-d6ca2f4c47a5",
+  "runId": "c3561317-5c4a-4ba5-beb3-b4aeb3b1070f",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 412,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/edf0f677-4e20-4667-a9a0-51c5836dde52",
+  "previewRendered": true
+}

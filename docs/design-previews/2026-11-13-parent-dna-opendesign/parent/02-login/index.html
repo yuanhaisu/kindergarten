@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>养成星球 · 登录</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-od-id="login-screen">
+    <header class="mp-statusbar" aria-label="状态栏">
+      <span class="mp-statusbar__time">9:41</span>
+      <svg class="mp-statusbar__icons" width="66" height="13" viewBox="0 0 66 13" fill="none" aria-hidden="true" focusable="false">
+        <g fill="currentColor">
+          <rect x="0" y="8.5" width="3" height="4" rx="1"/>
+          <rect x="4.5" y="6.5" width="3" height="6" rx="1"/>
+          <rect x="9" y="4.5" width="3" height="8" rx="1"/>
+          <rect x="13.5" y="2" width="3" height="10.5" rx="1"/>
+        </g>
+        <path d="M24.1 5.2a8.1 8.1 0 0 1 10.8 0M26.4 8.1a5 5 0 0 1 6.2 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="29.5" cy="10.9" r="1.15" fill="currentColor"/>
+        <rect x="43" y="1.5" width="20" height="10" rx="3" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="45.2" y="3.7" width="15.6" height="5.6" rx="1.7" fill="currentColor"/>
+        <path d="M64.5 4.6v3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>
+      </svg>
+    </header>
+
+    <main class="mp-main">
+      <section class="brand" aria-labelledby="login-title" data-od-id="brand-header">
+        <img class="brand-logo" src="../../_shared/logo-dna.svg" alt="养成星球" width="56" height="56" />
+        <p class="brand__overline">养成星球 · NURTURE PLANET</p>
+        <h1 class="brand__title" id="login-title" data-od-id="login-title">孩子的每一天<br>都值得被看见</h1>
+        <p class="brand__lead" data-od-id="brand-lead">家园沟通、成长记录与接送，都在这一个地方。</p>
+      </section>
+
+      <div class="hero-art" data-od-id="planet-illustration">
+        <svg viewBox="0 0 120 120" width="232" height="232" fill="none" role="img" aria-labelledby="planet-title planet-desc">
+          <title id="planet-title">一颗微笑的小星球</title>
+          <desc id="planet-desc">浅绿色圆底上，松绿小星球沿赤陶色轨道航行，旁边有一颗金色小星。</desc>
+          <circle cx="60" cy="60" r="55" fill="var(--sage)" opacity=".17"/>
+          <ellipse cx="60" cy="60" rx="48" ry="16.5" transform="rotate(-18 60 60)" stroke="var(--terracotta)" stroke-width="2.8"/>
+          <path d="M94.9 30.2c.6 5.3 2.3 7 7.6 7.6-5.3.6-7 2.3-7.6 7.6-.6-5.3-2.3-7-7.6-7.6 5.3-.6 7-2.3 7.6-7.6Z" fill="var(--marigold)"/>
+          <circle cx="60" cy="61" r="32" fill="var(--fg)"/>
+          <path d="M38.7 54.2A26.5 26.5 0 0 1 50.2 35.6" stroke="var(--sage)" stroke-width="2.4" stroke-linecap="round" opacity=".65"/>
+          <circle cx="51.5" cy="56" r="2.5" fill="var(--surface-soft)"/>
+          <circle cx="68.5" cy="56" r="2.5" fill="var(--surface-soft)"/>
+          <path d="M52.2 66.4Q60 73.5 67.8 66.4" stroke="var(--surface-soft)" stroke-width="2.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <section class="login-actions" aria-label="登录方式" data-od-id="login-actions">
+        <button class="btn btn-primary" type="button" id="wechat-login" data-od-id="wechat-login-button">
+          <svg class="btn__icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M9.17 3.5C5.05 3.5 1.7 6.22 1.7 9.6c0 1.92 1.13 3.63 2.9 4.75l-.7 2.17 2.4-1.13c.78.22 1.6.34 2.45.34.43 0 .86-.03 1.28-.09a5.52 5.52 0 0 1-.63-2.5c0-3.18 2.93-5.74 6.55-5.74.43 0 .86.04 1.27.11-.8-2.88-3.98-5.02-7.8-5.02Z"/>
+            <path fill="currentColor" d="M17.2 8.6c-3.22 0-5.83 2.22-5.83 4.95 0 2.74 2.61 4.95 5.83 4.95.68 0 1.34-.1 1.96-.3l2.04.96-.56-1.83c1.37-.9 2.23-2.29 2.23-3.78 0-2.73-2.6-4.95-5.83-4.95Z"/>
+            <circle cx="6.6" cy="8.1" r=".95" fill="var(--fg)"/>
+            <circle cx="11.5" cy="8.1" r=".95" fill="var(--fg)"/>
+            <circle cx="15.2" cy="13.7" r=".82" fill="var(--fg)"/>
+            <circle cx="19.1" cy="13.7" r=".82" fill="var(--fg)"/>
+          </svg>
+          <span id="wechat-login-label" aria-live="polite">微信一键登录</span>
+        </button>
+
+        <button class="btn btn-secondary" type="button" id="phone-login" data-od-id="phone-login-button">手机号验证码登录</button>
+
+        <div class="consent-row" id="consent-row" data-od-id="consent-row">
+          <input class="consent-input" type="checkbox" id="consent-checkbox" checked aria-labelledby="consent-copy" aria-describedby="consent-error">
+          <label class="consent-box" for="consent-checkbox" aria-hidden="true">
+            <svg viewBox="0 0 12 10" width="12" height="10" fill="none" focusable="false">
+              <path d="M1.5 5.2 4.4 8.1 10.5 1.7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </label>
+          <p class="consent-copy" id="consent-copy">我已阅读并同意 <a class="legal-link" href="#" data-legal="terms">用户协议</a> 与 <a class="legal-link" href="#" data-legal="privacy">隐私政策</a>，同意园所使用孩子信息开展家园沟通。</p>
+        </div>
+        <p class="consent-error" id="consent-error" role="alert" hidden>请先阅读并同意用户协议与隐私政策</p>
+      </section>
+
+      <p class="support-note" data-od-id="support-note">遇到问题？请联系园所老师协助绑定</p>
+    </main>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>

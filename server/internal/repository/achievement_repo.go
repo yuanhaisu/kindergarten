@@ -51,7 +51,7 @@ func (r *AchievementRepo) List(
 	}
 	var rows []AchievementListRow
 	sel := base.Session(&gorm.Session{}).
-		Select("a.id, a.name, a.description, a.icon, a.category, a.condition, a.target_value, a.status, a.created_at, "+achievementEarnedCountSQL).
+		Select("a.id, a.name, a.description, a.icon, a.category, a.condition, a.target_value, a.status, a.created_at, " + achievementEarnedCountSQL).
 		Order("a.created_at DESC, a.id DESC").
 		Offset(offset).Limit(limit)
 	if err := sel.Scan(&rows).Error; err != nil {

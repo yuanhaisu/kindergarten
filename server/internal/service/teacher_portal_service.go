@@ -16,6 +16,7 @@ import (
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/storage/oss"
 	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/pagination"
 )
@@ -2333,10 +2334,11 @@ type TeacherMediaInput struct {
 }
 
 func (s *TeacherPortalService) CreateGrowthMedia(ctx context.Context, tc *TeacherPortalContext, req TeacherMediaInput) (map[string]any, error) {
-	if strings.TrimSpace(req.FileURL) == "" {
+	fileRef := oss.NormalizeRef(strings.TrimSpace(req.FileURL))
+	if fileRef == "" {
 		return nil, ErrTeacherInvalidParams
 	}
-	m := &domain.GrowthMedia{KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, UploaderID: tc.UserID, FileURL: req.FileURL, ThumbURL: req.ThumbURL, FileType: req.FileType, FileName: req.FileName, FileSize: req.FileSize}
+	m := &domain.GrowthMedia{KindergartenID: tc.KindergartenID, ClassID: tc.ClassID, UploaderID: tc.UserID, FileURL: fileRef, ThumbURL: oss.NormalizeRef(strings.TrimSpace(req.ThumbURL)), FileType: req.FileType, FileName: req.FileName, FileSize: req.FileSize}
 	if m.FileType == "" {
 		m.FileType = "image"
 	}
@@ -3479,20 +3481,20 @@ func (s *TeacherPortalService) classParentCounts(ctx context.Context, kindergart
 // 编辑必须保留原值。用零值会让一次「只改标题」的请求静默把星星目标清零、
 // 关掉公开并批量撤回已公开内容（管理端 C-1 已改，这里必须同口径）。
 type TeacherTaskInput struct {
-	Title             string           `json:"title"`
-	Description       *string          `json:"description"`
-	Intro             string           `json:"intro"`
-	Requirements      []string         `json:"requirements"`
-	TargetStudentID   uint64           `json:"target_student_id"`
-	LearningLink      string           `json:"learning_link"`
-	Frequency         string           `json:"frequency"`
-	StartDate         string           `json:"start_date"`
-	EndDate           string           `json:"end_date"`
-	AllowPublic       *bool            `json:"allow_public"`
-	RecognitionRitual string           `json:"recognition_ritual"`
-	StarScope         string           `json:"star_scope"`
-	StarGoal          *int             `json:"star_goal"`
-	Status            int8             `json:"status"`
+	Title             string   `json:"title"`
+	Description       *string  `json:"description"`
+	Intro             string   `json:"intro"`
+	Requirements      []string `json:"requirements"`
+	TargetStudentID   uint64   `json:"target_student_id"`
+	LearningLink      string   `json:"learning_link"`
+	Frequency         string   `json:"frequency"`
+	StartDate         string   `json:"start_date"`
+	EndDate           string   `json:"end_date"`
+	AllowPublic       *bool    `json:"allow_public"`
+	RecognitionRitual string   `json:"recognition_ritual"`
+	StarScope         string   `json:"star_scope"`
+	StarGoal          *int     `json:"star_goal"`
+	Status            int8     `json:"status"`
 }
 
 // 任务列表的状态视图。active = status=1 且未过 end_date；ended 是其余全部。
@@ -4062,8 +4064,8 @@ func (s *TeacherPortalService) TaskFeedbackSummary(
 	responses := map[uint64]taskStatsResponse{}
 	reactions := map[uint64][]taskStatsReaction{}
 	remaining := map[uint64]struct{}{}
-	covered := map[uint64]map[uint64]struct{}{}  // response_id -> 覆盖的学生（去重）
-	checkinUser := map[[2]uint64]uint64{}        // (response_id, student_id) -> 提交人
+	covered := map[uint64]map[uint64]struct{}{} // response_id -> 覆盖的学生（去重）
+	checkinUser := map[[2]uint64]uint64{}       // (response_id, student_id) -> 提交人
 	studentSet := map[uint64]struct{}{}
 	for _, c := range checkinRows {
 		studentSet[c.StudentID] = struct{}{}

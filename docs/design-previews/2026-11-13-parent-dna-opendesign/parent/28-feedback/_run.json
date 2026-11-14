@@ -1,0 +1,20 @@
+{
+  "slug": "parent-28-feedback",
+  "surface": "parent",
+  "title": "意见反馈",
+  "projectId": "83e986bf-6136-4340-8f2d-2d382d1e20ba",
+  "conversationId": "0b929f4e-0d88-4c31-a8bf-6b5d426ba8ef",
+  "runId": "a65748c0-71b8-4305-ae41-9f83d60cd0d6",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 267,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/83e986bf-6136-4340-8f2d-2d382d1e20ba",
+  "previewRendered": true
+}

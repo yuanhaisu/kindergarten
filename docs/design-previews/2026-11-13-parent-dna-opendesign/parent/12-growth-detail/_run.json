@@ -1,0 +1,20 @@
+{
+  "slug": "parent-12-growth-detail",
+  "surface": "parent",
+  "title": "成长详情",
+  "projectId": "414bc517-3b53-4f5b-aa78-90c172df7b33",
+  "conversationId": "02de1d17-3271-461e-ac12-2cec8ad5cc3d",
+  "runId": "34579bfa-1f33-4328-9158-130eea2929f2",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 336,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/414bc517-3b53-4f5b-aa78-90c172df7b33",
+  "previewRendered": true
+}

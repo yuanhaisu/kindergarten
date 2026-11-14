@@ -1,0 +1,30 @@
+{
+  "group": "C",
+  "results": [
+    {
+      "slug": "06-notice-index",
+      "status": "succeeded",
+      "elapsedSec": 278
+    },
+    {
+      "slug": "07-notice-detail",
+      "status": "succeeded",
+      "elapsedSec": 443
+    },
+    {
+      "slug": "08-leave-index",
+      "status": "succeeded",
+      "elapsedSec": 428
+    },
+    {
+      "slug": "09-leave-create",
+      "status": "succeeded",
+      "elapsedSec": 338
+    },
+    {
+      "slug": "10-leave-detail",
+      "status": "succeeded",
+      "elapsedSec": 388
+    }
+  ]
+}

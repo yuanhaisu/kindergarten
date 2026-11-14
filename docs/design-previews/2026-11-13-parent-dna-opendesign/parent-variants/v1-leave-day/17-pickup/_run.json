@@ -1,0 +1,24 @@
+{
+  "slug": "parent-v1-leave-day-17-pickup",
+  "surface": "parent",
+  "title": "接送 · 请假变体",
+  "projectId": "4a6bb25d-a5fc-43db-a8ee-ac33daeb67c9",
+  "conversationId": "fa97da1e-4f2e-4eaf-80fd-a32af1c34b57",
+  "runId": "b0223475-f455-454c-bac4-dd201b213a33",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 567,
+  "files": [
+    ".file-versions/f25253152040a28225631103/0001-de9c0de4-c84b-4222-9d2d-30a6fc016cd4.html",
+    ".file-versions/f25253152040a28225631103/manifest.json",
+    "parent-variants/v1-leave-day/17-pickup/app.js",
+    "parent-variants/v1-leave-day/17-pickup/fonts/instrument-serif-regular.woff2",
+    "parent-variants/v1-leave-day/17-pickup/fonts/noto-serif-sc-subset.woff2",
+    "parent-variants/v1-leave-day/17-pickup/index.html",
+    "parent-variants/v1-leave-day/17-pickup/index.html.artifact.json",
+    "parent-variants/v1-leave-day/17-pickup/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/4a6bb25d-a5fc-43db-a8ee-ac33daeb67c9"
+}

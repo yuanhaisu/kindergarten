@@ -1,0 +1,20 @@
+{
+  "slug": "parent-04-consent",
+  "surface": "parent",
+  "title": "同意与协议",
+  "projectId": "4f65a9dd-df33-4124-bee5-3f279c8f7511",
+  "conversationId": "6a602644-d9c0-417b-85c9-be54e5313c89",
+  "runId": "10995a42-ab7c-4f8a-8323-d1b6e3b83235",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 216,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/4f65a9dd-df33-4124-bee5-3f279c8f7511",
+  "previewRendered": true
+}

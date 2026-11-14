@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>通知 · 养成星球</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" data-od-id="notice-page" data-state="list">
+    <header class="mp-statusbar" data-od-id="notice-statusbar" aria-label="状态栏">
+      <span class="statusbar-time">9:41</span>
+      <span class="statusbar-icons" aria-hidden="true">
+        <svg class="statusbar-signal" width="17" height="11" viewBox="0 0 17 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="7.5" width="3" height="3.5" rx=".8" fill="currentColor" />
+          <rect x="4.5" y="5" width="3" height="6" rx=".8" fill="currentColor" />
+          <rect x="9" y="2.5" width="3" height="8.5" rx=".8" fill="currentColor" />
+          <rect x="13.5" y="0" width="3" height="11" rx=".8" fill="currentColor" />
+        </svg>
+        <svg class="statusbar-battery" width="24" height="12" viewBox="0 0 24 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x=".5" y=".5" width="20" height="11" rx="3" stroke="currentColor" opacity=".4" />
+          <rect x="2" y="2" width="16" height="8" rx="1.6" fill="currentColor" />
+          <path d="M22 4v4c1-.4 1.5-1.1 1.5-2S23 4.4 22 4Z" fill="currentColor" opacity=".4" />
+        </svg>
+      </span>
+    </header>
+
+    <div class="page-bar" data-od-id="notice-page-bar">
+      <button class="back-button" type="button" data-od-id="notice-back" aria-label="返回上一页">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <p class="page-bar-title">乐乐 · 小一班</p>
+      <span class="page-bar-end" aria-hidden="true"></span>
+    </div>
+
+    <main class="mp-main">
+      <h1 class="page-title" data-od-id="notice-title">通知</h1>
+
+      <div class="list-view" data-list-view data-od-id="notice-list-view">
+        <div class="filter-row" role="group" aria-label="筛选通知" data-od-id="notice-filters">
+          <button class="filter-chip is-active" type="button" data-filter="all" aria-pressed="true" data-od-id="filter-all"><span>全部</span></button>
+          <button class="filter-chip" type="button" data-filter="unread" aria-pressed="false" data-od-id="filter-unread"><span>未读</span></button>
+          <button class="filter-chip" type="button" data-filter="school" aria-pressed="false" data-od-id="filter-school"><span>园所</span></button>
+          <button class="filter-chip" type="button" data-filter="class" aria-pressed="false" data-od-id="filter-class"><span>班级</span></button>
+        </div>
+
+        <section class="notice-stack" aria-label="通知列表">
+          <article class="notice-card notice-card--pinned" data-notice data-category="school" data-unread="true" tabindex="0" role="button" aria-label="置顶园所通知：秋季亲子运动会报名，未读，李老师，今天 08:30" data-od-id="notice-pinned-sports">
+            <div class="notice-meta-row">
+              <p class="notice-eyebrow">置顶 · 园所通知</p>
+              <span class="unread-dot" aria-hidden="true"></span>
+            </div>
+            <h2 class="notice-title">秋季亲子运动会报名</h2>
+            <p class="notice-summary">本周六上午 9:00 在园内操场举行，请在本周四 18:00 前完成报名。</p>
+            <p class="notice-byline">李老师 · 今天 08:30</p>
+          </article>
+
+          <div class="notice-list">
+            <article class="notice-card" data-notice data-category="school" data-unread="true" tabindex="0" role="button" aria-label="园所通知：流感疫苗接种安排，未读，王老师，昨天 16:20" data-od-id="notice-card-flu-vaccine">
+              <div class="notice-meta-row">
+                <p class="notice-eyebrow">园所通知</p>
+                <span class="unread-dot" aria-hidden="true"></span>
+              </div>
+              <h2 class="notice-title">流感疫苗接种安排</h2>
+              <p class="notice-summary">本周四上午社区卫生服务中心到园接种，请填写知情同意书，由孩子周一带来。</p>
+              <p class="notice-byline">王老师 · 昨天 16:20</p>
+            </article>
+
+            <article class="notice-card" data-notice data-category="class" data-unread="false" tabindex="0" role="button" aria-label="班级通知：本月家长会安排，李老师，11 月 10 日" data-od-id="notice-card-parent-meeting">
+              <div class="notice-meta-row">
+                <p class="notice-eyebrow">班级通知</p>
+              </div>
+              <h2 class="notice-title">本月家长会安排</h2>
+              <p class="notice-summary">11 月 21 日（周六）上午 10:00 在小一班教室召开，请尽量一位家长参加。</p>
+              <p class="notice-byline">李老师 · 11 月 10 日</p>
+            </article>
+
+            <article class="notice-card" data-notice data-category="school" data-unread="false" tabindex="0" role="button" aria-label="园所通知：本周食谱已更新，园务办公室，11 月 9 日" data-od-id="notice-card-weekly-menu">
+              <div class="notice-meta-row">
+                <p class="notice-eyebrow">园所通知</p>
+              </div>
+              <h2 class="notice-title">本周食谱已更新</h2>
+              <p class="notice-summary">本周新增南瓜小米粥与清蒸鲈鱼，孩子的过敏信息请在「幼儿信息」中确认。</p>
+              <p class="notice-byline">园务办公室 · 11 月 9 日</p>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <section class="empty-view" data-empty-view data-od-id="notice-empty-state" aria-labelledby="empty-title" hidden>
+        <div class="empty-illustration" aria-hidden="true">
+          <svg width="128" height="128" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+            <circle cx="60" cy="60" r="58" fill="var(--sage-pale)" />
+            <path d="M60 32C47.8 32 41 41.2 41 53v8.2c0 5.2-2.8 8.2-6.4 10.8h50.8c-3.6-2.6-6.4-5.6-6.4-10.8V53c0-11.8-6.8-21-19-21Z" fill="var(--surface-soft)" stroke="var(--fg)" stroke-width="3" stroke-linejoin="round" />
+            <path d="M52.5 76.5c.8 4.4 3.7 7 7.5 7s6.7-2.6 7.5-7" stroke="var(--fg)" stroke-width="3" stroke-linecap="round" />
+            <circle cx="60" cy="30.5" r="2.8" fill="var(--fg)" />
+            <circle cx="81.5" cy="41.5" r="7.5" fill="var(--marigold)" stroke="var(--surface-soft)" stroke-width="2.5" />
+            <path d="M33.5 44c-2.2 3.2-3.3 7-3 11" stroke="var(--sage-deep)" stroke-width="2" stroke-linecap="round" />
+            <path d="M25.5 39.2c-3.6 5.2-5.4 11.4-4.8 17.8" stroke="var(--sage)" stroke-width="2" stroke-linecap="round" opacity=".75" />
+          </svg>
+        </div>
+        <h2 class="empty-title" id="empty-title">还没有通知</h2>
+        <p class="empty-description">园所有新通知时会出现在这里</p>
+        <button class="primary-button" type="button" data-od-id="empty-home-cta">回到首页</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

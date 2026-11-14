@@ -44,14 +44,42 @@ const CONTENT_RULES = [
   ['github-token', /\bgh[pousr]_[0-9A-Za-z]{36,}\b/],
   ['slack-token', /\bxox[baprs]-[0-9A-Za-z-]{10,}\b/],
   ['mysql-dsn-password', /\bmysql:\/\/[^:\s/]+:[^@\s/]+@/i],
+  // Go/MySQL 驱动常见 DSN：账号:口令@tcp(主机:端口)/库名
+  ['go-mysql-dsn', /\b[A-Za-z0-9_]+:[^@\s]{6,}@tcp\([^)\s]+\)/i],
   ['jwt-secret', /\bJWT_SECRET\s*[:=]\s*['"][^'"]{8,}['"]/i],
   ['wechat-secret', /\bWECHAT_[A-Z0-9_]*(?:SECRET|KEY)\s*[:=]\s*['"][^'"]{8,}['"]/i],
+  // app.ini 风格：parent_secret = <32 位十六进制>
+  ['wechat-app-secret', /\b[a-z_]*secret\s*[:=]\s*['"]?[0-9a-f]{32}['"]?\s*$/i],
   ['oss-secret', /\bOSS_[A-Z0-9_]*(?:SECRET|KEY)\s*[:=]\s*['"][^'"]{8,}['"]/i],
   ['password-assignment', /\b(?:password|passwd|pwd|secret|token|api[_-]?key)\s*[:=]\s*['"][^'"]{6,}['"]/i],
+  // ini 风格不加引号：password = xiniaoshop / access_key_id = LTAI...
+  [
+    'ini-credential-assignment',
+    /^\s*(?:password|passwd|pwd|secret|secret_key|secret_id|access_key_id|access_key_secret|token|api[_-]?key)\s*=\s*[^\s$"'<>*{}()[\].;,]{8,}\s*$/i,
+  ],
 ]
 
 const PLACEHOLDER =
-  /(?:\b(?:x{3,}|\*{3,}|changeme|replace[-_ ]?me|your[-_ ]?(?:key|secret|token|password)|example|placeholder|redacted|dummy|sample)\b|\$\{[^}]*\}|<[^>]{1,}>)/i
+  /(?:\b(?:x{3,}|\*{3,}|change[-_ ]?me|replace[-_ ]?me|your[-_ ][a-z0-9_-]*(?:key|secret|token|password)|example|placeholder|redacted|dummy|sample)\b|\$\{[^}]*\}|<[^>]{1,}>)/i
+
+// --all 模式下已知且经人工确认的假阳性。只按「规则 + 文件」精确放行，
+// 不做整目录豁免，避免新增泄漏被同一目录的规则一起吞掉。
+const ALLOW = [
+  // vendored 的 agent/skill 文档与示例代码，口令是教学用假值
+  { rule: 'password-assignment', file: /^\.claude\/(?:agents|skills)\// },
+  // 两端 .env.* 是刻意入库的 Vite 公开变量（只有 API 域名），不含密钥
+  { rule: 'sensitive-file', file: /^(?:parent|teacher)\/\.env\.(?:development|production|test)$/ },
+  // .mcp.json 只含本机工具路径，无密钥
+  { rule: 'sensitive-file', file: /^\.mcp\.json$/ },
+  // 改密表单里的字段名，值来自变量而非字面量
+  { rule: 'password-assignment', file: /^admin\/pages\/admins\/index\.vue$/ },
+  // 测试夹具
+  { rule: 'password-assignment', file: /^server\/internal\/config\/config_test\.go$/ },
+]
+
+function isAllowed(finding) {
+  return ALLOW.some(({ rule, file }) => rule === finding.rule && file.test(finding.file))
+}
 
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 })
@@ -233,6 +261,7 @@ function main() {
   const unique = []
   const seen = new Set()
   for (const finding of findings) {
+    if (isAllowed(finding)) continue
     const key = `${finding.file}:${finding.line}:${finding.rule}`
     if (seen.has(key)) continue
     seen.add(key)

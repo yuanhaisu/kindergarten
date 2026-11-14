@@ -1,0 +1,20 @@
+{
+  "slug": "parent-profile",
+  "surface": "parent",
+  "title": "我的",
+  "projectId": "045bb32b-1e12-4647-87a6-5759dbd7b048",
+  "conversationId": "c4edaf9d-ab5f-4743-bb5d-6f269f690d71",
+  "runId": "94a24d7c-3cb5-40b5-a728-5134103c4916",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 507,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/045bb32b-1e12-4647-87a6-5759dbd7b048",
+  "previewRendered": true
+}

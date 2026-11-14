@@ -1,0 +1,20 @@
+{
+  "slug": "parent-06-notice-index",
+  "surface": "parent",
+  "title": "通知列表",
+  "projectId": "3364d36d-598a-4d7d-8b52-f171e31b7abf",
+  "conversationId": "be56edc2-1c4e-44da-9cfb-c8016cbbe915",
+  "runId": "44b5d94b-0ff4-4c5c-b759-0297373a334c",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 231,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/3364d36d-598a-4d7d-8b52-f171e31b7abf",
+  "previewRendered": true
+}

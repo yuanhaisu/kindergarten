@@ -1,0 +1,20 @@
+{
+  "slug": "parent-22-tasks-detail",
+  "surface": "parent",
+  "title": "任务详情",
+  "projectId": "bf172451-0716-4857-b520-e5cbcd42b784",
+  "conversationId": "f5983357-8d47-4531-993f-e31728ced298",
+  "runId": "ae13d377-6f71-4438-b50a-18a1c12b8c15",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 322,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/bf172451-0716-4857-b520-e5cbcd42b784",
+  "previewRendered": true
+}

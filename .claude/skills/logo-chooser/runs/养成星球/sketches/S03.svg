@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一段弧弯成掌心，托着上方一颗小圆点：点落在凹面里（不在弧外），
+       否则和「笑脸 + 眼睛」同构。 -->
+  <path d="M 24 44 A 36 36 0 0 0 96 44" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="60" cy="60" r="8" fill="#000"/>
+</svg>

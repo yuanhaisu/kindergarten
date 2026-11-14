@@ -1,8 +1,46 @@
 <script setup lang="ts">
 import { contact, hero, modules, plain, privacy, record, site } from '~/content/site'
 
+const canonical = `${site.siteUrl}/`
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${site.siteUrl}/#organization`,
+      name: site.name,
+      legalName: site.legalEntity,
+      url: canonical,
+      logo: `${site.siteUrl}/icon-512.png`,
+      email: site.contact.email,
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${site.siteUrl}/#website`,
+      url: canonical,
+      name: site.name,
+      inLanguage: 'zh-CN',
+      publisher: { '@id': `${site.siteUrl}/#organization` },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: site.name,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web, 微信小程序',
+      description: '面向民办幼儿园的家园共育与园务管理平台。',
+      url: canonical,
+      publisher: { '@id': `${site.siteUrl}/#organization` },
+    },
+  ],
+}
+
 useHead({
-  link: [{ rel: 'canonical', href: '/' }],
+  link: [{ rel: 'canonical', href: canonical }],
+  meta: [
+    { property: 'og:url', content: canonical },
+    { property: 'og:site_name', content: site.name },
+  ],
+  script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(structuredData) }],
 })
 
 const mailtoHref = `mailto:${site.contact.email}?subject=${encodeURIComponent(contact.emailSubject)}`
@@ -33,7 +71,7 @@ const mailtoHref = `mailto:${site.contact.email}?subject=${encodeURIComponent(co
             <p class="hero__note note rise rise--3">{{ hero.note }}</p>
           </div>
 
-          <ScreenWall class="rise rise--2" />
+          <ScreenWall />
         </div>
       </section>
 

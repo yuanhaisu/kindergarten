@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="810" viewBox="0 0 1600 810"><defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="1600" height="810" fill="#f7f7f4"/><text x="60" y="78" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#161616">Logo concepts</text><text x="60" y="116" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20" fill="#6b6b6b">Concepts for review — pick a direction (or tell me what you like in each).</text><rect x="60" y="150" width="726" height="600" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="90" y="190" width="666" height="300" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="90" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><text x="122" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="180" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><text x="196" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="238" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><text x="246" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="90.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">A · v3</text><text x="90.0" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">弧 26，芽原大</text><rect x="814" y="150" width="726" height="600" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="844" y="190" width="666" height="300" preserveAspectRatio="xMidYMid meet">
+  <title>养成星球 · 构造底座 v4</title>
+  <!-- v4 = v3 收紧：弧 26→24，芽放大 10%，整体下移 8 让上下留白接近 -->
+  <g transform="translate(0 8)">
+    <path d="M 86 189 A 86 86 0 1 1 170 189"
+          fill="none" stroke="#000" stroke-width="24" stroke-linecap="round"/>
+    <g transform="translate(128 196) scale(1.1) translate(-128 -196)">
+      <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+      <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+      <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+    </g>
+  </g>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="844" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title>养成星球 · 构造底座 v4</title>
+  <!-- v4 = v3 收紧：弧 26→24，芽放大 10%，整体下移 8 让上下留白接近 -->
+  <g transform="translate(0 8)">
+    <path d="M 86 189 A 86 86 0 1 1 170 189"
+          fill="none" stroke="#000" stroke-width="24" stroke-linecap="round"/>
+    <g transform="translate(128 196) scale(1.1) translate(-128 -196)">
+      <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+      <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+      <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+    </g>
+  </g>
+</svg>
+</g><text x="876" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="934" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title>养成星球 · 构造底座 v4</title>
+  <!-- v4 = v3 收紧：弧 26→24，芽放大 10%，整体下移 8 让上下留白接近 -->
+  <g transform="translate(0 8)">
+    <path d="M 86 189 A 86 86 0 1 1 170 189"
+          fill="none" stroke="#000" stroke-width="24" stroke-linecap="round"/>
+    <g transform="translate(128 196) scale(1.1) translate(-128 -196)">
+      <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+      <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+      <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+    </g>
+  </g>
+</svg>
+</g><text x="950" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="992" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title>养成星球 · 构造底座 v4</title>
+  <!-- v4 = v3 收紧：弧 26→24，芽放大 10%，整体下移 8 让上下留白接近 -->
+  <g transform="translate(0 8)">
+    <path d="M 86 189 A 86 86 0 1 1 170 189"
+          fill="none" stroke="#000" stroke-width="24" stroke-linecap="round"/>
+    <g transform="translate(128 196) scale(1.1) translate(-128 -196)">
+      <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+      <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+      <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+    </g>
+  </g>
+</svg>
+</g><text x="1000" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="844.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">B · v4 收紧</text><text x="844.0" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">弧 24，芽 +10%，居中</text></svg>
