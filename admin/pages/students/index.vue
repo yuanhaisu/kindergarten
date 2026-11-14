@@ -92,7 +92,7 @@
             :key="f.id"
             class="relative border border-border-hairline rounded-lg overflow-hidden bg-bg-card"
           >
-            <img :src="f.face_url" class="w-full h-28 object-cover" alt="底库照片" />
+            <img @error="onMediaError" :src="f.face_url" class="w-full h-28 object-cover" alt="底库照片" />
             <div class="p-2 space-y-1">
               <el-tag :type="faceTagType(f.status)" size="small">{{ f.status_label }}</el-tag>
               <div v-if="f.last_error" class="text-xs text-semantic-danger truncate" :title="f.last_error">
@@ -167,6 +167,8 @@ import {
   importStudents,
   retryStudentFaces,
 } from '~/api/students'
+import { useMediaRefresh } from '~/composables/useMediaRefresh'
+const onMediaError = useMediaRefresh(() => (load()))
 
 const { page, pageSize, total, resetPage } = usePagination()
 const loading = ref(false)
