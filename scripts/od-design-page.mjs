@@ -131,7 +131,7 @@ function renderPreview(htmlPath, pngPath) {
   return new Promise((resolve) => {
     execFile(
       process.execPath,
-      [shot, htmlPath, pngPath, '--width', '390', '--dsf', '2'],
+      [shot, htmlPath, pngPath, '--width', '390', '--height', '844', '--dsf', '2'],
       { timeout: 90000 },
       (err) => resolve(!err && fs.existsSync(pngPath)),
     );
