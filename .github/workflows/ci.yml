@@ -1,10 +1,11 @@
 name: CI
 
+# 非 main 分支只走 PR 门禁（避免每次 push 与 PR 双跑）；main 上用全量 lint 守住主干。
 on:
-  pull_request:
   push:
     branches:
-      - '**'
+      - main
+  pull_request:
 
 permissions:
   contents: read
@@ -61,13 +62,13 @@ jobs:
           version: v2.15.0
           working-directory: server
           args: --new-from-rev=origin/${{ github.base_ref }}
-      - name: Lint (new issues only, push)
+      - name: Lint (full, main)
         if: github.event_name != 'pull_request'
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.15.0
           working-directory: server
-          args: --new-from-rev=HEAD~1
+          args: ./...
       - name: Unit tests (DB-free packages)
         run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... -count=1
 
