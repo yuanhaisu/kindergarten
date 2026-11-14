@@ -24,6 +24,10 @@ server/bin/
 .env.local
 .env.*.local
 
+# === 本地开发脚本（含明文凭据，禁止提交）===
+cc.ps1
+start.bat
+
 # === IDE ===
 .idea/
 *.swp
@@ -58,6 +62,11 @@ assets/face-img/
 # 它们是一次性的验证工具，不是项目产物；一旦入库就等于又泄漏一次凭据。
 # 这个仓库的历史已经因明文凭据欠了一笔账，不要再欠第二笔。
 _verify/
+
+# === 本机代理/模型启动脚本（含个人 API token，禁止提交）===
+# cc.ps1 把 ANTHROPIC_AUTH_TOKEN 指向第三方模型服务；token 现已改为从
+# DEEPSEEK_API_KEY 环境变量读取，但脚本本身仍是个人机器配置，不入库。
+cc.ps1
 
 # === Ruflo 本地运行时状态 ===
 # 向量库、记忆库、agent 工作区都是本机工具链状态，跨机器不可复用
@@ -99,6 +108,7 @@ __pycache__/
 !.claude/skills/growth-records/
 !.claude/skills/impeccable/
 !.claude/skills/internal-comms/
+!.claude/skills/logo-chooser/
 !.claude/skills/mcp-builder/
 !.claude/skills/openspec-apply-change/
 !.claude/skills/openspec-archive-change/
@@ -118,3 +128,8 @@ __pycache__/
 !.claude/skills/webapp-testing/
 !.claude/skills/web-artifacts-builder/
 !.claude/skills/xlsx/
+
+# Impeccable 本地审查与决策图（体积大，不入库）
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/
