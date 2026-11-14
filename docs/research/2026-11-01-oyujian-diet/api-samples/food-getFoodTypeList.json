@@ -1,0 +1,42 @@
+{
+  "_note": "POST /diet/food/getFoodTypeList.do  body: {}。两级食物分类字典：parentID=0 为一类（20 个，完整列出），其余为二类（示例节选）。",
+  "body": {
+    "list": [
+      { "foodTypeID": 1, "foodTypeName": "谷类及制品", "parentID": 0 },
+      { "foodTypeID": 2, "foodTypeName": "薯类、淀粉及制品", "parentID": 0 },
+      { "foodTypeID": 3, "foodTypeName": "蔬菜类及制品", "parentID": 0 },
+      { "foodTypeID": 4, "foodTypeName": "菌藻类", "parentID": 0 },
+      { "foodTypeID": 5, "foodTypeName": "水果类及制品", "parentID": 0 },
+      { "foodTypeID": 6, "foodTypeName": "畜肉类及制品", "parentID": 0 },
+      { "foodTypeID": 7, "foodTypeName": "禽肉类及制品", "parentID": 0 },
+      { "foodTypeID": 8, "foodTypeName": "蛋类及制品", "parentID": 0 },
+      { "foodTypeID": 9, "foodTypeName": "鱼虾蟹贝类", "parentID": 0 },
+      { "foodTypeID": 10, "foodTypeName": "干豆类及制品", "parentID": 0 },
+      { "foodTypeID": 11, "foodTypeName": "坚果、种子类", "parentID": 0 },
+      { "foodTypeID": 12, "foodTypeName": "乳类及制品", "parentID": 0 },
+      { "foodTypeID": 13, "foodTypeName": "小吃、甜饼", "parentID": 0 },
+      { "foodTypeID": 14, "foodTypeName": "速食食品", "parentID": 0 },
+      { "foodTypeID": 15, "foodTypeName": "饮料类", "parentID": 0 },
+      { "foodTypeID": 16, "foodTypeName": "糖、蜜饯类", "parentID": 0 },
+      { "foodTypeID": 17, "foodTypeName": "动物油脂", "parentID": 0 },
+      { "foodTypeID": 18, "foodTypeName": "植物油脂", "parentID": 0 },
+      { "foodTypeID": 19, "foodTypeName": "调味品类", "parentID": 0 },
+      { "foodTypeID": 20, "foodTypeName": "其他", "parentID": 0 },
+
+      { "foodTypeID": 21, "foodTypeName": "小麦", "parentID": 1, "parentName": "谷类及制品" },
+      { "foodTypeID": 22, "foodTypeName": "稻米", "parentID": 1, "parentName": "谷类及制品" },
+      { "foodTypeID": 23, "foodTypeName": "玉米", "parentID": 1, "parentName": "谷类及制品" },
+      { "foodTypeID": 24, "foodTypeName": "大麦", "parentID": 1, "parentName": "谷类及制品" },
+      { "foodTypeID": 25, "foodTypeName": "小米、黄米", "parentID": 1, "parentName": "谷类及制品" },
+      { "foodTypeID": 26, "foodTypeName": "其他", "parentID": 1, "parentName": "谷类及制品" },
+      { "foodTypeID": 29, "foodTypeName": "根菜类", "parentID": 3, "parentName": "蔬菜类及制品" },
+      { "foodTypeID": 37, "foodTypeName": "菌类", "parentID": 4, "parentName": "菌藻类" },
+      { "foodTypeID": 38, "foodTypeName": "藻类", "parentID": 4, "parentName": "菌藻类" },
+      { "foodTypeID": 45, "foodTypeName": "猪", "parentID": 6, "parentName": "畜肉类及制品" },
+      { "foodTypeID": 56, "foodTypeName": "鸡蛋", "parentID": 8, "parentName": "蛋类及制品" },
+      { "…": "二类项共 100+ 条，此处只保留代表性条目，完整清单可再调接口获取" }
+    ]
+  },
+  "msg": "请求成功",
+  "success": true
+}

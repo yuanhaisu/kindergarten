@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">A2 深墨 + 琥珀</title>
+  <path d="M 96 56 A 72 72 0 0 0 96 200" fill="none" stroke="#1B2A41" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 160 56 A 72 72 0 0 1 160 200" fill="none" stroke="#1B2A41" stroke-width="18" stroke-linecap="round"/>
+  <path d="M128 108 Q131.6 124.4 148 128 Q131.6 131.6 128 148 Q124.4 131.6 108 128 Q124.4 124.4 128 108 Z" fill="#E8A23A"/>
+</svg>

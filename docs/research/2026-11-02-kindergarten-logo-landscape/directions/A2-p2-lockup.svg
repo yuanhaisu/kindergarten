@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="title">
+  <title id="title">A2 暖墨 + 珊瑚 横排</title>
+  <g transform="translate(90 28) scale(0.78)"><path d="M 96 56 A 72 72 0 0 0 96 200" fill="none" stroke="#2B2A33" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 160 56 A 72 72 0 0 1 160 200" fill="none" stroke="#2B2A33" stroke-width="18" stroke-linecap="round"/>
+  <path d="M128 108 Q131.6 124.4 148 128 Q131.6 131.6 128 148 Q124.4 131.6 108 128 Q124.4 124.4 128 108 Z" fill="#E2725B"/></g>
+  <text x="360" y="158" font-family="Microsoft YaHei, Source Han Sans SC, Noto Sans CJK SC, sans-serif" font-size="84" font-weight="700" letter-spacing="6" fill="#2B2A33">养成星球</text>
+</svg>

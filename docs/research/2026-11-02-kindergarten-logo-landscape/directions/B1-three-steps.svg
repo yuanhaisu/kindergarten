@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">B1 三步成星</title>
+  <g transform="rotate(-8 128 160)"><rect x="56" y="160" width="28" height="40" rx="14" fill="#111111"/><rect x="104" y="132" width="28" height="68" rx="14" fill="#111111"/><rect x="152" y="96" width="28" height="104" rx="14" fill="#111111"/></g>
+  <path d="M208 60 Q211.6 76.4 228 80 Q211.6 83.6 208 100 Q204.4 83.6 188 80 Q204.4 76.4 208 60 Z" fill="#111111"/>
+</svg>

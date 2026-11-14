@@ -1,0 +1,588 @@
+[
+  {
+    "layer": "L1",
+    "brand": "一起长大",
+    "url": "https://www.kid17.com/static/kid17-web/kid17_logo01.svg",
+    "file": "logos\\L1-saas\\L1-05.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 37172
+  },
+  {
+    "layer": "L1",
+    "brand": "壹点壹滴",
+    "url": "http://www.1d1d100.com/static/nav.logo-6ffc7a939bfb5615a4e577f408ba5843.png",
+    "file": "logos\\L1-saas\\L1-10.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 24323
+  },
+  {
+    "layer": "L1",
+    "brand": "希沃",
+    "url": "https://www.seewo.com/images/logo.svg",
+    "file": "logos\\L1-saas\\L1-09.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 5066
+  },
+  {
+    "layer": "L1",
+    "brand": "幼安宝",
+    "url": "https://www.youanbao.com.cn/content/img/yab_logo.png",
+    "file": "logos\\L1-saas\\L1-15.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 4094
+  },
+  {
+    "layer": "L1",
+    "brand": "幼师口袋",
+    "url": "https://www.youshikoudai.com/image/icon-180.png",
+    "file": "logos\\L1-saas\\L1-04.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 21343
+  },
+  {
+    "layer": "L1",
+    "brand": "幼视通",
+    "url": "https://www.mingcloud.net/images/logo.png",
+    "file": "logos\\L1-saas\\L1-11.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 13972
+  },
+  {
+    "layer": "L1",
+    "brand": "微家园",
+    "url": "",
+    "file": "",
+    "ok": false,
+    "error": "no logo_url"
+  },
+  {
+    "layer": "L1",
+    "brand": "掌心宝贝",
+    "url": "https://ancda.com/assets/common/logo-dark.png",
+    "file": "logos\\L1-saas\\L1-14.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 14827
+  },
+  {
+    "layer": "L1",
+    "brand": "掌通家园",
+    "url": "https://www.ztjy.cn/img/logo.png",
+    "file": "logos\\L1-saas\\L1-01.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 6510
+  },
+  {
+    "layer": "L1",
+    "brand": "晓黑板",
+    "url": "",
+    "file": "",
+    "ok": false,
+    "error": "no logo_url"
+  },
+  {
+    "layer": "L1",
+    "brand": "智慧树",
+    "url": "https://www.hybbtree.com/image/new_index_logo.png",
+    "file": "logos\\L1-saas\\L1-02.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 35681
+  },
+  {
+    "layer": "L1",
+    "brand": "校讯通",
+    "url": "https://www.xxt.cn/xxt_index/image/only-logo.png",
+    "file": "logos\\L1-saas\\L1-13.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 6764
+  },
+  {
+    "layer": "L1",
+    "brand": "班级优化大师",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e7/b6/48/e7b648d4-8115-f162-1246-011c558cb054/TeacherAppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg",
+    "file": "logos\\L1-saas\\L1-08.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 31794
+  },
+  {
+    "layer": "L1",
+    "brand": "贝聊",
+    "url": "",
+    "file": "",
+    "ok": false,
+    "error": "no logo_url"
+  },
+  {
+    "layer": "L1",
+    "brand": "阿童目",
+    "url": "https://www.atongmu.net/images/logo.png",
+    "file": "logos\\L1-saas\\L1-12.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 26149
+  },
+  {
+    "layer": "L2",
+    "brand": "三之三",
+    "url": "",
+    "file": "",
+    "ok": false,
+    "error": "no logo_url"
+  },
+  {
+    "layer": "L2",
+    "brand": "东方剑桥幼儿园",
+    "url": "",
+    "file": "",
+    "ok": false,
+    "error": "no logo_url"
+  },
+  {
+    "layer": "L2",
+    "brand": "伊顿国际幼儿园",
+    "url": "https://www.etonkids.com/_nuxt/img/logo.25bf869.png",
+    "file": "logos\\L2-kindergarten\\L2-18.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 42058
+  },
+  {
+    "layer": "L2",
+    "brand": "伟才幼儿园",
+    "url": "http://www.21gm.com/assets/2020/images/public/wap_logo.png",
+    "file": "logos\\L2-kindergarten\\L2-20.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 6225
+  },
+  {
+    "layer": "L2",
+    "brand": "协和幼儿园",
+    "url": "http://www.xieheedu.cn/wp-content/uploads/2018/04/logo@1x.png",
+    "file": "logos\\L2-kindergarten\\L2-29.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 16404
+  },
+  {
+    "layer": "L2",
+    "brand": "博苑幼儿园",
+    "url": "http://aimg4.dlszywz.com/ev_user_module_content_tmp/2016_03_14/tmp1457948631_1011328_s.jpg",
+    "file": "logos\\L2-kindergarten\\L2-24.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 22250
+  },
+  {
+    "layer": "L2",
+    "brand": "吉的堡",
+    "url": "https://assets.kidcastle.com.cn/websiteguanwang/html/static/icon/logo_h.png",
+    "file": "logos\\L2-kindergarten\\L2-21.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 3550
+  },
+  {
+    "layer": "L2",
+    "brand": "大地幼儿园",
+    "url": "http://www.dadikid.net/images/logo.png",
+    "file": "logos\\L2-kindergarten\\L2-22.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 5255
+  },
+  {
+    "layer": "L2",
+    "brand": "小金星国际幼儿园",
+    "url": "https://www.lgs.cn/static/img/logo.09a5e48.png",
+    "file": "logos\\L2-kindergarten\\L2-19.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 16542
+  },
+  {
+    "layer": "L2",
+    "brand": "红缨幼儿园",
+    "url": "http://www.hoing.net/cms/templets/guanw/images/logo.png",
+    "file": "logos\\L2-kindergarten\\L2-27.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 4691
+  },
+  {
+    "layer": "L2",
+    "brand": "红黄蓝幼儿园",
+    "url": "https://www.rybbaby.com/Uploads/Picture/2017/11/07/s5a01638989bb8_3913_869_224_7.png",
+    "file": "logos\\L2-kindergarten\\L2-16.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 118328
+  },
+  {
+    "layer": "L2",
+    "brand": "诺亚舟",
+    "url": "https://www.noaheducation.com/img/logo.jpg",
+    "file": "logos\\L2-kindergarten\\L2-23.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 8486
+  },
+  {
+    "layer": "L2",
+    "brand": "跨世纪幼儿园",
+    "url": "http://www.ksjjy.com/theme/images/logo.png",
+    "file": "logos\\L2-kindergarten\\L2-25.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 15725
+  },
+  {
+    "layer": "L2",
+    "brand": "金色摇篮",
+    "url": "http://www.mamababy.com/static/home/images/logo.png",
+    "file": "logos\\L2-kindergarten\\L2-17.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 13069
+  },
+  {
+    "layer": "L2",
+    "brand": "青苗幼儿园",
+    "url": "https://www.bibs.com.cn/Images/logo.png?t=20260916092009",
+    "file": "logos\\L2-kindergarten\\L2-28.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 20894
+  },
+  {
+    "layer": "L3",
+    "brand": "东方娃娃",
+    "url": "",
+    "file": "",
+    "ok": false,
+    "error": "no logo_url"
+  },
+  {
+    "layer": "L3",
+    "brand": "乐乐趣",
+    "url": "https://26571969.s21i.faiusr.com/4/1/ABUIABAEGAAgvOmAnAYoks6ntgEwqgE4MA.png",
+    "file": "logos\\L3-content\\L3-46.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 9686
+  },
+  {
+    "layer": "L3",
+    "brand": "亿童",
+    "url": "https://public.yitong.com/images/logo_v2.png",
+    "file": "logos\\L3-content\\L3-31.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 4009
+  },
+  {
+    "layer": "L3",
+    "brand": "信谊",
+    "url": "https://wifa2025.oss-cn-shanghai.aliyuncs.com/image/20250707/02877494ebaf87651094bc4abc5bfed9.png",
+    "file": "logos\\L3-content\\L3-45.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 15953
+  },
+  {
+    "layer": "L3",
+    "brand": "凯叔讲故事",
+    "url": "http://www.kaishustory.com/logo_new.png",
+    "file": "logos\\L3-content\\L3-40.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 6267
+  },
+  {
+    "layer": "L3",
+    "brand": "叽里呱啦",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/37/6d/ac/376dacc3-676e-143b-8109-4698100e1009/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg",
+    "file": "logos\\L3-content\\L3-38.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 19740
+  },
+  {
+    "layer": "L3",
+    "brand": "宝宝巴士",
+    "url": "https://www.babybus.com/_nuxt/img/logo-header.8a74a74.png",
+    "file": "logos\\L3-content\\L3-39.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 2276
+  },
+  {
+    "layer": "L3",
+    "brand": "小康轩",
+    "url": "http://www.xiaokangxuan.com/images/logo.jpg",
+    "file": "logos\\L3-content\\L3-32.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 15959
+  },
+  {
+    "layer": "L3",
+    "brand": "巧虎",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/33/d9/9e/33d99ea9-4cd8-0c98-f69e-a9dabb485919/AppIcon-1x_U007emarketing-0-6-0-sRGB-85-220-0.png/512x512bb.jpg",
+    "file": "logos\\L3-content\\L3-35.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 35956
+  },
+  {
+    "layer": "L3",
+    "brand": "斑马",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/09/cd/57/09cd5782-a1bb-0e8a-4e34-6e0e9e06d4e0/AppIcon-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg",
+    "file": "logos\\L3-content\\L3-37.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 25285
+  },
+  {
+    "layer": "L3",
+    "brand": "洪恩",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/cd/4d/cc/cd4dccbb-e5a4-b300-2058-00b1cf2f8708/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg",
+    "file": "logos\\L3-content\\L3-36.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 61986
+  },
+  {
+    "layer": "L3",
+    "brand": "火火兔",
+    "url": "http://www.alilo.com.cn/static/img/index/logo.png",
+    "file": "logos\\L3-content\\L3-42.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 5287
+  },
+  {
+    "layer": "L3",
+    "brand": "爱立方",
+    "url": "https://www.alfedu.com/theme/default/images/logo1.svg",
+    "file": "logos\\L3-content\\L3-33.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 13064
+  },
+  {
+    "layer": "L3",
+    "brand": "蒲蒲兰",
+    "url": "http://www.poplar.com.cn/images/front/logo.jpg",
+    "file": "logos\\L3-content\\L3-44.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 7418
+  },
+  {
+    "layer": "L3",
+    "brand": "贝瓦",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/34/0f/76/340f7605-ea98-cb46-e416-c3ff846a7c4d/AppIcon-0-0-1x_U007emarketing-0-8-0-0-sRGB-85-220.png/512x512bb.jpg",
+    "file": "logos\\L3-content\\L3-41.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 52200
+  },
+  {
+    "layer": "L3",
+    "brand": "逻辑狗",
+    "url": "",
+    "file": "",
+    "ok": false,
+    "error": "no logo_url"
+  },
+  {
+    "layer": "L4",
+    "brand": "Bloomz",
+    "url": "https://www.bloomz.com/images/logo-wide-white.webp",
+    "file": "logos\\L4-international\\L4-52.webp",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/webp",
+    "bytes": 45770
+  },
+  {
+    "layer": "L4",
+    "brand": "Brightwheel",
+    "url": "https://brightwheel.com/wp-content/uploads/2021/06/cropped-Untitled-design.png",
+    "file": "logos\\L4-international\\L4-47.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 8927
+  },
+  {
+    "layer": "L4",
+    "brand": "ChildPlus",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/37/57/33/375733c8-1547-c960-f103-02f1da0fa852/AppIcon-production-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg",
+    "file": "logos\\L4-international\\L4-60.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 20767
+  },
+  {
+    "layer": "L4",
+    "brand": "ClassDojo",
+    "url": "https://static.classdojo.com/img/classdojo-logo.svg",
+    "file": "logos\\L4-international\\L4-53.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 11929
+  },
+  {
+    "layer": "L4",
+    "brand": "Educa",
+    "url": "https://geteduca.com/wp-content/uploads/2023/10/Educa-logo.svg",
+    "file": "logos\\L4-international\\L4-57.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 10607
+  },
+  {
+    "layer": "L4",
+    "brand": "Famly",
+    "url": "https://cdn.prod.website-files.com/5f64c1a06bfbf4ea417a71af/66e5b094dfc47c83c2381d47_Famly-logo-nav.webp",
+    "file": "logos\\L4-international\\L4-55.webp",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/webp",
+    "bytes": 3888
+  },
+  {
+    "layer": "L4",
+    "brand": "Kaymbu",
+    "url": "https://www.kaymbu.com/hubfs/Logos/logo.jpg",
+    "file": "logos\\L4-international\\L4-51.webp",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/webp",
+    "bytes": 6138
+  },
+  {
+    "layer": "L4",
+    "brand": "Kinderpedia",
+    "url": "https://www.kinderpedia.com/images/logo.gif",
+    "file": "logos\\L4-international\\L4-58.gif",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/gif",
+    "bytes": 268411
+  },
+  {
+    "layer": "L4",
+    "brand": "Lillio（原 HiMama）",
+    "url": "https://images.ctfassets.net/x4nvfpejxuu4/12O04RxNlc9v6CaRqNE4hq/04c7047ed8b555ce679d8b223b1c99d8/Group_5.svg",
+    "file": "logos\\L4-international\\L4-49.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 17099
+  },
+  {
+    "layer": "L4",
+    "brand": "Procare",
+    "url": "https://www.procaresoftware.com/wp-content/uploads/2025/03/cropped-ProcareSolutions-RLogo-FullColor-Horiz-RGB.png",
+    "file": "logos\\L4-international\\L4-48.png",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/png",
+    "bytes": 25146
+  },
+  {
+    "layer": "L4",
+    "brand": "Seesaw",
+    "url": "https://seesaw.com/wp-content/uploads/2024/01/seesaw-logo.svg",
+    "file": "logos\\L4-international\\L4-54.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 4480
+  },
+  {
+    "layer": "L4",
+    "brand": "Smartcare",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0a/4d/d2/0a4dd2e5-0157-8802-f0c4-35c03a1e2e92/AppIcon-0-1x_U007emarketing-0-8-0-sRGB-85-220-0.png/512x512bb.jpg",
+    "file": "logos\\L4-international\\L4-59.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 12868
+  },
+  {
+    "layer": "L4",
+    "brand": "Storypark",
+    "url": "https://cdn.prod.website-files.com/69715f3b73e530ee6e53eb06/69715f3b73e530ee6e53eca6_Logotype%20Storypark.svg",
+    "file": "logos\\L4-international\\L4-56.svg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/svg+xml",
+    "bytes": 6641
+  },
+  {
+    "layer": "L4",
+    "brand": "Tadpoles",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/72/97/51/72975147-30ae-5206-054d-75080b84cbbc/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/512x512bb.jpg",
+    "file": "logos\\L4-international\\L4-50.jpg",
+    "ok": true,
+    "status": 200,
+    "content_type": "image/jpeg",
+    "bytes": 41387
+  }
+]

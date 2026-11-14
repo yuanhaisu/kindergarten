@@ -1,0 +1,28 @@
+{
+  "_note": "POST /diet/groupObj/queryYearListHasObj.do  (无请求体，可能携带 cookie/session)",
+  "body": {
+    "policyName": "DRIs2000",
+    "classes": [
+      {"gradeName": "托班", "classId": 236406, "grade": 117396, "className": "小三班", "type": 2},
+      {"gradeName": "小班", "classId": 236398, "grade": 117397, "className": "小二班", "type": 2},
+      {"gradeName": "小班", "classId": 236397, "grade": 117397, "className": "小一班", "type": 2},
+      {"gradeName": "中班", "classId": 236401, "grade": 117398, "className": "中二班", "type": 2},
+      {"gradeName": "中班", "classId": 236400, "grade": 117398, "className": "中一班", "type": 2},
+      {"gradeName": "大班", "classId": 236402, "grade": 117399, "className": "大一班", "type": 2},
+      {"gradeName": "大班", "classId": 236404, "grade": 117399, "className": "大三班", "type": 2},
+      {"gradeName": "大班", "classId": 236403, "grade": 117399, "className": "大二班", "type": 2}
+    ],
+    "list": [
+      {"endDate": "2027-01-29", "startDate": "2026-09-01", "yearID": 31846, "yearName": 2026},
+      {"endDate": "2026-07-31", "startDate": "2025-09-01", "yearID": 31417, "yearName": 2025},
+      {"endDate": "2025-07-31", "startDate": "2024-09-01", "yearID": 30483, "yearName": 2024},
+      {"endDate": "2024-07-26", "startDate": "2023-09-04", "yearID": 29857, "yearName": 2023},
+      {"endDate": "2023-07-31", "startDate": "2022-09-01", "yearID": 29850, "yearName": 2022}
+    ],
+    "provinceID": 430000,
+    "key": "yearID",
+    "yearID": 31846
+  },
+  "msg": "请求成功",
+  "success": true
+}

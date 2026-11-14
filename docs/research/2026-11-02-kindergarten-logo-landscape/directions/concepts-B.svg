@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="840" viewBox="0 0 1600 840"><defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="1600" height="840" fill="#f7f7f4"/><text x="60" y="78" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#161616">B · 成长刻度</text><text x="60" y="116" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20" fill="#6b6b6b">竞品求异：避开蓝绿 + 圆角 + 吉祥物</text><rect x="60" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#161616" stroke-width="2"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="90" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title id="c0-title">B1 三步成星</title>
+  <g transform="rotate(-8 128 160)"><rect x="56" y="160" width="28" height="40" rx="14" fill="#111111"/><rect x="104" y="132" width="28" height="68" rx="14" fill="#111111"/><rect x="152" y="96" width="28" height="104" rx="14" fill="#111111"/></g>
+  <path d="M208 60 Q211.6 76.4 228 80 Q211.6 83.6 208 100 Q204.4 83.6 188 80 Q204.4 76.4 208 60 Z" fill="#111111"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="90" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title id="s064-title">B1 三步成星</title>
+  <g transform="rotate(-8 128 160)"><rect x="56" y="160" width="28" height="40" rx="14" fill="#111111"/><rect x="104" y="132" width="28" height="68" rx="14" fill="#111111"/><rect x="152" y="96" width="28" height="104" rx="14" fill="#111111"/></g>
+  <path d="M208 60 Q211.6 76.4 228 80 Q211.6 83.6 208 100 Q204.4 83.6 188 80 Q204.4 76.4 208 60 Z" fill="#111111"/>
+</svg>
+</g><text x="122" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="180" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title id="s032-title">B1 三步成星</title>
+  <g transform="rotate(-8 128 160)"><rect x="56" y="160" width="28" height="40" rx="14" fill="#111111"/><rect x="104" y="132" width="28" height="68" rx="14" fill="#111111"/><rect x="152" y="96" width="28" height="104" rx="14" fill="#111111"/></g>
+  <path d="M208 60 Q211.6 76.4 228 80 Q211.6 83.6 208 100 Q204.4 83.6 188 80 Q204.4 76.4 208 60 Z" fill="#111111"/>
+</svg>
+</g><text x="196" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="238" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title id="s016-title">B1 三步成星</title>
+  <g transform="rotate(-8 128 160)"><rect x="56" y="160" width="28" height="40" rx="14" fill="#111111"/><rect x="104" y="132" width="28" height="68" rx="14" fill="#111111"/><rect x="152" y="96" width="28" height="104" rx="14" fill="#111111"/></g>
+  <path d="M208 60 Q211.6 76.4 228 80 Q211.6 83.6 208 100 Q204.4 83.6 188 80 Q204.4 76.4 208 60 Z" fill="#111111"/>
+</svg>
+</g><text x="246" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="90.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">A · 三步成星</text><text x="90.0" y="664" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#161616" letter-spacing="1.5">RECOMMENDED</text><text x="90.0" y="698" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">三根递增高柱，长成一颗星。</text><rect x="562.667" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="592.667" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title id="c1-title">B2 星轨刻度</title>
+  <path d="M 128 40 A 88 88 0 1 1 40 128" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 205 108 L 232 108 M 128 205 L 128 232 M 64 190 L 46 208" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
+  <path d="M24 90 Q27.24 104.76 42 108 Q27.24 111.24 24 126 Q20.76 111.24 6 108 Q20.76 104.76 24 90 Z" fill="#111111"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="592.667" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title id="s164-title">B2 星轨刻度</title>
+  <path d="M 128 40 A 88 88 0 1 1 40 128" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 205 108 L 232 108 M 128 205 L 128 232 M 64 190 L 46 208" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
+  <path d="M24 90 Q27.24 104.76 42 108 Q27.24 111.24 24 126 Q20.76 111.24 6 108 Q20.76 104.76 24 90 Z" fill="#111111"/>
+</svg>
+</g><text x="624.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="682.667" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title id="s132-title">B2 星轨刻度</title>
+  <path d="M 128 40 A 88 88 0 1 1 40 128" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 205 108 L 232 108 M 128 205 L 128 232 M 64 190 L 46 208" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
+  <path d="M24 90 Q27.24 104.76 42 108 Q27.24 111.24 24 126 Q20.76 111.24 6 108 Q20.76 104.76 24 90 Z" fill="#111111"/>
+</svg>
+</g><text x="698.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="740.667" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title id="s116-title">B2 星轨刻度</title>
+  <path d="M 128 40 A 88 88 0 1 1 40 128" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 205 108 L 232 108 M 128 205 L 128 232 M 64 190 L 46 208" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
+  <path d="M24 90 Q27.24 104.76 42 108 Q27.24 111.24 24 126 Q20.76 111.24 6 108 Q20.76 104.76 24 90 Z" fill="#111111"/>
+</svg>
+</g><text x="748.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="592.6666666666667" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">B · 星轨刻度</text><text x="592.6666666666667" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">轨道上的三个刻度，终点是星。</text><rect x="1065.33" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1095.33" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title id="c2-title">B3 向上折线</title>
+  <path d="M 48 192 H 80 Q 88 192 88 184 V 152 H 120 Q 128 152 128 144 V 104 H 160 Q 168 104 168 96 V 56 H 184"
+        fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M208 30 Q211.24 44.76 226 48 Q211.24 51.24 208 66 Q204.76 51.24 190 48 Q204.76 44.76 208 30 Z" fill="#111111"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1095.33" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title id="s264-title">B3 向上折线</title>
+  <path d="M 48 192 H 80 Q 88 192 88 184 V 152 H 120 Q 128 152 128 144 V 104 H 160 Q 168 104 168 96 V 56 H 184"
+        fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M208 30 Q211.24 44.76 226 48 Q211.24 51.24 208 66 Q204.76 51.24 190 48 Q204.76 44.76 208 30 Z" fill="#111111"/>
+</svg>
+</g><text x="1127.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1185.33" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title id="s232-title">B3 向上折线</title>
+  <path d="M 48 192 H 80 Q 88 192 88 184 V 152 H 120 Q 128 152 128 144 V 104 H 160 Q 168 104 168 96 V 56 H 184"
+        fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M208 30 Q211.24 44.76 226 48 Q211.24 51.24 208 66 Q204.76 51.24 190 48 Q204.76 44.76 208 30 Z" fill="#111111"/>
+</svg>
+</g><text x="1201.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title" viewBox="0 0 256 256" x="1243.33" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title id="s216-title">B3 向上折线</title>
+  <path d="M 48 192 H 80 Q 88 192 88 184 V 152 H 120 Q 128 152 128 144 V 104 H 160 Q 168 104 168 96 V 56 H 184"
+        fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M208 30 Q211.24 44.76 226 48 Q211.24 51.24 208 66 Q204.76 51.24 190 48 Q204.76 44.76 208 30 Z" fill="#111111"/>
+</svg>
+</g><text x="1251.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="1095.3333333333335" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">C · 向上折线</text><text x="1095.3333333333335" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">三级台阶，走到星。</text></svg>

@@ -1,0 +1,453 @@
+<meta charset="utf-8">
+<title>江浙五园参访清单</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* layout: single-column field document, 660px, hairline sections, sticky park bar with per-park tick state */
+:root{
+  --paper:#F7F6F1;
+  --paper-2:#FFFFFF;
+  --ink:#1B201D;
+  --ink-2:#4B554E;
+  --ink-3:#7A857D;
+  --line:#DBDCD2;
+  --pine:#2C6A54;
+  --pine-soft:#E7EFE9;
+  --clay:#9C5A2B;
+  --clay-soft:#F4E8DD;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"PingFang SC",monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141715; --paper-2:#1B1F1C; --ink:#E7EAE4; --ink-2:#B2BBB4; --ink-3:#828D85;
+    --line:#2C332E; --pine:#6FB79A; --pine-soft:#1D2C26; --clay:#D08C5C; --clay-soft:#2A211B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141715; --paper-2:#1B1F1C; --ink:#E7EAE4; --ink-2:#B2BBB4; --ink-3:#828D85;
+  --line:#2C332E; --pine:#6FB79A; --pine-soft:#1D2C26; --clay:#D08C5C; --clay-soft:#2A211B;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  font-size:15px;
+  line-height:1.7;
+  -webkit-text-size-adjust:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+body::before{
+  content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);
+  z-index:10;background:var(--paper);
+}
+.wrap{max-width:660px;margin:0 auto;padding-block:0 72px}
+:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+
+/* hero */
+.hero{padding-block:36px 20px}
+.kicker{font:600 11px/1.4 var(--font-mono);letter-spacing:.12em;color:var(--pine);margin:0 0 14px}
+h1{font-size:31px;line-height:1.25;letter-spacing:-.01em;font-weight:650;margin:0 0 14px;text-wrap:balance}
+.lede{margin:0;color:var(--ink-2);font-size:15px;line-height:1.75;max-width:44ch}
+.lede strong{color:var(--ink);font-weight:600}
+.inv{margin:20px 0 0;padding:0;list-style:none;counter-reset:inv;border-top:1px solid var(--line)}
+.inv li{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-2);min-width:0}
+.inv li::before{counter-increment:inv;content:counter(inv,decimal-leading-zero);font:600 10.5px/1.9 var(--font-mono);color:var(--ink-3)}
+.inv b{color:var(--ink);font-weight:600}
+
+/* sticky park bar */
+.parkbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--paper);border-bottom:1px solid var(--line);padding-block:10px;margin-inline:-0px}
+.parkbar-in{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.parks{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;min-width:0;padding-bottom:2px}
+.parks::-webkit-scrollbar{display:none}
+.park{flex:none;border:1px solid var(--line);background:transparent;color:var(--ink-2);font:inherit;font-size:12.5px;padding:6px 11px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.park[aria-pressed="true"]{background:var(--pine);border-color:var(--pine);color:var(--paper-2);font-weight:600}
+.park-todo{opacity:.62}
+.count{flex:none;font:600 11px/1 var(--font-mono);color:var(--ink-3);letter-spacing:.04em}
+
+/* sections */
+.sec{padding-block:30px 6px;border-top:1px solid var(--line)}
+.sec-head{display:flex;gap:11px;align-items:flex-start;margin-bottom:6px}
+.gnum{flex:none;width:23px;height:23px;margin-top:3px;display:grid;place-items:center;border:1px solid var(--pine);color:var(--pine);font:600 11px/1 var(--font-mono)}
+.sec h2{font-size:17.5px;line-height:1.35;font-weight:650;margin:0;text-wrap:balance}
+.why{margin:0 0 4px 34px;font-size:12.5px;line-height:1.65;color:var(--ink-3)}
+.why .mod{color:var(--pine);font-weight:600}
+
+/* questions */
+.qs{list-style:none;margin:10px 0 0;padding:0}
+.q{display:grid;grid-template-columns:23px 1fr;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);min-width:0}
+.q:last-child{border-bottom:0}
+.q input[type=checkbox]{appearance:none;-webkit-appearance:none;width:19px;height:19px;margin:3px 0 0;border:1.5px solid var(--ink-3);border-radius:4px;background:transparent;cursor:pointer;position:relative;flex:none}
+.q input[type=checkbox]:checked{background:var(--pine);border-color:var(--pine)}
+.q input[type=checkbox]:checked::after{content:"";position:absolute;left:5.5px;top:2px;width:5px;height:9px;border:solid var(--paper-2);border-width:0 2px 2px 0;transform:rotate(42deg)}
+.q label{font-size:14.5px;line-height:1.65;cursor:pointer;color:var(--ink);min-width:0}
+.q input:checked + label{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--line);text-decoration-thickness:1px}
+.tag{display:inline-block;font:600 10.5px/1.5 var(--font-mono);padding:1px 6px;margin-left:5px;border-radius:3px;white-space:nowrap;vertical-align:1px}
+.tag-keep{background:var(--clay-soft);color:var(--clay)}
+.tag-mod{background:var(--pine-soft);color:var(--pine)}
+.tag-must{background:var(--clay);color:var(--paper-2)}
+
+.callout{margin:14px 0 0;background:var(--pine-soft);padding:11px 13px;font-size:13px;line-height:1.65;color:var(--ink-2)}
+.callout b{color:var(--ink);font-weight:650}
+
+/* evening tool */
+.tool{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:16px}
+.tool h3{font-size:13px;font-weight:650;margin:0 0 3px;letter-spacing:.01em}
+.tool .hint{font-size:12px;color:var(--ink-3);margin:0 0 14px}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+.field textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:6px;color:var(--ink);font:inherit;font-size:13.5px;line-height:1.6;padding:8px 10px;resize:vertical;min-height:40px}
+.field textarea::placeholder{color:var(--ink-3);opacity:.75}
+.field textarea:focus{border-color:var(--pine);outline:none;box-shadow:0 0 0 2px var(--pine-soft)}
+.three{display:grid;gap:8px}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tg{border:1px solid var(--line);background:var(--paper);color:var(--ink-2);font:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer}
+.tg[aria-pressed="true"]{background:var(--pine);border-color:var(--pine);color:var(--paper-2);font-weight:600}
+.out{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+pre.pv{margin:0 0 10px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px;font:12.5px/1.65 var(--font-mono);white-space:pre-wrap;word-break:break-word;color:var(--ink-2);max-height:260px;overflow:auto}
+.copy{width:100%;border:0;background:var(--pine);color:var(--paper-2);font:inherit;font-size:14px;font-weight:650;padding:11px;border-radius:8px;cursor:pointer}
+.copy:active{transform:translateY(1px)}
+.status{font-size:12px;color:var(--pine);margin:8px 0 0;min-height:16px}
+
+/* rules + appendix */
+.rules{list-style:none;margin:10px 0 0;padding:0}
+.rules li{display:grid;grid-template-columns:23px 1fr;gap:11px;padding:9px 0;font-size:13.5px;line-height:1.65;color:var(--ink-2);border-bottom:1px solid var(--line)}
+.rules li:last-child{border-bottom:0}
+.rules li b{color:var(--ink);font-weight:650}
+.rules .rn{font:600 10.5px/1.9 var(--font-mono);color:var(--clay)}
+details.apx{margin-top:26px;border-top:1px solid var(--line);padding-top:18px}
+details.apx summary{cursor:pointer;font-size:13px;font-weight:650;color:var(--ink-2);list-style:none}
+details.apx summary::-webkit-details-marker{display:none}
+details.apx summary::before{content:"＋ ";color:var(--pine);font-family:var(--font-mono)}
+details.apx[open] summary::before{content:"− "}
+.maptab{margin-top:14px;display:grid;gap:0}
+.maprow{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1.3fr);gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6;min-width:0}
+.maprow span{min-width:0}
+.maprow .k{color:var(--ink-2)}
+.maprow .v{color:var(--ink-3)}
+@media (max-width:430px){
+  .maptab .maprow{grid-template-columns:1fr;gap:2px}
+}
+.foot{margin-top:28px;font-size:11.5px;color:var(--ink-3);line-height:1.7}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="kicker">2026.11.04 — 11.06 · 江浙五园</p>
+    <h1>三天里，带回来五样东西</h1>
+    <p class="lede">你不需要看懂他们的转型。你只需要带回 <strong>能变成产品里一张表、一个流程、一段数据</strong> 的做法。下面每一项都按「谁做 / 多久一次 / 用什么载体」问。</p>
+    <ol class="inv">
+      <li><span><b>一张表</b> —— 观察记录 / 评估量表 / 一日流程 / 户外风险评估</span></li>
+      <li><span><b>一个微信</b> —— 教学主任或园长，回去还能追问</span></li>
+      <li><span><b>五个答案</b> —— 「如果上系统，最先解决什么」</span></li>
+      <li><span><b>十五个做法</b> —— 每园 3 条，写清谁做、多久一次、用什么</span></li>
+      <li><span><b>五个「居然」</b> —— 居然有 / 居然没有</span></li>
+    </ol>
+  </header>
+
+  <div class="parkbar">
+    <div class="parkbar-in">
+      <div class="parks" id="parks" role="group" aria-label="选择当前园所"></div>
+      <span class="count" id="count">已勾 0</span>
+    </div>
+  </div>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">0</span><h2>开场三问 · 一分钟判断这园强在哪</h2></div>
+    <p class="why">听完答案再决定深挖哪一组。不用每组都问。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="o1"><label for="o1">你们课程体系是自己研发的，还是引进的？引进的哪一家？</label></li>
+      <li class="q"><input type="checkbox" id="o2"><label for="o2">户外活动一周几次？有没有固定的外出日？</label></li>
+      <li class="q"><input type="checkbox" id="o3"><label for="o3">你们最想让家长记住你们哪一件事？</label></li>
+    </ul>
+    <div class="callout">
+      <b>怎么选：</b>强调课程与领域目标 → A 组；强调户外与自然 → B 组；强调家长满意与招生 → C 组；说不清、只讲服务细节 → D 组。<b>D 组每园至少问两题。</b>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">A</span><h2>儿童发展评估 · 观察 → 评估 → 计划</h2></div>
+    <p class="why"><span class="mod">对应产品：成长报告</span>　现在只是规则聚合出来的雷达图，没有任何量表实体。这一组是整趟最值钱的部分。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="a1"><label for="a1">观察记录用什么表？多久填一次、谁来填、填完交给谁？<span class="tag tag-must">要一张空白表</span></label></li>
+      <li class="q"><input type="checkbox" id="a2"><label for="a2">写一条观察记录要多久？一周写几条？手写、Word，还是系统里录？</label></li>
+      <li class="q"><input type="checkbox" id="a3"><label for="a3">有没有一套固定的发展目标库？EYFS 七大领域，还是《3-6 岁儿童学习与发展指南》五大领域？条目固定还是老师自拟？</label></li>
+      <li class="q"><input type="checkbox" id="a4"><label for="a4">观察记录最后怎么变成给家长的评估？学期末出报告吗？文字描述，还是等级、打分？</label></li>
+      <li class="q"><input type="checkbox" id="a5"><label for="a5">家长看到的是什么形式？纸质报告、家长会、微信群，还是 App？</label></li>
+      <li class="q"><input type="checkbox" id="a6"><label for="a6">评估结果会反过来改下周的课程计划吗？谁决定？留痕吗？</label></li>
+      <li class="q"><input type="checkbox" id="a7"><label for="a7">如果要上一套系统，这条链路里最该被接管的是哪一步？</label></li>
+    </ul>
+    <div class="callout"><b>这组可以放弃其他一切，这张表不能丢。</b>拍照也可以，但要拍得到表头和填写栏。</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">B</span><h2>户外与森林课程 · 只问安全与知情同意</h2></div>
+    <p class="why"><span class="mod">对应产品：通知 / 请假 / 晨检</span>　我们有请假和接送，但没有「外出活动」这条链路：知情同意、风险评估、点名留痕、异常上报，全都没有。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="b1"><label for="b1">走出园区一次，谁是安全第一责任人？出发前要签什么？</label></li>
+      <li class="q"><input type="checkbox" id="b2"><label for="b2">家长知情同意怎么做？纸质签字、微信群接龙，还是系统？出园要不要单独签？</label></li>
+      <li class="q"><input type="checkbox" id="b3"><label for="b3">有没有风险评估表、天气预案、撤退标准？谁填、谁批？<span class="tag tag-keep">要一张表</span></label></li>
+      <li class="q"><input type="checkbox" id="b4"><label for="b4">孩子磕碰受伤怎么记录？怎么通知家长？有没有留痕要求，比如拍照、签字？</label></li>
+      <li class="q"><input type="checkbox" id="b5"><label for="b5">师生配比多少？外出怎么点名？点名记录留痕吗？</label></li>
+      <li class="q"><input type="checkbox" id="b6"><label for="b6">家长会要求实时看位置或照片吗？你们做不做？为什么？</label></li>
+      <li class="q"><input type="checkbox" id="b7"><label for="b7">下雨、雾霾怎么改课？有成交预案吗？</label></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">C</span><h2>品质呈现、收费与家长沟通</h2></div>
+    <p class="why"><span class="mod">对应产品：收费（完全没有）、膳食公示（家长端零入口）、满意度问卷（只有单向留言）</span></p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="c1"><label for="c1">家长第一次来参观，你带他看哪几个地方、按什么顺序？<span class="tag tag-keep">这条动线就是品质</span></label></li>
+      <li class="q"><input type="checkbox" id="c2"><label for="c2">怎么向家长解释「为什么我们比隔壁贵」？有成文话术或物料吗？</label></li>
+      <li class="q"><input type="checkbox" id="c3"><label for="c3">收费结构：保教费、伙食费、代收费分别怎么收、怎么公示？伙食费据实结算还是包干？</label></li>
+      <li class="q"><input type="checkbox" id="c4"><label for="c4">家长最常问的三个问题是什么？谁负责回答？</label></li>
+      <li class="q"><input type="checkbox" id="c5"><label for="c5">日常用什么渠道跟家长沟通？微信群、公众号、系统、家长会，各承担什么？</label></li>
+      <li class="q"><input type="checkbox" id="c6"><label for="c6">有没有家长满意度调查？多久一次、什么形式、结果怎么用？</label></li>
+      <li class="q"><input type="checkbox" id="c7"><label for="c7">家长投诉怎么处理？有台账吗、谁跟进、多久闭环？</label></li>
+      <li class="q"><input type="checkbox" id="c8"><label for="c8">让家长「看见孩子一天」的方式是什么？照片、视频、日报，还是成长档案？谁生产、花多久？</label></li>
+      <li class="q"><input type="checkbox" id="c9"><label for="c9">伙食和食谱家长看得到吗？在哪看？<span class="tag tag-mod">我方家长端看不到食谱</span></label></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">D</span><h2>工具与系统 · 暗线，每园至少两题</h2></div>
+    <p class="why"><span class="mod">对应产品：定价与合规</span>　这一组问的是「他们凭什么换掉现在的东西」。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="d1"><label for="d1">现在一共用几套工具在管园？含微信群、Excel、纸质表。</label></li>
+      <li class="q"><input type="checkbox" id="d2"><label for="d2">哪件事至今还是纸质或 Excel？为什么没上系统？<span class="tag tag-keep">最强的需求信号</span></label></li>
+      <li class="q"><input type="checkbox" id="d3"><label for="d3">每天必须打开的是哪个？谁在用？</label></li>
+      <li class="q"><input type="checkbox" id="d4"><label for="d4">老师下班后还在做什么？形式主义，还是额外录入？</label></li>
+      <li class="q"><input type="checkbox" id="d5"><label for="d5">用过亲小禾、智慧树、掌通家园、微幼通吗？为什么不用了，或者还在用？</label></li>
+      <li class="q"><input type="checkbox" id="d6"><label for="d6">教育局对进园 App 有备案要求吗？来检查过？怎么应对？</label></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">E</span><h2>临走三件事 · 每园必做</h2></div>
+    <p class="why">参观结束、握完手之前的那两分钟，决定了这趟能带回来多少。</p>
+    <ul class="qs">
+      <li class="q"><input type="checkbox" id="e1"><label for="e1"><b>要一张表。</b>优先级：儿童观察记录表 → 发展评估量表 → 一日流程表 → 户外风险评估表</label></li>
+      <li class="q"><input type="checkbox" id="e2"><label for="e2"><b>加一个微信。</b>教学主任或园长。加完发一句「今天学到很多，回去可能还有两个小问题请教您」</label></li>
+      <li class="q"><input type="checkbox" id="e3"><label for="e3"><b>问一句话。</b>「如果给你们园上一套管理系统，你最想它先解决哪件事？」</label></li>
+    </ul>
+    <div class="callout"><b>要表的话术：</b>「你们这个观察记录表做得挺细的，能不能给我一张空白的？我回去参考一下格式。」同行之间这个请求很自然。</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">F</span><h2>晚上十分钟 · 当天填，隔夜就忘</h2></div>
+    <p class="why">填完点复制，直接粘进微信发过来。每园一段，不要合并。</p>
+
+    <div class="tool">
+      <h3 id="toolname">当前园所</h3>
+      <p class="hint">只写你亲眼看到、亲耳听到的。没问到的留空。</p>
+
+      <div class="field">
+        <label for="n1">做法 1（谁做 / 多久一次 / 用什么载体）</label>
+        <textarea id="n1" rows="2" placeholder="例：每周五主教填一张观察记录，手写在 A4 表上，交给教学主任归档"></textarea>
+      </div>
+      <div class="field">
+        <label for="n2">做法 2</label>
+        <textarea id="n2" rows="2" placeholder=""></textarea>
+      </div>
+      <div class="field">
+        <label for="n3">做法 3</label>
+        <textarea id="n3" rows="2" placeholder=""></textarea>
+      </div>
+      <div class="field">
+        <label for="npain">他们的痛点（一条就够）</label>
+        <textarea id="npain" rows="2" placeholder="例：老师写观察记录占掉午休，写完没人看"></textarea>
+      </div>
+      <div class="field">
+        <label for="nsurprise">居然有 / 居然没有</label>
+        <textarea id="nsurprise" rows="2" placeholder="例：居然没有家长满意度调查；居然每个班都有一本纸质成长档案"></textarea>
+      </div>
+      <div class="field">
+        <label>可下沉性（你这园能不能照做）</label>
+        <div class="tags" id="tags" role="group" aria-label="可下沉性">
+          <button type="button" class="tg" data-tag="低成本可抄" aria-pressed="false">低成本可抄</button>
+          <button type="button" class="tg" data-tag="要加人力" aria-pressed="false">要加人力</button>
+          <button type="button" class="tg" data-tag="要加预算" aria-pressed="false">要加预算</button>
+        </div>
+      </div>
+
+      <div class="out">
+        <pre class="pv" id="pv" aria-live="polite"></pre>
+        <button type="button" class="copy" id="copy">复制这段，发微信</button>
+        <p class="status" id="status" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><span class="gnum">G</span><h2>三条纪律</h2></div>
+    <ul class="rules">
+      <li><span class="rn">01</span><span><b>不拍孩子。</b>只拍环境、墙面、表格、物料、脱敏后的系统截图。拍孩子既不合适，也会让对方收起防备。</span></li>
+      <li><span class="rn">02</span><span><b>问做法，不问评价。</b>「你们这个好不好用」问不出东西；「上一次是什么时候做的、做了哪几步、花了多久」才问得出来。</span></li>
+      <li><span class="rn">03</span><span><b>要表单，不要数据。</b>表格模板、制度目录、量表结构可以要；具体孩子的数据、收费明细、教师工资不要开口。</span></li>
+    </ul>
+  </section>
+
+  <details class="apx">
+    <summary>附录：这份清单怎么喂回产品</summary>
+    <div class="maptab">
+      <div class="maprow"><span class="k">A 组 观察与评估链路</span><span class="v">成长报告：只有规则聚合的雷达图，无量表实体</span></div>
+      <div class="maprow"><span class="k">B 组 外出知情同意</span><span class="v">通知 / 请假 / 晨检：无「外出活动」链路</span></div>
+      <div class="maprow"><span class="k">C 组 收费与公示</span><span class="v">收费与账单：模块完全不存在</span></div>
+      <div class="maprow"><span class="k">C 组 食谱可见性</span><span class="v">膳食与带量食谱：后台 31 个端点，教师端和家长端零入口</span></div>
+      <div class="maprow"><span class="k">C 组 满意度调查</span><span class="v">意见反馈：只有单向留言，无问卷与统计</span></div>
+      <div class="maprow"><span class="k">D 组 工具与系统</span><span class="v">定价未定；ICP 与备案尚未办理</span></div>
+    </div>
+  </details>
+
+  <p class="foot">据 2026-11-04 仓库盘点整理 · 对应 docs/competitive/ 下的竞品分析与访谈提纲</p>
+</div>
+
+<script>
+(function(){
+  var PARKS=[
+    {id:"lidesi",  short:"理德斯", full:"金华理德斯幼儿园"},
+    {id:"qunxing", short:"群星",   full:"义乌群星外国语附属幼儿园"},
+    {id:"sanglu",  short:"桑庐",   full:"杭州桑庐幼儿园"},
+    {id:"xipu",    short:"西浦",   full:"苏州西浦附属幼儿园"},
+    {id:"mengqi",  short:"蒙琪星", full:"无锡蒙琪星幼儿园（待定）", todo:true}
+  ];
+  var KEY="kg-visit-2026-11-04-v1-";
+  var ids=["o1","o2","o3","a1","a2","a3","a4","a5","a6","a7","b1","b2","b3","b4","b5","b6","b7","c1","c2","c3","c4","c5","c6","c7","c8","c9","d1","d2","d3","d4","d5","d6","e1","e2","e3"];
+  var notes=["n1","n2","n3","npain","nsurprise"];
+
+  var cur=PARKS[0].id;
+  var state={ticks:{},note:{},tag:""};
+
+  function blank(){return {ticks:{},note:{},tag:""};}
+  function load(id){
+    try{
+      var raw=localStorage.getItem(KEY+id);
+      if(!raw) return blank();
+      var o=JSON.parse(raw);
+      return {ticks:o&&o.ticks||{}, note:o&&o.note||{}, tag:(o&&o.tag)||""};
+    }catch(e){ return blank(); }
+  }
+  function save(){
+    try{ localStorage.setItem(KEY+cur, JSON.stringify(state)); }catch(e){}
+  }
+
+  var parksEl=document.getElementById("parks");
+  var countEl=document.getElementById("count");
+  var toolname=document.getElementById("toolname");
+  var pv=document.getElementById("pv");
+  var statusEl=document.getElementById("status");
+
+  PARKS.forEach(function(p){
+    var b=document.createElement("button");
+    b.type="button";
+    b.className="park"+(p.todo?" park-todo":"");
+    b.textContent=p.short;
+    b.setAttribute("aria-pressed", p.id===cur?"true":"false");
+    b.dataset.id=p.id;
+    b.addEventListener("click",function(){ switchTo(p.id); });
+    parksEl.appendChild(b);
+  });
+
+  function switchTo(id){
+    cur=id;
+    state=load(id);
+    Array.prototype.forEach.call(parksEl.children,function(b){
+      b.setAttribute("aria-pressed", b.dataset.id===cur?"true":"false");
+    });
+    paint();
+  }
+
+  function paint(){
+    ids.forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.checked=!!state.ticks[id];
+    });
+    notes.forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.value=(state.note&&state.note[id])||"";
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".tg"),function(b){
+      b.setAttribute("aria-pressed", b.dataset.tag===state.tag?"true":"false");
+    });
+    var p=PARKS.filter(function(x){return x.id===cur;})[0];
+    toolname.textContent=p?p.full:"";
+    updateCount();
+    renderPreview();
+  }
+
+  function updateCount(){
+    var n=0;
+    ids.forEach(function(id){ if(state.ticks[id]) n++; });
+    countEl.textContent="已勾 "+n;
+  }
+
+  function renderPreview(){
+    var p=PARKS.filter(function(x){return x.id===cur;})[0];
+    var name=p?p.full:"";
+    function v(s){ s=(s||"").trim(); return s?s:"—"; }
+    var lines=[];
+    lines.push("【"+name+"】");
+    lines.push("① 我看到的做法（谁做 / 多久一次 / 用什么载体）");
+    lines.push("1. "+v(state.note.n1));
+    lines.push("2. "+v(state.note.n2));
+    lines.push("3. "+v(state.note.n3));
+    lines.push("② 他们的痛点："+v(state.note.npain));
+    lines.push("③ 居然有 / 居然没有："+v(state.note.nsurprise));
+    lines.push("④ 可下沉性："+(state.tag||"—"));
+    lines.push("⑤ 照片：__ 张（只拍环境、表格、物料）");
+    pv.textContent=lines.join("\n");
+  }
+
+  document.addEventListener("change",function(e){
+    var t=e.target;
+    if(t && t.type==="checkbox" && ids.indexOf(t.id)>-1){
+      if(t.checked) state.ticks[t.id]=true; else delete state.ticks[t.id];
+      save(); updateCount();
+    }
+  });
+
+  document.addEventListener("input",function(e){
+    var t=e.target;
+    if(t && notes.indexOf(t.id)>-1){
+      if(!state.note) state.note={};
+      state.note[t.id]=t.value;
+      save(); renderPreview();
+    }
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".tg"),function(b){
+    b.addEventListener("click",function(){
+      state.tag = (state.tag===b.dataset.tag) ? "" : b.dataset.tag;
+      Array.prototype.forEach.call(document.querySelectorAll(".tg"),function(x){
+        x.setAttribute("aria-pressed", x.dataset.tag===state.tag?"true":"false");
+      });
+      save(); renderPreview();
+    });
+  });
+
+  document.getElementById("copy").addEventListener("click",function(){
+    var text=pv.textContent||"";
+    statusEl.textContent="";
+    function done(){ statusEl.textContent="已复制，去微信粘贴吧"; }
+    function fallback(){
+      try{
+        var r=document.createRange(); r.selectNodeContents(pv);
+        var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        statusEl.textContent="已选中，长按复制";
+      }catch(e){ statusEl.textContent="复制失败，请长按选中上面的文字"; }
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    }else{ fallback(); }
+  });
+
+  switchTo(cur);
+})();
+</script>
