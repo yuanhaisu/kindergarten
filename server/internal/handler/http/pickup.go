@@ -40,11 +40,11 @@ func (h *Handler) GetPickupOverview(c *gin.Context) {
 }
 
 type pickupRecordsQuery struct {
-	Page        int    `form:"page"`
-	PageSize    int    `form:"page_size"`
-	ClassID     uint64 `form:"class_id"`
-	Date        string `form:"date"`
-	IsAbnormal  *bool  `form:"is_abnormal"`
+	Page       int    `form:"page"`
+	PageSize   int    `form:"page_size"`
+	ClassID    uint64 `form:"class_id"`
+	Date       string `form:"date"`
+	IsAbnormal *bool  `form:"is_abnormal"`
 }
 
 func (h *Handler) GetPickupRecords(c *gin.Context) {

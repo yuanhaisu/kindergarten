@@ -25,11 +25,11 @@ import (
 // ID 落在 9902xx 区间，t.Cleanup 硬删。
 
 const (
-	testNMTKG       uint64 = 990201
-	testNMTTeacher  uint64 = 990201
-	testNMTAdmin    uint64 = 990202
-	testNMTParent   uint64 = 990210
-	testNMTParent2  uint64 = 990211 // 无关班家长
+	testNMTKG      uint64 = 990201
+	testNMTTeacher uint64 = 990201
+	testNMTAdmin   uint64 = 990202
+	testNMTParent  uint64 = 990210
+	testNMTParent2 uint64 = 990211 // 无关班家长
 )
 
 var nmtDB *gorm.DB
@@ -113,7 +113,7 @@ func newNMTFixture(t *testing.T) *nmtFixture {
 		}).Error)
 	}
 	for _, u := range []struct {
-		id   uint64
+		id          uint64
 		phone, nick string
 	}{
 		{testNMTTeacher, "13900002001", "测试多班老师"},

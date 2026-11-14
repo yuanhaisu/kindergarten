@@ -37,10 +37,10 @@ func (Announcement) TableName() string { return "announcements" }
 type AnnouncementAttachment struct {
 	BaseModel
 	AnnouncementID uint64 `json:"announcement_id" gorm:"not null;index"`
-	FileURL          string `json:"file_url" gorm:"size:500;not null"`
-	FileName         string `json:"file_name" gorm:"size:200"`
-	FileSize         int64  `json:"file_size" gorm:"default:0"`
-	SortNum          int    `json:"sort_num" gorm:"default:0"`
+	FileURL        string `json:"file_url" gorm:"size:500;not null"`
+	FileName       string `json:"file_name" gorm:"size:200"`
+	FileSize       int64  `json:"file_size" gorm:"default:0"`
+	SortNum        int    `json:"sort_num" gorm:"default:0"`
 }
 
 func (AnnouncementAttachment) TableName() string { return "announcement_attachments" }

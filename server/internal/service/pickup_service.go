@@ -357,24 +357,24 @@ func (s *PickupService) ListAuthorizations(
 			reviewLabel = "已拒绝"
 		}
 		item := map[string]interface{}{
-			"id":               row.ID,
-			"student_id":       row.StudentID,
-			"student_name":     row.StudentName,
-			"class_name":       row.ClassName,
-			"name":             row.Name,
-			"phone":            row.Phone,
-			"relation":         row.Relation,
-			"id_card":          row.IDCard,
-			"avatar":           row.Avatar,
-			"auth_type":        row.AuthType,
-			"review_status":    row.ReviewStatus,
-			"review_label":     reviewLabel,
-			"audited_at":       nil,
-			"audit_remark":     row.AuditRemark,
-			"allow_pickup":     row.AllowPickup,
+			"id":                row.ID,
+			"student_id":        row.StudentID,
+			"student_name":      row.StudentName,
+			"class_name":        row.ClassName,
+			"name":              row.Name,
+			"phone":             row.Phone,
+			"relation":          row.Relation,
+			"id_card":           row.IDCard,
+			"avatar":            row.Avatar,
+			"auth_type":         row.AuthType,
+			"review_status":     row.ReviewStatus,
+			"review_label":      reviewLabel,
+			"audited_at":        nil,
+			"audit_remark":      row.AuditRemark,
+			"allow_pickup":      row.AllowPickup,
 			"allow_view_record": row.AllowViewRecord,
 			"allow_growth_view": row.AllowGrowthView,
-			"created_at":       row.CreatedAt.UTC().Format(time.RFC3339),
+			"created_at":        row.CreatedAt.UTC().Format(time.RFC3339),
 		}
 		if row.AuditedAt != nil {
 			item["audited_at"] = row.AuditedAt.UTC().Format(time.RFC3339)
@@ -383,7 +383,6 @@ func (s *PickupService) ListAuthorizations(
 	}
 	return out, total, pn.Page, pn.PageSize, nil
 }
-
 
 // ==================== 滞留与超时未接（管理端）====================
 
@@ -454,11 +453,11 @@ func (s *PickupService) ListOverdueStudents(
 	}
 
 	type classGroup struct {
-		ClassID     uint64                   `json:"class_id"`
-		ClassName   string                   `json:"class_name"`
-		Deadline    string                   `json:"pickup_deadline"`
-		Count       int                      `json:"overdue_count"`
-		Students    []map[string]interface{} `json:"students"`
+		ClassID   uint64                   `json:"class_id"`
+		ClassName string                   `json:"class_name"`
+		Deadline  string                   `json:"pickup_deadline"`
+		Count     int                      `json:"overdue_count"`
+		Students  []map[string]interface{} `json:"students"`
 	}
 	groups := make(map[uint64]*classGroup)
 	order := make([]uint64, 0, 4)

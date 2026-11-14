@@ -5,21 +5,21 @@ package domain
 // PersonRef 为云侧人员标识（腾讯云 PersonId，形如 kg{id}_stu{sid}）——我方不存人脸特征值。
 type StudentFace struct {
 	SoftDeleteModel
-	StudentID  uint64 `json:"student_id" gorm:"not null;uniqueIndex:idx_student_face"`
-	FaceURL    string `json:"face_url" gorm:"size:500;not null;uniqueIndex:idx_student_face"`
-	Provider   string `json:"provider" gorm:"size:20;not null;default:tencent"`
-	PersonRef  string `json:"person_ref" gorm:"size:64"`
-	Status     int8   `json:"status" gorm:"default:0;index;comment:0待注册 1已注册 2注册失败"`
-	LastError  string `json:"last_error" gorm:"size:255"`
+	StudentID uint64 `json:"student_id" gorm:"not null;uniqueIndex:idx_student_face"`
+	FaceURL   string `json:"face_url" gorm:"size:500;not null;uniqueIndex:idx_student_face"`
+	Provider  string `json:"provider" gorm:"size:20;not null;default:tencent"`
+	PersonRef string `json:"person_ref" gorm:"size:64"`
+	Status    int8   `json:"status" gorm:"default:0;index;comment:0待注册 1已注册 2注册失败"`
+	LastError string `json:"last_error" gorm:"size:255"`
 }
 
 func (StudentFace) TableName() string { return "student_faces" }
 
 // 底库注册状态
 const (
-	FaceStatusPending  int8 = 0 // 待注册
-	FaceStatusIndexed  int8 = 1 // 已注册（可被识别命中）
-	FaceStatusFailed   int8 = 2 // 注册失败（可重试）
+	FaceStatusPending int8 = 0 // 待注册
+	FaceStatusIndexed int8 = 1 // 已注册（可被识别命中）
+	FaceStatusFailed  int8 = 2 // 注册失败（可重试）
 )
 
 // RecognitionJob 照片人脸识别任务（异步队列，设计 D2：DB 表驱动轮询）。

@@ -162,9 +162,9 @@ func (s *AuditService) ListAudits(
 				"nickname":   row.SubmitterNick,
 				"class_name": row.ClassName,
 			},
-			"status":        stStr,
-			"status_label":  stLabel,
-			"submitted_at":  row.CreatedAt.UTC().Format(time.RFC3339),
+			"status":       stStr,
+			"status_label": stLabel,
+			"submitted_at": row.CreatedAt.UTC().Format(time.RFC3339),
 		}
 		out = append(out, item)
 	}
@@ -295,10 +295,10 @@ func (s *AuditService) GetAuditStats(ctx context.Context, kindergartenID uint64)
 		}
 	}
 	return map[string]interface{}{
-		"pending":            pending,
-		"passed_today":       passedToday,
-		"rejected_today":     rejectedToday,
-		"total_this_month":   totalMonth,
-		"by_type":            byType,
+		"pending":          pending,
+		"passed_today":     passedToday,
+		"rejected_today":   rejectedToday,
+		"total_this_month": totalMonth,
+		"by_type":          byType,
 	}, nil
 }

@@ -140,15 +140,15 @@ type classTeacherDetail struct {
 }
 
 type classListItem struct {
-	ID            uint64             `json:"id"`
-	Name          string             `json:"name"`
-	Grade         string             `json:"grade"`
-	AcademicYear  string             `json:"academic_year"`
-	Capacity      int                `json:"capacity"`
-	StudentCount  int64              `json:"student_count"`
-	Teachers      []classTeacherBrief `json:"teachers"`
-	Status        int8               `json:"status"`
-	CreatedAt     string             `json:"created_at"`
+	ID           uint64              `json:"id"`
+	Name         string              `json:"name"`
+	Grade        string              `json:"grade"`
+	AcademicYear string              `json:"academic_year"`
+	Capacity     int                 `json:"capacity"`
+	StudentCount int64               `json:"student_count"`
+	Teachers     []classTeacherBrief `json:"teachers"`
+	Status       int8                `json:"status"`
+	CreatedAt    string              `json:"created_at"`
 }
 
 type studentPreview struct {
@@ -158,16 +158,16 @@ type studentPreview struct {
 }
 
 type classDetailResp struct {
-	ID               uint64               `json:"id"`
-	Name             string               `json:"name"`
-	Grade            string               `json:"grade"`
-	AcademicYear     string               `json:"academic_year"`
-	Capacity         int                  `json:"capacity"`
-	StudentCount     int64                `json:"student_count"`
-	Status           int8                 `json:"status"`
-	Teachers         []classTeacherDetail `json:"teachers"`
-	StudentsPreview  []studentPreview     `json:"students_preview"`
-	CreatedAt        string               `json:"created_at"`
+	ID              uint64               `json:"id"`
+	Name            string               `json:"name"`
+	Grade           string               `json:"grade"`
+	AcademicYear    string               `json:"academic_year"`
+	Capacity        int                  `json:"capacity"`
+	StudentCount    int64                `json:"student_count"`
+	Status          int8                 `json:"status"`
+	Teachers        []classTeacherDetail `json:"teachers"`
+	StudentsPreview []studentPreview     `json:"students_preview"`
+	CreatedAt       string               `json:"created_at"`
 }
 
 func (s *ClassService) buildTeacherBriefs(rows []domain.ClassTeacher) []classTeacherBrief {
@@ -221,15 +221,15 @@ func (s *ClassService) ListClasses(
 	list := make([]classListItem, 0, len(classes))
 	for _, c := range classes {
 		list = append(list, classListItem{
-			ID:            c.ID,
-			Name:          c.Name,
-			Grade:         c.Grade,
-			AcademicYear:  c.AcademicYear,
-			Capacity:      c.Capacity,
-			StudentCount:  counts[c.ID],
-			Teachers:      s.buildTeacherBriefs(byClass[c.ID]),
-			Status:        c.Status,
-			CreatedAt:     c.CreatedAt.UTC().Format(time.RFC3339),
+			ID:           c.ID,
+			Name:         c.Name,
+			Grade:        c.Grade,
+			AcademicYear: c.AcademicYear,
+			Capacity:     c.Capacity,
+			StudentCount: counts[c.ID],
+			Teachers:     s.buildTeacherBriefs(byClass[c.ID]),
+			Status:       c.Status,
+			CreatedAt:    c.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return list, total, q.Page, q.PageSize, nil
@@ -307,11 +307,11 @@ type classTeacherAssign struct {
 }
 
 type CreateClassReq struct {
-	Name           string               `json:"name" binding:"required,max=64"`
-	Grade          string               `json:"grade" binding:"required"`
-	AcademicYear   string               `json:"academic_year"`
-	Capacity       int                  `json:"capacity" binding:"required,min=1"`
-	TeacherIDs     []classTeacherAssign `json:"teacher_ids"`
+	Name         string               `json:"name" binding:"required,max=64"`
+	Grade        string               `json:"grade" binding:"required"`
+	AcademicYear string               `json:"academic_year"`
+	Capacity     int                  `json:"capacity" binding:"required,min=1"`
+	TeacherIDs   []classTeacherAssign `json:"teacher_ids"`
 }
 
 type createClassResp struct {

@@ -12,7 +12,7 @@ import (
 // 场景：返回有效授权人（TC-NEW-PKU-AUTH-001）
 func TestStudentAuthorizedPersons_ReturnsValid(t *testing.T) {
 	f := newPickupFixture(t, "00:00", testPickupClass)
-	f.makeAuthorization(t, "奶奶（张三）", 1, 1, nil)            // 有效
+	f.makeAuthorization(t, "奶奶（张三）", 1, 1, nil)           // 有效
 	authID := f.makeAuthorization(t, "爸爸（王明）", 1, 1, nil) // 有效
 
 	result, err := f.svc.StudentAuthorizedPersons(ctx(), f.tc, f.studentID)

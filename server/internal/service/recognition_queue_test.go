@@ -159,9 +159,9 @@ func TestWriteSuggestions_ProtectsConfirmedAndRejected(t *testing.T) {
 	require.NoError(t, db.Create(&domain.GrowthMediaStudent{MediaID: mid, StudentID: rejectedSID, Status: &st2}).Error)
 
 	matches := []face.Match{
-		{StudentID: confirmedSID, Score: 95}, // 已确认：不得被覆盖
-		{StudentID: rejectedSID, Score: 96},  // 已拒绝：不得复活
-		{StudentID: suggestedSID, Score: 88}, // 新建议：应写入 status=0
+		{StudentID: confirmedSID, Score: 95},            // 已确认：不得被覆盖
+		{StudentID: rejectedSID, Score: 96},             // 已拒绝：不得复活
+		{StudentID: suggestedSID, Score: 88},            // 新建议：应写入 status=0
 		{StudentID: uint64(rqTestBase + 14), Score: 50}, // 低于阈值：不落
 	}
 	require.NoError(t, q.writeSuggestions(ctx, mid, matches))

@@ -152,11 +152,11 @@ func (r *AuditRepo) UpdateAuditDecision(
 	res := r.db.WithContext(ctx).Model(&domain.ContentAudit{}).
 		Where("kindergarten_id = ? AND id = ? AND deleted_at IS NULL", kindergartenID, auditID).
 		Updates(map[string]interface{}{
-			"status":          status,
-			"reviewer_id":     reviewerID,
-			"reviewed_at":     reviewedAt,
-			"reject_reason":   rejectReason,
-			"updated_at":      reviewedAt,
+			"status":        status,
+			"reviewer_id":   reviewerID,
+			"reviewed_at":   reviewedAt,
+			"reject_reason": rejectReason,
+			"updated_at":    reviewedAt,
 		})
 	if res.Error != nil {
 		return res.Error

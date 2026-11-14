@@ -26,8 +26,8 @@ import (
 // 用独立测试园所/班级（高 ID），每例 t.Cleanup 硬删自建行，不污染真实数据。
 
 const (
-	testPickupKG    uint64 = 990001
-	testPickupClass uint64 = 990001
+	testPickupKG     uint64 = 990001
+	testPickupClass  uint64 = 990001
 	testPickupClass2 uint64 = 990002
 	// testPickupOperatorID 作 OperatorID（核验人）；pickup_records.operator_id 有外键指向 users
 	testPickupOperatorID uint64 = 990001

@@ -12,11 +12,11 @@ import (
 )
 
 type listGrowthLogsQuery struct {
-	Page       int    `form:"page"`
-	PageSize   int    `form:"page_size"`
-	ClassID    uint64 `form:"class_id"`
-	TeacherID  uint64 `form:"teacher_id"`
-	Date       string `form:"date"`
+	Page      int    `form:"page"`
+	PageSize  int    `form:"page_size"`
+	ClassID   uint64 `form:"class_id"`
+	TeacherID uint64 `form:"teacher_id"`
+	Date      string `form:"date"`
 }
 
 func (h *Handler) ListGrowthLogs(c *gin.Context) {
