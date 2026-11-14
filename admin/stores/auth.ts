@@ -5,6 +5,11 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
   const refreshTokenValue = useCookie<string | null>('admin_refresh', { sameSite: 'lax' })
 
+  // 隐私政策同意状态：登录响应先给一次，路由守卫再用 /common/consent 校准。
+  const consentRequired = ref(false)
+  const currentPolicyVersion = ref('')
+  const consentChecked = ref(false)
+
   function setSession(data: LoginResult) {
     const token = useCookie<string | null>('admin_token', {
       sameSite: 'lax',
@@ -13,6 +18,9 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = data.token
     refreshTokenValue.value = data.refresh_token
     user.value = data.user
+    consentRequired.value = Boolean(data.consent_required)
+    currentPolicyVersion.value = data.current_policy_version || ''
+    consentChecked.value = false
   }
 
   function clearSession() {
@@ -20,6 +28,9 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     refreshTokenValue.value = null
     user.value = null
+    consentRequired.value = false
+    currentPolicyVersion.value = ''
+    consentChecked.value = false
     usePermissionStore().reset()
   }
 
@@ -33,5 +44,31 @@ export const useAuthStore = defineStore('auth', () => {
     usePermissionStore().setCodes(codes)
   }
 
-  return { user, setSession, clearSession, fetchProfile }
+  /** 返回 true 表示已同意当前政策。force 用于政策更新后重新校准。 */
+  async function ensureConsent(force = false): Promise<boolean> {
+    if (!force && consentChecked.value) return !consentRequired.value
+    const { getConsentStatus } = await import('~/api/consent')
+    const status = await getConsentStatus()
+    consentChecked.value = true
+    currentPolicyVersion.value = status.policy_version || currentPolicyVersion.value
+    consentRequired.value = !status.consented
+    return !consentRequired.value
+  }
+
+  function markConsented(status: { policy_version?: string }) {
+    consentRequired.value = false
+    consentChecked.value = true
+    if (status?.policy_version) currentPolicyVersion.value = status.policy_version
+  }
+
+  return {
+    user,
+    consentRequired,
+    currentPolicyVersion,
+    setSession,
+    clearSession,
+    fetchProfile,
+    ensureConsent,
+    markConsented,
+  }
 })
