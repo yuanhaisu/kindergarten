@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 班级信息</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__pad { width: 36px; height: 36px; }
+    .head-sub { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-bone); }
+
+    .facts { display: grid; margin: 0; }
+    .fact {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+      border-top: 1px solid var(--hair-soft);
+    }
+    .fact:first-child { border-top: 0; padding-top: 1px; }
+    .fact:last-child { padding-bottom: 1px; }
+    .fact dt { font-size: 13px; color: var(--ink-card); }
+    .fact dd { margin: 0; font-size: 14px; font-weight: 500; color: var(--pine); }
+    .fact .time { font-variant-numeric: tabular-nums; }
+
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 26px 0 8px; }
+    .section-head h2 { font-size: 18px; }
+
+    .teacher .list-row { min-height: 64px; }
+    .call {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 1px solid var(--hair-strong);
+      border-radius: 50%;
+      background: var(--card);
+      color: var(--pine);
+      cursor: pointer;
+    }
+
+    .announce h3 { margin: 3px 0 0; font-size: 17px; line-height: 1.45; }
+    .announce-body { margin: 7px 0 0; font-size: 13px; line-height: 1.65; color: var(--ink-card); }
+    .announce-meta { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-card); }
+
+    .foot-note { margin: 20px 0 0; text-align: center; font-size: 11.5px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+        </button>
+        <span class="page-bar__title">班级信息</span>
+        <span class="page-bar__pad" aria-hidden="true"></span>
+      </header>
+
+      <header class="screen-head">
+        <div>
+          <h1>小一班</h1>
+          <p class="head-sub">阳光幼儿园 · 28 名幼儿</p>
+        </div>
+      </header>
+
+      <section class="card" aria-label="班级信息">
+        <dl class="facts">
+          <div class="fact"><dt>班级</dt><dd>小一班</dd></div>
+          <div class="fact"><dt>教室</dt><dd>教学楼 2 层 203</dd></div>
+          <div class="fact"><dt>在园时间</dt><dd class="time">08:00–17:00</dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="teachers-title">
+        <div class="section-head">
+          <h2 id="teachers-title">班级老师</h2>
+          <span class="tiny muted">2 位</span>
+        </div>
+        <div class="card card--flush teacher">
+          <div class="list-row">
+            <span class="avatar avatar--sage" aria-hidden="true">李</span>
+            <span class="list-row__body">
+              <span class="list-row__title">李老师</span>
+              <span class="list-row__sub">主班 · 语言</span>
+            </span>
+            <button class="call" type="button" aria-label="拨打李老师电话">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            </button>
+          </div>
+          <div class="list-row">
+            <span class="avatar avatar--clay" aria-hidden="true">王</span>
+            <span class="list-row__body">
+              <span class="list-row__title">王老师</span>
+              <span class="list-row__sub">配班 · 艺术</span>
+            </span>
+            <button class="call" type="button" aria-label="拨打王老师电话">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="notice-title">
+        <div class="section-head">
+          <h2 id="notice-title">班级公告</h2>
+        </div>
+        <div class="card card--soft announce">
+          <p class="overline">秋游通知</p>
+          <h3>本周五去城市公园</h3>
+          <p class="announce-body">定于 <span class="hl hl--gold">11 月 13 日（周五）</span> 上午组织秋游，请给孩子准备轻便水壶和遮阳帽，周四前交回执。</p>
+          <p class="announce-meta">李老师 · 11 月 10 日</p>
+        </div>
+      </section>
+
+      <p class="foot-note">有疑问请先联系班级老师</p>
+    </main>
+  </div>
+</body>
+</html>

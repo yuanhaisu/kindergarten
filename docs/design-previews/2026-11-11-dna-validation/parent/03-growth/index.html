@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>养成星球 · 成长时光 · DNA 验证</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../_shared/dna.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="screen-head">
+        <div>
+          <p class="overline">乐乐 · 本周 6 条</p>
+          <h1>成长时光</h1>
+        </div>
+        <button class="btn btn--ghost btn--sm" type="button">相册</button>
+      </header>
+
+      <div class="filters" role="group" aria-label="筛选">
+        <button class="chip is-on" type="button">全部</button>
+        <button class="chip" type="button">照片</button>
+        <button class="chip" type="button">老师记录</button>
+        <button class="chip" type="button">我的记录</button>
+      </div>
+
+      <article class="g-card card">
+        <div class="thumb g-photo" role="img" aria-label="孩子系鞋带的照片占位">
+          <span class="photo-label">示例照片</span>
+          <span class="photo-tag">今天 09:20</span>
+        </div>
+        <div class="g-body">
+          <p class="overline">自理能力</p>
+          <h2 class="g-title">第一次自己系好了鞋带</h2>
+          <p class="g-text">他蹲下来试了三次，第三次成功以后抬头看着我笑，说「老师你看」。</p>
+          <p class="g-tags">
+            <span class="hl">坚持</span>
+            <span class="hl hl--gold">小肌肉</span>
+          </p>
+          <div class="g-foot row between">
+            <span class="g-meta">王老师</span>
+            <span class="g-actions"><span class="dot"></span> 12 人点赞 · 3 条评论</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="g-card card">
+        <div class="thumb g-photo g-photo--sage" role="img" aria-label="户外活动照片占位">
+          <span class="photo-label">示例照片</span>
+          <span class="photo-tag">昨天 15:40</span>
+        </div>
+        <div class="g-body">
+          <p class="overline">户外活动</p>
+          <h2 class="g-title">在沙水区搭了一条「会转弯的河」</h2>
+          <p class="g-text">和两个小朋友一起挖了二十分钟，中间主动说「我们把它连起来吧」。</p>
+          <p class="g-tags"><span class="hl hl--clay">合作</span></p>
+          <div class="g-foot row between">
+            <span class="g-meta">李老师</span>
+            <span class="g-actions">8 人点赞</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="g-card card card--soft">
+        <div class="g-body g-body--plain">
+          <p class="overline">家庭记录</p>
+          <h2 class="g-title">周末第一次自己收拾了书包</h2>
+          <p class="g-text">睡前把绘本、水壶和换洗衣服一件件放进去，最后还检查了一遍。</p>
+          <div class="g-foot row between">
+            <span class="g-meta">妈妈 · 11 月 9 日</span>
+            <span class="g-actions">仅家人可见</span>
+          </div>
+        </div>
+      </article>
+    </main>
+
+    <button class="fab" type="button" aria-label="记录成长">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+
+    <nav class="mp-nav" aria-label="主导航">
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></svg>
+        首页
+      </a>
+      <a class="is-on" href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 5.3A2.3 2.3 0 0 1 6.1 3H11v16.8H6.1a2.3 2.3 0 0 0-2.3 2.3V5.3Z"/><path d="M20.2 5.3A2.3 2.3 0 0 0 17.9 3H13v16.8h4.9a2.3 2.3 0 0 1 2.3 2.3V5.3Z"/></svg>
+        成长
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h13.2"/><path d="m14.2 5.2 3 3-3 3"/><path d="M20 15.8H6.8"/><path d="m9.8 12.8-3 3 3 3"/></svg>
+        接送
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.4"/><path d="M4.8 20c.7-3.9 3.6-6 7.2-6s6.5 2.1 7.2 6"/></svg>
+        我的
+      </a>
+    </nav>
+  </div>
+</body>
+</html>

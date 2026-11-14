@@ -9,6 +9,7 @@ import {
   Download,
   Files,
   FirstAidKit,
+  Food,
   Grid,
   Histogram,
   HomeFilled,
@@ -26,6 +27,7 @@ import {
   UserFilled,
   Van,
   View,
+  Wallet,
 } from '@element-plus/icons-vue'
 
 export interface AdminMenuEntry {
@@ -70,6 +72,16 @@ export const ADMIN_MENU_GROUPS: MenuGroup[] = [
     ],
   },
   {
+    label: '膳食管理',
+    children: [
+      { title: '基本参数设置', path: '/diet/config', icon: Setting, permission: 'diet:view' },
+      // 膳食计划页在 S9 落地；菜单先行，点击暂 404（brief 允许）
+      { title: '膳食计划', path: '/diet/plans', icon: Calendar, permission: 'diet:view' },
+      { title: '菜谱库', path: '/diet/recipes', icon: Notebook, permission: 'diet:view' },
+      { title: '资源库', path: '/diet/foods', icon: Food, permission: 'diet:view' },
+    ],
+  },
+  {
     label: '园所与人员',
     children: [
       { title: '班级管理', path: '/classes', icon: OfficeBuilding, permission: 'student:view' },
@@ -97,6 +109,7 @@ export const ADMIN_MENU_GROUPS: MenuGroup[] = [
       { title: '角色管理', path: '/roles', icon: Key, permission: 'admin:role' },
       { title: '管理员', path: '/admins', icon: Stamp, permission: 'admin:view' },
       { title: '操作日志', path: '/logs', icon: Clock, permission: 'system:log' },
+      { title: '我的套餐', path: '/billing', icon: Wallet, permission: 'system:kindergarten' },
     ],
   },
 ]

@@ -1,0 +1,115 @@
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["ecs:Describe*", "ecs:ListTagResources"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["rds:Describe*"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["kvstore:Describe*"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["vpc:Describe*"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["cms:Describe*", "cms:Query*"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["oos:ListExecutions"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "actiontrail:LookupEvents",
+        "actiontrail:DescribeTrails",
+        "actiontrail:GetTrailStatus"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["bssopenapi:Query*", "bssopenapi:Describe*", "bss:Describe*"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["oss:ListBuckets"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["oss:ListObjects", "oss:GetBucket*"],
+      "Resource": [
+        "acs:oss:*:*:<bucket-prod>",
+        "acs:oss:*:*:<bucket-staging>",
+        "acs:oss:*:*:<bucket-dev>"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["oss:GetObject"],
+      "Resource": [
+        "acs:oss:*:*:<bucket-prod>/*",
+        "acs:oss:*:*:<bucket-staging>/*",
+        "acs:oss:*:*:<bucket-dev>/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["log:ListProject"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "log:ListLogStores",
+        "log:GetProject",
+        "log:GetProjectLogs",
+        "log:GetLogStore",
+        "log:GetIndex",
+        "log:GetLogStoreMeteringMode",
+        "log:GetLogStoreConfig"
+      ],
+      "Resource": "acs:log:cn-guangzhou:*:project/<sls-project>"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cr:ListInstance",
+        "cr:ListNamespace",
+        "cr:ListRepository",
+        "cr:GetInstance",
+        "cr:GetRepository",
+        "cr:ListRepoTag",
+        "cr:GetRepoTag",
+        "cr:GetInstanceEndpoint",
+        "cr:GetAuthorizationToken"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["alidns:DescribeDomains"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["alidns:DescribeDomainRecords", "alidns:DescribeDomainRecordInfo"],
+      "Resource": "acs:alidns:*:*:domain/<domain>"
+    }
+  ]
+}

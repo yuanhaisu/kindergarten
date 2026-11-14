@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "pages": {
+    "parent/01-home": {
+      "assetsSha": "828e937d43bccfb18e96c6debf7bab9ba4110e0b32b4ef42490ab6fcb1914c21",
+      "previewSha": "f2c9d65fc27a1203b598cf4bdae41f563e8775a053e10ee50748548e3d9f5a03"
+    },
+    "parent/02-login": {
+      "assetsSha": "1304543accb5ac040177518d887b88540b15b889a47a1bdaf1393e90e24ba2ad",
+      "previewSha": "79f8efd0c71fd0d9f58fef439d1c013ba6ea64ded5914bd4624682a14032c3b6"
+    },
+    "parent/03-bind": {
+      "assetsSha": "4d6b0053cb778dc3e9316065201894b19e7dc2af20613feffaab0314b22bb5e9",
+      "previewSha": "093b029127f1c5b4b049e1991946cbe0ee2ab72a91da67913a761b59327df741"
+    },
+    "parent/04-notice-index": {
+      "assetsSha": "67d632bd70cd537e21931351e0e2381cc97442adc74d5f582f6e474c2432c2e4",
+      "previewSha": "f50096f99e1bc44307a2345e96fe7dbee007bcf4945465e724eb7f6c175113c6"
+    },
+    "parent/05-notice-detail": {
+      "assetsSha": "4c78da59a9b7ef2d2fd3415e5487cf2b44aabaa677be0a563a3a47a00346da5d",
+      "previewSha": "e5e6acb07c217a4b24a8a3ccd6621380b05c2addec941f89c097696b8b5bc9d2"
+    },
+    "parent/06-leave-index": {
+      "assetsSha": "e44990b8c0efd3b2e2062838d9f00ec35942ef10690efac18b9d510d4ae84151",
+      "previewSha": "872888da5fa1934367c7de57edfe14c9a256c864fdee8377c12c3c4546f6df4c"
+    },
+    "parent/07-leave-create": {
+      "assetsSha": "de1e7182a6c6448bb26fb7251206149966ab5ac1a9b102c46cef09574f644ad6",
+      "previewSha": "64ef26b88a8fb84884ff0a7549bf3f7d94074dc8f117332b71ee63b3e84593cb"
+    },
+    "parent/08-leave-detail": {
+      "assetsSha": "b5f063441dd957219445170d3559f9a65497033da7e5e7c5c6f7d0162a385202",
+      "previewSha": "cac304a7499a8996fea727a90bb5a086417394e38cf5bc2cb426d23bfcbaf0d2"
+    },
+    "parent/09-growth-index": {
+      "assetsSha": "eb862a19fda8f25715cbdbfe479345953f1c9ebd84c73f54dd9dec80587e54f1",
+      "previewSha": "f006325dee4fae61cbe7394aac5fcc7261ed27a21dfdc9c8cffbe6ef3a671b87"
+    },
+    "parent/10-growth-detail": {
+      "assetsSha": "39dbbb672624a59de18bec5cf734d80fffde25c80c2eb589885afcb3fa7ebf32",
+      "previewSha": "a63a575d40c17b5eade943592a4d49674c0ffe5c5e129990a90a5f7f3e720550"
+    },
+    "parent/11-growth-album": {
+      "assetsSha": "daa2d632baf440ca081e263f1f8f17b45a92de635cc19c1edce511a00a33ddf0",
+      "previewSha": "b353a3475c530bbbdfc42bd58d9aa1f4ec0cb19de9f924f21d656c2505ae668a"
+    },
+    "parent/12-growth-report": {
+      "assetsSha": "c1872424f87267894265f532d57f22baced667d37c22e5619fa99b1f08b2c86c",
+      "previewSha": "1509059676fd9c8dc3d354c9947fb50525aba6c9a58c0cda046f72004aee8107"
+    },
+    "parent/13-pickup-index": {
+      "assetsSha": "311c09eb05f19d222554e8046286b0a7e40422029c6f33cb44f53d0593a5ad48",
+      "previewSha": "c849261595dce17c4c5414e28b2cae1152b300184aa5e35bd12f25d9c8f5b3db"
+    },
+    "parent/14-pickup-qrcode": {
+      "assetsSha": "b66ffd110c72fd82e2a27b2b6851fcfec6565b021f315b20e6f0a2dc10939ae1",
+      "previewSha": "c7d710a67508c5f6c558fdcce7c3333da4556d64f4ffd14db34111b9a1cccb38"
+    },
+    "parent/15-pickup-authorized": {
+      "assetsSha": "2aff5fb1f96d6e5c2cc7fa250a85111e00a121b2e69a2c2b899ce3782616330a",
+      "previewSha": "b43b384e79b85e147f014bdb6cc40d1dee05ce8994bda464148140176c8115d7"
+    },
+    "parent/16-pickup-authorized-create": {
+      "assetsSha": "dd5cee3f0b584ed9ac85894cc0dc622deaa24e5b9114f4e03c4f19aa5c6d3042",
+      "previewSha": "d95c6832df776a12d6263ca49b89a67bb5c7deb27f5e631717115d282a29a6d9"
+    },
+    "parent/17-tasks-index": {
+      "assetsSha": "252e713941553e6218c557e35ee87ca761b73890f0d15ba18bad27ae4c2d2d01",
+      "previewSha": "68501d30f9b584dd14b1935273f7296ca9169216b5539774ddd72edccab152bb"
+    },
+    "parent/18-tasks-detail": {
+      "assetsSha": "3a0486cd353ad74af184ecfe1bcd7db8688142c96cdedc8a71fd7ae4e8f6261b",
+      "previewSha": "cb65807d2641ac05c06a706b9ae52ee0399224b91f43ed7b1b2da109a3740bf6"
+    },
+    "parent/19-tasks-wall": {
+      "assetsSha": "1dcc524788bb7062db8bf4993b8de34351b83e5cc0a466bc7f9dff58d9f09198",
+      "previewSha": "937664ae60648e5c9db54c7f85b67ed457031e51912654eba5b260ddbd9f70cd"
+    },
+    "parent/20-points": {
+      "assetsSha": "3a8349027929dcb1e6c0e983afe1bf88a975a9bd73c70316fab806949a2294a0",
+      "previewSha": "553f2d387095ba114005e93eb57f344bee18f648ef867ef1a4ead8b5004f2766"
+    },
+    "parent/21-class-index": {
+      "assetsSha": "55ad37f535012591f5ebced346d6f0209468300bfec8d904dd129e896ecd0c1e",
+      "previewSha": "05cb84e895f4630ff2468e7dda6a43b372fd4bdf0d3f9896959780f7c1ca69bc"
+    },
+    "parent/22-calendar-index": {
+      "assetsSha": "107d5cc02a1b5a5457ebcfc101848ce54f0c587394ec514060b4d0f171927796",
+      "previewSha": "418904631832e5ece79b38fa5b8a8c2234906a6e28dfd8af043a040ae145cfef"
+    },
+    "parent/23-student-index": {
+      "assetsSha": "2127bf2371cb6cbaa2d1917d111f6df343473e4412bf47e0cdc99a9da11da03f",
+      "previewSha": "1d4a81d0da5a3018078874630a5118bea524ca7d1ac362aa25f6de7550714b63"
+    },
+    "parent/24-feedback": {
+      "assetsSha": "f1313ea6f6046a0c9ce4bc6cf042f87d17f535c3a15da36a4cc472cb54605a93",
+      "previewSha": "e42375473eae53ad14e7322712ff2db688136691cd4f1435b7a3c546561d0bee"
+    },
+    "parent/25-settings": {
+      "assetsSha": "e1432b94e055b5bf8e8366d158317316d35572b23c34cbe5bf04a8fde6ce4cec",
+      "previewSha": "5497f2fb571548ba2fe665229daee4eeaebc7699a871f6fd37fe94f05768e759"
+    },
+    "parent/26-messages": {
+      "assetsSha": "4027176f539f91cafc5d62858636f6761d25e182ea20899ec257589a2c558d61",
+      "previewSha": "fee7f369c0aba327500eaeb9aca58a1742e5fcbecbc1aef7dcebeaf18e9d3336"
+    },
+    "parent/27-profile": {
+      "assetsSha": "51f4c0a203fef328480eacc49a650e4c77735f85dd070c197d070e8783f94dc3",
+      "previewSha": "e67fc579c07581203e54f23f54b30525b2c0b2cebb19ce35ae88e83fa98be521"
+    },
+    "parent/28-album-list": {
+      "assetsSha": "71027bba87f5437bf13f92ec504bb2147acd3cfcef4e84d07fab70b5d600b128",
+      "previewSha": "3169b3fd77438834269a2867ab71ff4a732bd3e39790894e0ad74589d56ed6ac"
+    },
+    "parent/29-album-detail": {
+      "assetsSha": "92465d9726b63676fd23c20ec91b7e02ab6c9852de6409c2499132ce63391bd3",
+      "previewSha": "a0725666f7215a2307e48b75ff2f66cc9de747dc8a6ea125e23c052c85252df4"
+    },
+    "teacher/01-workbench": {
+      "assetsSha": "08dbefc5bdc2b4d13c1800f4d056ce5aec0820f552483ee4eeb38ec387e72f46",
+      "previewSha": "827e531b5af1a6a84846644835d26d1b21f6006029822815979c28b6017fe837"
+    },
+    "teacher/02-login": {
+      "assetsSha": "b85f2860c3e0383c6ace7028e8a5f907078374b2fa57c18488b0d535d9147679",
+      "previewSha": "f212fe45c58b1b63de4a53d3006a5d78c155473ae23af811da79a3b62c782a8c"
+    },
+    "teacher/03-notice-create": {
+      "assetsSha": "29b8e1477351e4895034eb681eeb3621c2e412391f8e136bfc93199a1f46e77f",
+      "previewSha": "da75026aa8671ad9a3489b22cc3772e77cfa26e5e576ed9c528f668ab4ea8e35"
+    },
+    "teacher/04-growth-index": {
+      "assetsSha": "e4d036a52ad5d2e415f2cee114d6f21880fb36bea27f66d426026d9c3150dc63",
+      "previewSha": "175868a951d53dcbad0be295ebb35a3afb2c020791bcbeedcae92c38a5cf4be0"
+    },
+    "teacher/05-growth-create": {
+      "assetsSha": "a98c7757d40a1da04b7208894e402409b39d0559f4e63764d77b2b4cefc4ae1f",
+      "previewSha": "379787416ec0e39f7dfacfe7f95322e2a5c333915da6996c5cb6a7a2b2e31248"
+    },
+    "teacher/06-growth-detail": {
+      "assetsSha": "e20b29925cd007f00c45ea26fe7618d611c033be9f67d99014240932583cd059",
+      "previewSha": "65945138822043ef4e5368213a4b3809c78e611049c62ef9e88f82649d93fb07"
+    },
+    "teacher/07-pickup-index": {
+      "assetsSha": "9c44bf35c05544222e3d04b23a1a6030b1b15b79af42299d8faa4d6950b550db",
+      "previewSha": "f4c856e16d0d18dcb14ed75a58a21ea4a995d2d4ab88e07a53ef5c3604dd9854"
+    },
+    "teacher/08-pickup-records": {
+      "assetsSha": "f397ff50d9688034c785c81396fd182fa5574358b83cd2a41f61853c6102fe45",
+      "previewSha": "4dd0d537bad855872927c396613e067591edf00c4c180534245b40540d53e729"
+    },
+    "teacher/09-tasks-index": {
+      "assetsSha": "ff4fd72e784d94556fe21a3657b92f77ebccd8573919e6ef8a6f6711e4a91802",
+      "previewSha": "615079a467d5f3e627bd3d2abdd7bbffd762e4adc3b30e2da0cf8dcd86cfed6d"
+    },
+    "teacher/10-tasks-detail": {
+      "assetsSha": "32cec9a19d0f18415ebde6fe1f4446a24f778f4bd673ca86d28f56e33ad99d78",
+      "previewSha": "35f8323ba7f4bf6bf6a7c786a7443784703c7d16ddc986d3a24160a5be7ca520"
+    },
+    "teacher/11-calendar-index": {
+      "assetsSha": "cf4e5d613a3a76bd4248e1e20e52b24e4c97ae37919767e1b646072a19a15176",
+      "previewSha": "390353e2c6e94a47eab9979532635075b70a23fe1b66ea41b845cdf4305929cb"
+    },
+    "teacher/12-calendar-create": {
+      "assetsSha": "e893343594a01ea29ce5202bb587b9e8f5898b656982e0fb69e9f7dc891f5fb4",
+      "previewSha": "98ef392c48479e8181c70fa1ccc7a74a7d7723d8ecbfafe562bfa55820c69965"
+    },
+    "teacher/13-calendar-detail": {
+      "assetsSha": "90d046a4ce39974c5f795c0ffe3b64c92360142a37cba0992c8f2dfd67398233",
+      "previewSha": "d38e312d62aac8db1174f238417933583f070f416796f8ebed446a6b0cba2a0f"
+    },
+    "teacher/14-leave-index": {
+      "assetsSha": "8aadf186cf0f6615434b5b3207b401e9422b5723c6f032be978a3617b1ac6879",
+      "previewSha": "0ae99df5f132fdc0b4f40d8d2746b69497a19fa25a6fac69950680103f197f70"
+    },
+    "teacher/15-class-index": {
+      "assetsSha": "761ddfb9a6f34fd2631f81f41cccab13cd54f155b0c337d594f9a08663f067a2",
+      "previewSha": "cca9642191cd6d30176d1feb5c2a9159c687fc681c26ecad16b4006883d76bc5"
+    },
+    "teacher/16-album-index": {
+      "assetsSha": "7d5f26e24d12c290f53c04fe1fe14a3f3ba932cc9b5cbb69a385b0d42307327c",
+      "previewSha": "fa8ec5c82b85bdb0f423d4223fee0870f738b9f047bf949e03bc6098db0666e1"
+    },
+    "teacher/17-more-index": {
+      "assetsSha": "d2268349730f64b9ce8cbebf73866eaa2b09b7a5403673aac286daffde4d2421",
+      "previewSha": "ef7bf403f72ccff84a37ac5f5767f978144545caa8e2bc8940c8bea50d34558d"
+    },
+    "teacher/18-messages-index": {
+      "assetsSha": "c7c9501e66b50140ff379ef8140ccd0e6ae5870e370586ed9b0f3f904a1b217c",
+      "previewSha": "ec66ae29d545e9cde14572e2d952dd3ae2d2bb6252a6a1309aa195b8d62b7219"
+    },
+    "teacher/19-profile-index": {
+      "assetsSha": "f96dad2f9761e5816e0b704e70e8d891848ca756713bf6079940d6c30afa164d",
+      "previewSha": "a36cfa6a8b5f7a8058bd19df31db75d29049a0b62ceb74165c91132ba96653d2"
+    },
+    "teacher/20-doctor-checkin": {
+      "assetsSha": "082ab3268ffb27232b64d8912a8dac9ecd0232944602761b34e2c5683555642b",
+      "previewSha": "4bad7c3df8d3c2138d1980f9c276961da90a32355dfb070e4cec973b65ddadc7"
+    },
+    "teacher/21-doctor-calendar": {
+      "assetsSha": "578c5e62207bad243f68f77ed4cecbfcb92a5e0b7631e36a5559918b46b353bc",
+      "previewSha": "6fd0e5874f2ac605f8778f63efc7768781bb92f40fb04ae2a2b2bbc83f18fade"
+    },
+    "teacher/23-notice-index": {
+      "assetsSha": "b73d2b44137dfb363e620195e1e391a4c4d11cbc8b6039485e1327e07727a6de",
+      "previewSha": "aac47479ebc24bf607a7401a0c0d2611f1faca4354c8a617f91f8a8fa88d5539"
+    }
+  }
+}

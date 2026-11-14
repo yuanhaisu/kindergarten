@@ -16,6 +16,7 @@ import (
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/storage/oss"
 	"kindergarten-server/pkg/log"
 )
 
@@ -55,6 +56,7 @@ type AuthService struct {
 	userRoleRepo   AuthRoleRepository
 	invitationRepo InvitationRepository
 	adminPerms     AdminPermissionResolver
+	kgStatus       KindergartenStatusChecker
 	rdb            *redis.Client
 	revoker        auth.TokenRevoker
 	wx             *auth.WeChatClient
@@ -69,6 +71,7 @@ func NewAuthService(
 	userRoleRepo AuthRoleRepository,
 	invitationRepo InvitationRepository,
 	adminPerms AdminPermissionResolver,
+	kgStatus KindergartenStatusChecker,
 	rdb *redis.Client,
 	wx *auth.WeChatClient,
 	secret []byte,
@@ -81,6 +84,7 @@ func NewAuthService(
 		userRoleRepo:   userRoleRepo,
 		invitationRepo: invitationRepo,
 		adminPerms:     adminPerms,
+		kgStatus:       kgStatus,
 		rdb:            rdb,
 		revoker:        auth.NewTokenRevoker(rdb),
 		wx:             wx,
@@ -98,12 +102,13 @@ type LoginResult struct {
 }
 
 type UserInfo struct {
-	ID       uint64     `json:"id"`
-	Phone    string     `json:"phone"`
-	Nickname string     `json:"nickname"`
-	Avatar   string     `json:"avatar"`
-	Gender   int        `json:"gender"`
-	Roles    []RoleInfo `json:"roles"`
+	ID                 uint64     `json:"id"`
+	Phone              string     `json:"phone"`
+	Nickname           string     `json:"nickname"`
+	Avatar             string     `json:"avatar"`
+	Gender             int        `json:"gender"`
+	MustChangePassword bool       `json:"must_change_password"`
+	Roles              []RoleInfo `json:"roles"`
 }
 
 type RoleInfo struct {
@@ -139,13 +144,40 @@ func (s *AuthService) buildUserInfo(ctx context.Context, user *domain.User) (*Us
 	}
 
 	return &UserInfo{
-		ID:       user.ID,
-		Phone:    maskPhone(user.Phone),
-		Nickname: user.Nickname,
-		Avatar:   user.Avatar,
-		Gender:   user.Gender,
-		Roles:    roleInfos,
+		ID:                 user.ID,
+		Phone:              maskPhone(user.Phone),
+		Nickname:           user.Nickname,
+		Avatar:             user.Avatar,
+		Gender:             user.Gender,
+		MustChangePassword: user.MustChangePassword,
+		Roles:              roleInfos,
 	}, nil
+}
+
+// ChangePassword 自助改密。平台开通园所时创建的园长账号首次登录后必须走这里，
+// 改密成功后清除 must_change_password。
+func (s *AuthService) ChangePassword(ctx context.Context, userID uint64, oldPassword, newPassword string) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return fmt.Errorf("USER_NOT_FOUND")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return fmt.Errorf("PASSWORD_INCORRECT")
+	}
+	if err := validatePassword(newPassword); err != nil {
+		return fmt.Errorf("WEAK_PASSWORD: %w", err)
+	}
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	return s.userRepo.UpdateFields(ctx, userID, map[string]any{
+		"password_hash":        hash,
+		"must_change_password": false,
+	})
 }
 
 // issueTokens 签发 access + refresh；access claims 含 kindergarten_id（由 user_roles 推导）
@@ -160,6 +192,17 @@ func (s *AuthService) issueTokens(ctx context.Context, user *domain.User) (*Logi
 func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
 	roleNames := roleNamesFromUserRoles(roles)
 	kgID := kindergartenIDFromUserRoles(roles)
+
+	// 停用园所不签发新凭证：登录与刷新都会走到这里。
+	if kgID > 0 && s.kgStatus != nil {
+		suspended, err := s.kgStatus.Suspended(ctx, kgID)
+		if err != nil {
+			return nil, err
+		}
+		if suspended {
+			return nil, ErrKindergartenSuspended
+		}
+	}
 
 	uid := fmt.Sprintf("%d", user.ID)
 	accessToken, err := auth.SignAccess(s.secret, uid, roleNames, kgID, s.atTTL)
@@ -438,6 +481,8 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 var (
 	ErrTokenRevoked           = errors.New("TOKEN_REVOKED")
 	ErrAuthStorageUnavailable = errors.New("AUTH_STORAGE_UNAVAILABLE")
+	// ErrKindergartenSuspended 园所被平台方停用，不签发凭证。
+	ErrKindergartenSuspended = errors.New("KINDERGARTEN_SUSPENDED")
 )
 
 // RefreshToken 刷新令牌
@@ -724,6 +769,7 @@ func (s *AuthService) BindParentPhone(ctx context.Context, currentUserID uint64,
 }
 
 func (s *AuthService) UpdateAvatar(ctx context.Context, userID uint64, avatar string) (string, error) {
+	avatar = oss.NormalizeRef(avatar)
 	if err := s.userRepo.UpdateFields(ctx, userID, map[string]any{"avatar": avatar}); err != nil {
 		return "", err
 	}

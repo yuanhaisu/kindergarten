@@ -112,8 +112,8 @@
 // Response
 {
   "list": [
-    { "year": "2025-2026", "is_current": true },
-    { "year": "2024-2025", "is_current": false }
+    { "id": 31846, "year": "2025-2026", "is_current": true },
+    { "id": 31845, "year": "2024-2025", "is_current": false }
   ]
 }
 ```

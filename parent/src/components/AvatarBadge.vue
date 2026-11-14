@@ -5,6 +5,7 @@
       :src="src"
       class="avatar-img"
       mode="aspectFill"
+      @error="emit('error')"
     />
     <text v-else class="avatar-placeholder">{{ placeholder }}</text>
     <view v-if="dot" class="avatar-dot" :class="'dot-' + dotColor" />
@@ -19,6 +20,8 @@
  * 角标颜色走语义色 token。
  */
 import { computed } from "vue"
+
+const emit = defineEmits(["error"])
 
 const props = defineProps({
   src: { type: String, default: "" },

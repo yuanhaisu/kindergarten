@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 通知</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; height: 36px; }
+
+    .filters { display: flex; gap: 8px; margin: 12px 0 14px; overflow-x: auto; scrollbar-width: none; }
+    .filters::-webkit-scrollbar { display: none; }
+
+    .kicker { display: flex; align-items: center; gap: 7px; margin: 0 0 6px; }
+
+    .pinned { padding: 15px 18px; margin-bottom: 10px; }
+    .pinned-title { margin: 0; }
+
+    .notice-list { display: grid; gap: 12px; }
+    .notice-card { padding: 14px 18px; }
+    .notice-title { margin: 0; }
+    .notice-sum {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin: 6px 0 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--ink-card);
+    }
+    .notice-meta { margin: 8px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--ink-card); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <div class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">乐乐 · 小一班</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </div>
+
+      <h1>通知</h1>
+
+      <div class="filters" role="tablist" aria-label="通知筛选">
+        <button class="chip is-on" type="button" aria-selected="true">全部</button>
+        <button class="chip" type="button">未读</button>
+        <button class="chip" type="button">园所</button>
+        <button class="chip" type="button">班级</button>
+      </div>
+
+      <article class="card card--soft pinned">
+        <p class="overline kicker">置顶 · 园所通知<span class="dot" aria-hidden="true"></span></p>
+        <h2 class="pinned-title">秋季亲子运动会报名</h2>
+        <p class="notice-sum">本周六上午 9:00 在园内操场举行，请在本周四 18:00 前完成报名。</p>
+        <p class="notice-meta">李老师 · 今天 08:30</p>
+      </article>
+
+      <div class="notice-list">
+        <article class="card notice-card">
+          <p class="overline kicker">园所通知<span class="dot" aria-hidden="true"></span><span class="sr-only">未读</span></p>
+          <h3 class="notice-title">流感疫苗接种安排</h3>
+          <p class="notice-sum">本周四上午社区卫生服务中心到园接种，请填写知情同意书，由孩子周一带来。</p>
+          <p class="notice-meta">王老师 · 昨天 16:20</p>
+        </article>
+
+        <article class="card notice-card">
+          <p class="overline kicker">班级通知</p>
+          <h3 class="notice-title">本月家长会安排</h3>
+          <p class="notice-sum">11 月 21 日（周六）上午 10:00 在小一班教室召开，请尽量一位家长参加。</p>
+          <p class="notice-meta">李老师 · 11 月 10 日</p>
+        </article>
+
+        <article class="card notice-card">
+          <p class="overline kicker">园所通知</p>
+          <h3 class="notice-title">本周食谱已更新</h3>
+          <p class="notice-sum">本周新增南瓜小米粥与清蒸鲈鱼，孩子的过敏信息请在「幼儿信息」中确认。</p>
+          <p class="notice-meta">园务办公室 · 11 月 9 日</p>
+        </article>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

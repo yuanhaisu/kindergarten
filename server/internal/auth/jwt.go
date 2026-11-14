@@ -7,10 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// ScopePlatform 标记平台方凭证。园所凭证不带 scope（空串），
+// 两类凭证互不通用（ADR-0014）。
+const ScopePlatform = "platform"
+
 type AccessClaims struct {
 	UserID         string   `json:"uid"`
 	Roles          []string `json:"roles"`
 	KindergartenID uint64   `json:"kindergarten_id,omitempty"`
+	Scope          string   `json:"scope,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -28,6 +33,26 @@ func SignAccess(secret []byte, userID string, roles []string, kindergartenID uin
 			Subject:   userID,
 			// 每次签发都换新 jti：登出只能吊销某一枚 token，不能按用户或前缀误伤。
 			ID: uuid.NewString(),
+		},
+	}
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return t.SignedString(secret)
+}
+
+// SignPlatformAccess 签发平台方凭证：带 scope=platform，不含 kindergarten_id。
+func SignPlatformAccess(secret []byte, adminID string, ttl time.Duration) (string, error) {
+	now := time.Now()
+	claims := AccessClaims{
+		UserID: adminID,
+		Roles:  []string{"platform"},
+		Scope:  ScopePlatform,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    "kindergarten-api",
+			Subject:   adminID,
+			ID:        uuid.NewString(),
 		},
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

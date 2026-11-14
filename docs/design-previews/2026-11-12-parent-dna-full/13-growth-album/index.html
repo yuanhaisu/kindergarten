@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 成长相册</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .bar-spacer { width: 36px; height: 36px; }
+
+    .page-head { margin-top: 2px; }
+    .album-sub { margin: 7px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-bone); }
+
+    .filters { display: flex; gap: 8px; margin: 16px 0 0; }
+
+    .month { margin-top: 22px; }
+    .month:first-of-type { margin-top: 18px; }
+    .month-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .month-head h3 { font-size: 19px; }
+
+    .ph-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .ph-grid .thumb { aspect-ratio: 1 / 1; border-radius: 12px; }
+    .ph-play {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 38px;
+      height: 38px;
+      margin: -19px 0 0 -19px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--pine);
+    }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回成长时光">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">成长时光</span>
+        <span class="bar-spacer" aria-hidden="true"></span>
+      </header>
+
+      <header class="page-head">
+        <h1>成长相册</h1>
+        <p class="album-sub">乐乐 · 共 48 张照片 · 6 段视频</p>
+      </header>
+
+      <div class="filters" role="group" aria-label="筛选">
+        <button class="chip is-on" type="button" aria-pressed="true">全部</button>
+        <button class="chip" type="button" aria-pressed="false">照片</button>
+        <button class="chip" type="button" aria-pressed="false">视频</button>
+      </div>
+
+      <section class="month" aria-labelledby="month-11">
+        <div class="month-head">
+          <h3 id="month-11">11 月</h3>
+          <span class="tiny muted">18 张照片 · 2 段视频</span>
+        </div>
+        <div class="ph-grid" role="group" aria-label="11 月的照片">
+          <span class="thumb thumb--sage"></span>
+          <span class="thumb thumb--gold"></span>
+          <span class="thumb thumb--clay"></span>
+          <span class="thumb thumb--blue"></span>
+          <span class="thumb thumb--sage"></span>
+          <span class="thumb thumb--pine">
+            <span class="thumb__badge">00:18</span>
+            <span class="ph-play" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 7.2v9.6l7.8-4.8Z"/></svg>
+            </span>
+          </span>
+        </div>
+      </section>
+
+      <section class="month" aria-labelledby="month-10">
+        <div class="month-head">
+          <h3 id="month-10">10 月</h3>
+          <span class="tiny muted">20 张照片 · 3 段视频</span>
+        </div>
+        <div class="ph-grid" role="group" aria-label="10 月的照片">
+          <span class="thumb thumb--gold"></span>
+          <span class="thumb thumb--sage"></span>
+          <span class="thumb thumb--pine">
+            <span class="thumb__badge">00:32</span>
+            <span class="ph-play" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 7.2v9.6l7.8-4.8Z"/></svg>
+            </span>
+          </span>
+          <span class="thumb thumb--clay"></span>
+          <span class="thumb thumb--sage"></span>
+          <span class="thumb thumb--blue"></span>
+        </div>
+      </section>
+
+      <section class="month" aria-labelledby="month-09">
+        <div class="month-head">
+          <h3 id="month-09">9 月</h3>
+          <span class="tiny muted">10 张照片 · 1 段视频</span>
+        </div>
+        <div class="ph-grid" role="group" aria-label="9 月的照片">
+          <span class="thumb thumb--clay"></span>
+          <span class="thumb thumb--sage"></span>
+          <span class="thumb thumb--gold"></span>
+          <span class="thumb thumb--blue"></span>
+          <span class="thumb thumb--sage"></span>
+          <span class="thumb thumb--clay"></span>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -72,3 +72,7 @@
 - `node scripts/od-shot.mjs … --width 390 --dsf 2` → `preview.png`（390 × 1268，225 KB）
 - `node scripts/od-audit.mjs docs/design-previews/2026-10-25-full-redesign` → 本页无 ✗（无裸色值、无 nowrap、无 `.mp-*` 重定义、已链接 `../../_shared/shell.css`、无 `_shared/` 副本、无 `.mcp.json`）
 - 视觉复核（mcp-vision 读 `preview.png`）：状态栏/导航栏/返回箭头/胶囊齐全，无 tabBar；6 张卡片文字完整无裁切、无横向滚动；卡片/标签/按钮全圆角；橙色只出现在待审批数字、选中分段与 FAB；FAB 与「原型演示」胶囊同排不重叠
+
+## 与代码同步（2026-11-06）
+
+- 列表状态文案改为代码现状：「已驳回」→「已拒绝」；「已取消」保持不变。

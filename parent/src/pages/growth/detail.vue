@@ -13,6 +13,8 @@ import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/cur
 import { formatCommentTime, formatRecordTime } from "@/utils/time"
 import { relationLabel } from "@/utils/relation"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => ((logId.value ? loadData(logId.value) : undefined)))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -409,7 +411,7 @@ onLoad((opts) => {
       <view class="card author-card" aria-label="记录概况">
         <view class="author-row">
           <view class="author-avatar">
-            <image
+            <image @error="onMediaError"
               v-if="detail.creator?.avatar"
               class="author-avatar-img"
               :src="detail.creator.avatar"
@@ -470,7 +472,7 @@ onLoad((opts) => {
               class="photo-cell"
               @click="openPreview(idx)"
             >
-              <image class="photo-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
+              <image @error="onMediaError" class="photo-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
               <view v-if="myStudentId && isMyPhoto(m)" class="photo-mine">
                 <view class="photo-mine-dot" />
                 <text>我的孩子</text>
@@ -612,7 +614,7 @@ onLoad((opts) => {
 
         <swiper class="preview-swiper" :current="previewIndex" @change="onPreviewChange">
           <swiper-item v-for="m in previewImages" :key="m.id">
-            <image class="preview-img" :src="m.file_url || m.thumb_url" mode="aspectFit" />
+            <image @error="onMediaError" class="preview-img" :src="m.file_url || m.thumb_url" mode="aspectFit" />
           </swiper-item>
         </swiper>
 

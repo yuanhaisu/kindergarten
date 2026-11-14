@@ -1,0 +1,33 @@
+name: kindergarten-prod
+
+services:
+  migrate:
+    image: ${ACR_REGISTRY}/${ACR_NAMESPACE}/kindergarten-server:${IMAGE_TAG}
+    container_name: kindergarten-migrate-prod
+    profiles: ["migrate"]
+    restart: "no"
+    entrypoint: ["/app/kindergarten-migrate", "up"]
+    environment:
+      CONFIG_PATH: /etc/kindergarten/app.ini
+      TZ: Asia/Shanghai
+      # 迁移账号（DDL）只给 migrate 容器；api 容器继续用 app.ini 里的 DML 账号。
+      MYSQL_DSN: ${MIGRATE_MYSQL_DSN}
+    volumes:
+      - /etc/kindergarten/prod/app.ini:/etc/kindergarten/app.ini:ro
+
+  api:
+    image: ${ACR_REGISTRY}/${ACR_NAMESPACE}/kindergarten-server:${IMAGE_TAG}
+    container_name: kindergarten-api-prod
+    restart: unless-stopped
+    environment:
+      CONFIG_PATH: /etc/kindergarten/app.ini
+      TZ: Asia/Shanghai
+    volumes:
+      - /etc/kindergarten/prod/app.ini:/etc/kindergarten/app.ini:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

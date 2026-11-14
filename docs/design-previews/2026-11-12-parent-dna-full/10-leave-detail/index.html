@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 请假详情</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; }
+    .page-title { margin: 2px 0 16px; }
+
+    .status { padding: 18px 20px; }
+    .status-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .status-state { margin: 2px 0 0; font-size: 30px; line-height: 1.25; }
+    .status-sub { margin: 6px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-card); }
+    .status-orb {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--orange-soft);
+      color: var(--pine);
+    }
+
+    .timeline { padding: 18px 20px 20px; }
+    .timeline h2 { margin-bottom: 14px; font-size: 18px; }
+
+    .rail { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+    .rail-step { position: relative; display: flex; gap: 12px; }
+    .rail-step::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 16px;
+      bottom: -16px;
+      width: 1px;
+      background: var(--hair-strong);
+    }
+    .rail-step:last-child::before { display: none; }
+    .rail-dot {
+      width: 11px;
+      height: 11px;
+      margin-top: 4px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      border: 1.5px solid var(--hair-strong);
+      background: var(--card);
+    }
+    .rail-step.is-done .rail-dot { border-color: var(--pine); background: var(--pine); }
+    .rail-step.is-wait .rail-dot { border-color: var(--orange); }
+    .rail-step.is-idle .rail-dot { border-color: var(--hair-strong); background: transparent; }
+    .rail-body { display: grid; gap: 1px; }
+    .rail-body b { font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--pine); }
+    .rail-body span { font-size: 11.5px; color: var(--ink-card); }
+    .rail-step.is-idle .rail-body b { font-weight: 500; color: var(--ink-card); }
+
+    .info { margin: 0; }
+    .info-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--hair-soft);
+    }
+    .info-row:last-child { border-bottom: 0; }
+    .info-row dt { font-size: 12.5px; color: var(--ink-card); }
+    .info-row dd { margin: 0; font-size: 15px; font-weight: 500; color: var(--pine); }
+    .info-row dd small { margin-left: 4px; font-size: 11px; font-weight: 400; color: var(--ink-card); }
+
+    .reason { margin: 0; font-size: 15px; line-height: 1.7; color: var(--pine); }
+    .shots { display: flex; gap: 8px; margin-top: 12px; }
+    .shot { width: 84px; height: 84px; }
+    .files-head .overline { margin: 0; }
+
+    .withdraw { display: grid; justify-items: center; gap: 6px; margin: 22px 0 10px; }
+    .withdraw-btn { color: var(--danger); }
+    .withdraw-note { margin: 0; text-align: center; font-size: 11px; line-height: 1.5; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">乐乐 · 小一班</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </header>
+
+      <h1 class="page-title">请假详情</h1>
+
+      <div class="stack">
+        <section class="status card card--soft" aria-labelledby="status-title">
+          <div class="status-top">
+            <div>
+              <p class="overline">11 月 12 日 · 病假</p>
+              <h2 class="status-state" id="status-title">待审批</h2>
+              <p class="status-sub">已提交 1 小时，等待老师审批。</p>
+            </div>
+            <span class="status-orb" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.8"/></svg>
+            </span>
+          </div>
+        </section>
+
+        <section class="timeline card" aria-labelledby="timeline-title">
+          <h2 id="timeline-title">审批进度</h2>
+          <ol class="rail">
+            <li class="rail-step is-done">
+              <span class="rail-dot" aria-hidden="true"></span>
+              <div class="rail-body"><b>提交申请</b><span>11 月 12 日 08:20 · 妈妈</span></div>
+            </li>
+            <li class="rail-step is-wait">
+              <span class="rail-dot" aria-hidden="true"></span>
+              <div class="rail-body"><b>等待李老师审批</b><span>已等待 1 小时，通常当天处理</span></div>
+            </li>
+            <li class="rail-step is-idle">
+              <span class="rail-dot" aria-hidden="true"></span>
+              <div class="rail-body"><b>园长审批</b><span>未开始 · 请假超过 3 天时进入</span></div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="card card--flush" aria-labelledby="info-title">
+          <p class="sr-only" id="info-title">请假信息</p>
+          <dl class="info">
+            <div class="info-row"><dt>类型</dt><dd>病假</dd></div>
+            <div class="info-row"><dt>开始</dt><dd>11 月 12 日<small>周四</small></dd></div>
+            <div class="info-row"><dt>结束</dt><dd>11 月 12 日<small>周四</small></dd></div>
+            <div class="info-row"><dt>天数</dt><dd>共 1 天</dd></div>
+          </dl>
+        </section>
+
+        <section class="card" aria-labelledby="reason-title">
+          <p class="overline" id="reason-title">请假事由</p>
+          <p class="reason">凌晨乐乐发烧到 38.4℃，吃了退烧药还没完全退下来。医生建议在家观察一天，麻烦老师今天不用准备他的午餐。</p>
+        </section>
+
+        <section class="card" aria-labelledby="files-title">
+          <div class="row row--between files-head">
+            <p class="overline" id="files-title">就医凭证</p>
+            <span class="tiny muted">2 张</span>
+          </div>
+          <div class="shots">
+            <div class="thumb thumb--clay shot" role="img" aria-label="门诊病历照片"></div>
+            <div class="thumb thumb--sage shot" role="img" aria-label="处方单照片"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="withdraw">
+        <button class="btn btn--text withdraw-btn" type="button">撤回申请</button>
+        <p class="withdraw-note">撤回后审批会立即终止，如需请假要重新提交</p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

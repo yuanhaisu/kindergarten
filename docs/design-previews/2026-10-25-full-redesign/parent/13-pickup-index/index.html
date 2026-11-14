@@ -59,42 +59,35 @@
 <span class="seal seal--pre" aria-hidden="true"><svg width="22" height="22"><use href="#i-clock"/></svg></span>
 <div class="status-copy">
 <p class="status-main">未入园</p>
-<p class="status-sub"><span class="status-who">今天还没有入园记录</span></p>
+<p class="status-sub"><span class="status-time">截至 09:41</span><span class="status-dot" aria-hidden="true">·</span><span class="status-who">未入园</span></p>
 </div>
 </div>
 <div class="pass-status pass-status--in" data-od-id="pass-status-in">
 <span class="seal seal--in" aria-hidden="true"><svg width="22" height="22"><use href="#i-sprout"/></svg></span>
 <div class="status-copy">
 <p class="status-main">在园中</p>
-<p class="status-sub"><time class="status-time" datetime="2026-10-26T07:52">07:52</time><span class="status-dot" aria-hidden="true">·</span><span class="status-who">妈妈（李丽）送入</span></p>
 </div>
 </div>
 <div class="pass-status pass-status--out" data-od-id="pass-status-out">
 <span class="seal seal--out" aria-hidden="true"><svg width="22" height="22"><use href="#i-check"/></svg></span>
 <div class="status-copy">
 <p class="status-main">已接走</p>
-<p class="status-sub"><time class="status-time" datetime="2026-10-26T17:30">17:30</time><span class="status-dot" aria-hidden="true">·</span><span class="status-who">爸爸（王明）</span></p>
 </div>
 </div>
 </div>
-<div class="pass-body">
-<p class="track-label">今日轨迹</p>
-<ol class="track" aria-label="今日接送时间轴">
-<li class="track-item" data-od-id="today-in">
-<span class="track-mark" aria-hidden="true"><span class="track-dot track-dot--in"></span></span>
-<div class="track-content">
-<p class="track-top"><span class="track-type track-type--in">入园</span><time class="track-time" datetime="2026-10-26T07:52">07:52</time><span class="track-rel">母亲</span></p>
-<p class="track-who">妈妈（李丽）</p>
-</div>
-</li>
-<li class="track-item track-item--out" data-od-id="today-out">
-<span class="track-mark" aria-hidden="true"><span class="track-dot track-dot--out"></span></span>
-<div class="track-content">
-<p class="track-top"><span class="track-type track-type--out">接走</span><time class="track-time" datetime="2026-10-26T17:30">17:30</time><span class="track-rel">父亲</span></p>
-<p class="track-who">爸爸（王明）</p>
-</div>
-</li>
-</ol>
+<div class="pass-rail" aria-label="今日接送进度">
+<span class="rail-step rail-step--in is-done">
+<span class="rail-dot" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.2 4.2L19 7.5"/></svg></span>
+<span class="rail-copy"><span class="rail-label">送入</span><span class="rail-meta"><time datetime="2026-10-26T07:52">07:52</time> · 妈妈（李丽）</span></span>
+</span>
+<span class="rail-line" aria-hidden="true"></span>
+<span class="rail-step rail-step--out">
+<span class="rail-dot" aria-hidden="true">
+<svg class="rail-glyph rail-glyph--pending" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6V12l3 1.8"/></svg>
+<svg class="rail-glyph rail-glyph--done" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.2 4.2L19 7.5"/></svg>
+</span>
+<span class="rail-copy"><span class="rail-label">接走</span><span class="rail-meta rail-meta--pending">等待接走</span><span class="rail-meta rail-meta--done"><time datetime="2026-10-26T17:30">17:30</time> · 爸爸（王明）</span></span>
+</span>
 </div>
 <div class="pass-foot">
 <button class="btn-primary qr-cta" id="qr-open" type="button" aria-haspopup="dialog" data-od-id="pass-qr-cta">
@@ -102,7 +95,7 @@
 <span>出示接送二维码</span>
 </button>
 <p class="pass-note"><span>核验后</span><span>一次有效</span></p>
-<p class="done-note" data-od-id="pass-done"><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg><span>今日接送已完成</span></p>
+<p class="done-note" data-od-id="pass-done"><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg><span>今日接送已完成 · 17:30 爸爸 接走</span></p>
 </div>
 </section>
 

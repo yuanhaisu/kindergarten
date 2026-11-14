@@ -25,6 +25,9 @@ type PermissionResolver interface {
 // 无独立码的资源组沿用其查看码（leaves→attendance:view、health→dashboard:view，
 // 属已登记的近似处理，待权限码补全后收紧）。
 var adminRoutePermission = map[string]string{
+	// billing —— 园所端「我的套餐」只读
+	"GET /api/v1/admin/billing/subscription": "system:kindergarten",
+
 	// dashboard —— 看板全部只读
 	"GET /api/v1/admin/dashboard/overview":         "dashboard:view",
 	"GET /api/v1/admin/dashboard/attendance-trend": "dashboard:view",
@@ -216,6 +219,51 @@ var adminRoutePermission = map[string]string{
 	"GET /api/v1/admin/timetable/setting":           "timetable:view",
 	"PUT /api/v1/admin/timetable/setting":           "timetable:manage",
 	"POST /api/v1/admin/timetable/sync":             "timetable:manage",
+
+	// diet —— 基本参数集体对象（DGO-S3b）、食物库（AQR-S3）、菜谱库（AQR-S4）与
+	// 周食谱/模板（AQR-S6）。本表是 fail-closed，漏登记会让服务启动失败。
+	// 旧的 /diet/config 单例端点已移除，不再登记。
+	"GET /api/v1/admin/diet/group-objects":     "diet:view",
+	"POST /api/v1/admin/diet/group-objects":    "diet:manage",
+	"GET /api/v1/admin/diet/group-objects/:id": "diet:view",
+	"PUT /api/v1/admin/diet/group-objects/:id": "diet:manage",
+
+	// 基本参数选项（DGO-S7）：学年与就餐班级的自读接口，只有 diet 权限的角色即可加载。
+	"GET /api/v1/admin/diet/academic-years": "diet:view",
+	"GET /api/v1/admin/diet/classes":        "diet:view",
+
+	// 食物库：查看（分类/列表/详情/候选）用 diet:view，所有写操作 diet:manage。
+	"GET /api/v1/admin/diet/food-categories":              "diet:view",
+	"GET /api/v1/admin/diet/foods":                        "diet:view",
+	"POST /api/v1/admin/diet/foods":                       "diet:manage",
+	"GET /api/v1/admin/diet/foods/:id":                    "diet:view",
+	"PUT /api/v1/admin/diet/foods/:id":                    "diet:manage",
+	"DELETE /api/v1/admin/diet/foods/:id":                 "diet:manage",
+	"POST /api/v1/admin/diet/foods/batch-delete":          "diet:manage",
+	"GET /api/v1/admin/diet/foods/:id/replace-candidates": "diet:view",
+
+	// 菜谱库：列表/详情/联想用 diet:view；保存/改名改配方/删除/合并用 diet:manage。
+	"GET /api/v1/admin/diet/recipes":         "diet:view",
+	"POST /api/v1/admin/diet/recipes":        "diet:manage",
+	"GET /api/v1/admin/diet/recipes/suggest": "diet:view",
+	"POST /api/v1/admin/diet/recipes/merge":  "diet:manage",
+	"GET /api/v1/admin/diet/recipes/:id":     "diet:view",
+	"PUT /api/v1/admin/diet/recipes/:id":     "diet:manage",
+	"DELETE /api/v1/admin/diet/recipes/:id":  "diet:manage",
+
+	// 周食谱：列表/详情/模板只读用 diet:view；新建/整单保存/清空/删除用 diet:manage。
+	"GET /api/v1/admin/diet/plans":            "diet:view",
+	"POST /api/v1/admin/diet/plans":           "diet:manage",
+	"GET /api/v1/admin/diet/plans/:id":        "diet:view",
+	"PUT /api/v1/admin/diet/plans/:id":        "diet:manage",
+	"DELETE /api/v1/admin/diet/plans/:id":     "diet:manage",
+	"POST /api/v1/admin/diet/plans/:id/clear": "diet:manage",
+	"GET /api/v1/admin/diet/templates":        "diet:view",
+	"GET /api/v1/admin/diet/templates/:id":    "diet:view",
+
+	// 营养分析（AQR-S7）：查看报表用 diet:view，导出 Excel 用 diet:export。
+	"GET /api/v1/admin/diet/plans/:id/analysis":        "diet:view",
+	"GET /api/v1/admin/diet/plans/:id/analysis/export": "diet:export",
 }
 
 // RequirePermission 按登记表强制管理端接口权限，挂在 adminG 组上（AuthJWT/CasbinRBAC 之后）。

@@ -1,11 +1,58 @@
+<script>
+// getApp().globalData 需要先声明；字体加载状态写入这里，便于排查「字体没生效」。
+export default {
+  globalData: {
+    serifFont: "",
+    latinSerifFont: ""
+  }
+}
+</script>
+
 <script setup>
 import { onLaunch } from "@dcloudio/uni-app"
-import { ensureLogin } from "@/utils/login"
+import { ensureConsent, ensureLogin } from "@/utils/login"
+import serifFontBase64 from "@/assets/fonts/noto-serif-sc-subset.js"
+import latinSerifFontBase64 from "@/assets/fonts/instrument-serif-subset.js"
+
+// DNA 字体：中文标题 Noto Serif SC，拉丁/数字 Instrument Serif，均以 data URI 注入。
+// 小程序不允许读包内文件、loadFontFace 也不接受本地路径，只能内联 base64。
+const DNA_FONTS = [
+  { family: "Noto Serif SC", base64: serifFontBase64, statusKey: "serifFont" },
+  { family: "Instrument Serif", base64: latinSerifFontBase64, statusKey: "latinSerifFont" }
+]
+
+function loadDnaFonts() {
+  // #ifdef MP-WEIXIN
+  DNA_FONTS.forEach(({ family, base64, statusKey }) => {
+    try {
+      wx.loadFontFace({
+        global: true,
+        family,
+        source: `url("data:font/woff2;base64,${base64.trim()}")`,
+        success: () => {
+          const app = getApp()
+          if (app) app.globalData[statusKey] = "loaded"
+        },
+        fail: (err) => {
+          const app = getApp()
+          if (app) app.globalData[statusKey] = "failed"
+          console.warn(`[font] ${family} load failed:`, err?.errMsg || err)
+        }
+      })
+    } catch (e) {
+      console.warn(`[font] ${family} load failed:`, e?.message || e)
+    }
+  })
+  // #endif
+}
 
 onLaunch(() => {
-  ensureLogin().catch(() => {
-    // 启动阶段静默登录失败时，业务页会继续引导用户授权。
-  })
+  loadDnaFonts()
+  ensureLogin()
+    .then(() => ensureConsent())
+    .catch(() => {
+      // 启动阶段静默登录失败时，业务页会继续引导用户授权。
+    })
 })
 </script>
 

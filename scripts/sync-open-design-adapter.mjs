@@ -71,6 +71,13 @@ function color(path) {
   return String(resolveValue(get(path)));
 }
 
+// Parent has its own typography and semantic overrides in tokens.json. The
+// adapter defaults to the parent surface, so prefer the override when present.
+function pick(path) {
+  const parentKey = `parent.${path}`;
+  return flat.has(parentKey) ? parentKey : `shared.${path}`;
+}
+
 function fontStack() {
   const families = get('shared.typography.fontFamily.base');
   if (!Array.isArray(families)) return String(families);
@@ -87,7 +94,7 @@ const vars = [
   ['--accent-gradient-soft', color('parent.gradient.brandSoft')],
   ['--fg', color('shared.color.text.primary')],
   ['--fg-2', color('shared.color.text.body')],
-  ['--muted', color('shared.color.text.muted')],
+  ['--muted', color(pick('color.text.muted'))],
   ['--hint', color('shared.color.text.hint')],
   ['--on-brand', color('shared.color.text.onBrand')],
   ['--on-accent', color('shared.color.text.onAccent')],
@@ -100,25 +107,25 @@ const vars = [
   ['--brand-teacher', color('teacher.color.brand.primary')],
   ['--brand-parent', color('parent.color.brand.primary')],
   ['--brand-admin', color('admin.color.brand.primary')],
-  ['--success', color('shared.color.semantic.success')],
+  ['--success', color(pick('color.semantic.success'))],
   ['--success-wash', color('shared.color.semantic.successBg')],
-  ['--warning', color('shared.color.semantic.warning')],
+  ['--warning', color(pick('color.semantic.warning'))],
   ['--warning-wash', color('shared.color.semantic.warningBg')],
-  ['--danger', color('shared.color.semantic.danger')],
+  ['--danger', color(pick('color.semantic.danger'))],
   ['--danger-wash', color('shared.color.semantic.dangerBg')],
-  ['--info', color('shared.color.semantic.info')],
+  ['--info', color(pick('color.semantic.info'))],
   ['--info-wash', color('shared.color.semantic.infoBg')],
   ['--sidebar', color('admin.color.brand.sidebar')],
   ['--sidebar-hover', color('admin.color.brand.sidebarHover')],
   ['--font-sans', fontStack()],
-  ['--text-xs', px('shared.typography.fontSize.xs')],
-  ['--text-sm', px('shared.typography.fontSize.sm')],
-  ['--text-base', px('shared.typography.fontSize.base')],
-  ['--text-md', px('shared.typography.fontSize.md')],
-  ['--text-lg', px('shared.typography.fontSize.lg')],
-  ['--text-xl', px('shared.typography.fontSize.xl')],
-  ['--text-2xl', px('shared.typography.fontSize.2xl')],
-  ['--text-3xl', px('shared.typography.fontSize.3xl')],
+  ['--text-xs', px(pick('typography.fontSize.xs'))],
+  ['--text-sm', px(pick('typography.fontSize.sm'))],
+  ['--text-base', px(pick('typography.fontSize.base'))],
+  ['--text-md', px(pick('typography.fontSize.md'))],
+  ['--text-lg', px(pick('typography.fontSize.lg'))],
+  ['--text-xl', px(pick('typography.fontSize.xl'))],
+  ['--text-2xl', px(pick('typography.fontSize.2xl'))],
+  ['--text-3xl', px(pick('typography.fontSize.3xl'))],
   ['--weight-normal', String(resolveValue(get('shared.typography.fontWeight.normal')))],
   ['--weight-medium', String(resolveValue(get('shared.typography.fontWeight.medium')))],
   ['--weight-semibold', String(resolveValue(get('shared.typography.fontWeight.semibold')))],
@@ -189,6 +196,21 @@ ${surfaceBlock('teacher', {
   '--accent-wash': color('teacher.color.brand.primaryBg'),
   '--accent-gradient': color('teacher.gradient.brand'),
   '--accent-gradient-soft': color('teacher.gradient.brandSoft'),
+  // Teacher keeps the shared 13px scale and semantic colors; the default
+  // :root block now carries the parent overrides.
+  '--muted': color('shared.color.text.muted'),
+  '--success': color('shared.color.semantic.success'),
+  '--warning': color('shared.color.semantic.warning'),
+  '--danger': color('shared.color.semantic.danger'),
+  '--info': color('shared.color.semantic.info'),
+  '--text-xs': px('shared.typography.fontSize.xs'),
+  '--text-sm': px('shared.typography.fontSize.sm'),
+  '--text-base': px('shared.typography.fontSize.base'),
+  '--text-md': px('shared.typography.fontSize.md'),
+  '--text-lg': px('shared.typography.fontSize.lg'),
+  '--text-xl': px('shared.typography.fontSize.xl'),
+  '--text-2xl': px('shared.typography.fontSize.2xl'),
+  '--text-3xl': px('shared.typography.fontSize.3xl'),
 })}
 
 ${surfaceBlock('parent', {

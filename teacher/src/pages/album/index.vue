@@ -17,6 +17,8 @@ import { ALBUM_CATEGORIES, ALBUM_FILTERS, albumCategoryLabel, albumTagClass } fr
 import { formatDateAnchor, formatDateLabel, formatMonthLabel, monthKeyOf, todayKey } from "@/utils/time"
 import { pickImages } from "@/utils/media"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadAlbums()))
 
 const PAGE_SIZE = 20
 const MAX_PHOTOS = 50
@@ -1176,7 +1178,7 @@ onLoad(() => {
                     :aria-label="'查看' + (album.title || '相册') + '第 ' + (coverIndex + 1) + ' 张照片'"
                     @click="openViewer(album, coverIndex)"
                   >
-                    <image class="cover-img" :src="cover" mode="aspectFill" />
+                    <image @error="onMediaError" class="cover-img" :src="cover" mode="aspectFill" />
                   </view>
                   <view v-if="!album.coverTiles.length" class="cover-cell cover-cell--empty">
                     <text class="icon cover-glyph">&#xEE4B;</text>
@@ -1260,7 +1262,7 @@ onLoad(() => {
         </view>
 
         <view class="viewer-photo">
-          <image
+          <image @error="onMediaError"
             v-if="currentPhoto && !viewerLoading && !viewerError"
             class="viewer-img"
             :src="currentPhoto.file_url"
@@ -1410,7 +1412,7 @@ onLoad(() => {
                 :aria-label="'第 ' + (index + 1) + ' 张，' + photoParticipantsAria(item)"
                 @click="onPhotoTileTap(item, index)"
               >
-                <image class="upload-img" :src="item._temp" mode="aspectFill" />
+                <image @error="onMediaError" class="upload-img" :src="item._temp" mode="aspectFill" />
                 <view v-if="item.status === 'uploading'" class="upload-mask">
                   <view class="upload-spinner" />
                   <text>{{ item.progress || 0 }}%</text>
@@ -1483,7 +1485,7 @@ onLoad(() => {
             @click="togglePickerStudent(student.id)"
           >
             <view class="picker-avatar">
-              <image v-if="student.avatar" class="picker-avatar-img" :src="student.avatar" mode="aspectFill" />
+              <image @error="onMediaError" v-if="student.avatar" class="picker-avatar-img" :src="student.avatar" mode="aspectFill" />
               <text v-else>{{ String(student.name || "?").slice(0, 1) }}</text>
             </view>
             <view class="picker-info">
@@ -1500,7 +1502,7 @@ onLoad(() => {
             @click="togglePickerStudent(student.student_id)"
           >
             <view class="picker-avatar">
-              <image v-if="student.avatar" class="picker-avatar-img" :src="student.avatar" mode="aspectFill" />
+              <image @error="onMediaError" v-if="student.avatar" class="picker-avatar-img" :src="student.avatar" mode="aspectFill" />
               <text v-else>{{ String(student.name || "?").slice(0, 1) }}</text>
             </view>
             <view class="picker-info">

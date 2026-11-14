@@ -5,13 +5,21 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 
 	"kindergarten-server/internal/auth"
+	"kindergarten-server/internal/config"
+	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/service"
 )
 
 // 管理端权限中间件行为（wire-admin-permissions，TC-NEW-PERM-0004/0005/0006）。
@@ -37,6 +45,42 @@ func newPermEngine(resolver PermissionResolver) *gin.Engine {
 	})
 	g.Use(RequirePermission(resolver))
 	g.GET("/dashboard/overview", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/group-objects", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/group-objects", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/group-objects/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.PUT("/diet/group-objects/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// DGO-S7 基本参数选项：学年与就餐班级的自读接口。
+	g.GET("/diet/academic-years", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/classes", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// AQR-S3 食物库：用于验证 8 条路由的权限码登记。
+	g.GET("/diet/food-categories", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/foods", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/foods", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/foods/batch-delete", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/foods/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.PUT("/diet/foods/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.DELETE("/diet/foods/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/foods/:id/replace-candidates", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// AQR-S4 菜谱库：用于验证 7 条路由的权限码登记。
+	g.GET("/diet/recipes", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/recipes", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/recipes/suggest", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/recipes/merge", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.PUT("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.DELETE("/diet/recipes/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// AQR-S6 周食谱/模板：用于验证 8 条路由的权限码登记。
+	g.GET("/diet/plans", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/plans", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/plans/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.PUT("/diet/plans/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.DELETE("/diet/plans/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.POST("/diet/plans/:id/clear", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/templates", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/templates/:id", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	// AQR-S7 营养分析：用于验证查看（diet:view）与导出（diet:export）两条路由。
+	g.GET("/diet/plans/:id/analysis", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	g.GET("/diet/plans/:id/analysis/export", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	g.GET("/unregistered-probe", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	return r
 }
@@ -44,6 +88,27 @@ func newPermEngine(resolver PermissionResolver) *gin.Engine {
 func doGet(r *gin.Engine, path string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, path, nil)
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func doPut(r *gin.Engine, path string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, path, nil)
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func doPost(r *gin.Engine, path string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, path, nil)
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func doDelete(r *gin.Engine, path string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, path, nil)
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -102,4 +167,296 @@ func TestAdminPermissionGaps(t *testing.T) {
 
 	// 真实登记表必须覆盖这两条真实路由（抽样保真）
 	assert.Empty(t, adminPermissionGaps(routes[:2], adminRoutePermission))
+}
+
+// DGO-S3b：集体对象 4 条路由必须登记到 diet:view / diet:manage；旧配置路由已移除。
+func TestAdminPermission_DietGroupObjectRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/group-objects"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/group-objects"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/group-objects/:id"},
+		{Method: http.MethodPut, Path: "/api/v1/admin/diet/group-objects/:id"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "集体对象路由不得有登记缺口")
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/group-objects"])
+	assert.Equal(t, "diet:manage", adminRoutePermission["POST /api/v1/admin/diet/group-objects"])
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/group-objects/:id"])
+	assert.Equal(t, "diet:manage", adminRoutePermission["PUT /api/v1/admin/diet/group-objects/:id"])
+
+	_, ok := adminRoutePermission["GET /api/v1/admin/diet/config"]
+	assert.False(t, ok, "旧配置路由必须从登记表移除")
+}
+
+// 查看码可以读集体对象，但不能新增/修改。
+func TestAdminPermission_DietGroupObjectViewCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	assert.Equal(t, http.StatusOK, doGet(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusOK, doGet(r, "/api/v1/admin/diet/group-objects/1").Code)
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusForbidden, doPut(r, "/api/v1/admin/diet/group-objects/1").Code)
+}
+
+// 管理码可以新增/修改集体对象，但不能读列表/详情（两个码互不替代）。
+func TestAdminPermission_DietGroupObjectManageCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/group-objects/1").Code)
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/group-objects").Code)
+	assert.Equal(t, http.StatusOK, doPut(r, "/api/v1/admin/diet/group-objects/1").Code)
+}
+
+// DGO-S7：基本参数选项 2 条路由登记 diet:view，只有 view 码可读。
+func TestAdminPermission_DietOptionRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/academic-years"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/classes"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "基本参数选项路由不得有登记缺口")
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/academic-years"])
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/classes"])
+
+	viewOnly := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	assert.Equal(t, http.StatusOK, doGet(viewOnly, "/api/v1/admin/diet/academic-years").Code)
+	assert.Equal(t, http.StatusOK, doGet(viewOnly, "/api/v1/admin/diet/classes").Code)
+
+	manageOnly := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/academic-years").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/classes").Code)
+}
+
+// AQR-S3：8 条食物路由必须逐条登记，GET 用 diet:view、写操作用 diet:manage。
+func TestAdminPermission_DietFoodRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/food-categories"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/foods"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/foods"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/foods/batch-delete"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/foods/:id"},
+		{Method: http.MethodPut, Path: "/api/v1/admin/diet/foods/:id"},
+		{Method: http.MethodDelete, Path: "/api/v1/admin/diet/foods/:id"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/foods/:id/replace-candidates"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "食物路由不得有登记缺口")
+
+	want := map[string]string{
+		"GET /api/v1/admin/diet/food-categories":              "diet:view",
+		"GET /api/v1/admin/diet/foods":                        "diet:view",
+		"POST /api/v1/admin/diet/foods":                       "diet:manage",
+		"POST /api/v1/admin/diet/foods/batch-delete":          "diet:manage",
+		"GET /api/v1/admin/diet/foods/:id":                    "diet:view",
+		"PUT /api/v1/admin/diet/foods/:id":                    "diet:manage",
+		"DELETE /api/v1/admin/diet/foods/:id":                 "diet:manage",
+		"GET /api/v1/admin/diet/foods/:id/replace-candidates": "diet:view",
+	}
+	for key, code := range want {
+		assert.Equal(t, code, adminRoutePermission[key], key)
+	}
+}
+
+// 查看码放行全部食物 GET；写操作一律 403。
+func TestAdminPermission_DietFoodViewCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/food-categories",
+		"/api/v1/admin/diet/foods",
+		"/api/v1/admin/diet/foods/1",
+		"/api/v1/admin/diet/foods/1/replace-candidates",
+	} {
+		assert.Equal(t, http.StatusOK, doGet(r, path).Code, path)
+	}
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/foods").Code)
+	assert.Equal(t, http.StatusForbidden, doPut(r, "/api/v1/admin/diet/foods/1").Code)
+	assert.Equal(t, http.StatusForbidden, doDelete(r, "/api/v1/admin/diet/foods/1").Code)
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/foods/batch-delete").Code)
+}
+
+// 管理码放行全部写操作；食物 GET 一律 403。
+func TestAdminPermission_DietFoodManageCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/foods").Code)
+	assert.Equal(t, http.StatusOK, doPut(r, "/api/v1/admin/diet/foods/1").Code)
+	assert.Equal(t, http.StatusOK, doDelete(r, "/api/v1/admin/diet/foods/1").Code)
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/foods/batch-delete").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/food-categories").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/foods").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/foods/1").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/foods/1/replace-candidates").Code)
+}
+
+// AQR-S4：7 条菜谱路由必须逐条登记，GET 用 diet:view、写操作用 diet:manage。
+func TestAdminPermission_DietRecipeRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/recipes"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/recipes"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/recipes/suggest"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/recipes/merge"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/recipes/:id"},
+		{Method: http.MethodPut, Path: "/api/v1/admin/diet/recipes/:id"},
+		{Method: http.MethodDelete, Path: "/api/v1/admin/diet/recipes/:id"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "菜谱路由不得有登记缺口")
+
+	want := map[string]string{
+		"GET /api/v1/admin/diet/recipes":         "diet:view",
+		"POST /api/v1/admin/diet/recipes":        "diet:manage",
+		"GET /api/v1/admin/diet/recipes/suggest": "diet:view",
+		"POST /api/v1/admin/diet/recipes/merge":  "diet:manage",
+		"GET /api/v1/admin/diet/recipes/:id":     "diet:view",
+		"PUT /api/v1/admin/diet/recipes/:id":     "diet:manage",
+		"DELETE /api/v1/admin/diet/recipes/:id":  "diet:manage",
+	}
+	for key, code := range want {
+		assert.Equal(t, code, adminRoutePermission[key], key)
+	}
+}
+
+// 查看码放行全部菜谱 GET；写操作一律 403。
+func TestAdminPermission_DietRecipeViewCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/recipes",
+		"/api/v1/admin/diet/recipes/suggest",
+		"/api/v1/admin/diet/recipes/1",
+	} {
+		assert.Equal(t, http.StatusOK, doGet(r, path).Code, path)
+	}
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/recipes").Code)
+	assert.Equal(t, http.StatusForbidden, doPost(r, "/api/v1/admin/diet/recipes/merge").Code)
+	assert.Equal(t, http.StatusForbidden, doPut(r, "/api/v1/admin/diet/recipes/1").Code)
+	assert.Equal(t, http.StatusForbidden, doDelete(r, "/api/v1/admin/diet/recipes/1").Code)
+}
+
+// 管理码放行全部菜谱写操作；菜谱 GET 一律 403。
+func TestAdminPermission_DietRecipeManageCode(t *testing.T) {
+	r := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/recipes").Code)
+	assert.Equal(t, http.StatusOK, doPost(r, "/api/v1/admin/diet/recipes/merge").Code)
+	assert.Equal(t, http.StatusOK, doPut(r, "/api/v1/admin/diet/recipes/1").Code)
+	assert.Equal(t, http.StatusOK, doDelete(r, "/api/v1/admin/diet/recipes/1").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/recipes").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/recipes/suggest").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(r, "/api/v1/admin/diet/recipes/1").Code)
+}
+
+func openAdminPermTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	cfgPath := filepath.Join("..", "..", "configs", "app.ini")
+	if _, err := os.Stat(cfgPath); err != nil {
+		t.Skipf("跳过：找不到 %s（本地无 DB 配置）", cfgPath)
+	}
+	cfg, err := config.Load(cfgPath)
+	require.NoError(t, err, "load config")
+	if cfg.MySQL.DSN == "" {
+		t.Skip("跳过：MySQL DSN 为空")
+	}
+	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
+	})
+	require.NoError(t, err, "open db")
+	return db
+}
+
+// 角色目录新增 diet 模块（view/manage/export），角色管理页据此渲染勾选项。
+// PermissionTree 会先确保权限目录已落库，因此这条用例需要真实 DB；无 DB 时跳过，
+// 路由与权限码断言仍由上面不依赖 DB 的用例覆盖。
+func TestAdminPermission_RoleCatalogHasDietModule(t *testing.T) {
+	db := openAdminPermTestDB(t)
+	svc := service.NewRoleService(db, repository.NewAdminRepo(db), repository.NewOperationLogRepo(db))
+
+	tree, err := svc.PermissionTree(context.Background())
+	require.NoError(t, err)
+
+	codes := map[string]string{}
+	for _, module := range tree {
+		if module.Module != "diet" {
+			continue
+		}
+		for _, item := range module.Items {
+			codes[item.Key] = item.Label
+		}
+	}
+	require.Len(t, codes, 3, "diet 模块必须恰好包含 view/manage/export 三个权限码")
+	assert.Contains(t, codes, "diet:view")
+	assert.Contains(t, codes, "diet:manage")
+	assert.Contains(t, codes, "diet:export")
+}
+
+// AQR-S6：8 条周食谱/模板路由必须逐条登记，GET 用 diet:view、写操作用 diet:manage。
+func TestAdminPermission_DietPlanRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/plans"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans/:id"},
+		{Method: http.MethodPut, Path: "/api/v1/admin/diet/plans/:id"},
+		{Method: http.MethodDelete, Path: "/api/v1/admin/diet/plans/:id"},
+		{Method: http.MethodPost, Path: "/api/v1/admin/diet/plans/:id/clear"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/templates"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/templates/:id"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "周食谱/模板路由不得有登记缺口")
+
+	want := map[string]string{
+		"GET /api/v1/admin/diet/plans":            "diet:view",
+		"POST /api/v1/admin/diet/plans":           "diet:manage",
+		"GET /api/v1/admin/diet/plans/:id":        "diet:view",
+		"PUT /api/v1/admin/diet/plans/:id":        "diet:manage",
+		"DELETE /api/v1/admin/diet/plans/:id":     "diet:manage",
+		"POST /api/v1/admin/diet/plans/:id/clear": "diet:manage",
+		"GET /api/v1/admin/diet/templates":        "diet:view",
+		"GET /api/v1/admin/diet/templates/:id":    "diet:view",
+	}
+	for key, code := range want {
+		assert.Equal(t, code, adminRoutePermission[key], key)
+	}
+}
+
+// 查看码放行周食谱/模板 GET；写操作一律 403。管理码相反。
+func TestAdminPermission_DietPlanViewAndManageCodes(t *testing.T) {
+	viewOnly := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	for _, path := range []string{
+		"/api/v1/admin/diet/plans",
+		"/api/v1/admin/diet/plans/1",
+		"/api/v1/admin/diet/templates",
+		"/api/v1/admin/diet/templates/1",
+	} {
+		assert.Equal(t, http.StatusOK, doGet(viewOnly, path).Code, path)
+	}
+	assert.Equal(t, http.StatusForbidden, doPost(viewOnly, "/api/v1/admin/diet/plans").Code)
+	assert.Equal(t, http.StatusForbidden, doPut(viewOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusForbidden, doDelete(viewOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusForbidden, doPost(viewOnly, "/api/v1/admin/diet/plans/1/clear").Code)
+
+	manageOnly := newPermEngine(stubResolver{codes: []string{"diet:manage"}})
+	assert.Equal(t, http.StatusOK, doPost(manageOnly, "/api/v1/admin/diet/plans").Code)
+	assert.Equal(t, http.StatusOK, doPut(manageOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusOK, doDelete(manageOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusOK, doPost(manageOnly, "/api/v1/admin/diet/plans/1/clear").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/plans").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/plans/1").Code)
+	assert.Equal(t, http.StatusForbidden, doGet(manageOnly, "/api/v1/admin/diet/templates").Code)
+}
+
+// AQR-S7：营养分析两条路由逐条登记；查看用 diet:view，导出用 diet:export。
+func TestAdminPermission_DietAnalysisRoutesRegistered(t *testing.T) {
+	routes := []gin.RouteInfo{
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans/:id/analysis"},
+		{Method: http.MethodGet, Path: "/api/v1/admin/diet/plans/:id/analysis/export"},
+	}
+	assert.Empty(t, adminPermissionGaps(routes, adminRoutePermission), "营养分析路由不得有登记缺口")
+	assert.Equal(t, "diet:view", adminRoutePermission["GET /api/v1/admin/diet/plans/:id/analysis"])
+	assert.Equal(t, "diet:export", adminRoutePermission["GET /api/v1/admin/diet/plans/:id/analysis/export"])
+}
+
+// AQR-S7：查看码不能导出，导出码不能看报表（两个码互不替代）。
+func TestAdminPermission_DietAnalysisViewAndExportCodes(t *testing.T) {
+	viewOnly := newPermEngine(stubResolver{codes: []string{"diet:view"}})
+	assert.Equal(t, http.StatusOK, doGet(viewOnly, "/api/v1/admin/diet/plans/1/analysis").Code)
+	assert.Equal(t, http.StatusForbidden,
+		doGet(viewOnly, "/api/v1/admin/diet/plans/1/analysis/export").Code)
+
+	exportOnly := newPermEngine(stubResolver{codes: []string{"diet:export"}})
+	assert.Equal(t, http.StatusForbidden,
+		doGet(exportOnly, "/api/v1/admin/diet/plans/1/analysis").Code)
+	assert.Equal(t, http.StatusOK,
+		doGet(exportOnly, "/api/v1/admin/diet/plans/1/analysis/export").Code)
 }

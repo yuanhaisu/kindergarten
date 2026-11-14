@@ -27,6 +27,11 @@
   --color-border-subtle: #E2E8F0;
   --color-accent-purple: #9333EA;
   --color-accent-purple-bg: #F3E8FF;
+  --color-identity-ink: #1B2A41;
+  --color-identity-ink-muted: #566275;
+  --color-identity-amber: #E8A23A;
+  --color-identity-cream: #F7F3E8;
+  --color-identity-rule: #DED5C4;
   --color-brand-primary: #3B82F6;
   --color-brand-primary-light: #60A5FA;
   --color-brand-primary-dark: #1D4ED8;
@@ -35,7 +40,7 @@
   --color-brand-sidebar-hover: #334155;
   --color-bg-page: #F1F5F9;
   --color-bg-card: #FFFFFF;
-  --typography-font-family-base: 'Noto Sans SC', 'system-ui', '-apple-system', 'sans-serif';
+  --typography-font-family-base: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'system-ui', '-apple-system', 'sans-serif';
   --typography-font-size-xs: 11px;
   --typography-font-size-sm: 12px;
   --typography-font-size-base: 13px;
@@ -44,6 +49,9 @@
   --typography-font-size-xl: 16px;
   --typography-font-size-2xl: 18px;
   --typography-font-size-3xl: 20px;
+  --typography-font-size-display3: 28px;
+  --typography-font-size-display2: 40px;
+  --typography-font-size-display1: 56px;
   --typography-font-weight-normal: 400;
   --typography-font-weight-medium: 500;
   --typography-font-weight-semibold: 600;
@@ -62,6 +70,12 @@
   --spacing-md: 8px;
   --spacing-lg: 12px;
   --spacing-xl: 16px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 48px;
+  --spacing-5xl: 64px;
+  --spacing-6xl: 96px;
+  --spacing-7xl: 128px;
   --animation-duration-fast: 150ms;
   --animation-duration-base: 300ms;
   --animation-duration-slow: 500ms;

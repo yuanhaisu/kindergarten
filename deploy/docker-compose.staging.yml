@@ -1,0 +1,82 @@
+name: kindergarten-staging
+
+services:
+  migrate:
+    image: ${ACR_REGISTRY}/${ACR_NAMESPACE}/kindergarten-server:${IMAGE_TAG}
+    container_name: kindergarten-migrate-staging
+    profiles: ["migrate"]
+    restart: "no"
+    entrypoint: ["/app/kindergarten-migrate", "up"]
+    environment:
+      CONFIG_PATH: /etc/kindergarten/app.ini
+      TZ: Asia/Shanghai
+      # 迁移账号（DDL）只给 migrate 容器；api 容器继续用 app.ini 里的 DML 账号。
+      MYSQL_DSN: ${MIGRATE_MYSQL_DSN}
+    volumes:
+      - /etc/kindergarten/staging/app.ini:/etc/kindergarten/app.ini:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api:
+    image: ${ACR_REGISTRY}/${ACR_NAMESPACE}/kindergarten-server:${IMAGE_TAG}
+    container_name: kindergarten-api-staging
+    restart: unless-stopped
+    environment:
+      CONFIG_PATH: /etc/kindergarten/app.ini
+      TZ: Asia/Shanghai
+    volumes:
+      - /etc/kindergarten/staging/app.ini:/etc/kindergarten/app.ini:ro
+    ports:
+      - "127.0.0.1:8081:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  mysql:
+    image: mysql:8.0
+    container_name: kindergarten-mysql-staging
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${STAGING_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: kindergarten
+      MYSQL_USER: ${STAGING_MYSQL_USER}
+      MYSQL_PASSWORD: ${STAGING_MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    volumes:
+      - staging_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: kindergarten-redis-staging
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${STAGING_REDIS_PASSWORD}
+    command: ["sh", "-c", "redis-server --requirepass \"$${REDIS_PASSWORD}\" --appendonly yes"]
+    volumes:
+      - staging_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  staging_mysql_data:
+  staging_redis_data:

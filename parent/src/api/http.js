@@ -4,6 +4,7 @@ import { rememberPendingRoute } from "@/utils/pendingRoute"
 
 const SUCCESS_CODE = 0
 const LOGIN_URL = "/pages/auth/login"
+const CONSENT_URL = "/pages/auth/consent"
 const AUTH_EXPIRED_MESSAGE = "登录状态已失效，请重新登录"
 
 // 后端 refresh token 一次性消费（Redis ConsumeRefresh 是 get + del）：并发 401 各发一次刷新时，
@@ -12,6 +13,8 @@ const AUTH_EXPIRED_MESSAGE = "登录状态已失效，请重新登录"
 let refreshPromise = null
 // 同一批失败只跳一次登录页：多个 reLaunch 会互相打断。
 let redirecting = false
+// 同意门禁同样只跳一次，避免并发业务请求叠多个 reLaunch。
+let consentRedirecting = false
 
 // 401 发生在哪个页面，就把那个页面（含 query）记下来，登录后回跳。
 // 深链尤其重要：从消息点进任务详情时 token 过期，不能把用户丢回首页。
@@ -52,6 +55,18 @@ function redirectToLogin() {
     url: LOGIN_URL,
     complete() {
       redirecting = false
+    }
+  })
+}
+
+// 403 + 40301：未同意当前隐私政策。跳到阻断页，不弹全局错误。
+function redirectToConsent() {
+  if (consentRedirecting) return
+  consentRedirecting = true
+  uni.reLaunch({
+    url: CONSENT_URL,
+    complete() {
+      consentRedirecting = false
     }
   })
 }
@@ -184,6 +199,13 @@ function request({ url, method = "GET", data, header = {}, auth = false, silent 
 
         if (res.statusCode >= 200 && res.statusCode < 300 && body.code === SUCCESS_CODE) {
           resolve(body)
+          return
+        }
+
+        // 未同意当前隐私政策：服务端兜底 403 + 40301，跳阻断页而不是普通错误 toast。
+        if (res.statusCode === 403 && body.code === 40301) {
+          redirectToConsent()
+          reject(body)
           return
         }
 

@@ -7,6 +7,8 @@ import { fetchParentHomeOverview } from "@/api/parent-home"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { formatDateLabel, formatDateRange, formatMonthLabel, formatYmd, monthKeyOf, todayKey } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -274,7 +276,7 @@ onPullDownRefresh(loadData)
             class="ph"
             @click="openPreview(group, idx)"
           >
-            <image class="ph-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
+            <image @error="onMediaError" class="ph-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
             <view v-if="isVideo(m)" class="ph-video">
               <text class="ph-play">{{ ICON.play }}</text>
             </view>
@@ -311,7 +313,7 @@ onPullDownRefresh(loadData)
               autoplay
               object-fit="contain"
             />
-            <image
+            <image @error="onMediaError"
               v-else-if="previewCurrent"
               class="pv-img"
               :src="previewCurrent.file_url || previewCurrent.thumb_url"

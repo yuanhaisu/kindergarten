@@ -49,6 +49,9 @@
             <span class="status-pill status-pill--expired" data-od-id="pickup-status-expired">
               <span class="status-dot" aria-hidden="true"></span>已过期
             </span>
+            <span class="status-pill status-pill--verified" data-od-id="pickup-status-verified">
+              <span class="status-dot" aria-hidden="true"></span>已核验
+            </span>
             <span class="status-pill status-pill--refresh" data-od-id="pickup-status-refresh">
               <span class="status-dot" aria-hidden="true"></span>刷新中
             </span>
@@ -81,6 +84,12 @@
           <div class="pass-qr">
             <div class="qr-panel" data-od-id="pickup-qr-panel">
               <svg class="qr-svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="接送二维码（原型占位）"></svg>
+              <span class="qr-verified-mask" aria-hidden="true">
+                <span class="qr-verified-check">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.2 4.2L19 7.5"/></svg>
+                </span>
+                <span class="qr-verified-label">已核验</span>
+              </span>
               <span class="qr-expired" role="status">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 9A8 8 0 1 0 20 14"></path><path d="M19.5 4.5V9H15"></path></svg>
                 已过期 · 刷新后可用
@@ -94,6 +103,9 @@
               <span class="expiry-expired">已于 10月26日 23:59 过期</span>
             </p>
             <p class="pass-tip">请向老师出示此码，核验后一次有效</p>
+            <p class="verified-note">已核验 · 17:32 由妈妈接走</p>
+            <p class="verified-sub">老师已核验，本码已失效</p>
+            <p class="verified-sub">今日接送已完成，可安心接孩子</p>
           </div>
         </article>
 
@@ -188,6 +200,7 @@
       <div class="mp-demo-chips" role="group" aria-label="原型状态">
         <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
         <button class="mp-demo-chip" type="button" data-mp-state="expired" aria-pressed="false">已过期</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="verified" aria-pressed="false">已核验</button>
         <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空态</button>
         <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
         <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>

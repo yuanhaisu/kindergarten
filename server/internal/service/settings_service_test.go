@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -114,6 +115,35 @@ func TestSettingsUpdate_HealthValidation(t *testing.T) {
 	require.NoError(t, db.Model(&domain.KindergartenAppSetting{}).
 		Where("kindergarten_id = ?", settingsTestKG).Count(&count).Error)
 	assert.Equal(t, int64(1), count)
+}
+
+func TestListAcademicYears_IncludesID(t *testing.T) {
+	svc, db := newSettingsFixture(t)
+	ctx := context.Background()
+
+	// 软删行仍占 (kindergarten_id, year) 唯一索引，重跑前必须硬删。
+	db.Unscoped().Where("kindergarten_id = ?", settingsTestKG).Delete(&domain.AcademicYear{})
+	t.Cleanup(func() {
+		db.Unscoped().Where("kindergarten_id = ?", settingsTestKG).Delete(&domain.AcademicYear{})
+	})
+	require.NoError(t, db.Create(&domain.AcademicYear{
+		BaseModel:      domain.BaseModel{ID: 991203},
+		KindergartenID: settingsTestKG,
+		Year:           "2025-2026",
+		IsCurrent:      true,
+	}).Error)
+
+	resp, err := svc.ListAcademicYears(ctx, settingsTestKG)
+	require.NoError(t, err)
+	require.Len(t, resp.List, 1)
+	assert.Equal(t, uint64(991203), resp.List[0].ID)
+	assert.Equal(t, "2025-2026", resp.List[0].Year)
+	assert.True(t, resp.List[0].IsCurrent)
+
+	// 膳食计划需要数值 academic_year_id，线上字段名必须是 id。
+	raw, err := json.Marshal(resp.List[0])
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"id":991203`)
 }
 
 func TestGetHealthPolicy_NoRowDoesNotCreate(t *testing.T) {

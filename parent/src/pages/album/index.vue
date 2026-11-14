@@ -9,11 +9,14 @@
 import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { hasModule, loadEntitlements } from "@/utils/entitlements"
 import { fetchParentClassAlbums } from "@/api/parent-class-album"
 import { fetchParentHomeOverview } from "@/api/parent-home"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { formatDateLabel } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadAlbums()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -42,6 +45,8 @@ const CATEGORY_TONES = {
 const albums = ref([])
 const total = ref(0)
 const loading = ref(true)
+// 班级相册是独立售卖模块：未开通时整页锁定，班级页与成长相册页的入口也会隐藏。
+const locked = ref(false)
 const loadingMore = ref(false)
 // 首次成功返回前不把空列表当「还没有相册」——错误态必须先于空态判定。
 const hasLoaded = ref(false)
@@ -143,6 +148,13 @@ async function loadAlbums({ skeleton = true } = {}) {
   }
   try {
     await ensureLogin()
+    await loadEntitlements()
+    if (!hasModule("album")) {
+      locked.value = true
+      loading.value = false
+      return
+    }
+    locked.value = false
     await ensureStudent()
     const res = await fetchPage(1)
     if (seq !== loadSeq) return
@@ -268,7 +280,11 @@ onPullDownRefresh(() => {
 </script>
 
 <template>
-  <PageShell max-width="430px" bottom-space="48rpx">
+  <view v-if="locked" class="locked-state">
+    <text class="locked-title">班级相册未开通</text>
+    <text class="locked-desc">本园暂未开通班级相册功能，请联系园所老师。</text>
+  </view>
+  <PageShell v-else max-width="430px" bottom-space="48rpx">
     <!-- 全班视图切换：只有服务端明确下发 classwide_enabled=true 才出现；
          关闭时整个入口不渲染，避免点了才 403。 -->
     <view v-if="classwideEnabled" class="scope-switch">
@@ -348,7 +364,7 @@ onPullDownRefresh(() => {
       >
         <view class="album-cover" :class="'album-cover--' + album.coverTiles.length">
           <view v-for="(cover, index) in album.coverTiles" :key="index" class="cover-cell">
-            <image class="cover-img" :src="cover" mode="aspectFill" />
+            <image @error="onMediaError" class="cover-img" :src="cover" mode="aspectFill" />
           </view>
           <view v-if="!album.coverTiles.length" class="cover-cell cover-cell--empty">
             <text class="cover-glyph">{{ ICON.gallery }}</text>
@@ -385,6 +401,30 @@ onPullDownRefresh(() => {
 </template>
 
 <style scoped lang="scss">
+// ---- 未开通 ----------------------------------------------------
+.locked-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  min-height: 60vh;
+  padding: $spacing-3xl $spacing-xl;
+}
+
+.locked-title {
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.locked-desc {
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+  text-align: center;
+  line-height: 1.6;
+}
+
 // ============================================================
 // 班级相册 · 可扫读的卡片列表
 // 封面承担主要识别；标题、可见张数、日期与分类依次降级。

@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 构建镜像与静态包
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/kindergarten-server
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate tag
+        run: |
+          if ! echo "${GITHUB_REF_NAME}" | grep -Eq '^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}-[0-9]+$'; then
+            echo "release tag must match vYYYY.MM.DD-N, got ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Sanity build
+        run: cd server && go build ./...
+      - name: Login ACR
+        run: echo "${{ secrets.ACR_PASSWORD }}" | docker login "${{ secrets.ACR_REGISTRY }}" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
+      - name: Build and push image
+        run: |
+          docker build -t "${IMAGE_NAME}:${GITHUB_REF_NAME}" server
+          docker push "${IMAGE_NAME}:${GITHUB_REF_NAME}"
+      - name: Build admin static
+        run: |
+          cd shared-design-tokens && npm ci && npm run build
+          cd ../admin && npm ci && npm run generate
+      - name: Package admin static
+        run: tar -czf admin-dist.tar.gz -C admin/.output/public .
+      - name: Build website static
+        run: cd website && npm ci && npm run generate
+      - name: Package website static
+        run: tar -czf website-dist.tar.gz -C website/.output/public .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: admin-dist
+          path: admin-dist.tar.gz
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: website-dist
+          path: website-dist.tar.gz
+          retention-days: 14
+
+  deploy-staging:
+    name: 部署预发
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: admin-dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: website-dist
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ECS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.ECS_HOST }}" >> ~/.ssh/known_hosts
+      - name: Upload admin artifact
+        run: |
+          scp -i ~/.ssh/id_ed25519 admin-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/admin-${GITHUB_REF_NAME}.tar.gz"
+          scp -i ~/.ssh/id_ed25519 website-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/website-${GITHUB_REF_NAME}.tar.gz"
+      - name: Deploy staging
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+            "bash -s -- staging ${GITHUB_REF_NAME} /tmp/admin-${GITHUB_REF_NAME}.tar.gz /tmp/website-${GITHUB_REF_NAME}.tar.gz" \
+            < deploy/scripts/deploy.sh
+
+  deploy-production:
+    name: 部署生产（人工批准）
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: admin-dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: website-dist
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ECS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.ECS_HOST }}" >> ~/.ssh/known_hosts
+      - name: Snapshot RDS
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+            "bash -s -- prod" < deploy/scripts/snapshot-rds.sh
+      - name: Upload admin artifact
+        run: |
+          scp -i ~/.ssh/id_ed25519 admin-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/admin-${GITHUB_REF_NAME}.tar.gz"
+          scp -i ~/.ssh/id_ed25519 website-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/website-${GITHUB_REF_NAME}.tar.gz"
+      - name: Deploy production
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+            "bash -s -- prod ${GITHUB_REF_NAME} /tmp/admin-${GITHUB_REF_NAME}.tar.gz /tmp/website-${GITHUB_REF_NAME}.tar.gz" \
+            < deploy/scripts/deploy.sh

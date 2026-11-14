@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
+import { hasModule, loadEntitlements } from "@/utils/entitlements"
 import { fetchGrowthFeed, likeGrowth, unlikeGrowth } from "@/api/parent-growth"
 import { fetchParentHomeOverview } from "@/api/parent-home"
 import { fetchAchievements } from "@/api/parent-points"
@@ -9,6 +10,8 @@ import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/cur
 import { syncTabBar } from "@/utils/tabbar"
 import { formatMonthLabel, formatRecordTime, formatYearRange, monthKeyOf } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadData()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -30,6 +33,8 @@ const refreshing = ref(false)
 const retrying = ref(false)
 const hasLoaded = ref(false)
 const loadError = ref("")
+// 成长模块未开通时整页显示锁定态；tabBar 不能按租户隐藏，只能在页面内拦。
+const locked = ref(false)
 const viewMode = ref("child")
 const currentStudentId = ref(getCurrentStudentId())
 
@@ -232,6 +237,14 @@ async function loadData() {
   loadError.value = ""
   try {
     await ensureLogin()
+    await loadEntitlements()
+    if (!hasModule("growth")) {
+      locked.value = true
+      hasLoaded.value = true
+      loading.value = false
+      return
+    }
+    locked.value = false
     const sid = getCurrentStudentId()
     currentStudentId.value = sid || null
     // 成就数是次要指标，失败不连累 feed——单独吞错，按 0 显示。
@@ -313,7 +326,12 @@ onPullDownRefresh(loadData)
 
 <template>
   <PageShell flush-top max-width="430px" :safe-bottom="false">
+    <view v-if="locked" class="locked-state">
+      <text class="locked-title">成长时光未开通</text>
+      <text class="locked-desc">本园暂未开通成长记录功能，请联系园所老师。</text>
+    </view>
     <scroll-view
+      v-else
       scroll-y
       class="feed-scroll"
       :refresher-enabled="true"
@@ -324,7 +342,7 @@ onPullDownRefresh(loadData)
       <view class="child-card">
         <view class="child-top">
           <view class="child-avatar">
-            <image
+            <image @error="onMediaError"
               v-if="childInfo.avatar"
               class="child-avatar-img"
               :src="childInfo.avatar"
@@ -409,7 +427,7 @@ onPullDownRefresh(loadData)
               <view v-for="item in group.records" :key="item.id" class="rec" @click="goDetail(item.id)">
                 <view class="rec-head">
                   <view class="rec-avatar">
-                    <image
+                    <image @error="onMediaError"
                       v-if="item.creator && item.creator.avatar"
                       class="rec-avatar-img"
                       :src="item.creator.avatar"
@@ -443,7 +461,7 @@ onPullDownRefresh(loadData)
                   :class="{ 'photo-grid--single': photoList(item).length === 1 }"
                 >
                   <view v-for="m in photoList(item)" :key="m.id" class="photo-cell">
-                    <image class="photo-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
+                    <image @error="onMediaError" class="photo-img" :src="m.thumb_url || m.file_url" mode="aspectFill" />
                   </view>
                 </view>
 
@@ -553,13 +571,38 @@ onPullDownRefresh(loadData)
   height: calc(140rpx + env(safe-area-inset-bottom));
 }
 
+// ---- 未开通 ----------------------------------------------------
+.locked-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-3xl $spacing-xl;
+}
+
+.locked-title {
+  font-size: $typography-font-size-lg;
+  font-weight: $typography-font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.locked-desc {
+  font-size: $typography-font-size-sm;
+  color: $color-text-muted;
+  text-align: center;
+  line-height: 1.6;
+}
+
 // ---- 孩子卡 ----------------------------------------------------
 .child-card {
   margin-top: $spacing-lg;
   padding: $spacing-xl;
-  border-radius: $component-card-radius;
+  // 与首页 hero / 接送凭证 / 我的身份卡统一为 2xl，避免四个页头四种圆角
+  border-radius: $border-radius-2xl;
   background: $gradient-brand-soft;
-  box-shadow: $shadow-md;
+  box-shadow: $shadow-sm;
 }
 
 .child-top {
@@ -779,7 +822,7 @@ onPullDownRefresh(loadData)
 }
 
 .seg-btn.is-active {
-  border-color: $color-brand-primary-light;
+  border-color: $color-brand-primary-dark;
   background: $color-brand-primary-bg;
   box-shadow: $shadow-sm;
 }

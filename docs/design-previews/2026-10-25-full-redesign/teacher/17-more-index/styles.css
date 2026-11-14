@@ -482,3 +482,6 @@ body {
     transition: none;
   }
 }
+
+/* ---- entitlements（billing）：未开通模块的入口不渲染 ------- */
+[data-state="partial"] .menu-row[data-module="album"] { display: none; }

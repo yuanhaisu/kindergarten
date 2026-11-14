@@ -504,7 +504,7 @@ onPullDownRefresh(handleRefresh)
 
 .segment-badge-text {
   color: $color-text-on-brand;
-  font-size: 20rpx;
+  font-size: $typography-font-size-xs;
   font-weight: $typography-font-weight-semibold;
   line-height: 1;
   font-variant-numeric: tabular-nums;

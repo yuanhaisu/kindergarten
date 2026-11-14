@@ -28,6 +28,12 @@ func AuthJWT(secret []byte, revoker auth.TokenRevoker) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		// 平台凭证不属于园所信任域，不能用于园所接口（ADR-0014）。
+		if claims.Scope == auth.ScopePlatform {
+			response.ErrForbidden(c, "平台凭证不能访问园所接口")
+			c.Abort()
+			return
+		}
 
 		// 加 jti 之前签发的旧 token 没有 jti，无从判断是否被吊销，只能用到过期。
 		if claims.ID != "" {

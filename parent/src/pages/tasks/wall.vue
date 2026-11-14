@@ -12,6 +12,8 @@ import { ensureLogin } from "@/utils/login"
 import { fetchPublicWall, withStudentScope } from "@/api/parent-task"
 import { formatClock, formatDayGroupLabel } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (load(true)))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG，字体已在 App.vue 全局注册。
 const ICON = {
@@ -302,7 +304,7 @@ onReachBottom(() => {
             >
               <!-- 照片卡：照片 4:3（padding-top 撑高，替代不支持的宽高比属性） -->
               <view v-if="item.media_url" class="photo-hit" @click="previewPhoto(item)">
-                <image class="wall-photo" :src="item.media_url" mode="aspectFill" />
+                <image @error="onMediaError" class="wall-photo" :src="item.media_url" mode="aspectFill" />
                 <text v-if="item.task_title" class="task-chip">{{ item.task_title }}</text>
               </view>
 
@@ -318,7 +320,7 @@ onReachBottom(() => {
                   :class="{ 'share-copy--note': !item.media_url }"
                 >{{ item.content }}</text>
                 <view class="share-meta">
-                  <image
+                  <image @error="onMediaError"
                     v-if="item.student && item.student.avatar"
                     class="avatar avatar--image"
                     :src="item.student.avatar"

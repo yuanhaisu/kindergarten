@@ -896,3 +896,6 @@ body.dialog-open {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- entitlements：成长报告未开通时菜单项不渲染 -------------- */
+[data-state="partial"] .menu-row[data-module="growth_report"] { display: none; }

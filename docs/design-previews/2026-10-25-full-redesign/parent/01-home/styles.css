@@ -203,9 +203,10 @@ svg { display: block; }
   height: 38px;
   border-radius: var(--radius-pill);
 }
-.stat-orb--success { background: var(--success-wash); color: var(--success); }
-.stat-orb--info { background: var(--info-wash); color: var(--info); }
-.stat-orb--warning { background: var(--warning-wash); color: var(--warning); }
+/* 代码现状：四个状态球统一暖橙单色，不再按语义分色 */
+.stat-orb--success,
+.stat-orb--info,
+.stat-orb--warning,
 .stat-orb--accent { background: var(--accent-wash); color: var(--accent-deep); }
 
 .stat-value {
@@ -597,6 +598,7 @@ svg { display: block; }
 .type-chip {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-xs);
   min-height: 18px;
   padding: 1px var(--space-md);
   border-radius: var(--radius-pill);
@@ -605,13 +607,11 @@ svg { display: block; }
   line-height: 1.45;
   letter-spacing: 0.02em;
 }
-.type-chip--notice {
-  background: var(--info-wash);
-  color: var(--info);
-}
+/* 代码现状：通知/成长统一暖橙单色，靠图标区分类型 */
+.type-chip--notice,
 .type-chip--growth {
-  background: var(--success-wash);
-  color: var(--success);
+  background: var(--accent-wash);
+  color: var(--accent-deep);
 }
 
 .feed-title-row {

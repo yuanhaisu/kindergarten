@@ -6,7 +6,7 @@
     data-index="{{index}}"
     bindtap="onTabTap"
   >
-    <text class="ctb__icon">{{item.icon}}</text>
+    <image class="ctb__icon" src="{{selected === index ? item.iconActive : item.icon}}" mode="aspectFit" />
     <text class="ctb__label">{{item.text}}</text>
   </view>
 </view>

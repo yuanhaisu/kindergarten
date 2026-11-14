@@ -21,14 +21,14 @@ var (
 )
 
 type SettingsService struct {
-	db         *gorm.DB
-	kg         *repository.KindergartenRepo
-	years      *repository.AcademicYearRepo
-	app        *repository.KindergartenAppSettingRepo
-	classes    *repository.ClassRepo
-	students   *repository.StudentRepo
-	userRoles  *repository.UserRoleRepo
-	oplog      *repository.OperationLogRepo
+	db        *gorm.DB
+	kg        *repository.KindergartenRepo
+	years     *repository.AcademicYearRepo
+	app       *repository.KindergartenAppSettingRepo
+	classes   *repository.ClassRepo
+	students  *repository.StudentRepo
+	userRoles *repository.UserRoleRepo
+	oplog     *repository.OperationLogRepo
 }
 
 func NewSettingsService(
@@ -78,8 +78,8 @@ type settingsAttendance struct {
 }
 
 type settingsNotice struct {
-	NeedAudit        bool `json:"need_audit"`
-	AutoRemindHours  int  `json:"auto_remind_hours"`
+	NeedAudit       bool `json:"need_audit"`
+	AutoRemindHours int  `json:"auto_remind_hours"`
 }
 
 type settingsGrowth struct {
@@ -89,14 +89,14 @@ type settingsGrowth struct {
 }
 
 type settingsPickup struct {
-	QRCodeExpireHours        int  `json:"qr_code_expire_hours"`
-	NeedAuthorizationAudit   bool `json:"need_authorization_audit"`
+	QRCodeExpireHours      int  `json:"qr_code_expire_hours"`
+	NeedAuthorizationAudit bool `json:"need_authorization_audit"`
 }
 
 type settingsPoints struct {
-	TaskCheckinPoints       int `json:"task_checkin_points"`
-	WeeklyAttendanceBonus   int `json:"weekly_attendance_bonus"`
-	MonthlyAttendanceBonus  int `json:"monthly_attendance_bonus"`
+	TaskCheckinPoints      int `json:"task_checkin_points"`
+	WeeklyAttendanceBonus  int `json:"weekly_attendance_bonus"`
+	MonthlyAttendanceBonus int `json:"monthly_attendance_bonus"`
 }
 
 type settingsHealth struct {
@@ -283,12 +283,12 @@ func (s *SettingsService) GetHealthPolicy(ctx context.Context, kindergartenID ui
 
 type UpdateSettingsReq struct {
 	Attendance *settingsAttendance `json:"attendance"`
-	Notice       *settingsNotice     `json:"notice"`
-	Growth       *settingsGrowth     `json:"growth"`
-	Pickup       *settingsPickup     `json:"pickup"`
-	Points       *settingsPoints     `json:"points"`
-	Health       *settingsHealth     `json:"health"`
-	Album        *settingsAlbum      `json:"album"`
+	Notice     *settingsNotice     `json:"notice"`
+	Growth     *settingsGrowth     `json:"growth"`
+	Pickup     *settingsPickup     `json:"pickup"`
+	Points     *settingsPoints     `json:"points"`
+	Health     *settingsHealth     `json:"health"`
+	Album      *settingsAlbum      `json:"album"`
 }
 
 type UpdateSettingsResp struct {
@@ -358,6 +358,8 @@ func (s *SettingsService) UpdateSettings(ctx context.Context, kindergartenID, us
 }
 
 type AcademicYearListItem struct {
+	// ID 供管理端创建膳食计划时传 academic_year_id；追加字段保持向后兼容。
+	ID        uint64 `json:"id"`
 	Year      string `json:"year"`
 	IsCurrent bool   `json:"is_current"`
 }
@@ -376,7 +378,7 @@ func (s *SettingsService) ListAcademicYears(ctx context.Context, kindergartenID 
 	}
 	out := AcademicYearsResp{List: make([]AcademicYearListItem, 0, len(rows))}
 	for _, r := range rows {
-		out.List = append(out.List, AcademicYearListItem{Year: r.Year, IsCurrent: r.IsCurrent})
+		out.List = append(out.List, AcademicYearListItem{ID: r.ID, Year: r.Year, IsCurrent: r.IsCurrent})
 	}
 	return &out, nil
 }
@@ -465,19 +467,19 @@ func (s *SettingsService) CreateAcademicYear(ctx context.Context, kindergartenID
 }
 
 type KindergartenInfoResp struct {
-	ID             uint64 `json:"id"`
-	Name           string `json:"name"`
-	Address        string `json:"address"`
-	Phone          string `json:"phone"`
-	Principal      string `json:"principal"`
-	LogoURL        string `json:"logo_url"`
-	LicenseNo      string `json:"license_no"`
-	Capacity       int    `json:"capacity"`
-	CurrentCount   int64  `json:"current_count"`
-	ClassCount     int64  `json:"class_count"`
-	TeacherCount   int64  `json:"teacher_count"`
-	EstablishedAt  string `json:"established_at"`
-	Description    string `json:"description"`
+	ID            uint64 `json:"id"`
+	Name          string `json:"name"`
+	Address       string `json:"address"`
+	Phone         string `json:"phone"`
+	Principal     string `json:"principal"`
+	LogoURL       string `json:"logo_url"`
+	LicenseNo     string `json:"license_no"`
+	Capacity      int    `json:"capacity"`
+	CurrentCount  int64  `json:"current_count"`
+	ClassCount    int64  `json:"class_count"`
+	TeacherCount  int64  `json:"teacher_count"`
+	EstablishedAt string `json:"established_at"`
+	Description   string `json:"description"`
 }
 
 func (s *SettingsService) GetKindergartenInfo(ctx context.Context, kindergartenID uint64) (*KindergartenInfoResp, error) {

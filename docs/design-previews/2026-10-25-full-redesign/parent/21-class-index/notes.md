@@ -80,3 +80,7 @@
 - 视觉复核（mcp-vision 读 `preview.png` 及空/加载/失败三态截图）：状态栏 + 导航栏 + 返回箭头 + 胶囊齐全；**无 tabBar**；三卡层级清晰、文字无裁切、无横向滚动；头像为正圆；无直角；暖色只做点缀；「原型演示」未遮挡内容
 - 交互实测（CDP）：入口 toast、重试 1 秒降级与恢复、空态重新加载、芯片切换、返回 toast 均正常；console 无 error/warn
 - 未修改 `teacher/` 与 `parent/` 源码；输出目录无 `.mcp.json`、无 `_shared/` 副本、未复制 `shell.css`
+
+## 与代码同步（2026-11-09）
+
+- 成长相册入口加 `data-module="album"`；新增「相册未开通」演示态，未开通时入口不渲染。班级相册入口在代码中同样受 `showClassAlbum` 控制。

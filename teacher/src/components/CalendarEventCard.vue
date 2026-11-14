@@ -73,11 +73,11 @@ const metaText = computed(() => {
   box-shadow: $shadow-md;
 }
 
-// 预览家长视角时套用家长端的表面值（tokens.json 的 parent 分支，非本端 token）：
-// 卡片纯白、类型兜底胶囊用家长端品牌浅底/深色。老师端直接用本端 token 会偏暖奶色，
-// 预览就不再是「家长看到的样子」。这两处硬编码是刻意的，改 tokens 时需同步。
-.event-card.is-parent-surface { background: #FFFFFF; }
-.event-card.is-parent-surface .type-chip.is-unknown { background: #FFF7ED; color: #EA580C; }
+// 预览家长视角时套用家长端的表面值：卡片纯白、类型兜底胶囊用家长端品牌浅底/深色。
+// 老师端直接用本端 token 会偏暖奶色，预览就不再是「家长看到的样子」。
+// 这些值由 tokens.json 的 teacher/parent `color.previewParent` 分支提供，随 token 构建同步。
+.event-card.is-parent-surface { background: $color-preview-parent-bg-card; }
+.event-card.is-parent-surface .type-chip.is-unknown { background: $color-preview-parent-brand-primary-bg; color: $color-preview-parent-brand-primary-dark; }
 
 .card-head { display: flex; align-items: center; gap: $spacing-md; }
 .title {

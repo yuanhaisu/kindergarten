@@ -45,8 +45,14 @@ func main() {
 	userRepo := repository.NewUserRepo(db)
 	userRoleRepo := repository.NewUserRoleRepo(db)
 	kgRepo := repository.NewKindergartenRepo(db)
+	dietSeedSvc := service.NewDietSeedService(
+		db,
+		repository.NewDietFoodRepo(db),
+		repository.NewDietTemplateRepo(db),
+		repository.NewDietDriRepo(db),
+	)
 
-	svc := service.NewSystemService(db, userRepo, userRoleRepo, kgRepo)
+	svc := service.NewSystemService(db, userRepo, userRoleRepo, kgRepo, dietSeedSvc)
 
 	err = svc.Initialize(context.Background(), service.InitRequest{
 		KindergartenName: "TestKG",

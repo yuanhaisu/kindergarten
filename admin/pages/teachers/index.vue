@@ -85,14 +85,14 @@
     <!-- 邀请码弹窗 - 创建成功后自动弹出 -->
     <el-dialog v-model="inviteDialog" title="邀请老师加入小程序" width="480px">
       <div style="text-align: center">
-        <p style="margin-bottom: 12px; color: #666">
+        <p class="mb-3 text-text-muted">
           将此路径发送给老师，老师通过微信小程序打开即可自动绑定账号
         </p>
         <img
           v-if="qrImageUrl"
           :src="qrImageUrl"
           alt="邀请小程序码"
-          style="width: 200px; height: 200px; margin-bottom: 12px; border: 1px solid #eee"
+          class="mb-3 h-[200px] w-[200px] border border-border-subtle"
         />
         <el-input
           :model-value="inviteLink"
@@ -106,7 +106,7 @@
             </el-button>
           </template>
         </el-input>
-        <p style="font-size: 12px; color: #999">
+        <p class="text-xs text-text-hint">
           邀请码：{{ inviteToken }} &nbsp;|&nbsp;
           有效期至：{{ inviteExpiry }}
         </p>
@@ -122,7 +122,7 @@
     <!-- 邀请码管理弹窗 - 从列表操作进入 -->
     <el-dialog v-model="inviteManageDialog" title="邀请码管理" width="480px">
       <div v-if="!inviteManageToken" style="text-align: center; padding: 24px 0">
-        <p style="color: #999; margin-bottom: 16px">该老师暂无有效邀请码</p>
+        <p class="mb-4 text-text-hint">该老师暂无有效邀请码</p>
         <el-button type="primary" :loading="regenerating" @click="doRegenerateForManage">
           生成邀请码
         </el-button>
@@ -132,7 +132,7 @@
           v-if="manageQrImageUrl"
           :src="manageQrImageUrl"
           alt="邀请小程序码"
-          style="width: 200px; height: 200px; margin-bottom: 12px; border: 1px solid #eee"
+          class="mb-3 h-[200px] w-[200px] border border-border-subtle"
         />
         <el-input
           :model-value="inviteManageLink"
@@ -146,7 +146,7 @@
             </el-button>
           </template>
         </el-input>
-        <p style="font-size: 12px; color: #999">
+        <p class="text-xs text-text-hint">
           邀请码：{{ inviteManageToken }} &nbsp;|&nbsp;
           状态：<el-tag :type="inviteManageStatus === 1 ? 'success' : 'info'" size="small">
             {{ inviteManageStatus === 1 ? '待使用' : '已使用' }}

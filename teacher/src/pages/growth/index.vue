@@ -6,6 +6,8 @@ import { fetchTeacherClassInfo } from "@/api/teacher-class"
 import { ensureLogin } from "@/utils/login"
 import { formatCardTime, formatHeadlineDate, formatMonthLabel, monthKeyOf, todayKey } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadLogs()))
 
 const logs = ref([])
 const loading = ref(false)
@@ -378,7 +380,7 @@ onPullDownRefresh(loadLogs)
                     class="media-tile"
                     :class="'ph-' + (index % 6 + 1)"
                   >
-                    <image
+                    <image @error="onMediaError"
                       v-if="media.thumb_url"
                       class="media-img"
                       :src="media.thumb_url"

@@ -14,6 +14,8 @@ import { fetchTeacherAchievements, grantAchievement } from "@/api/teacher-achiev
 import { addDays, formatDateAnchor, todayKey } from "@/utils/time"
 import { pickImages } from "@/utils/media"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => ((editId.value ? loadExistingLog(editId.value) : undefined)))
 
 const MAX_PHOTOS = 20
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024
@@ -843,7 +845,7 @@ async function pickWholeClass() {
             :class="{ 'is-picked': batchMode && batchSelected.has(index) }"
             @click="batchMode ? toggleBatchSelect(index) : openSingleNaming(index)"
           >
-            <image
+            <image @error="onMediaError"
               v-if="mediaDisplayUrl(media)"
               class="tile-img"
               :src="mediaDisplayUrl(media)"
@@ -887,7 +889,7 @@ async function pickWholeClass() {
         <view v-if="form.media.length" class="desc-list">
           <view v-for="(media, index) in form.media" :key="'desc-' + index" class="desc-row">
             <view class="desc-thumb">
-              <image
+              <image @error="onMediaError"
                 v-if="mediaDisplayUrl(media)"
                 class="desc-thumb-img"
                 :src="mediaDisplayUrl(media)"
@@ -943,7 +945,7 @@ async function pickWholeClass() {
             :class="{ 'is-on': grant.achievement_id === achievement.id }"
             @click="selectAchievement(achievement.id)"
           >
-            <image v-if="achievement.icon" class="badge-icon" :src="achievement.icon" mode="aspectFit" />
+            <image @error="onMediaError" v-if="achievement.icon" class="badge-icon" :src="achievement.icon" mode="aspectFit" />
             <text>{{ achievement.name }}</text>
           </view>
         </view>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 登录</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .login-main { display: flex; flex-direction: column; min-height: calc(844px - 44px); padding: 10px 24px 28px; }
+    .brand { margin-top: 18px; }
+    .brand .overline { letter-spacing: 0.18em; }
+    .brand h1 { max-width: 300px; margin-top: 10px; }
+    .brand-sub { margin: 10px 0 0; max-width: 280px; font-family: var(--serif); font-size: 16px; line-height: 1.8; color: var(--ink-mid); }
+
+    .hero-art { display: grid; place-items: center; margin: 8px 0 4px; }
+    .hero-art svg { display: block; }
+
+    .login-actions { margin-top: auto; display: grid; gap: 10px; }
+    .btn--wechat svg { color: var(--sage-soft); }
+
+    .agree { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; font-size: 11.5px; line-height: 1.55; color: var(--ink-bone); }
+    .check {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 17px;
+      height: 17px;
+      margin-top: 1px;
+      border: 1px solid var(--hair-strong);
+      border-radius: 4px;
+      background: var(--card);
+      color: var(--bone);
+    }
+    .check.is-on { background: var(--pine); border-color: var(--pine); }
+    .agree a { color: var(--pine); text-decoration: underline; text-underline-offset: 2px; }
+
+    .login-foot { margin-top: 20px; text-align: center; font-size: 11.5px; color: var(--ink-bone); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="login-main">
+      <div class="brand">
+        <p class="overline">养成星球 · NURTURE PLANET</p>
+        <h1>孩子的每一天<br />都值得被看见</h1>
+        <p class="brand-sub">家园沟通、成长记录与接送，都在这一个地方。</p>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <svg width="232" height="232" viewBox="0 0 120 120" fill="none">
+          <circle cx="60" cy="60" r="52" fill="#E5EFE9" />
+          <circle cx="60" cy="58" r="27" fill="#8DA386" stroke="#173220" stroke-width="3" />
+          <path d="M33 58c0 12 12 20 27 20s27-8 27-20" stroke="#173220" stroke-width="2.4" stroke-linecap="round" opacity=".35" />
+          <ellipse cx="60" cy="60" rx="47" ry="15" stroke="#C36540" stroke-width="3.6" transform="rotate(-18 60 60)" />
+          <circle cx="96" cy="34" r="6" fill="#DDB14A" stroke="#173220" stroke-width="2.4" />
+          <circle cx="30" cy="36" r="2.1" fill="#173220" />
+          <circle cx="101" cy="76" r="1.8" fill="#173220" />
+          <circle cx="22" cy="72" r="1.6" fill="#173220" />
+          <path d="M52 66c2.6 3.4 5.3 5.1 8 5.1s5.4-1.7 8-5.1" stroke="#FCFAF4" stroke-width="2.4" stroke-linecap="round" />
+          <circle cx="51" cy="53" r="2.2" fill="#FCFAF4" />
+          <circle cx="69" cy="53" r="2.2" fill="#FCFAF4" />
+        </svg>
+      </div>
+
+      <div class="login-actions">
+        <button class="btn btn--primary btn--lg btn--block btn--wechat" type="button">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9.3 4.2C5.6 4.2 2.6 6.7 2.6 9.8c0 1.8 1 3.4 2.6 4.4l-.7 2.2 2.5-1.3c.7.2 1.5.3 2.3.3h.6" />
+            <path d="M14.9 8.5c-3.4 0-6.2 2.3-6.2 5.2s2.8 5.2 6.2 5.2c.7 0 1.4-.1 2-.3l2.2 1.2-.6-2c1.5-.9 2.4-2.4 2.4-4.1 0-2.9-2.7-5.2-6-5.2Z" />
+          </svg>
+          微信一键登录
+        </button>
+        <button class="btn btn--ghost btn--lg btn--block" type="button">手机号验证码登录</button>
+
+        <label class="agree">
+          <span class="check is-on" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4.2 4.2 8.8-9.4"/></svg>
+          </span>
+          <span>我已阅读并同意 <a href="#">用户协议</a> 与 <a href="#">隐私政策</a>，同意园所使用孩子信息开展家园沟通。</span>
+        </label>
+      </div>
+
+      <p class="login-foot">遇到问题？请联系园所老师协助绑定</p>
+    </main>
+  </div>
+</body>
+</html>

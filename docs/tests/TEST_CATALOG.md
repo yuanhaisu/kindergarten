@@ -22,6 +22,8 @@
 | ACH | 成就 | ANN | 公告 |
 | PERM | 权限强制 | TBL | 课表 |
 | ALB | 班级相册 | | |
+| DIE | 膳食管理 | | |
+| DEP | 部署发布 | OPS | 运行运维 |
 
 ---
 
@@ -595,6 +597,9 @@
 | TC-NEW-MAS-0009 | 跨业务可见性各自生效 | P0 | Integration | 🔲 |
 | TC-NEW-MAS-0010 | 文件层不提供可见性开关 | P1 | Unit | 🔲 |
 | TC-NEW-MAS-0011 | 新业务复用统一通道 | P0 | Integration | 🔲 |
+| TC-NEW-MAS-0012 | 读取返回短期签名 URL | P0 | Integration | 🚧 签名/响应层单测通过；真实 OSS 私有桶待联调 |
+| TC-NEW-MAS-0013 | 过期 URL 被拒绝并可重新获取 | P0 | Integration | 🚧 客户端刷新逻辑已接入；真实过期联调待私有桶 |
+| TC-NEW-MAS-0014 | 未签名公共 URL 不可访问 | P0 | Integration | 🚧 fake bucket 单测通过；真实桶 ACL 待验证 |
 
 ### 成长记录媒体上传（对应 OpenSpec 变更 `wire-growth-media-upload`，首个遵循媒体基线的接入方）
 
@@ -1166,3 +1171,216 @@
 - 老师端审核 UI（9.3）、家长端申请开关与公开墙页面（10.3/10.x）、管理端撤回入口（11.4）——B2 无界面可点。
 - 「内容中只有提交者孩子」只能由老师勾选确认，服务端无法自动识别图片/语音里出现了谁。
 - 任务列表/详情（`GET /parent/tasks`、`GET /parent/tasks/:id`）尚未返回 `public_*`；家长端要展示某条提交的公开状态目前走 `checkin-history`。字段补齐归契约任务 8.1。
+
+## 膳食管理（DIE）
+
+> 对应 OpenSpec 变更 `add-quantified-recipe` 的任务 7.1。
+> 规格见 `openspec/changes/add-quantified-recipe/specs/` 下 `diet-meal-config`、`diet-food-library`、
+> `diet-meal-plan`、`diet-nutrition-analysis`；契约见 `backend/api/api-admin/23-diet.md`。
+> 单测分布在 AQR-S2–S7（service 层，真实 MySQL 夹具）；页面交互由 AQR-S10b 的 E2E 覆盖。
+> 状态列中的 S10b 指 `AQR-S10b` 的端到端验收切片。
+> `add-diet-group-objects`（DGO-S6）补充 TC-NEW-DIE-0065..0077：后端单测见
+> `diet_group_object_service_test.go` / `diet_plan_test.go`，页面交互由 DGO-S6 的 Playwright E2E 覆盖。
+> DGO-S6 校准：fallback 权重 26.7%/32.6%/40.8%/0 的能量目标为 **1485.95** 千卡（`diet_plan_test.go` 断言）；
+> `diet_analysis_test.go` 的 1484.26 是对参考产品黄金样本的复刻，不走 fallback 计算，两者口径不同。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-DIE-0001 | 首次读取返回默认配置（日托、5 餐、市品重量） | P0 | 单测 | ✅ `TestDietMealConfig_TC0001_FirstReadReturnsDefault` |
+| TC-NEW-DIE-0002 | 标准模式保存餐次时间与默认比例后读取一致 | P0 | 单测 | ✅ `TestDietMealConfig_TC0002_SaveStandardAndReadBack` |
+| TC-NEW-DIE-0003 | 餐次时间顺序错误被拒绝且配置不变 | P0 | 单测 | ✅ `TestDietMealConfig_TC0003_RejectsTimeOutOfOrder` |
+| TC-NEW-DIE-0004 | 自定模式相邻餐次占比超限被拒绝 | P0 | 单测 | ✅ `TestDietMealConfig_TC0004_RejectsCustomAdjacentCap` |
+| TC-NEW-DIE-0005 | 五餐配置折算系数 0.95 | P0 | 单测 | ✅ `TestDietMealConfig_TC0005_StandardCoefficient95` |
+| TC-NEW-DIE-0006 | 停用晚餐后折算系数变为 0.70 | P0 | 单测 | ✅ `TestDietMealConfig_TC0006_DisableDinnerCoefficient70` |
+| TC-NEW-DIE-0007 | 保存可食重量口径被拒绝 | P0 | 单测 | ✅ `TestDietMealConfig_TC0007_RejectsEdibleWeight` |
+| TC-NEW-DIE-0008 | 调整比例后旧食谱按创建时快照计算 | P0 | 单测 | ✅ `TestDietMealConfig_TC0008_SnapshotNotRetroactive` |
+| TC-NEW-DIE-0009 | 新园可见平台预置食物 | P0 | 单测 | ✅ `TestDietSeedCopiesPresetFoods` + `TestDietSeedGlobals` |
+| TC-NEW-DIE-0010 | 修改园所食物副本不影响他园与预置源 | P1 | 单测 | ✅ `TestDietFood_UpdateCopyIsolation` |
+| TC-NEW-DIE-0011 | 缺失营养项存 NULL、读取显示占位符 | P0 | 单测 | ✅ `TestDietFood_DetailPreservesNullNutrients` |
+| TC-NEW-DIE-0012 | 缺失营养项不按 0 计入合计 | P0 | 单测 | ✅ `TestDietAnalysis_NullNutrientSkipped` |
+| TC-NEW-DIE-0013 | 按一级/二级分类与名称片段检索食物 | P1 | 单测 | ✅ `TestDietFood_ListFiltersByCategoryAndKeyword` |
+| TC-NEW-DIE-0014 | 删除被菜谱引用的食物被拒绝 | P0 | 单测 | ✅ `TestDietFood_DeleteReferencedByRecipeRejected` |
+| TC-NEW-DIE-0015 | 删除仅被历史食谱引用的食物成功且历史不变 | P0 | 单测 | ✅ `TestDietFood_DeleteReferencedOnlyByMealPlanAllowed` |
+| TC-NEW-DIE-0016 | 预置库升级跳过园所已修改行并报告冲突 | P1 | 单测 | 🚧 `TestDietFood_UpdatePresetCopyMarksCustomized` 只覆盖标记位；升级命令冲突报告待 S5 命令验证 |
+| TC-NEW-DIE-0017 | 同名菜谱不能并存 | P0 | 单测 | ✅ `TestDietRecipe_DuplicateNameWithoutReplaceConflict` |
+| TC-NEW-DIE-0018 | 新名称保存为新菜谱 | P0 | 单测 | ✅ `TestDietRecipe_SaveNewNameCreatesRecipe` |
+| TC-NEW-DIE-0019 | 重名选择「替换」覆盖原配方 | P0 | 单测 | ✅ `TestDietRecipe_ReplaceOverwritesFormula` |
+| TC-NEW-DIE-0020 | 重名选择「仅限本次使用」不写入菜谱库 | P0 | E2E | 🔲 前端分支，S10b E2E |
+| TC-NEW-DIE-0021 | 同菜内同一种食物合并为一行、克数相加 | P0 | 单测 | ✅ `TestDietRecipe_DuplicateFoodRowsMergeGrams` + `TestDietPlanSaveMergesSameFoodInSameRecipe` |
+| TC-NEW-DIE-0022 | 输入菜名触发名称/拼音码联想 | P1 | 单测 | ✅ `TestDietRecipe_SuggestMatchesNameAndSpellPrefix` |
+| TC-NEW-DIE-0023 | 选中联想候选载入菜谱配方 | P1 | E2E | 🔲 编辑器交互，S10b E2E |
+| TC-NEW-DIE-0024 | 菜谱改名后库与联想更新、历史食谱不变 | P0 | 单测 | ✅ `TestDietRecipe_UpdateRenameAndFormulaKeepsHistory` |
+| TC-NEW-DIE-0025 | 菜谱删除后库不再返回、历史食谱不变 | P0 | 单测 | ✅ `TestDietRecipe_DeleteSoftDeletesAndAllowsRecreate` |
+| TC-NEW-DIE-0026 | 合并重复菜谱时同种食物克数累加并删除源菜谱 | P1 | 单测 | ✅ `TestDietRecipe_MergeSumsGramsAndDeletesSource` |
+| TC-NEW-DIE-0027 | 修改菜谱配料后历史周食谱与报表不变 | P1 | 单测 | ✅ `TestDietRecipe_UpdateRenameAndFormulaKeepsHistory` |
+| TC-NEW-DIE-0028 | 新建后列表显示周次与周一至周日区间 | P0 | 单测 | ✅ `TestDietPlanCreateCustomAndList` |
+| TC-NEW-DIE-0029 | 同一学年内重名周食谱被拒绝 | P0 | 单测 | ✅ `TestDietPlanCreateRejectsDuplicateNameInAcademicYear` |
+| TC-NEW-DIE-0030 | 自定义方式新建空白周食谱 | P0 | 单测 | ✅ `TestDietPlanCreateCustomAndList` |
+| TC-NEW-DIE-0031 | 选用模板新建周食谱 | P0 | 单测 | ✅ `TestDietPlanCreateFromTemplateCopiesItems` |
+| TC-NEW-DIE-0032 | 复制历史新建周食谱 | P0 | 单测 | ✅ `TestDietPlanCopyMapsWeekdayAndRecomputesSnapshot` |
+| TC-NEW-DIE-0033 | 修改模板生成结果不影响模板本身 | P1 | 单测 | 🚧 `TestDietPlanCreateFromTemplateCopiesItems` 证明条目独立复制；「改结果不动模板」无独立断言 |
+| TC-NEW-DIE-0034 | 跨周复制按星期几映射并重算营养快照 | P0 | 单测 | ✅ `TestDietPlanCopyMapsWeekdayAndRecomputesSnapshot` |
+| TC-NEW-DIE-0035 | 网格编辑器添加菜谱、食物与克数 | P0 | E2E | 🚧 后端保存覆盖 `TestDietPlanSaveAddsRemovesAndClearsItems`；网格交互待 S10b E2E |
+| TC-NEW-DIE-0036 | 移除菜谱或食物后明细与小计同步减少 | P1 | E2E | 🚧 后端移除覆盖 `TestDietPlanSaveAddsRemovesAndClearsItems`；UI 小计联动待 S10b E2E |
+| TC-NEW-DIE-0037 | 空克数或 0 克阻止保存并定位到单元格 | P0 | 单测 | ✅ `TestDietPlanSaveValidatesCells` |
+| TC-NEW-DIE-0038 | 同类替换后克数不变、营养按新食物重算 | P1 | E2E | 🔲 编辑器交互，S10b E2E（候选接口见 `TestDietFood_ReplaceCandidatesUseRootCategory`） |
+| TC-NEW-DIE-0039 | 调整菜谱顺序后保存并重新打开保持一致 | P1 | 单测 | ✅ `TestDietPlanSavePersistsArrayOrder` |
+| TC-NEW-DIE-0040 | 保存后立即可被列表与营养分析读取 | P0 | 单测 | ✅ `TestDietPlanSaveImmediatelyReadable` |
+| TC-NEW-DIE-0041 | 清空食谱明细后食谱本身保留 | P0 | 单测 | ✅ `TestDietPlanClearKeepsPlan` |
+| TC-NEW-DIE-0042 | 删除周食谱后列表与营养分析不再返回 | P0 | 单测 | ✅ `TestDietPlanDeleteSoftDeletes` |
+| TC-NEW-DIE-0043 | 修改克数后餐次与当日营养小计立即更新 | P1 | E2E | 🔲 编辑器交互，S10b E2E |
+| TC-NEW-DIE-0044 | 两条明细按食部折算后营养合计 | P0 | 单测 | ✅ `TestDietAnalysis_TwoItemsNutritionSum` |
+| TC-NEW-DIE-0045 | NULL 营养项不参与求和 | P0 | 单测 | ✅ `TestDietAnalysis_NullNutrientSkipped` |
+| TC-NEW-DIE-0046 | 五餐 0.95 的显示值与比较%（DRIs 不缩放） | P0 | 单测 | ✅ `TestDietAnalysis_ZeroNineFiveDisplay` |
+| TC-NEW-DIE-0047 | 折算系数变为 0.70 后显示值与比较% 重算 | P0 | 单测 | ✅ `TestDietAnalysis_CoefficientChange` |
+| TC-NEW-DIE-0048 | 按 3/4/5/6 岁班级人数权重算出 11 项 DRIs 目标值 | P0 | 单测 | ✅ `TestDietAnalysis_DriTargetsFromSnapshot` + `TestDietPlanSnapshotWeightsByGradeStudents` + `TestDietPlanSnapshotFallbackWeightsWithoutStudents` |
+| TC-NEW-DIE-0049 | 评价阈值 ±20% 闭区间边界 | P0 | 单测 | ✅ `TestDietAnalysis_EvaluationBoundaries` |
+| TC-NEW-DIE-0050 | 低于 80% 判「低」、高于 120% 判「高」 | P0 | 单测 | ✅ `TestDietAnalysis_EvaluationLowHigh` |
+| TC-NEW-DIE-0051 | 营养分析表 14 列（视黄醇当量复用维生素A、胡萝卜素「-」） | P0 | 单测 + E2E | 🚧 后端 `TestDietAnalysis_NutritionGoldenSample`；14 列页面渲染待 S10b E2E |
+| TC-NEW-DIE-0052 | 三大营养素供能四行与分母口径 | P0 | 单测 | ✅ `TestDietAnalysis_MacroEnergy` |
+| TC-NEW-DIE-0053 | 三餐供能比按 6 个餐次展示 | P0 | 单测 | ✅ `TestDietAnalysis_MealEnergy` |
+| TC-NEW-DIE-0054 | 膳食构成接口 16 类、页面只渲染 10 类 | P0 | 单测 + E2E | 🚧 后端 `TestDietAnalysis_Composition16Groups`；页面渲染待 S10b E2E |
+| TC-NEW-DIE-0055 | 钙三来源不互斥（126%）、铁两来源互斥（100%） | P0 | 单测 | ✅ `TestDietAnalysis_CalciumIron` |
+| TC-NEW-DIE-0056 | 蛋白质来源只统计动物+豆类，三项合计不等于总蛋白 | P0 | 单测 | ✅ `TestDietAnalysis_ProteinSource` |
+| TC-NEW-DIE-0057 | 脂肪来源返回 3 项、页面只渲染动物性/植物性 | P1 | 单测 | ✅ `TestDietAnalysis_FatSource` |
+| TC-NEW-DIE-0058 | 同一报表三个能量总量并存、不做统一 | P0 | 单测 | ✅ `TestDietAnalysis_NutritionGoldenSample` |
+| TC-NEW-DIE-0059 | 营养表列渲染复用：视黄醇当量=维生素A、胡萝卜素「-」 | P0 | 单测 + E2E | 🚧 后端 `TestDietAnalysis_NoRetinolCarotinInResponse`；页面复用列待 S10b E2E |
+| TC-NEW-DIE-0060 | 三餐供能比合计 85.88% 不归一化 | P0 | 单测 | ✅ `TestDietAnalysis_MealEnergy` |
+| TC-NEW-DIE-0061 | 钙偏低触发固定建议话术 | P0 | 单测 | ✅ `TestDietAnalysis_ConclusionCalciumLowSuggestion` |
+| TC-NEW-DIE-0062 | 「合格」营养素不触发建议 | P0 | 单测 | ✅ `TestDietAnalysis_ConclusionNoSuggestionForOK` |
+| TC-NEW-DIE-0063 | 修改食物库后历史报表 7 组不变 | P0 | 单测 | ✅ `TestDietAnalysis_SnapshotUnaffectedByFoodChanges` |
+| TC-NEW-DIE-0064 | 导出 Excel 5 个 sheet，数值与页面一致 | P0 | 单测 | ✅ `TestDietAnalysisExportWorkbook` |
+| TC-NEW-DIE-0065 | 学年没有对象时返回空列表、不自动创建 | P1 | 单测 | ✅ `TestDietGroupObjectService_TC0065_ListEmptyAndFilter` |
+| TC-NEW-DIE-0066 | 新增集体对象成功并出现在列表 | P0 | 单测 + E2E | ✅ `TestDietGroupObjectService_TC0066_TC0074_CreateDefaultAndDetail`；DGO-S6 E2E 真实点击新增 |
+| TC-NEW-DIE-0067 | 同学年重名被拒绝 | P0 | 单测 | ✅ `TestDietGroupObjectService_TC0067_RejectsDuplicateName` |
+| TC-NEW-DIE-0068 | 未选择就餐班级被拒绝 | P0 | 单测 | ✅ `TestDietGroupObjectService_TC0068_RejectsNoClass` |
+| TC-NEW-DIE-0069 | 修改就餐班级只影响新食谱 | P0 | 单测 | ✅ `TestDietPlanDriWeightsFollowGroupObjectClasses` |
+| TC-NEW-DIE-0070 | 制定食谱携带对象与学年进入新建向导 | P0 | E2E | ✅ DGO-S6 E2E：基本参数页点击「制定食谱」→ 周食谱页向导自动打开且对象预选 |
+| TC-NEW-DIE-0071 | 未指定集体对象被拒绝 | P0 | 单测 | ✅ `TestDietPlanCreateRequiresGroupObject`（缺少集体对象） |
+| TC-NEW-DIE-0072 | 跨学年或跨园对象被拒绝 | P0 | 单测 | ✅ `TestDietPlanCreateRequiresGroupObject`（对象不存在/他园/其他学年，均不落库） |
+| TC-NEW-DIE-0073 | 列表与详情显示集体对象 | P0 | 单测 + E2E | ✅ `TestDietPlanListAndDetailReturnGroupObject`；DGO-S6 E2E 计划列表与详情头显示对象名 |
+| TC-NEW-DIE-0074 | 详情展示完整配置 | P0 | 单测 + E2E | ✅ `TestDietGroupObjectService_TC0066_TC0074_CreateDefaultAndDetail`；DGO-S6 E2E 详情含 DRIs2000 与系数 0.95 |
+| TC-NEW-DIE-0075 | 对象改名后旧食谱仍显示原名 | P0 | 单测 | ✅ `TestDietPlanDetailKeepsSnapshotObjectNameAfterRename` |
+| TC-NEW-DIE-0076 | DRIs 只统计集体对象内的班级 | P0 | 单测 | ✅ `TestDietPlanDriWeightsFollowGroupObjectClasses` |
+| TC-NEW-DIE-0077 | 就餐班级选项来自班级列表（按年级分组/全选） | P0 | E2E | ✅ DGO-S6 E2E：新增对话框按小班/中班/大班分组，年级全选生效 |
+
+---
+
+## 部署与运行（DEP / OPS）
+
+> 来源：`openspec/changes/establish-deployment-pipeline/specs/release-pipeline/spec.md`、
+> `specs/runtime-operations/spec.md`、`specs/media-assets/spec.md`。
+> 状态说明：🔲 未验证 · 🚧 代码/单测已覆盖、真实环境待联调 · ✅ 已验证。
+
+### 发布流水线（DEP）
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-DEP-0001 | tag 触发构建并产出唯一版本 | P0 | Integration | 🔲 待首次 tag 发布 |
+| TC-NEW-DEP-0002 | 重复 tag 被拒绝/不覆盖 | P0 | Integration | 🔲 待首次 tag 发布 |
+| TC-NEW-DEP-0003 | tag 构建成功后自动部署预发 | P0 | Integration | 🔲 待 staging 资源 |
+| TC-NEW-DEP-0004 | 未批准不进入生产 | P0 | Integration | 🔲 待 GitHub Environment |
+| TC-NEW-DEP-0005 | `/ready` 失败自动回滚 | P0 | Integration | 🚧 `deploy.sh` 已实现回滚分支；待 staging 演练 |
+| TC-NEW-DEP-0006 | 回滚后旧版本可服务 | P0 | Integration | 🚧 同上 |
+| TC-NEW-DEP-0007 | 旧版小程序调用新后端仍可用 | P0 | Integration | 🔲 待兼容性测试 |
+| TC-NEW-DEP-0008 | 破坏性变更拆两次发布 | P0 | Review | 🔲 契约评审门 |
+| TC-NEW-DEP-0009 | 快照失败中止发布 | P0 | Integration | 🚧 `snapshot-rds.sh` 失败即退出；待真实 RDS |
+| TC-NEW-DEP-0010 | 快照成功后继续 | P0 | Integration | 🚧 同上 |
+
+### 运行与恢复（OPS）
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|-------|------|--------|------|------|
+| TC-NEW-OPS-0001 | 依赖不可用时 `/ready` 失败、`/health` 存活 | P0 | Unit | ✅ `health_test.go` |
+| TC-NEW-OPS-0002 | 依赖恢复后 `/ready` 成功 | P0 | Unit | ✅ `health_test.go` |
+| TC-NEW-OPS-0003 | SIGTERM 后在途请求完成 | P0 | Unit | ✅ `server_test.go` |
+| TC-NEW-OPS-0004 | 超时后强制退出 | P0 | Unit | ✅ `server_test.go` |
+| TC-NEW-OPS-0005 | 迁移失败中止发布 | P0 | Integration | 🚧 `migrate` 失败返回非零；流水线断言待 staging |
+| TC-NEW-OPS-0006 | 启动期不执行 AutoMigrate/种子 | P0 | Integration | ✅ DML-only 账号启动 + `/ready` 200，无 DDL 日志 |
+| TC-NEW-OPS-0007 | 请求日志带 request_id | P1 | Unit | 🚧 中间件已挂载；待 SLS 检索 |
+| TC-NEW-OPS-0008 | 日志敏感信息脱敏 | P0 | Unit | ✅ `log_test.go` |
+| TC-NEW-OPS-0009 | 单实例部署 | P1 | Config | 🚧 compose 单副本；无自动化检查 |
+| TC-NEW-OPS-0010 | 阻止水平扩展 | P1 | Config | 🔲 发布检查待实现 |
+| TC-NEW-OPS-0011 | 每日备份存在 | P0 | Ops | 🔲 待 RDS 配置 |
+| TC-NEW-OPS-0012 | 季度恢复演练通过 | P0 | Ops | 🔲 待首次演练 |
+
+---
+## 商业化（变更 `add-saas-commercial-layer`）
+
+| 缩写 | 模块 |
+|---|---|
+| PLT | 平台运营 |
+| CAT | 套餐目录 |
+| ORD | 订单收款 |
+| ENT | 功能授权 |
+| DST | 分销佣金 |
+
+### 平台运营 (PLT)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-PLT-0001 | 园所凭证调用平台接口被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0002 | 平台凭证调用园所接口被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0003 | 开通后园长可登录 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0004 | 重复手机号被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0005 | 停用后园所管理员无法登录 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0006 | 重新启用后恢复 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0007 | 两所园所都出现在平台列表 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0008 | 停用操作可追溯 | P0 | Unit / Contract | 🔲 |
+
+### 套餐目录 (CAT)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-CAT-0001 | 新建套餐引用已注册模块 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0002 | 引用未注册模块被拒 | P0 | Unit / Contract | ✅ (`TestPlan_RejectsUnknownModule`) |
+| TC-NEW-CAT-0003 | 套餐新增模块后老园所不获得 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0004 | 套餐调价后老订单金额不变 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0005 | 改价后新订单使用新价 | P0 | Unit / Contract | ✅ (`TestOrder_NewOrdersUseCurrentPrice`) |
+| TC-NEW-CAT-0006 | 按幼儿数落入对应档位 | P0 | Unit / Contract | ✅ (`TestOrder_TierByStudentCountAndFrozen`) |
+| TC-NEW-CAT-0007 | 学期中人数变动不改档位 | P0 | Unit / Contract | ✅ (`TestOrder_TierByStudentCountAndFrozen`) |
+| TC-NEW-CAT-0008 | 可查询可售模块清单 | P0 | Unit / Contract | 🔲 |
+
+### 订单收款 (ORD)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-ORD-0001 | 确认后目录变更不影响订单 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0002 | 首付后进入部分收款 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0003 | 收清后进入已收清 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0004 | 退款后已收金额回落 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0005 | 退款冲回佣金 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0006 | 订单生效即发放授权 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0007 | 取消订单后授权失效 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0008 | 保存开票信息 | P0 | Unit / Contract | ✅ (`TestOrder_InvoiceInfoRoundTrip`) |
+
+### 功能授权 (ENT)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-ENT-0001 | 一模块在期另一模块已过期 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0002 | 同一模块叠加时取并集 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0003 | 未购模块接口被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0004 | base 模块始终可用 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0005 | 未购模块入口不可见 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0006 | 授权变更后入口即时更新 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0007 | 宽限期内仍可写入 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0008 | 降级后新增被拒 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0009 | 降级后历史仍可读 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0010 | 收款后立刻可写 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0011 | 新开通园所获得试用 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | ✅ (`TestEntitlement_TrialExpiryKeepsData`) |
+| TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | 🔲 |
+
+### 分销佣金 (DST)
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-DST-0001 | 订单确认后改归因被拒 | P0 | Unit / Contract | ✅ (`TestOrder_AttributionFrozen`) |
+| TC-NEW-DST-0002 | 分销商无登录入口 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0003 | 部分收款只按已收部分计佣 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0004 | 收款退款后佣金冲回 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0005 | 未满三十天不可结算 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0006 | 满三十天后可结算 | P0 | Unit / Contract | ✅ (`TestCommission_PromotedAfter30Days`) |
+| TC-NEW-DST-0007 | 台账金额不可手工改写 | P0 | Unit / Contract | 🔲 |
+

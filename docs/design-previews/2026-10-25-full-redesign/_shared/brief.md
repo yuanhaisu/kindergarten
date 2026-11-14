@@ -56,7 +56,7 @@
 
 - 颜色**只能**写 `var(--*)`，不得写裸 hex / rgb。需要新颜色就说明「建议回到 tokens.json 新增」，原型里先用最接近的 token。
 - 老师端 `data-surface="teacher"`：暖奶白底 `var(--bg)`，主色偏奶暖橙 `var(--accent)`。
-- 家长端 `data-surface="parent"`：冷雾白底，主色鲜橙。
+- 家长端 `data-surface="parent"`：暖米底（`#F7F3EA`，卡片 `#FFFAF0`），主色鲜橙，正文 15px（与代码现状一致）。
 - **暖色占比 ≤ 10% 面积**：大面积永远是中性底；渐变只用于一个紧凑 hero 或主按钮。
 - **无直角**：最扁平元素 ≥ `var(--radius-sm)`；按钮/标签/头像 `var(--radius-pill)`；卡片 `var(--radius-card)`。
 - **阴影只用 `var(--shadow-*)`**，不写黑色投影。
@@ -167,3 +167,19 @@ tokens.css 已由流程提供，不要重写，不要覆盖。
 每个文件 < 20KB。不要引用任何外部资源。
 ```
 
+
+## 与代码同步记录（2026-11-06）
+
+- **token 层**：重新生成 51 页的 `tokens.css`。家长端默认值改为代码现状——页面底 `#F7F3EA`、卡片 `#FFFAF0`、强调深色 `#C2410C`、正文 15px、语义色加深；老师端显式保留共享 13px 字号与共享语义色。
+- **页面清单**：删除两端 webview 原型（源码已删），新增家长端 `28-album-list` / `29-album-detail`；总数仍为 51（老师 22 / 家长 29）。
+- **内容差异**：通知页标题与空态、请假状态文案、家长「我的」退出登录、设置页空态、首页动态 chip / 状态球 / 日期、接送完成态与二维码已核验态，均按代码现状更新。
+- **保留差异**：原型图标仍用内联 SVG，代码用 remixicon 字体图标；原型用演示数据，代码按接口渲染。这两项属于呈现介质差异，不做逐像素复刻。
+
+## 同步门禁（2026-11-06 起）
+
+- `_shared/pages.json`、各页 `tokens.css`、`design.lock.json`、`index.html` / `README.md` 由 `scripts/design-sync.mjs` 生成，不要手改。
+- 页面源码 / 依赖的内容型 utils / 导航标题 / tabBar 改动后：`npm run design:sync` → 复核受影响原型 → `npm run design:accept -- <surface>/<slug> --reason "<依据>"` → `npm run design:check`。
+- 设计领先的改版先建 `docs/design-changes/` 变更单（`npm run design:change -- <slug> "标题"`），实现后再 accept。
+- 新增页面先在 `design.config.json` 登记 `slug / n / tabbar`，再补原型目录；`sync` 只写入“待复核”条目，必须显式 `accept`。
+- `accept --all` 默认拒绝，只有确认没有任何页面内容变化或显式 `--force` 才执行；`shared-ui / utils / api / components` 变更用 `accept --shared` 单独确认。
+- `design.preview.lock.json` 记录的截图基线与原型内容不一致时，`check` 给 warning，运行 `npm run design:shots` 重出截图。

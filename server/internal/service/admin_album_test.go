@@ -545,9 +545,19 @@ func TestAdminAlbumRoutesHaveNoEditEndpoint(t *testing.T) {
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, // auth..settings
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, // admin..notice
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, // announcement..gardenCalendar
-		nil,
+		nil, // timetable
+		nil, // dietConfig
+		nil, // dietFood
+		nil, // dietRecipe
+		nil, // dietPlan
+		nil, // dietAnalysis
+		nil, // platform
+		nil, // plan
+		nil, // order
+		nil, // distributor
+		nil, // entitlement
 	)
-	engine, err := app.NewRouter(app.NewAppHandler(h), nil, app.JWTSecret("test-secret"), nil)
+	engine, err := app.NewRouter(app.NewAppHandler(h), nil, app.JWTSecret("test-secret"), nil, nil, nil)
 	require.NoError(t, err, "admin 路由权限登记缺口会让 NewRouter 启动失败")
 
 	var got []string

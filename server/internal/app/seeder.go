@@ -2,10 +2,13 @@ package app
 
 import (
 	"context"
+	"log/slog"
 
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/service"
 )
 
 // SeedDicts seeds default dictionary data for a kindergarten.
@@ -133,4 +136,42 @@ func SeedDictsAfterMigration(db *gorm.DB) {
 		// Log but don't fail startup — dict seeding is not critical
 		println("dict seeder: " + err.Error())
 	}
+}
+
+// SeedDietAfterMigration 是膳食模块的启动种子（openspec: add-quantified-recipe, design D10）。
+//
+// 独立于 SeedDictsAfterMigration：先种全局分类 + DRIs，再遍历园所按 preset_key
+// 复制 kg=0 预置食物、种模板。任何错误只记录，不阻断启动——食物数据依赖
+// 另行导入的授权 CSV，未导入时园所没有食物是合法状态（跳过模板并告警）。
+func SeedDietAfterMigration(db *gorm.DB) {
+	ctx := context.Background()
+	seeder := service.NewDietSeedService(
+		db,
+		repository.NewDietFoodRepo(db),
+		repository.NewDietTemplateRepo(db),
+		repository.NewDietDriRepo(db),
+	)
+
+	globals, err := seeder.SeedDietGlobals(ctx)
+	if err != nil {
+		slog.Error("diet seeder: 全局分类/DRIs 播种失败，跳过园所补齐", "error", err)
+		return
+	}
+	slog.Info("diet seeder: 全局数据就绪",
+		"categories_added", globals.CategoriesAdded,
+		"dri_rows_added", globals.DriRowsAdded,
+	)
+
+	all, err := seeder.SeedDietForAll(ctx)
+	if err != nil {
+		slog.Error("diet seeder: 园所食物/模板播种失败", "error", err)
+		return
+	}
+	slog.Info("diet seeder: 园所补齐完成",
+		"kindergartens", all.Kindergartens,
+		"foods_copied", all.FoodsCopied,
+		"templates_created", all.TemplatesCreated,
+		"template_items_created", all.TemplateItemsCreated,
+		"warnings", len(all.Warnings),
+	)
 }

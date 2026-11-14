@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 可接送人</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; height: 36px; }
+    .page-sub { margin: 8px 0 16px; font-size: 13px; line-height: 1.55; color: var(--ink-bone); }
+
+    .person-row { align-items: center; text-decoration: none; }
+    .person-row .list-row__title { font-size: 15px; font-weight: 600; }
+    .person-row .tag { margin-left: 2px; }
+
+    .add-wrap { margin-top: 18px; }
+    .note { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回接送">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6 6.5 6 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">接送</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </header>
+
+      <h1>可接送人</h1>
+      <p class="page-sub">只有名单内的家人可以接走孩子</p>
+
+      <div class="card card--flush">
+        <a class="list-row person-row" href="#">
+          <span class="avatar" aria-hidden="true">李</span>
+          <span class="list-row__body">
+            <span class="list-row__title">李静</span>
+            <span class="list-row__sub">妈妈 · 长期授权 · 138****6721</span>
+          </span>
+          <span class="tag tag--ok">已通过</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </a>
+
+        <a class="list-row person-row" href="#">
+          <span class="avatar avatar--sage" aria-hidden="true">王</span>
+          <span class="list-row__body">
+            <span class="list-row__title">王磊</span>
+            <span class="list-row__sub">爸爸 · 长期授权 · 139****2035</span>
+          </span>
+          <span class="tag tag--ok">已通过</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </a>
+
+        <a class="list-row person-row" href="#">
+          <span class="avatar avatar--clay" aria-hidden="true">陈</span>
+          <span class="list-row__body">
+            <span class="list-row__title">陈秀兰</span>
+            <span class="list-row__sub">外婆 · 137****4418</span>
+          </span>
+          <span class="tag tag--wait">待审核</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </a>
+
+        <a class="list-row person-row" href="#">
+          <span class="avatar avatar--plain" aria-hidden="true">赵</span>
+          <span class="list-row__body">
+            <span class="list-row__title">赵国强</span>
+            <span class="list-row__sub">叔叔 · 135****8890</span>
+          </span>
+          <span class="tag tag--danger">已拒绝</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+          </span>
+        </a>
+      </div>
+
+      <div class="add-wrap">
+        <button class="btn btn--primary btn--block btn--lg" type="button">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          添加授权人
+        </button>
+      </div>
+
+      <div class="banner banner--info note">
+        <span class="banner__icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 10.6v5.2"/><path d="M12 7.6h.01"/></svg>
+        </span>
+        <span>名单有变更时会通知班级老师；新添加的家人需审核通过后才能接走孩子。</span>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

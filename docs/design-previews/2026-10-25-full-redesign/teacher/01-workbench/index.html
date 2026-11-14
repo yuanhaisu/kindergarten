@@ -55,6 +55,10 @@
       </button>
     </section>
 
+    <div class="expiry-banner" role="status" data-od-id="entitlement-expiry">
+      <span class="expiry-banner-text">套餐将于 2026-11-15 到期，请提醒园所管理员续费</span>
+    </div>
+
     <!-- 2. 今日班级概况 -->
     <section class="overview" data-od-id="overview">
       <div class="section-head">
@@ -93,7 +97,7 @@
         </span>
         <span class="entry-label">发布通知</span>
       </button>
-      <button type="button" class="entry" data-open="成长记录" data-od-id="entry-growth">
+      <button type="button" class="entry" data-open="成长记录" data-module="growth" data-od-id="entry-growth">
         <span class="entry-ico">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 21v-8"/>
@@ -143,7 +147,7 @@
         </span>
         <span class="entry-label">请假审批</span>
       </button>
-      <button type="button" class="entry" data-open="班级相册" data-od-id="entry-album">
+      <button type="button" class="entry" data-open="班级相册" data-module="album" data-od-id="entry-album">
         <span class="entry-ico">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3.2" y="4.6" width="17.6" height="14.8" rx="3"/>
@@ -284,6 +288,8 @@
       <button class="mp-demo-chip" data-mp-state="empty" aria-pressed="false">空态</button>
       <button class="mp-demo-chip" data-mp-state="loading" aria-pressed="false">加载</button>
       <button class="mp-demo-chip" data-mp-state="error" aria-pressed="false">失败</button>
+      <button class="mp-demo-chip" data-mp-state="expiring" aria-pressed="false">即将到期</button>
+      <button class="mp-demo-chip" data-mp-state="partial" aria-pressed="false">部分未开通</button>
     </div>
     <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
   </div>

@@ -24,6 +24,8 @@ import {
 } from "@/utils/time"
 import { LEAVE_TYPES } from "@/utils/leave"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadChild()))
 
 // remixicon 字形：小程序 WXML 不允许内联 SVG。
 const ICON = {
@@ -599,7 +601,7 @@ onLoad(() => {
             <view class="upload-grid">
               <view v-for="photo in photos" :key="photo.key" class="photo-cell">
                 <view class="photo-frame">
-                  <image class="photo-img" :src="photo.localPath" mode="aspectFill" />
+                  <image @error="onMediaError" class="photo-img" :src="photo.localPath" mode="aspectFill" />
                   <view v-if="photo.status !== 'done'" class="photo-mask" @click="retryPhoto(photo.key)">
                     <text class="photo-mask-text">{{ photo.status === "uploading" ? "上传中…" : "上传失败 · 重试" }}</text>
                   </view>

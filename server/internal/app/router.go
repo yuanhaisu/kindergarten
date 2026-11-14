@@ -10,16 +10,23 @@ import (
 	"kindergarten-server/internal/auth"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/service"
 )
 
-func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver) (*gin.Engine, error) {
+func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker) (*gin.Engine, error) {
 	r := gin.New()
+	// 只在宿主机 Nginx 反代（127.0.0.1 / ::1）时信任 X-Forwarded-For；
+	// 直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
+	if err := r.SetTrustedProxies([]string{"127.0.0.1", "::1"}); err != nil {
+		return nil, fmt.Errorf("configure trusted proxies: %w", err)
+	}
 	r.Use(gin.Recovery())
-	r.Use(middleware.CORS())
+	r.Use(middleware.CORS(h.corsOrigins))
 	r.Use(middleware.RequestID())
 	r.Use(middleware.RequestContextLogger())
 
 	r.GET("/health", h.inner.HealthCheck)
+	r.GET("/ready", h.Ready)
 
 	v1 := r.Group("/api/v1")
 	{
@@ -32,10 +39,46 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/auth/login/password", h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
+		// 平台方：独立信任域，凭证 scope=platform（ADR-0014）。
+		v1.POST("/platform/auth/login", h.inner.PlatformLogin)
+		platformG := v1.Group("/platform")
+		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker))
+		platformG.Use(middleware.CasbinRBAC(e))
+		{
+			platformG.POST("/auth/logout", h.inner.PlatformLogout)
+			platformG.GET("/kindergartens", h.inner.PlatformListKindergartens)
+			platformG.POST("/kindergartens", h.inner.PlatformOnboardKindergarten)
+			platformG.GET("/kindergartens/:id", h.inner.PlatformGetKindergarten)
+			platformG.PATCH("/kindergartens/:id/status", h.inner.PlatformSetKindergartenStatus)
+			platformG.GET("/logs", h.inner.PlatformListLogs)
+			platformG.GET("/modules", h.inner.PlatformListModules)
+			platformG.GET("/plans", h.inner.PlatformListPlans)
+			platformG.POST("/plans", h.inner.PlatformCreatePlan)
+			platformG.PATCH("/plans/:id", h.inner.PlatformUpdatePlan)
+			platformG.GET("/plans/:id/tiers", h.inner.PlatformListPlanTiers)
+			platformG.PUT("/plans/:id/tiers", h.inner.PlatformReplacePlanTiers)
+			platformG.GET("/orders", h.inner.PlatformListOrders)
+			platformG.POST("/orders", h.inner.PlatformCreateOrder)
+			platformG.GET("/orders/:id", h.inner.PlatformGetOrder)
+			platformG.POST("/orders/:id/confirm", h.inner.PlatformConfirmOrder)
+			platformG.POST("/orders/:id/cancel", h.inner.PlatformCancelOrder)
+			platformG.POST("/orders/:id/payments", h.inner.PlatformAddPayment)
+			platformG.GET("/orders/:id/payments", h.inner.PlatformListPayments)
+			platformG.GET("/distributors", h.inner.PlatformListDistributors)
+			platformG.POST("/distributors", h.inner.PlatformCreateDistributor)
+			platformG.PATCH("/distributors/:id", h.inner.PlatformUpdateDistributor)
+			platformG.GET("/commissions", h.inner.PlatformListCommissions)
+			platformG.GET("/commissions/:id", h.inner.PlatformGetCommission)
+		}
+
 		// 需要认证的接口
 		authed := v1.Group("")
 		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker))
+		// 停用园所：凭证有效也一律拒绝（PLT-0005/0006）。
+		authed.Use(middleware.RequireActiveKindergarten(kgStatus))
 		authed.Use(middleware.CasbinRBAC(e))
+		// 功能授权裁剪：只对 premium 模块生效，base 路由直接放行（ADR-0012）。
+		authed.Use(middleware.ModuleGate(moduleAuthz))
 		{
 			// 退出登录
 			authed.POST("/auth/logout", h.inner.Logout)
@@ -48,10 +91,12 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			authed.GET("/common/user/profile", h.inner.GetProfile)
 			authed.PUT("/common/user/profile", h.inner.UpdateProfile)
 			authed.PUT("/common/user/avatar", h.inner.UpdateAvatar)
+			authed.PUT("/common/user/password", h.inner.ChangePassword)
 			authed.POST("/common/user/bind-invite", h.inner.BindInvite)
 			authed.POST("/common/user/bind-parent-phone", h.inner.BindParentPhone)
 
 			// 消息
+			authed.GET("/common/entitlements", h.inner.CommonGetEntitlements)
 			authed.GET("/common/messages", h.inner.ListMessages)
 			authed.GET("/common/messages/unread-count", h.inner.UnreadCount)
 			authed.PUT("/common/messages/:id/read", h.inner.MarkMessageRead)
@@ -77,6 +122,12 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 	// 缺口存在即启动失败，不允许带着缺口对外服务。
 	if gaps := middleware.AdminPermissionGaps(r.Routes()); len(gaps) > 0 {
 		return nil, fmt.Errorf("admin permission registry has %d gap(s): %s", len(gaps), strings.Join(gaps, "; "))
+	}
+
+	// 功能模块登记自检：每个 premium 模块必须至少命中一条已注册路由，
+	// 否则说明模块规则写错或功能已被删除（design D3）。
+	if gaps := middleware.ModuleRegistryGaps(r.Routes()); len(gaps) > 0 {
+		return nil, fmt.Errorf("module registry has %d unmatched module(s): %s", len(gaps), strings.Join(gaps, ", "))
 	}
 
 	return r, nil
@@ -230,6 +281,11 @@ func registerTeacherRoutes(teacherG *gin.RouterGroup, h *handler.Handler) {
 }
 
 func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
+	bg := adminG.Group("/billing")
+	{
+		bg.GET("/subscription", h.AdminGetSubscription)
+	}
+
 	dash := adminG.Group("/dashboard")
 	{
 		dash.GET("/overview", h.GetDashboardOverview)
@@ -464,6 +520,58 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		tt.POST("/sync", h.AdminSyncTimetable)
 	}
 
+	// 膳食管理：基本参数（按学年的集体对象，DGO-S3b）+ AQR-S3 食物库（分类树/列表/
+	// 详情/新增/修改/删除/批量删除/同类替换候选）+ AQR-S4 菜谱库（列表/详情/新增或替换/
+	// 改名改配方/删除/合并/联想）+ AQR-S6 周食谱与模板 + AQR-S7 营养分析与导出。
+	diet := adminG.Group("/diet")
+	{
+		// 旧的园所单例配置端点已移除（BREAKING，design D7）；无删除入口（design D5）。
+		diet.GET("/group-objects", h.ListDietGroupObjects)
+		diet.POST("/group-objects", h.CreateDietGroupObject)
+		diet.GET("/group-objects/:id", h.GetDietGroupObject)
+		diet.PUT("/group-objects/:id", h.UpdateDietGroupObject)
+
+		// 基本参数选项（DGO-S7）：只含 diet 权限的角色需要学年与就餐班级，
+		// 不能直连 /settings/academic-years（system:kindergarten）或 /classes（student:view）。
+		diet.GET("/academic-years", h.ListDietAcademicYears)
+		diet.GET("/classes", h.ListDietClasses)
+
+		diet.GET("/food-categories", h.ListDietFoodCategories)
+		diet.GET("/foods", h.ListDietFoods)
+		diet.POST("/foods", h.CreateDietFood)
+		// 静态段 batch-delete 与 :id 同层；gin 静态优先，不会与详情路由冲突。
+		diet.POST("/foods/batch-delete", h.BatchDeleteDietFoods)
+		diet.GET("/foods/:id", h.GetDietFood)
+		diet.PUT("/foods/:id", h.UpdateDietFood)
+		diet.DELETE("/foods/:id", h.DeleteDietFood)
+		diet.GET("/foods/:id/replace-candidates", h.ListDietFoodReplaceCandidates)
+
+		// 静态段 suggest/merge 必须先于 :id 注册（gin 静态优先，二者不冲突）。
+		diet.GET("/recipes", h.ListDietRecipes)
+		diet.POST("/recipes", h.CreateDietRecipe)
+		diet.GET("/recipes/suggest", h.SuggestDietRecipes)
+		diet.POST("/recipes/merge", h.MergeDietRecipes)
+		diet.GET("/recipes/:id", h.GetDietRecipe)
+		diet.PUT("/recipes/:id", h.UpdateDietRecipe)
+		diet.DELETE("/recipes/:id", h.DeleteDietRecipe)
+
+		// 周食谱：三种创建方式与整单保存；清空/删除需前端二次确认。
+		diet.GET("/plans", h.ListDietPlans)
+		diet.POST("/plans", h.CreateDietPlan)
+		diet.GET("/plans/:id", h.GetDietPlan)
+		diet.PUT("/plans/:id", h.UpdateDietPlan)
+		diet.DELETE("/plans/:id", h.DeleteDietPlan)
+		diet.POST("/plans/:id/clear", h.ClearDietPlan)
+
+		// 营养分析：只读报表与 Excel 导出（导出直接返回二进制，不是 JSON 包络）。
+		diet.GET("/plans/:id/analysis", h.GetDietPlanAnalysis)
+		diet.GET("/plans/:id/analysis/export", h.ExportDietPlanAnalysis)
+
+		// 模板：按园种子化，只读。
+		diet.GET("/templates", h.ListDietTemplates)
+		diet.GET("/templates/:id", h.GetDietTemplate)
+	}
+
 	dict := adminG.Group("/dicts")
 	{
 		dict.GET("/types", h.ListDictTypes)
@@ -609,8 +717,18 @@ type AppHandler struct {
 	inner *handler.Handler
 	// tokenRevoker 由认证服务提供，AuthJWT 用它校验登出黑名单；两处必须是同一份存储。
 	tokenRevoker auth.TokenRevoker
+	// corsOrigins 为空表示不向任何跨域来源下发 CORS 头。
+	corsOrigins []string
+	// ready 为 nil 时 /ready 视为就绪（仅用于不装配基础设施的单元测试）。
+	ready *readiness
 }
 
 func NewAppHandler(h *handler.Handler) *AppHandler {
 	return &AppHandler{inner: h, tokenRevoker: h.TokenRevoker()}
+}
+
+// WithCORS 设置允许跨域的来源；由装配层从配置传入。
+func (h *AppHandler) WithCORS(origins []string) *AppHandler {
+	h.corsOrigins = origins
+	return h
 }

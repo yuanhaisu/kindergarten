@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 通知详情</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__spacer { width: 36px; height: 36px; }
+
+    .detail-main { padding-bottom: 112px; }
+
+    .detail-kicker { margin: 10px 0 0; }
+    .detail-title { margin: 6px 0 0; }
+
+    .byline { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; }
+    .byline-name { display: block; font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+    .byline-sub { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.3; color: var(--ink-bone); }
+
+    .rule { margin: 16px 0 0; }
+
+    .article { display: grid; gap: 12px; margin: 16px 0 0; }
+    .article p { margin: 0; font-size: 15px; line-height: 1.65; color: var(--pine); }
+
+    .warn { margin-top: 18px; }
+    .warn .banner__icon { color: var(--orange); }
+
+    .attach { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+    .attach-name { display: block; font-size: 14px; font-weight: 600; line-height: 1.35; }
+    .attach-sub { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.4; color: var(--ink-card); }
+
+    .detail-foot { margin: 16px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--ink-bone); }
+
+    .action-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px 20px;
+      background: var(--card);
+      border-top: 1px solid var(--hair);
+    }
+    .action-read { flex: 1; font-size: 11.5px; line-height: 1.4; color: var(--ink-card); }
+    .action-bar .btn { min-width: 156px; }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main detail-main">
+      <div class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">通知</span>
+        <span class="page-bar__spacer" aria-hidden="true"></span>
+      </div>
+
+      <p class="overline detail-kicker">园所通知 · 今天 08:30</p>
+      <h1 class="detail-title">秋季亲子运动会报名</h1>
+
+      <div class="byline">
+        <span class="avatar avatar--sm avatar--clay" aria-hidden="true">李</span>
+        <span>
+          <span class="byline-name">李老师</span>
+          <span class="byline-sub">小一班 · 班主任</span>
+        </span>
+      </div>
+
+      <hr class="hairline rule" />
+
+      <div class="article">
+        <p>各位家长：</p>
+        <p>11 月 14 日（周六）上午 9:00，我们将在幼儿园操场举行秋季亲子运动会，小一班全体家庭参加。请提前 10 分钟带孩子到班级集合。</p>
+        <p>当天有亲子接力、袋鼠跳和拔河三个项目。孩子穿园服和运动鞋，家长穿方便活动的衣服，每位幼儿由一位家长陪同。</p>
+        <p>活动预计 11:30 结束，当天不设午餐，请安排好接回时间。如遇雨天，顺延至下周三同一时间。</p>
+      </div>
+
+      <div class="banner banner--warning warn">
+        <span class="banner__icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.4 21 20H3L12 4.4Z"/><path d="M12 10.2v4.2"/><path d="M12 17.2h.01"/></svg>
+        </span>
+        <span>报名截止本周四 18:00，逾期不再补报。</span>
+      </div>
+
+      <section class="card card--tight attach" aria-label="附件">
+        <span class="orb orb--mint" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3.5H8.2A2.2 2.2 0 0 0 6 5.7v12.6a2.2 2.2 0 0 0 2.2 2.2h7.6a2.2 2.2 0 0 0 2.2-2.2V7.5L14 3.5Z"/><path d="M14 3.5v4h4"/><path d="M9.5 12h5"/><path d="M9.5 15.5h3.2"/></svg>
+        </span>
+        <span class="grow">
+          <span class="attach-name">报名表.xlsx</span>
+          <span class="attach-sub">Excel 表格 · 24 KB</span>
+        </span>
+        <button class="icon-btn" type="button" aria-label="下载附件">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"/><path d="m8 10.5 4 4 4-4"/><path d="M5 19h14"/></svg>
+        </button>
+      </section>
+
+      <p class="detail-foot">如有疑问，可以在班级群里直接问李老师。</p>
+    </main>
+
+    <div class="action-bar" role="group" aria-label="报名操作">
+      <span class="action-read">已读 32 人</span>
+      <button class="btn btn--primary" type="button">我要报名</button>
+    </div>
+  </div>
+</body>
+</html>

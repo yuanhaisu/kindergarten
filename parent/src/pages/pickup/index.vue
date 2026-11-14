@@ -7,7 +7,7 @@
  * 没有新增接口 —— 三态（未入园 / 在园中 / 已接走）全部由当天记录派生。
  */
 import { computed, ref } from "vue"
-import { onShow, onPullDownRefresh } from "@dcloudio/uni-app"
+import { onShow, onHide, onUnload, onPullDownRefresh } from "@dcloudio/uni-app"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { syncTabBar } from "@/utils/tabbar"
@@ -17,23 +17,18 @@ import { relationLabel } from "@/utils/relation"
 import { formatClock, formatDateLabel } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
 
-// remixicon 字形（App.vue 已全局注册字体）；小程序 WXML 不允许内联 SVG。
-const ICON = {
-  clock: "", // time-line
-  sprout: "", // seedling-line
-  check: "", // check-line
-  qr: "", // qr-code-line
-  refresh: "\u{f064}", // refresh-line
-  chevron: "\u{ea6e}", // arrow-right-s-line
-  error: "" // error-warning-line
+// DNA 图标按色调导出（WXML 的 image 不能继承 currentColor）：
+// pine 用于浅底，muted 用于次级，bone 只用于 pine 实底上的图标。
+function iconSrc(name, tone = "pine") {
+  return `/static/icons/dna/${tone}/icon-${name}.svg`
 }
+
 
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
 
 const records = ref([])
 const loading = ref(false)
 const retrying = ref(false)
-const refreshingDay = ref("")
 const hasLoaded = ref(false)
 const loadError = ref("")
 const student = ref({ name: "", class_name: "" })
@@ -87,13 +82,14 @@ const dayState = computed(() => {
 })
 
 const statusMain = computed(() => ({ pre: "未入园", in: "在园中", picked: "已接走" }[dayState.value]))
+const sealIcon = computed(() => (dayState.value === "picked" ? "check" : dayState.value === "in" ? "sprout" : "clock"))
+const sealTone = computed(() => (dayState.value === "pre" ? "muted" : "pine"))
+const nowClock = ref(formatClock(new Date()))
+// 「未入园」必须带时间上下文：早上 8 点看到是正常，上午 10 点看到才值得担心。
+const statusSubText = computed(() => (dayState.value === "pre" ? `截至 ${nowClock.value || "--:--"} 未入园` : ""))
 
-const timelineRecords = computed(() => {
-  if (dayState.value === "pre") return []
-  // 「在园中」不带接走节点，避免尚未发生的动作出现在轨迹里。
-  if (dayState.value === "in") return todayRecords.value.filter(r => Number(r.type) !== 2)
-  return todayRecords.value
-})
+const inRecord = computed(() => todayRecords.value.find(r => Number(r.type) === 1) || null)
+const outRecord = computed(() => todayRecords.value.find(r => Number(r.type) === 2) || null)
 
 const historyGroups = computed(() => {
   const groups = []
@@ -122,8 +118,8 @@ const historyGroups = computed(() => {
         id: r.id,
         typeLabel: r.type_label || (Number(r.type) === 2 ? "接走" : "入园"),
         isOut: Number(r.type) === 2,
-        name: r.pickup_name || "—",
-        relation: relationLabel(r.pickup_relation),
+        name: r.pickup_name || "",
+        relation: relationLabel(r.pickup_relation) || "其他关系",
         time: formatClock(r.recorded_at),
         abnormal: Boolean(r.is_abnormal)
       }))
@@ -182,16 +178,6 @@ async function handleRetry() {
   }
 }
 
-// 接口只有整页 GET：组级刷新实际重拉整页，只让被点的那一组图标转圈，
-// 避免所有日期组同时转起来造成「各刷各的」的错觉。
-async function handleDayRefresh(group) {
-  if (loading.value) return
-  refreshingDay.value = group.key
-  const ok = await loadData()
-  refreshingDay.value = ""
-  uni.showToast({ title: ok ? "已刷新接送记录" : "刷新失败，请稍后再试", icon: "none" })
-}
-
 function goQRCode() {
   if (loading.value) return
   uni.navigateTo({ url: "/pages/pickup/qrcode" })
@@ -199,17 +185,34 @@ function goQRCode() {
 
 // tabBar 页必须用 onShow：switchTab 切回来不重跑 onLoad，切完孩子会看不到变化。
 // 同时把原生底栏高亮校正到「接送」（index 2）——组件内算不准当前 tab，见 utils/tabbar.js。
+let clockTimer = 0
+function syncClock() {
+  nowClock.value = formatClock(new Date())
+}
+
 onShow(() => {
+  syncClock()
+  if (!clockTimer) clockTimer = setInterval(syncClock, 60000)
   syncTabBar(2)
   loadData()
 })
+
+function stopClock() {
+  if (clockTimer) {
+    clearInterval(clockTimer)
+    clockTimer = 0
+  }
+}
+
+onHide(stopClock)
+onUnload(stopClock)
 
 // 刷新粒度是整页：接口只有整页 GET，历史日期组不再单独提供刷新。
 onPullDownRefresh(loadData)
 </script>
 
 <template>
-  <PageShell bottom-space="140rpx" max-width="430px">
+  <PageShell background="#ece6d7" bottom-space="140rpx" max-width="430px">
     <!-- ===== 加载：凭证卡骨架 + 3 行列表骨架 ===== -->
     <view v-if="isFirstLoading" class="loading-state">
       <view class="sk-pass">
@@ -247,7 +250,9 @@ onPullDownRefresh(loadData)
 
     <!-- ===== 错误：先于空态判定，避免把加载失败误读成「没有记录」 ===== -->
     <view v-else-if="showError" class="error-state">
-      <view class="error-icon"><text class="error-glyph">{{ ICON.error }}</text></view>
+      <view class="error-art">
+        <image class="error-illustration" src="/static/illustrations/pickup-error.svg" mode="aspectFit" />
+      </view>
       <text class="error-title">接送记录加载失败</text>
       <text class="error-desc">网络好像不太稳定</text>
       <button class="retry-btn" :disabled="retrying" @click="handleRetry">
@@ -257,68 +262,69 @@ onPullDownRefresh(loadData)
 
     <!-- ===== 空：今天没记录且没有任何历史 ===== -->
     <view v-else-if="showEmpty" class="empty-state">
-      <view class="empty-art"><text class="empty-glyph">{{ ICON.qr }}</text></view>
+      <view class="empty-art">
+        <image class="empty-illustration" src="/static/illustrations/pickup-empty.svg" mode="aspectFit" />
+      </view>
       <text class="empty-title">今天还没有接送记录</text>
       <text class="empty-desc">老师核验接送码后，记录会出现在这里</text>
       <button class="qr-cta empty-cta" @click="goQRCode">
-        <text class="qr-cta-icon">{{ ICON.qr }}</text>
+        <image class="qr-cta-icon" src="/static/icons/dna/bone/icon-qr.svg" mode="aspectFit" />
         <text>出示接送二维码</text>
       </button>
     </view>
 
     <!-- ===== 正常 ===== -->
     <template v-else>
-      <!-- 今日接送凭证：全页唯一的大面积暖色块 -->
+      <!-- 大标题与日期：DNA 里标题承担层级，不再放进卡片 -->
+      <view class="pickup-head">
+        <view class="pickup-head-copy">
+          <text class="pickup-overline">{{ todayDateText }}<text v-if="todayWeekday"> · {{ todayWeekday }}</text></text>
+          <text class="pickup-title">接送</text>
+        </view>
+        <button class="head-cta" @click="goQRCode">接送码</button>
+      </view>
+
+      <!-- 今日接送凭证：白面 + 发丝线，状态与进度轨都在卡内 -->
       <view class="pass">
         <view class="pass-head">
-          <view class="pass-head-top">
+          <view class="pass-copy">
             <text class="pass-eyebrow">今日接送凭证</text>
-            <view v-if="childLabel" class="child-chip"><text>{{ childLabel }}</text></view>
+            <text class="pass-state">{{ statusMain }}</text>
+            <text v-if="dayState === 'pre'" class="pass-sub">{{ statusSubText }}</text>
+            <text v-else-if="childLabel" class="pass-sub">{{ childLabel }}</text>
           </view>
-          <view class="pass-date-row">
-            <text class="pass-date">{{ todayDateText }}</text>
-            <text v-if="todayWeekday" class="pass-week">{{ todayWeekday }}</text>
-          </view>
-
-          <view class="pass-status">
-            <view class="seal" :class="'seal--' + dayState">
-              <text class="seal-glyph">
-                {{ dayState === "picked" ? ICON.check : dayState === "in" ? ICON.sprout : ICON.clock }}
-              </text>
-            </view>
-            <view class="status-copy">
-              <text class="status-main">{{ statusMain }}</text>
-              <view class="status-sub">
-                <template v-if="dayState !== 'pre'">
-                  <text class="status-time">{{ formatClock(lastToday && lastToday.recorded_at) }}</text>
-                  <text class="status-dot">·</text>
-                  <text class="status-who">
-                    {{ (lastToday && lastToday.pickup_name) || "—" }}{{ dayState === "in" ? " 送入" : "" }}
-                  </text>
-                </template>
-                <text v-else class="status-who">今天还没有入园记录</text>
-              </view>
-            </view>
+          <view class="seal" :class="'seal--' + dayState">
+            <image class="seal-glyph" :src="iconSrc(sealIcon, sealTone)" mode="aspectFit" />
           </view>
         </view>
 
-        <view v-if="dayState !== 'pre'" class="pass-body">
-          <text class="track-label">今日轨迹</text>
-          <view class="track">
-            <view v-for="item in timelineRecords" :key="item.id" class="track-item">
-              <view class="track-mark">
-                <view class="track-dot" :class="Number(item.type) === 2 ? 'track-dot--out' : 'track-dot--in'" />
-              </view>
-              <view class="track-content">
-                <view class="track-top">
-                  <text class="track-type" :class="Number(item.type) === 2 ? 'track-type--out' : 'track-type--in'">
-                    {{ item.type_label || (Number(item.type) === 2 ? "接走" : "入园") }}
-                  </text>
-                  <text class="track-time">{{ formatClock(item.recorded_at) }}</text>
-                  <text class="track-rel">{{ relationLabel(item.pickup_relation) }}</text>
-                </view>
-                <text class="track-who">{{ item.pickup_name || "—" }}</text>
-              </view>
+        <view v-if="dayState !== 'pre'" class="pass-rail" aria-label="今日接送进度">
+          <view class="rail-step rail-step--in is-done">
+            <view class="rail-dot">
+              <image class="rail-glyph" src="/static/icons/dna/bone/icon-check.svg" mode="aspectFit" />
+            </view>
+            <view class="rail-copy">
+              <text class="rail-label">送入</text>
+              <text class="rail-meta">
+                {{ formatClock(inRecord && inRecord.recorded_at) }} · {{ (inRecord && inRecord.pickup_name) || "接送人未记录" }}
+              </text>
+            </view>
+          </view>
+          <view class="rail-line" :class="{ 'is-done': dayState === 'picked' }" />
+          <view class="rail-step rail-step--out" :class="{ 'is-done': dayState === 'picked' }">
+            <view class="rail-dot">
+              <image
+                class="rail-glyph"
+                :src="iconSrc(dayState === 'picked' ? 'check' : 'clock', dayState === 'picked' ? 'bone' : 'muted')"
+                mode="aspectFit"
+              />
+            </view>
+            <view class="rail-copy">
+              <text class="rail-label">接走</text>
+              <text v-if="dayState === 'picked'" class="rail-meta">
+                {{ formatClock(outRecord && outRecord.recorded_at) }} · {{ (outRecord && outRecord.pickup_name) || "接送人未记录" }}
+              </text>
+              <text v-else class="rail-meta">等待接走</text>
             </view>
           </view>
         </view>
@@ -326,12 +332,15 @@ onPullDownRefresh(loadData)
         <view class="pass-foot">
           <!-- 已接走是终态：再出示二维码会与「今日接送已完成」自相矛盾 -->
           <view v-if="dayState === 'picked'" class="done-note">
-            <text class="done-icon">{{ ICON.check }}</text>
-            <text>今日接送已完成</text>
+            <image class="done-icon" src="/static/icons/dna/pine/icon-check.svg" mode="aspectFit" />
+            <text>
+              今日接送已完成 · {{ formatClock(lastToday && lastToday.recorded_at) }}
+              {{ (lastToday && lastToday.pickup_name) || "接送人未记录" }} 接走
+            </text>
           </view>
           <template v-else>
             <button class="qr-cta" :disabled="loading" @click="goQRCode">
-              <text class="qr-cta-icon">{{ ICON.qr }}</text>
+              <image class="qr-cta-icon" src="/static/icons/dna/bone/icon-qr.svg" mode="aspectFit" />
               <text>出示接送二维码</text>
             </button>
             <view class="pass-note">
@@ -352,26 +361,25 @@ onPullDownRefresh(loadData)
             <view class="day-head">
               <text class="day-title">{{ group.label }}</text>
               <text v-if="group.weekday" class="day-week">{{ group.weekday }}</text>
-              <view
-                class="day-refresh"
-                :class="{ 'is-spinning': refreshingDay === group.key }"
-                @click="handleDayRefresh(group)"
-              >
-                <text class="day-refresh-glyph">{{ ICON.refresh }}</text>
-              </view>
             </view>
             <view v-for="row in group.rows" :key="row.id" class="rec-row">
-              <text class="rec-type" :class="row.isOut ? 'rec-type--out' : 'rec-type--in'">{{ row.typeLabel }}</text>
+              <view class="rec-type" :class="row.isOut ? 'rec-type--out' : 'rec-type--in'">
+                <image
+                  class="rec-type-icon"
+                  :src="row.isOut ? '/static/icons/dna/pine/icon-logout.svg' : '/static/icons/dna/pine/icon-login.svg'"
+                  mode="aspectFit"
+                />
+                <text>{{ row.typeLabel }}</text>
+              </view>
               <view class="rec-main">
                 <view class="rec-name-row">
-                  <text class="rec-name">{{ row.name }}</text>
+                  <text class="rec-name" :class="{ 'is-missing': !row.name }">{{ row.name || "接送人未记录" }}</text>
                   <text v-if="row.abnormal" class="abnormal-tag">异常</text>
                 </view>
-                <text class="rec-rel">{{ row.relation }}</text>
+                <text v-if="row.relation && row.relation !== row.name" class="rec-rel">{{ row.relation }}</text>
               </view>
               <view class="rec-end">
                 <text class="rec-time">{{ row.time }}</text>
-                <text class="rec-chev">{{ ICON.chevron }}</text>
               </view>
             </view>
           </view>
@@ -383,290 +391,263 @@ onPullDownRefresh(loadData)
 
 <style scoped lang="scss">
 // ============================================================
-// 接送记录 · 今日凭证 + 历史流水
-// 冷雾白底；暖色只落在凭证头部、主按钮与「接走」节点上。
+// 接送记录 · Kinderly DNA 迁移验证
+// 暖纸底 + 深松绿；白面靠 1rpx 发丝线分层，不用阴影。
+// 数值按 750rpx 设计基准（1px = 2rpx），字体只用系统可用族。
 // ============================================================
 
+$dna-bone: #ece6d7;
+$dna-card: #ffffff;
+$dna-card-soft: #fcfaf4;
+$dna-pine: #173220;
+$dna-ink-mid: #3d5141;
+$dna-ink-soft: #728173;
+$dna-sage-deep: #5c7359;
+$dna-sage-soft: #cfd9c5;
+$dna-marigold-soft: #efd485;
+$dna-terracotta: #c36540;
+$dna-terracotta-soft: #e5bca1;
+$dna-hair: rgba(23, 50, 32, 0.1);
+$dna-hair-strong: rgba(23, 50, 32, 0.22);
+// 拉丁/数字走 Instrument Serif，中文自动回落 Noto Serif SC；两者都在 App.vue 里自托管加载。
+$dna-serif: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", serif;
+$dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+// ---- 页头 ----------------------------------------------------
+.pickup-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24rpx;
+  margin: 8rpx 0 28rpx;
+}
+
+.pickup-head-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pickup-overline {
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+}
+
+.pickup-title {
+  margin-top: 8rpx;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 60rpx;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.head-cta {
+  flex: none;
+  height: 64rpx;
+  padding: 0 24rpx;
+  margin: 0;
+  border: 1rpx solid $dna-hair-strong;
+  border-radius: 999rpx;
+  background: $dna-card;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  font-weight: 500;
+  line-height: 62rpx;
+}
+
+.head-cta::after {
+  border: none;
+}
+
+// ---- 凭证卡 --------------------------------------------------
 .pass {
-  margin-top: $spacing-lg;
+  margin-bottom: 28rpx;
   overflow: hidden;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .pass-head {
-  padding: 28rpx 32rpx 32rpx;
-  background: $gradient-brand-soft;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 32rpx 32rpx 0;
 }
 
-.pass-head-top {
+.pass-copy {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $spacing-md;
+  flex-direction: column;
   min-width: 0;
 }
 
 .pass-eyebrow {
-  flex: 1;
-  min-width: 0;
-  color: $color-text-body;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   line-height: 1.4;
 }
 
-.child-chip {
-  flex: none;
-  max-width: 300rpx;
-  padding: 6rpx 18rpx;
-  overflow: hidden;
-  border-radius: $border-radius-full;
-  background: $color-bg-card;
-  color: $color-text-body;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1.5;
-  box-shadow: $shadow-sm;
-}
-
-.pass-date-row {
-  display: flex;
-  align-items: baseline;
-  gap: $spacing-sm;
-  margin-top: $spacing-sm;
-}
-
-.pass-date {
-  color: $color-text-primary;
-  font-size: $typography-font-size-3xl;
-  font-weight: $typography-font-weight-semibold;
+.pass-state {
+  margin-top: 10rpx;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 60rpx;
+  font-weight: 400;
+  letter-spacing: 0;
   line-height: 1.35;
 }
 
-.pass-week {
-  color: $color-text-body;
-  font-size: $typography-font-size-sm;
-  font-weight: $typography-font-weight-medium;
-}
-
-.pass-status {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-lg;
-  margin-top: $spacing-lg;
+.pass-sub {
+  margin-top: 8rpx;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  line-height: 1.5;
 }
 
 .seal {
-  flex: none;
-  width: 88rpx;
-  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: $border-radius-full;
-  background: $color-bg-card;
-  color: $color-brand-primary-dark;
-  box-shadow: $shadow-sm;
+  flex: none;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 999rpx;
+  background: $dna-sage-soft;
+  color: $dna-sage-deep;
 }
 
 .seal--pre {
-  color: $color-text-muted;
+  background: $dna-bone;
+  color: $dna-ink-soft;
+}
+
+.seal--picked {
+  background: $dna-marigold-soft;
+  color: $dna-pine;
 }
 
 .seal-glyph {
-  font-family: remixicon;
-  font-size: 44rpx;
-  line-height: 1;
+  width: 40rpx;
+  height: 40rpx;
 }
 
-.status-copy {
-  min-width: 0;
-  padding-top: 2rpx;
-}
-
-// 设计稿 24–26px，超出 token 上限 40rpx；仅此一处状态标题使用。
-.status-main {
-  display: block;
-  color: $color-text-primary;
-  font-size: 48rpx;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
-}
-
-.status-sub {
+// ---- 进度轨 --------------------------------------------------
+.pass-rail {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: $spacing-sm;
-  margin-top: 6rpx;
+  align-items: flex-start;
+  gap: 12rpx;
+  padding: 32rpx 32rpx 8rpx;
 }
 
-.status-time {
-  color: $color-text-primary;
-  font-size: $typography-font-size-xl;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
+.rail-step {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 1 0;
+  gap: 14rpx;
+  min-width: 0;
 }
 
-.status-dot {
-  color: $color-text-muted;
-  font-size: $typography-font-size-sm;
-  line-height: 1;
+.rail-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44rpx;
+  height: 44rpx;
+  margin-top: 0;
+  border-radius: 999rpx;
+  border: 2rpx solid $dna-hair-strong;
+  background: $dna-card;
+  color: $dna-card;
 }
 
-.status-who {
-  color: $color-text-body;
-  font-size: $typography-font-size-md;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+.rail-step.is-done .rail-dot {
+  border-color: $dna-sage-deep;
+  background: $dna-sage-deep;
 }
 
-.pass-body {
-  padding: 28rpx 32rpx 0;
+.rail-glyph {
+  width: 28rpx;
+  height: 28rpx;
 }
 
-.track-label {
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+.rail-line {
+  flex: 0 0 48rpx;
+  height: 0;
+  margin-top: 21rpx;
+  border-top: 2rpx dashed $dna-hair-strong;
+}
+
+.rail-line.is-done {
+  border-top-style: solid;
+  border-top-color: $dna-sage-deep;
+}
+
+.rail-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.rail-label {
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 24rpx;
+  font-weight: 600;
   line-height: 1.4;
 }
 
-.track {
-  margin-top: $spacing-xs;
+.rail-meta {
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 24rpx;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.track-item {
-  display: grid;
-  grid-template-columns: 28rpx minmax(0, 1fr);
-  column-gap: 20rpx;
-}
-
-.track-mark {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  padding-top: 16rpx;
-}
-
-.track-mark::after {
-  content: "";
-  position: absolute;
-  top: 34rpx;
-  bottom: -24rpx;
-  left: 50%;
-  width: 1rpx;
-  background: $color-border-hairline;
-  transform: translateX(-50%);
-}
-
-.track-item:last-child .track-mark::after {
-  display: none;
-}
-
-.track-dot {
-  position: relative;
-  z-index: 1;
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: $border-radius-full;
-}
-
-.track-dot--in {
-  background: $color-semantic-success;
-}
-
-.track-dot--out {
-  background: $color-brand-primary;
-}
-
-.track-content {
-  min-width: 0;
-  padding: 4rpx 0 28rpx;
-}
-
-.track-item:last-child .track-content {
-  padding-bottom: 0;
-}
-
-.track-top {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-  min-width: 0;
-}
-
-.track-type {
-  font-size: $typography-font-size-sm;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1.35;
-}
-
-.track-type--in {
-  color: $color-semantic-success;
-}
-
-.track-type--out {
-  color: $color-brand-primary-dark;
-}
-
-.track-time {
-  color: $color-text-primary;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.35;
-}
-
-.track-rel {
-  margin-left: auto;
-  padding: 2rpx 16rpx;
-  border-radius: $border-radius-full;
-  background: $color-bg-page;
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1.5;
-}
-
-.track-who {
-  display: block;
-  margin-top: 4rpx;
-  color: $color-text-body;
-  font-size: $typography-font-size-base;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
+// ---- 卡底操作 ------------------------------------------------
 .pass-foot {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: $spacing-sm;
-  margin-top: 28rpx;
-  padding: 28rpx 32rpx 32rpx;
-  border-top: 1rpx solid $color-border-subtle;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12rpx;
+  margin-top: 24rpx;
+  padding: 24rpx 32rpx 32rpx;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .qr-cta {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-md;
+  gap: 12rpx;
   width: 100%;
-  height: $component-input-height;
+  height: 96rpx;
   padding: 0 28rpx;
   margin: 0;
   border: none;
-  border-radius: $border-radius-full;
-  background: $gradient-brand;
-  color: $color-text-on-brand;
-  font-size: $typography-font-size-lg;
-  font-weight: $typography-font-weight-semibold;
+  border-radius: 999rpx;
+  background: $dna-pine;
+  color: $dna-bone;
+  font-family: $dna-sans;
+  font-size: 29rpx;
+  font-weight: 500;
   line-height: 1.3;
-  box-shadow: $shadow-md;
 }
 
 .qr-cta::after {
@@ -675,172 +656,135 @@ onPullDownRefresh(loadData)
 
 .qr-cta[disabled] {
   opacity: 0.45;
-  box-shadow: none;
 }
 
 .qr-cta-icon {
-  font-family: remixicon;
-  font-size: 38rpx;
-  line-height: 1;
+  width: 34rpx;
+  height: 34rpx;
 }
 
 .pass-note {
   display: flex;
-  flex-direction: column;
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1.45;
+  justify-content: center;
+  gap: 12rpx;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 
 .done-note {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-md;
-  min-height: $component-input-height;
-  border-radius: $border-radius-full;
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
+  gap: 12rpx;
+  min-height: 96rpx;
+  border-radius: 999rpx;
+  background: rgba(141, 163, 134, 0.18);
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .done-icon {
-  font-family: remixicon;
-  font-size: $typography-font-size-2xl;
-  line-height: 1;
+  width: 30rpx;
+  height: 30rpx;
 }
 
 // ---- 历史 ----------------------------------------------------
 .history {
-  margin-top: 40rpx;
+  margin-top: 8rpx;
 }
 
 .history-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: $spacing-md;
   padding: 0 4rpx 16rpx;
 }
 
 .history-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-xl;
-  font-weight: $typography-font-weight-semibold;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 40rpx;
+  font-weight: 400;
+  letter-spacing: 0;
   line-height: 1.35;
 }
 
 .ledger {
   overflow: hidden;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-sm;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .day + .day {
-  border-top: 1rpx solid $color-border-hairline;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .day-head {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
-  min-height: $component-input-height;
-  padding: 4rpx $spacing-md 4rpx 32rpx;
+  gap: 14rpx;
+  min-height: 88rpx;
+  padding: 8rpx 32rpx;
 }
 
 .day-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-lg;
-  font-weight: $typography-font-weight-semibold;
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 32rpx;
+  font-weight: 400;
   line-height: 1.35;
-}
-
-.day-refresh {
-  flex: none;
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: $border-radius-full;
-  color: $color-text-muted;
-}
-
-.day-refresh:active {
-  background: $color-bg-page;
-}
-
-.day-refresh-glyph {
-  font-family: remixicon;
-  font-size: $typography-font-size-2xl;
-  line-height: 1;
-}
-
-.day-refresh.is-spinning .day-refresh-glyph {
-  animation: pickup-spin 600ms $animation-easing-default;
-}
-
-@keyframes pickup-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .day-week {
   padding: 4rpx 14rpx;
-  border-radius: $border-radius-full;
-  background: $color-bg-page;
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+  border-radius: 999rpx;
+  background: $dna-card-soft;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
   line-height: 1.5;
 }
 
 .rec-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  column-gap: $spacing-lg;
+  gap: 20rpx;
   min-height: 116rpx;
-  padding: 18rpx 44rpx 18rpx 32rpx;
-  border-top: 1rpx solid $color-border-hairline;
+  padding: 18rpx 32rpx;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .rec-type {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 88rpx;
-  height: 48rpx;
-  padding: 0 16rpx;
-  border-radius: $border-radius-full;
-  font-size: $typography-font-size-sm;
-  font-weight: $typography-font-weight-medium;
-  line-height: 1;
+  flex: none;
+  gap: 6rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  background: $dna-sage-soft;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
-.rec-type--in {
-  background: $color-semantic-success-bg;
-  color: $color-semantic-success;
-}
-
-// 接走在今日轨迹与历史里统一用品牌色，避免同一动作两套语义色。
 .rec-type--out {
-  background: $color-brand-primary-bg;
-  color: $color-brand-primary-dark;
+  background: $dna-marigold-soft;
+}
+
+.rec-type-icon {
+  width: 28rpx;
+  height: 28rpx;
 }
 
 .rec-main {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2rpx;
   min-width: 0;
@@ -850,55 +794,55 @@ onPullDownRefresh(loadData)
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: $spacing-sm;
+  gap: 12rpx;
   min-width: 0;
 }
 
 .rec-name {
-  color: $color-text-primary;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 28rpx;
+  font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
+.rec-name.is-missing {
+  color: $dna-terracotta;
+  font-weight: 600;
+}
+
 .rec-rel {
-  color: $color-text-muted;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 22rpx;
   line-height: 1.5;
 }
 
 .abnormal-tag {
   flex: none;
   padding: 2rpx 12rpx;
-  border-radius: $border-radius-full;
-  background: $color-semantic-warning-bg;
-  color: $color-semantic-warning;
-  font-size: $typography-font-size-xs;
-  font-weight: $typography-font-weight-semibold;
+  border-radius: 999rpx;
+  background: $dna-terracotta-soft;
+  color: $dna-pine;
+  font-family: $dna-sans;
+  font-size: 22rpx;
+  font-weight: 500;
   line-height: 1.5;
 }
 
 .rec-end {
   display: flex;
   align-items: center;
-  gap: 6rpx;
   flex: none;
 }
 
 .rec-time {
-  color: $color-text-body;
-  font-size: $typography-font-size-base;
-  font-weight: $typography-font-weight-medium;
+  color: $dna-ink-mid;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  font-weight: 500;
   line-height: 1.35;
-}
-
-.rec-chev {
-  color: $color-text-muted;
-  font-family: remixicon;
-  font-size: $typography-font-size-xl;
-  line-height: 1;
 }
 
 // ---- 空态 / 错误态 ------------------------------------------
@@ -911,95 +855,61 @@ onPullDownRefresh(loadData)
   text-align: center;
 }
 
-.empty-art {
+.empty-art,
+.error-art {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 192rpx;
-  height: 192rpx;
+  width: 176rpx;
+  height: 176rpx;
   margin-bottom: 36rpx;
-  border-radius: $border-radius-full;
-  background: $gradient-brand-soft;
-  color: $color-brand-primary-dark;
-  box-shadow: $shadow-sm;
+  border-radius: 999rpx;
+  background: $dna-card-soft;
 }
 
-.empty-glyph {
-  font-family: remixicon;
-  font-size: 116rpx;
-  line-height: 1;
+.empty-illustration,
+.error-illustration {
+  width: 148rpx;
+  height: 148rpx;
 }
 
-.empty-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-2xl;
-  font-weight: $typography-font-weight-semibold;
+.empty-title,
+.error-title {
+  color: $dna-pine;
+  font-family: $dna-serif;
+  font-size: 40rpx;
+  font-weight: 400;
+  letter-spacing: 0;
   line-height: 1.35;
 }
 
-.empty-desc {
-  max-width: 520rpx;
-  margin-top: $spacing-md;
-  color: $color-text-muted;
-  font-size: $typography-font-size-base;
-  line-height: 1.7;
+.empty-desc,
+.error-desc {
+  margin-top: 10rpx;
+  color: $dna-ink-soft;
+  font-family: $dna-sans;
+  font-size: 26rpx;
+  line-height: 1.5;
 }
 
 .empty-cta {
   width: auto;
-  min-width: 400rpx;
-  margin-top: 44rpx;
-  padding: 0 56rpx;
-}
-
-.error-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 104rpx;
-  height: 104rpx;
-  margin-bottom: 28rpx;
-  border-radius: $border-radius-full;
-  background: $color-semantic-danger-bg;
-  color: $color-semantic-danger;
-}
-
-.error-glyph {
-  font-family: remixicon;
-  font-size: 52rpx;
-  line-height: 1;
-}
-
-.error-title {
-  color: $color-text-primary;
-  font-size: $typography-font-size-xl;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.35;
-}
-
-.error-desc {
-  margin-top: $spacing-sm;
-  color: $color-text-muted;
-  font-size: $typography-font-size-base;
-  line-height: 1.6;
+  min-width: 360rpx;
+  margin-top: 32rpx;
+  padding: 0 40rpx;
 }
 
 .retry-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 320rpx;
-  height: $component-input-height;
-  margin-top: 40rpx;
-  padding: 0 48rpx;
-  border: 1rpx solid $color-border-hairline;
-  border-radius: $border-radius-full;
-  background: $color-bg-card;
-  color: $color-text-primary;
-  font-size: $typography-font-size-md;
-  font-weight: $typography-font-weight-semibold;
-  line-height: 1.3;
-  box-shadow: $shadow-sm;
+  height: 88rpx;
+  margin-top: 32rpx;
+  padding: 0 56rpx;
+  border: none;
+  border-radius: 999rpx;
+  background: $dna-pine;
+  color: $dna-bone;
+  font-family: $dna-sans;
+  font-size: 28rpx;
+  line-height: 88rpx;
 }
 
 .retry-btn::after {
@@ -1007,169 +917,140 @@ onPullDownRefresh(loadData)
 }
 
 .retry-btn[disabled] {
-  opacity: 0.55;
-  box-shadow: none;
+  opacity: 0.5;
 }
 
 // ---- 骨架 ----------------------------------------------------
+.loading-state {
+  padding-top: 8rpx;
+}
+
+.sk {
+  border-radius: 999rpx;
+  background: rgba(23, 50, 32, 0.07);
+}
+
 .sk-pass {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  padding: $spacing-xl;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-sm;
+  padding: 32rpx;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .sk-top {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: $spacing-md;
-}
-
-.sk {
-  display: block;
-  border-radius: $border-radius-full;
-  background: $color-border-subtle;
-  animation: pickup-sk 1.5s $animation-easing-default infinite;
+  margin-bottom: 24rpx;
 }
 
 .sk-chip {
-  width: 168rpx;
-  height: 24rpx;
+  width: 120rpx;
+  height: 20rpx;
 }
 
 .sk-chip--sm {
-  width: 128rpx;
+  width: 80rpx;
 }
 
 .sk-title {
-  width: 264rpx;
-  height: 44rpx;
-  margin-top: 2rpx;
+  width: 300rpx;
+  height: 56rpx;
+  margin-bottom: 28rpx;
 }
 
 .sk-status {
   display: flex;
   align-items: center;
-  gap: $spacing-lg;
+  gap: 24rpx;
+  margin-bottom: 32rpx;
 }
 
 .sk-seal {
-  flex: none;
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: $border-radius-full;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 999rpx;
 }
 
 .sk-lines {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: $spacing-sm;
+  gap: 12rpx;
 }
 
 .sk-line {
   width: 100%;
-  height: 24rpx;
+  height: 20rpx;
 }
 
 .sk-line--lg {
   width: 60%;
-  height: 40rpx;
+  height: 28rpx;
 }
 
 .sk-kicker {
-  width: 96rpx;
-  height: 20rpx;
+  width: 40%;
+  height: 16rpx;
+  margin-bottom: 16rpx;
 }
 
 .sk-track {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-}
-
-.sk-track .sk-line {
-  width: 62%;
-}
-
-.sk-line--track {
-  height: 24rpx;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
 }
 
 .sk-dot {
-  flex: none;
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: $border-radius-full;
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 999rpx;
+}
+
+.sk-line--track {
+  width: 120rpx;
+  height: 4rpx;
+  border-radius: 0;
 }
 
 .sk-cta {
   width: 100%;
-  height: $component-input-height;
-  margin-top: 4rpx;
-  border-radius: $border-radius-full;
+  height: 96rpx;
 }
 
 .sk-list {
-  margin-top: $spacing-lg;
-  overflow: hidden;
-  border-radius: $border-radius-2xl;
-  background: $color-bg-card;
-  box-shadow: $shadow-sm;
+  margin-top: 40rpx;
+  padding: 0 32rpx;
+  border: 1rpx solid $dna-hair;
+  border-radius: 40rpx;
+  background: $dna-card;
 }
 
 .sk-item {
-  display: grid;
-  grid-template-columns: 88rpx minmax(0, 1fr) 88rpx;
+  display: flex;
   align-items: center;
-  gap: $spacing-lg;
-  min-height: 116rpx;
-  padding: 20rpx 32rpx;
+  gap: 20rpx;
+  min-height: 112rpx;
 }
 
 .sk-item + .sk-item {
-  border-top: 1rpx solid $color-border-subtle;
+  border-top: 1rpx solid $dna-hair;
 }
 
 .sk-pill {
   width: 88rpx;
-  height: 44rpx;
+  height: 34rpx;
 }
 
 .sk-line--name {
-  width: 72%;
-  height: 24rpx;
+  width: 40%;
+  height: 20rpx;
 }
 
 .sk-time {
-  width: 80rpx;
-  height: 24rpx;
-  justify-self: end;
-}
-
-@keyframes pickup-sk {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.95;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sk {
-    animation: none;
-    opacity: 0.7;
-  }
-
-  .day-refresh.is-spinning .day-refresh-glyph {
-    animation: none;
-  }
+  width: 60rpx;
+  height: 20rpx;
+  margin-left: auto;
 }
 </style>
+

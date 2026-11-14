@@ -34,6 +34,8 @@ import {
   stickerGlyph
 } from "@/utils/tasks"
 import PageShell from "@/components/PageShell.vue"
+import { createMediaErrorHandler } from "@/utils/mediaRefresh"
+const onMediaError = createMediaErrorHandler(() => (loadTask()))
 
 const SUPPLEMENT_STICKERS = ["flower", "heart", "star", "thumb"]
 
@@ -1109,7 +1111,7 @@ onPullDownRefresh(() => {
               </text>
 
               <view v-if="row.media_url" class="media-grid">
-                <image
+                <image @error="onMediaError"
                   class="media-tile"
                   :src="row.media_url"
                   mode="aspectFill"

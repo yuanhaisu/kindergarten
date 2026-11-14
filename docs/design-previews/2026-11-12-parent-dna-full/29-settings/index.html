@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 设置</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .page-bar__pad { width: 36px; height: 36px; }
+    .page-title { margin: 0 0 6px; }
+
+    .group { margin-top: 18px; }
+    .group-head { margin: 0 4px 8px; }
+    .group-head h2 { font-size: 17px; }
+
+    .set-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 48px;
+      padding: 0;
+      border: 0;
+      border-bottom: 1px solid var(--hair-soft);
+      background: transparent;
+      font-family: var(--sans);
+      text-align: left;
+      cursor: pointer;
+    }
+    .set-row:last-child { border-bottom: 0; }
+    .set-row__label { font-size: 15px; font-weight: 500; color: var(--pine); }
+    .set-row__tail { margin-left: auto; font-size: 13px; color: var(--ink-card); font-variant-numeric: tabular-nums; }
+    .set-row .chev { margin-left: auto; color: var(--ink-soft); }
+    .set-row__tail + .chev { margin-left: 0; }
+    .set-row .tag { margin-left: auto; }
+    .set-row .tag + .chev { margin-left: 0; }
+
+    .set-row--danger .set-row__label { color: var(--danger); }
+    .set-row--danger .chev { color: var(--danger); }
+    .set-row--static { cursor: default; }
+
+    .logout {
+      display: block;
+      width: 100%;
+      height: 48px;
+      margin-top: 20px;
+      border: 0;
+      border-radius: var(--r-pill);
+      background: transparent;
+      color: var(--ink-card);
+      font-family: var(--sans);
+      font-size: 13.5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+        </button>
+        <span class="page-bar__title">设置</span>
+        <span class="page-bar__pad" aria-hidden="true"></span>
+      </header>
+
+      <h1 class="page-title">设置</h1>
+
+      <section class="group" aria-labelledby="notice-title">
+        <div class="group-head"><h2 id="notice-title">消息设置</h2></div>
+        <div class="card card--flush">
+          <button class="set-row" type="button">
+            <span class="set-row__label">接收园所通知</span>
+            <span class="tag tag--ok">已开启</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+          <button class="set-row" type="button">
+            <span class="set-row__label">接收老师消息</span>
+            <span class="tag tag--ok">已开启</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+          <button class="set-row" type="button">
+            <span class="set-row__label">免打扰时段</span>
+            <span class="set-row__tail">20:00–07:30</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="privacy-title">
+        <div class="group-head"><h2 id="privacy-title">隐私与账号</h2></div>
+        <div class="card card--flush">
+          <button class="set-row" type="button">
+            <span class="set-row__label">隐私政策</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+          <button class="set-row" type="button">
+            <span class="set-row__label">用户协议</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+          <button class="set-row" type="button">
+            <span class="set-row__label">儿童信息授权管理</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+          <button class="set-row set-row--danger" type="button">
+            <span class="set-row__label">注销账号</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="about-title">
+        <div class="group-head"><h2 id="about-title">关于</h2></div>
+        <div class="card card--flush">
+          <div class="set-row set-row--static">
+            <span class="set-row__label">当前版本</span>
+            <span class="set-row__tail">v1.0.0</span>
+          </div>
+          <button class="set-row" type="button">
+            <span class="set-row__label">检查更新</span>
+            <span class="set-row__tail">已是最新</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <button class="logout" type="button">退出登录</button>
+    </main>
+  </div>
+</body>
+</html>

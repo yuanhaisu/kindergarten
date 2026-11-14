@@ -180,7 +180,7 @@ func TestNoticeDraft_ScheduledPastRejected(t *testing.T) {
 	// 裸 "YYYY-MM-DD HH:mm"（修复前前端就是这么发的）没有时区，必须拒绝
 	_, err = f.svcT.CreateNotice(ctx, f.tc, TeacherNoticeInput{
 		Title: "无时区", Content: "正文", ClassIDs: []uint64{f.classA},
-		Status: noticeStatusPtr(1), ScheduledAt: "2026-11-01 09:00",
+		Status: noticeStatusPtr(1), ScheduledAt: "2099-01-01 09:00",
 	})
 	assert.ErrorIs(t, err, ErrTeacherInvalidParams)
 	assert.Equal(t, int64(0), countNoticesIn(t, f.db))
@@ -191,7 +191,7 @@ func TestNoticeDraft_ScheduledRFC3339Persisted(t *testing.T) {
 	f := newNoticeDraftFixture(t)
 	ctx := context.Background()
 
-	raw := "2026-11-01T09:00:00+08:00"
+	raw := "2099-01-01T09:00:00+08:00"
 	out, err := f.svcT.CreateNotice(ctx, f.tc, TeacherNoticeInput{
 		Title: "定时通知", Content: "正文", ClassIDs: []uint64{f.classA},
 		Status: noticeStatusPtr(1), ScheduledAt: raw,

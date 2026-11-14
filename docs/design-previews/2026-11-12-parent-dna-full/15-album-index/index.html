@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>养成星球 · 家长端 · 班级相册</title>
+  <link rel="stylesheet" href="../_shared/dna.css" />
+  <style>
+    .bar-spacer { width: 36px; height: 36px; }
+
+    .page-head { margin-top: 2px; }
+    .album-sub { margin: 7px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-bone); }
+
+    .feature { display: block; position: relative; height: 200px; margin-top: 18px; border-radius: var(--r-lg); text-decoration: none; }
+    /* 唯一局部渐变：压暗封面下沿，保证白字可读 */
+    .feature__shade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(23, 50, 32, 0) 40%, rgba(23, 50, 32, 0.72) 68%, rgba(23, 50, 32, 0.96) 100%);
+    }
+    .feature__copy { position: absolute; left: 18px; right: 18px; bottom: 16px; display: grid; }
+    .feature__title { font-family: var(--serif); font-size: 24px; font-weight: 400; line-height: 1.3; color: var(--bone); }
+    .feature__meta { margin-top: 4px; font-size: 11.5px; line-height: 1.4; color: rgba(236, 230, 215, 0.88); }
+
+    .all { margin-top: 26px; }
+    .all-head { margin-bottom: 12px; }
+    .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .album {
+      display: block;
+      padding: 8px;
+      border: 1px solid var(--hair-soft);
+      border-radius: var(--r-lg);
+      background: var(--bone-cool);
+      text-decoration: none;
+      color: var(--pine);
+    }
+    .album__cover { display: block; aspect-ratio: 4 / 3; border-radius: var(--r-sm); }
+    .album__title { display: block; margin: 10px 6px 0; font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+    .album__meta { display: block; margin: 3px 6px 6px; font-size: 11.5px; line-height: 1.4; color: var(--ink-card); }
+  </style>
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main">
+      <header class="page-bar">
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="返回首页">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></svg>
+        </button>
+        <span class="page-bar__title">小一班</span>
+        <span class="bar-spacer" aria-hidden="true"></span>
+      </header>
+
+      <header class="page-head">
+        <h1>班级相册</h1>
+        <p class="album-sub">小一班 · 共 7 个相册</p>
+      </header>
+
+      <a class="feature thumb thumb--gold" href="#" aria-label="打开相册：秋日远足，32 张照片，10 月 24 日">
+        <span class="thumb__badge">本月精选</span>
+        <span class="feature__shade" aria-hidden="true"></span>
+        <span class="feature__copy">
+          <span class="feature__title">秋日远足</span>
+          <span class="feature__meta">32 张照片 · 10 月 24 日</span>
+        </span>
+      </a>
+
+      <section class="all" aria-labelledby="all-title">
+        <div class="row row--between all-head">
+          <h2 id="all-title">全部相册</h2>
+        </div>
+        <div class="album-grid">
+          <a class="album" href="#">
+            <span class="thumb thumb--gold album__cover"></span>
+            <span class="album__title">手工课</span>
+            <span class="album__meta">18 张照片 · 11 月 6 日</span>
+          </a>
+          <a class="album" href="#">
+            <span class="thumb thumb--pine album__cover"></span>
+            <span class="album__title">音乐课</span>
+            <span class="album__meta">12 张照片 · 11 月 1 日</span>
+          </a>
+          <a class="album" href="#">
+            <span class="thumb thumb--blue album__cover"></span>
+            <span class="album__title">生日会</span>
+            <span class="album__meta">24 张照片 · 10 月 30 日</span>
+          </a>
+          <a class="album" href="#">
+            <span class="thumb thumb--clay album__cover"></span>
+            <span class="album__title">运动会</span>
+            <span class="album__meta">26 张照片 · 10 月 18 日</span>
+          </a>
+          <a class="album" href="#">
+            <span class="thumb thumb--sage album__cover"></span>
+            <span class="album__title">种植角</span>
+            <span class="album__meta">15 张照片 · 9 月 26 日</span>
+          </a>
+          <a class="album" href="#">
+            <span class="thumb thumb--clay album__cover"></span>
+            <span class="album__title">午餐时光</span>
+            <span class="album__meta">20 张照片 · 9 月 18 日</span>
+          </a>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -68,7 +68,12 @@ async function handleLogin() {
   loginError.value = null
   loading.value = true
   try {
-    await ensureLogin()
+    const data = await ensureLogin()
+    // 已登录但未同意当前政策：先完成同意，不进入业务页。
+    if (data && data.consent_required) {
+      uni.reLaunch({ url: "/pages/auth/consent" })
+      return
+    }
     uni.showToast({ title: "登录成功", icon: "success" })
     setTimeout(() => {
       // 从深链/401 过来时优先回到原页面；没有保留路径才回首页。
@@ -81,6 +86,10 @@ async function handleLogin() {
   } finally {
     loading.value = false
   }
+}
+
+function openPolicy(type) {
+  uni.navigateTo({ url: `/pages/auth/policy?type=${type}` })
 }
 
 onLoad(() => {
@@ -118,7 +127,7 @@ onLoad(() => {
         <text class="btn-label">{{ buttonLabel }}</text>
       </button>
 
-      <!-- 主动勾选：整行是命中区（96rpx），协议名在协议页落地前保持纯文本。 -->
+      <!-- 主动勾选：整行是命中区（96rpx）；协议名现在可点开全文。 -->
       <view
         class="agree-row"
         :class="{ 'is-loading': loading, 'is-unchecked': !agreed, 'is-nudged': nudged }"
@@ -127,7 +136,12 @@ onLoad(() => {
         <view class="agree-box" :class="{ 'is-checked': agreed }">
           <text class="agree-check">{{ ICON.check }}</text>
         </view>
-        <text class="agree-text">我已阅读并同意《用户协议》和《隐私政策》</text>
+        <view class="agree-text">
+          我已阅读并同意
+          <text class="agree-link" @click.stop="openPolicy('terms')">《用户协议》</text>
+          和
+          <text class="agree-link" @click.stop="openPolicy('privacy')">《隐私政策》</text>
+        </view>
       </view>
     </view>
 
@@ -370,6 +384,11 @@ onLoad(() => {
   letter-spacing: 0.01em;
   overflow-wrap: anywhere;
   transition: color $animation-duration-fast $animation-easing-default;
+}
+
+.agree-link {
+  color: $color-brand-primary-dark;
+  text-decoration: underline;
 }
 
 .agree-row.is-unchecked .agree-text {

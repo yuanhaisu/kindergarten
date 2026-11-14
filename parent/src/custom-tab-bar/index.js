@@ -1,11 +1,11 @@
 // 微信原生自定义 tabBar：本目录被 @dcloudio/uni-mp-weixin 原样复制到 dist，
 // 不经过 uni/Vue 编译，因此这里只能用原生 Component + wx.* API。
-// 图标码位与 shared-ui BottomNav 一致（remixicon U+EE1C / U+EDA5 / U+EC79 / U+F264）。
+// 图标码位与 shared-ui BottomNav 一致（remixicon U+EE1C / U+EDA5 / U+EB39 / U+F264）。
 const TABS = [
-  { pagePath: "pages/index/index", text: "首页", icon: "" },
-  { pagePath: "pages/growth/index", text: "成长", icon: "" },
-  { pagePath: "pages/pickup/index", text: "接送", icon: "" },
-  { pagePath: "pages/profile/index", text: "我的", icon: "" }
+  { pagePath: "pages/index/index", text: "首页", icon: "/static/icons/dna/muted/icon-home.svg", iconActive: "/static/icons/dna/pine/icon-home.svg" },
+  { pagePath: "pages/growth/index", text: "成长", icon: "/static/icons/dna/muted/icon-growth.svg", iconActive: "/static/icons/dna/pine/icon-growth.svg" },
+  { pagePath: "pages/pickup/index", text: "接送", icon: "/static/icons/dna/muted/icon-pickup.svg", iconActive: "/static/icons/dna/pine/icon-pickup.svg" },
+  { pagePath: "pages/profile/index", text: "我的", icon: "/static/icons/dna/muted/icon-profile.svg", iconActive: "/static/icons/dna/pine/icon-profile.svg" }
 ]
 
 // 每个 tab 页各持有一个 tabBar 组件实例，隐藏页的实例仍在内存里；

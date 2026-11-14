@@ -105,3 +105,7 @@
 2. **待办 action 契约漂移**：`backend/api/api-teacher/03-home.md` 里「通知未读提醒」的 actions 是 `["remind"]`，但前端 `todoActionLabel` 只映射 `approve / reject / share / go_record`，`remind` 会落到兜底文案「处理」；且只有 `share` 走 `open-type="share"`。原型按**前端实际能力**画「转发」，未画「一键提醒家长」。这条要么改契约、要么改前端映射。
 3. **下拉刷新未体现**：`enablePullDownRefresh: true` 是真实能力，静态原型不表现，未做下拉手势模拟。
 4. **老师端个人号限制**：与本页无关，但同批次其他老师端页面涉及 `web-view` 时需注意白屏（个人号不支持）。
+
+## 与代码同步（2026-11-09）
+
+- 新增套餐临期横幅（`expiring`）与入口过滤（`partial`）：growth / album 入口加 `data-module`，未开通时不渲染。文案与 `7d71f06` 一致；演示 chip「即将到期」「部分未开通」。

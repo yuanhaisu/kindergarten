@@ -1,0 +1,62 @@
+; 部署时由 deploy 脚本用 envsubst 渲染为 /etc/kindergarten/{env}/app.ini（0600）。
+; 不要把渲染后的文件提交到仓库；真实值只存在于 GitHub Environment Secrets 与服务器。
+;
+; 必填变量：
+;   CORS_ORIGINS  MYSQL_DSN  REDIS_ADDR  REDIS_PASSWORD  REDIS_DB
+;   JWT_SECRET  WECHAT_TEACHER_APP_ID  WECHAT_TEACHER_SECRET
+;   WECHAT_PARENT_APP_ID  WECHAT_PARENT_SECRET
+;   OSS_ENDPOINT  OSS_ACCESS_KEY_ID  OSS_ACCESS_KEY_SECRET  OSS_BUCKET
+; 可选：FACE_SECRET_ID  FACE_SECRET_KEY（生产 enabled=false 时不使用）
+
+[app]
+http_addr    = :8080
+gin_mode     = release
+cors_origins = ${CORS_ORIGINS}
+
+[log]
+level  = info
+format = json
+
+[mysql]
+dsn = ${MYSQL_DSN}
+
+[redis]
+addr     = ${REDIS_ADDR}
+password = ${REDIS_PASSWORD}
+db       = ${REDIS_DB}
+
+[jwt]
+secret          = ${JWT_SECRET}
+access_ttl_min  = 15
+refresh_ttl_day = 7
+
+[wechat]
+teacher_app_id   = ${WECHAT_TEACHER_APP_ID}
+teacher_secret   = ${WECHAT_TEACHER_SECRET}
+parent_app_id    = ${WECHAT_PARENT_APP_ID}
+parent_secret    = ${WECHAT_PARENT_SECRET}
+code_env_version = release
+
+[casbin]
+enable      = true
+model_path  = /app/configs/rbac_model.conf
+policy_path = /app/configs/rbac_policy.csv
+
+[oss]
+endpoint          = ${OSS_ENDPOINT}
+access_key_id     = ${OSS_ACCESS_KEY_ID}
+access_key_secret = ${OSS_ACCESS_KEY_SECRET}
+bucket_name       = ${OSS_BUCKET}
+
+[face]
+; 人脸识别尚未接真实供应商：生产先关闭 worker，避免空转与误调用。
+provider     = mock
+enabled      = false
+secret_id    = ${FACE_SECRET_ID}
+secret_key   = ${FACE_SECRET_KEY}
+region       = ap-beijing
+qps          = 10
+daily_budget = 10000
+suggest_high = 80
+suggest_low  = 70
+group_photo_min_faces = 6

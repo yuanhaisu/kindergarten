@@ -74,3 +74,7 @@
 3. **`empty` 芯片在本页的含义需要产品确认**：登录页没有列表可"空"，我把它映射成「协议未勾选」，2026-10-27 P1 修复后它同时是本页首屏初值——它是本页唯一真实的"缺一项"形态，视觉上与交互触发的 `unagreed` 完全一致。如果批次希望登录页的「空态」另有所指，这里要重新定义。
 4. **预览截图**：批次已把 `renderPreview()` 换成 `scripts/od-shot.mjs`（CDP `setDeviceMetricsOverride` + `captureScreenshot`），本页已用它重出，视口确认 `cssViewport=390 / cssWidth=390`，不再有 125% 缩放下的右侧裁切。
 5. **批次 `index.html` 需重跑** `node scripts/od-gallery.mjs docs/design-previews/2026-10-25-full-redesign` 才会登记本页（我没动，避免与其他页并发写冲突）。
+
+## 与代码同步（2026-11-09）
+
+- 协议名改为可点链接样式（`.agree-link`）；老师端个人号不支持 web-view，点击复制官网协议链接到浏览器打开。登录后若 `consent_required` 会先跳 `pages/auth/consent`。
