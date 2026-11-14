@@ -4,11 +4,22 @@ import (
 	"context"
 	"errors"
 
+	mysqldriver "github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/domain"
 )
+
+// IsDuplicateKey 判断错误是否为唯一键冲突（MySQL 1062）。
+// 收款幂等依赖「订单 + 幂等键」唯一约束兜底并发重复提交。
+func IsDuplicateKey(err error) bool {
+	var me *mysqldriver.MySQLError
+	if errors.As(err, &me) {
+		return me.Number == 1062
+	}
+	return errors.Is(err, gorm.ErrDuplicatedKey)
+}
 
 // OrderFilter 平台侧订单查询。平台查询必须显式给出过滤条件，
 // 不允许复用按 kindergarten_id 自动过滤的园所仓储（design D9）。
@@ -136,6 +147,53 @@ func (r *PaymentRepo) Create(ctx context.Context, p *domain.Payment) error {
 
 func (r *PaymentRepo) CreateTx(ctx context.Context, tx *gorm.DB, p *domain.Payment) error {
 	return tx.WithContext(ctx).Create(p).Error
+}
+
+// FindByIDForUpdateTx 在事务内锁定并读取单笔收款。退款校验先锁被退收款行，
+// 并发退款会在此串行化，避免两笔退款同时通过可退金额校验。
+func (r *PaymentRepo) FindByIDForUpdateTx(ctx context.Context, tx *gorm.DB, id uint64) (*domain.Payment, error) {
+	var p domain.Payment
+	err := tx.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		First(&p, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &p, err
+}
+
+// FindByOrderAndIdempotencyKey 按「订单 + 幂等键」取首次落库的收款。
+// 幂等键为 NULL 的旧收款不参与匹配。
+func (r *PaymentRepo) FindByOrderAndIdempotencyKey(ctx context.Context, orderID uint64, key string) (*domain.Payment, error) {
+	return r.findByOrderAndIdempotencyKey(ctx, r.db, orderID, key)
+}
+
+func (r *PaymentRepo) FindByOrderAndIdempotencyKeyTx(ctx context.Context, tx *gorm.DB, orderID uint64, key string) (*domain.Payment, error) {
+	return r.findByOrderAndIdempotencyKey(ctx, tx, orderID, key)
+}
+
+func (r *PaymentRepo) findByOrderAndIdempotencyKey(ctx context.Context, db *gorm.DB, orderID uint64, key string) (*domain.Payment, error) {
+	var p domain.Payment
+	err := db.WithContext(ctx).
+		Where("order_id = ? AND idempotency_key = ?", orderID, key).
+		First(&p).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// SumRefundsOfTx 返回某笔原收款已被退款的金额（正数合计）。
+func (r *PaymentRepo) SumRefundsOfTx(ctx context.Context, tx *gorm.DB, paymentID uint64) (int64, error) {
+	var sum int64
+	err := tx.WithContext(ctx).Model(&domain.Payment{}).
+		Where("refund_of_payment_id = ?", paymentID).
+		Select("COALESCE(SUM(-amount_cents), 0)").
+		Scan(&sum).Error
+	return sum, err
 }
 
 func (r *PaymentRepo) ListByOrder(ctx context.Context, orderID uint64) ([]domain.Payment, error) {

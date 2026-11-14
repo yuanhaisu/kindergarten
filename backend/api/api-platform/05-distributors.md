@@ -90,9 +90,12 @@
       "base_amount_cents": 100000,
       "rate": 10,
       "amount_cents": 10000,
+      "reversed_amount_cents": 0,
+      "net_amount_cents": 10000,
       "status": "settleable",
       "received_at": "2026-11-06T14:00:00+08:00",
-      "eligible_at": "2026-12-06"
+      "eligible_at": "2026-12-06",
+      "reversal_of": null
     }
   ],
   "total": 1,
@@ -108,7 +111,18 @@
 ```
 
 > 台账金额由「收款金额 × 订单确认时冻结的比例」推导，**不提供手工改写金额的接口**。
-> 负数收款会生成一条 `reversed` 行，冲回对应佣金。
+> `net_amount_cents = amount_cents - reversed_amount_cents`，结算条件为「到账满 30 天且净额大于 0」。
+> 列表只返回原始佣金行（`reversal_of` 为 `null`）：退款产生的冲回行金额已累计进原始行的 `reversed_amount_cents`，再列一次会重复扣减；冲回行仅在单条明细的 `reversals` 中查看。
+> `status` 取值 `pending` / `settleable` / `settled` / `reversed`；净额归零即 `reversed`，即使此前已可结算也不会再进入结算。
+
+**汇总口径（summary）**
+
+| 字段 | 口径 |
+| --- | --- |
+| `pending_cents` | 待结算原始行的净额合计 |
+| `settleable_cents` | 可结算原始行的净额合计 |
+| `settled_cents` | 已结算原始行的净额合计 |
+| `reversed_cents` | 期间累计冲回金额（正数），即原始行 `reversed_amount_cents` 合计 |
 
 ---
 
@@ -121,14 +135,31 @@
 {
   "id": 41,
   "order_no": "ORD20261106001",
-  "distributor": { "id": 3, "name": "华东渠道" },
-  "payment": { "id": 21, "amount_cents": 100000, "received_at": "2026-11-06T14:00:00+08:00" },
+  "kindergarten_name": "阳光幼儿园",
+  "distributor_name": "华东渠道",
+  "payment_id": 21,
+  "base_amount_cents": 100000,
   "rate": 10,
   "amount_cents": 10000,
+  "reversed_amount_cents": 4000,
+  "net_amount_cents": 6000,
   "status": "settleable",
+  "received_at": "2026-11-06T14:00:00+08:00",
   "eligible_at": "2026-12-06",
-  "reversal_of": null
+  "reversal_of": null,
+  "reversals": [
+    {
+      "id": 52,
+      "payment_id": 25,
+      "base_amount_cents": 40000,
+      "amount_cents": -4000,
+      "status": "reversed",
+      "created_at": "2026-11-20T10:00:00+08:00"
+    }
+  ]
 }
 ```
 
-> `reversal_of` 指向被冲回的佣金行；普通佣金为 `null`。
+> `reversal_of` 指向被冲回的原始佣金行；列表返回的原始佣金行恒为 `null`。
+> `reversals` 为该原始行对应的冲回记录，仅在单条明细中返回：每笔退款一条，`payment_id` 为退款收款，`amount_cents` 为负数。
+> 冲回金额累计达到原始佣金时，该行 `status` 置为 `reversed`、`net_amount_cents` 为 0。

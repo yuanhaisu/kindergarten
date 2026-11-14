@@ -115,16 +115,21 @@ type Order struct {
 func (Order) TableName() string { return "orders" }
 
 // Payment 收款登记。退款以负数金额表达，不设独立退款单（ADR-0016 / design D7）。
+// 负数收款必须用 RefundOfPaymentID 指明被退的原收款，佣金冲回据此精确定位。
 type Payment struct {
 	BaseModel
-	OrderID        uint64    `gorm:"not null;index" json:"order_id"`
-	KindergartenID uint64    `gorm:"not null;index" json:"kindergarten_id"`
-	AmountCents    int64     `gorm:"not null" json:"amount_cents"`
-	Method         string    `gorm:"size:32;not null;default:'bank_transfer'" json:"method"`
-	ReceivedAt     time.Time `gorm:"not null" json:"received_at"`
-	VoucherURL     string    `gorm:"size:512;not null;default:''" json:"voucher_url"`
-	Remark         string    `gorm:"size:255;not null;default:''" json:"remark"`
-	RecordedBy     string    `gorm:"size:64;not null;default:''" json:"recorded_by"`
+	OrderID uint64 `gorm:"not null;index;uniqueIndex:uk_payments_order_idem" json:"order_id"`
+	// IdempotencyKey 由管理端收款弹窗生成，与订单一起构成唯一约束。
+	// 旧请求可以不传（NULL）；MySQL 唯一索引允许多个 NULL，因此不会互相冲突。
+	IdempotencyKey    *string   `gorm:"size:64;uniqueIndex:uk_payments_order_idem" json:"idempotency_key,omitempty"`
+	RefundOfPaymentID *uint64   `gorm:"index" json:"refund_of_payment_id"`
+	KindergartenID    uint64    `gorm:"not null;index" json:"kindergarten_id"`
+	AmountCents       int64     `gorm:"not null" json:"amount_cents"`
+	Method            string    `gorm:"size:32;not null;default:'bank_transfer'" json:"method"`
+	ReceivedAt        time.Time `gorm:"not null" json:"received_at"`
+	VoucherURL        string    `gorm:"size:512;not null;default:''" json:"voucher_url"`
+	Remark            string    `gorm:"size:255;not null;default:''" json:"remark"`
+	RecordedBy        string    `gorm:"size:64;not null;default:''" json:"recorded_by"`
 }
 
 func (Payment) TableName() string { return "payments" }
@@ -143,18 +148,22 @@ type Entitlement struct {
 func (Entitlement) TableName() string { return "entitlements" }
 
 // CommissionLedger 佣金台账。金额由收款与订单冻结比例推导，不提供手工改写（design D8）。
+// 原始行的净额 = AmountCents - ReversedAmountCents；净额归零即视为已冲回。
+// 冲回行（ReversalOf 非空）是审计记录，其金额已累计进原始行的 ReversedAmountCents，
+// 不参与台账明细与汇总，避免重复扣减。
 type CommissionLedger struct {
 	BaseModel
-	OrderID         uint64    `gorm:"not null;index" json:"order_id"`
-	PaymentID       uint64    `gorm:"not null;index" json:"payment_id"`
-	DistributorID   uint64    `gorm:"not null;index" json:"distributor_id"`
-	KindergartenID  uint64    `gorm:"not null;index" json:"kindergarten_id"`
-	BaseAmountCents int64     `gorm:"not null" json:"base_amount_cents"`
-	Rate            int       `gorm:"not null" json:"rate"`
-	AmountCents     int64     `gorm:"not null" json:"amount_cents"`
-	Status          string    `gorm:"size:16;not null;default:'pending'" json:"status"`
-	EligibleAt      time.Time `gorm:"not null" json:"eligible_at"`
-	ReversalOf      *uint64   `gorm:"index" json:"reversal_of"`
+	OrderID             uint64    `gorm:"not null;index" json:"order_id"`
+	PaymentID           uint64    `gorm:"not null;index" json:"payment_id"`
+	DistributorID       uint64    `gorm:"not null;index" json:"distributor_id"`
+	KindergartenID      uint64    `gorm:"not null;index" json:"kindergarten_id"`
+	BaseAmountCents     int64     `gorm:"not null" json:"base_amount_cents"`
+	Rate                int       `gorm:"not null" json:"rate"`
+	AmountCents         int64     `gorm:"not null" json:"amount_cents"`
+	ReversedAmountCents int64     `gorm:"not null;default:0" json:"reversed_amount_cents"`
+	Status              string    `gorm:"size:16;not null;default:'pending'" json:"status"`
+	EligibleAt          time.Time `gorm:"not null" json:"eligible_at"`
+	ReversalOf          *uint64   `gorm:"index" json:"reversal_of"`
 }
 
 func (CommissionLedger) TableName() string { return "commission_ledger" }

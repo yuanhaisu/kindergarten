@@ -2,7 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,18 +42,7 @@ func (h *Handler) PlatformCreateOrder(c *gin.Context) {
 	}
 	order, err := h.orderSvc.Create(c.Request.Context(), req, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		switch err.Error() {
-		case "KINDERGARTEN_NOT_FOUND":
-			response.ErrNotFound(c, "园所不存在")
-		case "PLAN_NOT_FOUND":
-			response.ErrNotFound(c, "套餐不存在")
-		case "PLAN_ARCHIVED":
-			response.ErrValidation(c, "套餐已下架")
-		case "DISTRIBUTOR_NOT_FOUND":
-			response.ErrNotFound(c, "分销商不存在")
-		default:
-			response.ErrInternal(c, "创建订单失败")
-		}
+		writeCreateOrderError(c, err)
 		return
 	}
 	var snap service.PlanSnapshot
@@ -60,6 +53,25 @@ func (h *Handler) PlatformCreateOrder(c *gin.Context) {
 		"starts_at": order.StartsAt.Format("2006-01-02"), "expires_at": order.ExpiresAt.Format("2006-01-02"),
 		"plan_snapshot": snap,
 	})
+}
+
+// writeCreateOrderError 是建单错误的唯一映射出口。历史档位配置无法落档
+// 必须作为可识别的校验错误返回，不能退化成 500 或静默按最低价成交。
+func writeCreateOrderError(c *gin.Context, err error) {
+	switch {
+	case err.Error() == "KINDERGARTEN_NOT_FOUND":
+		response.ErrNotFound(c, "园所不存在")
+	case err.Error() == "PLAN_NOT_FOUND":
+		response.ErrNotFound(c, "套餐不存在")
+	case err.Error() == "PLAN_ARCHIVED":
+		response.ErrValidation(c, "套餐已下架")
+	case err.Error() == "DISTRIBUTOR_NOT_FOUND":
+		response.ErrNotFound(c, "分销商不存在")
+	case errors.Is(err, service.ErrTierCoverageUnresolved):
+		response.ErrValidation(c, "按在园幼儿数无法落入该套餐的任何档位：档位配置不完整，请先修正套餐档位后重试")
+	default:
+		response.ErrInternal(c, "创建订单失败")
+	}
 }
 
 func (h *Handler) PlatformGetOrder(c *gin.Context) {
@@ -120,17 +132,34 @@ func (h *Handler) PlatformCancelOrder(c *gin.Context) {
 	_ = c.ShouldBindJSON(&req)
 	order, err := h.orderSvc.Cancel(c.Request.Context(), id, req.Reason, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		switch err.Error() {
-		case "ORDER_NOT_FOUND":
-			response.ErrNotFound(c, "订单不存在")
-		case "ORDER_ALREADY_CANCELLED":
-			response.ErrConflict(c, "订单已取消")
-		default:
-			response.ErrInternal(c, "取消订单失败")
-		}
+		writeCancelOrderError(c, err)
 		return
 	}
 	response.OK(c, gin.H{"cancelled_at": order.CancelledAt.Format(time.RFC3339)})
+}
+
+// writeCancelOrderError 是取消失败的唯一映射出口。
+func writeCancelOrderError(c *gin.Context, err error) {
+	// 未退款收款阻断取消：除了提示先退款，还要把待退金额结构化返回，
+	// 管理端据此直接展示，不必解析文案。
+	var unrefunded *service.UnrefundedPaymentError
+	if errors.As(err, &unrefunded) {
+		response.JSON(c, http.StatusConflict, response.Envelope{
+			Code: 40900,
+			Message: fmt.Sprintf("订单仍有未退款收款 %.2f 元，请先登记退款后再取消",
+				float64(unrefunded.AmountCents)/100),
+			Data: gin.H{"unrefunded_amount_cents": unrefunded.AmountCents},
+		})
+		return
+	}
+	switch err.Error() {
+	case "ORDER_NOT_FOUND":
+		response.ErrNotFound(c, "订单不存在")
+	case "ORDER_ALREADY_CANCELLED":
+		response.ErrConflict(c, "订单已取消")
+	default:
+		response.ErrInternal(c, "取消订单失败")
+	}
 }
 
 func (h *Handler) PlatformAddPayment(c *gin.Context) {
@@ -144,21 +173,68 @@ func (h *Handler) PlatformAddPayment(c *gin.Context) {
 		response.ErrValidation(c, "请求参数不合法")
 		return
 	}
+	// 幂等键优先取请求头（契约推荐），兼容早期把键放在 JSON body 的调用方。
+	if key := strings.TrimSpace(c.GetHeader("Idempotency-Key")); key != "" {
+		req.IdempotencyKey = key
+	}
 	res, err := h.orderSvc.AddPayment(c.Request.Context(), id, req, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		switch err.Error() {
-		case "ORDER_NOT_FOUND":
-			response.ErrNotFound(c, "订单不存在")
-		case "ORDER_CANCELLED":
-			response.ErrConflict(c, "订单已取消")
-		case "INVALID_AMOUNT", "INVALID_RECEIVED_AT":
-			response.ErrValidation(c, "收款参数不合法")
-		default:
-			response.ErrInternal(c, "登记收款失败")
-		}
+		writeAddPaymentError(c, err)
 		return
 	}
 	response.Created(c, res)
+}
+
+// writeAddPaymentError 是登记收款错误的唯一映射出口。金额类错误附带结构化金额，
+// 管理端可直接展示「超出多少 / 最多可退多少」，不必解析文案。
+func writeAddPaymentError(c *gin.Context, err error) {
+	var exceeds *service.PaymentExceedsAmountDueError
+	if errors.As(err, &exceeds) {
+		response.JSON(c, http.StatusUnprocessableEntity, response.Envelope{
+			Code: 42200,
+			Message: fmt.Sprintf("收款金额超过订单应收，超出 %.2f 元",
+				float64(exceeds.ExcessCents)/100),
+			Data: gin.H{"excess_cents": exceeds.ExcessCents, "remaining_cents": exceeds.RemainingCents},
+		})
+		return
+	}
+	var refundExceeds *service.RefundExceedsPaidAmountError
+	if errors.As(err, &refundExceeds) {
+		response.JSON(c, http.StatusUnprocessableEntity, response.Envelope{
+			Code: 42200,
+			Message: fmt.Sprintf("退款金额超过订单已收，最多可退 %.2f 元",
+				float64(refundExceeds.AvailableCents)/100),
+			Data: gin.H{
+				"available_cents": refundExceeds.AvailableCents,
+				"requested_cents": refundExceeds.RequestedCents,
+			},
+		})
+		return
+	}
+	switch err.Error() {
+	case "ORDER_NOT_FOUND":
+		response.ErrNotFound(c, "订单不存在")
+	case "ORDER_CANCELLED":
+		response.ErrConflict(c, "订单已取消")
+	case "INVALID_AMOUNT", "INVALID_RECEIVED_AT":
+		response.ErrValidation(c, "收款参数不合法")
+	case "RECEIVED_AT_IN_FUTURE":
+		response.ErrValidation(c, "到账时间不能晚于当前时间")
+	case "INVALID_IDEMPOTENCY_KEY":
+		response.ErrValidation(c, "幂等键不合法：长度不能超过 64 个字符")
+	case "REFUND_PAYMENT_REQUIRED":
+		response.ErrValidation(c, "退款必须指定被退的原收款")
+	case "REFUND_PAYMENT_INVALID":
+		response.ErrValidation(c, "被退收款不合法")
+	case "REFUND_PAYMENT_NOT_ALLOWED":
+		response.ErrValidation(c, "正数收款不能指定被退收款")
+	case "REFUND_PAYMENT_NOT_FOUND":
+		response.ErrNotFound(c, "被退收款不存在")
+	case "REFUND_EXCEEDS_PAYMENT":
+		response.ErrValidation(c, "退款金额超过该笔收款的可退金额")
+	default:
+		response.ErrInternal(c, "登记收款失败")
+	}
 }
 
 func (h *Handler) PlatformListPayments(c *gin.Context) {
