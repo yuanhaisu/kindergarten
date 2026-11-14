@@ -221,7 +221,31 @@
 
 > `method` 取值：`bank_transfer` 对公转账 / `wechat` 微信 / `cash` 现金 / `other` 其他。
 > 退款以负数金额登记，同时冲减订单已收金额与对应佣金。
-> 到账后 30 天且净额为正的部分才可进入结算。
+> 佣金结算时钟使用**服务端登记时间**（登记时刻 + 30 天），`received_at` 只用于账务展示与对账。
+
+**幂等键（防重复记账）**
+
+请求头 `Idempotency-Key`（推荐，管理端收款弹窗在打开时生成一次，窗口内重试复用）：
+
+```http
+POST /platform/orders/12/payments
+Idempotency-Key: 3f1c2a9e-8b7d-4c6f-9a10-2d5e8f7a6b4c
+```
+
+- 也可放在 JSON body 的 `idempotency_key` 字段；两者同时出现时以请求头为准。
+- 服务端按 `(order_id, idempotency_key)` 唯一约束落库。相同键重复提交**返回首次收款结果**（同一 `payment_id`），不新增收款，也不重复计佣。
+- 不传幂等键的旧请求仍可写入，但没有幂等保护（写 `NULL`，多个旧请求互不冲突）。
+
+**金额上限**
+
+- 正数收款：`当前已收净额 + 本次金额 ≤ amount_due_cents`，超出即拒绝，已收金额不变。
+- 负数退款：`|本次金额| ≤ 当前已收净额`，同时不得超过被退收款的可退金额，超出即拒绝。
+
+**时间可信**
+
+- `received_at` 必须不晚于当前时间，未来时间返回 `RECEIVED_AT_IN_FUTURE`。
+- 回填历史 `received_at` 允许落库，但佣金 `eligible_at` 仍按服务端登记时间计算，不会被提前「催熟」。
+- 所有校验与收款、佣金写入在同一事务内；任一步失败不会留下收款或佣金行。
 
 **退款链接规则（负数收款）**
 
@@ -234,11 +258,33 @@
 
 | code | HTTP | 含义 |
 | --- | --- | --- |
+| `PAYMENT_EXCEEDS_AMOUNT_DUE` | 422 | 正数收款导致已收超过应收 |
+| `REFUND_EXCEEDS_PAID_AMOUNT` | 422 | 退款金额超过订单当前已收净额 |
+| `RECEIVED_AT_IN_FUTURE` | 422 | `received_at` 晚于当前时间 |
+| `INVALID_IDEMPOTENCY_KEY` | 422 | 幂等键超过 64 个字符 |
 | `REFUND_PAYMENT_REQUIRED` | 400 | 负数收款未指定 `refund_of_payment_id` |
 | `REFUND_PAYMENT_NOT_ALLOWED` | 400 | 正数收款携带了 `refund_of_payment_id` |
 | `REFUND_PAYMENT_INVALID` | 400 | 被退收款不是正数收款（如指向退款行） |
 | `REFUND_PAYMENT_NOT_FOUND` | 404 | 被退收款不存在或不属于该订单 |
 | `REFUND_EXCEEDS_PAYMENT` | 400 | 退款金额超过该笔收款的可退金额 |
+
+金额类错误附带结构化金额，管理端可直接展示，不必解析文案：
+
+```json
+// 正数收款超额（code 42200）
+{
+  "code": 42200,
+  "message": "收款金额超过订单应收，超出 100.00 元",
+  "data": { "excess_cents": 10000, "remaining_cents": 40000 }
+}
+
+// 退款超过已收（code 42200）
+{
+  "code": 42200,
+  "message": "退款金额超过订单已收，最多可退 500.00 元",
+  "data": { "available_cents": 50000, "requested_cents": 50001 }
+}
+```
 
 ---
 

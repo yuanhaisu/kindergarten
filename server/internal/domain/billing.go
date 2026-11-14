@@ -118,7 +118,10 @@ func (Order) TableName() string { return "orders" }
 // 负数收款必须用 RefundOfPaymentID 指明被退的原收款，佣金冲回据此精确定位。
 type Payment struct {
 	BaseModel
-	OrderID           uint64    `gorm:"not null;index" json:"order_id"`
+	OrderID uint64 `gorm:"not null;index;uniqueIndex:uk_payments_order_idem" json:"order_id"`
+	// IdempotencyKey 由管理端收款弹窗生成，与订单一起构成唯一约束。
+	// 旧请求可以不传（NULL）；MySQL 唯一索引允许多个 NULL，因此不会互相冲突。
+	IdempotencyKey    *string   `gorm:"size:64;uniqueIndex:uk_payments_order_idem" json:"idempotency_key,omitempty"`
 	RefundOfPaymentID *uint64   `gorm:"index" json:"refund_of_payment_id"`
 	KindergartenID    uint64    `gorm:"not null;index" json:"kindergarten_id"`
 	AmountCents       int64     `gorm:"not null" json:"amount_cents"`

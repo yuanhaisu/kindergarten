@@ -236,6 +236,8 @@ const paymentYuan = ref(0)
 const paymentMethod = ref('bank_transfer')
 const paymentRemark = ref('')
 const refundOfPaymentID = ref<number>()
+// 每次打开弹窗生成一次，窗口内的重试复用同一个键：响应丢失后重试不会重复记账。
+const paymentIdempotencyKey = ref('')
 
 // 只有正数收款可以被退款；退款必须指明被退的那一笔。
 const refundablePayments = computed(() =>
@@ -348,11 +350,19 @@ async function onCancel() {
   }
 }
 
+function newIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `pay-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 function openPayment() {
   paymentYuan.value = 0
   paymentMethod.value = 'bank_transfer'
   paymentRemark.value = ''
   refundOfPaymentID.value = undefined
+  paymentIdempotencyKey.value = newIdempotencyKey()
   paymentVisible.value = true
 }
 
@@ -375,7 +385,7 @@ async function submitPayment() {
   if (amountCents < 0) body.refund_of_payment_id = refundOfPaymentID.value
   submitting.value = true
   try {
-    await addPayment(detail.value.id, body)
+    await addPayment(detail.value.id, body, paymentIdempotencyKey.value)
     ElMessage.success('收款已登记')
     paymentVisible.value = false
     await Promise.all([refreshDetail(), load()])
