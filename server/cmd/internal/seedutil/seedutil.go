@@ -21,9 +21,14 @@ import (
 // DefaultKindergartenID 是这批一次性脚本惯用的目标园所。
 const DefaultKindergartenID uint64 = 4
 
-// Open 读取 configs/app.ini 并建立数据库连接。失败即退出。
+// Open 读取配置并建立数据库连接。失败即退出。
+// 配置路径优先取 CONFIG_PATH，未设置时回落 configs/app.ini。
 func Open() *gorm.DB {
-	cfg, err := config.Load("configs/app.ini")
+	cfgPath := os.Getenv("CONFIG_PATH")
+	if cfgPath == "" {
+		cfgPath = "configs/app.ini"
+	}
+	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		log.Fatal("load config:", err)
 	}
