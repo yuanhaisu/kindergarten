@@ -131,6 +131,14 @@
                 </template>
               </el-table-column>
               <el-table-column prop="method" label="方式" width="110" />
+              <el-table-column label="关联" width="100">
+                <template #default="{ row }">
+                  <span v-if="row.refund_of_payment_id" class="text-xs text-text-muted">
+                    退 #{{ row.refund_of_payment_id }}
+                  </span>
+                  <span v-else class="text-text-hint">—</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="remark" label="备注" />
               <el-table-column label="到账" width="110">
                 <template #default="{ row }">{{ formatDate(row.received_at) }}</template>
@@ -146,6 +154,17 @@
         <el-form-item label="金额（元）">
           <el-input-number v-model="paymentYuan" :precision="2" :step="100" class="w-full" />
           <div class="mt-1 text-xs text-text-muted">退款请填负数。</div>
+        </el-form-item>
+        <el-form-item v-if="paymentYuan < 0" label="被退收款" required>
+          <el-select v-model="refundOfPaymentID" class="w-full" placeholder="选择被退的原收款">
+            <el-option
+              v-for="p in refundablePayments"
+              :key="p.id"
+              :label="`#${p.id} ${formatMoney(p.amount_cents)} ${formatDate(p.received_at)}`"
+              :value="p.id"
+            />
+          </el-select>
+          <div class="mt-1 text-xs text-text-muted">冲回该笔收款产生的佣金。</div>
         </el-form-item>
         <el-form-item label="方式">
           <el-select v-model="paymentMethod" class="w-full">
@@ -216,6 +235,12 @@ const paymentVisible = ref(false)
 const paymentYuan = ref(0)
 const paymentMethod = ref('bank_transfer')
 const paymentRemark = ref('')
+const refundOfPaymentID = ref<number>()
+
+// 只有正数收款可以被退款；退款必须指明被退的那一笔。
+const refundablePayments = computed(() =>
+  (detail.value?.payments || []).filter((p) => p.amount_cents > 0),
+)
 
 async function load() {
   loading.value = true
@@ -316,18 +341,30 @@ function openPayment() {
   paymentYuan.value = 0
   paymentMethod.value = 'bank_transfer'
   paymentRemark.value = ''
+  refundOfPaymentID.value = undefined
   paymentVisible.value = true
 }
 
 async function submitPayment() {
   if (!detail.value) return
+  const amountCents = Math.round(paymentYuan.value * 100)
+  if (amountCents === 0) {
+    ElMessage.warning('金额不能为 0')
+    return
+  }
+  if (amountCents < 0 && !refundOfPaymentID.value) {
+    ElMessage.warning('退款请选择被退的原收款')
+    return
+  }
+  const body: Record<string, unknown> = {
+    amount_cents: amountCents,
+    method: paymentMethod.value,
+    remark: paymentRemark.value,
+  }
+  if (amountCents < 0) body.refund_of_payment_id = refundOfPaymentID.value
   submitting.value = true
   try {
-    await addPayment(detail.value.id, {
-      amount_cents: Math.round(paymentYuan.value * 100),
-      method: paymentMethod.value,
-      remark: paymentRemark.value,
-    })
+    await addPayment(detail.value.id, body)
     ElMessage.success('收款已登记')
     paymentVisible.value = false
     await Promise.all([refreshDetail(), load()])

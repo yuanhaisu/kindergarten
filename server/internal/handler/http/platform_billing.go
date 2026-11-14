@@ -153,6 +153,16 @@ func (h *Handler) PlatformAddPayment(c *gin.Context) {
 			response.ErrConflict(c, "订单已取消")
 		case "INVALID_AMOUNT", "INVALID_RECEIVED_AT":
 			response.ErrValidation(c, "收款参数不合法")
+		case "REFUND_PAYMENT_REQUIRED":
+			response.ErrValidation(c, "退款必须指定被退的原收款")
+		case "REFUND_PAYMENT_INVALID":
+			response.ErrValidation(c, "被退收款不合法")
+		case "REFUND_PAYMENT_NOT_ALLOWED":
+			response.ErrValidation(c, "正数收款不能指定被退收款")
+		case "REFUND_PAYMENT_NOT_FOUND":
+			response.ErrNotFound(c, "被退收款不存在")
+		case "REFUND_EXCEEDS_PAYMENT":
+			response.ErrValidation(c, "退款金额超过该笔收款的可退金额")
 		default:
 			response.ErrInternal(c, "登记收款失败")
 		}

@@ -88,18 +88,31 @@ func (s *DistributorService) UpdateDistributor(ctx context.Context, id uint64, r
 }
 
 type CommissionRow struct {
-	ID               uint64    `json:"id"`
-	OrderNo          string    `json:"order_no"`
-	KindergartenName string    `json:"kindergarten_name"`
-	DistributorName  string    `json:"distributor_name"`
-	PaymentID        uint64    `json:"payment_id"`
-	BaseAmountCents  int64     `json:"base_amount_cents"`
-	Rate             int       `json:"rate"`
-	AmountCents      int64     `json:"amount_cents"`
-	Status           string    `json:"status"`
-	ReceivedAt       time.Time `json:"received_at"`
-	EligibleAt       time.Time `json:"eligible_at"`
-	ReversalOf       *uint64   `json:"reversal_of"`
+	ID                  uint64                  `json:"id"`
+	OrderNo             string                  `json:"order_no"`
+	KindergartenName    string                  `json:"kindergarten_name"`
+	DistributorName     string                  `json:"distributor_name"`
+	PaymentID           uint64                  `json:"payment_id"`
+	BaseAmountCents     int64                   `json:"base_amount_cents"`
+	Rate                int                     `json:"rate"`
+	AmountCents         int64                   `json:"amount_cents"`
+	ReversedAmountCents int64                   `json:"reversed_amount_cents"`
+	NetAmountCents      int64                   `json:"net_amount_cents"`
+	Status              string                  `json:"status"`
+	ReceivedAt          time.Time               `json:"received_at"`
+	EligibleAt          time.Time               `json:"eligible_at"`
+	ReversalOf          *uint64                 `json:"reversal_of"`
+	Reversals           []CommissionReversalRow `json:"reversals,omitempty"`
+}
+
+// CommissionReversalRow 冲回行的审计视图，挂在原始佣金明细下返回。
+type CommissionReversalRow struct {
+	ID              uint64    `json:"id"`
+	PaymentID       uint64    `json:"payment_id"`
+	BaseAmountCents int64     `json:"base_amount_cents"`
+	AmountCents     int64     `json:"amount_cents"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 func (s *DistributorService) ListCommissions(ctx context.Context, f repository.CommissionFilter) ([]CommissionRow, int64, map[string]int64, error) {
@@ -136,6 +149,19 @@ func (s *DistributorService) GetCommission(ctx context.Context, id uint64) (*Com
 	rows, err := s.enrichCommissions(ctx, []domain.CommissionLedger{*row})
 	if err != nil {
 		return nil, err
+	}
+	// 原始佣金明细附带冲回记录，审计可追溯到被退的那笔收款。
+	if row.ReversalOf == nil {
+		reversals, err := s.comm.ListReversals(ctx, row.ID)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range reversals {
+			rows[0].Reversals = append(rows[0].Reversals, CommissionReversalRow{
+				ID: r.ID, PaymentID: r.PaymentID, BaseAmountCents: r.BaseAmountCents,
+				AmountCents: r.AmountCents, Status: r.Status, CreatedAt: r.CreatedAt,
+			})
+		}
 	}
 	return &rows[0], nil
 }
@@ -174,8 +200,11 @@ func (s *DistributorService) enrichCommissions(ctx context.Context, rows []domai
 	for _, r := range rows {
 		row := CommissionRow{
 			ID: r.ID, PaymentID: r.PaymentID, BaseAmountCents: r.BaseAmountCents,
-			Rate: r.Rate, AmountCents: r.AmountCents, Status: r.Status,
-			EligibleAt: r.EligibleAt, ReversalOf: r.ReversalOf,
+			Rate: r.Rate, AmountCents: r.AmountCents,
+			ReversedAmountCents: r.ReversedAmountCents,
+			NetAmountCents:      r.AmountCents - r.ReversedAmountCents,
+			Status:              r.Status,
+			EligibleAt:          r.EligibleAt, ReversalOf: r.ReversalOf,
 			DistributorName: distMap[r.DistributorID], KindergartenName: kgMap[r.KindergartenID],
 		}
 		if o, ok := orderMap[r.OrderID]; ok {
