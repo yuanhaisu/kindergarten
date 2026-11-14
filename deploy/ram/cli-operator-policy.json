@@ -1,0 +1,127 @@
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:StartInstances",
+        "ecs:StopInstances",
+        "ecs:RebootInstances",
+        "ecs:RunCommand",
+        "ecs:TagResources",
+        "ecs:UntagResources"
+      ],
+      "Resource": [
+        "acs:ecs:cn-guangzhou:*:instance/i-7xv06thh5tsvzwnigrjz",
+        "acs:ecs:cn-guangzhou:*:instance/i-7xvbga12t596lzkbjt4r"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["ecs:CreateSnapshot", "ecs:DeleteSnapshot"],
+      "Resource": [
+        "acs:ecs:cn-guangzhou:*:disk/*",
+        "acs:ecs:cn-guangzhou:*:snapshot/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:AuthorizeSecurityGroup",
+        "ecs:RevokeSecurityGroup",
+        "ecs:ModifySecurityGroupRule",
+        "ecs:AuthorizeSecurityGroupEgress",
+        "ecs:RevokeSecurityGroupEgress",
+        "ecs:ModifySecurityGroupEgressRule"
+      ],
+      "Resource": "acs:ecs:cn-guangzhou:*:securitygroup/sg-7xvjc9ug5rtvox03hy6w"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["oos:StartExecution", "oos:ListExecutions"],
+      "Resource": "acs:oos:cn-guangzhou:*:execution/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateBackup",
+        "rds:ModifyBackupPolicy",
+        "rds:StartDBInstance",
+        "rds:StopDBInstance",
+        "rds:RestartDBInstance"
+      ],
+      "Resource": "acs:rds:cn-guangzhou:*:dbinstance/<rds-instance-id>"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["kvstore:CreateBackup", "kvstore:ModifyBackupPolicy", "kvstore:RestartInstance"],
+      "Resource": "acs:kvstore:cn-guangzhou:*:instance/<redis-instance-id>"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["oss:PutObject"],
+      "Resource": [
+        "acs:oss:*:*:<bucket-prod>/*",
+        "acs:oss:*:*:<bucket-staging>/*",
+        "acs:oss:*:*:<bucket-dev>/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["log:CreateProject"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["log:CreateLogStore", "log:UpdateLogStore", "log:CreateIndex", "log:CreateAlert", "log:UpdateAlert"],
+      "Resource": "acs:log:cn-guangzhou:*:project/<sls-project>"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["cms:PutResourceMetricRule", "cms:PutResourceMetricRules", "cms:EnableMetricRules", "cms:DisableMetricRules", "cms:PutMetricRuleTargets"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["cr:PushRepository", "cr:PullRepository", "cr:GetAuthorizationToken", "cr:ListInstanceEndpoint"],
+      "Resource": "acs:cr:cn-guangzhou:*:repository/<acr-instance-id>/<acr-namespace>/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["alidns:AddDomainRecord", "alidns:UpdateDomainRecord", "alidns:SetDomainRecordStatus"],
+      "Resource": "acs:alidns:*:*:domain/<domain>"
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "ecs:DeleteInstance",
+        "ecs:DeleteInstances",
+        "ecs:ResetPassword",
+        "ecs:ReplaceSystemDisk",
+        "ecs:DetachDisk",
+        "ecs:ReleasePublicIpAddress",
+        "rds:DeleteDBInstance",
+        "kvstore:DeleteInstance",
+        "kvstore:FlushInstance",
+        "oss:DeleteBucket",
+        "oss:PutBucketAcl",
+        "oss:PutBucketPolicy",
+        "vpc:DeleteVpc",
+        "vpc:DeleteVSwitch",
+        "vpc:ReleaseEipAddress",
+        "log:DeleteProject",
+        "log:DeleteLogStore",
+        "cr:DeleteRepository",
+        "cr:DeleteNamespace",
+        "oos:DeleteApplication",
+        "oos:DeleteApplicationGroup",
+        "ram:Create*",
+        "ram:Delete*",
+        "ram:Update*",
+        "ram:AttachPolicyToUser",
+        "ram:DetachPolicyFromUser"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

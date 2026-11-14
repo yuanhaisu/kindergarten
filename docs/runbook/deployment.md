@@ -234,3 +234,35 @@ sudo nginx -t && sudo systemctl reload nginx
 | 审计 | 开启 ActionTrail；RAM 控制台核对 AK「最后使用时间」 |
 | 环境隔离 | 本机 MCP / staging / production 使用不同 RAM 用户，不复用 AK |
 | 生产边界 | MCP 不参与生产发布；发布仍走 tag → GitHub Actions → 人工批准 |
+
+### 10.5 方案 C：小 MCP + `aliyun` CLI（2026-11-14）
+
+**架构**：MCP 只保留当前 8 个只读工具；安全组、VPC、Redis、SLS、ACR、账单、ActionTrail 等长尾操作走 `aliyun` CLI；服务器内部操作走 SSH MCP；发布仍走 GitHub Actions。
+
+**为什么 MCP 不再加工具**：实测本机（2026-11-14，0.9.27）：
+
+| 工具数 | 启动耗时 |
+| --- | --- |
+| 8（当前） | 15.5 秒 |
+| 10（+2 个动态工具） | 29.0 秒 |
+
+Claude Code 的 MCP 握手默认 30 秒，加到 10 个就贴着超时线，再加一个必挂。因此**不要往 `--visible-tools` 里加动态工具**；需要新查询时优先用 CLI。改配置后跑 `python scripts/verify-aliyun-mcp.py` 验证启动时间。
+
+**凭据与 profile**：
+
+- `mcp-readonly`：只读，绑定 `deploy/ram/mcp-readonly-policy.json`
+- `mcp-operator`：写操作，绑定 `deploy/ram/mcp-readonly-policy.json` + `deploy/ram/cli-operator-policy.json`
+- MCP 用户级配置已加 `ALIBABA_CLOUD_PROFILE=mcp-readonly`
+- CLI 通过 `--profile mcp-readonly` / `--profile mcp-operator` 选择身份
+- AK 只写入 `~/.aliyun/config.json`，不进入仓库、`.mcp.json` 或对话
+
+**CLI 安装位置**：
+
+- 官方 Go CLI v3.5.3：`D:\tools\aliyun-cli\aliyun.exe`
+- Bash 入口：`~/bin/aliyun`
+- PowerShell 入口：`~\.local\bin\aliyun.cmd`
+- 不要用 PyPI 的 `aliyuncli`（2017 年旧包，依赖老 SDK）
+
+**操作说明与占位符**：见 `deploy/ram/README.md`。
+
+**边界纪律**：MCP 与 operator CLI 都不授予删机、重置密码、换系统盘、删 RDS、Flush Redis、删桶、改桶 ACL、`ram:*`；这些动作保留在控制台人工执行。ActionTrail 开启，AK 90 天轮换。
