@@ -2,6 +2,8 @@
 
 > 基础路径：`/api/v1/parent` | 鉴权：`Authorization: Bearer <token>`（角色 `parent`）
 >
+> 登录与刷新响应包含 `consent_required` 与 `current_policy_version`（见 `../api-common.md`）；`consent_required=true` 时 MUST 先完成 `POST /common/consent`，再访问业务接口。
+>
 > 开发进度与恢复执行规则见 [PROGRESS.md](PROGRESS.md)。
 
 ## 模块文件索引

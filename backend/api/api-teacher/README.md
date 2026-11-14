@@ -9,6 +9,7 @@
 - 访问用户角色必须为 `teacher`。
 - 文档中的 Response 均为 `data` 部分，省略外层 `{ "code": 0, "message": "success" }` 包装。
 - 老师端接口实现时必须按当前登录老师限定幼儿园和班级范围，避免访问非本班数据。
+- 登录与刷新响应包含 `consent_required` 与 `current_policy_version`（见 `../api-common.md`）；`consent_required=true` 时 MUST 先完成 `POST /common/consent`，再访问业务接口。
 
 ## 模块文件
 

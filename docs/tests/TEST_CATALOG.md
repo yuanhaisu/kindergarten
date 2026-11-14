@@ -1384,3 +1384,45 @@
 | TC-NEW-DST-0006 | 满三十天后可结算 | P0 | Unit / Contract | ✅ (`TestCommission_PromotedAfter30Days`) |
 | TC-NEW-DST-0007 | 台账金额不可手工改写 | P0 | Unit / Contract | 🔲 |
 
+### 隐私政策同意 (CNS)
+
+> 前置：`server/migrations/00005_user_consents.sql` 已执行；测试账号可登录；`[consent] enforce` 按场景设置。
+> 步骤：按名称调用对应端点或进入对应页面；预期：名称后半句。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-CNS-0001 | 首次同意写入记录 | P0 | Unit / API | ✅ |
+| TC-NEW-CNS-0002 | 重复同意保持幂等 | P0 | Unit / API | ✅ |
+| TC-NEW-CNS-0003 | 未同意用户登录标记 consent_required | P0 | Unit | ✅ |
+| TC-NEW-CNS-0004 | 已同意用户登录不再要求同意 | P0 | Unit | ✅ |
+| TC-NEW-CNS-0005 | 未同意访问业务接口返回 403/40301 | P0 | Unit / API | ✅ |
+| TC-NEW-CNS-0006 | 同意后恢复业务访问 | P0 | Unit / API | ✅ |
+| TC-NEW-CNS-0007 | 同意与登出不被门禁拦截 | P0 | Unit | ✅ |
+| TC-NEW-CNS-0008 | 政策版本升级后要求重新同意 | P0 | Unit | ✅ |
+| TC-NEW-CNS-0009 | 旧版本同意记录保留 | P1 | Unit / Repo | ✅ |
+| TC-NEW-CNS-0010 | 家长端静默登录缺同意进入阻断页 | P0 | E2E | ✅（403 兜底路径实测） |
+| TC-NEW-CNS-0011 | 老师端静默登录缺同意进入阻断页 | P0 | E2E | ✅（403 兜底路径实测） |
+| TC-NEW-CNS-0012 | 管理端登录缺同意进入阻断页 | P0 | E2E | ✅（Playwright） |
+| TC-NEW-CNS-0013 | 同意后进入首页/工作台/后台 | P0 | E2E | ✅（三端） |
+| TC-NEW-CNS-0014 | 暂不同意不写记录且无法进入业务页 | P0 | E2E | ✅（admin 完整；家长/老师端原生弹窗确认未自动化） |
+| TC-NEW-CNS-0015 | 多角色用户按实际端记录来源 | P0 | Unit / API | ✅（Unit + API：61→parent、11→teacher；非法 header 400；缺省回退） |
+
+### 操作日志脱敏 (LGR)
+
+> 前置：`operation_logs` 表存在；测试库可写；回填用例使用独立临时表。
+> 步骤：按名称执行对应写入或回填；预期：名称后半句。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-LGR-0001 | 创建账号日志不含完整手机号 | P0 | Unit / Repo | ✅ |
+| TC-NEW-LGR-0002 | 学生日志不含完整学号 | P0 | Unit / Repo | ✅ |
+| TC-NEW-LGR-0003 | 自由文本中的身份证号被脱敏 | P0 | Unit | ✅ |
+| TC-NEW-LGR-0004 | 新建家长昵称被掩码 | P0 | Unit | ✅ |
+| TC-NEW-LGR-0005 | 幼儿姓名被掩码 | P0 | Unit | ✅ |
+| TC-NEW-LGR-0006 | 重复脱敏结果不变 | P0 | Unit | ✅ |
+| TC-NEW-LGR-0007 | 非个人信息保持不变 | P0 | Unit | ✅ |
+| TC-NEW-LGR-0008 | 回填 dry-run 不写库 | P0 | Command | ✅ |
+| TC-NEW-LGR-0009 | 执行后历史手机号被掩码 | P0 | Command | ✅ |
+| TC-NEW-LGR-0010 | 回填可重复执行 | P0 | Command | ✅ |
+| TC-NEW-LGR-0011 | 后台日志列表不展示完整手机号 | P0 | API | 🚧 |
+

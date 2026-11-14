@@ -95,6 +95,10 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			authed.POST("/common/user/bind-invite", h.inner.BindInvite)
 			authed.POST("/common/user/bind-parent-phone", h.inner.BindParentPhone)
 
+			// 隐私政策同意：不受 consent 门禁拦截，否则用户无法完成同意或退出。
+			authed.GET("/common/consent", h.inner.GetConsent)
+			authed.POST("/common/consent", h.inner.PostConsent)
+
 			// 消息
 			authed.GET("/common/entitlements", h.inner.CommonGetEntitlements)
 			authed.GET("/common/messages", h.inner.ListMessages)
@@ -102,15 +106,21 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			authed.PUT("/common/messages/:id/read", h.inner.MarkMessageRead)
 			authed.PUT("/common/messages/read-all", h.inner.MarkAllRead)
 
+			// 隐私政策门禁：只拦业务分组；/common/consent、/auth/logout 等仍可访问。
+			consentGate := middleware.RequireConsent(h.consent)
+
 			// 管理端细闸：按路由→权限码登记表强制（AuthJWT/CasbinRBAC 之后）
 			adminG := authed.Group("/admin")
+			adminG.Use(consentGate)
 			adminG.Use(middleware.RequirePermission(resolver))
 			registerAdminRoutes(adminG, h.inner)
 
 			teacherG := authed.Group("/teacher")
+			teacherG.Use(consentGate)
 			registerTeacherRoutes(teacherG, h.inner)
 
 			parentG := authed.Group("/parent")
+			parentG.Use(consentGate)
 			registerParentRoutes(parentG, h.inner)
 
 			doctorG := authed.Group("/doctor")
@@ -721,10 +731,12 @@ type AppHandler struct {
 	corsOrigins []string
 	// ready 为 nil 时 /ready 视为就绪（仅用于不装配基础设施的单元测试）。
 	ready *readiness
+	// consent 由认证服务实现；nil 时门禁直接放行（测试用空 Handler）。
+	consent service.ConsentChecker
 }
 
 func NewAppHandler(h *handler.Handler) *AppHandler {
-	return &AppHandler{inner: h, tokenRevoker: h.TokenRevoker()}
+	return &AppHandler{inner: h, tokenRevoker: h.TokenRevoker(), consent: h.AuthService()}
 }
 
 // WithCORS 设置允许跨域的来源；由装配层从配置传入。

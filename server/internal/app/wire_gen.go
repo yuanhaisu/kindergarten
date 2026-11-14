@@ -34,7 +34,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	jwtSecret := ProvideJWTSecret(cfg)
 	accessTTL := ProvideAccessTTL(cfg)
 	refreshTTL := ProvideRefreshTTL(cfg)
-	authService := ProvideAuthService(db, userRepo, userRoleRepo, teacherInvitationRepo, adminAuthzService, kindergartenStatusService, client, weChatClient, jwtSecret, accessTTL, refreshTTL)
+	consentRepo := repository.NewConsentRepo(db)
+	authService := ProvideAuthService(db, userRepo, userRoleRepo, teacherInvitationRepo, adminAuthzService, kindergartenStatusService, client, weChatClient, jwtSecret, accessTTL, refreshTTL, consentRepo, cfg)
 	fileRepo := repository.NewFileRepo(db)
 	storage, err := ProvideOSSStorage(cfg)
 	if err != nil {

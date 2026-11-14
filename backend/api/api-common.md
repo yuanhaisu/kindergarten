@@ -56,6 +56,10 @@
 
 ## 1. 认证
 
+> 登录与刷新响应包含 `consent_required` 与 `current_policy_version`（增量字段，旧客户端忽略）。
+> `consent_required=true` 时，客户端 MUST 先调用 `POST /common/consent` 完成同意，再访问业务接口；
+> 服务端在 `[consent] enforce=true` 时会对未同意的业务请求返回 `403` + `code=40301`。
+
 ### POST `/auth/sms/send`
 
 > 发送短信验证码
@@ -92,6 +96,8 @@
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
   "expires_at": "2026-03-20T12:00:00Z",
+  "consent_required": true,
+  "current_policy_version": "v1",
   "user": {
     "id": 1,
     "phone": "138****1234",
@@ -132,6 +138,8 @@
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
   "expires_at": "2026-03-20T12:00:00Z",
+  "consent_required": true,
+  "current_policy_version": "v1",
   "user": {
     "id": 1,
     "phone": "138****1234",
@@ -170,6 +178,8 @@
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
   "expires_at": "2026-03-20T12:00:00Z",
+  "consent_required": true,
+  "current_policy_version": "v1",
   "user": {
     "id": 100,
     "phone": "138****1234",
@@ -204,7 +214,9 @@
 {
   "token": "eyJhbGciOiJIUzI1NiIs...(new)",
   "refresh_token": "eyJhbGciOiJIUzI1NiIs...(new)",
-  "expires_at": "2026-03-21T12:00:00Z"
+  "expires_at": "2026-03-21T12:00:00Z",
+  "consent_required": true,
+  "current_policy_version": "v1"
 }
 ```
 
@@ -495,6 +507,51 @@ Content-Type: multipart/form-data
   "marked_count": 5
 }
 ```
+
+---
+
+## 5. 隐私政策同意
+
+> 三端通用。记录用户对当前隐私政策版本的同意。客户端 MUST 在请求头带
+> `terminal_from: parent | teacher | admin`；服务端校验该端出现在令牌角色中后写入 `source`，
+> 不接受与角色不符的自称。旧客户端未带该头时，服务端回退为按令牌角色推导（兼容期行为）。
+> 同一用户同一版本重复提交幂等，返回首次同意时间。
+
+### GET `/common/consent`
+
+```json
+// Response
+{
+  "policy_version": "v1",
+  "consented": false,
+  "consented_at": null
+}
+```
+
+### POST `/common/consent`
+
+```json
+// Request
+{
+  "policy_version": "v1"
+}
+
+// Response
+{
+  "policy_version": "v1",
+  "consented": true,
+  "consented_at": "2026-11-09T10:00:00+08:00"
+}
+```
+
+| code | HTTP | 含义 |
+| --- | --- | --- |
+| 40030 | 400 | 政策版本已更新，客户端需刷新后重试 |
+| 40031 | 400 | 无法识别账号来源端 |
+| 40301 | 403 | 未同意当前政策，业务接口被拦截；客户端应跳转同意页 |
+
+> 当前政策版本为 `v1`，与官网 `website/content/site.ts` 的 `policyVersion` 保持一致；
+> 备案通过、文本定稿后两处一起改为生效日期。
 
 ---
 
