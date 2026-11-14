@@ -21,6 +21,7 @@
 - 设计稿用 **DNA 版**：`_shared/logo-dna.svg`（pine `#173220` / marigold `#DDB14A` / cream `#FCFAF4`；几何沿用官方 logo，只换色）
 - 官方 PNG `_shared/logo.png`（复制自 `parent/src/static/logo.png`）保留为品牌资产
 - 02 登录：56×56，置于 `养成星球 · NURTURE PLANET` 眉题上方
+- 02 登录中间图案：抽象轨道（松绿小星球无脸 + 赤陶细轨道 + marigold 星点），不再用笑脸星球
 - 31 我的：页头右上角 28×28；页脚版本行 16×16
 - V8 单孩子：页头 24×24（在“单孩子”角标左侧）+ 页脚 16×16
 - 其他页面不重复放 logo；品牌 mark 只在登录与账号页出现，避免每页都贴标
