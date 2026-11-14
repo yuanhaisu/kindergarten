@@ -1,0 +1,51 @@
+{
+  "_method": "对 queryList.do 返回的全部 154 份周食谱逐个调用 queryDiet.do，把每条 dietInfo 的 (foodTypeOne, typeIDOne) 做成列联表。目的：确定 foodTypeOne(37-48) 与 typeIDOne(1-20) 的对应关系，因为没有任何接口返回 37-48 的字典。",
+  "_endpoint": "POST /diet/queryDiet.do {dietID}",
+  "_scope": {"diets": 154, "rows": 22809},
+  "_result": "只出现 18 种 (foodTypeOne, typeIDOne) 组合；每个 typeIDOne 只对应唯一一个 foodTypeOne（含 null），即 foodTypeOne = f(typeIDOne) 是确定性映射。",
+  "typeIDOneName": {
+    "1": "谷类及制品",
+    "2": "薯类、淀粉及制品",
+    "3": "蔬菜类及制品",
+    "4": "菌藻类",
+    "5": "水果类及制品",
+    "6": "畜肉类及制品",
+    "7": "禽肉类及制品",
+    "8": "蛋类及制品",
+    "9": "鱼虾蟹贝类",
+    "10": "干豆类及制品",
+    "11": "坚果、种子类",
+    "12": "乳类及制品",
+    "13": "小吃、甜饼",
+    "14": "速食食品",
+    "15": "饮料类",
+    "16": "糖、蜜饯类",
+    "17": "动物油脂",
+    "18": "植物油脂",
+    "19": "调味品类",
+    "20": "其他"
+  },
+  "foodTypeOne": {
+    "37": {"typeIDOne": [1], "rows": 2992, "samples": ["面条", "稻米"]},
+    "38": {"typeIDOne": [10], "rows": 809, "samples": ["红豆", "青豆[青大豆]"]},
+    "39": {"typeIDOne": [6, 7], "rows": 3426, "breakdown": {"6": 2772, "7": 654}, "samples": ["猪瘦肉", "牛肉（腹部肉）[牛腩]", "鸭", "母鸡(一年内)"]},
+    "40": {"typeIDOne": [8], "rows": 633, "samples": ["鸡蛋", "鸡蛋(白皮)"]},
+    "41": {"typeIDOne": [12], "rows": 649, "samples": ["全脂牛奶粉", "豆奶粉"]},
+    "42": {"typeIDOne": [3, 4], "rows": 6168, "breakdown": {"3": 5165, "4": 1003}, "samples": ["胡萝卜(黄)", "彩椒", "紫菜(干)", "蘑菇(鲜蘑)"]},
+    "43": {"typeIDOne": [13, 14], "rows": 790, "breakdown": {"13": 173, "14": 617}, "samples": ["西式蛋糕", "蛋糕", "燕麦片"]},
+    "44": {"typeIDOne": [5], "rows": 2371, "samples": ["蔓越莓", "葡萄干", "中华猕猴桃[毛叶猕猴桃]"]},
+    "45": {"typeIDOne": [19], "rows": 1593, "samples": ["番茄酱", "冰糖"]},
+    "46": {"typeIDOne": [9], "rows": 607, "samples": ["墨鱼(干)[曼氏无针乌贼]", "巴沙鱼", "虾米[海米,虾仁]"]},
+    "47": {"typeIDOne": [18], "rows": 1335, "samples": ["葵花籽油"]},
+    "48": {"typeIDOne": [11], "rows": 847, "samples": ["腰果", "核桃(鲜)", "花生仁(生)"]},
+    "null": {"typeIDOne": [2, 15, 16], "rows": 589, "breakdown": {"2": 487, "15": 24, "16": 78}, "samples": ["马铃薯[土豆，洋芋]", "粉丝", "冰川可乐", "金糕条[山楂条]"]}
+  },
+  "unobservedTypeIDOne": [17, 20],
+  "notes": [
+    "null 的三类（薯类/饮料/糖、蜜饯）是整类为 null，不是个别脏数据：12 键的 weekAmountStr 模型里没有这三类的槽位。",
+    "服务端对 null 的 foodTypeOne 直接省略字段（JSON 里没有 foodTypeOne 键），不是返回 \"null\"。",
+    "43 的名称在 weekAmountStr 里显示为「糕点类」，但它同时收纳 typeIDOne=13（小吃、甜饼）与 14（速食食品）。",
+    "weekAmountStr 的 12 个键：谷类/豆类/肉类/蛋类/奶类/蔬菜类/糕点类/水果类/调味品/海鲜/油/坚果 —— 与 37-48 一一对应。",
+    "已排除的字典来源：/diet/food/getFoodTypeOneList.do、getTypeOneList.do、getFoodTypeOne.do 均 404；7 个膳食 JSP 均不含 foodTypeOne 字样。"
+  ]
+}

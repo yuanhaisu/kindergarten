@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="title">
+  <title id="title">C3 竖排字标</title>
+  <path d="M256 74 Q259.24 88.76 274 92 Q259.24 95.24 256 110 Q252.76 95.24 238 92 Q252.76 88.76 256 74 Z" fill="#111111"/>
+  <text x="256" y="236" text-anchor="middle" font-family="Microsoft YaHei, Source Han Sans SC, Noto Sans CJK SC, sans-serif" font-size="110" font-weight="700"
+        letter-spacing="10" fill="#111111">养成</text>
+  <text x="256" y="366" text-anchor="middle" font-family="Microsoft YaHei, Source Han Sans SC, Noto Sans CJK SC, sans-serif" font-size="110" font-weight="700"
+        letter-spacing="10" fill="#111111">星球</text>
+</svg>

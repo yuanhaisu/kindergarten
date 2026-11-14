@@ -1,0 +1,88 @@
+{
+  "_note": "POST /diet/report/GeneralDietTypeBeforeReport/query.do  body: {\"startDate\":\"2026-10-26\",\"endDate\":\"2026-10-30\",\"queryType\":1,\"objID\":361593}。queryType=1 按计划食谱查询（objID 传集体对象 sourceID），queryType=2 按集体对象查询。本文件为**完整**响应：除 body.diet.infos（187 行，结构与 queryDiet.do 的 infos 相同）外，全部字段原样保留。已移除 orgID / createUserName。orgName 已改写。",
+  "body": {
+    "orgName": "某幼儿园",
+    "startDate": "2026-10-26",
+    "endDate": "2026-10-30",
+    "nutrition": [
+      {
+        "label": "平均每人每日",
+        "energy": 1341.7474, "heat": 5616.5684,
+        "protein": 52.4632, "fats": 42.7368, "carbohydrate": 196.5474,
+        "retinol": 1328.7158, "vitaminA": 580.7368, "carotin": 4478.8843,
+        "vitaminB1": 0.6842, "vitaminB2": 0.5579, "vitaminC": 64.2316,
+        "ca": 245.6632, "zn": 8.7263, "fe": 14.9789
+      },
+      {
+        "label": "DRIs",
+        "energy": 1484.26, "heat": 6213.11,
+        "protein": 50.7, "fats": 49.47, "carbohydrate": 209.05,
+        "retinol": 745.35, "vitaminA": 573.31, "carotin": 1030.15,
+        "vitaminB1": 0.67, "vitaminB2": 0.67, "vitaminC": 67.33,
+        "ca": 746.61, "zn": 11.2, "fe": 12
+      },
+      {
+        "label": "比较%",
+        "energy": 90.4, "heat": 90.4, "protein": 103.48, "fats": 86.39, "carbohydrate": 94.02,
+        "retinol": 178.27, "vitaminA": 101.3, "carotin": 434.78,
+        "vitaminB1": 102.12, "vitaminB2": 83.27, "vitaminC": 95.4,
+        "ca": 32.9, "zn": 77.91, "fe": 124.82
+      }
+    ],
+    "energy": [
+      { "label": "千卡", "fatsRecommend": 445.23, "fatsIntake": 384.66, "proteinRecommend": 202.8, "proteinIntake": 209.84, "carbohydrateRecommend": 836.2, "carbohydrateIntake": 786.2 },
+      { "label": "千焦", "fatsRecommend": 1863.7328, "fatsIntake": 1610.1868, "proteinRecommend": 848.9208, "proteinIntake": 878.3902, "carbohydrateRecommend": 3500.3333, "carbohydrateIntake": 3291.0332 },
+      { "label": "占总热量%", "fatsRecommend": "30-35%", "fatsIntake": "27.86", "proteinRecommend": "12-15%", "proteinIntake": "15.2", "carbohydrateRecommend": "50-60%", "carbohydrateIntake": "56.94" },
+      { "label": "营养素比例", "fatsRecommend": "1", "fatsIntake": 0.81, "proteinRecommend": "1", "proteinIntake": "1", "carbohydrateRecommend": "4-5", "carbohydrateIntake": 3.75 }
+    ],
+    "dbz": [
+      { "label": "摄入量（克）", "require": "26.23", "animalprotein": "28.36", "beanprotein": "4.43" },
+      { "label": "占蛋白质总量%", "require": "≥50%", "animalprotein": "54.05", "beanprotein": "8.44" }
+    ],
+    "fats": [
+      { "label": "摄入量（克）", "animalfats": "22.38", "vegfats": "8.48", "otherfats": "11.88" },
+      { "label": "构成比（%）", "animalfats": "52.36", "vegfats": "19.84", "otherfats": "27.8" }
+    ],
+    "tgly": [
+      { "label": "重量（毫克）", "animalca": 105.91, "vegca": 134.12, "milk": 69.47, "meatfe": 2.35, "notmeatfe": 12.63 },
+      { "label": "构成比（%）", "animalca": 43.11243, "vegca": 54.595783, "milk": 28.280073, "meatfe": 15.687583, "notmeatfe": 84.312416 }
+    ],
+    "scgnb": [
+      { "label": "能量（千卡）", "1": "174.88", "2": "195.89", "4": "482.46", "8": "73.15", "16": "348.27", "32": "0" },
+      { "label": "比例", "1": "11.78", "2": "13.2", "4": "32.51", "8": "4.93", "16": "23.46", "32": "0" }
+    ],
+    "ssgcb": {
+      "蔬菜": 167.91, "蛋类": 18.34, "畜禽肉类": 97.39, "水果": 155.87, "水产类": 21.6,
+      "坚果": 12.37, "调味品": 14.71, "其他": 0, "糖果蜜饯": 0, "乳制品": 16.84,
+      "大豆": 17.47, "谷类": 155.89, "速食小吃": 1.05, "饮料": 0, "油脂类": 11.79, "薯类": 9.16
+    },
+    "analysis": "1、本周期内食品种类：97种，其中调味品种：7种，食物品种：90种。<br>2、本周期DRIs占比分析：<br>  1）热量占比：90.4%，蛋白质占比：103.48%，脂肪占比：86.39%，碳水化合物占比：94.02%<br>  2）维生素占比分析：维生素A：101.3%，维生素B1：102.12%，维生素B2：83.27%，维生素C：95.4%<br>  3）矿物质占比分析：钙：32.9%，铁：124.82%，锌：77.91%<br>3、三大营养素占比分析：<br>  1）蛋白质：15.2%，脂肪：27.86%，碳水化合物：56.94%<br>  2）【蛋白质 ：脂肪 ： 碳水化合物】的比值：【1 : 0.81 : 3.75】<br>4、【动物蛋白质 + 豆类蛋白质】占总蛋白质百分比：62.49%<br>5、营养摄入量分析：<br>  1）钙摄入量偏低。建议补充一些牛奶与奶制品鱼类、大豆与豆制品、杏仁、酵母。<br>  2）锌摄入量偏低。建议补充一些牛肉、乳酪、蛋鱼、豆类、果仁、麦牙、粗粮。<br>",
+    "diet": {
+      "dietID": 1017248, "dietName": "第九周", "dietRange": "2026-10-26至2026-10-30",
+      "dietType": 1, "dayNum": 5, "createMethod": 2,
+      "weekOfYear": 9, "startDate": "2026-10-26", "endDate": "2026-11-01",
+      "objID": 363055, "nutriPolicyID": 19, "status": 1,
+      "dietGroupObj": { "objID": 363055, "objName": "全体幼儿", "objType": 2, "objTypeStr": "日托", "foodInputType": 1, "foodInputTypeStr": "市品重量", "mealPercentMode": 1, "sourceID": 361593, "sourceName": "全体幼儿", "sourceStatus": 1, "status": 2, "yearID": 31846 },
+      "infos": ["… 187 行，与 /diet/queryDiet.do 的 infos 同构，此处省略 …"]
+    }
+  },
+  "msg": "请求成功",
+  "success": true,
+
+  "_derived": {
+    "_说明": "以下公式均为用本响应的数值与 /diet/queryDiet.do 的 187 行明细双向反算、逐项精确复现得出（误差 < 0.01，除注明外）。不是猜测，也不是读到的服务端源码。",
+    "D_常数": "0.95（同时用于两处：供给量除以它、DRIs 基准乘以它）",
+    "人均日营养素": "Σ(foodGram × eatPart/100 × 营养素/100) ÷ dayNum ÷ 0.95。13 项全部可复现：11 项直接命中（能量/蛋白/脂肪/碳水/维生素A/B1/B2/C/钙/锌/铁）；胡萝卜素 = 上述值 ×2（24 周恒为 2.000000）；视黄醇当量 = 维生素A + 胡萝卜素×0.167（24 周回归 R²=0.9999999997，最大残差 0.008；注意系数是 0.167 不是 1/6）",
+    "千焦行": "= 千卡行 × 4.186（1484.26×4.186=6213.11）",
+    "推荐能量拆分": "脂肪推荐 = 能量×30%÷9 = 49.475；碳水推荐 = (能量 − 蛋白×4 − 脂肪×9) ÷ 4 = 209.06；三者合计恰好 100% 能量",
+    "占总热量%": "分母 = 蛋白克×4 + 脂肪克×9 + 碳水克×4 = 209.84+384.66+786.2 = 1380.7（**不是** 1341.7474，也不是 DRIs 1484.26）",
+    "营养素比例": "克数比，以蛋白质为 1：脂肪 42.7368/52.4632 = 0.81，碳水 196.5474/52.4632 = 3.75",
+    "scgnb_能量": "各餐能量之和 1274.65 = 1341.7474 × 0.95（即未做 ÷0.95 折算的那一版）",
+    "scgnb_比例": "各餐能量 ÷ DRIs 能量 1484.26，合计 85.88%；**分母与分子不同基**，不是占比 100%",
+    "dbz": "动物蛋白 = typeIDOne {6,7,8,9,12} = 28.36；豆类蛋白 = {10} = 4.43；require = 总蛋白 52.4632 × 50% = 26.23；占总量% 分母 = 总蛋白",
+    "fats": "动物脂 = {6,7,8,9,12} = 22.38；植物脂 = {1,2,3,4,5,10,11} = 8.48；**其他脂是残差 = 总脂肪 − 动物脂 − 植物脂 = 11.88，不是固定类别集合**（本周只有 14/18/19 有数据，才看起来像 {14,18,19}；用 dietID 952437 可反证：残差 13.84 命中、{14,18,19} 的 13.60 不命中）。三类互斥且穷尽，合计 = 42.74 = 总脂肪。注意页面 fatsTable 只渲染动物性/植物性两列，otherfats 只进饼图",
+    "tgly_钙": "animalca = {6,7,8,9,12} = 105.91（**含乳类**）；vegca = {1,2,3,4,5,10,11} = 134.12；milk = {12} = 69.47（**⊂ animalca，重复计入**）；三者之和 309.5 > 总钙 245.66；分母均为总钙 245.6632",
+    "tgly_铁": "meatfe = {6,7} 畜肉+禽肉 = 2.35（蛋、水产均不计）；notmeatfe = 其余全部 = 12.63；两者互斥且穷尽（合计 = 总铁 14.9789）",
+    "ssgcb": "Σ(foodGram × eatPart/100) ÷ dayNum ÷ 0.95，按一级类合并 —— 16 个行名全部精确复现。合并已验证：13 小吃甜饼 并入 速食小吃（与 14 同行，4 份食谱精确成立）；15→饮料、16→糖果蜜饯、18→油脂类、19→调味品（dietID 952437 一次验完）。页面 tableSsgcbRpt 只渲染其中 10 列"
+  }
+}

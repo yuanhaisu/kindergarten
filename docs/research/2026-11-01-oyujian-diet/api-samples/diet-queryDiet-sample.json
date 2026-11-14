@@ -1,0 +1,83 @@
+{
+  "_note": "POST /diet/queryDiet.do  body: {\"dietID\":\"1017248\"}  节选：meta 完整，infos 仅保留前 4 行（原始 187 行）。orgID/orgName/createUserName 等租户与人员信息已脱敏或移除。",
+  "body": {
+    "dietID": 1017248,
+    "dietName": "第九周",
+    "dietRange": "2026-10-26至2026-10-30",
+    "dietType": 1,
+    "objID": 363055,
+    "stuNum": 251,
+    "dayNum": 5,
+    "nutriPolicyID": 19,
+    "createMethod": 2,
+    "status": 1,
+    "weekOfYear": 9,
+    "startDate": "2026-10-26",
+    "endDate": "2026-11-01",
+    "dietGroupObj": {
+      "foodInputType": 1,
+      "foodInputTypeStr": "市品重量",
+      "mealPercentMode": 1,
+      "objID": 363055,
+      "objName": "全体幼儿",
+      "objType": 2,
+      "objTypeStr": "日托",
+      "sourceID": 361593,
+      "sourceName": "全体幼儿",
+      "sourceStatus": 1,
+      "status": 2,
+      "yearID": 31846
+    },
+    "dayAmountList": [
+      { "amount": "谷类37.65,豆类1.26,肉类37.65,蛋类2.51,奶类10.04,蔬菜类40.67,水果类47.7,调味品5.29,海鲜1.26,油3.52,坚果2.52" },
+      { "amount": "谷类40.16,肉类25.1,蛋类12.55,蔬菜类75.3,水果类37.66,调味品5.79,海鲜15.06,油3.52,坚果7.54" }
+    ],
+    "weekAmountStr": "谷类197.8,豆类20.85,肉类133.05,蛋类25.1,奶类20.08,蔬菜类225.2,糕点类1.26,水果类228.46,调味品17.88,海鲜31.39,油14.08,坚果18.37",
+    "infos": [
+      {
+        "dietDate": "2026-10-26", "dietDayOfWeek": 1, "dietID": 1017248, "dietInfoID": 96777138,
+        "mealTimes": 1, "eatPart": 100, "foodGram": 30, "isFromMarket": 1,
+        "orgFoodID": 55775453, "orgFoodAlias": "面条", "orgRecipeAlias": "肉酱意大利面",
+        "typeIDOne": 1, "typeIDTwo": 21, "foodTypeOne": 37,
+        "planTotal": 7.53, "status": 1,
+        "nutriEnergy": 286, "nutriHeat": 1197.196, "nutriProtein": 8.3, "nutriFats": 0.7,
+        "nutriCarbohydrate": 61.9, "nutriDietaryFiber": 0.8, "nutriAsh": 0.6, "nutriWater": 28.5,
+        "nutriCholesterol": 0, "nutriRetinol": 0, "nutriCarotin": 0, "nutriVitaminA": 0,
+        "nutriVitaminB1": 0.22, "nutriVitaminB2": 0.07, "nutriNicotinicAcid": 1.4, "nutriVitaminC": 0, "nutriVitaminE": 0.59,
+        "nutriCa": 11, "nutriP": 162, "nutriK": 135, "nutriNa": 28, "nutriMg": 39, "nutriFe": 3.6, "nutriZn": 1.43, "nutriSe": 11.74, "nutriCu": 0.17, "nutriMn": 0.86
+      },
+      {
+        "dietDate": "2026-10-26", "dietDayOfWeek": 1, "dietID": 1017248, "dietInfoID": 96777139,
+        "mealTimes": 1, "eatPart": 100, "foodGram": 10, "isFromMarket": 1,
+        "orgFoodID": 55776077, "orgFoodAlias": "猪瘦肉", "orgRecipeAlias": "肉酱意大利面",
+        "typeIDOne": 6, "typeIDTwo": 45, "foodTypeOne": 39,
+        "planTotal": 2.51, "status": 1,
+        "nutriEnergy": 143, "nutriHeat": 598.598, "nutriProtein": 20.3, "nutriFats": 6.2,
+        "nutriCarbohydrate": 1.5, "nutriCholesterol": 81, "nutriRetinol": 44, "nutriVitaminA": 44,
+        "nutriCa": 6, "nutriP": 189, "nutriFe": 3, "nutriZn": 2.99
+      },
+      {
+        "dietDate": "2026-10-26", "dietDayOfWeek": 1, "dietID": 1017248, "dietInfoID": 96777140,
+        "mealTimes": 1, "eatPart": 100, "foodGram": 5, "isFromMarket": 1,
+        "orgFoodID": 55777050, "orgFoodAlias": "番茄酱", "orgRecipeAlias": "肉酱意大利面",
+        "typeIDOne": 19, "typeIDTwo": 97, "foodTypeOne": 45,
+        "planTotal": 1.26, "status": 1,
+        "nutriEnergy": 85, "nutriHeat": 355.81, "nutriProtein": 4.9, "nutriFats": 0.2, "nutriCarbohydrate": 16.9,
+        "nutriCa": 28, "nutriP": 117, "nutriFe": 1.1, "nutriZn": 0.7, "nutriNa": 37.1
+      },
+      {
+        "dietDate": "2026-10-26", "dietDayOfWeek": 1, "dietID": 1017248, "dietInfoID": 96777141,
+        "mealTimes": 1, "eatPart": 100, "foodGram": 2, "isFromMarket": 1,
+        "orgFoodID": 55775876, "orgFoodAlias": "紫菜(干)", "orgRecipeAlias": "紫菜蛋花汤",
+        "typeIDOne": 4, "typeIDTwo": 38, "foodTypeOne": 42,
+        "planTotal": 0.5, "status": 1,
+        "nutriEnergy": 250, "nutriHeat": 1046.5, "nutriProtein": 26.7, "nutriFats": 1.1, "nutriCarbohydrate": 44.1,
+        "nutriCa": 264, "nutriP": 350, "nutriFe": 54.9, "nutriZn": 2.47, "nutriK": 1796, "nutriNa": 710.5,
+        "nutriCarotin": 1370, "nutriVitaminA": 228, "nutriDietaryFiber": 21.6
+      }
+    ],
+    "infoCountInOriginal": 187
+  },
+  "msg": "请求成功",
+  "success": true
+}

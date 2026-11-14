@@ -2,7 +2,7 @@
 
 ## 状态
 
-- 域名：`nurtureplanet.cn`（ICP 备案进行中）。
+- 域名：`nurtureplanet.cn`（ICP 备案已于 2026-11-13 通过；DNS 尚未解析）。
 - 站点已建完，并通过 Impeccable finish review：`disposition: ship`，7 项 material fix 全部 resolved，无回归。
 - 本地构建通过：`cd website && npm run generate` → `.output/public`。
 - **未公开部署**：域名 ICP 备案进行中，DNS 尚未解析。
@@ -11,13 +11,13 @@
 
 | # | 事项 | 说明 |
 |---|---|---|
-| 1 | ICP 备案 | 备案通过前不要把域名解析到 ECS；`docs/runbook/deployment.md` §0 已列为上线前置 |
+| 1 | ICP 备案 | ✅ **2026-11-13 已通过**；待把备案号填入 `site.ts` 的 `icp`，再按下方顺序做 DNS 与证书 |
 | 2 | DNS | `www` / `test-www` 各加一条 A 记录指向 ECS EIP |
 | 3 | 证书 SAN | 现有证书需覆盖 `www` / `test-www`（以及 apex）；少一个主机名会让对应 server block 握手失败 |
 | 4 | 企业微信二维码 | **已暂缓（2026-11-09）**：企业微信认证需 300 元，暂不支出。官网当前以邮件为唯一联系方式；代码保留 `contact.wecomQr` 条件位，认证后放二维码即可启用 |
 | 5 | 域名邮箱 | ✅ **已完成**：`contact@nurtureplanet.cn`（阿里企业邮箱免费版），已填入 `content/site.ts` → `contact.email` |
-| 6 | 主体与备案号 | 填 `legalEntity` / `icp`；两个法务页定稿后把 `legalDraft` 改为 `false` |
-| 7 | 法务复核 | `pages/privacy.vue` / `pages/terms.vue` 是按代码事实起草的初稿，需法务按主体信息复核 |
+| 6 | 主体与备案号 | ✅ **已完成**：主体 `湘潭市岳塘区稚序软件开发工作室` 在 `legalEntity`；备案号 `湘ICP备2026054245号-1` 已填 `icp`；备案网站名称 `稚序saas软件服务平台` 已在页脚展示。两个法务页定稿后再把 `legalDraft` 改为 `false` |
+| 7 | 法务复核 | ✅ 已完成一轮**代码事实自查**（`docs/handoffs/2026-11-09-legal-selfcheck.md`），两份文本已按实际数据流补齐；仍需律师复核角色划分、敏感信息与责任上限。`legalDraft` 保持 `true` |
 | 8 | 百度统计（可选） | 填 `baiduAnalyticsId`；留空则不加载任何统计脚本 |
 
 ## 部署接入（已写好，未启用）
@@ -33,7 +33,7 @@
 
 1. 补 DNS A 记录（`www.nurtureplanet.cn` / `test-www.nurtureplanet.cn`），等生效。
 2. 重签证书，把 `www` / `test-www` 加入 SAN。
-3. 填剩余占位项：`website/content/site.ts` 的 `legalEntity` / `icp`（`baiduAnalyticsId` 可选）。企业微信二维码已暂缓，不阻塞上线。
+3. 填剩余占位项：`website/content/site.ts` 的 `icp`（`baiduAnalyticsId` 可选）。主体已是「湘潭市岳塘区稚序软件开发工作室」；企业微信二维码已暂缓，不阻塞上线。
 4. 本地 `cd website && npm run generate` 复核。
 5. 打 tag 走 release：先 staging（`test-www`），再 production（人工批准）。
 6. 验证：`curl -fsSI https://www.<domain>/`、`/privacy`、`/terms`、一个不存在的路径返回品牌化 404。
@@ -56,3 +56,16 @@
 - Impeccable detector 返回 `[]`。
 - 内容红线核对：无 60% / AI / 私有化 / 价格 / 小程序码；所有产品截图标注「界面示意」。
 - 13 张上线用图已写入 provenance。
+
+## 2026-11-12 上线前技术收口
+
+- **Lighthouse**（本地静态产物，Chrome 142 headless）：
+  - 移动端：Performance **91** / Accessibility **100** / SEO **100** / Best Practices **100**；LCP 3.2s、CLS 0、TBT 30ms
+  - 桌面端：Performance **100** / Accessibility **100** / SEO **100** / Best Practices **100**；LCP 0.7s
+  - `/privacy`、`/terms` 移动端：Accessibility / SEO / Best Practices 均为 **100**
+- **SEO**：三页 canonical 与 `og:url` 改为绝对地址（`https://www.nurtureplanet.cn/...`）；首页新增 Organization / WebSite / SoftwareApplication JSON-LD；`sitemap.xml` 的 `lastmod` 更新为 2026-11-12；`robots.txt` 不变。
+- **图片**：8 张产品截图由 PNG 转 WebP（1.77MB → 412KB）；首屏主图 preload，非首屏 lazy + async decode；移除手机墙入场动画以减少 LCP 渲染延迟。
+- **全页复验**：1440 / 390 无横向溢出、无破图、唯一 h1；`/`、`/privacy`、`/terms`、`sitemap.xml`、`robots.txt`、`og.png` 均 200，缺失路径返回品牌化 404。
+- **截图注意**：「一日五时刻」是 sticky 滚动区块，单张 fullPage 截图不能忠实呈现；已按区块视口单独复核（桌面 1440、移动 390），图形与当前时刻对应。
+- **移动端 LCP 3.2s** 的剩余项主要是渲染延迟而非图片下载；若后续要冲 95+，可在移动端简化手机墙的旋转/阴影，但需先过设计复核。
+- 产物与审计报告在 `_verify/lighthouse-*-final.json`、`_verify/website-*-final2-*.png`。

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">B2 星轨刻度</title>
+  <path d="M 128 40 A 88 88 0 1 1 40 128" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 205 108 L 232 108 M 128 205 L 128 232 M 64 190 L 46 208" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
+  <path d="M24 90 Q27.24 104.76 42 108 Q27.24 111.24 24 126 Q20.76 111.24 6 108 Q20.76 104.76 24 90 Z" fill="#111111"/>
+</svg>

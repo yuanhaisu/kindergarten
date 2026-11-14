@@ -1,0 +1,45 @@
+{
+  "_note": "POST /diet/groupObj/queryList.do  body: {\"yearID\":\"31846\"}  (2026学年)",
+  "body": {
+    "list": [
+      {
+        "classInfos": [
+          {"classID": 236406, "classInfoID": 3279664, "className": "小三班", "gradeAge": 2, "objID": 361593, "status": 1},
+          {"classID": 236398, "classInfoID": 3279666, "className": "小二班", "gradeAge": 3, "objID": 361593, "status": 1},
+          {"classID": 236397, "classInfoID": 3279665, "className": "小一班", "gradeAge": 3, "objID": 361593, "status": 1},
+          {"classID": 236400, "classInfoID": 3279667, "className": "中一班", "gradeAge": 4, "objID": 361593, "status": 1},
+          {"classID": 236401, "classInfoID": 3279668, "className": "中二班", "gradeAge": 4, "objID": 361593, "status": 1},
+          {"classID": 236404, "classInfoID": 3279671, "className": "大三班", "gradeAge": 5, "objID": 361593, "status": 1},
+          {"classID": 236402, "classInfoID": 3279670, "className": "大一班", "gradeAge": 5, "objID": 361593, "status": 1},
+          {"classID": 236403, "classInfoID": 3279669, "className": "大二班", "gradeAge": 5, "objID": 361593, "status": 1}
+        ],
+        "classNameStr": "小三班、小二班、小一班、中一班、中二班、大三班、大一班、大二班",
+        "foodInputType": 1,
+        "foodInputTypeStr": "市品重量",
+        "mealInfos": [
+          {"eatTime": "07:00", "mealInfoID": 1387671, "mealTimeStr": "早餐", "mealTimes": 1, "objID": 361593, "percents": 25, "status": 1},
+          {"eatTime": "09:00", "mealInfoID": 1387672, "mealTimeStr": "早点", "mealTimes": 2, "objID": 361593, "percents": 5, "status": 1},
+          {"eatTime": "11:00", "mealInfoID": 1387673, "mealTimeStr": "午餐", "mealTimes": 4, "objID": 361593, "percents": 35, "status": 1},
+          {"eatTime": "14:30", "mealInfoID": 1387674, "mealTimeStr": "午点", "mealTimes": 8, "objID": 361593, "percents": 5, "status": 1},
+          {"eatTime": "17:00", "mealInfoID": 1387675, "mealTimeStr": "晚餐", "mealTimes": 16, "objID": 361593, "percents": 25, "status": 1}
+        ],
+        "mealPercentMode": 1,
+        "mealType": 31,
+        "mealTypeStr": "早餐/早点/午餐/午点/晚餐",
+        "objID": 361593,
+        "objName": "全体幼儿",
+        "objType": 2,
+        "objTypeStr": "日托",
+        "orgID": 43957,
+        "policyName": "DRIs2000",
+        "sourceID": 0,
+        "status": 1,
+        "yearID": 31846,
+        "yearName": 2026
+      }
+    ],
+    "key": "objID"
+  },
+  "msg": "请求成功",
+  "success": true
+}
