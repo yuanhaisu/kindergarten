@@ -82,8 +82,16 @@
 
     <el-dialog v-model="tiersVisible" title="幼儿数档位" width="620px">
       <p class="mb-3 text-xs text-text-muted">
-        按在园幼儿数落入的区间决定价格系数（100 = 不加价）。档位变更只影响之后创建的订单。
+        按在园幼儿数落入的区间决定价格系数（100 = 不加价）。档位必须从 0 人开始、区间连续，且最高档上限填 0（无上限）。档位变更只影响之后创建的订单。
       </p>
+      <el-alert
+        v-if="tiersError"
+        :title="tiersError"
+        type="error"
+        show-icon
+        :closable="false"
+        class="mb-3"
+      />
       <el-table :data="tiers" size="small" border>
         <el-table-column label="档位" width="80">
           <template #default="{ row }">
@@ -167,6 +175,7 @@ const formRules: FormRules = {
 
 const tiersVisible = ref(false)
 const tiersPlanId = ref<number | null>(null)
+const tiersError = ref('')
 const tiers = ref<{ tier: number; min_students: number; max_students: number; price_multiplier: number }[]>([])
 
 async function load() {
@@ -222,6 +231,7 @@ async function submitEdit() {
 
 async function openTiers(row: PlanRow) {
   tiersPlanId.value = row.id
+  tiersError.value = ''
   tiersVisible.value = true
   try {
     const data = await listPlanTiers(row.id)
@@ -236,12 +246,14 @@ async function openTiers(row: PlanRow) {
 async function submitTiers() {
   if (!tiersPlanId.value) return
   submitting.value = true
+  tiersError.value = ''
   try {
     await replacePlanTiers(tiersPlanId.value, tiers.value)
     ElMessage.success('档位已保存')
     tiersVisible.value = false
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '保存档位失败')
+    // 覆盖校验的具体原因由后端返回，直接展示在弹窗里，避免只弹一条转瞬即逝的 toast
+    tiersError.value = e instanceof Error ? e.message : '保存档位失败'
   } finally {
     submitting.value = false
   }

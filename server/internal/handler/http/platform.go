@@ -246,15 +246,37 @@ func (h *Handler) PlatformReplacePlanTiers(c *gin.Context) {
 		return
 	}
 	if err := h.planSvc.ReplaceTiers(c.Request.Context(), id, req.List, h.operatorOf(c), c.ClientIP()); err != nil {
-		switch err.Error() {
-		case "PLAN_NOT_FOUND":
-			response.ErrNotFound(c, "套餐不存在")
-		case "INVALID_TIER", "DUPLICATE_TIER", "INVALID_TIER_RANGE":
-			response.ErrValidation(c, "档位配置不合法")
-		default:
-			response.ErrInternal(c, "保存档位失败")
-		}
+		writePlanTierError(c, err)
 		return
 	}
 	response.OK(c, gin.H{"updated_at": time.Now().Format(time.RFC3339)})
+}
+
+// writePlanTierError 是档位保存错误的唯一映射出口：覆盖校验失败必须
+// 返回具体原因，管理端据此展示可操作的修复提示。
+func writePlanTierError(c *gin.Context, err error) {
+	switch {
+	case err.Error() == "PLAN_NOT_FOUND":
+		response.ErrNotFound(c, "套餐不存在")
+	case err.Error() == "INVALID_TIER":
+		response.ErrValidation(c, "档位序号必须从 1 开始")
+	case err.Error() == "DUPLICATE_TIER":
+		response.ErrValidation(c, "档位序号不能重复")
+	case err.Error() == "INVALID_TIER_RANGE":
+		response.ErrValidation(c, "档位人数区间不合法：上限不能小于下限")
+	case errors.Is(err, service.ErrTierCoverageEmpty):
+		response.ErrValidation(c, "至少需要配置一个档位，且第一档必须从 0 人开始")
+	case errors.Is(err, service.ErrTierCoverageNotFromZero):
+		response.ErrValidation(c, "档位必须从 0 人开始：第一档的人数下限应为 0")
+	case errors.Is(err, service.ErrTierCoverageGap):
+		response.ErrValidation(c, "档位区间不连续：后一档的人数下限必须等于前一档上限 + 1")
+	case errors.Is(err, service.ErrTierCoverageOverlap):
+		response.ErrValidation(c, "档位区间重叠：后一档的人数下限必须等于前一档上限 + 1")
+	case errors.Is(err, service.ErrTierCoverageBoundedTop):
+		response.ErrValidation(c, "最高档必须无上限：请把最高档的人数上限填为 0")
+	case errors.Is(err, service.ErrTierCoverageUnboundedNotLast):
+		response.ErrValidation(c, "只有最高档可以无上限：无上限的档位必须排在最后")
+	default:
+		response.ErrInternal(c, "保存档位失败")
+	}
 }

@@ -2,11 +2,26 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+)
+
+// 档位覆盖校验错误。管理端按错误类型给出具体的修复提示，
+// 这些错误码也用于接口契约与回归测试。
+var (
+	ErrTierCoverageEmpty            = errors.New("TIER_COVERAGE_EMPTY")
+	ErrTierCoverageNotFromZero      = errors.New("TIER_COVERAGE_NOT_FROM_ZERO")
+	ErrTierCoverageGap              = errors.New("TIER_COVERAGE_GAP")
+	ErrTierCoverageOverlap          = errors.New("TIER_COVERAGE_OVERLAP")
+	ErrTierCoverageBoundedTop       = errors.New("TIER_COVERAGE_BOUNDED_TOP")
+	ErrTierCoverageUnboundedNotLast = errors.New("TIER_COVERAGE_UNBOUNDED_NOT_LAST")
+	// ErrTierCoverageUnresolved 表示历史遗留的档位配置落不到任何一档。
+	ErrTierCoverageUnresolved = errors.New("TIER_COVERAGE_UNRESOLVED")
 )
 
 // PlanService 套餐目录。目录可改，但已成交订单只认快照（ADR-0013）。
@@ -149,7 +164,8 @@ func (s *PlanService) ReplaceTiers(ctx context.Context, planID uint64, tiers []d
 		return fmt.Errorf("PLAN_NOT_FOUND")
 	}
 	seen := make(map[int]struct{}, len(tiers))
-	for _, t := range tiers {
+	for i := range tiers {
+		t := &tiers[i]
 		if t.Tier <= 0 {
 			return fmt.Errorf("INVALID_TIER")
 		}
@@ -164,6 +180,9 @@ func (s *PlanService) ReplaceTiers(ctx context.Context, planID uint64, tiers []d
 			t.PriceMultiplier = 100
 		}
 	}
+	if err := validateTierCoverage(tiers); err != nil {
+		return err
+	}
 	if err := s.plans.ReplaceTiers(ctx, planID, tiers); err != nil {
 		return err
 	}
@@ -171,6 +190,35 @@ func (s *PlanService) ReplaceTiers(ctx context.Context, planID uint64, tiers []d
 		Operator: operator, Module: "plan", Action: "replace_tiers", TargetType: "plan", TargetID: planID,
 		Detail: fmt.Sprintf("%d 档", len(tiers)), IP: ip,
 	})
+}
+
+// validateTierCoverage 校验档位覆盖：从 0 开始、区间连续、最高档开口。
+func validateTierCoverage(tiers []domain.PlanTier) error {
+	byMin := make([]domain.PlanTier, len(tiers))
+	copy(byMin, tiers)
+	sort.Slice(byMin, func(i, j int) bool { return byMin[i].MinStudents < byMin[j].MinStudents })
+	if len(byMin) == 0 {
+		return ErrTierCoverageEmpty
+	}
+	if byMin[0].MinStudents != 0 {
+		return ErrTierCoverageNotFromZero
+	}
+	for i := 0; i < len(byMin)-1; i++ {
+		cur, next := byMin[i], byMin[i+1]
+		if cur.MaxStudents == 0 {
+			return ErrTierCoverageUnboundedNotLast
+		}
+		switch {
+		case next.MinStudents <= cur.MaxStudents:
+			return ErrTierCoverageOverlap
+		case next.MinStudents != cur.MaxStudents+1:
+			return ErrTierCoverageGap
+		}
+	}
+	if byMin[len(byMin)-1].MaxStudents != 0 {
+		return ErrTierCoverageBoundedTop
+	}
+	return nil
 }
 
 func validatePlanRequest(req PlanRequest, requireCode bool) error {
