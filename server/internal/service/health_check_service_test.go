@@ -145,7 +145,7 @@ func newHealthFixture(t *testing.T) *healthFixture {
 	require.NoError(t, createPendingCheck(t, db))
 
 	return &healthFixture{
-		db:  db,
+		db: db,
 		svc: NewHealthCheckService(db, repository.NewHealthCheckRepo(db), repository.NewMessageRepo(db), repository.NewFileRepo(db),
 			healthPolicyStub{policy: HealthPolicy{FeverThreshold: DefaultFeverThreshold}}),
 	}

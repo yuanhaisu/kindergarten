@@ -24,7 +24,7 @@ import (
 // 用独立测试园所/班级（高 ID），每例 t.Cleanup 硬删自建行，不污染真实数据。
 
 const (
-	testNoticeKG     uint64 = 990101
+	testNoticeKG      uint64 = 990101
 	testNoticeCreator uint64 = 990101
 )
 
@@ -62,7 +62,7 @@ func openNoticeTestDB(t *testing.T) *gorm.DB {
 
 // noticeFixture 测试所需的班级/家长/学生骨架。ID 全部显式指定，便于 cleanup。
 type noticeFixture struct {
-	db  *gorm.DB
+	db   *gorm.DB
 	repo *NoticeRepo
 	// classIDs[0..1] 为两个目标班，classIDs[2] 为无关班
 	classIDs [3]uint64

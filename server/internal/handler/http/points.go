@@ -31,11 +31,11 @@ func (h *Handler) GetPointsOverview(c *gin.Context) {
 }
 
 type listPointRecordsQuery struct {
-	Page       int    `form:"page"`
-	PageSize   int    `form:"page_size"`
-	StudentID  uint64 `form:"student_id"`
-	ClassID    uint64 `form:"class_id"`
-	Type       string `form:"type"`
+	Page      int    `form:"page"`
+	PageSize  int    `form:"page_size"`
+	StudentID uint64 `form:"student_id"`
+	ClassID   uint64 `form:"class_id"`
+	Type      string `form:"type"`
 }
 
 func (h *Handler) ListPointRecords(c *gin.Context) {

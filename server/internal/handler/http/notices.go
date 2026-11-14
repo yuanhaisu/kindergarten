@@ -12,12 +12,12 @@ import (
 )
 
 type listNoticesQuery struct {
-	Page       int    `form:"page"`
-	PageSize   int    `form:"page_size"`
-	Keyword    string `form:"keyword"`
-	ClassID    uint64 `form:"class_id"`
-	Category   string `form:"category"`
-	Status     *int8  `form:"status"`
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
+	Keyword  string `form:"keyword"`
+	ClassID  uint64 `form:"class_id"`
+	Category string `form:"category"`
+	Status   *int8  `form:"status"`
 }
 
 func (h *Handler) ListNotices(c *gin.Context) {

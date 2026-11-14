@@ -36,23 +36,23 @@ type PickupRecord struct {
 	// PickupPersonID 本次接走人对应的授权记录。
 	// 接走且未走例外通道时必须有值（I1 授权闭合的落库依据）；
 	// 例外通道与送入时为 NULL。
-	PickupPersonID *uint64      `json:"pickup_person_id,omitempty" gorm:"index"`
-	PickupName     string       `json:"pickup_name" gorm:"size:50"`
-	PickupRelation string       `json:"pickup_relation" gorm:"size:20"`
+	PickupPersonID *uint64 `json:"pickup_person_id,omitempty" gorm:"index"`
+	PickupName     string  `json:"pickup_name" gorm:"size:50"`
+	PickupRelation string  `json:"pickup_relation" gorm:"size:20"`
 	// OperatorID 登记/核验人（园所方教职工）。
 	// 契约列名「核验人」，对齐 design-data/admin-05；本次不建双人流程，
 	// 故接送人与核验人不分列，只此一人。
-	OperatorID     uint64       `json:"operator_id"`
-	RecordedAt     time.Time    `json:"recorded_at"`
+	OperatorID uint64    `json:"operator_id"`
+	RecordedAt time.Time `json:"recorded_at"`
 	// IsAuthorizedOverride 是否走了授权例外通道（来接者不在有效授权集合内）。
 	// 与 PickupPersonID 互补：PickupPersonID 为空无法区分「漏选」与「有意例外」，
 	// 故显式记录，使例外可观测统计。例外不阻断登记。
 	IsAuthorizedOverride bool   `json:"is_authorized_override" gorm:"default:false"`
 	OverrideName         string `json:"override_name" gorm:"size:50"`
 	// IsAbnormal 由老师手动标记，系统不因重复接走/提前接走/例外而自动置位
-	IsAbnormal     bool         `json:"is_abnormal" gorm:"default:false"`
-	AbnormalReason string       `json:"abnormal_reason" gorm:"size:200"`
-	Remark         string       `json:"remark" gorm:"size:200"`
+	IsAbnormal     bool   `json:"is_abnormal" gorm:"default:false"`
+	AbnormalReason string `json:"abnormal_reason" gorm:"size:200"`
+	Remark         string `json:"remark" gorm:"size:200"`
 
 	Student  *Student `json:"student,omitempty" gorm:"foreignKey:StudentID"`
 	Operator *User    `json:"operator,omitempty" gorm:"foreignKey:OperatorID"`
@@ -74,15 +74,15 @@ type PickupAuthorization struct {
 	// Status 1有效 0已撤销。
 	// 不加 gorm:"default:1" —— int8 零值 0 会被 GORM 当「未赋值」跳过并回填 DB 默认值，
 	// 导致「已撤销」被写成「有效」。取值由调用方显式给出（见 PickupRepo.CreateAuthorization）。
-	Status    int8       `json:"status" gorm:"comment:1有效 0已撤销"`
-	CreatorID uint64     `json:"creator_id"`
-	AuthType          string     `json:"auth_type" gorm:"size:20;default:permanent;comment:permanent长期 temporary临时"`
+	Status    int8   `json:"status" gorm:"comment:1有效 0已撤销"`
+	CreatorID uint64 `json:"creator_id"`
+	AuthType  string `json:"auth_type" gorm:"size:20;default:permanent;comment:permanent长期 temporary临时"`
 	// 下列布尔字段同理：false 是有意义的取值，不得依赖 DB 默认值。
-	AllowPickup       bool       `json:"allow_pickup" gorm:"comment:允许接送（入离园）"`
-	AllowViewRecord   bool       `json:"allow_view_record" gorm:"comment:允许查看接送记录"`
-	AllowViewStatus   bool       `json:"allow_view_status" gorm:"comment:允许查看在校情况"`
-	AllowGrowthView   bool       `json:"allow_growth_view" gorm:"comment:允许查看成长记录"`
-	NotifyOnPickup    bool       `json:"notify_on_pickup" gorm:"comment:接送消息通知"`
+	AllowPickup     bool `json:"allow_pickup" gorm:"comment:允许接送（入离园）"`
+	AllowViewRecord bool `json:"allow_view_record" gorm:"comment:允许查看接送记录"`
+	AllowViewStatus bool `json:"allow_view_status" gorm:"comment:允许查看在校情况"`
+	AllowGrowthView bool `json:"allow_growth_view" gorm:"comment:允许查看成长记录"`
+	NotifyOnPickup  bool `json:"notify_on_pickup" gorm:"comment:接送消息通知"`
 	// ReviewStatus 园所审核：0 待审核 1 通过 2 拒绝
 	ReviewStatus int8       `json:"review_status" gorm:"default:0;index"`
 	AuditedAt    *time.Time `json:"audited_at,omitempty"`

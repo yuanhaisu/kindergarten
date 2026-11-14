@@ -803,13 +803,13 @@ func (r *PickupRepo) EverOverdueStudentIDs(
 
 // OverdueStudentRow 滞留学生行。
 type OverdueStudentRow struct {
-	StudentID   uint64 `gorm:"column:student_id"`
-	Name        string `gorm:"column:name"`
-	Avatar      string `gorm:"column:avatar"`
-	ClassID     uint64 `gorm:"column:class_id"`
-	ClassName   string `gorm:"column:class_name"`
-	ArriveTime  string `gorm:"column:arrive_time"`
-	Deadline    string `gorm:"column:pickup_deadline"`
+	StudentID  uint64 `gorm:"column:student_id"`
+	Name       string `gorm:"column:name"`
+	Avatar     string `gorm:"column:avatar"`
+	ClassID    uint64 `gorm:"column:class_id"`
+	ClassName  string `gorm:"column:class_name"`
+	ArriveTime string `gorm:"column:arrive_time"`
+	Deadline   string `gorm:"column:pickup_deadline"`
 }
 
 // ListOverdueStudents 查「已到园且超过班级放学时刻仍未接走」的学生。

@@ -289,4 +289,3 @@ func TestListClasses_Success(t *testing.T) {
 	assert.Equal(t, 20, pageSize)
 	assert.Equal(t, "小一班", list[0].Name)
 }
-

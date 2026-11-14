@@ -382,8 +382,8 @@ func (s *HealthCheckService) buildDetail(ctx context.Context, check *domain.Morn
 	return &HealthCheckDetail{
 		ID: check.ID, PickupRecordID: check.PickupRecordID,
 		StudentID: check.StudentID, StudentName: nr.StudentName, ClassName: nr.ClassName,
-		CheckStatus: int8(check.CheckStatus),
-		Temperature: check.Temperature,
+		CheckStatus:  int8(check.CheckStatus),
+		Temperature:  check.Temperature,
 		ThroatStatus: int8(check.ThroatStatus), HandStatus: int8(check.HandStatus),
 		MouthStatus: int8(check.MouthStatus), EyeStatus: int8(check.EyeStatus),
 		SkinStatus: int8(check.SkinStatus), OverallStatus: int8(check.OverallStatus),
