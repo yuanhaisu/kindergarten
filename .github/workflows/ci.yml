@@ -35,6 +35,8 @@ jobs:
           if [ -n "$files" ]; then
             node scripts/check-secrets.mjs --files $files
           fi
+      - name: Secret scan (full tree)
+        run: node scripts/check-secrets.mjs --all
       - name: Token lint (admin)
         run: node scripts/check-tokens.mjs admin
 
