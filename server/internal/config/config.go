@@ -9,20 +9,25 @@ import (
 )
 
 type Config struct {
-	App    AppConfig    `ini:"app"`
-	Log    LogConfig    `ini:"log"`
-	MySQL  MySQLConfig  `ini:"mysql"`
-	Redis  RedisConfig  `ini:"redis"`
-	JWT    JWTConfig    `ini:"jwt"`
-	WeChat WeChatConfig `ini:"wechat"`
-	Casbin CasbinConfig `ini:"casbin"`
-	OSS    OSSConfig    `ini:"oss"`
-	Face   FaceConfig   `ini:"face"`
+	App     AppConfig     `ini:"app"`
+	Log     LogConfig     `ini:"log"`
+	MySQL   MySQLConfig   `ini:"mysql"`
+	Redis   RedisConfig   `ini:"redis"`
+	JWT     JWTConfig     `ini:"jwt"`
+	WeChat  WeChatConfig  `ini:"wechat"`
+	Casbin  CasbinConfig  `ini:"casbin"`
+	OSS     OSSConfig     `ini:"oss"`
+	Face    FaceConfig    `ini:"face"`
+	Consent ConsentConfig `ini:"consent"`
 }
 
 type AppConfig struct {
 	HTTPAddr string `ini:"http_addr"`
 	GinMode  string `ini:"gin_mode"`
+	// CORSOrigins 是允许跨域访问的来源，逗号分隔。留空表示不向任何跨域来源
+	// 下发 CORS 头（管理端经 Nginx 同源访问，不依赖 CORS）。
+	// 生产由部署模板渲染为 https://admin.<domain>；本地开发可加 http://localhost:3000。
+	CORSOrigins string `ini:"cors_origins"`
 }
 
 type LogConfig struct {
@@ -114,8 +119,8 @@ type OSSConfig struct {
 // FaceConfig 人脸识别（腾讯云 IAI）配置。
 // 密钥只在本文件与环境变量中出现，绝不下发客户端（见 photo-tagging-face-recognition design D-密钥边界）。
 type FaceConfig struct {
-	Provider    string `ini:"provider"`     // mock | tencent
-	Enabled     bool   `ini:"enabled"`      // 全局开关（灰度时按园所白名单另控）
+	Provider    string `ini:"provider"` // mock | tencent
+	Enabled     bool   `ini:"enabled"`  // 全局开关（灰度时按园所白名单另控）
 	SecretID    string `ini:"secret_id"`
 	SecretKey   string `ini:"secret_key"`
 	Region      string `ini:"region"`       // 如 ap-beijing
@@ -126,6 +131,13 @@ type FaceConfig struct {
 	// GroupPhotoMinFaces 大合影阈值（D11）：照片检测到的人脸数 ≥ 此值时判为大合影——
 	// 不产逐人建议（10 张脸的人脸上限下注定不完整），改由老师一键「全班（当日到场）」。0 = 默认 6。
 	GroupPhotoMinFaces int `ini:"group_photo_min_faces"`
+}
+
+// ConsentConfig 隐私政策同意门禁。
+// Enforce 默认 false：先发布带同意页的三端版本，确认旧版小程序已退出后再开启，
+// 避免线上旧客户端全部收到 403（ADR-0009 向后兼容）。
+type ConsentConfig struct {
+	Enforce bool `ini:"enforce"`
 }
 
 func Load(path string) (*Config, error) {
@@ -194,6 +206,9 @@ func overrideFromEnv(c *Config) {
 	}
 	if v := os.Getenv("HTTP_ADDR"); v != "" {
 		c.App.HTTPAddr = v
+	}
+	if v := os.Getenv("CORS_ORIGINS"); v != "" {
+		c.App.CORSOrigins = v
 	}
 	if v := os.Getenv("JWT_ACCESS_TTL_MIN"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {

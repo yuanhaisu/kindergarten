@@ -28,7 +28,7 @@ func JSON(c *gin.Context, httpStatus int, env Envelope) {
 }
 
 func OK(c *gin.Context, data any) {
-	JSON(c, http.StatusOK, Envelope{Code: 0, Message: "success", Data: data})
+	JSON(c, http.StatusOK, Envelope{Code: 0, Message: "success", Data: signMedia(data)})
 }
 
 func OKList(c *gin.Context, list any, total int64, page, pageSize int) {
@@ -36,7 +36,7 @@ func OKList(c *gin.Context, list any, total int64, page, pageSize int) {
 }
 
 func Created(c *gin.Context, data any) {
-	JSON(c, http.StatusCreated, Envelope{Code: 0, Message: "success", Data: data})
+	JSON(c, http.StatusCreated, Envelope{Code: 0, Message: "success", Data: signMedia(data)})
 }
 
 func Err(c *gin.Context, httpStatus int, bizCode int, message string) {

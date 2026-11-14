@@ -1,8 +1,8 @@
 package app
 
 import (
-	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	mysqldrv "github.com/go-sql-driver/mysql"
@@ -14,10 +14,10 @@ import (
 	"kindergarten-server/internal/ai/face"
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
-	"kindergarten-server/internal/domain"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/service"
 	ossx "kindergarten-server/internal/storage/oss"
+	"kindergarten-server/pkg/response"
 )
 
 // dsnLocIssue 检查 DSN 的 loc 是否与进程时区同源（配置正确时返回空串）。
@@ -52,8 +52,7 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 	}
 
 	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
-		Logger:                                   logger.Default.LogMode(logger.Warn),
-		DisableForeignKeyConstraintWhenMigrating: true,
+		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
 		return nil, err
@@ -67,136 +66,8 @@ func ProvideGorm(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := db.AutoMigrate(
-		// 核心实体
-		&domain.User{},
-		&domain.Kindergarten{},
-		&domain.AcademicYear{},
-		&domain.KindergartenAppSetting{},
-		&domain.Class{},
-		&domain.UserRole{},
-		&domain.File{},
-		&domain.Message{},
-		// 老师端聚合消息的已读记录（B22）：与 messages.is_read / notice_read_logs 两套口径互不影响。
-		&domain.TeacherMessageRead{},
-
-		// 师生关系
-		&domain.ClassTeacher{},
-		&domain.TeacherProfile{},
-		&domain.ParentProfile{},
-		&domain.ParentSetting{},
-		&domain.Student{},
-		&domain.StudentParent{},
-
-		// 通知 / 请假 / 出勤 / 接送
-		&domain.Notice{},
-		&domain.NoticeAttachment{},
-		&domain.NoticeReadLog{},
-		&domain.NoticeTarget{},
-		&domain.NoticeTemplate{},
-		&domain.LeaveRequest{},
-		&domain.LeaveAttachment{},
-		&domain.Attendance{},
-		&domain.PickupRecord{},
-		&domain.PickupAuthorization{},
-		&domain.PickupQRCode{},
-		&domain.PickupDailyDesignation{},
-
-		// 成长记录 / 日历 / 任务 / 积分
-		&domain.GrowthDailyLog{},
-		&domain.GrowthLogStudent{},
-		&domain.GrowthMedia{},
-		&domain.GrowthMediaStudent{},
-		&domain.GrowthComment{},
-		&domain.GrowthLike{},
-		&domain.GrowthCommentLike{},
-		&domain.GrowthReport{},
-		&domain.GrowthReportDimension{},
-		&domain.StudentDailySummary{},
-		&domain.CalendarEvent{},
-		&domain.TimetableTemplate{},
-		&domain.TimetableOverride{},
-		&domain.ParentTask{},
-		&domain.TaskCheckIn{},
-		&domain.TaskResponse{},
-		&domain.TaskResponseSupplement{},
-		&domain.TaskResponseReaction{},
-		&domain.TaskCheckInState{},
-		&domain.ClassStarJar{},
-		&domain.TaskReadMark{},
-		&domain.PointAccount{},
-		&domain.PointTransaction{},
-		&domain.Achievement{},
-		&domain.StudentAchievement{},
-
-		// 班级相册（openspec class-album）
-		&domain.Album{},
-		&domain.AlbumPhoto{},
-		&domain.AlbumStudent{},
-		&domain.AlbumPhotoStudent{},
-
-		// 老师邀请
-		&domain.TeacherInvitation{},
-
-		// 公告 / 审核 / RBAC / 推送 / 文件 / 日志 / 反馈
-		&domain.Announcement{},
-		&domain.Feedback{},
-		&domain.AnnouncementAttachment{},
-		&domain.ContentAudit{},
-		&domain.AdminRole{},
-		&domain.AdminPermission{},
-		&domain.AdminRolePermission{},
-		&domain.UserAdminRole{},
-		&domain.WechatPushLog{},
-		&domain.FileRecord{},
-		&domain.OperationLog{},
-		&domain.ExportTask{},
-
-		// 人脸底库与识别队列
-		&domain.StudentFace{},
-		&domain.RecognitionJob{},
-
-		// 字典
-		&domain.SysDictType{},
-		&domain.SysDictItem{},
-
-		// 晨检
-		&domain.MorningHealthCheck{},
-		&domain.HealthCheckMedia{},
-
-		// 膳食 / 带量食谱（openspec: add-quantified-recipe）
-		// 全部是新表，AutoMigrate 只增不改；上线后仍需 dbcheck 核实列与索引。
-		&domain.MealConfig{},
-		&domain.MealConfigMeal{},
-		// 集体对象（openspec: add-diet-group-objects, design D1）：旧单例表保留但不再读写。
-		&domain.DietGroupObject{},
-		&domain.DietGroupObjectMeal{},
-		&domain.DietGroupObjectClass{},
-		&domain.FoodCategory{},
-		&domain.Food{},
-		&domain.Recipe{},
-		&domain.RecipeItem{},
-		&domain.MealPlan{},
-		&domain.MealPlanItem{},
-		&domain.TemplatePlan{},
-		&domain.TemplatePlanItem{},
-		&domain.DriAgeTarget{},
-	); err != nil {
-		return nil, err
-	}
-
-	// Seed default dictionary data (idempotent)
-	SeedDictsAfterMigration(db)
-
-	// 膳食平台数据：分类/DRIs → 按园复制 kg=0 食物 → 模板。
-	// 独立于字典种子，失败只记日志、不阻断启动（design D10）。
-	SeedDietAfterMigration(db)
-
-	// 幂等补齐园长角色（align-class-calendar 4.3）；失败不阻断启动，与字典播种同策略
-	if err := service.SeedPrincipalRolesForAll(context.Background(), db); err != nil {
-		println("principal role seeder: " + err.Error())
-	}
-
+	// schema 由 goose 迁移管理；应用启动不建表、不播种。
+	// 新环境初始化顺序：make migrate -> make seedbase。
 	return db, nil
 }
 
@@ -261,12 +132,27 @@ func ProvideFaceProvider(cfg *config.Config) (face.Provider, error) {
 }
 
 func ProvideOSSStorage(cfg *config.Config) (*ossx.Storage, error) {
-	return ossx.NewStorage(ossx.Config{
+	storage, err := ossx.NewStorage(ossx.Config{
 		Endpoint:        cfg.OSS.Endpoint,
 		AccessKeyID:     cfg.OSS.AccessKeyID,
 		AccessKeySecret: cfg.OSS.AccessKeySecret,
 		BucketName:      cfg.OSS.BucketName,
 	})
+	if err != nil {
+		return nil, err
+	}
+	// 媒体 URL 在响应序列化前统一签名；OSS 未配置时保持引用原样（本地开发）。
+	if storage.Configured() {
+		response.SetMediaSigner(func(ref string, thumb bool) string {
+			signed, signErr := storage.SignRef(ref, time.Hour, thumb)
+			if signErr != nil {
+				slog.Warn("sign media url failed", "err", signErr)
+				return ref
+			}
+			return signed
+		})
+	}
+	return storage, nil
 }
 
 // ProvideNoticeScheduler 定时通知发布 worker（openspec: notice-scheduled-publish）。
@@ -278,7 +164,22 @@ func ProvideNoticeScheduler(db *gorm.DB) *service.NoticeScheduler {
 // NewAppHandlerWithBackgroundWorkers 装配 AppHandler 时启动进程内后台 worker。
 // InjectEngine 的返回类型固定为 *gin.Engine，后台任务没有别的可挂点；做成显式依赖
 // （而不是手工往 wire_gen.go 里加一行）可以保证 make wire 重新生成后启动仍然存在。
-func NewAppHandlerWithBackgroundWorkers(h *handler.Handler, scheduler *service.NoticeScheduler) *AppHandler {
+func NewAppHandlerWithBackgroundWorkers(h *handler.Handler, scheduler *service.NoticeScheduler, cfg *config.Config, db *gorm.DB, rdb *redis.Client) *AppHandler {
 	scheduler.Start()
-	return NewAppHandler(h)
+	return NewAppHandler(h).
+		WithCORS(parseOrigins(cfg.App.CORSOrigins)).
+		WithInfra(db, rdb)
+}
+
+// parseOrigins 把逗号分隔的 CORS 来源配置拆成切片；空配置返回 nil，
+// 中间件据此不下发任何跨域响应头。
+func parseOrigins(raw string) []string {
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if origin := strings.TrimSpace(part); origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
 }
