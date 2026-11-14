@@ -134,11 +134,13 @@ draft --publish--> published --unpublish--> unpublished
 | `category_label` | string | 分类中文标签 |
 | `album_date` | string | 相册日期，`YYYY-MM-DD` |
 | `photo_count` | int | 照片数（写入时冗余，编辑时重算） |
-| `cover_url` | string | 封面，取第一张照片的 `file_url`（编辑时重算） |
-| `cover_urls` | string[] | 封面候选，最多 3 张，按 `sort_num` 升序；无照片时为空数组 `[]`（不是 `null`） |
+| `cover_url` | string | 封面，取第一张照片的 `file_url`（编辑时重算）；短期签名 URL，1 小时有效 |
+| `cover_urls` | string[] | 封面候选，最多 3 张，按 `sort_num` 升序；无照片时为空数组 `[]`（不是 `null`）；均为短期签名 URL |
 | `status` | string | `draft` / `published` / `unpublished` |
 | `published_at` | string \| null | 最近一次发布时间（RFC3339 UTC）；草稿/下架为 `null` |
 | `published_by` | uint64 | 最近一次发布人 user_id；未发布为 0 |
+
+> 媒体 URL 为短期签名地址（默认 1 小时），以 `file_id` / `id` 为媒体身份；语义见 `api-common.md` §2。
 
 ---
 

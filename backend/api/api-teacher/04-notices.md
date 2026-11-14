@@ -101,7 +101,7 @@
   "attachments": [
     {
       "id": 10,
-      "file_url": "https://cdn.example.com/uploads/notice/1.jpg",
+      "file_url": "https://cdn.example.com/uploads/notice/1.jpg", // 1 小时签名 URL
       "file_type": "image",
       "file_name": "活动照片1.jpg",
       "file_size": 512000
@@ -139,7 +139,7 @@
   "status": 2,                    // 可选：0 草稿 / 1 定时待发 / 2 立即发布；省略等价 2
   "attachments": [
     {
-      "file_url": "https://cdn.example.com/uploads/notice/1.jpg",
+      "file_url": "https://cdn.example.com/uploads/notice/1.jpg", // 1 小时签名 URL
       "file_type": "image",       // 仅 image；最多 9 张；单张 file_size ≤ 20971520
       "file_name": "活动照片1.jpg",
       "file_size": 512000
@@ -183,7 +183,7 @@
   "status": 2,                    // 可选：0 草稿 / 1 定时待发 / 2 发布；省略保持当前状态
   "attachments": [
     {
-      "file_url": "https://cdn.example.com/uploads/notice/1.jpg",
+      "file_url": "https://cdn.example.com/uploads/notice/1.jpg", // 1 小时签名 URL
       "file_type": "image",
       "file_name": "活动照片1.jpg",
       "file_size": 512000

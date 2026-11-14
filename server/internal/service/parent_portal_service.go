@@ -16,6 +16,7 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/storage/oss"
 	"kindergarten-server/pkg/log"
 )
 
@@ -740,7 +741,7 @@ func (s *ParentPortalService) CreateAuthorizedPerson(ctx context.Context, pc *Pa
 		Phone:           req.Phone,
 		Relation:        relation,
 		IDCard:          req.IDCardNumber,
-		Avatar:          req.Avatar,
+		Avatar:          oss.NormalizeRef(req.Avatar),
 		Status:          1, // 1=有效
 		CreatorID:       pc.UserID,
 		AuthType:        authType,
@@ -791,7 +792,7 @@ func (s *ParentPortalService) UpdateAuthorizedPerson(ctx context.Context, pc *Pa
 		updates["phone"] = req.Phone
 	}
 	if req.Avatar != "" {
-		updates["avatar"] = req.Avatar
+		updates["avatar"] = oss.NormalizeRef(req.Avatar)
 	}
 	if req.Relation != "" {
 		relation, ok := normalizePickupRelation(req.Relation)
@@ -1120,7 +1121,7 @@ func parentLeaveAttachments(inputs []ParentLeaveAttachmentInput) ([]domain.Leave
 	}
 	list := make([]domain.LeaveAttachment, 0, len(inputs))
 	for i, in := range inputs {
-		url := strings.TrimSpace(in.FileURL)
+		url := oss.NormalizeRef(strings.TrimSpace(in.FileURL))
 		fileType := strings.ToLower(strings.TrimSpace(in.FileType))
 		if url == "" || fileType != "image" {
 			return nil, ErrParentInvalidParams
@@ -4338,7 +4339,11 @@ func (s *ParentPortalService) UpdateStudentProfile(ctx context.Context, pc *Pare
 	}
 	updates := map[string]any{}
 	if v, ok := req["avatar"]; ok {
-		updates["avatar"] = v
+		if str, isString := v.(string); isString {
+			updates["avatar"] = oss.NormalizeRef(str)
+		} else {
+			updates["avatar"] = v
+		}
 	}
 	if v, ok := req["health_note"]; ok {
 		updates["health_note"] = v

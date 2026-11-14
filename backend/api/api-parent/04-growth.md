@@ -60,6 +60,8 @@
 }
 ```
 
+> `file_url` / `thumb_url` / `avatar` 为短期签名 URL（默认 1 小时），以 `id` / `file_id` 为媒体身份；语义见 `api-common.md` §2。
+
 **字段说明**
 
 | 字段 | 说明 |

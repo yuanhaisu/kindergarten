@@ -9,10 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/pkg/log"
 )
 
 type ExportService struct {
@@ -28,12 +30,73 @@ func NewExportService(
 	students *StudentService,
 	growth *GrowthService,
 ) *ExportService {
-	return &ExportService{
+	svc := &ExportService{
 		tasks:      tasks,
 		attendance: attendance,
 		students:   students,
 		growth:     growth,
 	}
+	svc.startCleanup()
+	return svc
+}
+
+var exportCleanupOnce sync.Once
+
+// startCleanup 启动时清理一次过期导出文件，之后每 24 小时清理一次。
+// 导出文件写在 os.TempDir()，没有清理会随发布次数持续堆积。
+func (s *ExportService) startCleanup() {
+	exportCleanupOnce.Do(func() {
+		cleanup := func() {
+			if err := cleanupExportFiles(exportFileTTL); err != nil {
+				log.L(context.Background()).Warn("export temp cleanup failed", "err", err)
+			}
+		}
+		cleanup()
+		go func() {
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for range ticker.C {
+				cleanup()
+			}
+		}()
+	})
+}
+
+func cleanupExportFiles(maxAge time.Duration) error {
+	dir, err := exportStorageDir()
+	if err != nil {
+		return err
+	}
+	return cleanupExportFilesIn(dir, maxAge)
+}
+
+// cleanupExportFilesIn 删除 dir 下修改时间早于 maxAge 的普通文件。
+// 单独拆出来便于用 t.TempDir() 测试，不碰真实导出目录。
+func cleanupExportFilesIn(dir string, maxAge time.Duration) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	cutoff := time.Now().Add(-maxAge)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			continue
+		}
+		if !info.ModTime().Before(cutoff) {
+			continue
+		}
+		if removeErr := os.Remove(filepath.Join(dir, entry.Name())); removeErr != nil && !os.IsNotExist(removeErr) {
+			return removeErr
+		}
+	}
+	return nil
 }
 
 func newExportPublicID() (string, error) {

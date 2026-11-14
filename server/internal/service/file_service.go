@@ -78,14 +78,9 @@ func (s *FileService) Upload(ctx context.Context, userID uint64, fh *multipart.F
 		return nil, fmt.Errorf("OSS_UPLOAD_FAILED")
 	}
 
-	fileURL := s.oss.PublicURL(objectKey)
-	thumbURL := ""
-	if fileType == "image" {
-		thumbURL = fileURL + "?x-oss-process=image/resize,w_200"
-	}
-	if fileType == "video" {
-		thumbURL = fileURL + "?x-oss-process=video/snapshot,t_1000,w_200,m_fast"
-	}
+	// 库里保存 object key（缩略图为 key + 处理参数）；响应层统一签成短期 URL。
+	fileURL := objectKey
+	thumbURL := ossx.ThumbRef(objectKey, fileType)
 
 	f := &domain.File{
 		UserID:   userID,
