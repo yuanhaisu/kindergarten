@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -12,6 +13,18 @@ import (
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 )
+
+// ErrOrderHasUnrefundedPayment 表示订单仍有未退款收款，资金未结清时不得取消。
+var ErrOrderHasUnrefundedPayment = errors.New("ORDER_HAS_UNREFUNDED_PAYMENT")
+
+// UnrefundedPaymentError 携带待退金额，供管理端直接展示给运营。
+type UnrefundedPaymentError struct {
+	AmountCents int64
+}
+
+func (e *UnrefundedPaymentError) Error() string { return ErrOrderHasUnrefundedPayment.Error() }
+
+func (e *UnrefundedPaymentError) Unwrap() error { return ErrOrderHasUnrefundedPayment }
 
 // OrderService 订单与收款。订单确认时冻结快照（ADR-0013），
 // 收款状态由金额推导（design D7）。
@@ -242,6 +255,15 @@ func (s *OrderService) Cancel(ctx context.Context, id uint64, reason, operator, 
 	}
 	now := time.Now()
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 取消前先看已收净额（正数收款 − 负数退款）。钱未退清就取消，
+		// 会留下「款收了、授权没了」的失配，因此必须拒绝并回传待退金额。
+		netPaid, err := s.payments.SumByOrderTx(ctx, tx, order.ID)
+		if err != nil {
+			return err
+		}
+		if netPaid > 0 {
+			return &UnrefundedPaymentError{AmountCents: netPaid}
+		}
 		if err := s.orders.UpdateTx(ctx, tx, order.ID, map[string]any{
 			"cancelled_at": now, "cancel_reason": reason, "status": domain.OrderStatusCancelled,
 		}); err != nil {

@@ -94,6 +94,7 @@ func TestBillingFlow_SnapshotPaymentsAndCancel(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, domain.OrderStatusPartial, res.OrderStatus)
 	assert.EqualValues(t, 50000, res.AmountPaidCents)
+	firstPaymentID := res.PaymentID
 
 	var commissions []domain.CommissionLedger
 	require.NoError(t, db.Where("order_id = ?", order.ID).Find(&commissions).Error)
@@ -118,6 +119,14 @@ func TestBillingFlow_SnapshotPaymentsAndCancel(t *testing.T) {
 	require.NoError(t, db.Where("order_id = ? AND reversal_of IS NOT NULL", order.ID).First(&reversal).Error)
 	assert.Equal(t, domain.CommissionStatusReversed, reversal.Status)
 	assert.EqualValues(t, -5000, reversal.AmountCents)
+
+	// 退清剩余收款后净已收归零，才允许取消（未退款收款会阻断取消）。
+	res, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{
+		AmountCents: -50000, RefundOfPaymentID: &firstPaymentID,
+	}, "s1b_ops", "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, domain.OrderStatusUnpaid, res.OrderStatus)
+	assert.EqualValues(t, 0, res.AmountPaidCents)
 
 	// 取消订单收回未到期授权
 	_, err = orderSvc.Cancel(ctx, order.ID, "暂停采购", "s1b_ops", "127.0.0.1")

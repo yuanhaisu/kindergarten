@@ -67,8 +67,14 @@ export function useHttp() {
           }
         }
         // 保留 HTTP 状态码：调用方需要区分「无权限（403）」与真实故障
-        const wrapped = new Error(String(msg)) as Error & { status?: number }
+        const wrapped = new Error(String(msg)) as Error & { status?: number; data?: unknown }
         wrapped.status = err.response?.status
+        // 保留业务错误里的 data（如取消订单被拒时的 unrefunded_amount_cents），
+        // 调用方据此展示结构化信息，而不是解析文案。
+        wrapped.data =
+          data && typeof data === 'object' && 'data' in data
+            ? (data as { data?: unknown }).data
+            : undefined
         return Promise.reject(wrapped)
       },
     )
