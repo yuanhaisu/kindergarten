@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"gorm.io/gorm"
 
@@ -16,6 +18,34 @@ import (
 
 // ErrOrderHasUnrefundedPayment 表示订单仍有未退款收款，资金未结清时不得取消。
 var ErrOrderHasUnrefundedPayment = errors.New("ORDER_HAS_UNREFUNDED_PAYMENT")
+
+// 收款写入的可识别错误。金额类错误携带结构化数据，管理端可直接展示。
+var (
+	ErrPaymentExceedsAmountDue = errors.New("PAYMENT_EXCEEDS_AMOUNT_DUE")
+	ErrRefundExceedsPaidAmount = errors.New("REFUND_EXCEEDS_PAID_AMOUNT")
+	ErrReceivedAtInFuture      = errors.New("RECEIVED_AT_IN_FUTURE")
+	ErrInvalidIdempotencyKey   = errors.New("INVALID_IDEMPOTENCY_KEY")
+)
+
+// PaymentExceedsAmountDueError 携带超出金额与剩余应收，供管理端与园所核对。
+type PaymentExceedsAmountDueError struct {
+	ExcessCents    int64
+	RemainingCents int64
+}
+
+func (e *PaymentExceedsAmountDueError) Error() string { return ErrPaymentExceedsAmountDue.Error() }
+
+func (e *PaymentExceedsAmountDueError) Unwrap() error { return ErrPaymentExceedsAmountDue }
+
+// RefundExceedsPaidAmountError 携带当前可退上限，避免运营反复试错。
+type RefundExceedsPaidAmountError struct {
+	AvailableCents int64
+	RequestedCents int64
+}
+
+func (e *RefundExceedsPaidAmountError) Error() string { return ErrRefundExceedsPaidAmount.Error() }
+
+func (e *RefundExceedsPaidAmountError) Unwrap() error { return ErrRefundExceedsPaidAmount }
 
 // UnrefundedPaymentError 携带待退金额，供管理端直接展示给运营。
 type UnrefundedPaymentError struct {
@@ -287,11 +317,15 @@ func (s *OrderService) Cancel(ctx context.Context, id uint64, reason, operator, 
 type PaymentRequest struct {
 	AmountCents int64  `json:"amount_cents" binding:"required"`
 	Method      string `json:"method"`
-	ReceivedAt  string `json:"received_at"`
-	VoucherURL  string `json:"voucher_url"`
-	Remark      string `json:"remark"`
+	// ReceivedAt 只作账务展示与对账，不得晚于当前时间；佣金结算时钟用服务端登记时间。
+	ReceivedAt string `json:"received_at"`
+	VoucherURL string `json:"voucher_url"`
+	Remark     string `json:"remark"`
 	// RefundOfPaymentID 负数收款必填，指明被退的原收款；佣金冲回据此精确定位。
 	RefundOfPaymentID *uint64 `json:"refund_of_payment_id"`
+	// IdempotencyKey 由管理端收款弹窗生成，同一订单下重复提交返回首次结果。
+	// 请求头 Idempotency-Key 优先于本字段；缺省时旧调用仍可写入，但没有幂等保护。
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 type PaymentResult struct {
@@ -308,9 +342,7 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 	if order == nil {
 		return nil, fmt.Errorf("ORDER_NOT_FOUND")
 	}
-	if order.CancelledAt != nil {
-		return nil, fmt.Errorf("ORDER_CANCELLED")
-	}
+	// 与数据库状态无关的输入校验先做，避免为必然失败的请求开启事务。
 	if req.AmountCents == 0 {
 		return nil, fmt.Errorf("INVALID_AMOUNT")
 	}
@@ -321,11 +353,21 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 	} else if req.RefundOfPaymentID != nil && *req.RefundOfPaymentID != 0 {
 		return nil, fmt.Errorf("REFUND_PAYMENT_NOT_ALLOWED")
 	}
-	receivedAt := time.Now()
+	idempotencyKey, err := normalizeIdempotencyKey(req.IdempotencyKey)
+	if err != nil {
+		return nil, err
+	}
+	// recordedAt 是本次登记的服务端时间：既用于拒绝未来 received_at，
+	// 也是佣金 30 天结算时钟的起点，回填历史到账日不会让佣金提前可结算。
+	recordedAt := time.Now()
+	receivedAt := recordedAt
 	if req.ReceivedAt != "" {
 		parsed, err := time.Parse(time.RFC3339, req.ReceivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("INVALID_RECEIVED_AT")
+		}
+		if parsed.After(recordedAt) {
+			return nil, ErrReceivedAtInFuture
 		}
 		receivedAt = parsed
 	}
@@ -335,39 +377,136 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 	}
 	payment := &domain.Payment{
 		OrderID: order.ID, KindergartenID: order.KindergartenID, AmountCents: req.AmountCents,
-		RefundOfPaymentID: req.RefundOfPaymentID,
-		Method:            method, ReceivedAt: receivedAt, VoucherURL: req.VoucherURL,
+		IdempotencyKey: idempotencyKey, RefundOfPaymentID: req.RefundOfPaymentID,
+		Method: method, ReceivedAt: receivedAt, VoucherURL: req.VoucherURL,
 		Remark: req.Remark, RecordedBy: operator,
 	}
 
-	var paid int64
+	var result *PaymentResult
+	created := false
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := s.validateRefundTarget(ctx, tx, order, payment); err != nil {
+		// 锁订单行，使同一订单的收款/退款串行化：金额上限与幂等判定
+		// 都建立在这道锁上，避免并发请求同时通过校验。
+		locked, err := s.orders.FindByIDForUpdate(ctx, tx, order.ID)
+		if err != nil {
+			return err
+		}
+		if locked == nil {
+			return fmt.Errorf("ORDER_NOT_FOUND")
+		}
+		// 幂等重放优先于状态检查：首次请求已落库时，重复请求原样返回首次结果。
+		if idempotencyKey != nil {
+			existing, err := s.payments.FindByOrderAndIdempotencyKeyTx(ctx, tx, order.ID, *idempotencyKey)
+			if err != nil {
+				return err
+			}
+			if existing != nil {
+				paid, err := s.payments.SumByOrderTx(ctx, tx, order.ID)
+				if err != nil {
+					return err
+				}
+				result = &PaymentResult{
+					PaymentID: existing.ID, OrderStatus: locked.Status, AmountPaidCents: paid,
+				}
+				return nil
+			}
+		}
+		if locked.CancelledAt != nil {
+			return fmt.Errorf("ORDER_CANCELLED")
+		}
+		if err := s.validateRefundTarget(ctx, tx, locked, payment); err != nil {
+			return err
+		}
+		netPaid, err := s.payments.SumByOrderTx(ctx, tx, order.ID)
+		if err != nil {
+			return err
+		}
+		if err := validatePaymentAmount(locked, netPaid, payment.AmountCents); err != nil {
 			return err
 		}
 		if err := s.payments.CreateTx(ctx, tx, payment); err != nil {
 			return err
 		}
+		created = true
 		sum, err := s.payments.SumByOrderTx(ctx, tx, order.ID)
 		if err != nil {
 			return err
 		}
-		paid = sum
-		status := deriveOrderStatus(order, sum, time.Now())
+		status := deriveOrderStatus(locked, sum, time.Now())
 		if err := s.orders.UpdateTx(ctx, tx, order.ID, map[string]any{"status": status}); err != nil {
 			return err
 		}
-		order.Status = status
-		return s.writeCommission(ctx, tx, order, payment)
+		locked.Status = status
+		if err := s.writeCommission(ctx, tx, locked, payment, recordedAt); err != nil {
+			return err
+		}
+		result = &PaymentResult{PaymentID: payment.ID, OrderStatus: status, AmountPaidCents: sum}
+		return nil
 	}); err != nil {
+		// 唯一约束兜底：并发重复请求中较晚提交的一笔在插入时撞键，
+		// 回读首次落库的收款并返回同一标识。
+		if idempotencyKey != nil && repository.IsDuplicateKey(err) {
+			existing, findErr := s.payments.FindByOrderAndIdempotencyKey(ctx, order.ID, *idempotencyKey)
+			if findErr != nil {
+				return nil, findErr
+			}
+			if existing != nil {
+				paid, sumErr := s.payments.SumByOrder(ctx, order.ID)
+				if sumErr != nil {
+					return nil, sumErr
+				}
+				status := order.Status
+				if fresh, err := s.orders.FindByID(ctx, order.ID); err == nil && fresh != nil {
+					status = fresh.Status
+				}
+				return &PaymentResult{PaymentID: existing.ID, OrderStatus: status, AmountPaidCents: paid}, nil
+			}
+		}
 		return nil, err
+	}
+	if !created {
+		return result, nil
 	}
 	s.invalidate(ctx, order.KindergartenID)
 	_ = s.logs.Create(ctx, &domain.PlatformOperationLog{
 		Operator: operator, Module: "payment", Action: "record", TargetType: "order", TargetID: order.ID,
 		Detail: fmt.Sprintf("%d 分 / %s", req.AmountCents, method), IP: ip,
 	})
-	return &PaymentResult{PaymentID: payment.ID, OrderStatus: order.Status, AmountPaidCents: paid}, nil
+	return result, nil
+}
+
+// normalizeIdempotencyKey 空串视为未提供（写 NULL，多个旧请求互不冲突）。
+func normalizeIdempotencyKey(raw string) (*string, error) {
+	key := strings.TrimSpace(raw)
+	if key == "" {
+		return nil, nil
+	}
+	if utf8.RuneCountInString(key) > 64 {
+		return nil, ErrInvalidIdempotencyKey
+	}
+	return &key, nil
+}
+
+// validatePaymentAmount 校验金额上限：正数收款不得超过应收，负数退款不得超过已收净额。
+func validatePaymentAmount(order *domain.Order, netPaid, amount int64) error {
+	if amount > 0 {
+		remaining := order.AmountDueCents - netPaid
+		if remaining < 0 {
+			remaining = 0
+		}
+		if amount > remaining {
+			return &PaymentExceedsAmountDueError{ExcessCents: amount - remaining, RemainingCents: remaining}
+		}
+		return nil
+	}
+	available := netPaid
+	if available < 0 {
+		available = 0
+	}
+	if -amount > available {
+		return &RefundExceedsPaidAmountError{AvailableCents: available, RequestedCents: -amount}
+	}
+	return nil
 }
 
 // validateRefundTarget 退款必须指向本订单内一笔可退的正数收款，且累计退款不得超过该笔收款。
@@ -398,11 +537,12 @@ func (s *OrderService) validateRefundTarget(ctx context.Context, tx *gorm.DB, or
 // writeCommission 正数收款生成原始佣金行；负数收款冲回被退收款对应的佣金（ADR-0016）。
 // 冲回金额累计进原始行的 ReversedAmountCents，净额归零后状态置为 reversed，
 // 不再被 PromoteEligible 推进为可结算。
-func (s *OrderService) writeCommission(ctx context.Context, tx *gorm.DB, order *domain.Order, p *domain.Payment) error {
+// recordedAt 是服务端登记时间：结算时钟以它为准，received_at 只作展示与对账。
+func (s *OrderService) writeCommission(ctx context.Context, tx *gorm.DB, order *domain.Order, p *domain.Payment, recordedAt time.Time) error {
 	if order.DistributorID == nil || order.CommissionRate <= 0 {
 		return nil
 	}
-	eligibleAt := p.ReceivedAt.AddDate(0, 0, commissionEligibleDays)
+	eligibleAt := recordedAt.AddDate(0, 0, commissionEligibleDays)
 	if p.AmountCents > 0 {
 		amount := p.AmountCents * int64(order.CommissionRate) / 100
 		status := deriveCommissionStatus(eligibleAt, time.Now())

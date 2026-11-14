@@ -228,8 +228,13 @@ export function cancelOrder(id: number, reason: string) {
   return usePlatformHttp().post(`/platform/orders/${id}/cancel`, { reason })
 }
 
-export function addPayment(id: number, body: Record<string, unknown>) {
-  return usePlatformHttp().post(`/platform/orders/${id}/payments`, body)
+// 幂等键随请求头提交：同一笔转账重复点击只落一条收款，重试返回首次结果。
+export function addPayment(id: number, body: Record<string, unknown>, idempotencyKey?: string) {
+  return usePlatformHttp().post(
+    `/platform/orders/${id}/payments`,
+    body,
+    idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined,
+  )
 }
 
 export function listDistributors(params: Record<string, unknown>) {
