@@ -16,6 +16,7 @@ import (
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/pagination"
+	"kindergarten-server/pkg/redact"
 )
 
 type AdminService struct {
@@ -276,7 +277,7 @@ func (s *AdminService) CreateAdmin(ctx context.Context, kindergartenID, operator
 		return nil, err
 	}
 	s.logOp(ctx, kindergartenID, operatorID, "admins", "create", "admin", newUserID,
-		fmt.Sprintf(`{"phone":%q,"nickname":%q,"role_id":%d}`, req.Phone, req.Nickname, roleID), ip, ua)
+		fmt.Sprintf(`{"phone":%q,"nickname":%q,"role_id":%d}`, redact.Phone(req.Phone), redact.Name(req.Nickname), roleID), ip, ua)
 	u2, err := s.users.FindByID(ctx, newUserID)
 	if err != nil || u2 == nil {
 		return &createAdminResp{ID: newUserID, CreatedAt: time.Now().UTC().Format(time.RFC3339)}, nil
@@ -347,8 +348,15 @@ func (s *AdminService) UpdateAdmin(ctx context.Context, kindergartenID, operator
 	if err != nil || u2 == nil {
 		return nil, fmt.Errorf("NOT_FOUND")
 	}
-	detail, _ := json.Marshal(req)
-	s.logOp(ctx, kindergartenID, operatorID, "admins", "update", "admin", targetUserID, string(detail), ip, ua)
+	detail := map[string]any{}
+	if req.Nickname != nil {
+		detail["nickname"] = redact.Name(*req.Nickname)
+	}
+	if req.RoleID != nil {
+		detail["role_id"] = *req.RoleID
+	}
+	detailBytes, _ := json.Marshal(detail)
+	s.logOp(ctx, kindergartenID, operatorID, "admins", "update", "admin", targetUserID, string(detailBytes), ip, ua)
 	return &updateAdminResp{ID: targetUserID, UpdatedAt: u2.UpdatedAt.UTC().Format(time.RFC3339)}, nil
 }
 

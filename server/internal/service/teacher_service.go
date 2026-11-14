@@ -18,6 +18,7 @@ import (
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
+	"kindergarten-server/pkg/redact"
 )
 
 type TeacherService struct {
@@ -403,7 +404,7 @@ func (s *TeacherService) CreateTeacher(
 		return nil, err
 	}
 	s.logOp(ctx, kindergartenID, adminUserID, "teachers", "create", "teacher", teacherID,
-		fmt.Sprintf(`{"phone":%q,"nickname":%q}`, req.Phone, req.Nickname), ip, ua)
+		fmt.Sprintf(`{"phone":%q,"nickname":%q}`, redact.Phone(req.Phone), redact.Name(req.Nickname)), ip, ua)
 
 	inviteCode := generateInviteCode()
 	inv := &domain.TeacherInvitation{
@@ -655,7 +656,7 @@ func (s *TeacherService) UpdateTeacher(
 		updated = u3.UpdatedAt.UTC().Format(time.RFC3339)
 	}
 	s.logOp(ctx, kindergartenID, adminUserID, "teachers", "update", "teacher", teacherUserID,
-		fmt.Sprintf(`{"nickname":%q}`, u.Nickname), ip, ua)
+		fmt.Sprintf(`{"nickname":%q}`, redact.Name(u.Nickname)), ip, ua)
 	return &updateTeacherResp{ID: teacherUserID, UpdatedAt: updated}, nil
 }
 

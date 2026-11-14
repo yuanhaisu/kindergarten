@@ -15,6 +15,7 @@ import (
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
+	"kindergarten-server/pkg/redact"
 )
 
 type StudentService struct {
@@ -563,7 +564,7 @@ func (s *StudentService) CreateStudent(
 		return nil, err
 	}
 	s.logOp(ctx, kindergartenID, userID, "students", "create", "student", st.ID,
-		fmt.Sprintf(`{"name":%q,"student_no":%q}`, st.Name, st.StudentNo), ip, ua)
+		fmt.Sprintf(`{"name":%q,"student_no":%q}`, redact.Name(st.Name), redact.StudentNo(st.StudentNo)), ip, ua)
 	return &createStudentResp{
 		ID:        st.ID,
 		StudentNo: st.StudentNo,
@@ -623,7 +624,7 @@ func (s *StudentService) UpdateStudent(
 		return nil, err
 	}
 	s.logOp(ctx, kindergartenID, userID, "students", "update", "student", st.ID,
-		fmt.Sprintf(`{"name":%q,"class_id":%d}`, st.Name, st.ClassID), ip, ua)
+		fmt.Sprintf(`{"name":%q,"class_id":%d}`, redact.Name(st.Name), st.ClassID), ip, ua)
 	return &updateStudentResp{
 		ID:        st.ID,
 		UpdatedAt: st.UpdatedAt.UTC().Format(time.RFC3339),
@@ -654,7 +655,7 @@ func (s *StudentService) DeleteStudent(ctx context.Context, kindergartenID, user
 		return err
 	}
 	s.logOp(ctx, kindergartenID, userID, "students", "delete", "student", studentID,
-		fmt.Sprintf(`{"name":%q,"student_no":%q}`, st.Name, st.StudentNo), ip, ua)
+		fmt.Sprintf(`{"name":%q,"student_no":%q}`, redact.Name(st.Name), redact.StudentNo(st.StudentNo)), ip, ua)
 	return nil
 }
 
