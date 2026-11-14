@@ -138,6 +138,29 @@ func (r *PaymentRepo) CreateTx(ctx context.Context, tx *gorm.DB, p *domain.Payme
 	return tx.WithContext(ctx).Create(p).Error
 }
 
+// FindByIDForUpdateTx 在事务内锁定并读取单笔收款。退款校验先锁被退收款行，
+// 并发退款会在此串行化，避免两笔退款同时通过可退金额校验。
+func (r *PaymentRepo) FindByIDForUpdateTx(ctx context.Context, tx *gorm.DB, id uint64) (*domain.Payment, error) {
+	var p domain.Payment
+	err := tx.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		First(&p, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &p, err
+}
+
+// SumRefundsOfTx 返回某笔原收款已被退款的金额（正数合计）。
+func (r *PaymentRepo) SumRefundsOfTx(ctx context.Context, tx *gorm.DB, paymentID uint64) (int64, error) {
+	var sum int64
+	err := tx.WithContext(ctx).Model(&domain.Payment{}).
+		Where("refund_of_payment_id = ?", paymentID).
+		Select("COALESCE(SUM(-amount_cents), 0)").
+		Scan(&sum).Error
+	return sum, err
+}
+
 func (r *PaymentRepo) ListByOrder(ctx context.Context, orderID uint64) ([]domain.Payment, error) {
 	var list []domain.Payment
 	err := r.db.WithContext(ctx).Where("order_id = ?", orderID).Order("id ASC").Find(&list).Error
