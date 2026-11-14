@@ -88,7 +88,7 @@
         <p class="mb-3 text-text-muted">
           将此路径发送给老师，老师通过微信小程序打开即可自动绑定账号
         </p>
-        <img
+        <img @error="onMediaError"
           v-if="qrImageUrl"
           :src="qrImageUrl"
           alt="邀请小程序码"
@@ -128,7 +128,7 @@
         </el-button>
       </div>
       <div v-else style="text-align: center">
-        <img
+        <img @error="onMediaError"
           v-if="manageQrImageUrl"
           :src="manageQrImageUrl"
           alt="邀请小程序码"
@@ -177,6 +177,8 @@ import {
   updateTeacher,
   updateTeacherStatus,
 } from '~/api/teachers'
+import { useMediaRefresh } from '~/composables/useMediaRefresh'
+const onMediaError = useMediaRefresh(() => (load()))
 
 const { page, pageSize, total, resetPage } = usePagination()
 const loading = ref(false)
