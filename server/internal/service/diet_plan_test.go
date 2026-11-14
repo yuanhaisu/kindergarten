@@ -30,7 +30,6 @@ const (
 
 var (
 	dietPlanWeek1Start = time.Date(2026, 10, 26, 0, 0, 0, 0, time.UTC) // 周一
-	dietPlanWeek2Start = time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC)  // 下周一
 )
 
 func openDietPlanServiceTestDB(t *testing.T) *gorm.DB {

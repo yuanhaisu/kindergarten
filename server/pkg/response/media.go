@@ -65,7 +65,7 @@ func signValue(v reflect.Value, signer func(string, bool) string, depth int) ref
 		out.Set(signed)
 		return out
 
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if v.IsNil() {
 			return v
 		}
@@ -153,7 +153,7 @@ func signedMediaValue(v reflect.Value, signer func(string, bool) string, thumb b
 	switch v.Kind() {
 	case reflect.String:
 		return reflect.ValueOf(signer(v.String(), thumb)).Convert(v.Type()), true
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if v.IsNil() || v.Type().Elem().Kind() != reflect.String {
 			return v, false
 		}
