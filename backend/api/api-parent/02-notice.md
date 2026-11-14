@@ -59,7 +59,7 @@
   "attachments": [
     {
       "id": 10,
-      "file_url": "https://cdn.example.com/uploads/notice/1.jpg",
+      "file_url": "https://cdn.example.com/uploads/notice/1.jpg", // 1 小时签名 URL
       "file_type": "image",
       "file_name": "活动照片1.jpg",
       "file_size": 512000

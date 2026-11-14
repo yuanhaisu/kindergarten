@@ -125,10 +125,11 @@
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `photos[].id` | uint64 | 照片 ID |
-| `photos[].file_url` | string | 原图 URL（逐张保存用） |
-| `photos[].thumb_url` | string | 缩略图 URL，可能为空串 |
+| `photos[].file_url` | string | 原图 URL（短期签名，1 小时有效；逐张保存用） |
+| `photos[].thumb_url` | string | 缩略图 URL（短期签名），可能为空串 |
 | `photos[].width` / `height` | int | 原始像素尺寸，0 表示未知 |
 
+> 媒体 URL 以 `id` 为媒体身份，过期后重新拉取；语义见 `api-common.md` §2。
 > 详情不返回 `file_id`、`students` 等老师端字段。
 
 ---

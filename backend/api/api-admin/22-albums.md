@@ -116,7 +116,7 @@
     {
       "id": 101,
       "file_id": 5001,
-      "file_url": "https://cdn.example.com/album/1.jpg",
+      "file_url": "https://cdn.example.com/album/1.jpg", // 1 小时签名 URL
       "thumb_url": "https://cdn.example.com/album/1_thumb.jpg",
       "width": 1200,
       "height": 900,

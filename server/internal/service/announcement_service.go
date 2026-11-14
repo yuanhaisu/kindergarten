@@ -11,11 +11,12 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/storage/oss"
 	"kindergarten-server/pkg/pagination"
 )
 
 type AnnouncementService struct {
-	ann  *repository.AnnouncementRepo
+	ann   *repository.AnnouncementRepo
 	oplog *repository.OperationLogRepo
 }
 
@@ -176,18 +177,18 @@ func (s *AnnouncementService) GetAnnouncementDetail(ctx context.Context, kinderg
 		avatar = a.Creator.Avatar
 	}
 	out := map[string]interface{}{
-		"id":            a.ID,
-		"title":         a.Title,
-		"content":       a.Content,
-		"cover_url":     a.CoverURL,
-		"is_important":  a.IsImportant,
-		"is_top":        a.IsTop,
-		"target_roles":  parseTargetRolesJSON(a.TargetRoles),
-		"status":        int(a.Status),
-		"attachments":   attachments,
-		"view_count":    a.ViewCount,
-		"creator":       map[string]interface{}{"id": a.CreatorID, "nickname": nick, "avatar": avatar},
-		"created_at":    a.CreatedAt.UTC().Format(time.RFC3339),
+		"id":           a.ID,
+		"title":        a.Title,
+		"content":      a.Content,
+		"cover_url":    a.CoverURL,
+		"is_important": a.IsImportant,
+		"is_top":       a.IsTop,
+		"target_roles": parseTargetRolesJSON(a.TargetRoles),
+		"status":       int(a.Status),
+		"attachments":  attachments,
+		"view_count":   a.ViewCount,
+		"creator":      map[string]interface{}{"id": a.CreatorID, "nickname": nick, "avatar": avatar},
+		"created_at":   a.CreatedAt.UTC().Format(time.RFC3339),
 	}
 	if a.PublishedAt != nil {
 		out["published_at"] = a.PublishedAt.UTC().Format(time.RFC3339)
@@ -197,14 +198,14 @@ func (s *AnnouncementService) GetAnnouncementDetail(ctx context.Context, kinderg
 
 // CreateAnnouncementReq POST /admin/announcements
 type CreateAnnouncementReq struct {
-	Title         string                      `json:"title" binding:"required"`
-	Content       string                      `json:"content"`
-	CoverURL      string                      `json:"cover_url"`
-	IsImportant   bool                        `json:"is_important"`
-	IsTop         bool                        `json:"is_top"`
-	TargetRoles   []string                    `json:"target_roles"`
-	ScheduledAt   *string                     `json:"scheduled_at"`
-	Attachments   []AnnouncementAttachmentIn  `json:"attachments"`
+	Title       string                     `json:"title" binding:"required"`
+	Content     string                     `json:"content"`
+	CoverURL    string                     `json:"cover_url"`
+	IsImportant bool                       `json:"is_important"`
+	IsTop       bool                       `json:"is_top"`
+	TargetRoles []string                   `json:"target_roles"`
+	ScheduledAt *string                    `json:"scheduled_at"`
+	Attachments []AnnouncementAttachmentIn `json:"attachments"`
 }
 
 type AnnouncementAttachmentIn struct {
@@ -260,7 +261,7 @@ func (s *AnnouncementService) CreateAnnouncement(
 		CreatorID:      adminUserID,
 		Title:          title,
 		Content:        req.Content,
-		CoverURL:       strings.TrimSpace(req.CoverURL),
+		CoverURL:       oss.NormalizeRef(strings.TrimSpace(req.CoverURL)),
 		IsImportant:    req.IsImportant,
 		IsTop:          req.IsTop,
 		TargetRoles:    string(rolesJSON),
@@ -270,7 +271,7 @@ func (s *AnnouncementService) CreateAnnouncement(
 	}
 	var attRows []domain.AnnouncementAttachment
 	for i, x := range req.Attachments {
-		u := strings.TrimSpace(x.FileURL)
+		u := oss.NormalizeRef(strings.TrimSpace(x.FileURL))
 		if u == "" {
 			continue
 		}
@@ -307,14 +308,14 @@ func (s *AnnouncementService) CreateAnnouncement(
 
 // UpdateAnnouncementReq PUT /admin/announcements/:id
 type UpdateAnnouncementReq struct {
-	Title        *string                     `json:"title"`
-	Content      *string                     `json:"content"`
-	CoverURL     *string                     `json:"cover_url"`
-	IsImportant  *bool                       `json:"is_important"`
-	IsTop        *bool                       `json:"is_top"`
-	TargetRoles  *[]string                   `json:"target_roles"`
-	ScheduledAt  *string                     `json:"scheduled_at"`
-	Attachments  *[]AnnouncementAttachmentIn `json:"attachments"`
+	Title       *string                     `json:"title"`
+	Content     *string                     `json:"content"`
+	CoverURL    *string                     `json:"cover_url"`
+	IsImportant *bool                       `json:"is_important"`
+	IsTop       *bool                       `json:"is_top"`
+	TargetRoles *[]string                   `json:"target_roles"`
+	ScheduledAt *string                     `json:"scheduled_at"`
+	Attachments *[]AnnouncementAttachmentIn `json:"attachments"`
 }
 
 func (s *AnnouncementService) UpdateAnnouncement(
@@ -345,7 +346,7 @@ func (s *AnnouncementService) UpdateAnnouncement(
 		patch["content"] = *req.Content
 	}
 	if req.CoverURL != nil {
-		patch["cover_url"] = strings.TrimSpace(*req.CoverURL)
+		patch["cover_url"] = oss.NormalizeRef(strings.TrimSpace(*req.CoverURL))
 	}
 	if req.IsImportant != nil {
 		patch["is_important"] = *req.IsImportant
@@ -388,7 +389,7 @@ func (s *AnnouncementService) UpdateAnnouncement(
 	if req.Attachments != nil {
 		var attRows []domain.AnnouncementAttachment
 		for i, x := range *req.Attachments {
-			u := strings.TrimSpace(x.FileURL)
+			u := oss.NormalizeRef(strings.TrimSpace(x.FileURL))
 			if u == "" {
 				continue
 			}

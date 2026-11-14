@@ -443,7 +443,7 @@
       "date": "2026-03-19",
       "content": "今天和爸爸一起读了《小王子》",
       "media_file_id": 1001,
-      "media_url": "https://cdn.example.com/task/checkin/1.jpg",
+      "media_url": "https://cdn.example.com/task/checkin/1.jpg", // 1 小时签名 URL
       "is_public_requested": false,
       "public_scope_confirmed": false,
       "public_approved_at": null,

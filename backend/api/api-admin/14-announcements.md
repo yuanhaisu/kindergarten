@@ -22,7 +22,7 @@
       "id": 1,
       "title": "春季学期家长开放日通知",
       "content_preview": "各位家长您好，我园定于4月5日举办春季学期家长开放日...",
-      "cover_url": "https://cdn.example.com/banner/1.jpg",
+      "cover_url": "https://cdn.example.com/banner/1.jpg", // 1 小时签名 URL
       "is_important": true,
       "is_top": true,
       "target_roles": ["parent", "teacher"],
@@ -52,14 +52,14 @@
   "id": 1,
   "title": "春季学期家长开放日通知",
   "content": "各位家长您好，我园定于4月5日举办春季学期家长开放日活动...",
-  "cover_url": "https://cdn.example.com/banner/1.jpg",
+  "cover_url": "https://cdn.example.com/banner/1.jpg", // 1 小时签名 URL
   "is_important": true,
   "is_top": true,
   "target_roles": ["parent", "teacher"],
   "status": 2,
   "published_at": "2026-03-18T10:00:00Z",
   "attachments": [
-    { "file_url": "https://cdn.example.com/files/schedule.pdf", "file_name": "活动日程.pdf", "file_size": 256000 }
+    { "file_url": "https://cdn.example.com/files/schedule.pdf", "file_name": "活动日程.pdf", "file_size": 256000 } // URL 为 1 小时签名地址
   ],
   "view_count": 350,
   "creator": { "id": 100, "nickname": "张园长", "avatar": "..." },
@@ -78,13 +78,13 @@
 {
   "title": "春季学期家长开放日通知",
   "content": "各位家长您好，我园定于4月5日举办春季学期家长开放日活动...",
-  "cover_url": "https://cdn.example.com/banner/1.jpg",
+  "cover_url": "https://cdn.example.com/banner/1.jpg", // 1 小时签名 URL
   "is_important": true,
   "is_top": true,
   "target_roles": ["parent", "teacher"],
   "scheduled_at": null,
   "attachments": [
-    { "file_url": "https://cdn.example.com/files/schedule.pdf", "file_name": "活动日程.pdf", "file_size": 256000 }
+    { "file_url": "https://cdn.example.com/files/schedule.pdf", "file_name": "活动日程.pdf", "file_size": 256000 } // URL 为 1 小时签名地址
   ]
 }
 

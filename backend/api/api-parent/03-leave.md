@@ -70,7 +70,7 @@
   "attachments": [
     {
       "id": 1,
-      "file_url": "https://cdn.example.com/uploads/leave/diagnosis.jpg",
+      "file_url": "https://cdn.example.com/uploads/leave/diagnosis.jpg", // 1 小时签名 URL
       "file_type": "image",
       "file_name": "diagnosis.jpg",
       "file_size": 512000
@@ -112,7 +112,7 @@
   "end_date": "2026-03-21",
   "attachments": [
     {
-      "file_url": "https://cdn.example.com/uploads/leave/diagnosis.jpg",
+      "file_url": "https://cdn.example.com/uploads/leave/diagnosis.jpg", // 1 小时签名 URL
       "file_type": "image",
       "file_name": "diagnosis.jpg",
       "file_size": 512000

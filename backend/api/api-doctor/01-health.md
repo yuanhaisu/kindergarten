@@ -69,7 +69,7 @@
   "media": [
     {
       "id": 11,
-      "file_url": "https://cdn.example.com/health/throat.jpg",
+      "file_url": "https://cdn.example.com/health/throat.jpg", // 1 小时签名 URL
       "thumb_url": "https://cdn.example.com/health/throat.jpg?x-oss-process=image/resize,w_200",
       "category": "throat"
     }
