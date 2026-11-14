@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一个圆，边上开一道口，口里含着一颗点：开口在下方，点被两个圆头端托住 -->
+  <path d="M 28.89 91.11 A 44 44 0 1 1 91.11 91.11"
+        fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="60" cy="88" r="8" fill="#000"/>
+</svg>

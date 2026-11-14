@@ -1,0 +1,1092 @@
+{
+  "version": "0.1.0",
+  "name": "logo-chooser axes",
+  "principle": "发散不是随机采样，是沿正交轴取值。每个取值必须能指认三个真实作品；指认不出来的取值不许进表。",
+  "library": {
+    "root": "C:/Users/33139/.claude/plugins/cache/logo-design-skill/logo-design/1.4.5/skills/logo-design/assets/library/svg",
+    "catalog": "C:/Users/33139/.claude/plugins/cache/logo-design-skill/logo-design/1.4.5/skills/logo-design/assets/library/catalog.json",
+    "search_script": "C:/Users/33139/.claude/plugins/cache/logo-design-skill/logo-design/1.4.5/skills/logo-design/scripts/search_library.py",
+    "skew_warning": "库中 1432 个样本以科技/软件为主。exemplars 只用于学形体构造，不用于对行业气质，更不许照着做。",
+    "filter_note": "filter 是谓词描述，不是可直接执行的参数。常规取值用 search_library.py --<key> <value> 复现；含 has_subject / technique_not 的谓词需直接读 catalog.json 过滤。"
+  },
+  "stations": [
+    {
+      "id": 0,
+      "name": "名片",
+      "input": "品牌名 + 一句话业务 + 使用者",
+      "diverge": 0,
+      "pick": null,
+      "rule": "一句话必须含「给谁」和「解决什么」。出现形容词就退回重写。"
+    },
+    {
+      "id": 1,
+      "name": "气质",
+      "axes": [
+        "mood",
+        "type_style"
+      ],
+      "diverge": 8,
+      "pick": [
+        2,
+        3
+      ],
+      "rule": "至少选 2 张，且必须来自 2 个不同 mood 分支——防止「看起来专业」一把梭。"
+    },
+    {
+      "id": 2,
+      "name": "意象",
+      "axes": [],
+      "method": "word_to_object",
+      "diverge": "5 词 × 3 具象 = 15 句",
+      "pick": 3,
+      "rule": "每句 ≤20 字，必须落到具体物件或动作。「成长 / 未来 / 关怀 / 生态」这类抽象词出现即作废。"
+    },
+    {
+      "id": 3,
+      "name": "类型",
+      "axes": [
+        "mark_type"
+      ],
+      "diverge": "3 句 × 5 类型 = 15 张试穿图",
+      "pick": [
+        2,
+        3
+      ],
+      "rule": "每张卡必须标「16px 存活率」与「文字依赖度」。不合用的类型先砍，不要凑满 5 种。"
+    },
+    {
+      "id": 4,
+      "name": "构造",
+      "axes": [
+        "literalness",
+        "geometry",
+        "figure_ground",
+        "symmetry",
+        "container"
+      ],
+      "diverge": "贪心窄化：每轮只动 1–2 条轴",
+      "pick": 3,
+      "rule": "不做全笛卡尔积。上一轮没定过的轴优先动；已定死的轴不再变，除非用户主动回退。"
+    },
+    {
+      "id": 5,
+      "name": "验收",
+      "axes": [],
+      "method": "audit",
+      "diverge": 0,
+      "pick": null,
+      "rule": "全自动。人工只读报告，不参与挑选。未过项必须修，不许「差不多就行」。"
+    }
+  ],
+  "axes": [
+    {
+      "id": "mark_type",
+      "zh": "标志类型",
+      "station": 3,
+      "question": "这个标志更像哪一种？",
+      "blind_spot": "类型本身不决定好坏，只决定成本：字标要字形有个性，徽章要小尺寸能活。",
+      "values": [
+        {
+          "id": "wordmark",
+          "zh": "字标",
+          "plain": "没有图形，名字本身就是标志",
+          "filter": {
+            "type": "wordmark"
+          },
+          "exemplars": [
+            "wire.svg",
+            "adyen.svg",
+            "go.svg"
+          ],
+          "risk": "名字太长、字形太普通时，等于没设计"
+        },
+        {
+          "id": "lettermark",
+          "zh": "字母组合",
+          "plain": "把名字缩写成几个字母，再排它",
+          "filter": {
+            "type": "lettermark"
+          },
+          "exemplars": [
+            "openframeworks.svg",
+            "ibm.svg",
+            "tensorflow.svg"
+          ],
+          "risk": "缩写没人认识时，等于凭空造一个词"
+        },
+        {
+          "id": "letterform",
+          "zh": "字母变形",
+          "plain": "拿名字的一个字母，改成图形",
+          "filter": {
+            "type": "letterform"
+          },
+          "exemplars": [
+            "patreon.svg",
+            "pagekit.svg",
+            "precursor.svg"
+          ],
+          "risk": "字母改过头就不像那个字母了"
+        },
+        {
+          "id": "pictorial",
+          "zh": "具象图形",
+          "plain": "画的是一个具体的物件",
+          "filter": {
+            "type": "pictorial"
+          },
+          "exemplars": [
+            "ello.svg",
+            "snowpack.svg",
+            "houndci.svg"
+          ],
+          "risk": "最容易变成通用图标，谁都能用"
+        },
+        {
+          "id": "abstract",
+          "zh": "抽象图形",
+          "plain": "不画具体东西，只画一个形",
+          "filter": {
+            "type": "abstract"
+          },
+          "exemplars": [
+            "vercel-icon.svg",
+            "framer.svg",
+            "tidal-icon.svg"
+          ],
+          "risk": "独特但需要长期教育才能被记住含义"
+        },
+        {
+          "id": "mascot",
+          "zh": "角色",
+          "plain": "有一个能动的形象",
+          "filter": {
+            "type": "mascot"
+          },
+          "exemplars": [
+            "discord-icon.svg",
+            "github-icon.svg",
+            "esdoc.svg"
+          ],
+          "risk": "亲和力最强，小尺寸和单色最差"
+        },
+        {
+          "id": "emblem",
+          "zh": "徽章",
+          "plain": "图形装在徽章、圆环或盾牌里",
+          "filter": {
+            "type": "emblem"
+          },
+          "exemplars": [
+            "markdown.svg",
+            "mozilla.svg",
+            "jupyter.svg"
+          ],
+          "risk": "机构感强，但 16px 基本报废"
+        },
+        {
+          "id": "combination",
+          "zh": "组合标",
+          "plain": "图形 + 文字，可拆可合",
+          "filter": {
+            "type": "combination"
+          },
+          "exemplars": [
+            "aws.svg",
+            "astro.svg",
+            "gnu-net.svg"
+          ],
+          "risk": "最稳妥，但元素最多，最容易做散"
+        }
+      ]
+    },
+    {
+      "id": "mood",
+      "zh": "气质",
+      "station": 1,
+      "question": "你希望别人第一眼觉得它是什么性格？",
+      "blind_spot": "气质必须以「同名试排」呈现，不能只给形容词——否则用户是在选词，不是在选感觉。",
+      "values": [
+        {
+          "id": "warm",
+          "zh": "温暖",
+          "plain": "像被照顾、被欢迎",
+          "filter": {
+            "mood": "warm"
+          },
+          "exemplars": [
+            "airbnb.svg",
+            "gitlab.svg",
+            "doctrine.svg"
+          ],
+          "risk": "过暖会显得不专业"
+        },
+        {
+          "id": "playful",
+          "zh": "活泼",
+          "plain": "有点调皮、有动感",
+          "filter": {
+            "mood": "playful"
+          },
+          "exemplars": [
+            "twitch.svg",
+            "spidermonkey-icon.svg",
+            "nodemon.svg"
+          ],
+          "risk": "对 B 端采购者可能显得不严肃"
+        },
+        {
+          "id": "clean",
+          "zh": "干净",
+          "plain": "少即是多，留白多",
+          "filter": {
+            "mood": "clean"
+          },
+          "exemplars": [
+            "rocky-linux-icon.svg",
+            "zorin-os.svg",
+            "vue.svg"
+          ],
+          "risk": "过度干净会变成没有记忆点"
+        },
+        {
+          "id": "solid",
+          "zh": "稳重",
+          "plain": "站得住，值得托付",
+          "filter": {
+            "mood": "solid"
+          },
+          "exemplars": [
+            "manjaro.svg",
+            "webpack.svg",
+            "ethereum.svg"
+          ],
+          "risk": "容易撞上同类机构的通用长相"
+        },
+        {
+          "id": "technical",
+          "zh": "科技",
+          "plain": "有秩序、像仪器",
+          "filter": {
+            "mood": "technical"
+          },
+          "exemplars": [
+            "circleci.svg",
+            "codesandbox.svg",
+            "git-icon.svg"
+          ],
+          "risk": "对幼教场景可能太冷"
+        },
+        {
+          "id": "bold",
+          "zh": "鲜明",
+          "plain": "一眼看见，存在感强",
+          "filter": {
+            "mood": "bold"
+          },
+          "exemplars": [
+            "patreon.svg",
+            "pagekit.svg",
+            "precursor.svg"
+          ],
+          "risk": "强对比在小尺寸容易糊成一团"
+        },
+        {
+          "id": "calm",
+          "zh": "沉静",
+          "plain": "安静、耐看、不吵",
+          "filter": {
+            "mood": "calm"
+          },
+          "exemplars": [
+            "houndci.svg",
+            "buffer.svg",
+            "dreamhost.svg"
+          ],
+          "risk": "安静过头会被忽略"
+        },
+        {
+          "id": "fresh",
+          "zh": "鲜活",
+          "plain": "轻、透、有生气",
+          "filter": {
+            "mood": "fresh"
+          },
+          "exemplars": [
+            "cucumber.svg",
+            "tailwindcss-icon.svg",
+            "imba-icon.svg"
+          ],
+          "risk": "容易显得年轻但不可靠"
+        }
+      ]
+    },
+    {
+      "id": "type_style",
+      "zh": "字型",
+      "station": 1,
+      "question": "名字排出来，该是什么手感？",
+      "blind_spot": "只对含文字的方向有效。纯图形标可以跳过。",
+      "values": [
+        {
+          "id": "geometric-sans",
+          "zh": "几何无衬线",
+          "plain": "圆规和直尺画出来的字",
+          "filter": {
+            "type_style": "geometric-sans"
+          },
+          "exemplars": [
+            "nextjs.svg",
+            "stripe.svg",
+            "sparkpost.svg"
+          ],
+          "risk": "最安全，也最容易没有个性"
+        },
+        {
+          "id": "grotesque-sans",
+          "zh": "中性无衬线",
+          "plain": "不夸张、不装饰的现代字体",
+          "filter": {
+            "type_style": "grotesque-sans"
+          },
+          "exemplars": [
+            "active-campaign.svg",
+            "apple-pay.svg",
+            "dashlane.svg"
+          ],
+          "risk": "中性到近乎没有表情"
+        },
+        {
+          "id": "humanist-sans",
+          "zh": "人文无衬线",
+          "plain": "笔画有轻微粗细变化，像手写的影子",
+          "filter": {
+            "type_style": "humanist-sans"
+          },
+          "exemplars": [
+            "fastly.svg",
+            "microsoft.svg",
+            "hubspot.svg"
+          ],
+          "risk": "温和但不够锐利"
+        },
+        {
+          "id": "rounded-sans",
+          "zh": "圆润",
+          "plain": "所有转角都是圆的",
+          "filter": {
+            "type_style": "rounded-sans"
+          },
+          "exemplars": [
+            "rocket-chat.svg",
+            "opencart.svg",
+            "pnpm.svg"
+          ],
+          "risk": "亲和力强，专业感弱"
+        },
+        {
+          "id": "serif",
+          "zh": "衬线",
+          "plain": "笔画末端有小脚",
+          "filter": {
+            "type_style": "serif"
+          },
+          "exemplars": [
+            "koa.svg",
+            "lerna.svg",
+            "medium.svg"
+          ],
+          "risk": "小尺寸下衬线会糊"
+        },
+        {
+          "id": "slab",
+          "zh": "粗衬线",
+          "plain": "方头方脑的衬线，印刷感强",
+          "filter": {
+            "type_style": "slab"
+          },
+          "exemplars": [
+            "ibm.svg",
+            "mozilla.svg",
+            "cloud9.svg"
+          ],
+          "risk": "重量大，容易压过图形"
+        },
+        {
+          "id": "script",
+          "zh": "手写",
+          "plain": "像写出来的，不像排出来的",
+          "filter": {
+            "type_style": "script"
+          },
+          "exemplars": [
+            "chargebee.svg",
+            "chevereto.svg",
+            "delighted.svg"
+          ],
+          "risk": "辨识度最不稳定"
+        },
+        {
+          "id": "display-custom",
+          "zh": "定制字形",
+          "plain": "为这个名字专门改过的字",
+          "filter": {
+            "type_style": "display-custom"
+          },
+          "exemplars": [
+            "wire.svg",
+            "adyen.svg",
+            "go.svg"
+          ],
+          "risk": "成本最高，也最可能独有"
+        }
+      ]
+    },
+    {
+      "id": "literalness",
+      "zh": "具象度",
+      "station": 4,
+      "question": "它离「画的那个东西」有多远？",
+      "blind_spot": "同一句意象可以落在四档中的任何一档，具象度不是风格，是翻译深度。",
+      "values": [
+        {
+          "id": "literal",
+          "zh": "实物",
+          "plain": "画的就是那个东西",
+          "filter": {
+            "type": "pictorial",
+            "has_subject": true
+          },
+          "exemplars": [
+            "ello.svg",
+            "snowpack.svg",
+            "houndci.svg"
+          ],
+          "risk": "一眼读懂，但容易像图标"
+        },
+        {
+          "id": "metaphor",
+          "zh": "隐喻",
+          "plain": "形是 A，意思是 B",
+          "filter": {
+            "technique": "hidden-meaning"
+          },
+          "exemplars": [
+            "rocky-linux-icon.svg",
+            "gnome-icon.svg",
+            "bluetooth.svg"
+          ],
+          "risk": "需要一句解释；解释不清就变成故弄玄虚"
+        },
+        {
+          "id": "abstract",
+          "zh": "抽象",
+          "plain": "只剩几何关系，不再指任何具体物",
+          "filter": {
+            "type": "abstract"
+          },
+          "exemplars": [
+            "tidal-icon.svg",
+            "auth0-icon.svg",
+            "prisma.svg"
+          ],
+          "risk": "最耐看，也最需要时间建立含义"
+        },
+        {
+          "id": "letter",
+          "zh": "字母",
+          "plain": "从名字的字母出发，不画物件",
+          "filter": {
+            "type": "letterform,lettermark"
+          },
+          "exemplars": [
+            "patreon.svg",
+            "pagekit.svg",
+            "precursor.svg"
+          ],
+          "risk": "非拉丁名的品牌用不了这一档"
+        }
+      ]
+    },
+    {
+      "id": "geometry",
+      "zh": "几何构造",
+      "station": 4,
+      "question": "主形是用什么骨架搭的？",
+      "blind_spot": "几何决定「克制还是活泼」，比颜色更早决定气质。",
+      "values": [
+        {
+          "id": "circle",
+          "zh": "圆",
+          "plain": "以圆为骨架",
+          "filter": {
+            "geometry": "circle"
+          },
+          "exemplars": [
+            "patreon.svg",
+            "rocky-linux-icon.svg",
+            "ello.svg"
+          ],
+          "risk": "最安全，也最容易撞"
+        },
+        {
+          "id": "organic",
+          "zh": "有机",
+          "plain": "像自然长出来的，没有直线",
+          "filter": {
+            "geometry": "organic"
+          },
+          "exemplars": [
+            "apple.svg",
+            "gnome-icon.svg",
+            "twitter.svg"
+          ],
+          "risk": "曲线质量要求最高，手一抖就垮"
+        },
+        {
+          "id": "square",
+          "zh": "方",
+          "plain": "以直角和方块为骨架",
+          "filter": {
+            "geometry": "square"
+          },
+          "exemplars": [
+            "framer.svg",
+            "pagekit.svg",
+            "manjaro.svg"
+          ],
+          "risk": "硬，但对儿童向品牌偏冷"
+        },
+        {
+          "id": "freeform",
+          "zh": "自由形",
+          "plain": "不讲基本几何，只讲轮廓",
+          "filter": {
+            "geometry": "freeform"
+          },
+          "exemplars": [
+            "twitch.svg",
+            "botanalytics.svg",
+            "buck.svg"
+          ],
+          "risk": "独特性最高，可复制性最低"
+        },
+        {
+          "id": "triangle",
+          "zh": "三角",
+          "plain": "以三角或尖角为骨架",
+          "filter": {
+            "geometry": "triangle"
+          },
+          "exemplars": [
+            "vercel-icon.svg",
+            "framer.svg",
+            "snowpack.svg"
+          ],
+          "risk": "方向感强，但尖角在小尺寸会扎眼"
+        },
+        {
+          "id": "hexagon",
+          "zh": "六边",
+          "plain": "六边形或蜂巢结构",
+          "filter": {
+            "geometry": "hexagon"
+          },
+          "exemplars": [
+            "zorin-os.svg",
+            "codesandbox.svg",
+            "graphql.svg"
+          ],
+          "risk": "科技感强，行业指向太明显"
+        },
+        {
+          "id": "rounded-square",
+          "zh": "圆角方",
+          "plain": "方中有圆",
+          "filter": {
+            "geometry": "rounded-square"
+          },
+          "exemplars": [
+            "git-icon.svg",
+            "rescript-icon.svg",
+            "markdown.svg"
+          ],
+          "risk": "最百搭，也最没有态度"
+        },
+        {
+          "id": "grid-modular",
+          "zh": "网格",
+          "plain": "由重复的模块拼成",
+          "filter": {
+            "geometry": "grid-modular"
+          },
+          "exemplars": [
+            "framer.svg",
+            "tidal-icon.svg",
+            "rabbitmq-icon.svg"
+          ],
+          "risk": "模块数一多，16px 必糊"
+        }
+      ]
+    },
+    {
+      "id": "figure_ground",
+      "zh": "正负形",
+      "station": 4,
+      "question": "墨和空，谁是主体？",
+      "blind_spot": "这是「线 vs 面」的决定轴。养成星球的 A1 与 P2b 只在这一条轴上不同。",
+      "values": [
+        {
+          "id": "solid",
+          "zh": "实心",
+          "plain": "一整块墨，最直接的剪影",
+          "filter": {
+            "technique_not": [
+              "negative-space",
+              "line-monoline",
+              "overlap-transparency"
+            ]
+          },
+          "exemplars": [
+            "vercel-icon.svg",
+            "medium-icon.svg",
+            "apple.svg"
+          ],
+          "risk": "小尺寸最稳，但少了精巧感"
+        },
+        {
+          "id": "negative",
+          "zh": "负空间",
+          "plain": "从实心里挖掉一块，空出来的形状才是意思",
+          "filter": {
+            "technique": "negative-space"
+          },
+          "exemplars": [
+            "patreon.svg",
+            "framer.svg",
+            "pagekit.svg"
+          ],
+          "risk": "挖空的缺口必须够大，否则 16px 会闭合"
+        },
+        {
+          "id": "line",
+          "zh": "单线",
+          "plain": "用一条等宽的线画完，不填面",
+          "filter": {
+            "technique": "line-monoline"
+          },
+          "exemplars": [
+            "pagekit.svg",
+            "bluetooth.svg",
+            "mailgun-icon.svg"
+          ],
+          "risk": "线宽固定，缩小时最先断"
+        },
+        {
+          "id": "overlap",
+          "zh": "交叠",
+          "plain": "两个形状叠在一起，靠叠压产生新形状",
+          "filter": {
+            "technique": "overlap-transparency"
+          },
+          "exemplars": [
+            "squarespace.svg",
+            "dreamhost.svg",
+            "lit-icon.svg"
+          ],
+          "risk": "叠压区在单色下会消失"
+        }
+      ]
+    },
+    {
+      "id": "symmetry",
+      "zh": "对称",
+      "station": 4,
+      "question": "它稳，还是它动？",
+      "blind_spot": "对称只影响「稳定感」，不影响力的独特程度。",
+      "values": [
+        {
+          "id": "mirror",
+          "zh": "镜像",
+          "plain": "左右（或上下）对折能重合",
+          "filter": {
+            "technique": "mirror-symmetry"
+          },
+          "exemplars": [
+            "zendesk-icon.svg",
+            "auth0-icon.svg",
+            "discord-icon.svg"
+          ],
+          "risk": "最稳，也最容易无聊"
+        },
+        {
+          "id": "radial",
+          "zh": "放射",
+          "plain": "绕中心转一圈，形状重复",
+          "filter": {
+            "technique": "radial-symmetry"
+          },
+          "exemplars": [
+            "unity.svg",
+            "graphql.svg",
+            "openai-icon.svg"
+          ],
+          "risk": "放射结构缩小时容易糊成一朵花"
+        },
+        {
+          "id": "asymmetric",
+          "zh": "非对称",
+          "plain": "故意不平衡，靠重心吊住",
+          "filter": {
+            "technique_not": [
+              "mirror-symmetry",
+              "radial-symmetry"
+            ]
+          },
+          "exemplars": [
+            "apple.svg",
+            "botanalytics.svg",
+            "buffer.svg"
+          ],
+          "risk": "最生动，也最容易看着「歪了」"
+        }
+      ]
+    },
+    {
+      "id": "container",
+      "zh": "容器",
+      "station": 4,
+      "question": "图形要不要装进一个形状里？",
+      "blind_spot": "容器是「机构感」和「产品感」的分水岭，且对 16px 影响最大。",
+      "values": [
+        {
+          "id": "none",
+          "zh": "无容器",
+          "plain": "图形自己就是边界",
+          "filter": {
+            "technique_not": [
+              "containment"
+            ]
+          },
+          "exemplars": [
+            "medium-icon.svg",
+            "apple.svg",
+            "mailgun-icon.svg"
+          ],
+          "risk": "自由，但在头像位里缺少稳定外框"
+        },
+        {
+          "id": "circle",
+          "zh": "圆形",
+          "plain": "图形装在一个圆里",
+          "filter": {
+            "technique": "containment",
+            "geometry": "circle"
+          },
+          "exemplars": [
+            "ello.svg",
+            "couchbase.svg",
+            "pinterest.svg"
+          ],
+          "risk": "最通用的 App 图标形，辨识度靠内部图形"
+        },
+        {
+          "id": "rounded-square",
+          "zh": "圆角方",
+          "plain": "图形装在一个圆角方形里",
+          "filter": {
+            "technique": "containment",
+            "geometry": "rounded-square"
+          },
+          "exemplars": [
+            "git-icon.svg",
+            "rescript-icon.svg",
+            "markdown.svg"
+          ],
+          "risk": "内部可用面积最小"
+        },
+        {
+          "id": "emblem",
+          "zh": "徽章环",
+          "plain": "外圈有环、边、盾牌",
+          "filter": {
+            "type": "emblem"
+          },
+          "exemplars": [
+            "markdown.svg",
+            "mozilla.svg",
+            "jupyter.svg"
+          ],
+          "risk": "16px 基本报废，必须另做简化版"
+        }
+      ]
+    }
+  ],
+  "zh": {
+    "note": "库内 1432 个样本没有一个中文字标：站 1 的「同名试排」必须用本机中文字体渲染，不能直接套拉丁 type_style。",
+    "strategy": "中文只有黑体 / 宋体两个可用字族，靠 wght 轴与字距拉开区分；圆润与手写需要另装 OFL 字体，站 1 只能近似或不出现。",
+    "fonts": [
+      {
+        "id": "noto-sans-sc",
+        "zh": "思源黑体",
+        "file": "C:/Windows/Fonts/NotoSansSC-VF.ttf",
+        "wght": [
+          100,
+          900
+        ],
+        "license": "SIL OFL 1.1"
+      },
+      {
+        "id": "noto-serif-sc",
+        "zh": "思源宋体",
+        "file": "C:/Windows/Fonts/NotoSerifSC-VF.ttf",
+        "wght": [
+          200,
+          900
+        ],
+        "license": "SIL OFL 1.1"
+      }
+    ],
+    "type_style_map": {
+      "geometric-sans": {
+        "font": "noto-sans-sc",
+        "wght": 500,
+        "tracking": 0.02
+      },
+      "grotesque-sans": {
+        "font": "noto-sans-sc",
+        "wght": 400,
+        "tracking": 0
+      },
+      "humanist-sans": {
+        "font": "noto-sans-sc",
+        "wght": 450,
+        "tracking": 0.01
+      },
+      "rounded-sans": {
+        "font": "noto-sans-sc",
+        "wght": 500,
+        "warn": "需转角圆化，站 1 只能近似"
+      },
+      "serif": {
+        "font": "noto-serif-sc",
+        "wght": 400,
+        "tracking": 0
+      },
+      "slab": {
+        "font": "noto-serif-sc",
+        "wght": 700,
+        "warn": "中文无粗衬线，用重宋体近似"
+      },
+      "script": null,
+      "display-custom": null
+    },
+    "unavailable": [
+      "script：本机无 OFL 手写中文字体（霞鹜文楷 / 得意黑可补）",
+      "display-custom：属于站 4 构造，不进站 1"
+    ],
+    "weight_tiers": [
+      {
+        "id": "light",
+        "zh": "轻",
+        "max": 449
+      },
+      {
+        "id": "medium",
+        "zh": "中",
+        "min": 450,
+        "max": 650
+      },
+      {
+        "id": "heavy",
+        "zh": "重",
+        "min": 651
+      }
+    ],
+    "station1_cards": [
+      {
+        "mood": "warm",
+        "type_style": "geometric-sans",
+        "zh": "温暖",
+        "meaning": "像被照顾、被欢迎",
+        "font": "noto-sans-sc",
+        "wght": 500,
+        "tracking": 0.02
+      },
+      {
+        "mood": "solid",
+        "zh": "稳重",
+        "meaning": "站得住，值得托付",
+        "font": "noto-sans-sc",
+        "wght": 700,
+        "tracking": 0.0
+      },
+      {
+        "mood": "clean",
+        "zh": "干净",
+        "meaning": "少即是多，留白多",
+        "font": "noto-sans-sc",
+        "wght": 400,
+        "tracking": 0.05
+      },
+      {
+        "mood": "calm",
+        "type_style": "serif",
+        "zh": "沉静",
+        "meaning": "安静、耐看、不吵",
+        "font": "noto-serif-sc",
+        "wght": 400,
+        "tracking": 0.02
+      },
+      {
+        "mood": "bold",
+        "zh": "鲜明",
+        "meaning": "一眼看见，存在感强",
+        "font": "noto-sans-sc",
+        "wght": 900,
+        "tracking": -0.01
+      },
+      {
+        "mood": "fresh",
+        "zh": "鲜活",
+        "meaning": "轻、透、有生气",
+        "font": "noto-sans-sc",
+        "wght": 300,
+        "tracking": 0.03
+      },
+      {
+        "mood": "playful",
+        "zh": "活泼",
+        "meaning": "有点调皮、有动感",
+        "font": "noto-sans-sc",
+        "wght": 600,
+        "tracking": 0.03,
+        "baseline_jitter": 0.04
+      },
+      {
+        "mood": "technical",
+        "zh": "科技",
+        "meaning": "有秩序、像仪器",
+        "font": "noto-sans-sc",
+        "wght": 400,
+        "tracking": -0.03
+      }
+    ]
+  },
+  "station3": {
+    "note": "站 3 只放 3 类进场：只用名字 / 只用图形 / 图形+名字。这是真实世界里标志的实际分法。其余取值要么不属于锁图类型（abstract 是构造轴，属站 4），要么中文用不上（lettermark / letterform），要么 16px 报废（mascot / emblem）——都在 cut 里申报了理由。",
+    "row_note": "字标不随想法变化——它只画名字。所以它在页面上是**一张全局卡**，不是每行一格；否则三行字标逐像素相同，用户点哪行纯属偶然，格子编号里的行号是假的。",
+    "survive_note": "16px 存活率由 scripts/survive.py 逐格实测，不再是按类型写死的常量。含文字的格子不测（16px 上文字本来就不可读），标「不适用」。",
+    "survive_rule": "把符号缩到 16×16，与 96×96 二值参考比：连通块变少 / 洞变多或变少 / 墨低于 6% —— 任一项不过记一次，全过=高，一项=中，两项以上=低。",
+    "cut_note": "裁掉的取值必须在这里申报理由，否则 coverage_check 会判为未申报缺失。没有理由的裁剪等于把正确答案挡在门外。",
+    "cut": {
+      "lettermark": "中文没有缩写共识（YCXQ 没人认得）；拉丁品牌应加回",
+      "letterform": "需要字母做骨架，中文用不上；拉丁品牌应加回",
+      "abstract": "抽象是构造轴（literalness），不是锁图类型。放进站 3 会和符号列重复——它属于站 4",
+      "mascot": "16px 基本报废，除非用户明确要角色",
+      "emblem": "16px 基本报废，除非用户明确要机构感"
+    },
+    "types": [
+      {
+        "id": "wordmark",
+        "zh": "字标",
+        "plain": "只用名字",
+        "symbol": false,
+        "text": true
+      },
+      {
+        "id": "pictorial",
+        "zh": "符号",
+        "plain": "只用图形",
+        "symbol": true,
+        "text": false
+      },
+      {
+        "id": "combination",
+        "zh": "组合",
+        "plain": "符号 + 名字",
+        "symbol": true,
+        "text": true
+      }
+    ]
+  },
+  "path_cut": {
+    "note": "全路径覆盖（scripts/coverage_path.py）里允许裁掉的取值。与 station3.cut 一起合并使用——mark_type 的裁剪写在站 3 那边，不重复维护。没有理由的缺失会被判为失败。",
+    "type_style": {
+      "grotesque-sans": "中文只有思源黑/宋两族可商用。grotesque 只能用思源黑 400 近似，而 clean（400 / 字距 +5%）与 technical（400 / 字距 -3%）已经占住 400 档，再摆一张只差字距的卡，等于让用户在一个不存在的选项里做决定",
+      "humanist-sans": "450 落在 warm（500）与 clean（400）之间，同字族、同字重区间，摆出来与已有卡片无法区分",
+      "rounded-sans": "需要转角圆化的中文字体，本机没有；用思源黑近似就是普通无衬线，等于没摆这一档",
+      "slab": "中文没有粗衬线。用重宋体近似后与 calm（宋体 400）只差字重——那是 weight 轴，不是 type_style 轴",
+      "script": "本机无 OFL 手写中文字体（霞鹜文楷 / 得意黑可补）。补上之后应删掉这一条",
+      "display-custom": "属于站 4 的构造改装（改写笔画、联结），不是站 1 可选的字型"
+    },
+    "literalness": {
+      "letter": "要从名字的字母出发造形。中文名「养成星球」没有可用的拉丁缩写共识，与 mark_type.lettermark 是同一条理由；拉丁品牌应加回"
+    },
+    "geometry": {
+      "triangle": "三角形的内宽随高度线性收窄。装得下与别格同尺寸的芽的三角形，芽必须缩到 0.5 倍——那一格就同时变了「外形」和「内容大小」两个变量，比较不再干净。换成不带内部元素的三角标仍然可用，那属于 logo-design 的另一条路"
+    },
+    "figure_ground": {
+      "solid": "实心盘会把芽整个吞掉——芽与盘同色，只剩一截茎露在盘下。要让芽可见，盘必须缩到放不下芽，或芽移到盘外，两种情况都超出画布或变成另一个图形。这条与「盘里长芽」这个构成本身不兼容",
+      "overlap": "叠压需要两个分量相当的形。这里盘占 86 半径、芽只有它一半，叠起来只剩两种结果：白缝把叶子切断（读作图层没接上），或等宽白描边把盘底挤满（读作画坏了）。两种都做过，都不成立"
+    }
+  },
+  "divergence_rules": {
+    "note": "来自 trials/2026-11-07-nurture-planet.md 的实测结论。缺了这些约束，A1 不会出现在选项里。",
+    "rules": [
+      {
+        "id": "coverage",
+        "rule": "每轮参与发散的每条轴，每个取值至少出现 1 次。",
+        "enforced_by": "scripts/coverage_check.py；typeset.py / matrix.py / narrow.py 出图前调用 require()",
+        "evidence": "A1 是 figure_ground=line。只出「看起来完整」的实心版时，line 会被默认跳过，A1 因而永远不会被选中。"
+      },
+      {
+        "id": "narrowing",
+        "rule": "每轮只动 1–2 条尚未锁定的轴，不做全笛卡尔积。",
+        "enforced_by": "scripts/construct.py → validate_round()：vary 超过 2 条轴直接退出；每个稿子的坐标必须落在本轮声明的取值里；变化轴的每个取值至少出现一次",
+        "evidence": "5 条轴全排列是数千个组合，卡片网格会退化成噪音。"
+      },
+      {
+        "id": "meaning",
+        "rule": "每张卡必须带一句「它意味着什么」，不能只给形。",
+        "enforced_by": "draft.py 校验 shape/relation/join 非空；typeset.py 直接读 meaning 字段，缺失即报错",
+        "evidence": "真实回退发生在两轮构造之后：用户看到形才意识到自己要的是「被养育」不是「破壳」。"
+      },
+      {
+        "id": "rollback",
+        "rule": "回退是一等操作：回到指定版本并锁住已定轴，不重新生成、不追问。",
+        "enforced_by": "scripts/narrow.py --restore N → picks.restore()；恢复前核对 based_on，上游变了就拒绝",
+        "evidence": "A1 是在 P2b 完成尖角钝化之后才被回退选中的。恢复一条按旧上游得出的结论会自相矛盾，所以必须先核对上游版本。"
+      }
+    ]
+  },
+  "relations": {
+    "note": "轴表只描述单个取值，测不到元素之间的关系。以下不变量必须单独校验，否则会生成「坐标对、看着不对」的稿子。校验阈值来自养成星球的实际返工数据。",
+    "checks": [
+      {
+        "id": "anchor",
+        "zh": "锚定",
+        "rule": "附属元素必须落在主元素的某个几何关系上（半径、切线、角平分线），不能悬空摆放。",
+        "evidence": "A1 的点落在开口的角平分线 225° 上，中心距 67.9，略小于弧内径 73——它被两个圆头端「托住」。偏离这条平分线，立刻读成绕行的卫星。"
+      },
+      {
+        "id": "junction",
+        "zh": "过渡",
+        "rule": "两个形状相接处的夹角必须 ≥ 45°。小于 30° 会被读成刀口或撕裂。",
+        "evidence": "P2b 咬口初版两圆近乎相切，尖角 13°；改为 d=86 / 咬口 r=42 后钝化到 59°。"
+      },
+      {
+        "id": "hierarchy",
+        "zh": "层级",
+        "rule": "主元素面积应 ≥ 次元素的 3 倍；小于 2 倍时，两者会读成「并列」。",
+        "evidence": "P2b 世界 r=100 对 孩子 r=26，面积比约 14.8:1；孩子放大到 r=60 时比值降到 2.8:1，主次立刻消失。"
+      },
+      {
+        "id": "breath",
+        "zh": "呼吸",
+        "rule": "两个分离元素的最小间隙 ≥ 主元素短边的 1/12；小于则会被读成「粘住了」。",
+        "evidence": "A1 的点到弧端净间隙 31（端点距 60 − 圆帽 11 − 点半径 18），是弧线宽 22 的 1.4 倍，远超阈值。"
+      }
+    ]
+  }
+}

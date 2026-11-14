@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一个圆，底部开一道拱形的口：缺口在正下方，拱顶朝内 -->
+  <path d="M 39 96 A 45 45 0 1 1 81 96 L 81 74 A 21 21 0 0 0 39 74 Z"
+        fill="none" stroke="#000" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

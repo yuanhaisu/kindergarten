@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>养成星球 · container=circle</title>
+  <!-- container=circle · 同一个标志装进不同的框；框是框，不是参与主次的元素（analyze 用 framed） -->
+  <circle cx="128" cy="120" r="108" fill="none" stroke="#000" stroke-width="8"/>
+  <g transform="translate(128 120) scale(0.68) translate(-128 -120)"><path d="M 86 197 A 86 86 0 1 1 170 197" fill="none" stroke="#000" stroke-width="24" stroke-linecap="round"/><g transform="translate(128 197) scale(0.9) translate(-128 -197)"><path d="M 128 217.2 L 128 153.4" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round"/><path d="M 128 157.8 C 130.2 135.8 148.9 116 181.9 107.2 C 181.9 135.8 158.8 155.6 128 157.8 Z" fill="#000"/><path d="M 128 153.4 C 125.8 135.8 111.5 120.4 82.9 111.6 C 82.9 135.8 101.6 151.2 128 153.4 Z" fill="#000"/></g></g>
+</svg>

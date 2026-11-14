@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 圆 + 底部开口，点在开口角平分线（中轴）上 -->
+  <path d="M 28.89 91.11 A 44 44 0 1 1 91.11 91.11" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="60" cy="88" r="8" fill="#000"/>
+</svg>

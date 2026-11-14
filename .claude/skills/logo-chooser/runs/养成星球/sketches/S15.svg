@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一条线从左下起，一路向上，中途绕成小圈：一笔连续，圈不封闭 -->
+  <path d="M 18 102 L 46 74 C 30 58 46 38 62 46 C 78 54 66 74 50 66"
+        fill="none" stroke="#000" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 50 66 L 102 18" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+</svg>

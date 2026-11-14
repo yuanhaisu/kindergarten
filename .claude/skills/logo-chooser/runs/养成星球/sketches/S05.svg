@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一个实心圆，外面套一圈等宽的环：同心，之间留等宽空隙 -->
+  <circle cx="60" cy="60" r="27" fill="#000"/>
+  <circle cx="60" cy="60" r="45" fill="none" stroke="#000" stroke-width="10"/>
+</svg>

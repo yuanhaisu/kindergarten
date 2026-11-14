@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一条竖线，右侧三道等距短线 -->
+  <path d="M 44 16 L 44 104" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 44 38 L 88 38 M 44 60 L 88 60 M 44 82 L 88 82"
+        fill="none" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+</svg>

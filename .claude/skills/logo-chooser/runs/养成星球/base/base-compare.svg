@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="810" viewBox="0 0 1600 810"><defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="1600" height="810" fill="#f7f7f4"/><text x="60" y="78" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#161616">Logo concepts</text><text x="60" y="116" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20" fill="#6b6b6b">Concepts for review — pick a direction (or tell me what you like in each).</text><rect x="60" y="150" width="474.667" height="600" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="90" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <!-- v1 窄缝连通：环上 24° 的缝，茎从左切面长出来，右切面留一条看得见的缝 -->
+  <path d="M 110.1 202.1 A 86 86 0 1 1 145.9 202.1"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 111 204 L 127 157" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 127 161 C 129 141 146 123 176 115 C 176 141 155 159 127 161 Z" fill="#000"/>
+  <path d="M 127 157 C 125 141 112 127 86 119 C 86 141 103 155 127 157 Z" fill="#000"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="90" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <!-- v1 窄缝连通：环上 24° 的缝，茎从左切面长出来，右切面留一条看得见的缝 -->
+  <path d="M 110.1 202.1 A 86 86 0 1 1 145.9 202.1"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 111 204 L 127 157" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 127 161 C 129 141 146 123 176 115 C 176 141 155 159 127 161 Z" fill="#000"/>
+  <path d="M 127 157 C 125 141 112 127 86 119 C 86 141 103 155 127 157 Z" fill="#000"/>
+</svg>
+</g><text x="122" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="180" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <!-- v1 窄缝连通：环上 24° 的缝，茎从左切面长出来，右切面留一条看得见的缝 -->
+  <path d="M 110.1 202.1 A 86 86 0 1 1 145.9 202.1"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 111 204 L 127 157" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 127 161 C 129 141 146 123 176 115 C 176 141 155 159 127 161 Z" fill="#000"/>
+  <path d="M 127 157 C 125 141 112 127 86 119 C 86 141 103 155 127 157 Z" fill="#000"/>
+</svg>
+</g><text x="196" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="238" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <!-- v1 窄缝连通：环上 24° 的缝，茎从左切面长出来，右切面留一条看得见的缝 -->
+  <path d="M 110.1 202.1 A 86 86 0 1 1 145.9 202.1"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 111 204 L 127 157" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 127 161 C 129 141 146 123 176 115 C 176 141 155 159 127 161 Z" fill="#000"/>
+  <path d="M 127 157 C 125 141 112 127 86 119 C 86 141 103 155 127 157 Z" fill="#000"/>
+</svg>
+</g><text x="246" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="90.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">A · v1 窄缝连通</text><text x="90.0" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">缝 24°，茎从左切面长出</text><rect x="562.667" y="150" width="474.667" height="600" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="592.667" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <!-- v2 宽口独立：40° 的开口，芽整株悬在开口里，不碰环 -->
+  <path d="M 98.6 198.8 A 86 86 0 1 1 157.4 198.8"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 128 196 L 128 152" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 156 C 130 136 147 118 177 110 C 177 136 156 154 128 156 Z" fill="#000"/>
+  <path d="M 128 152 C 126 136 113 122 87 114 C 87 136 104 150 128 152 Z" fill="#000"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="592.667" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <!-- v2 宽口独立：40° 的开口，芽整株悬在开口里，不碰环 -->
+  <path d="M 98.6 198.8 A 86 86 0 1 1 157.4 198.8"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 128 196 L 128 152" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 156 C 130 136 147 118 177 110 C 177 136 156 154 128 156 Z" fill="#000"/>
+  <path d="M 128 152 C 126 136 113 122 87 114 C 87 136 104 150 128 152 Z" fill="#000"/>
+</svg>
+</g><text x="624.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="682.667" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <!-- v2 宽口独立：40° 的开口，芽整株悬在开口里，不碰环 -->
+  <path d="M 98.6 198.8 A 86 86 0 1 1 157.4 198.8"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 128 196 L 128 152" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 156 C 130 136 147 118 177 110 C 177 136 156 154 128 156 Z" fill="#000"/>
+  <path d="M 128 152 C 126 136 113 122 87 114 C 87 136 104 150 128 152 Z" fill="#000"/>
+</svg>
+</g><text x="698.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="740.667" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <!-- v2 宽口独立：40° 的开口，芽整株悬在开口里，不碰环 -->
+  <path d="M 98.6 198.8 A 86 86 0 1 1 157.4 198.8"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 128 196 L 128 152" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 156 C 130 136 147 118 177 110 C 177 136 156 154 128 156 Z" fill="#000"/>
+  <path d="M 128 152 C 126 136 113 122 87 114 C 87 136 104 150 128 152 Z" fill="#000"/>
+</svg>
+</g><text x="748.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="592.6666666666667" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">B · v2 宽口独立</text><text x="592.6666666666667" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">缝 40°，芽整株悬在开口里</text><rect x="1065.33" y="150" width="474.667" height="600" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1095.33" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1095.33" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><text x="1127.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1185.33" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><text x="1201.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1243.33" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>
+</g><text x="1251.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="1095.3333333333335" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">C · v3 弧+芽</text><text x="1095.3333333333335" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">300° 弧，圆头收口</text></svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 抽象版：举手退化成两条直杆，圆退化成实心盘；保留「对称伸出」这一条关系 -->
+  <circle cx="60" cy="74" r="44" fill="#000"/>
+  <path d="M 38 34 L 27 12" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 82 34 L 93 12" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+</svg>

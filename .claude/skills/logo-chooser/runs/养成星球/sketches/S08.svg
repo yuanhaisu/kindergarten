@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 两个小椭圆，一前一后，落在弧的凹面里：沿内缘错开，与弧留出间隙 -->
+  <path d="M 12 44 A 48 48 0 0 0 108 44" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="46" cy="60" rx="8" ry="11" transform="rotate(-14 46 60)" fill="#000"/>
+  <ellipse cx="66" cy="66" rx="7" ry="9" transform="rotate(-14 66 66)" fill="#000"/>
+</svg>
