@@ -281,6 +281,7 @@ func TestSubscription_OverLimit(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
 		{Tier: 1, MinStudents: 0, MaxStudents: 2, PriceMultiplier: 100},
+		{Tier: 2, MinStudents: 3, MaxStudents: 0, PriceMultiplier: 150},
 	}, "s1b_ops", "127.0.0.1"))
 
 	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1b_ops", "127.0.0.1")

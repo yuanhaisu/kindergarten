@@ -149,11 +149,16 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	return order, nil
 }
 
-// resolveTier 按在园幼儿数找档位；没有配置档位时返回 1 / 100 / 无上限。
+// resolveTier 按在园幼儿数找档位。没有配置档位时按平价处理（1 / 100 / 无上限）；
+// 配置了档位却落不到任何一档，说明是历史遗留的不完整配置，必须报错——
+// 静默回落到第一档会把规模更大的园所按最低价成交。
 func (s *OrderService) resolveTier(ctx context.Context, planID uint64, studentCount int64) (int, int, int, error) {
 	tiers, err := s.plans.ListTiers(ctx, planID)
 	if err != nil {
 		return 0, 0, 0, err
+	}
+	if len(tiers) == 0 {
+		return 1, 100, 0, nil
 	}
 	for _, t := range tiers {
 		if studentCount >= int64(t.MinStudents) && (t.MaxStudents == 0 || studentCount <= int64(t.MaxStudents)) {
@@ -164,7 +169,7 @@ func (s *OrderService) resolveTier(ctx context.Context, planID uint64, studentCo
 			return t.Tier, mult, t.MaxStudents, nil
 		}
 	}
-	return 1, 100, 0, nil
+	return 0, 0, 0, ErrTierCoverageUnresolved
 }
 
 func (s *OrderService) Confirm(ctx context.Context, id uint64, operator, ip string) (*domain.Order, []domain.Entitlement, error) {

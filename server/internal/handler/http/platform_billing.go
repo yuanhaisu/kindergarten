@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"strconv"
 	"time"
 
@@ -38,18 +39,7 @@ func (h *Handler) PlatformCreateOrder(c *gin.Context) {
 	}
 	order, err := h.orderSvc.Create(c.Request.Context(), req, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		switch err.Error() {
-		case "KINDERGARTEN_NOT_FOUND":
-			response.ErrNotFound(c, "园所不存在")
-		case "PLAN_NOT_FOUND":
-			response.ErrNotFound(c, "套餐不存在")
-		case "PLAN_ARCHIVED":
-			response.ErrValidation(c, "套餐已下架")
-		case "DISTRIBUTOR_NOT_FOUND":
-			response.ErrNotFound(c, "分销商不存在")
-		default:
-			response.ErrInternal(c, "创建订单失败")
-		}
+		writeCreateOrderError(c, err)
 		return
 	}
 	var snap service.PlanSnapshot
@@ -60,6 +50,25 @@ func (h *Handler) PlatformCreateOrder(c *gin.Context) {
 		"starts_at": order.StartsAt.Format("2006-01-02"), "expires_at": order.ExpiresAt.Format("2006-01-02"),
 		"plan_snapshot": snap,
 	})
+}
+
+// writeCreateOrderError 是建单错误的唯一映射出口。历史档位配置无法落档
+// 必须作为可识别的校验错误返回，不能退化成 500 或静默按最低价成交。
+func writeCreateOrderError(c *gin.Context, err error) {
+	switch {
+	case err.Error() == "KINDERGARTEN_NOT_FOUND":
+		response.ErrNotFound(c, "园所不存在")
+	case err.Error() == "PLAN_NOT_FOUND":
+		response.ErrNotFound(c, "套餐不存在")
+	case err.Error() == "PLAN_ARCHIVED":
+		response.ErrValidation(c, "套餐已下架")
+	case err.Error() == "DISTRIBUTOR_NOT_FOUND":
+		response.ErrNotFound(c, "分销商不存在")
+	case errors.Is(err, service.ErrTierCoverageUnresolved):
+		response.ErrValidation(c, "按在园幼儿数无法落入该套餐的任何档位：档位配置不完整，请先修正套餐档位后重试")
+	default:
+		response.ErrInternal(c, "创建订单失败")
+	}
 }
 
 func (h *Handler) PlatformGetOrder(c *gin.Context) {
