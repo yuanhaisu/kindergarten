@@ -63,6 +63,8 @@ type AuthService struct {
 	secret         []byte
 	atTTL          time.Duration
 	rtTTL          time.Duration
+	consentRepo    ConsentRepository
+	consentEnforce bool
 }
 
 func NewAuthService(
@@ -77,6 +79,8 @@ func NewAuthService(
 	secret []byte,
 	atTTL time.Duration,
 	rtTTL time.Duration,
+	consentRepo ConsentRepository,
+	consentEnforce bool,
 ) *AuthService {
 	return &AuthService{
 		db:             db,
@@ -91,6 +95,8 @@ func NewAuthService(
 		secret:         secret,
 		atTTL:          atTTL,
 		rtTTL:          rtTTL,
+		consentRepo:    consentRepo,
+		consentEnforce: consentEnforce,
 	}
 }
 
@@ -99,6 +105,9 @@ type LoginResult struct {
 	RefreshToken string    `json:"refresh_token"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	User         *UserInfo `json:"user"`
+	// 增量字段：旧客户端忽略即可；新版客户端据此进入隐私政策阻断页。
+	ConsentRequired      bool   `json:"consent_required"`
+	CurrentPolicyVersion string `json:"current_policy_version"`
 }
 
 type UserInfo struct {
@@ -220,11 +229,18 @@ func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.Use
 		return nil, err
 	}
 
+	consentRequired, err := s.consentRequiredFor(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LoginResult{
-		Token:        accessToken,
-		RefreshToken: jti,
-		ExpiresAt:    time.Now().Add(s.atTTL),
-		User:         userInfo,
+		Token:                accessToken,
+		RefreshToken:         jti,
+		ExpiresAt:            time.Now().Add(s.atTTL),
+		User:                 userInfo,
+		ConsentRequired:      consentRequired,
+		CurrentPolicyVersion: CurrentPrivacyPolicyVersion,
 	}, nil
 }
 

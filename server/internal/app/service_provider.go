@@ -26,6 +26,8 @@ func ProvideAuthService(
 	secret JWTSecret,
 	atTTL AccessTTL,
 	rtTTL RefreshTTL,
+	consentRepo *repository.ConsentRepo,
+	cfg *config.Config,
 ) *service.AuthService {
 	return service.NewAuthService(
 		db,
@@ -39,6 +41,8 @@ func ProvideAuthService(
 		[]byte(secret),
 		time.Duration(atTTL),
 		time.Duration(rtTTL),
+		consentRepo,
+		cfg.Consent.Enforce,
 	)
 }
 

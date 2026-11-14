@@ -47,4 +47,5 @@ var Set = wire.NewSet(
 	NewPaymentRepo,
 	NewEntitlementRepo,
 	NewCommissionRepo,
+	NewConsentRepo,
 )
