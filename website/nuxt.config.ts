@@ -29,6 +29,8 @@ export default defineNuxtConfig({
         { property: 'og:locale', content: 'zh_CN' },
       ],
       link: [
+        // 首屏手机墙的主图是 LCP 元素，提前发现以减少移动端加载延迟。
+        { rel: 'preload', as: 'image', href: '/screens/teacher-workbench.webp', type: 'image/webp' },
         { rel: 'icon', href: '/favicon.ico', sizes: '48x48' },
         { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
