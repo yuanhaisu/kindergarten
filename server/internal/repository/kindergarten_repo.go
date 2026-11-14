@@ -81,11 +81,12 @@ func (r *KindergartenRepo) FindByIDs(ctx context.Context, ids []uint64) ([]domai
 	return list, err
 }
 
-// CountStudents 返回在园幼儿数，用于订单档位核定。
+// CountStudents 返回在园幼儿数，用于订单档位核定、超档提示与平台列表。
+// 口径：status = 1（在读）且未删除；待入学(0)、毕业(2)、退学(3) 不计入。
 func (r *KindergartenRepo) CountStudents(ctx context.Context, kindergartenID uint64) (int64, error) {
 	var n int64
 	err := r.db.WithContext(ctx).Table("students").
-		Where("kindergarten_id = ? AND deleted_at IS NULL", kindergartenID).
+		Where("kindergarten_id = ? AND status = ? AND deleted_at IS NULL", kindergartenID, 1).
 		Count(&n).Error
 	return n, err
 }

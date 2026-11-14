@@ -4,7 +4,7 @@
       <div>
         <h1 class="text-xl font-semibold text-text-primary">佣金台账</h1>
         <p class="mt-1 text-xs text-text-muted">
-          按实收到账计佣；到账满 30 天且无退款才可结算。台账金额由收款推导，不可手工改写。
+          按实收到账计佣；净额 = 原始佣金 − 已冲回金额，到账满 30 天且净额大于 0 才可结算。
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -35,9 +35,22 @@
       <el-table-column label="比例" width="70" align="right">
         <template #default="{ row }">{{ row.rate }}%</template>
       </el-table-column>
-      <el-table-column label="佣金" width="110" align="right">
+      <el-table-column label="原始佣金" width="110" align="right">
+        <template #default="{ row }">{{ formatMoney(row.amount_cents) }}</template>
+      </el-table-column>
+      <el-table-column label="已冲回" width="110" align="right">
         <template #default="{ row }">
-          <span :class="row.amount_cents < 0 ? 'text-semantic-danger' : ''">{{ formatMoney(row.amount_cents) }}</span>
+          <span v-if="row.reversed_amount_cents" class="text-semantic-danger">
+            -{{ formatMoney(row.reversed_amount_cents) }}
+          </span>
+          <span v-else class="text-text-hint">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="净额" width="110" align="right">
+        <template #default="{ row }">
+          <span :class="row.net_amount_cents < 0 ? 'text-semantic-danger' : 'font-medium'">
+            {{ formatMoney(row.net_amount_cents) }}
+          </span>
         </template>
       </el-table-column>
       <el-table-column label="状态" width="100">
@@ -78,7 +91,7 @@ const cards = computed(() => [
   { label: '待结算', value: summary.value.pending_cents },
   { label: '可结算', value: summary.value.settleable_cents },
   { label: '已结算', value: summary.value.settled_cents },
-  { label: '已冲回', value: summary.value.reversed_cents },
+  { label: '累计已冲回', value: summary.value.reversed_cents },
 ])
 
 async function load() {

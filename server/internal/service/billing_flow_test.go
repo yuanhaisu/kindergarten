@@ -106,9 +106,12 @@ func TestBillingFlow_SnapshotPaymentsAndCancel(t *testing.T) {
 	res, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{AmountCents: 50000}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.Equal(t, domain.OrderStatusPaid, res.OrderStatus)
+	secondPaymentID := res.PaymentID
 
-	// 退款以负数登记，并冲回佣金
-	res, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{AmountCents: -50000}, "s1b_ops", "127.0.0.1")
+	// 退款以负数登记，冲回被退收款对应的佣金
+	res, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{
+		AmountCents: -50000, RefundOfPaymentID: &secondPaymentID,
+	}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.Equal(t, domain.OrderStatusPartial, res.OrderStatus)
 	var reversal domain.CommissionLedger

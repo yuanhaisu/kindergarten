@@ -87,7 +87,14 @@ export interface OrderDetail {
   plan_snapshot: { plan_name: string; module_codes: string[]; price_cents: number }
   distributor: { id: number; name: string; commission_rate: number } | null
   invoice_info: Record<string, string> | null
-  payments: { id: number; amount_cents: number; method: string; received_at: string; remark: string }[]
+  payments: {
+    id: number
+    amount_cents: number
+    method: string
+    received_at: string
+    remark: string
+    refund_of_payment_id: number | null
+  }[]
 }
 
 export interface DistributorRow {
@@ -100,6 +107,15 @@ export interface DistributorRow {
   created_at: string
 }
 
+export interface CommissionReversalRow {
+  id: number
+  payment_id: number
+  base_amount_cents: number
+  amount_cents: number
+  status: string
+  created_at: string
+}
+
 export interface CommissionRow {
   id: number
   order_no: string
@@ -109,10 +125,13 @@ export interface CommissionRow {
   base_amount_cents: number
   rate: number
   amount_cents: number
+  reversed_amount_cents: number
+  net_amount_cents: number
   status: string
   received_at: string
   eligible_at: string
   reversal_of: number | null
+  reversals?: CommissionReversalRow[]
 }
 
 export interface CommissionSummary {

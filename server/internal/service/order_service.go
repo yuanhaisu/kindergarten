@@ -268,6 +268,8 @@ type PaymentRequest struct {
 	ReceivedAt  string `json:"received_at"`
 	VoucherURL  string `json:"voucher_url"`
 	Remark      string `json:"remark"`
+	// RefundOfPaymentID 负数收款必填，指明被退的原收款；佣金冲回据此精确定位。
+	RefundOfPaymentID *uint64 `json:"refund_of_payment_id"`
 }
 
 type PaymentResult struct {
@@ -290,6 +292,13 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 	if req.AmountCents == 0 {
 		return nil, fmt.Errorf("INVALID_AMOUNT")
 	}
+	if req.AmountCents < 0 {
+		if req.RefundOfPaymentID == nil || *req.RefundOfPaymentID == 0 {
+			return nil, fmt.Errorf("REFUND_PAYMENT_REQUIRED")
+		}
+	} else if req.RefundOfPaymentID != nil && *req.RefundOfPaymentID != 0 {
+		return nil, fmt.Errorf("REFUND_PAYMENT_NOT_ALLOWED")
+	}
 	receivedAt := time.Now()
 	if req.ReceivedAt != "" {
 		parsed, err := time.Parse(time.RFC3339, req.ReceivedAt)
@@ -304,12 +313,16 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 	}
 	payment := &domain.Payment{
 		OrderID: order.ID, KindergartenID: order.KindergartenID, AmountCents: req.AmountCents,
-		Method: method, ReceivedAt: receivedAt, VoucherURL: req.VoucherURL,
+		RefundOfPaymentID: req.RefundOfPaymentID,
+		Method:            method, ReceivedAt: receivedAt, VoucherURL: req.VoucherURL,
 		Remark: req.Remark, RecordedBy: operator,
 	}
 
 	var paid int64
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := s.validateRefundTarget(ctx, tx, order, payment); err != nil {
+			return err
+		}
 		if err := s.payments.CreateTx(ctx, tx, payment); err != nil {
 			return err
 		}
@@ -335,7 +348,34 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 	return &PaymentResult{PaymentID: payment.ID, OrderStatus: order.Status, AmountPaidCents: paid}, nil
 }
 
-// writeCommission 正数收款生成佣金行，负数收款生成冲回行（ADR-0016）。
+// validateRefundTarget 退款必须指向本订单内一笔可退的正数收款，且累计退款不得超过该笔收款。
+func (s *OrderService) validateRefundTarget(ctx context.Context, tx *gorm.DB, order *domain.Order, p *domain.Payment) error {
+	if p.RefundOfPaymentID == nil {
+		return nil
+	}
+	target, err := s.payments.FindByIDForUpdateTx(ctx, tx, *p.RefundOfPaymentID)
+	if err != nil {
+		return err
+	}
+	if target == nil || target.OrderID != order.ID {
+		return fmt.Errorf("REFUND_PAYMENT_NOT_FOUND")
+	}
+	if target.AmountCents <= 0 {
+		return fmt.Errorf("REFUND_PAYMENT_INVALID")
+	}
+	refunded, err := s.payments.SumRefundsOfTx(ctx, tx, target.ID)
+	if err != nil {
+		return err
+	}
+	if -p.AmountCents > target.AmountCents-refunded {
+		return fmt.Errorf("REFUND_EXCEEDS_PAYMENT")
+	}
+	return nil
+}
+
+// writeCommission 正数收款生成原始佣金行；负数收款冲回被退收款对应的佣金（ADR-0016）。
+// 冲回金额累计进原始行的 ReversedAmountCents，净额归零后状态置为 reversed，
+// 不再被 PromoteEligible 推进为可结算。
 func (s *OrderService) writeCommission(ctx context.Context, tx *gorm.DB, order *domain.Order, p *domain.Payment) error {
 	if order.DistributorID == nil || order.CommissionRate <= 0 {
 		return nil
@@ -350,18 +390,26 @@ func (s *OrderService) writeCommission(ctx context.Context, tx *gorm.DB, order *
 			Rate: order.CommissionRate, AmountCents: amount, Status: status, EligibleAt: eligibleAt,
 		}})
 	}
-	// 退款：冲回最近一条该订单的佣金
-	var last domain.CommissionLedger
-	err := tx.WithContext(ctx).Where("order_id = ? AND reversal_of IS NULL", order.ID).Order("id DESC").First(&last).Error
+	// 退款：只冲回被退的那笔收款产生的佣金，而不是订单下最近一条。
+	if p.RefundOfPaymentID == nil {
+		return fmt.Errorf("REFUND_PAYMENT_REQUIRED")
+	}
+	reversalAmount := p.AmountCents * int64(order.CommissionRate) / 100 // 负数
+	original, applied, err := s.comm.ApplyReversalByPaymentTx(
+		ctx, tx, order.ID, *p.RefundOfPaymentID, -reversalAmount,
+	)
 	if err != nil {
+		return err
+	}
+	if original == nil {
+		// 该笔收款没有佣金行（无分销商/比例为 0 的历史数据），退款照常入账。
 		return nil
 	}
-	amount := p.AmountCents * int64(order.CommissionRate) / 100
 	return s.comm.CreateBatch(ctx, tx, []domain.CommissionLedger{{
 		OrderID: order.ID, PaymentID: p.ID, DistributorID: *order.DistributorID,
-		KindergartenID: order.KindergartenID, BaseAmountCents: p.AmountCents,
-		Rate: order.CommissionRate, AmountCents: amount,
-		Status: domain.CommissionStatusReversed, EligibleAt: eligibleAt, ReversalOf: &last.ID,
+		KindergartenID: order.KindergartenID, BaseAmountCents: -p.AmountCents,
+		Rate: order.CommissionRate, AmountCents: -applied,
+		Status: domain.CommissionStatusReversed, EligibleAt: eligibleAt, ReversalOf: &original.ID,
 	}})
 }
 
@@ -461,13 +509,14 @@ func (s *OrderService) List(ctx context.Context, f repository.OrderFilter) ([]Or
 }
 
 type PaymentRow struct {
-	ID          uint64    `json:"id"`
-	AmountCents int64     `json:"amount_cents"`
-	Method      string    `json:"method"`
-	ReceivedAt  time.Time `json:"received_at"`
-	VoucherURL  string    `json:"voucher_url"`
-	Remark      string    `json:"remark"`
-	RecordedBy  string    `json:"recorded_by"`
+	ID                uint64    `json:"id"`
+	AmountCents       int64     `json:"amount_cents"`
+	Method            string    `json:"method"`
+	ReceivedAt        time.Time `json:"received_at"`
+	VoucherURL        string    `json:"voucher_url"`
+	Remark            string    `json:"remark"`
+	RecordedBy        string    `json:"recorded_by"`
+	RefundOfPaymentID *uint64   `json:"refund_of_payment_id"`
 }
 
 type OrderDetail struct {
@@ -525,6 +574,7 @@ func (s *OrderService) Detail(ctx context.Context, id uint64) (*OrderDetail, err
 		paymentRows = append(paymentRows, PaymentRow{
 			ID: p.ID, AmountCents: p.AmountCents, Method: p.Method,
 			ReceivedAt: p.ReceivedAt, VoucherURL: p.VoucherURL, Remark: p.Remark, RecordedBy: p.RecordedBy,
+			RefundOfPaymentID: p.RefundOfPaymentID,
 		})
 	}
 	detail := &OrderDetail{
@@ -549,6 +599,7 @@ func (s *OrderService) ListPayments(ctx context.Context, orderID uint64) ([]Paym
 		out = append(out, PaymentRow{
 			ID: p.ID, AmountCents: p.AmountCents, Method: p.Method,
 			ReceivedAt: p.ReceivedAt, VoucherURL: p.VoucherURL, Remark: p.Remark, RecordedBy: p.RecordedBy,
+			RefundOfPaymentID: p.RefundOfPaymentID,
 		})
 	}
 	return out, nil

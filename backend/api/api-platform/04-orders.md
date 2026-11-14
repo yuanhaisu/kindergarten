@@ -118,7 +118,18 @@
       "received_at": "2026-11-06T14:00:00+08:00",
       "voucher_url": "https://...",
       "remark": "首付",
-      "recorded_by": "ops"
+      "recorded_by": "ops",
+      "refund_of_payment_id": null
+    },
+    {
+      "id": 25,
+      "amount_cents": -40000,
+      "method": "bank_transfer",
+      "received_at": "2026-11-20T10:00:00+08:00",
+      "voucher_url": "",
+      "remark": "部分退费",
+      "recorded_by": "ops",
+      "refund_of_payment_id": 21
     }
   ]
 }
@@ -167,13 +178,20 @@
 > 登记一笔收款（退款传负数）
 
 ```json
-// Request
+// Request（正常收款）
 {
   "amount_cents": 100000,
   "method": "bank_transfer",
   "received_at": "2026-11-06T14:00:00+08:00",
   "voucher_url": "https://...",
   "remark": "首付"
+}
+
+// Request（退款：负数金额 + 被退的原收款）
+{
+  "amount_cents": -40000,
+  "refund_of_payment_id": 21,
+  "remark": "部分退费"
 }
 
 // Response
@@ -186,7 +204,24 @@
 
 > `method` 取值：`bank_transfer` 对公转账 / `wechat` 微信 / `cash` 现金 / `other` 其他。
 > 退款以负数金额登记，同时冲减订单已收金额与对应佣金。
-> 到账后 30 天且无退款的部分才可进入结算。
+> 到账后 30 天且净额为正的部分才可进入结算。
+
+**退款链接规则（负数收款）**
+
+- `refund_of_payment_id` 必填，指向**同一订单**的一笔正数收款；正数收款携带此字段会被拒绝。
+- 可退上限为该笔收款金额减去已退金额，超出即拒绝。
+- 佣金冲回精确作用于 `refund_of_payment_id` 所指向收款产生的佣金行，与该订单下「最近一条佣金」无关；每笔退款生成一条指向该佣金行的冲回记录。
+- 被退收款的佣金累计冲回金额达到原始佣金时，净额归零并置为 `reversed`，即使此前已可结算也不再可结算。
+
+**错误码**
+
+| code | HTTP | 含义 |
+| --- | --- | --- |
+| `REFUND_PAYMENT_REQUIRED` | 400 | 负数收款未指定 `refund_of_payment_id` |
+| `REFUND_PAYMENT_NOT_ALLOWED` | 400 | 正数收款携带了 `refund_of_payment_id` |
+| `REFUND_PAYMENT_INVALID` | 400 | 被退收款不是正数收款（如指向退款行） |
+| `REFUND_PAYMENT_NOT_FOUND` | 404 | 被退收款不存在或不属于该订单 |
+| `REFUND_EXCEEDS_PAYMENT` | 400 | 退款金额超过该笔收款的可退金额 |
 
 ---
 
@@ -198,7 +233,13 @@
 // Response
 {
   "list": [
-    { "id": 21, "amount_cents": 100000, "method": "bank_transfer", "received_at": "2026-11-06T14:00:00+08:00" }
+    {
+      "id": 21,
+      "amount_cents": 100000,
+      "method": "bank_transfer",
+      "received_at": "2026-11-06T14:00:00+08:00",
+      "refund_of_payment_id": null
+    }
   ]
 }
 ```

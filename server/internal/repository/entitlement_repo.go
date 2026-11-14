@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/domain"
 )
@@ -100,11 +101,66 @@ func (r *CommissionRepo) CreateBatch(ctx context.Context, tx *gorm.DB, rows []do
 	return tx.WithContext(ctx).Create(&rows).Error
 }
 
-// PromoteEligible 把「到账已满 30 天且未冲回」的待结算佣金推进为可结算。
-// 没有定时任务，所以在读取台账前惰性推进；幂等。
+// ApplyReversalByPaymentTx 把退款金额累计到被退收款产生的原始佣金行，
+// 返回被冲回的原始行与本次实际冲回金额（正数）；该收款没有佣金行时返回 nil。
+// 行锁保证并发退款不会丢失冲回金额。
+func (r *CommissionRepo) ApplyReversalByPaymentTx(
+	ctx context.Context, tx *gorm.DB, orderID, paymentID uint64, amount int64,
+) (*domain.CommissionLedger, int64, error) {
+	var c domain.CommissionLedger
+	err := tx.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("order_id = ? AND payment_id = ? AND reversal_of IS NULL", orderID, paymentID).
+		Order("id ASC").First(&c).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, 0, nil
+	}
+	if err != nil {
+		return nil, 0, err
+	}
+	// 本次退款覆盖了原收款的剩余全部金额时直接冲满剩余净额，
+	// 避免多笔部分退款各自整数取整后留下尾差。
+	var refundedTotal int64
+	if err := tx.WithContext(ctx).Model(&domain.Payment{}).
+		Where("refund_of_payment_id = ?", paymentID).
+		Select("COALESCE(SUM(-amount_cents), 0)").Scan(&refundedTotal).Error; err != nil {
+		return nil, 0, err
+	}
+	if refundedTotal >= c.BaseAmountCents {
+		amount = c.AmountCents - c.ReversedAmountCents
+	}
+	reversed := c.ReversedAmountCents + amount
+	cols := map[string]any{"reversed_amount_cents": reversed}
+	if c.AmountCents-reversed <= 0 {
+		cols["status"] = domain.CommissionStatusReversed
+	}
+	if err := tx.WithContext(ctx).Model(&domain.CommissionLedger{}).
+		Where("id = ?", c.ID).Updates(cols).Error; err != nil {
+		return nil, 0, err
+	}
+	c.ReversedAmountCents = reversed
+	if c.AmountCents-reversed <= 0 {
+		c.Status = domain.CommissionStatusReversed
+	}
+	return &c, amount, nil
+}
+
+// ListReversals 返回某条原始佣金行对应的冲回记录，按发生顺序排列。
+func (r *CommissionRepo) ListReversals(ctx context.Context, commissionID uint64) ([]domain.CommissionLedger, error) {
+	var list []domain.CommissionLedger
+	err := r.db.WithContext(ctx).
+		Where("reversal_of = ?", commissionID).
+		Order("id ASC").Find(&list).Error
+	return list, err
+}
+
+// PromoteEligible 把「到账已满 30 天且净额为正」的待结算佣金推进为可结算。
+// 没有定时任务，所以在读取台账前惰性推进；幂等。净额归零的佣金状态为
+// reversed，不会被此条件命中。
 func (r *CommissionRepo) PromoteEligible(ctx context.Context, now time.Time) error {
 	return r.db.WithContext(ctx).Model(&domain.CommissionLedger{}).
-		Where("status = ? AND eligible_at <= ? AND reversal_of IS NULL", domain.CommissionStatusPending, now).
+		Where("status = ? AND eligible_at <= ? AND reversal_of IS NULL AND amount_cents - reversed_amount_cents > 0",
+			domain.CommissionStatusPending, now).
 		Update("status", domain.CommissionStatusSettleable).Error
 }
 
@@ -117,9 +173,11 @@ func (r *CommissionRepo) FindByID(ctx context.Context, id uint64) (*domain.Commi
 	return &c, err
 }
 
+// List 返回台账明细。只列原始佣金行：冲回行的金额已经累计进原始行的
+// reversed_amount_cents，再列一次会重复扣减。
 func (r *CommissionRepo) List(ctx context.Context, f CommissionFilter) ([]domain.CommissionLedger, int64, error) {
 	f.normalize()
-	q := r.db.WithContext(ctx).Model(&domain.CommissionLedger{})
+	q := r.db.WithContext(ctx).Model(&domain.CommissionLedger{}).Where("reversal_of IS NULL")
 	q = applyCommissionFilter(q, f)
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
@@ -130,16 +188,22 @@ func (r *CommissionRepo) List(ctx context.Context, f CommissionFilter) ([]domain
 	return list, total, err
 }
 
-// Summary 按状态汇总金额，供台账页顶部卡片使用。
+// Summary 按状态汇总净额，供台账页顶部卡片使用。
+// pending / settleable / settled 为对应状态原始佣金行的净额合计；
+// reversed 为期间累计冲回金额（正数），与明细的 reversed_amount_cents 一致。
 func (r *CommissionRepo) Summary(ctx context.Context, f CommissionFilter) (map[string]int64, error) {
-	q := r.db.WithContext(ctx).Model(&domain.CommissionLedger{})
+	q := r.db.WithContext(ctx).Model(&domain.CommissionLedger{}).Where("reversal_of IS NULL")
 	q = applyCommissionFilter(q, f)
 	type row struct {
-		Status string
-		Total  int64
+		Status        string
+		NetTotal      int64
+		ReversedTotal int64
 	}
 	var rows []row
-	if err := q.Select("status, COALESCE(SUM(amount_cents),0) AS total").Group("status").Scan(&rows).Error; err != nil {
+	if err := q.Select(
+		"status, COALESCE(SUM(amount_cents - reversed_amount_cents),0) AS net_total, " +
+			"COALESCE(SUM(reversed_amount_cents),0) AS reversed_total",
+	).Group("status").Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 	out := map[string]int64{
@@ -148,9 +212,13 @@ func (r *CommissionRepo) Summary(ctx context.Context, f CommissionFilter) (map[s
 		domain.CommissionStatusSettled:    0,
 		domain.CommissionStatusReversed:   0,
 	}
+	var reversedTotal int64
 	for _, r := range rows {
-		out[r.Status] = r.Total
+		out[r.Status] = r.NetTotal
+		reversedTotal += r.ReversedTotal
 	}
+	// 已冲回卡片展示累计冲回金额，而不是 reversed 行的净额（后者恒为 0）。
+	out[domain.CommissionStatusReversed] = reversedTotal
 	return out, nil
 }
 
