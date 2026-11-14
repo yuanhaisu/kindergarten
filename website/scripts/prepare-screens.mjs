@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { PNG } from 'pngjs'
+import sharp from 'sharp'
 
 const ROOT = path.resolve(import.meta.dirname, '../..')
 const PREVIEW = path.join(ROOT, 'docs/design-previews/2026-10-25-full-redesign')
@@ -33,6 +34,12 @@ for (const job of JOBS) {
   const height = job.crop ? Math.min(job.crop, png.height) : png.height
   const out = new PNG({ width: png.width, height })
   PNG.bitblt(png, out, 0, 0, png.width, height, 0, 0)
-  fs.writeFileSync(path.join(OUT, job.out), PNG.sync.write(out))
-  console.log(`${job.out}  ${png.width}x${height}  ${(fs.statSync(path.join(OUT, job.out)).size / 1024) | 0}KB`)
+  const pngPath = path.join(OUT, job.out)
+  fs.writeFileSync(pngPath, PNG.sync.write(out))
+  const webpPath = pngPath.replace(/\.png$/, '.webp')
+  await sharp(pngPath).webp({ quality: 82, effort: 5 }).toFile(webpPath)
+  console.log(
+    `${job.out}  ${png.width}x${height}  ${(fs.statSync(pngPath).size / 1024) | 0}KB  ` +
+      `webp ${(fs.statSync(webpPath).size / 1024) | 0}KB`,
+  )
 }

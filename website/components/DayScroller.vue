@@ -43,7 +43,8 @@ onBeforeUnmount(() => observer?.disconnect())
               :key="moment.title"
               :src="moment.image"
               :class="{ 'is-active': active === index }"
-              :loading="index === 0 ? 'eager' : 'lazy'"
+              loading="lazy"
+              decoding="async"
               width="780"
               height="1400"
               alt=""
@@ -69,6 +70,7 @@ onBeforeUnmount(() => observer?.disconnect())
               width="780"
               height="1400"
               loading="lazy"
+              decoding="async"
             />
           </li>
         </ol>

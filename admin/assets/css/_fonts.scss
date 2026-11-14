@@ -1,1 +1,2 @@
-// 字体通过 nuxt.config head 引入 Noto Sans SC（思源黑体系）
+// 字体使用 design token 的系统字体栈（PingFang SC / Microsoft YaHei / Noto Sans SC），
+// 不再从 fonts.googleapis.com 远程加载；国内网络下不会阻塞首屏。

@@ -4,14 +4,16 @@
     :class="collapsed ? 'w-[64px]' : 'w-[250px]'"
   >
     <!-- Logo 区域 -->
-    <div class="h-16 flex items-center px-6 overflow-hidden">
-      <div
-        class="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-b from-blue-500 to-blue-600 flex items-center justify-center"
+    <!-- 塌缩时去掉左右内边距并居中，否则 32px 徽章会被 64px 宽的容器裁掉 -->
+    <div
+      class="h-16 flex items-center overflow-hidden"
+      :class="collapsed ? 'justify-center px-0' : 'px-6'"
+    >
+      <img
+        src="/brand-badge.png"
+        alt=""
+        class="w-8 h-8 shrink-0 rounded-full"
       >
-        <el-icon color="#fff" :size="18">
-          <StarFilled />
-        </el-icon>
-      </div>
       <span
         v-if="!collapsed"
         class="ml-3 text-lg font-bold text-text-onBrand whitespace-nowrap"
@@ -98,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { Setting, StarFilled, UserFilled } from '@element-plus/icons-vue'
+import { Setting, UserFilled } from '@element-plus/icons-vue'
 import { ADMIN_MENU_GROUPS, matchMenuByPath } from '~/constants/menus'
 
 const route = useRoute()

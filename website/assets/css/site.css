@@ -294,6 +294,8 @@ a {
 
 .wall__item {
   position: absolute;
+  /* 首屏三块界面各自旋转；提前提升为合成层，减少移动端首绘的栅格化延迟。 */
+  will-change: transform;
 }
 
 .wall__item figcaption {
