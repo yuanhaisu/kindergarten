@@ -16,14 +16,81 @@ if (!batch) {
   process.exit(2);
 }
 const root = path.resolve(batch);
+
+// Optional <batch>/gallery.json lets a batch carry its own title and palette.
+// Every key falls back to the 2026-10-25 orange batch, so existing galleries
+// regenerate byte-for-byte the same way.
+const defaults = {
+  title: '养成星球 · 全量页面重设计（2026-10-25）',
+  heroTitle: '养成星球 · 全量页面重设计',
+  subtitle: '老师端 + 家长端全部页面 · 微信小程序风格 · 每页独立 HTML 原型',
+  paletteLink: '_shared/themes.html',
+  paletteLabel: '查看三套配色方案对比（亮橙 / 深橙 AA / 亮橙+深墨字）→',
+  themeNote: '',
+  themeFollowup: '',
+  bg: '#f7f3ea',
+  surface: '#fff',
+  fg: '#1e293b',
+  fg2: '#475569',
+  muted: '#64748b',
+  accent: '#f97316',
+  accentDeep: '#9a3412',
+  accentWash: '#fff1e6',
+  border: '#e7e0d4',
+  teacher: '#ff8a3d',
+  parent: '#f97316',
+  ok: '#16a34a',
+  bad: '#dc2626',
+  shotBg: '#f1ece2',
+  shadow: '0 8px 24px rgba(178, 122, 52, .12)',
+  teacherBadgeBg: '#fff2e6',
+  teacherBadgeFg: '#b45309',
+  parentBadgeBg: '#ffecd9',
+  parentBadgeFg: '#c2410c',
+  teacherHint: '无 tabBar · 暖奶白底',
+  parentHint: '底部 tabBar · 冷雾白底',
+  readmeTitle: '全量页面重设计（2026-10-25）',
+  readmeLead: '老师端 + 家长端所有页面，每页一份独立 HTML 原型。先看 [index.html](index.html) 画廊。',
+  readmeShared: '- 共享约束：[_shared/brief.md](_shared/brief.md)',
+  designSystem: 'user:nurture-planet-local',
+};
+let galleryMeta = {};
+try {
+  galleryMeta = JSON.parse(fs.readFileSync(path.join(root, 'gallery.json'), 'utf8'));
+} catch {}
+const M = { ...defaults, ...galleryMeta };
+
 const surfaces = [
-  { id: 'teacher', label: '老师端', hint: '无 tabBar · 暖奶白底' },
-  { id: 'parent', label: '家长端', hint: '底部 tabBar · 冷雾白底' },
+  { id: 'teacher', label: '老师端', hint: M.teacherHint },
+  { id: 'parent', label: '家长端', hint: M.parentHint },
 ];
 
 function esc(value) {
   return String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
+
+// Optional illustration atlas: gallery.json may declare one or more groups.
+// Each group renders as a section between the toolbar and the page grids.
+const illustrationGroups = Array.isArray(galleryMeta.illustrations) ? galleryMeta.illustrations : [];
+
+const renderIllustrations = () => illustrationGroups.map((group, index) => `
+  <section class="pp-art-group" aria-labelledby="art-group-${index}">
+    <header class="group__head">
+      <h2 id="art-group-${index}">${esc(group.title)}</h2>
+      <span>${esc(group.note || '')}</span>
+    </header>
+    <div class="pp-art-grid pp-art-grid--${group.layout === 'bands' ? 'bands' : 'scenes'}">
+      ${(group.items || []).map((item) => `
+      <figure class="pp-art-card">
+        <img src="${esc(item.src)}" alt="${esc(item.title)}" loading="lazy" />
+        <figcaption>
+          <b>${esc(item.title)}</b>
+          ${item.guest ? `<span>${esc(item.guest)}</span>` : ''}
+          ${item.quote ? `<em>「${esc(item.quote)}」</em>` : ''}
+        </figcaption>
+      </figure>`).join('')}
+    </div>
+  </section>`).join('');
 
 function readPages(surface) {
   const dir = path.join(root, surface);
@@ -100,13 +167,13 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>养成星球 · 全量页面重设计（2026-10-25）</title>
+<title>${M.title}</title>
 <style>
   :root {
-    --bg: #f7f3ea; --surface: #fff; --fg: #1e293b; --fg-2: #475569; --muted: #64748b;
-    --accent: #f97316; --accent-wash: #fff1e6; --border: #e7e0d4;
-    --teacher: #ff8a3d; --parent: #f97316; --ok: #16a34a; --bad: #dc2626;
-    --radius: 16px; --shadow: 0 8px 24px rgba(178, 122, 52, .12);
+    --bg: ${M.bg}; --surface: ${M.surface}; --fg: ${M.fg}; --fg-2: ${M.fg2}; --muted: ${M.muted};
+    --accent: ${M.accent}; --accent-deep: ${M.accentDeep}; --accent-wash: ${M.accentWash}; --border: ${M.border};
+    --teacher: ${M.teacher}; --parent: ${M.parent}; --ok: ${M.ok}; --bad: ${M.bad};
+    --radius: 16px; --shadow: ${M.shadow};
   }
   * { box-sizing: border-box; }
   body {
@@ -121,6 +188,18 @@ const html = `<!doctype html>
   }
   .hero h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: .2px; }
   .hero p { margin: 0; color: var(--muted); }
+  .hero__art { width: 300px; max-width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--border); background: #fbfaf6; }
+  .hero--art .hero__copy { flex: 1 1 320px; min-width: 0; }
+  .pp-art-group { margin-top: 34px; }
+  .pp-art-grid { display: grid; gap: 16px; }
+  .pp-art-grid--scenes { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .pp-art-grid--bands { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .pp-art-card { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .pp-art-card img { display: block; width: 100%; height: auto; background: #fbfaf6; }
+  .pp-art-card figcaption { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .pp-art-card b { font-size: 13px; }
+  .pp-art-card span { color: var(--muted); font-size: 11px; }
+  .pp-art-card em { color: var(--accent-deep); font-style: normal; font-size: 12px; }
   .stats { display: flex; gap: 24px; }
   .stat b { display: block; font-size: 26px; line-height: 1.2; }
   .stat span { color: var(--muted); font-size: 12px; }
@@ -129,7 +208,7 @@ const html = `<!doctype html>
     border: 1px solid var(--border); background: var(--surface); color: var(--fg-2);
     border-radius: 999px; padding: 8px 16px; font: inherit; cursor: pointer;
   }
-  .toolbar button[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent); color: #9a3412; }
+  .toolbar button[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent); color: ${M.accentDeep}; }
   .group { margin-top: 28px; }
   .group__head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
   .group__head h2 { margin: 0; font-size: 18px; }
@@ -140,7 +219,7 @@ const html = `<!doctype html>
     box-shadow: var(--shadow); display: flex; flex-direction: column;
   }
   .shot {
-    display: block; aspect-ratio: 390 / 560; background: #f1ece2; overflow: hidden;
+    display: block; aspect-ratio: 390 / 560; background: ${M.shotBg}; overflow: hidden;
     border-bottom: 1px solid var(--border);
   }
   .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
@@ -148,8 +227,8 @@ const html = `<!doctype html>
   .body { padding: 12px 14px 14px; }
   .meta { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
-  .badge--teacher { background: #fff2e6; color: #b45309; }
-  .badge--parent { background: #ffecd9; color: #c2410c; }
+  .badge--teacher { background: ${M.teacherBadgeBg}; color: ${M.teacherBadgeFg}; }
+  .badge--parent { background: ${M.parentBadgeBg}; color: ${M.parentBadgeFg}; }
   .badge--ok { background: #e8f7ee; color: var(--ok); }
   .badge--bad { background: #fdeaea; color: var(--bad); }
   .time { margin-left: auto; color: var(--muted); font-size: 11px; }
@@ -159,16 +238,20 @@ const html = `<!doctype html>
   .links a { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 500; }
   .links a:hover { text-decoration: underline; }
   .empty { padding: 40px; text-align: center; color: var(--muted); }
+  footer { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; line-height: 1.9; }
+  footer p { margin: 0; }
+  footer code { background: var(--accent-wash); padding: 1px 5px; border-radius: 5px; color: var(--accent-deep); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="hero">
-    <div>
-      <h1>养成星球 · 全量页面重设计</h1>
-      <p>老师端 + 家长端全部页面 · 微信小程序风格 · 每页独立 HTML 原型</p>
-      <p style="margin-top:8px"><a href="_shared/themes.html" style="color:var(--accent-deep);font-weight:600;text-decoration:none">查看三套配色方案对比（亮橙 / 深橙 AA / 亮橙+深墨字）→</a></p>
+  <header class="hero${M.heroImage ? ' hero--art' : ''}">
+    <div class="hero__copy">
+      <h1>${M.heroTitle}</h1>
+      <p>${M.subtitle}</p>
+      <p style="margin-top:8px"><a href="${M.paletteLink}" style="color:var(--accent-deep);font-weight:600;text-decoration:none">${M.paletteLabel}</a></p>
     </div>
+    ${M.heroImage ? `<img class="hero__art" src="${esc(M.heroImage)}" alt="" />` : ''}
     <div class="stats">
       <div class="stat"><b>${total}</b><span>页面</span></div>
       <div class="stat"><b>${ready}</b><span>已出稿</span></div>
@@ -181,9 +264,14 @@ const html = `<!doctype html>
     <button type="button" data-filter="teacher" aria-pressed="false">老师端</button>
     <button type="button" data-filter="parent" aria-pressed="false">家长端</button>
   </div>
+${illustrationGroups.length ? renderIllustrations() : ''}
 ${surfaces.map(section).join('\n')}
 
   <p class="empty" id="empty" hidden>该端还没有页面产物。</p>
+${M.themeNote || M.themeFollowup ? `  <footer>
+    ${M.themeNote ? `<p>${M.themeNote}</p>` : ''}
+    ${M.themeFollowup ? `<p>${M.themeFollowup}</p>` : ''}
+  </footer>` : ''}
 </div>
 
 <script>
@@ -214,15 +302,30 @@ const table = (surface) => {
   ].join('\n');
 };
 
-const readme = `# 全量页面重设计（2026-10-25）
+const artReadme = illustrationGroups.map((group) => {
+  const rows = (group.items || [])
+    .map((item, i) => `| ${i + 1} | ${item.title} | ${item.guest || '—'} | ${item.quote ? `「${item.quote}」` : '—'} | [${item.src}](${item.src}) |`)
+    .join('\n');
+  const guestLabel = group.layout === 'bands' ? '使用位置' : '客人';
+  return [
+    `## ${group.title}`,
+    '',
+    group.note ? `${group.note}\n` : '',
+    `| # | 画面 | ${guestLabel} | 金句 | 文件 |`,
+    '|---|---|---|---|---|',
+    rows,
+  ].join('\n');
+}).join('\n\n');
 
-老师端 + 家长端所有页面，每页一份独立 HTML 原型。先看 [index.html](index.html) 画廊。
+const readme = `# ${M.readmeTitle}
+
+${M.readmeLead}
 
 - 页面总数：${total}
 - 已出稿：${ready}
-- 共享约束：[_shared/brief.md](_shared/brief.md)
-- 设计系统：\`user:nurture-planet-local\`
-
+${M.readmeShared}
+- 设计系统：\`${M.designSystem}\`
+${artReadme ? `\n${artReadme}\n` : ''}
 ${table('teacher')}
 
 ${table('parent')}
