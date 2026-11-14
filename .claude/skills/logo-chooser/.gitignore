@@ -1,0 +1,14 @@
+# 生成物不入库，输入物必须入库。
+#
+# 入库：SKILL.md / axes.json / references/ / scripts/ / trials/
+#       runs/*/words.json     （15 句意象，是创作，不可再生成）
+#       runs/*/sketches/*.svg （示意，是手绘，不可再生成）
+#
+# 忽略：卡片页与中间 JSON 都能由上面这些 + 脚本重新跑出来。
+
+runs/*/assets/
+runs/*/_check/
+runs/*/round-*.html
+runs/*/round-*.json
+
+__pycache__/

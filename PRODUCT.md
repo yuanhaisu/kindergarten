@@ -68,7 +68,7 @@ web
 ## Brand Commitments
 
 - **名称**：养成星球 / Nurture Planet
-- **Logo 资产**：`assets/logo.png`、`logo-32/64/128/256.png`
+- **Logo 资产**：新 kit `assets/logo-v2/`（A1 弧巢；teacher 已接入，parent 待接入）；旧 `assets/logo.png`、`logo-32/64/128/256.png` 保留归档
 - **Logo 设计哲学**：`assets/logo-design-philosophy.md`（"Tender Cosmos"）——温柔的惊奇感。核心词：柔和、圆润、无锐角、温暖的天体色（暖蓝/嫩绿/琥珀橙）、大面积留白、亲子比例结构。**这是既有视觉资产的身份约束，不因新设计而推翻。**
 
 ## Evidence on Hand
@@ -77,7 +77,7 @@ web
 - `产品方案.md` v1.0（2026-03-18）——痛点、功能、价值主张、上线计划
 - `pages-teacher.md` / `pages-parent.md` / `pages-admin.md` —— 三端页面规划
 - `design-data/` —— 三端设计稿 JSON（含家长端成长时光、老师端成长记录、管理后台 9 页等）
-- `assets/logo-design-philosophy.md` + logo PNG 全套
+- `assets/logo-design-philosophy.md` + logo PNG 全套（旧 `assets/logo.*` 保留归档；新 kit 见 `assets/logo-v2/`）
 - `docs/tests/TEST_CATALOG.md` —— 测试用例目录
 - `CLAUDE.md` —— 架构铁律与已知坑
 

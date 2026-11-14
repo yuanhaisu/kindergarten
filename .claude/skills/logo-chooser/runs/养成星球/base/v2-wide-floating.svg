@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- v2 宽口独立：40° 的开口，芽整株悬在开口里，不碰环 -->
+  <path d="M 98.6 198.8 A 86 86 0 1 1 157.4 198.8"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="butt"/>
+  <path d="M 128 196 L 128 152" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 156 C 130 136 147 118 177 110 C 177 136 156 154 128 156 Z" fill="#000"/>
+  <path d="M 128 152 C 126 136 113 122 87 114 C 87 136 104 150 128 152 Z" fill="#000"/>
+</svg>

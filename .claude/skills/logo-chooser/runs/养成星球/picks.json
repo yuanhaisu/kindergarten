@@ -1,0 +1,156 @@
+{
+  "brand": "养成星球",
+  "history": [
+    {
+      "seq": 1,
+      "station": 1,
+      "at": "2026-11-09T20:51:00",
+      "status": "active",
+      "candidates": "01–08（`runs/养成星球/round-1.html`）",
+      "picks": [
+        {
+          "id": "01",
+          "mood": "warm",
+          "zh": "温暖",
+          "font": "noto-sans-sc",
+          "wght": 500,
+          "tracking": 0.02,
+          "family": "sans",
+          "tier": "medium"
+        },
+        {
+          "id": "03",
+          "mood": "clean",
+          "zh": "干净",
+          "font": "noto-sans-sc",
+          "wght": 400,
+          "tracking": 0.05,
+          "family": "sans",
+          "tier": "light"
+        },
+        {
+          "id": "06",
+          "mood": "fresh",
+          "zh": "鲜活",
+          "font": "noto-sans-sc",
+          "wght": 300,
+          "tracking": 0.03,
+          "family": "sans",
+          "tier": "light"
+        }
+      ],
+      "chosen": [
+        "01 温暖 · wght 500 · 字距 +2%",
+        "03 干净 · wght 400 · 字距 +5%",
+        "06 鲜活 · wght 300 · 字距 +3%"
+      ],
+      "rejected": [
+        "02",
+        "04",
+        "05",
+        "07",
+        "08"
+      ],
+      "locked": "mood = warm, clean, fresh；type_style = sans",
+      "note": "盲测 2：测试者直给编号，未记录原话",
+      "based_on": {}
+    },
+    {
+      "seq": 2,
+      "station": 2,
+      "at": "2026-11-09T20:52:38",
+      "status": "active",
+      "candidates": "15 句（`runs/养成星球/round-2.html`）",
+      "picks": [
+        {
+          "id": "S01",
+          "word": "养成",
+          "object": "芽",
+          "sentence": "一个圆，底部开一道缝，芽从缝里钻出",
+          "shape": "圆 + 芽",
+          "relation": "芽在圆内下缘，尖端朝上",
+          "join": "芽茎穿过缝隙，与圆下缘相接"
+        },
+        {
+          "id": "S03",
+          "word": "养成",
+          "object": "手",
+          "sentence": "一段弧弯成掌心，托着上方一颗小圆点",
+          "shape": "弧 + 点",
+          "relation": "点悬在弧的凹面中央",
+          "join": "不相接，点被弧托住"
+        },
+        {
+          "id": "S04",
+          "word": "星球",
+          "object": "圆",
+          "sentence": "一个整圆，右上方缺掉一小块",
+          "shape": "圆，缺一角",
+          "relation": "缺口在外缘右上",
+          "join": "缺口边缘为圆弧直切"
+        }
+      ],
+      "chosen": [
+        "S01 一个圆，底部开一道缝，芽从缝里钻出",
+        "S03 一段弧弯成掌心，托着上方一颗小圆点",
+        "S04 一个整圆，右上方缺掉一小块"
+      ],
+      "rejected": [
+        "S02",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S14",
+        "S15"
+      ],
+      "locked": "words = 养成, 星球；objects = 芽, 手, 圆",
+      "note": "盲测 2：测试者直给编号，未记录原话",
+      "based_on": {}
+    },
+    {
+      "seq": 3,
+      "station": 3,
+      "at": "2026-11-09T20:57:52",
+      "status": "active",
+      "candidates": "3 句 × 3 类型 = 9 格（`runs/养成星球/round-3.html`）",
+      "picks": [
+        {
+          "id": "S01-combination",
+          "sentence_id": "S01",
+          "type": "combination",
+          "type_zh": "组合",
+          "sentence": "一个圆，底部开一道缝，芽从缝里钻出",
+          "object": "芽"
+        },
+        {
+          "id": "S04-combination",
+          "sentence_id": "S04",
+          "type": "combination",
+          "type_zh": "组合",
+          "sentence": "一个整圆，右上方缺掉一小块",
+          "object": "圆"
+        }
+      ],
+      "chosen": [
+        "S01-combination 组合 · 一个圆，底部开一道缝，芽从缝里钻出",
+        "S04-combination 组合 · 一个整圆，右上方缺掉一小块"
+      ],
+      "rejected": [
+        "其余 7 格"
+      ],
+      "locked": "variant = full；mark_type = combination；cells = S01-combination, S04-combination",
+      "note": "盲测 2：测试者直给编号",
+      "exception": "只有一种类型（组合）：盲测 2：测试者两次都给组合单元格，未再补不同类型的格子",
+      "based_on": {
+        "1": 1,
+        "2": 2
+      }
+    }
+  ]
+}

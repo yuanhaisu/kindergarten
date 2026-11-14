@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- v3 弧＋芽：300° 弧，圆头收口，芽从开口里立起来——与 A1 同构（弧托住里面的东西） -->
+  <path d="M 86 189 A 86 86 0 1 1 170 189"
+        fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 128 208 L 128 150" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 128 154 C 130 134 147 116 177 108 C 177 134 156 152 128 154 Z" fill="#000"/>
+  <path d="M 128 150 C 126 134 113 120 87 112 C 87 134 104 148 128 150 Z" fill="#000"/>
+</svg>

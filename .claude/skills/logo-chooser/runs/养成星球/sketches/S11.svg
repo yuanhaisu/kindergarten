@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一个圆，内壁向上翻卷：内弧贴着上缘走一周，围出中间的窝 -->
+  <circle cx="60" cy="60" r="45" fill="none" stroke="#000" stroke-width="10"/>
+  <path d="M 34.6 50.8 A 27 27 0 0 1 85.4 50.8" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+</svg>

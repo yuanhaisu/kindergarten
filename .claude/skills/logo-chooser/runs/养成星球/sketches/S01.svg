@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- 一个圆，底部开一道缝，芽从缝里钻出：缝在下缘，芽茎穿缝而过 -->
+  <path d="M 38 98.1 A 44 44 0 1 1 82 98.1"
+        fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 60 106 L 60 82" fill="none" stroke="#000" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 60 84 C 50 84 45 77 45 70 C 55 70 60 77 60 84 Z" fill="#000"/>
+  <path d="M 60 84 C 70 84 75 77 75 70 C 65 70 60 77 60 84 Z" fill="#000"/>
+</svg>
