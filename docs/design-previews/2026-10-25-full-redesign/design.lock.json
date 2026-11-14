@@ -117,13 +117,13 @@
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
-      "sha256": "c8bf80ad17298d0d123a5dedfab8ab6c85842ab190e2371a0a2ad7cb8ae70743",
-      "depsSha": "654d2d28c9c6e68f7e8115584b28f59839b82818be1295f9133ba2c2460bf3ca",
+      "sha256": "8f9e349cc007614f0f9b21eee570d2fd27ee0e643a47debe691a7e07ddcb9c5b",
+      "depsSha": "a9c66996390330ec18e159fdacaf9c3618c94de005f2e80c5602291be3a2e749",
       "title": "接送记录",
       "tabbar": true,
-      "reviewedAt": "2026-11-12",
-      "codeCommit": "503a63e-dirty",
-      "reason": "拉丁/数字改用 Instrument Serif（App.vue 双字体加载 + 字体栈更新）"
+      "reviewedAt": "2026-11-15",
+      "codeCommit": "93ddb0a-dirty",
+      "reason": "2026-11-15-token-baseline 接送页硬编码清零"
     },
     "parent/14-pickup-qrcode": {
       "source": "parent/src/pages/pickup/qrcode.vue",

@@ -396,17 +396,7 @@ onPullDownRefresh(loadData)
 // 数值按 750rpx 设计基准（1px = 2rpx），字体只用系统可用族。
 // ============================================================
 
-$dna-bone: #ece6d7;
-$dna-card: #ffffff;
-$dna-card-soft: #fcfaf4;
-$dna-pine: #173220;
-$dna-ink-mid: #3d5141;
-$dna-ink-soft: #728173;
-$dna-sage-deep: #5c7359;
-$dna-sage-soft: #cfd9c5;
-$dna-marigold-soft: #efd485;
-$dna-terracotta: #c36540;
-$dna-terracotta-soft: #e5bca1;
+// DNA 调色板由 $color-identity-dna-* 提供（shared-design-tokens/tokens.json）。
 $dna-hair: rgba(23, 50, 32, 0.1);
 $dna-hair-strong: rgba(23, 50, 32, 0.22);
 // 拉丁/数字走 Instrument Serif，中文自动回落 Noto Serif SC；两者都在 App.vue 里自托管加载。
@@ -418,8 +408,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24rpx;
-  margin: 8rpx 0 28rpx;
+  gap: $spacing-lg;
+  margin: $spacing-xs 0 28rpx;
 }
 
 .pickup-head-copy {
@@ -429,9 +419,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .pickup-overline {
-  color: $dna-ink-soft;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs2;
   font-weight: 600;
   letter-spacing: 0.14em;
   line-height: 1.4;
@@ -439,7 +429,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .pickup-title {
   margin-top: 8rpx;
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-serif;
   font-size: 60rpx;
   font-weight: 400;
@@ -454,10 +444,10 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   margin: 0;
   border: 1rpx solid $dna-hair-strong;
   border-radius: 999rpx;
-  background: $dna-card;
-  color: $dna-pine;
+  background: $color-identity-dna-card;
+  color: $color-identity-dna-pine;
   font-family: $dna-sans;
-  font-size: 26rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
   line-height: 62rpx;
 }
@@ -472,15 +462,15 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   overflow: hidden;
   border: 1rpx solid $dna-hair;
   border-radius: 40rpx;
-  background: $dna-card;
+  background: $color-identity-dna-card;
 }
 
 .pass-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24rpx;
-  padding: 32rpx 32rpx 0;
+  gap: $spacing-lg;
+  padding: $spacing-xl $spacing-xl 0;
 }
 
 .pass-copy {
@@ -490,9 +480,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .pass-eyebrow {
-  color: $dna-ink-soft;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs2;
   font-weight: 600;
   letter-spacing: 0.12em;
   line-height: 1.4;
@@ -500,7 +490,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .pass-state {
   margin-top: 10rpx;
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-serif;
   font-size: 60rpx;
   font-weight: 400;
@@ -510,9 +500,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .pass-sub {
   margin-top: 8rpx;
-  color: $dna-ink-soft;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 26rpx;
+  font-size: $typography-font-size-sm;
   line-height: 1.5;
 }
 
@@ -524,18 +514,18 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   width: 96rpx;
   height: 96rpx;
   border-radius: 999rpx;
-  background: $dna-sage-soft;
-  color: $dna-sage-deep;
+  background: $color-identity-dna-sage-soft;
+  color: $color-identity-dna-sage-deep;
 }
 
 .seal--pre {
-  background: $dna-bone;
-  color: $dna-ink-soft;
+  background: $color-identity-dna-bone;
+  color: $color-identity-dna-ink-soft;
 }
 
 .seal--picked {
-  background: $dna-marigold-soft;
-  color: $dna-pine;
+  background: $color-identity-dna-marigold-soft;
+  color: $color-identity-dna-pine;
 }
 
 .seal-glyph {
@@ -547,8 +537,8 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .pass-rail {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
-  padding: 32rpx 32rpx 8rpx;
+  gap: $spacing-sm;
+  padding: $spacing-xl $spacing-xl $spacing-xs;
 }
 
 .rail-step {
@@ -569,13 +559,13 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   margin-top: 0;
   border-radius: 999rpx;
   border: 2rpx solid $dna-hair-strong;
-  background: $dna-card;
-  color: $dna-card;
+  background: $color-identity-dna-card;
+  color: $color-identity-dna-card;
 }
 
 .rail-step.is-done .rail-dot {
-  border-color: $dna-sage-deep;
-  background: $dna-sage-deep;
+  border-color: $color-identity-dna-sage-deep;
+  background: $color-identity-dna-sage-deep;
 }
 
 .rail-glyph {
@@ -592,7 +582,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .rail-line.is-done {
   border-top-style: solid;
-  border-top-color: $dna-sage-deep;
+  border-top-color: $color-identity-dna-sage-deep;
 }
 
 .rail-copy {
@@ -603,17 +593,17 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .rail-label {
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-sans;
-  font-size: 24rpx;
+  font-size: $typography-font-size-xs;
   font-weight: 600;
   line-height: 1.4;
 }
 
 .rail-meta {
-  color: $dna-ink-soft;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 24rpx;
+  font-size: $typography-font-size-xs;
   line-height: 1.4;
   overflow: hidden;
   white-space: nowrap;
@@ -625,9 +615,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12rpx;
+  gap: $spacing-sm;
   margin-top: 24rpx;
-  padding: 24rpx 32rpx 32rpx;
+  padding: $spacing-lg $spacing-xl $spacing-xl;
   border-top: 1rpx solid $dna-hair;
 }
 
@@ -635,15 +625,15 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
   width: 100%;
   height: 96rpx;
   padding: 0 28rpx;
   margin: 0;
   border: none;
   border-radius: 999rpx;
-  background: $dna-pine;
-  color: $dna-bone;
+  background: $color-identity-dna-pine;
+  color: $color-identity-dna-bone;
   font-family: $dna-sans;
   font-size: 29rpx;
   font-weight: 500;
@@ -666,10 +656,10 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .pass-note {
   display: flex;
   justify-content: center;
-  gap: 12rpx;
-  color: $dna-ink-soft;
+  gap: $spacing-sm;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs2;
   line-height: 1.5;
 }
 
@@ -677,13 +667,13 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: $spacing-sm;
   min-height: 96rpx;
   border-radius: 999rpx;
   background: rgba(141, 163, 134, 0.18);
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-sans;
-  font-size: 26rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
   line-height: 1.4;
   text-align: center;
@@ -704,9 +694,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .history-title {
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-serif;
-  font-size: 40rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1.35;
@@ -716,7 +706,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   overflow: hidden;
   border: 1rpx solid $dna-hair;
   border-radius: 40rpx;
-  background: $dna-card;
+  background: $color-identity-dna-card;
 }
 
 .day + .day {
@@ -728,13 +718,13 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   align-items: center;
   gap: 14rpx;
   min-height: 88rpx;
-  padding: 8rpx 32rpx;
+  padding: $spacing-xs $spacing-xl;
 }
 
 .day-title {
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-serif;
-  font-size: 32rpx;
+  font-size: $typography-font-size-md;
   font-weight: 400;
   line-height: 1.35;
 }
@@ -742,10 +732,10 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .day-week {
   padding: 4rpx 14rpx;
   border-radius: 999rpx;
-  background: $dna-card-soft;
-  color: $dna-ink-soft;
+  background: $color-identity-dna-card-soft;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs2;
   line-height: 1.5;
 }
 
@@ -765,16 +755,16 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   gap: 6rpx;
   padding: 6rpx 16rpx;
   border-radius: 999rpx;
-  background: $dna-sage-soft;
-  color: $dna-pine;
+  background: $color-identity-dna-sage-soft;
+  color: $color-identity-dna-pine;
   font-family: $dna-sans;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs2;
   font-weight: 500;
   line-height: 1.2;
 }
 
 .rec-type--out {
-  background: $dna-marigold-soft;
+  background: $color-identity-dna-marigold-soft;
 }
 
 .rec-type-icon {
@@ -794,28 +784,28 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12rpx;
+  gap: $spacing-sm;
   min-width: 0;
 }
 
 .rec-name {
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-sans;
-  font-size: 28rpx;
+  font-size: $typography-font-size-sm2;
   font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
 .rec-name.is-missing {
-  color: $dna-terracotta;
+  color: $color-identity-dna-terracotta;
   font-weight: 600;
 }
 
 .rec-rel {
-  color: $dna-ink-soft;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs2;
   line-height: 1.5;
 }
 
@@ -823,10 +813,10 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   flex: none;
   padding: 2rpx 12rpx;
   border-radius: 999rpx;
-  background: $dna-terracotta-soft;
-  color: $dna-pine;
+  background: $color-identity-dna-terracotta-soft;
+  color: $color-identity-dna-pine;
   font-family: $dna-sans;
-  font-size: 22rpx;
+  font-size: $typography-font-size-xs2;
   font-weight: 500;
   line-height: 1.5;
 }
@@ -838,9 +828,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .rec-time {
-  color: $dna-ink-mid;
+  color: $color-identity-dna-ink-mid;
   font-family: $dna-sans;
-  font-size: 26rpx;
+  font-size: $typography-font-size-sm;
   font-weight: 500;
   line-height: 1.35;
 }
@@ -864,7 +854,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   height: 176rpx;
   margin-bottom: 36rpx;
   border-radius: 999rpx;
-  background: $dna-card-soft;
+  background: $color-identity-dna-card-soft;
 }
 
 .empty-illustration,
@@ -875,9 +865,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 .empty-title,
 .error-title {
-  color: $dna-pine;
+  color: $color-identity-dna-pine;
   font-family: $dna-serif;
-  font-size: 40rpx;
+  font-size: $typography-font-size-2xl;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1.35;
@@ -886,9 +876,9 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .empty-desc,
 .error-desc {
   margin-top: 10rpx;
-  color: $dna-ink-soft;
+  color: $color-identity-dna-ink-soft;
   font-family: $dna-sans;
-  font-size: 26rpx;
+  font-size: $typography-font-size-sm;
   line-height: 1.5;
 }
 
@@ -905,10 +895,10 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding: 0 56rpx;
   border: none;
   border-radius: 999rpx;
-  background: $dna-pine;
-  color: $dna-bone;
+  background: $color-identity-dna-pine;
+  color: $color-identity-dna-bone;
   font-family: $dna-sans;
-  font-size: 28rpx;
+  font-size: $typography-font-size-sm2;
   line-height: 88rpx;
 }
 
@@ -931,10 +921,10 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .sk-pass {
-  padding: 32rpx;
+  padding: $spacing-xl;
   border: 1rpx solid $dna-hair;
   border-radius: 40rpx;
-  background: $dna-card;
+  background: $color-identity-dna-card;
 }
 
 .sk-top {
@@ -961,7 +951,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .sk-status {
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: $spacing-lg;
   margin-bottom: 32rpx;
 }
 
@@ -975,7 +965,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 12rpx;
+  gap: $spacing-sm;
 }
 
 .sk-line {
@@ -997,7 +987,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .sk-track {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $spacing-md;
   margin-bottom: 28rpx;
 }
 
@@ -1023,7 +1013,7 @@ $dna-sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding: 0 32rpx;
   border: 1rpx solid $dna-hair;
   border-radius: 40rpx;
-  background: $dna-card;
+  background: $color-identity-dna-card;
 }
 
 .sk-item {
