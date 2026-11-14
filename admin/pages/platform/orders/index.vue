@@ -333,7 +333,18 @@ async function onCancel() {
     ElMessage.success('订单已取消')
     await Promise.all([refreshDetail(), load()])
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '取消失败')
+    // 有未退款收款时后端拒绝取消并回传待退金额，这里直接展示，避免运营反复试错。
+    const unrefunded = (e as Error & { data?: { unrefunded_amount_cents?: number } }).data
+      ?.unrefunded_amount_cents
+    if (typeof unrefunded === 'number') {
+      ElMessageBox.alert(
+        `订单仍有未退款收款 ${formatMoney(unrefunded)}，请先在「登记收款」中以负数登记退款，再取消订单。`,
+        '无法取消',
+        { type: 'warning', confirmButtonText: '知道了' },
+      ).catch(() => {})
+    } else {
+      ElMessage.error(e instanceof Error ? e.message : '取消失败')
+    }
   }
 }
 

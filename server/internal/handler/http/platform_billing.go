@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -129,17 +131,34 @@ func (h *Handler) PlatformCancelOrder(c *gin.Context) {
 	_ = c.ShouldBindJSON(&req)
 	order, err := h.orderSvc.Cancel(c.Request.Context(), id, req.Reason, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		switch err.Error() {
-		case "ORDER_NOT_FOUND":
-			response.ErrNotFound(c, "订单不存在")
-		case "ORDER_ALREADY_CANCELLED":
-			response.ErrConflict(c, "订单已取消")
-		default:
-			response.ErrInternal(c, "取消订单失败")
-		}
+		writeCancelOrderError(c, err)
 		return
 	}
 	response.OK(c, gin.H{"cancelled_at": order.CancelledAt.Format(time.RFC3339)})
+}
+
+// writeCancelOrderError 是取消失败的唯一映射出口。
+func writeCancelOrderError(c *gin.Context, err error) {
+	// 未退款收款阻断取消：除了提示先退款，还要把待退金额结构化返回，
+	// 管理端据此直接展示，不必解析文案。
+	var unrefunded *service.UnrefundedPaymentError
+	if errors.As(err, &unrefunded) {
+		response.JSON(c, http.StatusConflict, response.Envelope{
+			Code: 40900,
+			Message: fmt.Sprintf("订单仍有未退款收款 %.2f 元，请先登记退款后再取消",
+				float64(unrefunded.AmountCents)/100),
+			Data: gin.H{"unrefunded_amount_cents": unrefunded.AmountCents},
+		})
+		return
+	}
+	switch err.Error() {
+	case "ORDER_NOT_FOUND":
+		response.ErrNotFound(c, "订单不存在")
+	case "ORDER_ALREADY_CANCELLED":
+		response.ErrConflict(c, "订单已取消")
+	default:
+		response.ErrInternal(c, "取消订单失败")
+	}
 }
 
 func (h *Handler) PlatformAddPayment(c *gin.Context) {
