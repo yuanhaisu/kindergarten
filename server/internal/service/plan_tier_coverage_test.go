@@ -13,7 +13,9 @@ import (
 	"kindergarten-server/internal/repository"
 )
 
-// 本文件的测试数据统一使用 S1Btier- 前缀（园所名 / 分销商 / 套餐编码 s1bt-），
+// 本文件的测试数据统一使用 S1Btier- 前缀（园所名 / 分销商 / 套餐编码 s6tier%）。
+// 套餐编码刻意不以 s1b 开头：其它用例的清理语句 `code LIKE 's1b_%'` 中 `_` 是
+// SQL 通配符，会误删 s1b 开头的任何编码，导致本文件的测试对其它用例的清理敏感。
 // 清理只删除自己的数据，避免与并行运行的其它用例互相干扰。
 func cleanupTierCoverage(t *testing.T, db *gorm.DB) {
 	t.Helper()
@@ -29,10 +31,10 @@ func cleanupTierCoverage(t *testing.T, db *gorm.DB) {
 	del("DELETE FROM students WHERE kindergarten_id IN (SELECT id FROM kindergartens WHERE name LIKE 'S1Btier-%')")
 	del("DELETE FROM classes WHERE kindergarten_id IN (SELECT id FROM kindergartens WHERE name LIKE 'S1Btier-%')")
 	del("DELETE FROM kindergartens WHERE name LIKE 'S1Btier-%'")
-	del("DELETE FROM platform_operation_logs WHERE target_type = 'plan' AND target_id IN (SELECT id FROM plans WHERE code LIKE 's1bt%')")
-	del("DELETE FROM plan_tiers WHERE plan_id IN (SELECT id FROM plans WHERE code LIKE 's1bt%')")
-	del("DELETE FROM plan_modules WHERE plan_id IN (SELECT id FROM plans WHERE code LIKE 's1bt%')")
-	del("DELETE FROM plans WHERE code LIKE 's1bt%'")
+	del("DELETE FROM platform_operation_logs WHERE target_type = 'plan' AND target_id IN (SELECT id FROM plans WHERE code LIKE 's6tier%')")
+	del("DELETE FROM plan_tiers WHERE plan_id IN (SELECT id FROM plans WHERE code LIKE 's6tier%')")
+	del("DELETE FROM plan_modules WHERE plan_id IN (SELECT id FROM plans WHERE code LIKE 's6tier%')")
+	del("DELETE FROM plans WHERE code LIKE 's6tier%'")
 	del("DELETE FROM distributors WHERE name LIKE 'S1Btier-%'")
 }
 
@@ -41,7 +43,7 @@ func newTierTestPlan(t *testing.T, planSvc *PlanService, code, name string) *dom
 	plan, err := planSvc.Create(context.Background(), PlanRequest{
 		Code: code, Name: name, Tier: 1, PriceCents: 100000, TermMonths: 6,
 		ModuleCodes: []string{"base", "growth"},
-	}, "s1bt_ops", "127.0.0.1")
+	}, "s6tier_ops", "127.0.0.1")
 	require.NoError(t, err)
 	return plan
 }
@@ -54,11 +56,11 @@ func TestPlanTier_RejectsTiersNotStartingAtZero(t *testing.T) {
 	cleanupTierCoverage(t, db)
 	t.Cleanup(func() { cleanupTierCoverage(t, db) })
 
-	plan := newTierTestPlan(t, planSvc, "s1bt_zero", "S1Btier-不从零版")
+	plan := newTierTestPlan(t, planSvc, "s6tier_zero", "S1Btier-不从零版")
 
 	err := planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
 		{Tier: 1, MinStudents: 10, MaxStudents: 0, PriceMultiplier: 100},
-	}, "s1bt_ops", "127.0.0.1")
+	}, "s6tier_ops", "127.0.0.1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "TIER_COVERAGE_NOT_FROM_ZERO")
 
@@ -67,7 +69,7 @@ func TestPlanTier_RejectsTiersNotStartingAtZero(t *testing.T) {
 	assert.Empty(t, tiers, "非法档位配置不得落库")
 
 	// 空档位同样没有覆盖任何人数区间。
-	err = planSvc.ReplaceTiers(ctx, plan.ID, nil, "s1bt_ops", "127.0.0.1")
+	err = planSvc.ReplaceTiers(ctx, plan.ID, nil, "s6tier_ops", "127.0.0.1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "TIER_COVERAGE_EMPTY")
 }
@@ -104,8 +106,8 @@ func TestPlanTier_RejectsCoverageGapOrOverlap(t *testing.T) {
 	}
 	for i, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan := newTierTestPlan(t, planSvc, "s1bt_contig"+string(rune('a'+i)), "S1Btier-连续性"+tc.name)
-			err := planSvc.ReplaceTiers(ctx, plan.ID, tc.tiers, "s1bt_ops", "127.0.0.1")
+			plan := newTierTestPlan(t, planSvc, "s6tier_contig"+string(rune('a'+i)), "S1Btier-连续性"+tc.name)
+			err := planSvc.ReplaceTiers(ctx, plan.ID, tc.tiers, "s6tier_ops", "127.0.0.1")
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantCode)
 			tiers, err := planSvc.ListTiers(ctx, plan.ID)
@@ -147,8 +149,8 @@ func TestPlanTier_RejectsBoundedTopOrUnboundedMiddle(t *testing.T) {
 	}
 	for i, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan := newTierTestPlan(t, planSvc, "s1bt_top"+string(rune('a'+i)), "S1Btier-开口"+tc.name)
-			err := planSvc.ReplaceTiers(ctx, plan.ID, tc.tiers, "s1bt_ops", "127.0.0.1")
+			plan := newTierTestPlan(t, planSvc, "s6tier_top"+string(rune('a'+i)), "S1Btier-开口"+tc.name)
+			err := planSvc.ReplaceTiers(ctx, plan.ID, tc.tiers, "s6tier_ops", "127.0.0.1")
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantCode)
 			tiers, err := planSvc.ListTiers(ctx, plan.ID)
@@ -166,11 +168,11 @@ func TestPlanTier_AcceptsContiguousConfig(t *testing.T) {
 	cleanupTierCoverage(t, db)
 	t.Cleanup(func() { cleanupTierCoverage(t, db) })
 
-	plan := newTierTestPlan(t, planSvc, "s1bt_valid", "S1Btier-合法版")
+	plan := newTierTestPlan(t, planSvc, "s6tier_valid", "S1Btier-合法版")
 	require.NoError(t, planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
 		{Tier: 2, MinStudents: 101, MaxStudents: 0, PriceMultiplier: 130},
 		{Tier: 1, MinStudents: 0, MaxStudents: 100, PriceMultiplier: 0},
-	}, "s1bt_ops", "127.0.0.1"), "乱序输入不应影响连续性判定")
+	}, "s6tier_ops", "127.0.0.1"), "乱序输入不应影响连续性判定")
 
 	tiers, err := planSvc.ListTiers(ctx, plan.ID)
 	require.NoError(t, err)
@@ -188,7 +190,7 @@ func TestPlanTier_AcceptsContiguousConfig(t *testing.T) {
 	err = planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
 		{Tier: 1, MinStudents: 0, MaxStudents: 100, PriceMultiplier: 100},
 		{Tier: 2, MinStudents: 0, MaxStudents: 0, PriceMultiplier: 130},
-	}, "s1bt_ops", "127.0.0.1")
+	}, "s6tier_ops", "127.0.0.1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "TIER_COVERAGE_OVERLAP")
 	tiers, err = planSvc.ListTiers(ctx, plan.ID)
@@ -206,13 +208,13 @@ func TestOrder_UnresolvedTierReturnsError(t *testing.T) {
 	t.Cleanup(func() { cleanupTierCoverage(t, db) })
 
 	kg := newTierTestKindergarten(t, db, "S1Btier-落档园", 5)
-	plan := newTierTestPlan(t, planSvc, "s1bt_legacy", "S1Btier-历史缺口版")
+	plan := newTierTestPlan(t, planSvc, "s6tier_legacy", "S1Btier-历史缺口版")
 	// 绕过保存校验直接写入历史遗留配置：只覆盖 0-2 名幼儿。
 	require.NoError(t, db.Create(&domain.PlanTier{
 		PlanID: plan.ID, Tier: 1, MinStudents: 0, MaxStudents: 2, PriceMultiplier: 100,
 	}).Error)
 
-	_, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1bt_ops", "127.0.0.1")
+	_, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s6tier_ops", "127.0.0.1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "TIER_COVERAGE_UNRESOLVED")
 
@@ -230,9 +232,9 @@ func TestOrder_NoTierConfigUsesFlatPrice(t *testing.T) {
 	t.Cleanup(func() { cleanupTierCoverage(t, db) })
 
 	kg := newTierTestKindergarten(t, db, "S1Btier-平价园", 5)
-	plan := newTierTestPlan(t, planSvc, "s1bt_flat", "S1Btier-平价版")
+	plan := newTierTestPlan(t, planSvc, "s6tier_flat", "S1Btier-平价版")
 
-	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1bt_ops", "127.0.0.1")
+	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s6tier_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.Equal(t, 1, order.StudentTier)
 	assert.EqualValues(t, 100000, order.AmountDueCents, "无档位配置时按 100% 平价")
@@ -251,13 +253,13 @@ func TestOrder_TierChangeOnlyAffectsNewOrders(t *testing.T) {
 	t.Cleanup(func() { cleanupTierCoverage(t, db) })
 
 	kg := newTierTestKindergarten(t, db, "S1Btier-改档园", 5)
-	plan := newTierTestPlan(t, planSvc, "s1bt_change", "S1Btier-改档版")
+	plan := newTierTestPlan(t, planSvc, "s6tier_change", "S1Btier-改档版")
 
 	require.NoError(t, planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
 		{Tier: 1, MinStudents: 0, MaxStudents: 10, PriceMultiplier: 100},
 		{Tier: 2, MinStudents: 11, MaxStudents: 0, PriceMultiplier: 150},
-	}, "s1bt_ops", "127.0.0.1"))
-	first, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1bt_ops", "127.0.0.1")
+	}, "s6tier_ops", "127.0.0.1"))
+	first, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s6tier_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.Equal(t, 1, first.StudentTier)
 	assert.EqualValues(t, 100000, first.AmountDueCents)
@@ -266,8 +268,8 @@ func TestOrder_TierChangeOnlyAffectsNewOrders(t *testing.T) {
 	require.NoError(t, planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
 		{Tier: 1, MinStudents: 0, MaxStudents: 2, PriceMultiplier: 100},
 		{Tier: 2, MinStudents: 3, MaxStudents: 0, PriceMultiplier: 200},
-	}, "s1bt_ops", "127.0.0.1"))
-	second, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1bt_ops", "127.0.0.1")
+	}, "s6tier_ops", "127.0.0.1"))
+	second, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s6tier_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.Equal(t, 2, second.StudentTier, "新订单使用新档位")
 	assert.EqualValues(t, 200000, second.AmountDueCents)
