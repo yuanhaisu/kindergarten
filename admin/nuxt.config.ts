@@ -35,6 +35,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api/v1',
+      // 官网地址：同意页的隐私政策/用户协议链接；生产由部署环境注入。
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     },
   },
   elementPlus: {

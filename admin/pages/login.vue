@@ -65,6 +65,12 @@ async function onSubmit() {
   try {
     const data = await loginPassword({ phone: form.phone, password: form.password })
     auth.setSession(data)
+    // 未同意当前隐私政策：先完成同意，不进入业务页（首次改密也等同意之后）。
+    if (data.consent_required) {
+      const redirect = (route.query.redirect as string) || '/'
+      await navigateTo({ path: '/consent', query: { redirect } })
+      return
+    }
     if (data.user.must_change_password) {
       await promptInitialPasswordChange(auth)
     }

@@ -4,9 +4,14 @@
 export const site = {
   name: '养成星球',
   nameEn: 'Nurture Planet',
-  // 上线前必须替换的三项
-  legalEntity: '', // 营业执照主体全称
-  icp: '', // 例如 浙ICP备2026000000号-1
+  // 生产站点根地址：canonical、Open Graph 与结构化数据统一引用它。
+  siteUrl: 'https://www.nurtureplanet.cn',
+  // 主体全称（营业执照）
+  legalEntity: '湘潭市岳塘区稚序软件开发工作室',
+  // 工信部备案的网站名称（与产品品牌「养成星球」不同，页脚并列展示）
+  filingName: '稚序saas软件服务平台',
+  // 工信部 ICP 备案号
+  icp: '湘ICP备2026054245号-1',
   contact: {
     wecomQr: '', // 把二维码放到 public/contact/wecom-qr.png 后填 '/contact/wecom-qr.png'
     email: 'contact@nurtureplanet.cn', // 阿里企业邮箱（免费版）
