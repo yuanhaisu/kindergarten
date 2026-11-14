@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" font-family="'Ma Shan Zheng','Noto Serif SC',Georgia,serif">
+  <rect width="600" height="800" fill="#fbfaf6"/>
+
+  <!-- 星空带：星点 8 -->
+  <g fill="#141414" stroke="#141414">
+    <circle cx="85" cy="95" r="2"/>
+    <circle cx="190" cy="55" r="1.4" fill="none" stroke-width="1"/>
+    <circle cx="310" cy="115" r="2"/>
+    <circle cx="430" cy="80" r="1.6" fill="none" stroke-width="1"/>
+    <circle cx="540" cy="160" r="2"/>
+    <circle cx="70" cy="260" r="1.4" fill="none" stroke-width="1"/>
+    <circle cx="250" cy="240" r="2"/>
+    <g stroke-width="1" opacity=".7"><line x1="330" y1="300" x2="330" y2="314"/><line x1="323" y1="307" x2="337" y2="307"/></g>
+  </g>
+
+  <!-- V5 远景：右上角第二颗小星球 -->
+  <circle cx="500" cy="255" r="20" fill="none" stroke="#141414" stroke-width="1.5" opacity=".55"/>
+  <circle cx="494" cy="249" r="3" fill="none" stroke="#141414" stroke-width="1" opacity=".4"/>
+
+  <!-- 沙地弧 -->
+  <g id="ground" fill="none" stroke="#141414">
+    <path d="M40 640 Q300 565 560 640" stroke-width="2.6"/>
+    <path d="M40 640 Q300 700 560 640" stroke-width="1.4" opacity=".4"/>
+    <path d="M120 605 Q140 600 165 604" stroke-width="1" opacity=".5"/>
+    <path d="M380 600 Q405 595 430 600" stroke-width="1" opacity=".5"/>
+    <circle cx="250" cy="630" r="3" stroke-width="1" opacity=".5"/>
+  </g>
+
+  <!-- V5 远景：小王子缩小到 0.35x，脚仍落在原地 -->
+  <g transform="translate(235,610) scale(0.35) translate(-235,-610)">
+    <g id="prince" fill="none" stroke="#141414">
+      <circle cx="235" cy="470" r="15" stroke-width="2.2"/>
+      <path d="M220 461 Q234 445 250 461 M220 461 Q215 478 221 495 M250 461 Q255 478 249 495" stroke-width="1.4"/>
+      <circle cx="230" cy="471" r="1.7" fill="#141414" stroke="none"/>
+      <circle cx="240" cy="471" r="1.7" fill="#141414" stroke="none"/>
+      <path d="M233 476 q1.5 2 3 0" stroke-width=".8"/>
+      <path d="M230 479 q5 2.5 9 0" stroke-width=".8"/>
+      <path d="M222 486 q13 6 26 0" stroke-width="1.6"/>
+      <path d="M247 486 q6 3 9 9" stroke-width="1.4"/>
+      <path d="M235 489 Q210 506 206 588" stroke-width="2"/>
+      <path d="M235 489 Q260 506 264 588" stroke-width="2"/>
+      <path d="M206 588 q29 6 58 0" stroke-width="1.6"/>
+      <line x1="235" y1="491" x2="235" y2="585" stroke-width="1" opacity=".5"/>
+      <circle cx="235" cy="518" r="1" fill="#141414" stroke="none"/>
+      <circle cx="235" cy="536" r="1" fill="#141414" stroke="none"/>
+      <circle cx="235" cy="554" r="1" fill="#141414" stroke="none"/>
+      <path d="M212 504 q-5 16 -3 30" stroke-width="1.8"/>
+      <path d="M258 504 q7 13 11 23" stroke-width="1.8"/>
+      <path d="M223 588 q-1 14 0 22" stroke-width="1.8"/>
+      <path d="M247 588 q1 14 0 22" stroke-width="1.8"/>
+      <path d="M215 608 q8 4 14 0" stroke-width="1.4"/>
+      <path d="M240 608 q8 4 14 0" stroke-width="1.4"/>
+    </g>
+  </g>
+
+  <!-- 客人：飞行员（机尾为唯一朱砂焦点） -->
+  <g id="guest-pilot" fill="none" stroke="#141414">
+    <path d="M400 580 q30 -10 40 -30 l8 4 q-6 16 -30 26" stroke="#C0392B" stroke-width="1.8"/>
+    <line x1="430" y1="555" x2="452" y2="548" stroke-width="1.4"/>
+    <path d="M420 575 l-10 14" stroke-width="1.4"/>
+    <circle cx="345" cy="528" r="13" stroke-width="2.2"/>
+    <path d="M333 524 q12 -8 24 0" stroke-width="1.4"/>
+    <line x1="333" y1="522" x2="357" y2="522" stroke-width="1.6"/>
+    <circle cx="340" cy="530" r="1.6" fill="#141414" stroke="none"/>
+    <circle cx="350" cy="530" r="1.6" fill="#141414" stroke="none"/>
+    <path d="M343 536 q3 2 6 0" stroke-width=".8"/>
+    <path d="M345 542 Q326 556 322 600" stroke-width="2"/>
+    <path d="M345 542 Q364 556 368 600" stroke-width="2"/>
+    <path d="M322 600 q23 5 46 0" stroke-width="1.6"/>
+    <line x1="345" y1="544" x2="345" y2="596" stroke-width="1" opacity=".5"/>
+    <path d="M328 552 q-4 14 -2 26" stroke-width="1.8"/>
+    <path d="M362 552 q6 12 10 20" stroke-width="1.8"/>
+    <path d="M334 600 q-1 12 0 14" stroke-width="1.8"/>
+    <path d="M356 600 q1 12 0 14" stroke-width="1.8"/>
+    <path d="M328 612 q7 4 12 0" stroke-width="1.4"/>
+    <path d="M350 612 q7 4 12 0" stroke-width="1.4"/>
+  </g>
+
+  <!-- 惊喜元素：信（变体 C，已拆封；封蜡改墨色） -->
+  <g transform="translate(410 180) rotate(-6)" fill="none" stroke="#141414">
+    <rect x="0" y="0" width="36" height="24" rx="1" stroke-width="1.4"/>
+    <polyline points="0,0 18,12 36,0" stroke-width="1"/>
+    <path d="M0,0 L10,7 L12,4 L15,8 L18,5" stroke-width="1"/>
+    <circle cx="18" cy="12" r="3" fill="#141414" stroke="none"/>
+  </g>
+
+  <text id="title" x="300" y="695" text-anchor="middle" font-size="40" fill="#141414" letter-spacing="6">来 信</text>
+  <line x1="260" y1="715" x2="340" y2="715" stroke="#141414" stroke-width="1.4"/>
+  <text id="quote" x="300" y="745" text-anchor="middle" font-size="16" fill="#141414" letter-spacing="3">有些话要写下来</text>
+  <text x="300" y="770" text-anchor="middle" font-size="12" fill="#666666" letter-spacing="1">字句会飞</text>
+
+  <rect x="16" y="16" width="568" height="768" fill="none" stroke="#141414" stroke-width="1.2" opacity=".2"/>
+</svg>

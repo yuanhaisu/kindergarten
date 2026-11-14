@@ -1,0 +1,20 @@
+{
+  "slug": "parent-16-album-detail",
+  "surface": "parent",
+  "title": "相册详情",
+  "projectId": "e6061981-88c1-443b-9027-2dee04589905",
+  "conversationId": "7522f3d4-8065-4f20-8060-774f4b9769ff",
+  "runId": "90174fde-ec8e-4c1f-a09e-82139530e7a0",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 301,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/e6061981-88c1-443b-9027-2dee04589905",
+  "previewRendered": true
+}

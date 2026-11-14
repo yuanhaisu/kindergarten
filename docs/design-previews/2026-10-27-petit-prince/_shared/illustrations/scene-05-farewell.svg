@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" font-family="'Ma Shan Zheng','Noto Serif SC',Georgia,serif">
+  <rect width="600" height="800" fill="#fbfaf6"/>
+
+  <!-- 星空带：星点 9 -->
+  <g fill="#141414" stroke="#141414">
+    <circle cx="90" cy="90" r="2"/>
+    <circle cx="200" cy="60" r="1.4" fill="none" stroke-width="1"/>
+    <circle cx="320" cy="110" r="2"/>
+    <circle cx="450" cy="75" r="1.6" fill="none" stroke-width="1"/>
+    <circle cx="530" cy="150" r="2"/>
+    <circle cx="70" cy="240" r="1.4" fill="none" stroke-width="1"/>
+    <circle cx="260" cy="210" r="2"/>
+    <circle cx="500" cy="300" r="2"/>
+    <g stroke-width="1" opacity=".7"><line x1="150" y1="320" x2="150" y2="334"/><line x1="143" y1="327" x2="157" y2="327"/></g>
+    <circle cx="90" cy="430" r="8" fill="none" stroke-width="1.2" opacity=".4"/>
+    <circle cx="520" cy="430" r="13" fill="none" stroke-width="1.3" opacity=".5"/>
+  </g>
+
+  <!-- 沙地弧 -->
+  <g id="ground" fill="none" stroke="#141414">
+    <path d="M40 640 Q300 565 560 640" stroke-width="2.6"/>
+    <path d="M40 640 Q300 700 560 640" stroke-width="1.4" opacity=".4"/>
+    <path d="M120 605 Q140 600 165 604" stroke-width="1" opacity=".5"/>
+    <path d="M380 600 Q405 595 430 600" stroke-width="1" opacity=".5"/>
+    <circle cx="250" cy="630" r="3" stroke-width="1" opacity=".5"/>
+  </g>
+
+  <!-- 氛围层：星环 -->
+  <g fill="none" stroke="#141414" opacity=".15" stroke-width="1">
+    <ellipse cx="300" cy="640" rx="260" ry="24"/>
+  </g>
+
+  <!-- 小王子 -->
+  <g id="prince" fill="none" stroke="#141414">
+    <circle cx="235" cy="470" r="15" stroke-width="2.2"/>
+    <path d="M220 461 Q234 445 250 461 M220 461 Q215 478 221 495 M250 461 Q255 478 249 495" stroke-width="1.4"/>
+    <circle cx="230" cy="471" r="1.7" fill="#141414" stroke="none"/>
+    <circle cx="240" cy="471" r="1.7" fill="#141414" stroke="none"/>
+    <path d="M233 476 q1.5 2 3 0" stroke-width=".8"/>
+    <path d="M230 479 q5 2.5 9 0" stroke-width=".8"/>
+    <path d="M222 486 q13 6 26 0" stroke-width="1.6"/>
+    <path d="M247 486 q6 3 9 9" stroke-width="1.4"/>
+    <path d="M235 489 Q210 506 206 588" stroke-width="2"/>
+    <path d="M235 489 Q260 506 264 588" stroke-width="2"/>
+    <path d="M206 588 q29 6 58 0" stroke-width="1.6"/>
+    <line x1="235" y1="491" x2="235" y2="585" stroke-width="1" opacity=".5"/>
+    <circle cx="235" cy="518" r="1" fill="#141414" stroke="none"/>
+    <circle cx="235" cy="536" r="1" fill="#141414" stroke="none"/>
+    <circle cx="235" cy="554" r="1" fill="#141414" stroke="none"/>
+    <path d="M212 504 q-5 16 -3 30" stroke-width="1.8"/>
+    <path d="M258 504 q7 13 11 23" stroke-width="1.8"/>
+    <path d="M223 588 q-1 14 0 22" stroke-width="1.8"/>
+    <path d="M247 588 q1 14 0 22" stroke-width="1.8"/>
+    <path d="M215 608 q8 4 14 0" stroke-width="1.4"/>
+    <path d="M240 608 q8 4 14 0" stroke-width="1.4"/>
+  </g>
+
+  <!-- 客人：蛇（信子为唯一朱砂焦点） -->
+  <g id="guest-snake" fill="none" stroke="#141414">
+    <ellipse cx="370" cy="598" rx="40" ry="9" stroke-width="2"/>
+    <ellipse cx="372" cy="588" rx="32" ry="8" stroke-width="1.8"/>
+    <ellipse cx="374" cy="579" rx="24" ry="7" stroke-width="1.6"/>
+    <path d="M390 575 q14 -14 6 -28 q-8 -10 -20 -4" stroke-width="2"/>
+    <path d="M376 543 q-10 -2 -12 -10 q4 -6 12 -2 q4 6 0 12 Z" stroke-width="1.8"/>
+    <circle cx="370" cy="534" r="1.5" fill="#141414" stroke="none"/>
+    <path d="M364 537 q-8 -2 -12 -6" stroke="#C0392B" stroke-width="1.4"/>
+    <path d="M352 531 l-3 -2 M352 531 l-2 3" stroke="#C0392B" stroke-width="1.1"/>
+    <path d="M384 562 q4 -3 8 0" stroke-width="1" opacity=".5"/>
+  </g>
+
+  <!-- 惊喜元素：绳结（变体 A，朱砂点改墨色） -->
+  <g transform="translate(455 560) scale(.9)" fill="none" stroke="#141414">
+    <path d="M10,30 Q20,10 40,20 Q50,30 40,40 Q20,50 10,30" stroke-width="2.2" opacity=".8"/>
+    <path d="M8,28 Q30,30 42,38" stroke-width="2" opacity=".6"/>
+    <path d="M12,32 Q30,26 38,22" stroke-width="2" opacity=".6"/>
+    <path d="M15,38 Q12,50 14,58" stroke-width="1.8"/>
+    <path d="M35,42 Q38,52 36,60" stroke-width="1.8"/>
+    <line x1="12" y1="58" x2="10" y2="62" stroke-width="1"/>
+    <line x1="14" y1="58" x2="16" y2="62" stroke-width="1"/>
+    <line x1="34" y1="60" x2="32" y2="64" stroke-width="1"/>
+    <line x1="36" y1="60" x2="38" y2="64" stroke-width="1"/>
+    <circle cx="26" cy="28" r="1.5" fill="#141414" stroke="none"/>
+  </g>
+
+  <text id="title" x="300" y="695" text-anchor="middle" font-size="40" fill="#141414" letter-spacing="6">告 别</text>
+  <line x1="260" y1="715" x2="340" y2="715" stroke="#141414" stroke-width="1.4"/>
+  <text id="quote" x="300" y="745" text-anchor="middle" font-size="16" fill="#141414" letter-spacing="3">来去都有时辰</text>
+  <text x="300" y="770" text-anchor="middle" font-size="12" fill="#666666" letter-spacing="1">牵绊不断</text>
+
+  <rect x="16" y="16" width="568" height="768" fill="none" stroke="#141414" stroke-width="1.2" opacity=".2"/>
+</svg>

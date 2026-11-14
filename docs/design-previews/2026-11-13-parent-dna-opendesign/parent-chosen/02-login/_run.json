@@ -1,0 +1,20 @@
+{
+  "slug": "parent-02-login",
+  "surface": "parent",
+  "title": "登录",
+  "projectId": "ca87ed3a-574e-4eb7-9dc0-ed592c29ecc5",
+  "conversationId": "420ff0d7-2997-4d91-939c-7e831a47bbec",
+  "runId": "4fc35f68-c545-4c98-9357-8545746011fe",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 337,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/ca87ed3a-574e-4eb7-9dc0-ed592c29ecc5",
+  "previewRendered": true
+}

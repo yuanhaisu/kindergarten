@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="养成星球家长端「我的」页面：账号、孩子、本学期数据与服务入口。">
+  <title>我的 · 养成星球</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-od-id="mp-app">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="status-time">10:20</span>
+      <span class="status-icons">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="none" focusable="false">
+          <rect x="1" y="7.5" width="2.5" height="4" rx="1" fill="currentColor"/>
+          <rect x="5.5" y="5.5" width="2.5" height="6" rx="1" fill="currentColor"/>
+          <rect x="10" y="3.5" width="2.5" height="8" rx="1" fill="currentColor"/>
+          <rect x="14.5" y="1" width="2.5" height="10.5" rx="1" fill="currentColor"/>
+        </svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" focusable="false">
+          <path d="M1.3 4.4a10.4 10.4 0 0 1 13.4 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M3.9 7.1a6.4 6.4 0 0 1 8.2 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M6.3 9.6a2.7 2.7 0 0 1 3.4 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="8" cy="11" r=".85" fill="currentColor"/>
+        </svg>
+        <svg width="24" height="12" viewBox="0 0 24 12" fill="none" focusable="false">
+          <rect x=".75" y="1.25" width="20.5" height="9.5" rx="2.75" stroke="currentColor" stroke-width="1.2"/>
+          <rect x="2.5" y="3" width="16" height="6" rx="1.5" fill="currentColor"/>
+          <path d="M22.5 4.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </span>
+    </div>
+
+    <main class="mp-main" data-od-id="profile-main">
+      <header class="page-head" data-od-id="profile-header">
+        <div class="page-head-top">
+          <p class="eyebrow">账号与家庭</p>
+          <img class="header-logo" src="../../_shared/logo-dna.svg" alt="养成星球" width="28" height="28" />
+        </div>
+        <h1 class="page-title" data-od-id="page-title">我的</h1>
+      </header>
+
+      <section class="account-card" aria-labelledby="account-name" data-od-id="account-card">
+        <div class="account-main">
+          <div class="avatar avatar--account" aria-hidden="true">妈</div>
+          <div class="account-id">
+            <h2 class="account-name" id="account-name">李静</h2>
+            <p class="account-meta">138****6721 · 妈妈</p>
+          </div>
+          <a class="text-button" href="#" aria-label="编辑账号资料" data-od-id="account-edit">编辑</a>
+        </div>
+        <div class="child-row">
+          <div class="avatar avatar--child" aria-hidden="true">乐</div>
+          <div class="child-id">
+            <p class="child-name">乐乐</p>
+            <p class="child-meta">小一班 · 阳光幼儿园</p>
+          </div>
+          <a class="child-switch" href="#" aria-label="切换孩子" data-od-id="child-switch">切换</a>
+        </div>
+      </section>
+
+      <section class="stats-card" aria-labelledby="stats-title" data-od-id="semester-stats">
+        <p class="stats-title" id="stats-title">累计数据</p>
+        <div class="stats-grid">
+          <div class="stat">
+            <p class="stat-value">42</p>
+            <p class="stat-label">接送记录</p>
+          </div>
+          <div class="stat">
+            <p class="stat-value">32</p>
+            <p class="stat-label">成长记录</p>
+          </div>
+          <div class="stat">
+            <p class="stat-value">1245</p>
+            <p class="stat-label">累计积分</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="services-title" data-od-id="services-section">
+        <h2 class="section-title" id="services-title">我的服务</h2>
+        <div class="list-card">
+          <a class="list-row service-row" href="#" data-od-id="service-child-file">
+            <span class="icon-circle icon-circle--sage" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <circle cx="12" cy="8" r="3.2"/>
+                <path d="M5.5 19.5c.5-3.5 3.2-5.8 6.5-5.8s6 2.3 6.5 5.8"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">幼儿信息</span>
+              <span class="row-sub">档案、健康与紧急联系人</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+
+          <a class="list-row service-row" href="#" data-od-id="service-class-info">
+            <span class="icon-circle icon-circle--marigold" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M4.5 10.5 12 4l7.5 6.5"/>
+                <path d="M6.5 9.8V19a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V9.8"/>
+                <path d="M10 20v-5h4v5"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">班级信息</span>
+              <span class="row-sub">小一班 · 李老师、王老师</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+
+          <a class="list-row service-row" href="#" data-od-id="service-calendar">
+            <span class="icon-circle icon-circle--terracotta" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <rect x="3.5" y="5.5" width="17" height="15" rx="3"/>
+                <path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17"/>
+                <path d="M8 14h2.5M13.5 14h2.5M8 17h2.5"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">班级日历</span>
+              <span class="row-sub">本月 <span class="hl">3 个活动</span>待参加</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+
+          <a class="list-row service-row" href="#" data-od-id="service-achievements">
+            <span class="icon-circle icon-circle--marigold" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="m12 3.8 2.5 5.2 5.6.8-4 4 .9 5.6-5-2.7-5 2.7.9-5.6-4-4 5.6-.8z"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">积分与成就</span>
+              <span class="row-sub">已获得 8 枚徽章</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+
+          <a class="list-row service-row" href="#" data-od-id="service-feedback">
+            <span class="icon-circle icon-circle--neutral" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.6 8.6 0 0 1-3.2-.6L4 20l1.2-3.6A7.1 7.1 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">意见反馈</span>
+              <span class="row-sub">问题和建议都可以告诉我们</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="settings-title" data-od-id="settings-section">
+        <h2 class="section-title" id="settings-title">设置</h2>
+        <div class="list-card">
+          <a class="list-row setting-row" href="#" data-od-id="setting-messages">
+            <span class="row-copy">
+              <span class="row-title">消息</span>
+              <span class="row-sub">通知、请假与系统消息</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+
+          <a class="list-row setting-row" href="#" data-od-id="setting-notifications">
+            <span class="row-copy">
+              <span class="row-title">消息通知</span>
+            </span>
+            <span class="row-tail">
+              <span class="status-tag">已开启</span>
+              <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="m9 6 6 6-6 6"/>
+              </svg>
+            </span>
+          </a>
+
+          <a class="list-row setting-row" href="#" data-od-id="setting-privacy">
+            <span class="row-copy">
+              <span class="row-title">隐私与协议</span>
+              <span class="row-sub">用户协议、隐私政策、儿童信息授权</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+
+          <a class="list-row setting-row" href="#" data-od-id="setting-about">
+            <span class="row-copy">
+              <span class="row-title">关于养成星球</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+        </div>
+      </section>
+
+      <footer class="page-footer" data-od-id="profile-footer">
+        <button class="logout" type="button" data-od-id="logout-button">退出登录</button>
+        <p class="version" data-od-id="profile-version"><img class="version-logo" src="../../_shared/logo-dna.svg" alt="" width="16" height="16" />养成星球 · 家长端 v1.0.0</p>
+      </footer>
+    </main>
+
+    <nav class="mp-nav" aria-label="底部导航" data-od-id="tab-bar">
+      <a class="tab" href="#" aria-label="首页" data-od-id="tab-home">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M4 10.7 12 4l8 6.7V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z"/>
+        </svg>
+        <span>首页</span>
+      </a>
+      <a class="tab" href="#" aria-label="成长" data-od-id="tab-growth">
+        <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4C12 4 5 8 5 16c0 2 1 4 3 4 8 0 12-7 12-16Z"/><path d="M5 20c2-5 6-8 11-10"/></svg>
+        <span>成长</span>
+      </a>
+      <a class="tab" href="#" aria-label="接送" data-od-id="tab-pickup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M13.5 4.5h4A2.5 2.5 0 0 1 20 7v10a2.5 2.5 0 0 1-2.5 2.5h-4"/>
+          <path d="M4 12h9.5"/>
+          <path d="m10.5 8.5 3.5 3.5-3.5 3.5"/>
+        </svg>
+        <span>接送</span>
+      </a>
+      <a class="tab" href="#" aria-label="我的" aria-current="page" data-od-id="tab-profile">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="8" r="3.2"/>
+          <path d="M5.2 20c.7-3.7 3.4-6 6.8-6s6.1 2.3 6.8 6"/>
+        </svg>
+        <span>我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

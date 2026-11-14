@@ -1,0 +1,22 @@
+{
+  "slug": "parent-v5-report-month-14-growth-report",
+  "surface": "parent",
+  "title": "成长报告 · 本月版",
+  "projectId": "4d46c38f-ac86-4fb7-9d5a-d064c14df70c",
+  "conversationId": "cc851d68-c6a0-44c4-b718-87b406f38b5f",
+  "runId": "3578a8bd-2242-4c8f-a824-95410dbb4a7d",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 477,
+  "files": [
+    ".file-versions/92681f290180d0a2aaefbd22/0001-c9384a3d-10c3-4b0c-821d-3d13a052de7c.html",
+    ".file-versions/92681f290180d0a2aaefbd22/manifest.json",
+    "parent-variants/v5-report-month/14-growth-report/app.js",
+    "parent-variants/v5-report-month/14-growth-report/index.html",
+    "parent-variants/v5-report-month/14-growth-report/index.html.artifact.json",
+    "parent-variants/v5-report-month/14-growth-report/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/4d46c38f-ac86-4fb7-9d5a-d064c14df70c"
+}

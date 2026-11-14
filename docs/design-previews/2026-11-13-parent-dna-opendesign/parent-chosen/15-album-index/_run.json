@@ -1,0 +1,20 @@
+{
+  "slug": "parent-15-album-index",
+  "surface": "parent",
+  "title": "班级相册",
+  "projectId": "34013022-1ac6-4674-98be-e76bc4bd2a21",
+  "conversationId": "2d87d02b-9664-4957-af4e-d25a01f71c4a",
+  "runId": "da8d2005-4d67-43e1-b0fe-94fb11e6f9e2",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 397,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/34013022-1ac6-4674-98be-e76bc4bd2a21",
+  "previewRendered": true
+}

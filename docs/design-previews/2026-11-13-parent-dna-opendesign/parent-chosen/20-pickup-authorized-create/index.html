@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>添加授权人 · 接送</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-od-id="authorized-create-screen">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="status-time">10:20</span>
+      <div class="status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true">
+          <rect x="0" y="7" width="3" height="4" rx="1"></rect>
+          <rect x="4.5" y="5" width="3" height="6" rx="1"></rect>
+          <rect x="9" y="3" width="3" height="8" rx="1"></rect>
+          <rect x="13.5" y="0" width="3" height="11" rx="1"></rect>
+        </svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M1.5 4.4a10.2 10.2 0 0 1 13 0"></path>
+          <path d="M3.9 6.9a6.6 6.6 0 0 1 8.2 0"></path>
+          <path d="M6.3 9.4a3 3 0 0 1 3.4 0"></path>
+          <circle cx="8" cy="11" r=".9" fill="currentColor" stroke="none"></circle>
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true">
+          <rect x=".6" y=".6" width="21" height="10.8" rx="3" stroke="currentColor" stroke-opacity=".4" stroke-width="1.2"></rect>
+          <rect x="2.4" y="2.4" width="15.6" height="7.2" rx="1.6" fill="currentColor"></rect>
+          <path d="M23 4v4c1 .3 1.7-.4 1.7-2S24 3.7 23 4Z" fill="currentColor" fill-opacity=".45"></path>
+        </svg>
+      </div>
+    </div>
+
+    <main class="mp-main" data-od-id="main-content">
+      <header class="page-bar" data-od-id="page-bar">
+        <button class="page-back" type="button" aria-label="返回" data-od-id="btn-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M14.5 5.5 8 12l6.5 6.5"></path>
+          </svg>
+        </button>
+        <span class="page-bar-title">接送</span>
+        <span class="page-bar-spacer" aria-hidden="true"></span>
+      </header>
+
+      <div class="page-head" data-od-id="page-head">
+        <h1 class="page-title" data-od-id="page-title">添加授权人</h1>
+        <p class="page-subtitle">为乐乐（小一班）添加一位可接送人</p>
+      </div>
+
+      <form class="auth-form" id="auth-form" novalidate>
+        <section class="form-card" aria-label="授权人信息" data-od-id="form-card">
+          <div class="field" data-od-id="field-name">
+            <label class="field-label" for="name-input">姓名</label>
+            <input
+              class="field-input"
+              id="name-input"
+              name="name"
+              type="text"
+              value="陈秀兰"
+              placeholder="请填写身份证上的姓名"
+              autocomplete="name"
+              aria-describedby="name-error"
+            >
+            <p class="field-error" id="name-error" hidden>请填写姓名</p>
+          </div>
+
+          <div class="field" data-od-id="field-relation">
+            <span class="field-label" id="relation-label">与孩子的关系</span>
+            <button
+              class="picker"
+              id="relation-picker"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="relation-sheet"
+              aria-labelledby="relation-label relation-value"
+              aria-describedby="relation-hint"
+              data-od-id="picker-relation"
+            >
+              <span class="picker-value" id="relation-value" aria-live="polite">外婆</span>
+              <svg class="picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="m6.5 9.5 5.5 5.5 5.5-5.5"></path>
+              </svg>
+            </button>
+            <p class="field-hint" id="relation-hint">可选：爷爷、奶奶、外公、外婆、其他</p>
+            <input type="hidden" name="relation" id="relation-field" value="外婆">
+          </div>
+
+          <div class="field" data-od-id="field-phone">
+            <label class="field-label" for="phone-input">手机号</label>
+            <input
+              class="field-input field-input--tel"
+              id="phone-input"
+              name="phone"
+              type="tel"
+              inputmode="numeric"
+              maxlength="11"
+              enterkeyhint="done"
+              value="13700004418"
+              placeholder="用于接收审核结果"
+              autocomplete="tel"
+              aria-describedby="phone-error"
+            >
+            <p class="field-error" id="phone-error" hidden>请填写正确的手机号</p>
+          </div>
+
+          <div class="field" data-od-id="field-validity">
+            <span class="field-label" id="validity-label">有效期</span>
+            <button
+              class="picker"
+              id="validity-picker"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="validity-sheet"
+              aria-labelledby="validity-label validity-value"
+              aria-describedby="validity-hint"
+              data-od-id="picker-validity"
+            >
+              <span class="picker-value" id="validity-value" aria-live="polite">长期授权</span>
+              <svg class="picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="m6.5 9.5 5.5 5.5 5.5-5.5"></path>
+              </svg>
+            </button>
+            <p class="field-hint" id="validity-hint">可指定日期，到期自动失效</p>
+            <input type="hidden" name="validity" id="validity-field" value="长期授权">
+          </div>
+
+          <div class="field field-photo" role="group" aria-label="人像照片" data-od-id="field-photo">
+            <div class="photo-thumb" id="photo-thumb" role="img" aria-label="陈秀兰的人像照片">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="8.6" r="3.3"></circle>
+                <path d="M5.8 19.2c.8-3.1 3.2-4.9 6.2-4.9s5.4 1.8 6.2 4.9"></path>
+              </svg>
+            </div>
+            <div class="photo-meta">
+              <p class="photo-status">已上传 1 张</p>
+              <p class="photo-desc">用于老师与门卫在门口核对身份</p>
+            </div>
+            <button class="text-btn" id="photo-change" type="button" aria-label="更换人像照片" data-od-id="btn-change-photo">更换</button>
+            <input class="file-input" id="photo-input" type="file" name="photo" accept="image/*" tabindex="-1" aria-hidden="true">
+          </div>
+        </section>
+
+        <div class="notice" role="note" data-od-id="warning-pickup-code">
+          <svg class="notice-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M10.6 3.9c.6-1.1 2.2-1.1 2.8 0l8.1 14.1c.6 1.1-.2 2.4-1.4 2.4H4c-1.2 0-2-1.3-1.4-2.4L10.6 3.9Z" fill="currentColor"></path>
+            <path d="M12 9v4.4" stroke="var(--surface-soft)" stroke-width="1.8" stroke-linecap="round"></path>
+            <circle cx="12" cy="16.6" r="1.05" fill="var(--surface-soft)"></circle>
+          </svg>
+          <p class="notice-text">授权人接走孩子时需出示接送码</p>
+        </div>
+
+        <p class="review-note" data-od-id="review-note">提交后需园所审核，<span class="hl">审核通过</span>后才能接走孩子。</p>
+
+        <button class="btn-primary" type="submit" data-od-id="btn-submit-review">提交审核</button>
+
+        <p class="privacy-note" data-od-id="privacy-note">授权信息仅用于接送核验，园所不会对外提供。</p>
+      </form>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="sheet-layer" id="sheet-layer" hidden>
+      <div class="sheet-scrim" data-close-sheet aria-hidden="true"></div>
+
+      <section class="sheet" id="relation-sheet" role="dialog" aria-modal="true" aria-labelledby="relation-sheet-title" hidden data-od-id="sheet-relation">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <h2 class="sheet-title" id="relation-sheet-title">与孩子的关系</h2>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+              <path d="M6.5 6.5l11 11M17.5 6.5l-11 11"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="sheet-options" id="relation-options">
+          <button class="sheet-option" type="button" data-value="爷爷" aria-pressed="false" data-od-id="relation-grandpa">
+            <span>爷爷</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="奶奶" aria-pressed="false" data-od-id="relation-grandma">
+            <span>奶奶</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="外公" aria-pressed="false" data-od-id="relation-maternal-grandpa">
+            <span>外公</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="外婆" aria-pressed="true" data-od-id="relation-maternal-grandma">
+            <span>外婆</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="其他" aria-pressed="false" data-od-id="relation-other">
+            <span>其他</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="sheet" id="validity-sheet" role="dialog" aria-modal="true" aria-labelledby="validity-sheet-title" hidden data-od-id="sheet-validity">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <h2 class="sheet-title" id="validity-sheet-title">有效期</h2>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+              <path d="M6.5 6.5l11 11M17.5 6.5l-11 11"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="sheet-options" id="validity-options">
+          <button class="sheet-option" type="button" data-value="长期授权" aria-pressed="true" data-od-id="validity-longterm">
+            <span>长期授权</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="指定日期" aria-pressed="false" data-od-id="validity-date">
+            <span>指定日期</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+        </div>
+        <div class="date-block" id="date-block" hidden>
+          <label class="field-label" for="validity-date">到期日期</label>
+          <div class="date-row">
+            <input class="field-input date-input" id="validity-date" type="date" aria-label="到期日期">
+            <button class="btn-secondary" id="validity-date-confirm" type="button">确定</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

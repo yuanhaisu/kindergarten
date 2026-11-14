@@ -1,0 +1,23 @@
+{
+  "slug": "parent-growth-album",
+  "surface": "parent",
+  "title": "成长相册",
+  "projectId": "2d5ad5ed-52b6-496d-bf86-c7eaadb14ebd",
+  "conversationId": "58b60ee5-06ba-488a-9b71-7cf72699adcc",
+  "runId": "63c7d774-6139-4fad-b6ed-3b133a5e273e",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 1155,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/2d5ad5ed-52b6-496d-bf86-c7eaadb14ebd",
+  "previewRendered": true,
+  "terminalAt": "2026-10-26T12:27:19.553Z",
+  "terminalSource": "open-design/.od/runs/63c7d774-6139-4fad-b6ed-3b133a5e273e/state.json",
+  "exitCode": 0
+}

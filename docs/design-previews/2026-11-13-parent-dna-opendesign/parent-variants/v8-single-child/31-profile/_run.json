@@ -1,0 +1,22 @@
+{
+  "slug": "parent-v8-single-child-31-profile",
+  "surface": "parent",
+  "title": "我的 · 单孩子",
+  "projectId": "4506cb4c-2825-4dc3-abed-27237b312817",
+  "conversationId": "d8807e8d-df62-4641-9871-42d3627e13ee",
+  "runId": "6d6e0fce-d636-4ddb-b3c2-7d507cbe1ff2",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 617,
+  "files": [
+    ".file-versions/23a067fae8ee9045e1d3d9cd/0001-9ab81ca0-7f59-4f79-a746-c1d3a08442c2.html",
+    ".file-versions/23a067fae8ee9045e1d3d9cd/manifest.json",
+    "parent-variants/v8-single-child/31-profile/app.js",
+    "parent-variants/v8-single-child/31-profile/index.html",
+    "parent-variants/v8-single-child/31-profile/index.html.artifact.json",
+    "parent-variants/v8-single-child/31-profile/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/4506cb4c-2825-4dc3-abed-27237b312817"
+}

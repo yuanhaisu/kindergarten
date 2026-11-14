@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>星空蓝 · 配色说明 · 养成星球</title>
+<style>
+  :root {
+    --paper: #F8F5EE;
+    --surface: #FFFFFF;
+    --ink: #0B1B33;
+    --ink-2: #26374F;
+    --muted: #52677F;
+    --line: #E3DCCD;
+    --line-soft: #EEE9DE;
+    --blue: #3568A4;
+    --blue-light: #6FA8E8;
+    --blue-deep: #1C3F73;
+    --navy: #0F2A4E;
+    --gold: #B45309;
+    --gold-bg: #FEF3C7;
+    --green: #15803D;
+    --red: #B91C1C;
+    --radius: 16px;
+    --font: "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  ::selection { background: #D8E5F4; color: var(--ink); }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--blue-deep); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--blue-deep);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px 72px; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 0 18px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .topbar a { color: var(--ink-2); text-decoration: none; font-weight: 600; }
+  .topbar a:hover { color: var(--blue-deep); }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(260px, .88fr);
+    align-items: center;
+    gap: 44px;
+    padding: 26px 0 46px;
+    border-bottom: 1px solid var(--line);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(42px, 6vw, 64px);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+  .en {
+    margin: 10px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    color: var(--blue-deep);
+    text-transform: uppercase;
+  }
+  .lede {
+    max-width: 30em;
+    margin: 22px 0 0;
+    font-size: 17px;
+    line-height: 1.8;
+    color: var(--ink-2);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 26px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 32px;
+    padding: 0 12px 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink-2);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip i {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border-radius: 999px;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px rgba(11, 27, 51, .14);
+  }
+
+  .planet-stage {
+    position: relative;
+    min-height: 300px;
+    display: grid;
+    place-items: center;
+  }
+  .planet-stage::before {
+    content: "";
+    position: absolute;
+    width: min(340px, 80vw);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(107, 168, 232, .20) 0%, rgba(107, 168, 232, 0) 68%);
+  }
+  .planet {
+    position: relative;
+    width: min(260px, 62vw);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 32% 26%, #A8C9EA 0%, #6FA8E8 9%, #3568A4 30%, #1F4E8C 52%, #143862 76%, #0A1E3C 100%);
+    box-shadow:
+      0 24px 60px rgba(10, 30, 60, .28),
+      inset -18px -24px 48px rgba(4, 14, 30, .34),
+      inset 14px 18px 32px rgba(255, 255, 255, .14);
+    animation: float 9s ease-in-out infinite;
+  }
+  .planet::after {
+    content: "";
+    position: absolute;
+    left: 24%;
+    top: 18%;
+    width: 32%;
+    height: 22%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.44), rgba(255,255,255,0) 70%);
+    transform: rotate(-24deg);
+  }
+  .orbit {
+    position: absolute;
+    width: min(330px, 78vw);
+    aspect-ratio: 1 / .42;
+    border: 1px dashed rgba(28, 63, 115, .42);
+    border-radius: 50%;
+    transform: rotate(-16deg);
+    animation: orbit 42s linear infinite;
+  }
+  .orbit::before {
+    content: "";
+    position: absolute;
+    left: 6%;
+    top: 44%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 0 4px rgba(180, 83, 9, .10);
+  }
+  .star {
+    position: absolute;
+    color: var(--gold);
+    animation: twinkle 4.5s ease-in-out infinite;
+  }
+  .star--1 { right: 12%; top: 16%; width: 18px; height: 18px; }
+  .star--2 { right: 4%; top: 44%; width: 11px; height: 11px; animation-delay: -1.6s; color: var(--blue-deep); }
+  .star--3 { left: 8%; bottom: 20%; width: 9px; height: 9px; animation-delay: -2.8s; color: var(--blue); }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-9px); }
+  }
+  @keyframes orbit {
+    from { transform: rotate(-16deg); }
+    to { transform: rotate(344deg); }
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: .55; transform: scale(.88); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .planet, .orbit, .star { animation: none; }
+  }
+
+  section { padding: 46px 0 0; }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  .section-note { margin: 0; color: var(--muted); font-size: 12px; }
+
+  .why {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(220px, .65fr);
+    gap: 40px;
+    padding-top: 24px;
+  }
+  .why p { margin: 0 0 16px; font-size: 15px; line-height: 1.9; color: var(--ink-2); max-width: 38em; }
+  .why p:last-child { margin-bottom: 0; }
+  .why strong { color: var(--ink); font-weight: 600; }
+  .words { margin: 2px 0 0; padding: 0; list-style: none; }
+  .words li { padding: 14px 0; border-top: 1px solid var(--line-soft); }
+  .words li:first-child { border-top: 0; padding-top: 0; }
+  .words b { display: block; font-size: 16px; color: var(--ink); }
+  .words span { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  .ends {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 36px;
+    padding-top: 26px;
+  }
+  .end h3 { margin: 0; font-size: 16px; }
+  .end .end-sub { margin: 4px 0 16px; color: var(--muted); font-size: 12px; }
+  .end-swatch {
+    height: 96px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    box-shadow: inset 0 0 0 1px rgba(11, 27, 51, .10);
+  }
+  .swatches { margin: 0; padding: 0; list-style: none; }
+  .swatches li {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 46px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 12px;
+  }
+  .swatches li:first-child { border-top: 0; }
+  .swatches i {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px rgba(11, 27, 51, .12);
+  }
+  .swatches b { font-weight: 600; color: var(--ink-2); }
+  .swatches code { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; padding-top: 24px; }
+  .rule { border-top: 2px solid var(--blue-deep); padding-top: 14px; }
+  .rule:nth-child(2) { border-top-color: var(--gold); }
+  .rule:nth-child(3) { border-top-color: var(--green); }
+  .rule b { display: block; font-size: 15px; }
+  .rule p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+  .contrast-wrap { padding-top: 22px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  caption { text-align: left; color: var(--muted); font-size: 12px; padding-bottom: 10px; }
+  th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  th { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pair { display: inline-flex; align-items: center; gap: 8px; }
+  .pair i { width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(11,27,51,.16); }
+  .pass {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #DCFCE7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .contrast-foot { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+  .compare { padding-top: 24px; }
+  .pair-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    padding: 20px 0 26px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .pair-row:last-of-type { border-bottom: 0; }
+  .pair-row h3 { grid-column: 1 / -1; margin: 0 0 2px; font-size: 15px; }
+  .pair-row h3 span { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+  figure { margin: 0; }
+  figure a { display: block; }
+  figure img {
+    display: block;
+    width: 100%;
+    height: 430px;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  figcaption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  figcaption b { color: var(--ink-2); font-weight: 600; }
+  figcaption a { color: var(--blue-deep); text-decoration: none; font-weight: 600; }
+  figcaption a:hover { text-decoration: underline; }
+  .compare-foot { margin: 18px 0 0; font-size: 13px; color: var(--muted); }
+  .compare-foot a { font-weight: 600; }
+
+  footer {
+    margin-top: 52px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 2;
+  }
+  footer code { background: #EEE9DE; padding: 1px 6px; border-radius: 5px; color: var(--ink-2); }
+  footer p { margin: 0; }
+  footer a { color: var(--blue-deep); }
+
+  @media (max-width: 820px) {
+    .wrap { padding-left: 18px; padding-right: 18px; }
+    .hero { grid-template-columns: 1fr; gap: 24px; padding-bottom: 34px; }
+    .planet-stage { min-height: 240px; order: -1; }
+    .why { grid-template-columns: 1fr; gap: 26px; }
+    .ends { grid-template-columns: 1fr; gap: 30px; }
+    .rules { grid-template-columns: 1fr; gap: 22px; }
+    .pair-row { grid-template-columns: 1fr; gap: 14px; }
+    figure img { height: 360px; }
+    .topbar { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="../index.html">← 返回画廊</a>
+    <span>配色说明 · 2026-10-27</span>
+  </div>
+
+  <header class="hero">
+    <div>
+      <h1>星空蓝</h1>
+      <p class="en">Starry Blue</p>
+      <p class="lede">把品牌放进夜里：深空海军蓝负责行动与确认，月白纸面承载日常阅读，星砂金只留给奖章。不是科技蓝，是孩子抬头看见的那片夜空。</p>
+      <ul class="chips" aria-label="主色色阶">
+        <li class="chip"><i style="--c:#6FA8E8"></i>星辉蓝 <code>#6FA8E8</code></li>
+        <li class="chip"><i style="--c:#3568A4"></i>夜空蓝 <code>#3568A4</code></li>
+        <li class="chip"><i style="--c:#1C3F73"></i>深空蓝 <code>#1C3F73</code></li>
+        <li class="chip"><i style="--c:#F8F5EE"></i>月白纸 <code>#F8F5EE</code></li>
+        <li class="chip"><i style="--c:#B45309"></i>星砂金 <code>#B45309</code></li>
+      </ul>
+    </div>
+    <div class="planet-stage" aria-hidden="true">
+      <div class="orbit"></div>
+      <div class="planet"></div>
+      <svg class="star star--1" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.8 2.9 6 6.5 1-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.8l6.5-1L12 2.8Z"/></svg>
+      <svg class="star star--2" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.8 2.9 6 6.5 1-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.8l6.5-1L12 2.8Z"/></svg>
+      <svg class="star star--3" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.8 2.9 6 6.5 1-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.8l6.5-1L12 2.8Z"/></svg>
+    </div>
+  </header>
+
+  <section aria-labelledby="why-title">
+    <div class="section-head">
+      <h2 id="why-title">为什么是星空蓝</h2>
+      <p class="section-note">客户说：蓝色更像星球</p>
+    </div>
+    <div class="why">
+      <div>
+        <p>星球不是白天里的一颗球，它悬在夜空里。真正让人想到星球的，是<strong>深色天空与发光表面</strong>。所以这一版没有继续往浅蓝走，而是把主色压到深空海军蓝——比「星海蓝」更暗、更稳，也更像 logo 星球背光的那一面。</p>
+        <p>但幼儿园的产品不能被夜色吞掉。老师边带班边用手机，家长在通勤和睡前刷页面，大面积深色会让阅读变累。于是深空只落在<strong>行动层</strong>：主按钮、发布、提交、进度、选中态。纸面仍然是月白，卡片仍然是云白；<strong>蓝是夜空，白是月光</strong>。</p>
+        <p>老师端保留 10-25 版的暖米白纸面（<code>#F8F5EE</code>），家长端用冷雾白（<code>#F1F6FD</code>）。暖底让深海军蓝读起来是「夜空」而不是「企业后台」；金色只给奖章与提醒，绿色只给成长与完成。<strong>蓝负责方向，暖色负责情绪。</strong></p>
+      </div>
+      <ul class="words">
+        <li><b>夜空</b><span>深空海军蓝 #1C3F73 是行动色，不是背景色。它只落在能点、正在进行、需要确认的地方。</span></li>
+        <li><b>月光</b><span>老师端暖米白、家长端冷雾白；大面积永远是浅色，夜里也能长时间阅读。</span></li>
+        <li><b>星砂</b><span>金色只给奖章、等级与提醒，面积始终小于蓝；语义色保留，才不会被品牌色吞掉。</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="ends-title">
+    <div class="section-head">
+      <h2 id="ends-title">两端的夜空</h2>
+      <p class="section-note">同一个品牌，不同的使用场景</p>
+    </div>
+    <div class="ends">
+      <div class="end">
+        <h3>老师端 · 月夜蓝</h3>
+        <p class="end-sub">边带班边用手机；暖米白纸面接住深海军蓝，长时间看不发冷。</p>
+        <div class="end-swatch" style="background:linear-gradient(135deg,#3568A4 0%,#1B3E6E 100%)"></div>
+        <ul class="swatches">
+          <li><i style="--c:#1C3F73"></i><b>字与图标 · 夜空蓝</b><code>#1C3F73</code></li>
+          <li><i style="--c:#3568A4"></i><b>渐变起点 · 星辉</b><code>#3568A4</code></li>
+          <li><i style="--c:#1B3E6E"></i><b>渐变终点 · 深空</b><code>#1B3E6E</code></li>
+          <li><i style="--c:#D8E5F4"></i><b>浅底 · 月光蓝</b><code>#D8E5F4</code></li>
+          <li><i style="--c:#F8F5EE"></i><b>页面 · 暖米白</b><code>#F8F5EE</code></li>
+        </ul>
+      </div>
+      <div class="end">
+        <h3>家长端 · 深空蓝</h3>
+        <p class="end-sub">通勤与睡前使用；冷雾白让照片和孩子的状态更干净。</p>
+        <div class="end-swatch" style="background:linear-gradient(135deg,#3A70A9 0%,#1D4573 100%)"></div>
+        <ul class="swatches">
+          <li><i style="--c:#1F4E8C"></i><b>字与图标 · 深空蓝</b><code>#1F4E8C</code></li>
+          <li><i style="--c:#3A70A9"></i><b>渐变起点 · 星辉</b><code>#3A70A9</code></li>
+          <li><i style="--c:#1D4573"></i><b>渐变终点 · 深空</b><code>#1D4573</code></li>
+          <li><i style="--c:#DAE8F8"></i><b>浅底 · 冷月蓝</b><code>#DAE8F8</code></li>
+          <li><i style="--c:#F1F6FD"></i><b>页面 · 冷雾白</b><code>#F1F6FD</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="rules-title">
+    <div class="section-head">
+      <h2 id="rules-title">把夜空放在该在的位置</h2>
+      <p class="section-note">三条用色规则</p>
+    </div>
+    <div class="rules">
+      <div class="rule">
+        <b>行动与状态用夜空蓝</b>
+        <p>主按钮、发布、提交、进度、选中态。蓝负责「可以点」和「正在进行」。</p>
+      </div>
+      <div class="rule">
+        <b>奖章与提醒用金</b>
+        <p>小小艺术家、Lv.5 小星星、安排有变更。金色面积始终小于蓝。</p>
+      </div>
+      <div class="rule">
+        <b>成长与结果用绿</b>
+        <p>已同步、已通过、积分增加。语义色保留，才不会被品牌色吞掉。</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="contrast-title">
+    <div class="section-head">
+      <h2 id="contrast-title">对比度</h2>
+      <p class="section-note">WCAG 2.1 · 正文目标 AA</p>
+    </div>
+    <div class="contrast-wrap">
+      <table>
+        <caption>深空海军蓝上统一用白字；浅色纸面与浅蓝浅底继续用深墨字。</caption>
+        <thead>
+          <tr><th scope="col">组合</th><th scope="col">用途</th><th scope="col">对比度</th><th scope="col">判定</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pair"><i style="background:#0B1B33"></i>#0B1B33 / #FFFFFF</span></td>
+            <td>正文 / 白卡</td><td class="num">17.23 : 1</td><td><span class="pass">AA</span></td>
+          </tr>
+          <tr>
+            <td><span class="pair"><i style="background:#FFFFFF"></i>#FFFFFF / #3568A4</span></td>
+            <td>白字 / 老师端渐变最浅端</td><td class="num">5.73 : 1</td><td><span class="pass">AA</span></td>
+          </tr>
+          <tr>
+            <td><span class="pair"><i style="background:#FFFFFF"></i>#FFFFFF / #3A70A9</span></td>
+            <td>白字 / 家长端渐变最浅端</td><td class="num">5.16 : 1</td><td><span class="pass">AA</span></td>
+          </tr>
+          <tr>
+            <td><span class="pair"><i style="background:#1C3F73"></i>#FFFFFF / #1C3F73</span></td>
+            <td>白字 / 老师端主按钮</td><td class="num">10.46 : 1</td><td><span class="pass">AA</span></td>
+          </tr>
+          <tr>
+            <td><span class="pair"><i style="background:#1C3F73"></i>#1C3F73 / #D8E5F4</span></td>
+            <td>夜空蓝字 / 月光蓝浅底</td><td class="num">8.18 : 1</td><td><span class="pass">AA</span></td>
+          </tr>
+          <tr>
+            <td><span class="pair"><i style="background:#B45309"></i>#B45309 / #FEF3C7</span></td>
+            <td>星砂金字 / 星砂浅底</td><td class="num">4.51 : 1</td><td><span class="pass">AA</span></td>
+          </tr>
+          <tr>
+            <td><span class="pair"><i style="background:#52677F"></i>#52677F / #FFFFFF</span></td>
+            <td>次级文字 / 白卡</td><td class="num">5.82 : 1</td><td><span class="pass">AA</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="contrast-foot">亮橙原稿中「白字压亮橙」只有 2.35–2.80:1；星空蓝把白字放到深海军蓝上，最浅的渐变端也有 5.16:1。深墨字只留在浅色纸面与 #D8E5F4 这类浅蓝浅底上——两种路径都过 AA，不靠加粗来补救。</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="compare-title">
+    <div class="section-head">
+      <h2 id="compare-title">同一页，两种蓝</h2>
+      <p class="section-note">左：星空蓝 · 右：星海蓝</p>
+    </div>
+    <div class="compare">
+      <div class="pair-row">
+        <h3>老师工作台 <span>暖米白底 · 深海军蓝行动</span></h3>
+        <figure>
+          <a href="../teacher/01-workbench/index.html" target="_blank" rel="noreferrer"><img loading="lazy" src="../teacher/01-workbench/preview.png" alt="老师工作台 星空蓝主题"></a>
+          <figcaption><b>星空蓝 · 本稿</b><a href="../teacher/01-workbench/index.html" target="_blank" rel="noreferrer">打开原型</a></figcaption>
+        </figure>
+        <figure>
+          <a href="../teacher/01-workbench/index.html?theme=celestial" target="_blank" rel="noreferrer"><img loading="lazy" src="../teacher/01-workbench/preview-celestial.png" alt="老师工作台 星海蓝主题"></a>
+          <figcaption><b>星海蓝 · 上一版</b><a href="../teacher/01-workbench/index.html?theme=celestial" target="_blank" rel="noreferrer">打开星海蓝版</a></figcaption>
+        </figure>
+      </div>
+
+      <div class="pair-row">
+        <h3>家长首页 <span>冷雾白底 · 夜空蓝主叙事</span></h3>
+        <figure>
+          <a href="../parent/01-home/index.html" target="_blank" rel="noreferrer"><img loading="lazy" src="../parent/01-home/preview.png" alt="家长首页 星空蓝主题"></a>
+          <figcaption><b>星空蓝 · 本稿</b><a href="../parent/01-home/index.html" target="_blank" rel="noreferrer">打开原型</a></figcaption>
+        </figure>
+        <figure>
+          <a href="../parent/01-home/index.html?theme=celestial" target="_blank" rel="noreferrer"><img loading="lazy" src="../parent/01-home/preview-celestial.png" alt="家长首页 星海蓝主题"></a>
+          <figcaption><b>星海蓝 · 上一版</b><a href="../parent/01-home/index.html?theme=celestial" target="_blank" rel="noreferrer">打开星海蓝版</a></figcaption>
+        </figure>
+      </div>
+
+      <div class="pair-row">
+        <h3>积分与成就 <span>星砂金只给奖章与等级</span></h3>
+        <figure>
+          <a href="../parent/20-points/index.html" target="_blank" rel="noreferrer"><img loading="lazy" src="../parent/20-points/preview.png" alt="积分与成就 星空蓝主题"></a>
+          <figcaption><b>星空蓝 · 本稿</b><a href="../parent/20-points/index.html" target="_blank" rel="noreferrer">打开原型</a></figcaption>
+        </figure>
+        <figure>
+          <a href="../parent/20-points/index.html?theme=celestial" target="_blank" rel="noreferrer"><img loading="lazy" src="../parent/20-points/preview-celestial.png" alt="积分与成就 星海蓝主题"></a>
+          <figcaption><b>星海蓝 · 上一版</b><a href="../parent/20-points/index.html?theme=celestial" target="_blank" rel="noreferrer">打开星海蓝版</a></figcaption>
+        </figure>
+      </div>
+
+      <p class="compare-foot">星海蓝是白天的浅蓝，星空蓝是夜里的深蓝。完整星海蓝画廊：<a href="../../2026-10-27-celestial-blue/index.html">打开 →</a></p>
+    </div>
+  </section>
+
+  <footer>
+    <p>主题名 <code>starry</code>；色值入口 <code>shared-design-tokens/themes.json</code>；生成 <code>node scripts/build-theme-css.mjs</code>。</p>
+    <p>任意页面加 <code>?theme=bright</code> 切回原亮橙，<code>?theme=celestial</code> 切到星海蓝，<code>?theme=starry</code> 为默认蓝色。<a href="../index.html">返回全量页面画廊 →</a></p>
+  </footer>
+
+</div>
+</body>
+</html>

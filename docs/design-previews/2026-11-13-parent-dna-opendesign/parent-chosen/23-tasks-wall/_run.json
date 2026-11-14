@@ -1,0 +1,20 @@
+{
+  "slug": "parent-23-tasks-wall",
+  "surface": "parent",
+  "title": "班级墙",
+  "projectId": "a1a90d77-966b-4182-81ac-b6d1a3a1cc89",
+  "conversationId": "d44e52d5-c137-4aa2-b868-f9327bf0b2ef",
+  "runId": "5933149d-43cc-4b47-a264-0dc8a6c9ee27",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 364,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/a1a90d77-966b-4182-81ac-b6d1a3a1cc89",
+  "previewRendered": true
+}

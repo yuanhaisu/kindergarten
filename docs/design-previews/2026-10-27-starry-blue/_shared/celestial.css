@@ -1,0 +1,35 @@
+/* Celestial-only surface adjustments.
+ * Loaded after page styles.css. Scoped by [data-theme="celestial"] so
+ * ?theme=bright keeps the original orange rendering untouched.
+ *
+ * Two jobs:
+ * 1. Let warm accents carry rewards (gold) and gains (green), so the blue
+ *    theme does not become a monochrome enterprise UI.
+ * 2. Correct the two places where dark-on-light-orange was fine but
+ *    dark-on-deep-blue is not (filled primary buttons and count badges).
+ */
+:root[data-theme="celestial"] .perf-bar {
+  background: var(--star-wash);
+}
+:root[data-theme="celestial"] .perf-bar svg {
+  color: var(--star);
+}
+:root[data-theme="celestial"] .level-chip,
+:root[data-theme="celestial"] .stat-num--pill {
+  background: var(--star-wash);
+  color: var(--star);
+}
+:root[data-theme="celestial"] .ledger-amount.is-plus {
+  color: var(--success);
+}
+:root[data-theme="celestial"] .badge.is-earned .badge-icon {
+  background: var(--star-wash);
+  border-color: var(--star);
+  color: var(--star);
+}
+:root[data-theme="celestial"] .primary-button:not([aria-disabled="true"]) {
+  color: var(--on-brand);
+}
+:root[data-theme="celestial"] .filter.is-active .filter-count {
+  color: var(--on-brand);
+}

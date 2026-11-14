@@ -1,0 +1,19 @@
+{
+  "slug": "teacher-growth-index",
+  "surface": "teacher",
+  "title": "成长记录列表",
+  "projectId": "1de2e133-b7a7-4c80-bae9-25c739fb6d27",
+  "conversationId": "ddac1272-eb8f-484a-98ac-3f4ebaaaabc1",
+  "runId": "5f405a2f-8f83-4522-9abf-32477f204af5",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 276,
+  "files": [
+    ".mcp.json",
+    "index.html",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/1de2e133-b7a7-4c80-bae9-25c739fb6d27",
+  "previewRendered": true
+}

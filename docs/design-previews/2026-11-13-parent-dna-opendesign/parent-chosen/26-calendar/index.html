@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>班级日历 · 养成星球</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app">
+    <div class="mp-statusbar" data-od-id="statusbar">
+      <span class="mp-statusbar__time">10:20</span>
+      <div class="mp-statusbar__icons" aria-hidden="true">
+        <svg class="status-signal" width="17" height="11" viewBox="0 0 17 11" fill="currentColor">
+          <rect x="0" y="7.5" width="3" height="3.5" rx="1" />
+          <rect x="4.7" y="5" width="3" height="6" rx="1" />
+          <rect x="9.4" y="2.5" width="3" height="8.5" rx="1" />
+          <rect x="14.1" y="0" width="3" height="11" rx="1" />
+        </svg>
+        <svg class="status-wifi" width="15" height="11" viewBox="0 0 15 11" fill="none">
+          <path d="M1 3.1a10 10 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <path d="M3.7 6a7 7 0 0 1 7.6 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <circle cx="7.5" cy="9" r="1.25" fill="currentColor" />
+        </svg>
+        <svg class="status-battery" width="25" height="12" viewBox="0 0 25 12" fill="none">
+          <rect x="0.8" y="1" width="21" height="10" rx="3" stroke="currentColor" stroke-opacity="0.42" stroke-width="1.2" />
+          <rect x="2.6" y="2.8" width="16" height="6.4" rx="1.7" fill="currentColor" />
+          <path d="M23.5 4.3v3.4c.9-.3 1.3-1 1.3-1.7s-.4-1.4-1.3-1.7Z" fill="currentColor" fill-opacity="0.42" />
+        </svg>
+      </div>
+    </div>
+
+    <header class="page-bar" data-od-id="page-bar">
+      <button class="page-bar__back" type="button" aria-label="返回" data-od-id="back-button">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <h2 class="page-bar__title">班级日历</h2>
+      <button class="page-bar__today" type="button" id="today-button" aria-label="回到今天，11 月 12 日" data-od-id="today-button">今天</button>
+    </header>
+
+    <main class="mp-main" data-od-id="calendar-main">
+      <h1 class="month-title" id="calendar-month-title" data-od-id="calendar-month-title">
+        <time datetime="2026-11">2026 年 11 月</time>
+      </h1>
+
+      <section class="month-card" aria-labelledby="calendar-month-title" data-od-id="month-card">
+        <div class="weekday-row" aria-hidden="true">
+          <span>周一</span>
+          <span>周二</span>
+          <span>周三</span>
+          <span>周四</span>
+          <span>周五</span>
+          <span>周六</span>
+          <span>周日</span>
+        </div>
+
+        <div class="calendar-grid" aria-label="2026 年 11 月的日期">
+          <div class="calendar-week">
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">26</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">27</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">28</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">29</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">30</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">31</span></span>
+            <button class="day" type="button" data-date="2026-11-01" data-od-id="day-2026-11-01" aria-label="11 月 1 日，周日" aria-pressed="false">
+              <span class="day__num">1</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="calendar-week">
+            <button class="day" type="button" data-date="2026-11-02" data-od-id="day-2026-11-02" aria-label="11 月 2 日，周一" aria-pressed="false">
+              <span class="day__num">2</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-03" data-od-id="day-2026-11-03" aria-label="11 月 3 日，周二" aria-pressed="false">
+              <span class="day__num">3</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-04" data-od-id="day-2026-11-04" aria-label="11 月 4 日，周三" aria-pressed="false">
+              <span class="day__num">4</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-05" data-od-id="day-2026-11-05" aria-label="11 月 5 日，周四" aria-pressed="false">
+              <span class="day__num">5</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-06" data-od-id="day-2026-11-06" aria-label="11 月 6 日，周五，假期" aria-pressed="false">
+              <span class="day__num">6</span>
+              <span class="day__dots" aria-hidden="true"><span class="dot dot--holiday"></span></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-07" data-od-id="day-2026-11-07" aria-label="11 月 7 日，周六" aria-pressed="false">
+              <span class="day__num">7</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-08" data-od-id="day-2026-11-08" aria-label="11 月 8 日，周日" aria-pressed="false">
+              <span class="day__num">8</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="calendar-week">
+            <button class="day" type="button" data-date="2026-11-09" data-od-id="day-2026-11-09" aria-label="11 月 9 日，周一" aria-pressed="false">
+              <span class="day__num">9</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-10" data-od-id="day-2026-11-10" aria-label="11 月 10 日，周二" aria-pressed="false">
+              <span class="day__num">10</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-11" data-od-id="day-2026-11-11" aria-label="11 月 11 日，周三" aria-pressed="false">
+              <span class="day__num">11</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day is-today is-selected" type="button" data-date="2026-11-12" data-od-id="day-2026-11-12" aria-label="11 月 12 日，周四，今天，2 个安排" aria-current="date" aria-pressed="true">
+              <span class="day__num">12</span>
+              <span class="day__dots" aria-hidden="true"><span class="dot dot--activity"></span><span class="dot dot--activity"></span></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-13" data-od-id="day-2026-11-13" aria-label="11 月 13 日，周五，1 个活动" aria-pressed="false">
+              <span class="day__num">13</span>
+              <span class="day__dots" aria-hidden="true"><span class="dot dot--activity"></span></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-14" data-od-id="day-2026-11-14" aria-label="11 月 14 日，周六，1 个活动" aria-pressed="false">
+              <span class="day__num">14</span>
+              <span class="day__dots" aria-hidden="true"><span class="dot dot--activity"></span></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-15" data-od-id="day-2026-11-15" aria-label="11 月 15 日，周日" aria-pressed="false">
+              <span class="day__num">15</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="calendar-week">
+            <button class="day" type="button" data-date="2026-11-16" data-od-id="day-2026-11-16" aria-label="11 月 16 日，周一" aria-pressed="false">
+              <span class="day__num">16</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-17" data-od-id="day-2026-11-17" aria-label="11 月 17 日，周二" aria-pressed="false">
+              <span class="day__num">17</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-18" data-od-id="day-2026-11-18" aria-label="11 月 18 日，周三，家长会" aria-pressed="false">
+              <span class="day__num">18</span>
+              <span class="day__dots" aria-hidden="true"><span class="dot dot--meeting"></span></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-19" data-od-id="day-2026-11-19" aria-label="11 月 19 日，周四" aria-pressed="false">
+              <span class="day__num">19</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-20" data-od-id="day-2026-11-20" aria-label="11 月 20 日，周五" aria-pressed="false">
+              <span class="day__num">20</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-21" data-od-id="day-2026-11-21" aria-label="11 月 21 日，周六" aria-pressed="false">
+              <span class="day__num">21</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-22" data-od-id="day-2026-11-22" aria-label="11 月 22 日，周日" aria-pressed="false">
+              <span class="day__num">22</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="calendar-week">
+            <button class="day" type="button" data-date="2026-11-23" data-od-id="day-2026-11-23" aria-label="11 月 23 日，周一" aria-pressed="false">
+              <span class="day__num">23</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-24" data-od-id="day-2026-11-24" aria-label="11 月 24 日，周二，1 个活动" aria-pressed="false">
+              <span class="day__num">24</span>
+              <span class="day__dots" aria-hidden="true"><span class="dot dot--activity"></span></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-25" data-od-id="day-2026-11-25" aria-label="11 月 25 日，周三" aria-pressed="false">
+              <span class="day__num">25</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-26" data-od-id="day-2026-11-26" aria-label="11 月 26 日，周四" aria-pressed="false">
+              <span class="day__num">26</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-27" data-od-id="day-2026-11-27" aria-label="11 月 27 日，周五" aria-pressed="false">
+              <span class="day__num">27</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-28" data-od-id="day-2026-11-28" aria-label="11 月 28 日，周六" aria-pressed="false">
+              <span class="day__num">28</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <button class="day" type="button" data-date="2026-11-29" data-od-id="day-2026-11-29" aria-label="11 月 29 日，周日" aria-pressed="false">
+              <span class="day__num">29</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="calendar-week">
+            <button class="day" type="button" data-date="2026-11-30" data-od-id="day-2026-11-30" aria-label="11 月 30 日，周一" aria-pressed="false">
+              <span class="day__num">30</span>
+              <span class="day__dots" aria-hidden="true"></span>
+            </button>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">1</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">2</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">3</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">4</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">5</span></span>
+            <span class="day day--outside" aria-hidden="true"><span class="day__num">6</span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="agenda" aria-labelledby="agenda-title" data-od-id="agenda-section">
+        <div class="section-head">
+          <h2 class="section-title" id="agenda-title" data-od-id="agenda-title">今天</h2>
+          <p class="section-meta" id="agenda-meta">11 月 12 日 · 2 个安排</p>
+        </div>
+
+        <div class="card agenda-card" id="agenda-card" data-od-id="agenda-card">
+          <ul class="agenda-list">
+            <li class="agenda-row" data-od-id="event-sports-signup">
+              <time class="agenda-time" datetime="2026-11-12T18:00">18:00</time>
+              <div class="agenda-body">
+                <p class="agenda-event">亲子运动会报名截止</p>
+                <p class="agenda-detail">线上提交回执 · <span class="hl hl--marigold">活动</span></p>
+              </div>
+            </li>
+            <li class="agenda-row" data-od-id="event-class-birthday">
+              <time class="agenda-time" datetime="2026-11-12T15:30">15:30</time>
+              <div class="agenda-body">
+                <p class="agenda-event">班级生日会</p>
+                <p class="agenda-detail">小一班教室 · <span class="hl hl--marigold">班级活动</span></p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <ul class="legend" aria-label="日历图例" data-od-id="calendar-legend">
+        <li><span class="dot dot--activity" aria-hidden="true"></span>活动</li>
+        <li><span class="dot dot--meeting" aria-hidden="true"></span>家长会</li>
+        <li><span class="dot dot--holiday" aria-hidden="true"></span>假期</li>
+      </ul>
+
+      <footer class="month-footer" data-od-id="month-footer">
+        <p>本月还有 <span class="month-footer__count">3</span> 场活动</p>
+      </footer>
+
+      <p class="sr-only" id="selection-announcement" aria-live="polite"></p>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

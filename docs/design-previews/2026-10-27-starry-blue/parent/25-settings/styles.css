@@ -1,0 +1,710 @@
+/* 养成星球 · 家长端设置页
+ * 只负责页面内容与交互状态；微信外壳由共享 shell.css 提供。
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html.has-dialog,
+body.has-dialog {
+  overflow: hidden;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+svg {
+  display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+  white-space: normal;
+}
+
+/* 页面骨架 --------------------------------------------------------------- */
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
+  padding: var(--page-pad-y) var(--page-pad-x) calc(24px + env(safe-area-inset-bottom));
+}
+
+.settings-group {
+  width: 100%;
+  max-width: 100%;
+}
+
+.settings-group + .settings-group {
+  margin-top: 24px;
+}
+
+.group-title {
+  padding: 0 var(--space-xl);
+  margin: 0 0 var(--space-md);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: 0.02em;
+}
+
+.settings-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
+}
+
+.group-note {
+  padding: 0 var(--space-xl);
+  margin: var(--space-md) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  text-wrap: pretty;
+}
+
+/* 开关行 ----------------------------------------------------------------- */
+.switch-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 100%;
+  min-height: 56px;
+  padding: var(--space-md) var(--space-xl);
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.switch-row + .switch-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: var(--space-xl);
+  left: var(--space-xl);
+  height: 1px;
+  background: var(--border);
+}
+
+.row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+.row-tail {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.row-sync {
+  display: none;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+}
+
+.switch {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 48px;
+  height: 30px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--muted) 78%, var(--surface));
+  border-radius: var(--radius-pill);
+  transition: opacity var(--motion-fast) var(--ease);
+}
+
+.switch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent-gradient);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--ease);
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 1;
+  display: block;
+  width: 26px;
+  height: 26px;
+  background: var(--surface);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(0);
+  transition: transform var(--motion-base) var(--ease);
+}
+
+.switch-row[aria-checked="true"] .switch::before {
+  opacity: 1;
+}
+
+.switch-row[aria-checked="true"] .switch-thumb {
+  transform: translateX(18px);
+}
+
+.switch-row:active {
+  background: color-mix(in srgb, var(--fg) 6%, var(--surface));
+}
+
+.switch-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--fg) 3%, var(--surface));
+}
+
+.switch-row.is-syncing,
+[data-state="disabled"] .switch-row[data-key="pickup_push"] {
+  pointer-events: none;
+  cursor: default;
+}
+
+.switch-row.is-syncing .row-label,
+[data-state="disabled"] .switch-row[data-key="pickup_push"] .row-label {
+  color: var(--muted);
+}
+
+.switch-row.is-syncing .row-sync,
+[data-state="disabled"] .switch-row[data-key="pickup_push"] .row-sync {
+  display: inline-block;
+  animation: sync-in var(--motion-fast) var(--ease) both;
+}
+
+.switch-row.is-syncing .switch,
+[data-state="disabled"] .switch-row[data-key="pickup_push"] .switch {
+  opacity: 0.5;
+}
+
+/* 退出登录 --------------------------------------------------------------- */
+/* 退出登录紧跟最后一组，而不是吸到屏幕底部：短页面吸底会在
+ * 高屏上留下一个大洞，微信设置页也是在列表末尾接危险操作。 */
+.logout-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 24px;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  min-height: 56px;
+  padding: var(--space-md) var(--space-xl);
+  border: 0;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  color: color-mix(in srgb, var(--danger) 72%, var(--fg));
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  text-align: center;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
+
+.logout-button:active {
+  background: color-mix(in srgb, var(--danger-wash) 76%, var(--surface));
+  transform: translateY(1px);
+}
+
+.logout-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+/* 空态 ------------------------------------------------------------------- */
+.state-empty,
+.state-loading,
+.state-error {
+  display: none;
+}
+
+[data-state="empty"] .settings-group,
+[data-state="loading"] .settings-group,
+[data-state="error"] .settings-group {
+  display: none;
+}
+
+[data-state="empty"] .state-empty {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 加载时与源码一致不渲染退出登录：源码 v-if="loading" 只渲染「加载中...」，
+ * 退出按钮在 v-else 分支内。原型若保留它，188px 的骨架后面会紧跟一个危险
+ * 按钮、悬停在首屏中部（y≈288），与 normal/empty 切换时跳动近 400px。 */
+[data-state="loading"] .logout-wrap {
+  display: none;
+}
+
+[data-state="error"] .logout-wrap {
+  display: none;
+}
+
+.empty-card {
+  width: 100%;
+  max-width: 100%;
+  padding: 32px var(--space-xl) 28px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-xl);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+}
+
+.empty-title {
+  max-width: 100%;
+  margin: 0 0 20px;
+  color: var(--fg);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  text-wrap: pretty;
+}
+
+/* 主按钮：深色文字在橙色渐变上保持可读对比。 */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 132px;
+  min-height: var(--input-height);
+  padding: 0 22px;
+  border: 0;
+  background: var(--accent-gradient);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  color: var(--fg);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), opacity var(--motion-fast) var(--ease);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:disabled {
+  opacity: 0.68;
+  cursor: progress;
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* 骨架屏 ----------------------------------------------------------------- */
+[data-state="loading"] .state-loading {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.skeleton-heading-bar {
+  display: block;
+  width: 64px;
+  height: 12px;
+  margin: 0 0 var(--space-md) var(--space-xl);
+  background: color-mix(in srgb, var(--muted) 24%, var(--surface));
+  border-radius: var(--radius-pill);
+  animation: breathe 1.6s var(--ease) infinite;
+}
+
+.skeleton-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xl);
+  min-height: 56px;
+  padding: 0 var(--space-xl);
+}
+
+.skeleton-row + .skeleton-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: var(--space-xl);
+  left: var(--space-xl);
+  height: 1px;
+  background: var(--border);
+}
+
+.skeleton-bar {
+  display: block;
+  height: 12px;
+  background: color-mix(in srgb, var(--muted) 24%, var(--surface));
+  border-radius: var(--radius-pill);
+  animation: breathe 1.6s var(--ease) infinite;
+}
+
+.skeleton-bar--short {
+  width: 68px;
+}
+
+.skeleton-bar--medium {
+  width: 88px;
+}
+
+.skeleton-bar--wide {
+  width: 104px;
+}
+
+.skeleton-switch {
+  display: block;
+  flex: none;
+  width: 48px;
+  height: 30px;
+  background: color-mix(in srgb, var(--muted) 18%, var(--surface));
+  border-radius: var(--radius-pill);
+  animation: breathe 1.6s var(--ease) infinite;
+}
+
+/* 错误态 ----------------------------------------------------------------- */
+[data-state="error"] .state-error {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  padding: var(--space-xl) var(--space-xl) 48px;
+  text-align: center;
+}
+
+.error-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-xl);
+  background: var(--danger-wash);
+  border-radius: var(--radius-pill);
+  color: var(--danger);
+}
+
+.error-title {
+  margin: 0 0 var(--space-md);
+  color: var(--fg);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  text-wrap: pretty;
+}
+
+.error-desc {
+  max-width: 250px;
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  text-wrap: pretty;
+}
+
+/* 微信式居中确认框 ------------------------------------------------------- */
+.dialog-layer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  width: min(100%, 390px);
+  max-width: 100%;
+  padding: 24px;
+  transform: translateX(-50%);
+}
+
+.dialog-layer[hidden] {
+  display: none;
+}
+
+.dialog-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--fg) 46%, transparent);
+  -webkit-backdrop-filter: blur(1.5px);
+  backdrop-filter: blur(1.5px);
+  animation: scrim-in var(--motion-fast) var(--ease) both;
+}
+
+.dialog {
+  position: relative;
+  z-index: 1;
+  width: min(288px, 100%);
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  animation: dialog-in var(--motion-base) var(--ease) both;
+}
+
+.dialog-content {
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+
+/* 容器只负责接住初始焦点（tabindex="-1"），不画焦点环：
+ * 焦点环若出现在按钮上会暗示「推荐」，这里交给内部按钮的 :focus-visible。 */
+.dialog:focus,
+.dialog:focus-visible {
+  outline: none;
+}
+
+.dialog-title {
+  margin: 0 0 var(--space-md);
+  color: var(--fg);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  text-wrap: pretty;
+}
+
+.dialog-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  text-wrap: pretty;
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+}
+
+.dialog-button {
+  min-height: 52px;
+  padding: var(--space-md) var(--space-md);
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease);
+}
+
+.dialog-button + .dialog-button {
+  border-left: 1px solid var(--border);
+}
+
+.dialog-button:active {
+  background: var(--bg);
+}
+
+.dialog-button--confirm {
+  color: color-mix(in srgb, var(--danger) 72%, var(--fg));
+}
+
+.dialog-button--confirm:active {
+  background: var(--danger-wash);
+}
+
+.dialog-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+/* Toast ------------------------------------------------------------------ */
+.toast {
+  position: fixed;
+  bottom: calc(32px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 60;
+  width: max-content;
+  max-width: calc(100% - 48px);
+  padding: 10px 18px;
+  visibility: hidden;
+  background: color-mix(in srgb, var(--fg) 92%, transparent);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+  color: var(--on-brand);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 8px);
+  transition: opacity var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease), visibility 0s linear var(--motion-fast);
+}
+
+.toast.is-visible {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition: opacity var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease), visibility 0s;
+}
+
+/* 指针设备反馈 ----------------------------------------------------------- */
+@media (hover: hover) {
+  .switch-row:hover {
+    background: color-mix(in srgb, var(--fg) 3%, var(--surface));
+  }
+
+  .logout-button:hover {
+    background: var(--danger-wash);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dialog-button:hover {
+    background: var(--bg);
+  }
+
+  .dialog-button--confirm:hover {
+    background: var(--danger-wash);
+  }
+}
+
+/* 动效 ------------------------------------------------------------------- */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.44;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sync-in {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

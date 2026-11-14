@@ -1,0 +1,54 @@
+/* Starry-only surface adjustments.
+ * Loaded after page styles.css. Scoped by [data-theme="starry"] so
+ * ?theme=bright / celestial keep their original rendering untouched.
+ *
+ * Two jobs:
+ * 1. Let warm accents carry rewards (gold) and gains (green), so the deep
+ *    space navy does not become a monochrome enterprise UI.
+ * 2. Flip text to white wherever a filled accent surface is dark enough in
+ *    this theme. The bright-orange artwork used dark ink on light orange;
+ *    a deep navy fill needs the opposite. Disabled states that drop the fill
+ *    for a pale surface are excluded so they keep their muted ink.
+ */
+:root[data-theme="starry"] .perf-bar {
+  background: var(--star-wash);
+}
+:root[data-theme="starry"] .perf-bar svg {
+  color: var(--star);
+}
+:root[data-theme="starry"] .level-chip,
+:root[data-theme="starry"] .stat-num--pill {
+  background: var(--star-wash);
+  color: var(--star);
+}
+:root[data-theme="starry"] .ledger-amount.is-plus {
+  color: var(--success);
+}
+:root[data-theme="starry"] .badge.is-earned .badge-icon {
+  background: var(--star-wash);
+  border-color: var(--star);
+  color: var(--star);
+}
+
+/* Filled accent controls: white text on the night-sky navy. */
+:root[data-theme="starry"] .submit-btn:not(:disabled),
+:root[data-theme="starry"] [data-state="loading"] .submit-btn:disabled,
+:root[data-theme="starry"] .task-btn--primary,
+:root[data-theme="starry"] .state-action:not([aria-disabled="true"]),
+:root[data-theme="starry"] .primary-button:not([aria-disabled="true"]),
+:root[data-theme="starry"] .btn-gradient,
+:root[data-theme="starry"] .publish-btn:not(:disabled) {
+  color: var(--on-brand);
+}
+
+/* Same class name, different disabled contracts on the two ends. */
+:root[data-theme="starry"][data-surface="teacher"] .btn-primary:not(:disabled) {
+  color: var(--on-brand);
+}
+:root[data-theme="starry"][data-surface="parent"] .btn-primary {
+  color: var(--on-brand);
+}
+
+:root[data-theme="starry"] .filter.is-active .filter-count {
+  color: var(--on-brand);
+}

@@ -1,0 +1,22 @@
+{
+  "slug": "parent-v4-settings-simple-29-settings",
+  "surface": "parent",
+  "title": "设置 · 简化提案",
+  "projectId": "b520c209-0602-4303-b76f-fcdc21d2f26f",
+  "conversationId": "aa031fed-7f84-4c28-a185-1778ec4fd78b",
+  "runId": "b2569813-544a-45b6-bc70-ab0702a28385",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 1203,
+  "files": [
+    ".file-versions/84fb4cc87be9e939d441b278/0001-243c4a6c-1448-40a9-a5c2-48c449b070d1.html",
+    ".file-versions/84fb4cc87be9e939d441b278/manifest.json",
+    "parent-variants/v4-settings-simple/29-settings/app.js",
+    "parent-variants/v4-settings-simple/29-settings/index.html",
+    "parent-variants/v4-settings-simple/29-settings/index.html.artifact.json",
+    "parent-variants/v4-settings-simple/29-settings/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/b520c209-0602-4303-b76f-fcdc21d2f26f"
+}

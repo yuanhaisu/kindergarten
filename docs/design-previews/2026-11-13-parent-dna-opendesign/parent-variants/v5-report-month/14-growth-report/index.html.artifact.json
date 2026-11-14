@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "parent-variants/v5-report-month/14-growth-report/index.html",
+  "entry": "parent-variants/v5-report-month/14-growth-report/index.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-11-14T09:27:24.891Z",
+  "updatedAt": "2026-11-14T09:27:24.891Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

@@ -1,0 +1,389 @@
+/* 老师登录 · 养成星球
+ * 「推门」——一次呼吸的登录页。
+ * 外壳（状态栏 / 导航栏 / 胶囊 / 演示条）由 ../../_shared/shell.css 提供，
+ * 本文件不定义任何 .mp-* 类，只用 [data-state] 接管页面自身四态。
+ * 全部颜色来自 tokens.css，禁止裸色值。
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+p,
+h1 {
+  margin: 0;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- 内容区 ---------- */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 28px 24px calc(28px + env(safe-area-inset-bottom));
+  /* 与源码 $gradient-page 对齐：暖奶白到底部微微转白。
+     渐变起点正是 --bg，与上方导航栏无色差接缝。 */
+  background: var(--bg-gradient);
+}
+
+/* ---------- 品牌区 ---------- */
+
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.brand-mark {
+  position: relative;
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+}
+
+/* 全页唯一的装饰：一圈极淡的琥珀柔光 */
+.brand-mark::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-pill);
+  background: radial-gradient(circle, var(--accent-wash) 0%, transparent 68%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.brand-logo {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 76px;
+  height: 76px;
+}
+
+.brand-name {
+  margin-top: var(--space-lg);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+}
+
+.brand-tagline {
+  margin-top: var(--space-sm);
+  font-size: var(--text-md);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  color: var(--muted);
+}
+
+/* ---------- 登录卡 ---------- */
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 100%;
+  padding: 20px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.error-strip {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: var(--danger-wash);
+  text-align: center;
+}
+
+.error-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+}
+
+.error-desc {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+}
+
+/* ---------- 主按钮 ---------- */
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-gradient);
+  color: var(--on-accent);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--motion-fast) var(--ease),
+    box-shadow var(--motion-fast) var(--ease),
+    opacity var(--motion-fast) var(--ease);
+}
+
+.login-btn__icon {
+  display: block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.login-btn__label {
+  min-width: 0;
+}
+
+.login-btn:hover:not(:disabled) {
+  box-shadow: var(--shadow-lg);
+}
+
+.login-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+.login-btn:disabled {
+  cursor: default;
+}
+
+.login-btn:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+}
+
+/* ---------- 协议行 ---------- */
+
+.agree-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-md);
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 2px;
+  border-radius: var(--radius-xl);
+  text-align: left;
+  transition: opacity var(--motion-fast) var(--ease);
+}
+
+.agree-box {
+  display: grid;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  place-items: center;
+  transition: background var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease);
+}
+
+.agree-check {
+  width: 12px;
+  height: 12px;
+  color: var(--on-brand);
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.agree-text {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.agree-row:active {
+  transform: scale(0.995);
+}
+
+.agree-row:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* ---------- 脚注 ---------- */
+
+.footnote {
+  max-width: 280px;
+  margin-top: 28px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  line-height: 1.65;
+  /* --hint 压在暖奶白上只有 2.3:1，读不清；退到 --muted（4.3:1） */
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: absolute;
+  bottom: 96px;
+  left: 50%;
+  z-index: 40;
+  max-width: 300px;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  background: var(--sidebar);
+  color: var(--on-brand);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--ease),
+    transform var(--motion-base) var(--ease);
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ==========================================================================
+ * 页面四态 —— 全部由 .mp-app[data-state] 驱动，不依赖 JS 改样式
+ *
+ *   normal    已勾选、无错误、可登录（由勾选动作进入）
+ *   empty     协议未勾选（本页唯一的"缺内容"形态，也是「空态」芯片的含义与首屏初值）
+ *   unagreed  同 empty；由「未勾选时点登录」触发
+ *   loading   登录中（「加载」芯片）
+ *   pending   同 loading；由「点登录」触发
+ *   error     登录失败
+ * ========================================================================== */
+
+/* 勾选框：默认已选；未勾选的两种状态清空 */
+.agree-box {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.agree-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.mp-app:is([data-state="empty"], [data-state="unagreed"]) .agree-box {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.mp-app:is([data-state="empty"], [data-state="unagreed"]) .agree-check {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.mp-app:is([data-state="empty"], [data-state="unagreed"]) .agree-row:hover .agree-box {
+  border-color: var(--hint);
+}
+
+/* 按钮文案：三个 label 只显示当前状态需要的那一个 */
+.login-btn__label--pending,
+.login-btn__label--retry {
+  display: none;
+}
+
+.mp-app:is([data-state="loading"], [data-state="pending"]) .login-btn__label--idle,
+.mp-app:is([data-state="loading"], [data-state="pending"]) .login-btn__label--retry {
+  display: none;
+}
+
+.mp-app:is([data-state="loading"], [data-state="pending"]) .login-btn__label--pending {
+  display: inline;
+}
+
+.mp-app[data-state="error"] .login-btn__label--idle {
+  display: none;
+}
+
+.mp-app[data-state="error"] .login-btn__label--retry {
+  display: inline;
+}
+
+/* 登录中：按钮与勾选行一起降级，且都不可点（这是本页的禁用态） */
+.mp-app:is([data-state="loading"], [data-state="pending"]) .login-btn {
+  opacity: 0.55;
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+
+.mp-app:is([data-state="loading"], [data-state="pending"]) .agree-row {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* 失败：卡片内常驻错误条 */
+.mp-app[data-state="error"] .error-strip {
+  display: flex;
+}
+
+/* ---------- 动效偏好 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "slug": "parent-v7-age5-class-27-student",
+  "surface": "parent",
+  "title": "幼儿信息 · 中班数据集",
+  "projectId": "a8af5b79-e693-4836-a367-66d8b312c76b",
+  "conversationId": "de9217f9-42a7-4012-8785-ef718d30d01c",
+  "runId": "4ef1765f-5e67-456a-a840-e7ed18ef6a4e",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 347,
+  "files": [
+    ".file-versions/1c034bec1dca6633b2f29d83/0001-070831db-02be-471a-b409-ce0ad217b242.html",
+    ".file-versions/1c034bec1dca6633b2f29d83/manifest.json",
+    "parent-variants/v7-age5-class/27-student/app.js",
+    "parent-variants/v7-age5-class/27-student/index.html",
+    "parent-variants/v7-age5-class/27-student/index.html.artifact.json",
+    "parent-variants/v7-age5-class/27-student/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/a8af5b79-e693-4836-a367-66d8b312c76b"
+}

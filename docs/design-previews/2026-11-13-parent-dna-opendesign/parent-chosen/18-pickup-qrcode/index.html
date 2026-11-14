@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>接送码 · 养成星球</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app" data-route="pages/pickup/qrcode" data-od-id="pickup-code-screen">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="status-time">10:20</span>
+      <div class="status-icons">
+        <svg class="status-icon status-icon--signal" viewBox="0 0 20 12" fill="currentColor" aria-hidden="true">
+          <rect x="0" y="8" width="3" height="4" rx="1" />
+          <rect x="5" y="6" width="3" height="6" rx="1" />
+          <rect x="10" y="3" width="3" height="9" rx="1" />
+          <rect x="15" y="0" width="3" height="12" rx="1" />
+        </svg>
+        <svg class="status-icon status-icon--wifi" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M1.4 4.1a10 10 0 0 1 13.2 0" />
+          <path d="M4.1 6.8a6.2 6.2 0 0 1 7.8 0" />
+          <path d="M6.8 9.5a2.4 2.4 0 0 1 2.4 0" />
+          <circle cx="8" cy="11" r="0.9" fill="currentColor" stroke="none" />
+        </svg>
+        <svg class="status-icon status-icon--battery" viewBox="0 0 25 12" fill="none" aria-hidden="true">
+          <rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="currentColor" />
+          <rect x="2.5" y="2.5" width="17" height="7" rx="1.5" fill="currentColor" />
+          <path d="M23 4v4a2.2 2.2 0 0 0 0-4Z" fill="currentColor" />
+        </svg>
+      </div>
+    </div>
+
+    <header class="page-bar" data-od-id="pickup-page-bar">
+      <button class="page-bar__back" id="back-button" type="button" aria-label="返回接送页" data-od-id="pickup-back-button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m15 5-7 7 7 7" />
+        </svg>
+      </button>
+      <span class="page-bar__title">接送</span>
+      <span class="page-bar__spacer" aria-hidden="true"></span>
+    </header>
+
+    <main class="mp-main" data-od-id="pickup-code-main">
+      <header class="page-head">
+        <h1 data-od-id="pickup-heading">接送码</h1>
+        <p>在园门口出示给老师核验</p>
+      </header>
+
+      <section class="pass-card" aria-label="接送核验卡" data-od-id="pickup-code-card">
+        <svg class="qr-code" viewBox="0 0 296 296" width="220" height="220" role="img" aria-labelledby="qr-title">
+          <title id="qr-title">乐乐本次接送的动态二维码</title>
+          <rect class="qr-ground" width="296" height="296" />
+          <path class="qr-modules" id="qr-modules" d="M32 32h56v8h-56zM96 32h8v8h-8zM112 32h16v8h-16zM160 32h8v8h-8zM176 32h16v8h-16zM208 32h56v8h-56zM32 40h8v8h-8zM80 40h8v8h-8zM104 40h16v8h-16zM152 40h8v8h-8zM168 40h8v8h-8zM208 40h8v8h-8zM256 40h8v8h-8zM32 48h8v8h-8zM48 48h24v8h-24zM80 48h8v8h-8zM96 48h32v8h-32zM136 48h8v8h-8zM152 48h8v8h-8zM176 48h8v8h-8zM208 48h8v8h-8zM224 48h24v8h-24zM256 48h8v8h-8zM32 56h8v8h-8zM48 56h24v8h-24zM80 56h8v8h-8zM96 56h8v8h-8zM120 56h8v8h-8zM136 56h8v8h-8zM160 56h16v8h-16zM192 56h8v8h-8zM208 56h8v8h-8zM224 56h24v8h-24zM256 56h8v8h-8zM32 64h8v8h-8zM48 64h24v8h-24zM80 64h8v8h-8zM120 64h16v8h-16zM144 64h24v8h-24zM176 64h8v8h-8zM208 64h8v8h-8zM224 64h24v8h-24zM256 64h8v8h-8zM32 72h8v8h-8zM80 72h8v8h-8zM104 72h16v8h-16zM144 72h8v8h-8zM168 72h8v8h-8zM192 72h8v8h-8zM208 72h8v8h-8zM256 72h8v8h-8zM32 80h56v8h-56zM96 80h8v8h-8zM112 80h8v8h-8zM128 80h8v8h-8zM144 80h8v8h-8zM160 80h8v8h-8zM176 80h8v8h-8zM192 80h8v8h-8zM208 80h56v8h-56zM96 88h8v8h-8zM112 88h32v8h-32zM152 88h48v8h-48zM32 96h40v8h-40zM80 96h8v8h-8zM104 96h24v8h-24zM136 96h8v8h-8zM152 96h8v8h-8zM176 96h8v8h-8zM192 96h8v8h-8zM216 96h32v8h-32zM56 104h8v8h-8zM88 104h8v8h-8zM112 104h16v8h-16zM152 104h8v8h-8zM232 104h16v8h-16zM256 104h8v8h-8zM56 112h8v8h-8zM72 112h32v8h-32zM120 112h24v8h-24zM152 112h16v8h-16zM192 112h8v8h-8zM208 112h8v8h-8zM232 112h24v8h-24zM72 120h8v8h-8zM88 120h8v8h-8zM104 120h8v8h-8zM120 120h8v8h-8zM136 120h32v8h-32zM176 120h8v8h-8zM192 120h8v8h-8zM208 120h8v8h-8zM240 120h16v8h-16zM56 128h8v8h-8zM80 128h8v8h-8zM112 128h8v8h-8zM128 128h8v8h-8zM152 128h16v8h-16zM176 128h8v8h-8zM200 128h32v8h-32zM256 128h8v8h-8zM32 136h16v8h-16zM88 136h40v8h-40zM136 136h8v8h-8zM160 136h16v8h-16zM192 136h8v8h-8zM224 136h16v8h-16zM256 136h8v8h-8zM40 144h8v8h-8zM56 144h8v8h-8zM80 144h24v8h-24zM144 144h24v8h-24zM192 144h8v8h-8zM232 144h8v8h-8zM248 144h8v8h-8zM32 152h16v8h-16zM112 152h8v8h-8zM128 152h8v8h-8zM152 152h16v8h-16zM184 152h8v8h-8zM200 152h8v8h-8zM240 152h24v8h-24zM48 160h8v8h-8zM64 160h8v8h-8zM80 160h16v8h-16zM104 160h16v8h-16zM136 160h8v8h-8zM168 160h8v8h-8zM184 160h8v8h-8zM200 160h8v8h-8zM216 160h32v8h-32zM48 168h24v8h-24zM96 168h40v8h-40zM144 168h24v8h-24zM184 168h16v8h-16zM216 168h16v8h-16zM240 168h24v8h-24zM40 176h8v8h-8zM80 176h8v8h-8zM104 176h32v8h-32zM152 176h16v8h-16zM176 176h40v8h-40zM48 184h8v8h-8zM72 184h8v8h-8zM96 184h8v8h-8zM120 184h16v8h-16zM144 184h40v8h-40zM208 184h16v8h-16zM232 184h32v8h-32zM56 192h40v8h-40zM104 192h48v8h-48zM168 192h16v8h-16zM192 192h8v8h-8zM208 192h8v8h-8zM224 192h24v8h-24zM96 200h8v8h-8zM120 200h8v8h-8zM136 200h8v8h-8zM160 200h24v8h-24zM208 200h24v8h-24zM240 200h16v8h-16zM32 208h56v8h-56zM136 208h8v8h-8zM152 208h8v8h-8zM176 208h56v8h-56zM240 208h8v8h-8zM32 216h8v8h-8zM80 216h8v8h-8zM112 216h24v8h-24zM144 216h8v8h-8zM168 216h8v8h-8zM184 216h16v8h-16zM216 216h8v8h-8zM248 216h8v8h-8zM32 224h8v8h-8zM48 224h24v8h-24zM80 224h8v8h-8zM96 224h8v8h-8zM112 224h16v8h-16zM144 224h8v8h-8zM160 224h16v8h-16zM184 224h8v8h-8zM216 224h8v8h-8zM248 224h16v8h-16zM32 232h8v8h-8zM48 232h24v8h-24zM80 232h8v8h-8zM96 232h8v8h-8zM136 232h16v8h-16zM176 232h16v8h-16zM200 232h16v8h-16zM256 232h8v8h-8zM32 240h8v8h-8zM48 240h24v8h-24zM80 240h8v8h-8zM136 240h40v8h-40zM200 240h16v8h-16zM232 240h32v8h-32zM32 248h8v8h-8zM80 248h8v8h-8zM96 248h8v8h-8zM112 248h40v8h-40zM208 248h8v8h-8zM224 248h16v8h-16zM256 248h8v8h-8zM32 256h56v8h-56zM96 256h16v8h-16zM128 256h32v8h-32zM192 256h8v8h-8zM232 256h24v8h-24z" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true" />
+        </svg>
+
+        <p class="child-name" id="child-name">乐乐 · 小一班</p>
+
+        <div class="verify">
+          <span class="verify__label">核验码</span>
+          <span class="verify__code" id="verify-code" data-od-id="verify-code">A7K2-9F3D</span>
+        </div>
+
+        <div class="refresh-row">
+          <span class="refresh-row__count"><span id="countdown">58</span> 秒后自动刷新</span>
+          <button class="refresh-button" id="refresh-button" type="button" data-od-id="pickup-refresh-button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+              <path d="M20 4v7h-7" />
+            </svg>
+            <span>立即刷新</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="warning" role="note" data-od-id="pickup-screenshot-warning">
+        <svg class="warning__icon" viewBox="0 0 20 20" aria-hidden="true">
+          <path class="warning__triangle" d="M10 2.2 18.6 17.8H1.4Z" />
+          <path class="warning__mark" d="M10 7.4v5" />
+          <circle class="warning__dot" cx="10" cy="15" r="1" />
+        </svg>
+        <p>截图不可用，请在门口实时出示</p>
+      </div>
+
+      <section class="steps" aria-labelledby="steps-heading" data-od-id="pickup-steps">
+        <h2 class="overline" id="steps-heading">使用步骤</h2>
+        <ol class="steps__list">
+          <li>
+            <span class="step-no" aria-hidden="true">1</span>
+            <p>到园门口打开本页，把屏幕调亮一点。</p>
+          </li>
+          <li>
+            <span class="step-no" aria-hidden="true">2</span>
+            <p>把二维码或下方核验码出示给老师。</p>
+          </li>
+          <li>
+            <span class="step-no" aria-hidden="true">3</span>
+            <p>老师核验通过后，接送记录会自动生成。</p>
+          </li>
+        </ol>
+      </section>
+
+      <p class="footnote" data-od-id="pickup-validity-note">一次有效 · 核验后自动失效</p>
+      <p class="sr-only" id="refresh-status" role="status" aria-live="polite"></p>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

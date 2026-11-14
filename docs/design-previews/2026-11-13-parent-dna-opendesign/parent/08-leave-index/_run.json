@@ -1,0 +1,20 @@
+{
+  "slug": "parent-08-leave-index",
+  "surface": "parent",
+  "title": "请假记录",
+  "projectId": "423f58f0-94d7-4129-995e-5fe12211ad65",
+  "conversationId": "c725db6f-7616-4e94-8d2e-7cdae59cdce9",
+  "runId": "24f234e4-b88d-418d-a1fd-1738062f228f",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 381,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/423f58f0-94d7-4129-995e-5fe12211ad65",
+  "previewRendered": true
+}

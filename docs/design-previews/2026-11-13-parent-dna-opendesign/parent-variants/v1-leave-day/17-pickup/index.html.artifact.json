@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "parent-variants/v1-leave-day/17-pickup/index.html",
+  "entry": "parent-variants/v1-leave-day/17-pickup/index.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-11-14T08:22:57.668Z",
+  "updatedAt": "2026-11-14T08:22:57.668Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "slug": "teacher-calendar-detail",
+  "surface": "teacher",
+  "title": "活动详情",
+  "projectId": "aad173cf-9ab8-4a19-abd8-142ec823db9a",
+  "conversationId": "cdf2f487-d01e-4e93-8eda-43ba9e9534d6",
+  "runId": "d66d14f3-b319-452c-95c6-4646e06304bb",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 487,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/aad173cf-9ab8-4a19-abd8-142ec823db9a",
+  "previewRendered": true
+}

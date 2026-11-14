@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "parent-variants/v1-leave-day/01-home/index.html",
+  "entry": "parent-variants/v1-leave-day/01-home/index.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-11-14T07:53:26.643Z",
+  "updatedAt": "2026-11-14T07:53:26.643Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

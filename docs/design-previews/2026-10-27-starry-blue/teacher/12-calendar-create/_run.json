@@ -1,0 +1,18 @@
+{
+  "slug": "teacher-calendar-create",
+  "surface": "teacher",
+  "title": "添加活动",
+  "projectId": "fa791e8f-7c65-448c-81ea-6db9787e86f9",
+  "conversationId": "3eda870d-6eb1-4479-82ed-5ae939891383",
+  "runId": "91db5f38-44b7-4f92-ac0e-d04b4050f100",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 1143,
+  "files": [
+    "index.html",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/fa791e8f-7c65-448c-81ea-6db9787e86f9",
+  "previewRendered": true
+}

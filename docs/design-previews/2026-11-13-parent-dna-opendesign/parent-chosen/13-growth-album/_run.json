@@ -1,0 +1,20 @@
+{
+  "slug": "parent-13-growth-album",
+  "surface": "parent",
+  "title": "成长相册",
+  "projectId": "b2492ebd-14ba-40f2-ad50-b1b5a0b4bc14",
+  "conversationId": "5ca62fba-d5df-4de9-90f7-6fed946a54c9",
+  "runId": "84165dd3-4cd3-4277-8fa5-22978a981273",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 226,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/b2492ebd-14ba-40f2-ad50-b1b5a0b4bc14",
+  "previewRendered": true
+}

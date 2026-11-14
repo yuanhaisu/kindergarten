@@ -1,0 +1,22 @@
+{
+  "slug": "parent-v3-notice-signup-07-notice-detail",
+  "surface": "parent",
+  "title": "通知详情 · 报名提案",
+  "projectId": "aeb5dd2b-d607-4a0e-ba08-a2765f3d8f9b",
+  "conversationId": "f8d9bd57-d6a1-41a3-b6b6-b3624e21e99d",
+  "runId": "23c50fdb-b874-4939-a79a-2e3bf8e19987",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 442,
+  "files": [
+    ".file-versions/32b658c134f83dc69f522aba/0001-e8d5193c-9144-4ad3-8a98-2021e36b1e98.html",
+    ".file-versions/32b658c134f83dc69f522aba/manifest.json",
+    "parent-variants/v3-notice-signup/07-notice-detail/app.js",
+    "parent-variants/v3-notice-signup/07-notice-detail/index.html",
+    "parent-variants/v3-notice-signup/07-notice-detail/index.html.artifact.json",
+    "parent-variants/v3-notice-signup/07-notice-detail/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/aeb5dd2b-d607-4a0e-ba08-a2765f3d8f9b"
+}

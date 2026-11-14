@@ -1,0 +1,62 @@
+/* Starry-only surface adjustments.
+ * Loaded after page styles.css. Scoped by [data-theme="starry"] so
+ * ?theme=bright / celestial keep their original rendering untouched.
+ *
+ * Two jobs:
+ * 1. Let warm accents carry rewards (gold) and gains (green), so the deep
+ *    space navy does not become a monochrome enterprise UI.
+ * 2. Flip text to white on the filled accent surfaces that are now dark.
+ *    The bright-orange artwork used dark ink on light orange, so only the
+ *    controls whose base rule paints an accent fill are listed here — the
+ *    pale-wash and white-surface variants keep their dark ink. Page markers
+ *    (data-page) keep the two ends' same-named classes apart.
+ */
+:root[data-theme="starry"] .perf-bar {
+  background: var(--star-wash);
+}
+:root[data-theme="starry"] .perf-bar svg {
+  color: var(--star);
+}
+:root[data-theme="starry"] .level-chip,
+:root[data-theme="starry"] .stat-num--pill {
+  background: var(--star-wash);
+  color: var(--star);
+}
+:root[data-theme="starry"] .ledger-amount.is-plus {
+  color: var(--success);
+}
+:root[data-theme="starry"] .badge.is-earned .badge-icon {
+  background: var(--star-wash);
+  border-color: var(--star);
+  color: var(--star);
+}
+
+/* The share timestamp sits on an accent-wash card; hint is too light there. */
+:root[data-theme="starry"][data-page="tasks-wall"] .share-time {
+  color: var(--muted);
+}
+
+/* Filled accent controls: white text on the night-sky navy. */
+:root[data-theme="starry"][data-page="bind"] .submit-btn:not(:disabled),
+:root[data-theme="starry"][data-page="bind"] [data-state="loading"] .submit-btn:disabled,
+:root[data-theme="starry"][data-page="tasks-parent"] .task-btn--primary:not(:disabled),
+:root[data-theme="starry"][data-page="class"] .state-action:not([aria-disabled="true"]),
+:root[data-theme="starry"][data-page="student"] .primary-button:not([aria-disabled="true"]),
+:root[data-theme="starry"][data-page="settings"] .btn-primary,
+:root[data-theme="starry"][data-page="growth"] .publish-btn:not(:disabled),
+:root[data-theme="starry"][data-page="growth"] .btn-gradient,
+:root[data-theme="starry"][data-page="tasks-teacher"] .btn-primary:not(:disabled),
+:root[data-theme="starry"][data-page="doctor-calendar"] .btn-primary:not(:disabled) {
+  color: var(--on-brand);
+}
+
+/* Hover used a pale accent-soft fill; keep the dark hover background so the
+ * white label stays readable. */
+:root[data-theme="starry"][data-page="tasks-parent"] .task-btn--primary:hover:not(:disabled),
+:root[data-theme="starry"][data-page="doctor-calendar"] .btn-primary:hover:not(:disabled) {
+  background: var(--accent-deep);
+}
+
+:root[data-theme="starry"][data-page="tasks-teacher"] .filter.is-active .filter-count {
+  color: var(--on-brand);
+}

@@ -1,0 +1,20 @@
+{
+  "slug": "teacher-growth-detail",
+  "surface": "teacher",
+  "title": "成长记录详情",
+  "projectId": "de26fc7e-38e8-48cb-9845-2bb769d3f878",
+  "conversationId": "f005cebb-6a26-4c09-a0ca-276e42728963",
+  "runId": "48982d69-75c2-4021-9ee8-dafc0868c738",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 641,
+  "files": [
+    ".mcp.json",
+    "index.html",
+    "tokens.css",
+    "_shared/shell.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/de26fc7e-38e8-48cb-9845-2bb769d3f878",
+  "previewRendered": true
+}

@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小王子 · 配色与插图说明 · 养成星球</title>
+<style>
+  :root {
+    --paper: #F6F0E3;
+    --surface: #FFFDF6;
+    --ink: #23201A;
+    --ink-2: #4A4438;
+    --muted: #6B6354;
+    --line: #D9CBB2;
+    --line-soft: #E8DECB;
+    --vermilion: #C9593F;
+    --vermilion-deep: #B33A2B;
+    --vermilion-dark: #8C2A1E;
+    --gold: #8A5A0B;
+    --gold-bg: #F6E9C8;
+    --green: #2E6B3F;
+    --red: #A32B22;
+    --radius: 16px;
+    --font: "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --serif: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  ::selection { background: #F5E0D8; color: var(--ink); }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--vermilion-dark); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--vermilion-dark); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px 72px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 22px 0 18px; font-size: 12px; color: var(--muted);
+  }
+  .topbar a { color: var(--ink-2); text-decoration: none; font-weight: 600; }
+  .topbar a:hover { color: var(--vermilion-dark); }
+
+  .hero {
+    display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(280px, .96fr);
+    align-items: center; gap: 44px; padding: 26px 0 46px; border-bottom: 1px solid var(--line);
+  }
+  h1 { margin: 0; font-family: var(--serif); font-size: clamp(42px, 6vw, 64px); line-height: 1.04; letter-spacing: .02em; font-weight: 700; }
+  .en { margin: 10px 0 0; font-size: 13px; font-weight: 600; letter-spacing: .16em; color: var(--vermilion-deep); text-transform: uppercase; }
+  .lede { margin: 18px 0 22px; font-size: 15px; line-height: 1.9; color: var(--ink-2); max-width: 34em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
+    font-size: 12px; color: var(--ink-2);
+  }
+  .chip i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); border: 1px solid rgba(35, 32, 26, .12); }
+  .chip code { font-size: 11px; color: var(--muted); }
+  .hero-art img {
+    display: block; width: 100%; height: auto;
+    border: 1px solid var(--line); border-radius: 18px; background: #fbfaf6;
+    box-shadow: 0 8px 24px rgba(74, 58, 32, .08);
+  }
+
+  section { padding: 40px 0 8px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+  h2 { margin: 0; font-family: var(--serif); font-size: 24px; letter-spacing: .02em; }
+  .section-note { margin: 0; color: var(--muted); font-size: 12px; }
+
+  .why { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(240px, .7fr); gap: 42px; align-items: start; }
+  .why p { margin: 0 0 16px; font-size: 15px; line-height: 1.9; color: var(--ink-2); max-width: 38em; }
+  .why strong { color: var(--ink); font-weight: 600; }
+  .words { margin: 0; padding: 0; list-style: none; }
+  .words li { padding: 14px 0; border-top: 1px solid var(--line-soft); }
+  .words b { display: block; font-size: 16px; color: var(--ink); font-family: var(--serif); }
+  .words span { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  .ends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px; }
+  .end { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .end h3 { margin: 0; font-family: var(--serif); font-size: 18px; }
+  .end-sub { margin: 6px 0 16px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+  .end-swatch { height: 64px; border-radius: 12px; margin-bottom: 16px; }
+  .swatches { margin: 0; padding: 0; list-style: none; }
+  .swatches li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line-soft); }
+  .swatches li:first-child { border-top: 0; }
+  .swatches i { width: 18px; height: 18px; border-radius: 5px; background: var(--c); border: 1px solid rgba(35, 32, 26, .12); flex: none; }
+  .swatches b { font-weight: 600; color: var(--ink-2); font-size: 13px; }
+  .swatches code { margin-left: auto; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .rule { border-top: 2px solid var(--vermilion-deep); padding-top: 14px; }
+  .rule:nth-child(2) { border-top-color: var(--gold); }
+  .rule:nth-child(3) { border-top-color: var(--green); }
+  .rule b { display: block; font-family: var(--serif); font-size: 16px; }
+  .rule p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+  .contrast-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  caption { text-align: left; color: var(--muted); font-size: 12px; padding-bottom: 10px; }
+  th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  th { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+  .pair { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+  .pair i { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(35, 32, 26, .12); }
+  .num { font-variant-numeric: tabular-nums; }
+  .pass { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #DFF0DF; color: #1E5A33; font-size: 11px; font-weight: 600; }
+  .contrast-foot { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+  .scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .scene-card { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .scene-card img { display: block; width: 100%; height: auto; background: #fbfaf6; }
+  .scene-card figcaption { padding: 10px 12px 12px; }
+  .scene-card b { display: block; font-family: var(--serif); font-size: 14px; }
+  .scene-card span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+  .scene-card em { display: block; margin-top: 4px; color: var(--vermilion-dark); font-style: normal; font-size: 12px; }
+  .scene-note { margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+
+  .compare { padding-top: 6px; }
+  .pair-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 20px 0 26px; border-bottom: 1px solid var(--line-soft); }
+  .pair-row:last-of-type { border-bottom: 0; }
+  .pair-row h3 { grid-column: 1 / -1; margin: 0 0 2px; font-family: var(--serif); font-size: 16px; }
+  .pair-row h3 span { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; font-family: var(--font); }
+  figure { margin: 0; }
+  figure a { display: block; }
+  figure img {
+    display: block; width: 100%; height: 430px; object-fit: cover; object-position: top;
+    border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+  }
+  figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  figcaption b { color: var(--ink-2); font-weight: 600; }
+  figcaption a { color: var(--vermilion-dark); text-decoration: none; font-weight: 600; }
+  figcaption a:hover { text-decoration: underline; }
+
+  footer { margin-top: 52px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 2; }
+  footer code { background: #EFE5D2; padding: 1px 6px; border-radius: 5px; color: var(--ink-2); }
+  footer p { margin: 0; }
+  footer a { color: var(--vermilion-dark); }
+
+  @media (max-width: 820px) {
+    .wrap { padding-left: 18px; padding-right: 18px; }
+    .hero { grid-template-columns: 1fr; gap: 24px; padding-bottom: 34px; }
+    .hero-art { order: -1; }
+    .why { grid-template-columns: 1fr; gap: 26px; }
+    .ends { grid-template-columns: 1fr; gap: 20px; }
+    .rules { grid-template-columns: 1fr; gap: 22px; }
+    .pair-row { grid-template-columns: 1fr; gap: 14px; }
+    figure img { height: 360px; }
+    .topbar { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="../index.html">← 返回画廊</a>
+    <span>配色与插图 · 2026-10-27</span>
+  </div>
+
+  <header class="hero">
+    <div>
+      <h1>小王子</h1>
+      <p class="en">Petit Prince</p>
+      <p class="lede">不是把童话贴到界面上，而是把《小王子》的墨线、羊皮纸和一点朱砂，变成一套能安静工作的界面。插图是页面的一部分，不是页面的装饰。</p>
+      <ul class="chips" aria-label="主色色阶">
+        <li class="chip"><i style="--c:#C9593F"></i>朱砂 <code>#C9593F</code></li>
+        <li class="chip"><i style="--c:#B33A2B"></i>实体朱砂 <code>#B33A2B</code></li>
+        <li class="chip"><i style="--c:#8C2A1E"></i>深朱砂 <code>#8C2A1E</code></li>
+        <li class="chip"><i style="--c:#23201A"></i>墨 <code>#23201A</code></li>
+        <li class="chip"><i style="--c:#8A5A0B"></i>星金 <code>#8A5A0B</code></li>
+        <li class="chip"><i style="--c:#F6F0E3"></i>羊皮纸 <code>#F6F0E3</code></li>
+      </ul>
+    </div>
+    <div class="hero-art">
+      <img src="illustrations/hero-gallery.svg" alt="小王子站在星球上，彗星划过夜空">
+    </div>
+  </header>
+
+  <section aria-labelledby="why-title">
+    <div class="section-head">
+      <h2 id="why-title">为什么是墨与朱砂</h2>
+      <p class="section-note">先有纸，再有界面</p>
+    </div>
+    <div class="why">
+      <div>
+        <p>《小王子》的原书不是彩色插画集，而是<strong>墨线速写加一点手工上色</strong>。所以这套主题的底色不是白，而是偏暖的羊皮纸；正文不是纯黑，而是带一点棕的墨；品牌色不是大面积的橙，而是<strong>只在关键处落一笔的朱砂</strong>。</p>
+        <p>朱砂只负责「需要立刻看见」的事：主按钮、未读、待审批、当前选中。它出现得越少，出现时就越有分量。星金留给奖励与等级，绿色留给成长与通过，蓝色留给信息与链接——语义色不参与品牌色的统一，才能继续被看见。</p>
+        <p>页面顶部的<strong>故事带</strong>是整个主题的签名：一条 390×84 的横向速写，按模块换客人带来的道具（信、风筝、铃铛、幼苗、镜子、绳结、灯柱、星球、星座）。它不抢内容，只在你滑到页面顶部时，提醒你这页在讲什么。</p>
+      </div>
+      <ul class="words">
+        <li><b>纸</b><span>羊皮纸底、暖白卡片；长时间使用不刺眼，照片仍然干净。</span></li>
+        <li><b>墨</b><span>正文与图标用墨色，不用纯黑；线稿、边框、分隔线同一种墨。</span></li>
+        <li><b>朱砂</b><span>每屏最多一个焦点。按钮、未读、待办优先，其它地方保持安静。</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="ends-title">
+    <div class="section-head">
+      <h2 id="ends-title">两端的纸色</h2>
+      <p class="section-note">同一个故事，不同的阅读场景</p>
+    </div>
+    <div class="ends">
+      <div class="end">
+        <h3>老师端 · 暖羊皮纸</h3>
+        <p class="end-sub">边带班边用手机；暖底降低长时间使用的刺激，朱砂标记待办。</p>
+        <div class="end-swatch" style="background:linear-gradient(135deg,#C9593F 0%,#B33A2B 100%)"></div>
+        <ul class="swatches">
+          <li><i style="--c:#B33A2B"></i><b>主色 · 实体朱砂</b><code>#B33A2B</code></li>
+          <li><i style="--c:#C9593F"></i><b>渐变起点 · 朱砂</b><code>#C9593F</code></li>
+          <li><i style="--c:#8C2A1E"></i><b>深色 · 深朱砂</b><code>#8C2A1E</code></li>
+          <li><i style="--c:#F5E0D8"></i><b>浅底 · 朱砂洗</b><code>#F5E0D8</code></li>
+          <li><i style="--c:#F6F0E3"></i><b>页面 · 羊皮纸</b><code>#F6F0E3</code></li>
+          <li><i style="--c:#FFFDF6"></i><b>卡片 · 暖白</b><code>#FFFDF6</code></li>
+        </ul>
+      </div>
+      <div class="end">
+        <h3>家长端 · 暖纸玫瑰</h3>
+        <p class="end-sub">通勤或晚上刷手机；比老师端多一分玫瑰色，孩子的内容仍然清楚。</p>
+        <div class="end-swatch" style="background:linear-gradient(135deg,#C25A64 0%,#A63A45 100%)"></div>
+        <ul class="swatches">
+          <li><i style="--c:#A63A45"></i><b>主色 · 玫瑰朱砂</b><code>#A63A45</code></li>
+          <li><i style="--c:#C25A64"></i><b>渐变起点 · 玫瑰</b><code>#C25A64</code></li>
+          <li><i style="--c:#7E2833"></i><b>深色 · 暗玫瑰</b><code>#7E2833</code></li>
+          <li><i style="--c:#F4DEE1"></i><b>浅底 · 玫瑰洗</b><code>#F4DEE1</code></li>
+          <li><i style="--c:#F7F1E6"></i><b>页面 · 暖纸</b><code>#F7F1E6</code></li>
+          <li><i style="--c:#FFFEFA"></i><b>卡片 · 纸白</b><code>#FFFEFA</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="rules-title">
+    <div class="section-head">
+      <h2 id="rules-title">把朱砂放在该在的位置</h2>
+      <p class="section-note">三条用色规则</p>
+    </div>
+    <div class="rules">
+      <div class="rule">
+        <b>行动与状态用朱砂</b>
+        <p>主按钮、未读、待审批、当前选中。朱砂负责「现在需要你」。</p>
+      </div>
+      <div class="rule">
+        <b>奖章与提醒用星金</b>
+        <p>小小艺术家、Lv.5、积分增加。金色面积始终小于朱砂。</p>
+      </div>
+      <div class="rule">
+        <b>成长与结果用绿</b>
+        <p>已同步、已通过、出勤。语义色保留，才不会被品牌色吞掉。</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="contrast-title">
+    <div class="section-head">
+      <h2 id="contrast-title">对比度</h2>
+      <p class="section-note">WCAG 2.1 · 正文目标 AA</p>
+    </div>
+    <div class="contrast-wrap">
+      <table>
+        <caption>所有正文使用墨色；朱砂浅底上不使用白字。</caption>
+        <thead>
+          <tr><th scope="col">组合</th><th scope="col">用途</th><th scope="col">对比度</th><th scope="col">判定</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="pair"><i style="background:#23201A"></i>#23201A / #FFFDF6</span></td><td>正文 / 暖白卡</td><td class="num">15.96 : 1</td><td><span class="pass">AAA</span></td></tr>
+          <tr><td><span class="pair"><i style="background:#23201A"></i>#23201A / #F6F0E3</span></td><td>正文 / 羊皮纸</td><td class="num">14.30 : 1</td><td><span class="pass">AAA</span></td></tr>
+          <tr><td><span class="pair"><i style="background:#FFFFFF"></i>#FFFFFF / #B33A2B</span></td><td>白字 / 老师端主按钮</td><td class="num">5.90 : 1</td><td><span class="pass">AA</span></td></tr>
+          <tr><td><span class="pair"><i style="background:#FFFFFF"></i>#FFFFFF / #A63A45</span></td><td>白字 / 家长端主按钮</td><td class="num">6.34 : 1</td><td><span class="pass">AA</span></td></tr>
+          <tr><td><span class="pair"><i style="background:#8C2A1E"></i>#8C2A1E / #F5E0D8</span></td><td>深朱砂字 / 朱砂洗</td><td class="num">6.71 : 1</td><td><span class="pass">AA</span></td></tr>
+          <tr><td><span class="pair"><i style="background:#8A5A0B"></i>#8A5A0B / #F6E9C8</span></td><td>星金字 / 星金浅底</td><td class="num">4.91 : 1</td><td><span class="pass">AA</span></td></tr>
+          <tr><td><span class="pair"><i style="background:#6B6354"></i>#6B6354 / #FFFDF6</span></td><td>次级文字 / 暖白卡</td><td class="num">5.83 : 1</td><td><span class="pass">AA</span></td></tr>
+        </tbody>
+      </table>
+      <p class="contrast-foot">亮橙原稿中「白字压亮橙」只有 2.35–2.80:1；小王子主题把主按钮改成白字压深朱砂（5.90 / 6.34:1），浅底上的朱砂字改用深朱砂（6.71:1）。朱砂只做填充与小面积强调，不用作长段正文。</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="scenes-title">
+    <div class="section-head">
+      <h2 id="scenes-title">8 幅故事分镜</h2>
+      <p class="section-note">同一篇里每位客人只出现一次</p>
+    </div>
+    <div class="scene-grid">
+      <figure class="scene-card"><img src="illustrations/scene-01-departure.svg" alt="启程"><figcaption><b>启程</b><span>王子独行</span><em>「从这里出发」</em></figcaption></figure>
+      <figure class="scene-card"><img src="illustrations/scene-02-rose.svg" alt="玫瑰"><figcaption><b>玫瑰</b><span>玫瑰</span><em>「你为它花的时间」</em></figcaption></figure>
+      <figure class="scene-card"><img src="illustrations/scene-03-fox.svg" alt="驯养"><figcaption><b>驯养</b><span>狐狸</span><em>「用心去看」</em></figcaption></figure>
+      <figure class="scene-card"><img src="illustrations/scene-04-letter.svg" alt="来信"><figcaption><b>来信</b><span>飞行员</span><em>「有些话要写下来」</em></figcaption></figure>
+      <figure class="scene-card"><img src="illustrations/scene-05-farewell.svg" alt="告别"><figcaption><b>告别</b><span>蛇</span><em>「来去都有时辰」</em></figcaption></figure>
+      <figure class="scene-card"><img src="illustrations/scene-06-watch.svg" alt="值守"><figcaption><b>值守</b><span>点灯人</span><em>「到点就点灯」</em></figcaption></figure>
+      <figure class="scene-card"><img src="illustrations/scene-07-keep.svg" alt="收好"><figcaption><b>收好</b><span>王子独行</span><em>「把今天收好」</em></figcaption></figure>
+      <figure class="scene-card"><img src="illustrations/scene-08-planet.svg" alt="星球"><figcaption><b>星球</b><span>王子独行</span><em>「一个人也是星球」</em></figcaption></figure>
+    </div>
+    <p class="scene-note">分镜遵循 <code>.claude/skills/petit-prince-story</code> 的规则：墨线 #141414、纸底 #fbfaf6、每幕恰好一个朱砂焦点、星点 ≤12 颗、小行星 ≤2 颗。页面里的 12 条故事带是同一套视觉语言的无客人版本，只保留道具与地平线。</p>
+  </section>
+
+  <section aria-labelledby="compare-title">
+    <div class="section-head">
+      <h2 id="compare-title">同一页，两种版本</h2>
+      <p class="section-note">左：小王子 · 右：原亮橙</p>
+    </div>
+    <div class="compare">
+      <div class="pair-row">
+        <h3>老师工作台 <span>羊皮纸底 · 故事带 · 朱砂待办</span></h3>
+        <figure>
+          <a href="../teacher/01-workbench/index.html" target="_blank" rel="noreferrer"><img loading="lazy" src="../teacher/01-workbench/preview.png" alt="老师工作台 小王子主题"></a>
+          <figcaption><b>小王子 · 本稿</b><a href="../teacher/01-workbench/index.html" target="_blank" rel="noreferrer">打开原型</a></figcaption>
+        </figure>
+        <figure>
+          <a href="../teacher/01-workbench/index.html?theme=bright" target="_blank" rel="noreferrer"><img loading="lazy" src="../teacher/01-workbench/preview-bright.png" alt="老师工作台 原亮橙主题"></a>
+          <figcaption><b>亮橙 · 原稿</b><a href="../teacher/01-workbench/index.html?theme=bright" target="_blank" rel="noreferrer">打开橙色版</a></figcaption>
+        </figure>
+      </div>
+      <div class="pair-row">
+        <h3>家长首页 <span>暖纸底 · 玫瑰朱砂 · 故事带</span></h3>
+        <figure>
+          <a href="../parent/01-home/index.html" target="_blank" rel="noreferrer"><img loading="lazy" src="../parent/01-home/preview.png" alt="家长首页 小王子主题"></a>
+          <figcaption><b>小王子 · 本稿</b><a href="../parent/01-home/index.html" target="_blank" rel="noreferrer">打开原型</a></figcaption>
+        </figure>
+        <figure>
+          <a href="../parent/01-home/index.html?theme=bright" target="_blank" rel="noreferrer"><img loading="lazy" src="../parent/01-home/preview-bright.png" alt="家长首页 原亮橙主题"></a>
+          <figcaption><b>亮橙 · 原稿</b><a href="../parent/01-home/index.html?theme=bright" target="_blank" rel="noreferrer">打开橙色版</a></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>主题名 <code>petitprince</code>；色值入口 <code>shared-design-tokens/themes.json</code>；生成 <code>node scripts/build-theme-css.mjs</code>。</p>
+    <p>插图源文件 <code>_shared/illustrations/</code>；页面改写脚本 <code>_shared/apply-theme.mjs</code>。任意页面加 <code>?theme=bright</code> 可切回原亮橙，<code>?theme=petitprince</code> 为默认主题。<a href="../index.html">返回全量页面画廊 →</a></p>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" font-family="'Ma Shan Zheng','Noto Serif SC',Georgia,serif">
+  <rect width="600" height="800" fill="#fbfaf6"/>
+
+  <!-- 星空带：星点 11 -->
+  <g fill="#141414" stroke="#141414">
+    <circle cx="90" cy="80" r="2"/>
+    <circle cx="200" cy="50" r="1.4" fill="none" stroke-width="1"/>
+    <circle cx="330" cy="100" r="2"/>
+    <circle cx="450" cy="60" r="1.6" fill="none" stroke-width="1"/>
+    <circle cx="540" cy="130" r="2"/>
+    <circle cx="70" cy="220" r="1.4" fill="none" stroke-width="1"/>
+    <circle cx="240" cy="180" r="2"/>
+    <circle cx="480" cy="230" r="2"/>
+    <circle cx="520" cy="420" r="9" fill="none" stroke-width="1.2" opacity=".4"/>
+    <g stroke-width="1" opacity=".7"><line x1="160" y1="320" x2="160" y2="334"/><line x1="153" y1="327" x2="167" y2="327"/></g>
+    <g stroke-width="1" opacity=".7"><line x1="480" y1="330" x2="480" y2="344"/><line x1="473" y1="337" x2="487" y2="337"/></g>
+  </g>
+
+  <!-- 沙地弧 -->
+  <g id="ground" fill="none" stroke="#141414">
+    <path d="M40 640 Q300 565 560 640" stroke-width="2.6"/>
+    <path d="M40 640 Q300 700 560 640" stroke-width="1.4" opacity=".4"/>
+    <path d="M120 605 Q140 600 165 604" stroke-width="1" opacity=".5"/>
+    <path d="M380 600 Q405 595 430 600" stroke-width="1" opacity=".5"/>
+    <circle cx="250" cy="630" r="3" stroke-width="1" opacity=".5"/>
+  </g>
+
+  <!-- 氛围层：影子 -->
+  <g fill="none" stroke="#141414" opacity=".1">
+    <ellipse cx="235" cy="618" rx="18" ry="4" stroke-width="1"/>
+    <ellipse cx="382" cy="620" rx="26" ry="5" stroke-width="1"/>
+  </g>
+
+  <!-- 小王子 -->
+  <g id="prince" fill="none" stroke="#141414">
+    <circle cx="235" cy="470" r="15" stroke-width="2.2"/>
+    <path d="M220 461 Q234 445 250 461 M220 461 Q215 478 221 495 M250 461 Q255 478 249 495" stroke-width="1.4"/>
+    <circle cx="230" cy="471" r="1.7" fill="#141414" stroke="none"/>
+    <circle cx="240" cy="471" r="1.7" fill="#141414" stroke="none"/>
+    <path d="M233 476 q1.5 2 3 0" stroke-width=".8"/>
+    <path d="M230 479 q5 2.5 9 0" stroke-width=".8"/>
+    <path d="M222 486 q13 6 26 0" stroke-width="1.6"/>
+    <path d="M247 486 q6 3 9 9" stroke-width="1.4"/>
+    <path d="M235 489 Q210 506 206 588" stroke-width="2"/>
+    <path d="M235 489 Q260 506 264 588" stroke-width="2"/>
+    <path d="M206 588 q29 6 58 0" stroke-width="1.6"/>
+    <line x1="235" y1="491" x2="235" y2="585" stroke-width="1" opacity=".5"/>
+    <circle cx="235" cy="518" r="1" fill="#141414" stroke="none"/>
+    <circle cx="235" cy="536" r="1" fill="#141414" stroke="none"/>
+    <circle cx="235" cy="554" r="1" fill="#141414" stroke="none"/>
+    <path d="M212 504 q-5 16 -3 30" stroke-width="1.8"/>
+    <path d="M258 504 q7 13 11 23" stroke-width="1.8"/>
+    <path d="M223 588 q-1 14 0 22" stroke-width="1.8"/>
+    <path d="M247 588 q1 14 0 22" stroke-width="1.8"/>
+    <path d="M215 608 q8 4 14 0" stroke-width="1.4"/>
+    <path d="M240 608 q8 4 14 0" stroke-width="1.4"/>
+  </g>
+
+  <!-- 客人：狐狸（眼睛为唯一朱砂焦点） -->
+  <g id="guest-fox" fill="none" stroke="#141414">
+    <path d="M430 600 q40 -8 36 -56 q-2 -30 -24 -28 q-18 2 -14 30 q4 22 -2 40 Z" stroke-width="1.8"/>
+    <path d="M344 604 q-12 -34 16 -44 q40 -8 56 14 q8 20 -6 30 q-32 8 -66 0 Z" stroke-width="1.8"/>
+    <path d="M360 585 q14 8 30 0" stroke-width="1" opacity=".4"/>
+    <path d="M336 565 q-22 2 -26 -14 q-2 -16 14 -20 q20 -2 28 12 q6 16 -8 22 Z" stroke-width="1.8"/>
+    <path d="M330 540 l-6 -16 l14 8 Z" stroke-width="1.6"/>
+    <path d="M344 536 l2 -18 l12 10 Z" stroke-width="1.6"/>
+    <circle cx="320" cy="554" r="3.4" fill="#C0392B" stroke="none"/>
+    <path d="M312 562 q-4 1 -4 -2" stroke-width="1.2"/>
+    <path d="M340 558 q4 4 8 1" stroke-width="1" opacity=".5"/>
+    <path d="M362 604 q-2 8 1 12" stroke-width="1.6"/>
+    <path d="M386 604 q-2 8 1 12" stroke-width="1.6"/>
+    <path d="M358 616 q5 3 9 0" stroke-width="1"/>
+    <path d="M382 616 q5 3 9 0" stroke-width="1"/>
+  </g>
+
+  <!-- 惊喜元素：幼苗（变体 A，朱砂点改墨色） -->
+  <g transform="translate(80 555) scale(1.2)" fill="none" stroke="#141414">
+    <path d="M24,40 Q24,20 24,10" stroke-width="2"/>
+    <path d="M24,18 Q14,10 6,14 Q12,22 24,18" stroke-width="1.6"/>
+    <path d="M24,14 Q34,6 42,10 Q36,18 24,14" stroke-width="1.6"/>
+    <path d="M24,10 Q28,4 24,0 Q20,4 24,10" stroke-width="1.4"/>
+    <path d="M14,40 q10,-6 20,0 q-10,-3 -20,0" stroke-width="1" opacity=".5"/>
+    <circle cx="24" cy="28" r="1" fill="#141414" stroke="none"/>
+  </g>
+
+  <text id="title" x="300" y="695" text-anchor="middle" font-size="40" fill="#141414" letter-spacing="6">驯 养</text>
+  <line x1="260" y1="715" x2="340" y2="715" stroke="#141414" stroke-width="1.4"/>
+  <text id="quote" x="300" y="745" text-anchor="middle" font-size="16" fill="#141414" letter-spacing="3">用心去看</text>
+  <text x="300" y="770" text-anchor="middle" font-size="12" fill="#666666" letter-spacing="1">责任由此开始</text>
+
+  <rect x="16" y="16" width="568" height="768" fill="none" stroke="#141414" stroke-width="1.2" opacity=".2"/>
+</svg>

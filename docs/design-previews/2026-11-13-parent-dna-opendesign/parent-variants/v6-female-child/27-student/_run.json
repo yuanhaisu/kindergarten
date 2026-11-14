@@ -1,0 +1,22 @@
+{
+  "slug": "parent-v6-female-child-27-student",
+  "surface": "parent",
+  "title": "幼儿信息 · 女性数据集",
+  "projectId": "4d08999f-d7f8-4635-97c9-cab271bb6fac",
+  "conversationId": "38a9a00a-135b-4f84-ace0-60f7bbab864d",
+  "runId": "366f22d5-e993-425c-9a11-8c9d6fe10203",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 637,
+  "files": [
+    ".file-versions/6f9cd5ae52a2702042f2f164/0001-b95e1132-fc31-45bd-beb7-e8e96075a6c9.html",
+    ".file-versions/6f9cd5ae52a2702042f2f164/manifest.json",
+    "parent-variants/v6-female-child/27-student/app.js",
+    "parent-variants/v6-female-child/27-student/index.html",
+    "parent-variants/v6-female-child/27-student/index.html.artifact.json",
+    "parent-variants/v6-female-child/27-student/styles.css",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/4d08999f-d7f8-4635-97c9-cab271bb6fac"
+}
