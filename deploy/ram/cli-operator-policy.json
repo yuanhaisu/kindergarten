@@ -12,8 +12,8 @@
         "ecs:UntagResources"
       ],
       "Resource": [
-        "acs:ecs:cn-guangzhou:*:instance/i-7xv06thh5tsvzwnigrjz",
-        "acs:ecs:cn-guangzhou:*:instance/i-7xvbga12t596lzkbjt4r"
+        "acs:ecs:cn-guangzhou:*:instance/<ecs-instance-id-a>",
+        "acs:ecs:cn-guangzhou:*:instance/<ecs-instance-id-b>"
       ]
     },
     {
@@ -34,7 +34,7 @@
         "ecs:RevokeSecurityGroupEgress",
         "ecs:ModifySecurityGroupEgressRule"
       ],
-      "Resource": "acs:ecs:cn-guangzhou:*:securitygroup/sg-7xvjc9ug5rtvox03hy6w"
+      "Resource": "acs:ecs:cn-guangzhou:*:securitygroup/<security-group-id>"
     },
     {
       "Effect": "Allow",
