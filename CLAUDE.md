@@ -383,7 +383,12 @@ pkg/
 > **新增种子数据时请循此例，不要再往读取路径挂写操作。**
 >
 > 三者共用 `cmd/internal/seedutil`（配置、连库、园所、时区），
-> 园所默认 4，可用 `SEED_KG_ID=7 go run ./cmd/seedleaves` 覆盖；均幂等。
+> 园所默认 4，可用 `SEED_ALLOW_DEMO=1 SEED_KG_ID=7 go run ./cmd/seedleaves` 覆盖；均幂等。
+
+> 🔒 **演示/破坏性命令必须显式 opt-in**（`server/cmd/internal/seedutil`）：
+> `seedgrowth` / `seedgrowthfeed` / `seedattendance` / `seedleaves` / `seedpickup` / `seedqrcode` 需要 `SEED_ALLOW_DEMO=1`；
+> `refreshtasks` / `initcheck` 还需 `SEED_ALLOW_DESTRUCTIVE=1`（`seedgrowthfeed -reset` 同）。
+> 拒绝时打印脱敏后的目标库 `host:port/db`。所有 `cmd` 命令统一按 `CONFIG_PATH`（未设置回落 `configs/app.ini`）解析配置。
 
 > ⚠️ 表中 `chkgrowth` / `fixpwd` / `linkwx` / `openid` / `refreshtasks` 及多数 `seed*` 是**针对特定 kindergarten（id=4）或硬编码手机号的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、手机号、任务文案全部写死。**不要在生产库上执行。**
 >
@@ -391,7 +396,7 @@ pkg/
 >
 > ⚠️ 破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部用户、角色与园所**；`albumretention` 会**硬删**到期相册及关联。前两者只适用于一次性测试库自检。
 >
-> `initcheck` 的连接串已改为读 `configs/app.ini`（可用 `MYSQL_DSN` 覆盖），管理员口令改为读环境变量 `INIT_ADMIN_PASSWORD`（未设置则直接退出）。**不要再把凭据写回源码**——即使后续删除，git 历史仍可追溯。
+> `initcheck` 的连接串已改为读 `CONFIG_PATH`（默认 `configs/app.ini`，可用 `MYSQL_DSN` 覆盖），管理员口令改为读环境变量 `INIT_ADMIN_PASSWORD`（未设置则直接退出）。**不要再把凭据写回源码**——即使后续删除，git 历史仍可追溯。
 
 > 🔧 **`dbcheck` 的用途**：schema 由 **goose** 版本化迁移管理（`server/migrations/`），应用启动不再执行 `AutoMigrate`。手工核对某张表的索引与行数：
 >

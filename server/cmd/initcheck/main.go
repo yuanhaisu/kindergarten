@@ -24,7 +24,7 @@ import (
 func main() {
 	seedutil.RequireDestructiveOptIn("initcheck")
 
-	cfg, err := config.Load("configs/app.ini")
+	cfg, err := config.Load(seedutil.ConfigPath())
 	if err != nil {
 		log.Fatal("load config:", err)
 	}

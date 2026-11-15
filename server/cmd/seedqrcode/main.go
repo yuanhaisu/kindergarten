@@ -2,6 +2,10 @@
 //
 // 创建：家长用户 → 学生 + 绑定 → 有效授权接送人 → 今日指定接走人。
 // 幂等：已存在则跳过。
+//
+// 用法：
+//
+//	SEED_ALLOW_DEMO=1 go run ./cmd/seedqrcode
 package main
 
 import (
@@ -29,7 +33,7 @@ const (
 func main() {
 	seedutil.RequireDemoOptIn("seedqrcode")
 
-	cfg, err := config.Load("configs/app.ini")
+	cfg, err := config.Load(seedutil.ConfigPath())
 	if err != nil {
 		log.Fatal(err)
 	}

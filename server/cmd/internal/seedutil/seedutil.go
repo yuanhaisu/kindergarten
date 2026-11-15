@@ -23,14 +23,18 @@ import (
 // DefaultKindergartenID 是这批一次性脚本惯用的目标园所。
 const DefaultKindergartenID uint64 = 4
 
-// Open 读取配置并建立数据库连接。失败即退出。
-// 配置路径优先取 CONFIG_PATH，未设置时回落 configs/app.ini。
-func Open() *gorm.DB {
-	cfgPath := os.Getenv("CONFIG_PATH")
-	if cfgPath == "" {
-		cfgPath = "configs/app.ini"
+// ConfigPath 返回配置路径：CONFIG_PATH 优先，未设置时回落 configs/app.ini。
+// 所有命令都必须走这里，否则「护栏提示的库」与「实际连接的库」可能不是同一个。
+func ConfigPath() string {
+	if p := os.Getenv("CONFIG_PATH"); p != "" {
+		return p
 	}
-	cfg, err := config.Load(cfgPath)
+	return "configs/app.ini"
+}
+
+// Open 读取配置并建立数据库连接。失败即退出。
+func Open() *gorm.DB {
+	cfg, err := config.Load(ConfigPath())
 	if err != nil {
 		log.Fatal("load config:", err)
 	}
@@ -119,10 +123,7 @@ var dsnTargetPattern = regexp.MustCompile(`@tcp\(([^)]+)\)/([^?]+)`)
 // targetSummary 返回脱敏后的目标库 host:port/db。
 // 配置读不到时只返回占位描述，不影响护栏本身的判断。
 func targetSummary() string {
-	cfgPath := os.Getenv("CONFIG_PATH")
-	if cfgPath == "" {
-		cfgPath = "configs/app.ini"
-	}
+	cfgPath := ConfigPath()
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		return "未知（读取 " + cfgPath + " 失败）"
