@@ -129,6 +129,18 @@
     }
   });
 
+  const requestedState = new URLSearchParams(window.location.search).get("state");
+  if (requestedState === "cancelled") {
+    const title = document.querySelector(".status-card__title");
+    const desc = document.querySelector(".status-card__desc");
+    if (title) title.textContent = "已取消";
+    if (desc) desc.textContent = "你已撤回这次请假，如需请假请重新提交。";
+    const approval = document.querySelector(".approval-card");
+    if (approval) approval.style.display = "none";
+    const withdraw = document.querySelector(".withdraw-section");
+    if (withdraw) withdraw.style.display = "none";
+  }
+
   window.addEventListener(
     "pagehide",
     () => {

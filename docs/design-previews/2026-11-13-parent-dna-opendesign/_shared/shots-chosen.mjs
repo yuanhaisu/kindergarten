@@ -18,15 +18,22 @@ const stateVariants = {
   "06-notice-index": [["empty", "preview-empty.png"]],
   "08-leave-index": [["empty", "preview-empty.png"]],
   "09-leave-create": [["error", "preview-error.png"]],
+  "10-leave-detail": [["cancelled", "preview-cancelled.png"]],
   "11-growth": [["empty", "preview-empty.png"]],
   "15-album-index": [["empty", "preview-empty.png"]],
   "17-pickup": [
     ["away", "preview-away.png"],
     ["done", "preview-done.png"],
   ],
-  "19-pickup-authorized": [["empty", "preview-empty.png"]],
+  "19-pickup-authorized": [
+    ["empty", "preview-empty.png"],
+    ["detail", "preview-detail.png"],
+  ],
   "21-tasks": [["empty", "preview-empty.png"]],
-  "30-messages": [["empty", "preview-empty.png"]],
+  "30-messages": [
+    ["empty", "preview-empty.png"],
+    ["detail", "preview-detail.png"],
+  ],
 };
 
 function shot(html, out, query) {

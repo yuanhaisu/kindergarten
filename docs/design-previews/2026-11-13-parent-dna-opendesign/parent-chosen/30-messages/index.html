@@ -54,8 +54,13 @@
         <button class="seg__item" type="button" data-filter="teacher" aria-pressed="false" data-od-id="filter-teacher">老师</button>
       </div>
 
+      <div class="filter-meta" data-od-id="message-filter-meta">
+        <p class="filter-unread">本组 <span data-group-unread>2</span> 条未读</p>
+        <button class="mark-all" type="button" data-mark-all data-od-id="messages-mark-all">全部已读</button>
+      </div>
+
       <section class="inbox" aria-label="消息列表" data-od-id="message-list">
-        <button class="msg-row" type="button" data-category="teacher" data-unread="true" data-od-id="message-row-lilaoshi-sleep">
+        <button class="msg-row" type="button" data-message-id="lilaoshi-sleep" data-category="teacher" data-unread="true" data-full-time="今天 09:24" data-od-id="message-row-lilaoshi-sleep">
           <span class="avatar avatar--sage" aria-hidden="true">李</span>
           <span class="msg-body">
             <span class="msg-head">
@@ -68,7 +73,7 @@
           </span>
         </button>
 
-        <button class="msg-row has-separator" type="button" data-category="system" data-unread="true" data-od-id="message-row-system-pickup-code">
+        <button class="msg-row has-separator" type="button" data-message-id="system-pickup-code" data-category="system" data-unread="true" data-full-time="11 月 14 日 16:40" data-od-id="message-row-system-pickup-code">
           <span class="avatar avatar--system" aria-hidden="true">
             <svg class="avatar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6.8 9.6a5.2 5.2 0 0 1 10.4 0c0 3.2 1.2 4.5 1.8 5.1.3.3.1.9-.4.9H5.4c-.5 0-.7-.6-.4-.9.6-.6 1.8-1.9 1.8-5.1Z"></path>
@@ -82,11 +87,11 @@
               <span class="sr-only unread-label">未读</span>
               <span class="msg-time">昨天 16:40</span>
             </span>
-            <span class="msg-summary">接送码已更新，可在接送页查看本学期的接送码</span>
+            <span class="msg-summary">接送码已更新，可在接送页查看今日接送码（23:59 前有效）</span>
           </span>
         </button>
 
-        <button class="msg-row has-separator" type="button" data-category="teacher" data-unread="false" data-od-id="message-row-wanglaoshi-art-class">
+        <button class="msg-row has-separator" type="button" data-message-id="wanglaoshi-art-class" data-category="teacher" data-unread="false" data-full-time="11 月 14 日 08:10" data-od-id="message-row-wanglaoshi-art-class">
           <span class="avatar avatar--terracotta" aria-hidden="true">王</span>
           <span class="msg-body">
             <span class="msg-head">
@@ -97,7 +102,7 @@
           </span>
         </button>
 
-        <button class="msg-row has-separator" type="button" data-category="system" data-unread="false" data-od-id="message-row-system-growth-report">
+        <button class="msg-row has-separator" type="button" data-message-id="system-growth-report" data-category="system" data-unread="false" data-full-time="11 月 10 日" data-od-id="message-row-system-growth-report">
           <span class="avatar avatar--system" aria-hidden="true">
             <svg class="avatar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6.8 9.6a5.2 5.2 0 0 1 10.4 0c0 3.2 1.2 4.5 1.8 5.1.3.3.1.9-.4.9H5.4c-.5 0-.7-.6-.4-.9.6-.6 1.8-1.9 1.8-5.1Z"></path>
@@ -113,14 +118,14 @@
           </span>
         </button>
 
-        <button class="msg-row has-separator" type="button" data-category="system" data-unread="false" data-od-id="message-row-principal-parent-meeting">
+        <button class="msg-row has-separator" type="button" data-message-id="principal-parent-meeting" data-category="system" data-unread="false" data-full-time="11 月 09 日" data-od-id="message-row-principal-parent-meeting">
           <span class="avatar avatar--default" aria-hidden="true">园</span>
           <span class="msg-body">
             <span class="msg-head">
               <span class="msg-sender">园长</span>
               <span class="msg-time">11-09</span>
             </span>
-            <span class="msg-summary">11 月 21 日上午 9 点，多功能厅秋季家长会</span>
+            <span class="msg-summary">11 月 21 日上午 10:00，小一班教室秋季家长会</span>
           </span>
         </button>
       </section>
@@ -139,6 +144,54 @@
         <button class="btn-primary" type="button" data-action="home" data-od-id="empty-home-cta">回到首页</button>
       </section>
     </main>
+
+    <div class="sheet-layer" id="message-sheet" inert aria-hidden="true" data-od-id="message-sheet">
+      <div class="sheet-scrim" data-close-sheet></div>
+      <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="message-sheet-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-heading">
+          <h2 class="sheet-title" id="message-sheet-title">消息详情</h2>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭消息详情" data-od-id="message-sheet-close">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="sheet-meta">
+          <span class="sheet-avatar" data-sheet-avatar aria-hidden="true"></span>
+          <span class="sheet-meta-copy">
+            <span class="sheet-sender" data-sheet-sender></span>
+            <span class="sheet-time" data-sheet-time></span>
+          </span>
+        </div>
+        <div class="sheet-body" data-sheet-body></div>
+      </section>
+    </div>
   </div>
+
+  <script type="application/json" id="message-bodies">
+    {
+      "lilaoshi-sleep": [
+        "乐乐今天午睡很好，起来自己把小被子叠好放回床头，还帮老师把椅子摆整齐。",
+        "明天请照常带水壶和一套备用衣裤，天气转凉，午睡后我们会提醒孩子穿好外套。"
+      ],
+      "system-pickup-code": [
+        "今日接送码已经更新，23:59 前有效。旧码从今天起停止使用。你可以在「接送」页查看新的接送码；请勿转发，核验后自动失效。",
+        "如果需要增加或变更授权人，请在接送页的「授权人管理」里提交，老师审核通过后就能用了。"
+      ],
+      "wanglaoshi-art-class": [
+        "明天上午有美术课，主题是「秋天的树」，请让乐乐带一盒水彩笔来园。",
+        "家里没有水彩笔的话，带蜡笔也可以，画纸和调色盘我们会提前准备好。"
+      ],
+      "system-growth-report": [
+        "乐乐这学期的成长报告已经生成，四个发展维度都有记录，也收了这学期的作品照片。",
+        "在「成长时光」里点开「成长报告」就能看到完整内容，看完欢迎给老师留一句反馈。"
+      ],
+      "principal-parent-meeting": [
+        "11 月 21 日上午 10:00，我们将在小一班教室举办秋季家长会，预计一小时左右。",
+        "当天会介绍本学期的课程安排和冬季保健注意事项，也留了提问时间，请提前十分钟到场签到。"
+      ]
+    }
+  </script>
 </body>
 </html>

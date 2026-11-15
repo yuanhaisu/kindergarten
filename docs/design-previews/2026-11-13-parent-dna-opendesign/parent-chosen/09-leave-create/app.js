@@ -9,6 +9,8 @@
   var endDateLabel = document.querySelector('[data-date-label="end"]');
   var endDateCol = document.getElementById("endDateCol");
   var endDateError = document.getElementById("endDateError");
+  var dateOrderError = document.getElementById("dateOrderError");
+  var dateLimitError = document.getElementById("dateLimitError");
   var reason = document.getElementById("leaveReason");
   var reasonShell = document.getElementById("reasonShell");
   var reasonError = document.getElementById("reasonError");
@@ -104,11 +106,15 @@
 
   startDate.addEventListener("change", function () {
     syncDateLabel(startDate, startDateLabel);
+    dateOrderError.hidden = true;
+    dateLimitError.hidden = true;
   });
 
   endDate.addEventListener("change", function () {
     syncDateLabel(endDate, endDateLabel);
     setEndDateError(!endDate.value);
+    dateOrderError.hidden = true;
+    dateLimitError.hidden = true;
   });
 
   document.querySelectorAll(".date-input").forEach(function (control) {
@@ -158,7 +164,22 @@
     setEndDateError(!hasEndDate);
     setReasonError(!hasReason);
 
+    var start = startDate.value ? new Date(startDate.value + "T00:00:00") : null;
+    var end = endDate.value ? new Date(endDate.value + "T00:00:00") : null;
+    var today = new Date(2026, 10, 12);
+    var orderInvalid = Boolean(start && end && end < start);
+    var pastInvalid = Boolean(start && start < today);
+    var limitInvalid = Boolean(start && end && (end - start) / 86400000 > 30);
+    dateOrderError.hidden = !orderInvalid;
+    dateLimitError.hidden = !(pastInvalid || limitInvalid);
+    if (pastInvalid) dateLimitError.textContent = "不能选择过去的日期";
+    else if (limitInvalid) dateLimitError.textContent = "一次请假最多 30 天";
+
     if (!hasEndDate) {
+      firstInvalid = endDate;
+    } else if (orderInvalid || pastInvalid) {
+      firstInvalid = startDate;
+    } else if (limitInvalid) {
       firstInvalid = endDate;
     } else if (!hasReason) {
       firstInvalid = reason;

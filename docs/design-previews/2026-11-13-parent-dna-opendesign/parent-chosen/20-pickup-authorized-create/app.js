@@ -23,6 +23,11 @@
   const dateInput = document.getElementById('validity-date');
   const dateConfirm = document.getElementById('validity-date-confirm');
   const toast = document.getElementById('toast');
+  const pageTitle = document.querySelector('.page-title');
+  const pageSubtitle = document.querySelector('.page-subtitle');
+  const reviewNote = document.querySelector('.review-note');
+  const submitButton = document.querySelector('.btn-primary');
+  const mode = new URLSearchParams(window.location.search).get('mode');
 
   let activeSheet = null;
   let lastTrigger = null;
@@ -253,6 +258,30 @@
     photoThumb.setAttribute('aria-label', `${name}的人像照片`);
   }
 
+  if (mode === 'edit') {
+    document.title = '编辑授权人 · 接送';
+    pageTitle.textContent = '编辑授权人';
+    pageSubtitle.textContent = '修改陈秀兰的授权信息';
+    submitButton.textContent = '保存修改';
+    reviewNote.innerHTML = '修改后需园所重新审核，<span class="hl">审核通过</span>后生效。';
+    nameInput.value = '陈秀兰';
+    phoneInput.value = '13700004418';
+    relationValue.textContent = '外婆';
+    relationField.value = '外婆';
+    validityValue.textContent = '长期授权';
+    validityField.value = '长期授权';
+    syncRelationSheet();
+    syncValiditySheet();
+    updatePhotoLabel();
+  }
+
+  document.querySelectorAll('.switch').forEach((toggle) => {
+    toggle.addEventListener('click', () => {
+      const checked = toggle.getAttribute('aria-checked') === 'true';
+      toggle.setAttribute('aria-checked', String(!checked));
+    });
+  });
+
   function setFieldError(input, error, message) {
     error.textContent = message;
     error.hidden = false;
@@ -299,7 +328,10 @@
       return;
     }
 
-    showToast('已提交，审核结果会短信通知');
+    showToast(mode === 'edit' ? '已保存修改' : '已提交，等待园所审核');
+    window.setTimeout(() => {
+      window.location.href = '../19-pickup-authorized/index.html';
+    }, 900);
   });
 
   window.addEventListener('beforeunload', () => {
