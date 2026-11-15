@@ -31,8 +31,9 @@ website/
 - 不写未测量的效果数字、不写案例、不写价格数字。
 - 小程序尚未正式发布：官网不出现小程序码，也不写「立即使用」。
 - 所有产品截图下方标注「界面示意，数据为演示」。
-- ICP 备案号仍是占位，备案通过后在 `content/site.ts` 补 `icp`；主体已填
-  「湘潭市岳塘区稚序软件开发工作室」，联系邮箱已填 `contact@nurtureplanet.cn`。
+- ICP 备案已于 2026-11-13 通过，备案号 `湘ICP备2026054245号-1` 与备案网站名称
+  `稚序saas软件服务平台` 已填入 `content/site.ts` 并在页脚展示；主体为
+  「湘潭市岳塘区稚序软件开发工作室」，联系邮箱为 `contact@nurtureplanet.cn`。
 - 企业微信二维码暂缓（认证费 300 元），当前以邮件为唯一联系方式；认证后填
   `contact.wecomQr` 即可启用二维码。
 - `legalDraft` 改为 `false` 后法务页的初稿提示才会消失。
@@ -47,9 +48,9 @@ website/
 ## 部署
 
 静态产物接入现有 `deploy/` 体系：nginx 增加 `www.${DOMAIN}` server block，
-`release.yml` 增加官网构建与发布步骤。域名备案通过前不对外解析。
+`release.yml` 增加官网构建与发布步骤。ICP 已通过；DNS 与证书就绪后即可对外解析。
 
 ## 上线前未完成
 
-当前等待域名 ICP 备案，**尚未公开部署**。阻塞项、待补占位与备案通过后的
-执行顺序见 [`docs/handoffs/2026-11-07-website-pending.md`](../docs/handoffs/2026-11-07-website-pending.md)。
+ICP 已通过，当前等待 DNS 解析与证书 SAN；**尚未公开部署**。阻塞项与执行顺序见
+[`docs/handoffs/2026-11-07-website-pending.md`](../docs/handoffs/2026-11-07-website-pending.md)。

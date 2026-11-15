@@ -893,6 +893,15 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+.footer__icp {
+  color: inherit;
+  text-decoration: none;
+}
+
+.footer__icp:hover {
+  text-decoration: underline;
+}
+
 /* ---------- motion ---------- */
 
 @media (prefers-reduced-motion: no-preference) {
