@@ -25,7 +25,8 @@
 - 31 我的：页头右上角 28×28；页脚版本行 16×16
 - V8 单孩子：页头 24×24（在“单孩子”角标左侧）+ 页脚 16×16
 - 其他页面不重复放 logo；品牌 mark 只在登录与账号页出现，避免每页都贴标
-- 移植时导出 `logo-dna.png` @3x；小程序 `<image>` 不支持 SVG
+- 移植资产：`_shared/logo-dna-168.png` / `logo-dna-84.png` / `logo-dna-48.png`（168/84/48 = 56/28/16 @3x，圆盘外透明）；小程序 `<image>` 不支持 SVG，移植时用这三档
+- 重新导出：`node _shared/export-logo-png.mjs`（本机 Chrome 栅格化 `_shared/logo-dna.svg`，不联网）；校验：`node _shared/verify-logo-png.mjs`
 
 ## Baseline 对齐（2026-11-15）
 
