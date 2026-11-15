@@ -3,6 +3,7 @@
  * OpenDesign DNA 批次渲染检查：衬线真的落地、H1 规格、画布颜色、横向溢出。
  *
  *   node _shared/font-check.mjs parent/01-home/index.html [...]
+ *   node _shared/font-check.mjs --chosen     # chosen 31 页
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -12,9 +13,16 @@ import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const files = process.argv.slice(2);
+const chosenMode = process.argv.includes("--chosen");
+const files = chosenMode
+  ? fs
+      .readdirSync(path.join(root, "parent-chosen"), { withFileTypes: true })
+      .filter((dir) => dir.isDirectory() && /^\d{2}-/.test(dir.name))
+      .map((dir) => `parent-chosen/${dir.name}/index.html`)
+      .sort()
+  : process.argv.slice(2);
 if (!files.length) {
-  console.error("usage: node _shared/font-check.mjs <page.html> [...]");
+  console.error("usage: node _shared/font-check.mjs <page.html> [...] | --chosen");
   process.exit(2);
 }
 
