@@ -3,6 +3,7 @@
 配套设计：[部署架构](../deployment-architecture.md)；决策：[ADR-0007 ~ ADR-0010](../adr/)。
 
 > **当前阶段（2026-11-15）**：只落地了 staging；§1–§5 是 prod 目标流程，尚未启用。staging 实际步骤见 §1.0，访问门禁见 §1.1，详细状态见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。
+> 本文中的服务器 IP、bucket 名等已脱敏为占位符；真实值见运维私密记录，占位符约定见 `docs/handoffs/README.md`。
 
 ## 0. 约定与前置
 
@@ -12,7 +13,7 @@
 | 预发域名 | `test-api.nurtureplanet.cn`、`test-admin.nurtureplanet.cn`、`test-www.nurtureplanet.cn` |
 | 生产 API 端口 | ECS 本机 `127.0.0.1:8080`（未启用） |
 | 预发 API 端口 | ECS 本机 `127.0.0.1:8081` |
-| 当前服务器 | A `np-staging` `8.148.144.201`（staging）；B `np-idle` `8.166.119.31`（闲置） |
+| 当前服务器 | A `np-staging` `<staging-public-ip>`（staging）；B `np-idle` `<idle-public-ip>`（闲置） |
 | 目录 | `/opt/kindergarten/{prod,staging}`；当前只有 `staging` |
 | 配置 | `/etc/kindergarten/{prod,staging}/app.ini`（0600）；当前只有 `staging` |
 | 部署密钥 | `/etc/kindergarten/{prod,staging}/deploy.env`（0600，含 `MIGRATE_MYSQL_DSN`） |
@@ -30,10 +31,10 @@
 
 > 详细状态与待办见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。以下为当前 staging 的实际流程；prod 尚未使用。
 
-1. **DNS**：`test-api` / `test-admin` / `test-www` → `8.148.144.201`，TTL 600。解析线路必须是「默认」或额外加「境外」，否则 Let's Encrypt 会看到 NXDOMAIN。
+1. **DNS**：`test-api` / `test-admin` / `test-www` → `<staging-public-ip>`，TTL 600。解析线路必须是「默认」或额外加「境外」，否则 Let's Encrypt 会看到 NXDOMAIN。
 2. **安全组**：A（`sg-np-staging`）开放 80/443，22 限管理员 IP；B（`sg-np-idle`）只开 22。
 3. **安装**：Docker 24 + Compose、Nginx 1.30、acme.sh 3.1.5、jq/curl/git/rsync/httpd-tools。
-4. **配置**：`/etc/kindergarten/staging/app.ini`（0600）。MySQL/Redis 指向 compose 服务名；OSS 用 `oss-cn-guangzhou-internal.aliyuncs.com` + `kindergarten-staging`；微信 teacher/parent AppID/Secret 填真实值。
+4. **配置**：`/etc/kindergarten/staging/app.ini`（0600）。MySQL/Redis 指向 compose 服务名；OSS 用 `<oss-internal-endpoint>` + `<bucket-staging>`；微信 teacher/parent AppID/Secret 填真实值。
 5. **容器**：`docker compose -f docker-compose.yml -f docker-compose.local.yml up -d mysql redis` → `run --rm migrate` → `run --rm --entrypoint /app/kindergarten-seedbase api` → `up -d api`。
 6. **静态包**：解压到 `admin/releases/<tag>`、`website/releases/<tag>`，`current` 指向该 release（当前 `staging-20261115-1`）。
 

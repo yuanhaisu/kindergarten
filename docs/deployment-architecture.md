@@ -8,15 +8,16 @@
 ## 0. 当前实施状态（2026-11-15）
 
 > **本文 §2–§16 描述的是 prod 目标设计，尚未实施。** 当前只落地了 staging；实际状态以本节和 [`docs/handoffs/2026-11-15-staging-bootstrap.md`](handoffs/2026-11-15-staging-bootstrap.md) 为准。
+> 本文中的服务器 IP、bucket 名等已脱敏为占位符；真实值见运维私密记录，占位符约定见 [`docs/handoffs/README.md`](handoffs/README.md)。
 
 | 项 | 当前状态 |
 |---|---|
 | 地域 / 可用区 | 华南3（广州）/ `cn-guangzhou-b` |
 | 域名 / 备案 | `nurtureplanet.cn` / 湘ICP备2026054245号-1 |
-| 服务器 | A `np-staging`：2C4G，`8.148.144.201`，ALinux 4 LTS，跑 staging；B `np-idle`：2C4G，`8.166.119.31`，CentOS 7.9，闲置 |
+| 服务器 | A `np-staging`：2C4G，`<staging-public-ip>`，ALinux 4 LTS，跑 staging；B `np-idle`：2C4G，`<idle-public-ip>`，CentOS 7.9，闲置 |
 | 公网入口 | A 用**固定公网 IP**（不是 EIP）；B 也有固定公网 IP，但未开放 80/443 |
 | staging 组件 | Nginx 1.30.4 + API 容器（`127.0.0.1:8081`）+ 本地 `mysql:8` / `redis:7` 容器；静态包 `staging-20261115-1` |
-| staging 域名 | `test-api` / `test-admin` / `test-www` → `8.148.144.201`，解析线路默认，TTL 600 |
+| staging 域名 | `test-api` / `test-admin` / `test-www` → `<staging-public-ip>`，解析线路默认，TTL 600 |
 | 证书 | Let's Encrypt（issuer `YR1`），SAN 覆盖三个 test 域名，有效期至 2027-02-12；acme.sh 每天 4 次续期检查 |
 | 未创建 | RDS、托管 Redis、EIP、ACR、`api` / `admin` / `www` 生产域名；GitHub Actions 发布流水线未启用 |
 | staging 发布方式 | 本地构建 API 镜像 / admin / website，再传输到 A；镜像未走 ACR |
@@ -98,7 +99,7 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 | 数据 | 任意 | **仅合成/种子数据** | 真实数据 |
 | 配置来源 | 本地 `app.ini` | GitHub Secrets 渲染 | GitHub Secrets 渲染 |
 
-> 上表 prod 列尚未创建；staging 实际：API `:8081`、`test-*` 域名、容器 MySQL/Redis、OSS `kindergarten-staging`、配置为服务器本地 `app.ini`（尚未接 GitHub Secrets）。
+> 上表 prod 列尚未创建；staging 实际：API `:8081`、`test-*` 域名、容器 MySQL/Redis、OSS `<bucket-staging>`、配置为服务器本地 `app.ini`（尚未接 GitHub Secrets）。
 
 ## 4. 组件与规格
 
