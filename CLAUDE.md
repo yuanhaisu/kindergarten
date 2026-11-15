@@ -695,3 +695,7 @@ single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agent
 ### Parallel development
 
 多个会话并行时，一个会话 = 一个分支 = 一个独立 worktree；主工作树始终留在 `main` 且保持干净。纪律与脚本见 `docs/agents/parallel-development.md`。
+
+### CI / 合并等待
+
+推送 PR 后，不要在主会话空转或提前开始下一项。起一个只读 subagent 监听 CI 与合并结果：`gh pr checks <n> --watch` 等 CI 终态，`gh pr view <n> --json state,mergeStateStatus,mergedAt` 看合并；收到 CI/合并终态后再提出下一项工作。subagent 不得 merge、push 或改文件。

@@ -90,6 +90,18 @@ powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Name pickup
 | 本机端口 | admin dev `5173`、website dev `3000`、server `8080`。并行起多个前端时改端口，不要抢占。 |
 | 构建产物 | 两个 uni-app 项目的 `npm run dev:mp-weixin` 是 watch 进程，会把**自己的** `dist/` 写热。不同 worktree 的 dist 互不影响，但同一个 worktree 里不要起两份。 |
 
+## CI 与合并等待
+
+PR 推送后，主会话必须起一个只读 subagent 监听结果，不能空转或提前开始下一项。
+
+1. CI：`gh pr checks <n> --watch`，等所有 job 终态。
+2. 合并：`gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup`。
+3. 若 CI 绿但 PR 仍 OPEN，每 60 秒查一次，最多 15 分钟；MERGED / CLOSED 或超时后回报。
+4. subagent 只读：不 merge、不 push、不改文件。
+5. 主会话收到终态反馈后，才提出下一项工作。
+
+> PowerShell 不能执行 `~/bin/gh` 的 POSIX wrapper；PowerShell 里用 `& "C:\Program Files\GitHub CLI\gh.exe"`。Bash 里用 `~/bin/gh`。
+
 ## 提交与 PR 纪律
 
 **只允许精确暂存**：
