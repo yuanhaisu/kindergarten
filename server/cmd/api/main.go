@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -30,6 +31,12 @@ func main() {
 	}
 
 	pkglog.Init(cfg.Log.Level, cfg.Log.Format == "json")
+
+	// release 模式下 CORS 通配符等于向任意站点放行跨域读取；只告警不阻断，
+	// 避免未知部署因配置检查而无法启动。
+	if warning := cfg.App.CORSConfigWarning(); warning != "" {
+		slog.Warn(warning, "gin_mode", cfg.App.GinMode, "cors_origins", cfg.App.CORSOrigins)
+	}
 
 	if cfg.App.GinMode != "" {
 		gin.SetMode(cfg.App.GinMode)

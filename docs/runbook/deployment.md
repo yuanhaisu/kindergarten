@@ -343,13 +343,66 @@ sudo nginx -t && sudo systemctl reload nginx
 - [ ] 生产 `app.ini` 0600，属主 deploy
 - [ ] 安全组仅 80/443；SSH 限管理员 IP
 - [ ] RDS/Redis 无公网地址
-- [ ] `cors_origins` 只含 `https://admin.<domain>`
+- [ ] `cors_origins` 精确匹配本环境管理端：staging = `https://test-admin.nurtureplanet.cn`，prod = `https://admin.<domain>`；不含 `*`（见 §9.1）
 - [ ] 发布前快照已成功
 - [ ] 回滚 tag / admin symlink 已知
 - [ ] MCP 使用专用 RAM 用户，AK 未进入任何被跟踪文件
 - [ ] staging 安全组 22 已限管理员 IP（当前仍为 `0.0.0.0/0`，待收）
 - [ ] staging Basic Auth 生效：`test-admin` / `test-www` 无凭据 401、`/privacy` 匿名 200；htpasswd 为 `0640 root:nginx`，口令文件 0600（见 §1.1）
 - [ ] `np-staging` 续费已确认（2026-12-14 到期）
+
+### 9.1 CORS / 反向代理 / 上传上限验收
+
+CORS 由 `server/internal/middleware/cors.go` 实现：白名单精确匹配、留空默认拒绝、`OPTIONS` 返回 204、响应带 `Vary: Origin`。`cors_origins` 由 `deploy/config/app.ini.tmpl` 从 `CORS_ORIGINS` 渲染：
+
+| 环境 | `cors_origins` |
+|---|---|
+| staging | `https://test-admin.nurtureplanet.cn` |
+| prod | `https://admin.<domain>` |
+| 本地 | `http://localhost:3000`（admin dev 走 Vite 代理时可不填） |
+
+小程序（teacher / parent）与官网不调用 API 跨域，不需要加入白名单。留空是安全默认值：管理端经 Nginx 同源访问，不依赖 CORS。release 模式下误填 `*` 会在启动日志记录 WARN（不阻断启动），看到即应改回显式来源。
+
+```bash
+API=https://test-api.nurtureplanet.cn   # prod 换成 https://api.<domain>
+
+# 1) 白名单来源：逐字回显 + Vary: Origin
+curl -sS -o /dev/null -D - -H 'Origin: https://test-admin.nurtureplanet.cn' "$API/health" \
+  | grep -iE '^(access-control-allow-origin|vary):'
+# 期望：access-control-allow-origin: https://test-admin.nurtureplanet.cn
+#       vary: Origin
+
+# 2) 非白名单来源：无放行头，但仍有 Vary（防止缓存把 A 来源的响应复用到 B 来源）
+curl -sS -o /dev/null -D - -H 'Origin: https://evil.example.com' "$API/health" \
+  | grep -iE '^(access-control-allow-origin|vary):'
+# 期望：只有 vary: Origin，没有 access-control-allow-origin
+
+# 3) 预检：204，允许头含 terminal_from
+curl -sS -o /dev/null -D - -X OPTIONS -H 'Origin: https://test-admin.nurtureplanet.cn' \
+  -H 'Access-Control-Request-Method: GET' "$API/health" \
+  | grep -iE '^(HTTP/|access-control-allow-origin|access-control-allow-headers):'
+# 期望：HTTP/... 204；allow-headers 含 terminal_from
+```
+
+**代理头**：应用只信任来自 `127.0.0.1` / `::1`（宿主机 Nginx）的 `X-Forwarded-For`，见 `server/internal/app/router.go` 的 `SetTrustedProxies`；Nginx 用 `$proxy_add_x_forwarded_for` 追加而非透传，客户端伪造值只能排在最左。回归信号：若 `SetTrustedProxies` 被改成信任全部或删除，直连公网时伪造头会被当成真实客户端 IP。
+
+```bash
+# 伪造 XFF 后触发一次后台写操作（如修改班级），
+# 在管理端「操作日志」核对最近一条 IP 是真实客户端出口 IP，而不是 1.2.3.4。
+curl -sS -o /dev/null -H 'X-Forwarded-For: 1.2.3.4' "$API/health"
+```
+
+**上传上限**：Nginx 每个 server 块 `client_max_body_size 25m`；后端业务层单文件限制仍是 20MB（按 `FileSize` 校验），两者不要混为一谈。用 26MB 与 24MB 各试一次：
+
+```bash
+head -c 26M /dev/zero > /tmp/26mb.bin
+head -c 24M /dev/zero > /tmp/24mb.bin
+# 超过 Nginx 上限：413，不进入应用（未带凭据也应先看到 413）
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST --data-binary @/tmp/26mb.bin "$API/api/v1/common/upload"
+# 低于 Nginx 上限：不是 413（通常是 401/400，由应用层处理）
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST --data-binary @/tmp/24mb.bin "$API/api/v1/common/upload"
+rm -f /tmp/26mb.bin /tmp/24mb.bin
+```
 
 ## 10. MCP 运维凭据（alibaba-cloud-ops-mcp-server）
 
