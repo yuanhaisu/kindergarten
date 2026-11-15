@@ -735,7 +735,7 @@ single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agent
 
 ### CI / 合并等待
 
-推送 PR 后，不要在主会话空转或提前开始下一项。起一个只读 subagent 监听 CI 与合并结果：`gh pr checks <n> --watch` 等 CI 终态，`gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup` 看合并与检查汇总；收到 CI/合并终态后再提出下一项工作。subagent 不得 merge、push 或改文件。
+推送 PR 后，不要在主会话空转或提前开始下一项。起一个只读 subagent 监听 CI 与合并结果：`gh pr checks <n> --watch` 等 CI 终态，`gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup` 看合并与检查汇总；收到 CI/合并终态后再提出下一项工作。subagent 不得 merge、push 或改文件。**一个 subagent 只监听一个 PR**：多个 PR 并行等待时，每个 PR 各起一个 subagent，不得用一个 subagent 同时轮询多个 PR。
 
 **合并必须等到 `MERGED` 或 `CLOSED`，不能因为短时间没合并就结束监听。** 轮询用阶梯：0–5 分钟 15 秒，5–15 分钟 30 秒，15–60 分钟 60 秒，1–4 小时 5 分钟，4–12 小时 15 分钟；12 小时后只报告“仍未合并”并立即重新起监听。
 

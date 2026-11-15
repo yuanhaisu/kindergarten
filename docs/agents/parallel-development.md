@@ -44,7 +44,7 @@ git commit -m "..."
 # 5. 推送并开 PR
 $env:https_proxy = "http://127.0.0.1:7890"; $env:http_proxy = "http://127.0.0.1:7890"
 git push -u origin feat/pickup-polish
-~/bin/gh pr create --base main --head feat/pickup-polish --title "..." --body-file <file>
+& "C:\Program Files\GitHub CLI\gh.exe" pr create --base main --head feat/pickup-polish --title "..." --body-file <file>
 
 # 5.1 起只读 subagent 监听 CI/合并（见「Agent 会话规则」第 2 条）
 
