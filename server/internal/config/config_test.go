@@ -1,6 +1,11 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestWeChatConfigCredentialPerEnd(t *testing.T) {
 	c := WeChatConfig{
@@ -109,5 +114,107 @@ func TestWeChatConfigCodeEnvVersionDefault(t *testing.T) {
 	c.normalize()
 	if c.CodeEnvVersion != "trial" {
 		t.Errorf("explicit code_env_version must be preserved, got %q", c.CodeEnvVersion)
+	}
+}
+
+// cors_origins 是逗号分隔字符串：空配置得到空列表，空白项被丢弃，各项去空格。
+func TestAppConfigAllowedCORSOrigins(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		want []string
+	}{
+		{name: "empty", raw: "", want: nil},
+		{name: "blank items only", raw: " , ,, ", want: nil},
+		{name: "wildcard", raw: "*", want: []string{"*"}},
+		{
+			name: "spaces around comma separated origins",
+			raw:  " https://admin.example.com ,\t https://ops.example.com ,",
+			want: []string{"https://admin.example.com", "https://ops.example.com"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := AppConfig{CORSOrigins: tc.raw}.AllowedCORSOrigins()
+			if len(got) != len(tc.want) {
+				t.Fatalf("AllowedCORSOrigins(%q) = %#v, want %#v", tc.raw, got, tc.want)
+			}
+			for i := range tc.want {
+				if got[i] != tc.want[i] {
+					t.Errorf("AllowedCORSOrigins(%q)[%d] = %q, want %q", tc.raw, i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// Load 必须把 app.ini 的 cors_origins 原样读入字符串，再由 AllowedCORSOrigins 解析；
+// 空值与通配符是两种不同的部署契约，不能在加载阶段被归一化。
+func TestLoadCORSOrigins(t *testing.T) {
+	cases := []struct {
+		name    string
+		iniVal  string
+		wantLen int
+		want    string
+	}{
+		{name: "empty", iniVal: "", wantLen: 0},
+		{name: "wildcard", iniVal: "*", wantLen: 1, want: "*"},
+		{name: "staging admin origin", iniVal: "https://test-admin.example.com", wantLen: 1, want: "https://test-admin.example.com"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("CORS_ORIGINS", "") // 避免宿主机环境变量覆盖测试输入
+			path := filepath.Join(t.TempDir(), "app.ini")
+			content := "[app]\ncors_origins = " + tc.iniVal + "\n"
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatalf("write temp ini: %v", err)
+			}
+
+			cfg, err := Load(path)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			got := cfg.App.AllowedCORSOrigins()
+			if len(got) != tc.wantLen {
+				t.Fatalf("AllowedCORSOrigins() = %#v, want len %d", got, tc.wantLen)
+			}
+			if tc.want != "" && got[0] != tc.want {
+				t.Errorf("AllowedCORSOrigins()[0] = %q, want %q", got[0], tc.want)
+			}
+		})
+	}
+}
+
+// release 模式下误配通配符只告警、不阻断启动；其他模式或非通配配置不应产生告警。
+func TestAppConfigCORSConfigWarning(t *testing.T) {
+	cases := []struct {
+		name        string
+		ginMode     string
+		corsOrigins string
+		wantWarn    bool
+	}{
+		{name: "release wildcard", ginMode: "release", corsOrigins: "*", wantWarn: true},
+		{name: "release wildcard among origins", ginMode: "release", corsOrigins: " https://admin.example.com , * ", wantWarn: true},
+		{name: "release explicit origins", ginMode: "release", corsOrigins: "https://admin.example.com", wantWarn: false},
+		{name: "release empty", ginMode: "release", corsOrigins: "", wantWarn: false},
+		{name: "debug wildcard", ginMode: "debug", corsOrigins: "*", wantWarn: false},
+		{name: "empty mode wildcard", ginMode: "", corsOrigins: "*", wantWarn: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := AppConfig{GinMode: tc.ginMode, CORSOrigins: tc.corsOrigins}.CORSConfigWarning()
+			if tc.wantWarn && got == "" {
+				t.Fatal("CORSConfigWarning() = \"\", want a warning")
+			}
+			if !tc.wantWarn && got != "" {
+				t.Errorf("CORSConfigWarning() = %q, want no warning", got)
+			}
+			if tc.wantWarn && !strings.Contains(got, `"*"`) {
+				t.Errorf("warning should name the wildcard, got %q", got)
+			}
+		})
 	}
 }

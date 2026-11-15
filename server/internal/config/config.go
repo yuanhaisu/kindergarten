@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"gopkg.in/ini.v1"
 )
@@ -28,6 +29,40 @@ type AppConfig struct {
 	// 下发 CORS 头（管理端经 Nginx 同源访问，不依赖 CORS）。
 	// 生产由部署模板渲染为 https://admin.<domain>；本地开发可加 http://localhost:3000。
 	CORSOrigins string `ini:"cors_origins"`
+}
+
+// AllowedCORSOrigins 把逗号分隔的 cors_origins 拆成去空格的来源列表。
+// 空白项被丢弃；空配置返回空切片，中间件据此默认拒绝所有跨域来源。
+func (a AppConfig) AllowedCORSOrigins() []string {
+	parts := strings.Split(a.CORSOrigins, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if origin := strings.TrimSpace(part); origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
+}
+
+// ginReleaseMode 与 gin.ReleaseMode 同值。config 层不引入 gin 依赖，故在此声明。
+const ginReleaseMode = "release"
+
+// corsWildcardOrigin 是 CORS 中间件唯一识别的通配来源。
+const corsWildcardOrigin = "*"
+
+// CORSConfigWarning 返回 release 模式下 cors_origins 含通配符时的告警文本。
+// 返回空串表示无需告警：非 release 模式允许本地调试放开，空配置本身就是默认拒绝。
+// 只告警不阻断启动，避免误伤未知部署。
+func (a AppConfig) CORSConfigWarning() string {
+	if a.GinMode != ginReleaseMode {
+		return ""
+	}
+	for _, origin := range a.AllowedCORSOrigins() {
+		if origin == corsWildcardOrigin {
+			return `cors_origins contains "*" in release mode: every origin can read cross-origin API responses; configure explicit admin origins (see deploy/config/app.ini.tmpl)`
+		}
+	}
+	return ""
 }
 
 type LogConfig struct {
