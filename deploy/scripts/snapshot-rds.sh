@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# 生产发布前创建 RDS 物理快照，并等待 BackupStatus=Success。
+# 生产发布前创建 RDS 物理快照，并等待本次备份任务到达 Finished。
 # 依赖：aliyun CLI、jq；RDS_INSTANCE_ID 从 /etc/kindergarten/<env>/deploy.env 读取。
+#
+# 只认 CreateBackup 返回的 BackupJobId：DescribeBackups 只列已完成备份，
+# 按「最新一条」判断会在实例有多次历史备份时把上上一次的 Success 当成本次成功。
 set -euo pipefail
 
 env=${1:-prod}
@@ -17,19 +20,33 @@ command -v aliyun >/dev/null || { echo "aliyun CLI is required" >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 
 echo "==> create RDS snapshot: $RDS_INSTANCE_ID"
-aliyun rds CreateBackup --DBInstanceId "$RDS_INSTANCE_ID" --BackupMethod Physical >/dev/null
+create_response=$(aliyun rds CreateBackup --DBInstanceId "$RDS_INSTANCE_ID" --BackupMethod Physical)
+job_id=$(printf '%s' "$create_response" | jq -r '.BackupJobId // empty' 2>/dev/null || true)
+if [ -z "$job_id" ]; then
+  echo "!! CreateBackup returned no BackupJobId: $create_response" >&2
+  exit 1
+fi
+echo "==> backup job: $job_id"
 
-for _ in $(seq 1 30); do
-  status=$(aliyun rds DescribeBackups \
+for _ in $(seq 1 60); do
+  record=$(aliyun rds DescribeBackupTasks \
     --DBInstanceId "$RDS_INSTANCE_ID" \
-    --BackupMode Manual \
-    --PageSize 1 2>/dev/null | jq -r '.Backups.Backup[0].BackupStatus // empty')
-  if [ "$status" = "Success" ]; then
-    echo "==> snapshot ok"
-    exit 0
-  fi
+    --BackupJobId "$job_id" 2>/dev/null |
+    jq -r --arg job "$job_id" '
+      [.Items.BackupJob[]? | select((.BackupJobId | tostring) == $job)] | .[0]
+      | if . then "\(.BackupStatus)\t\(.BackupId // "")" else empty end' 2>/dev/null || true)
+  status=${record%%$'\t'*}
+  backup_id=${record#*$'\t'}
+  case "$status" in
+    Finished)
+      echo "==> snapshot ok: job $job_id${backup_id:+, backup $backup_id}"
+      exit 0 ;;
+    Failed)
+      echo "!! snapshot job $job_id failed" >&2
+      exit 1 ;;
+  esac
   sleep 10
 done
 
-echo "!! snapshot did not reach Success within 5 minutes" >&2
+echo "!! snapshot job $job_id did not finish within 10 minutes" >&2
 exit 1

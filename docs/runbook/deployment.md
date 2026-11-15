@@ -65,8 +65,8 @@ sudo chown -R deploy:deploy /opt/kindergarten /etc/kindergarten
 sudo -u deploy cp deploy/config/app.ini.tmpl /tmp/app.ini
 sudo -u deploy envsubst < /tmp/app.ini > /etc/kindergarten/prod/app.ini
 sudo chmod 600 /etc/kindergarten/prod/app.ini
-# deploy.env 至少包含：
-#   MIGRATE_MYSQL_DSN=kg_migrate:***@tcp(<rds-host>:3306)/kindergarten?...
+# deploy.env 至少包含（DSN 必须用单引号包住，否则 source 时 & 会被 shell 当成后台执行）：
+#   MIGRATE_MYSQL_DSN='kg_migrate:***@tcp(<rds-host>:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Asia%2FShanghai'
 #   RDS_INSTANCE_ID=rm-***
 sudo chmod 600 /etc/kindergarten/prod/deploy.env
 
@@ -97,7 +97,7 @@ docker compose run --rm --entrypoint /app/kindergarten-seedbase api
    - 自动部署 staging；
    - 等待 `production` 环境人工批准；
    - 生产发布前调用 `snapshot-rds.sh`；
-   - 执行迁移、切换 admin/website symlink、`/ready` 探测。
+   - 执行迁移、启动 API 并等 `/ready`、再切 admin/website symlink（顺序不能反）。
 3. 生产验证：
    ```bash
    curl -fsS https://api.<domain>/ready
@@ -128,6 +128,8 @@ docker compose run --rm --entrypoint /app/kindergarten-seedbase api
 | website | `ln -sfn /opt/kindergarten/<env>/website/releases/<previous-tag> /opt/kindergarten/<env>/website/current` |
 | 数据库 | 迁移只向前；破坏性变更用发布前 RDS 快照恢复到新实例，再切 DSN |
 | 小程序 | 微信后台回退版本（受平台能力限制） |
+
+`rollback.sh` 的顺序与发布相反：先切静态、再切 API。旧静态 + 新 API 在 ADR-0009 下向后兼容；反过来会出现新静态页面打旧 API。
 
 回滚后必须再探 `/ready`，并检查 SLS 中的 5xx。
 
