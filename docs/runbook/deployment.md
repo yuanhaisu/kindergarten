@@ -65,8 +65,8 @@ sudo chown -R deploy:deploy /opt/kindergarten /etc/kindergarten
 sudo -u deploy cp deploy/config/app.ini.tmpl /tmp/app.ini
 sudo -u deploy envsubst < /tmp/app.ini > /etc/kindergarten/prod/app.ini
 sudo chmod 600 /etc/kindergarten/prod/app.ini
-# deploy.env 至少包含：
-#   MIGRATE_MYSQL_DSN=kg_migrate:***@tcp(<rds-host>:3306)/kindergarten?...
+# deploy.env 至少包含（DSN 必须用单引号包住，否则 source 时 & 会被 shell 当成后台执行）：
+#   MIGRATE_MYSQL_DSN='kg_migrate:***@tcp(<rds-host>:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Asia%2FShanghai'
 #   RDS_INSTANCE_ID=rm-***
 sudo chmod 600 /etc/kindergarten/prod/deploy.env
 
