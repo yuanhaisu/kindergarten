@@ -2,8 +2,9 @@
 # 手动回滚到指定 tag：
 #   bash deploy/scripts/rollback.sh prod v2026.11.03-1
 #
-# 顺序：切换 api → /ready 探测 → 切换 admin/website symlink → 记录 tag。
-# 先确认 api 就绪再切静态包，避免回滚窗口里新静态页面打到旧接口。
+# 顺序：先切 admin/website symlink，再切 api 并等 /ready。
+# 与发布顺序相反：回滚窗口里旧静态 + 新 api 是安全的（ADR-0009 向后兼容），
+# 反过来则会让新静态页面打到旧 api。
 set -euo pipefail
 
 env=${1:?usage: rollback.sh <prod|staging> <tag>}
@@ -31,6 +32,15 @@ if [ ! -d "admin/releases/$tag" ]; then
   exit 1
 fi
 
+echo "==> switch admin ($env $tag)"
+ln -sfn "$root/admin/releases/$tag" "$root/admin/current"
+if [ -d "website/releases/$tag" ]; then
+  echo "==> switch website ($env $tag)"
+  ln -sfn "$root/website/releases/$tag" "$root/website/current"
+else
+  echo "website release not found: $root/website/releases/$tag (keep current)" >&2
+fi
+
 echo "==> rollback api ($env $tag)"
 IMAGE_TAG="$tag" docker compose pull api
 IMAGE_TAG="$tag" docker compose up -d api
@@ -45,15 +55,8 @@ for _ in $(seq 1 30); do
 done
 
 if [ "$ready" != "true" ]; then
-  echo "!! rollback target $tag is not ready; static links unchanged" >&2
+  echo "!! rollback target $tag is not ready; static links already switched" >&2
   exit 1
-fi
-
-ln -sfn "$root/admin/releases/$tag" "$root/admin/current"
-if [ -d "website/releases/$tag" ]; then
-  ln -sfn "$root/website/releases/$tag" "$root/website/current"
-else
-  echo "website release not found: $root/website/releases/$tag (keep current)" >&2
 fi
 
 printf '%s\n' "$tag" > .current_tag
