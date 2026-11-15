@@ -20,6 +20,7 @@
 ## 底部导航
 
 - 「成长」tab 统一为 **V1 的叶子图标**（`M20 4C12 4 5 8 5 16c0 2 1 4 3 4 8 0 12-7 12-16Z` + `M5 20c2-5 6-8 11-10`）。
+- 「接送」tab 统一为 **面包车正视图**（`rect x=4.2 y=4.8 w=15.6 h=12 rx=3` + `M4.4 10.6h15.2` + 两个 `r=1.3` 车轮），覆盖 `01-home`、`11-growth`、`17-pickup`、`31-profile`。
 - 已覆盖有底部导航的页面：`parent-chosen/01-home`、`11-growth`、`17-pickup`、`31-profile`；变体参照 `parent-variants/v1-leave-day/01-home`、`v1-leave-day/17-pickup`、`v8-single-child/31-profile`。
 - 二级页没有底部导航，不需要改。
 
@@ -27,9 +28,8 @@
 
 - 设计稿用 **DNA 版**：`_shared/logo-dna.svg`（pine `#173220` / marigold `#DDB14A` / cream `#FCFAF4`；几何沿用官方 logo，只换色）
 - 官方 PNG `_shared/logo.png`（复制自 `parent/src/static/logo.png`）保留为品牌资产
-- 02 登录：56×56，置于 `养成星球 · NURTURE PLANET` 眉题上方
-- 02 登录中间图案：抽象轨道（松绿小星球无脸 + 赤陶细轨道 + marigold 星点），不再用笑脸星球
-- 31 我的：页头右上角 28×28；页脚版本行 16×16
+- 02 登录：56×56，置于 `养成星球 · NURTURE PLANET` 眉题上方；中间不放任何插图
+- 31 我的：页头只留「我的」标题（原右上角 28×28 logo 已移除）；页脚版本行 16×16
 - V8 单孩子：页头 24×24（在“单孩子”角标左侧）+ 页脚 16×16
 - 其他页面不重复放 logo；品牌 mark 只在登录与账号页出现，避免每页都贴标
 - 移植资产：`_shared/logo-dna-168.png` / `logo-dna-84.png` / `logo-dna-48.png`（168/84/48 = 56/28/16 @3x，圆盘外透明）；小程序 `<image>` 不支持 SVG，移植时用这三档
@@ -52,11 +52,11 @@
 - 17 接送：10:20、可接送人改“妈妈、爸爸，共 2 位（外婆待审核）”、接送码说明改“当日有效，核验后失效”。
 - 14 报告：页头加“乐乐”，本期积分改 +218。
 - 22 任务详情：补 V2 提案态 `+10 积分` / `本周 2 / 3 天`，页脚标注 `积分提案`。
-- 31 我的：统计卡改“累计数据 / 32 成长记录”，补“消息”菜单；保留多孩子“切换”。
+- 31 我的：统计卡改“累计数据 / 32 成长记录”，补“消息”菜单；“切换”打开孩子切换底部抽屉（乐乐 / 朵朵），选中后同步孩子行（头像首字、名字、班级园所）。
 - 所有 chosen 页面状态栏统一 10:20。
 - V1 / V5 / V6 / V7 / V8 作为状态/数据集并存，不替换主稿。
-- 画廊：`chosen.html`（31 页 / 13 状态）；重建：`node _shared/build-gallery.mjs --chosen`。
-- 截图：`node _shared/shots-chosen.mjs`（31 默认 + 13 状态）。
+- 画廊：`chosen.html`（31 页 / 13 契约状态 + 2 评审补充态 = 15 个状态变体）；重建：`node _shared/build-gallery.mjs --chosen`。
+- 截图：`node _shared/shots-chosen.mjs`（31 默认 + 15 状态）。13 个契约状态之外，「照片查看」（11-growth `?state=photo`）与「切换孩子」（31-profile `?state=switch`）是为本轮评审补的预览，不进契约清单。
 
 ## 验收命令
 
@@ -65,8 +65,8 @@ cd docs/design-previews/2026-11-13-parent-dna-opendesign
 node _shared/check-variants.mjs --chosen   # 31 页，0 失败
 node _shared/audit.mjs --chosen            # 0 error
 node _shared/font-check.mjs --chosen       # 31 / 31 通过
-node _shared/build-gallery.mjs --chosen    # chosen.html，31 页 / 13 状态
-node _shared/shots-chosen.mjs              # 31 张默认 + 13 张状态截图
+node _shared/build-gallery.mjs --chosen    # chosen.html，31 页 / 15 个状态变体
+node _shared/shots-chosen.mjs              # 31 张默认 + 15 张状态截图
 ```
 
 ## 边界

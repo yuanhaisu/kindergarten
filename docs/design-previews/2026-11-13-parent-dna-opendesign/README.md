@@ -2,7 +2,7 @@
 
 - 日期：2026-11-13（2026-11-15 收口）
 - 规则：DNA v1（`docs/design-dna/2026-11-11-kinderly/DESIGN.md`，2026-11-12 冻结）
-- 交付主稿：`parent-chosen/` 的 31 页（画廊 `chosen.html`，31 页 / 13 状态）
+- 交付主稿：`parent-chosen/` 的 31 页（画廊 `chosen.html`，31 页 / 13 契约状态 + 2 评审补充态）
 - 对照基线：`docs/design-previews/2026-11-12-parent-dna-full/`（手工 31 页，**仅作参照，不是移植起点**）
 - 设计系统：`user:nurture-planet-dna`（OpenDesign 本地设计系统，见 `open-design/.od/design-systems/nurture-planet-dna/`）
 
@@ -27,17 +27,17 @@
 
 ## 状态
 
-- 全量：**31 / 31 页完成**，chosen 页集 13 个状态截图
+- 全量：**31 / 31 页完成**，chosen 页集 13 个契约状态截图（另有 2 个评审补充态：11 照片查看 / 31 切换孩子）
 - 机械检查：chosen checker 0 失败；`audit --chosen` 0 error；`font-check --chosen` 31 / 31 通过（H1 衬线 30px / 400、390×844 无溢出）
 - 产物：`parent-chosen/NN-slug/`，每页 `index.html` / `styles.css` / `app.js` / `preview.png`
-- 画廊：`chosen.html`（31 页 / 13 状态）；重建：`node _shared/build-gallery.mjs --chosen`
-- 截图：`node _shared/shots-chosen.mjs`（31 张默认 + 13 张状态）
+- 画廊：`chosen.html`（31 页 / 15 个状态变体）；重建：`node _shared/build-gallery.mjs --chosen`
+- 截图：`node _shared/shots-chosen.mjs`（31 张默认 + 15 张状态）
 - 手工批次与 `parent/` baseline 保持原样，仅供并排比较
 - 8 组变体（请假 / 积分 / 报名 / 设置 / 月度 / 女 / 中班 / 单孩）单独生成，不替换主稿；V2 / V3 / V4 已选入 chosen
 
 ## 约定
 
 - chosen 是本批唯一交付主稿；不改产品代码、不迁移 token
-- 页面用 `?state=empty|error|away|done` 切换状态
+- 页面用 `?state=empty|error|away|done|cancelled|detail|switch|photo` 切换状态
 - 字体是本地 `_shared/fonts.css`（Instrument Serif + Noto Serif SC），不引外网
 - 截图统一 390×844 @2x

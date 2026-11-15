@@ -19,7 +19,10 @@ const stateVariants = {
   "08-leave-index": [["empty", "preview-empty.png"]],
   "09-leave-create": [["error", "preview-error.png"]],
   "10-leave-detail": [["cancelled", "preview-cancelled.png"]],
-  "11-growth": [["empty", "preview-empty.png"]],
+  "11-growth": [
+    ["empty", "preview-empty.png"],
+    ["photo", "preview-photo.png"],
+  ],
   "15-album-index": [["empty", "preview-empty.png"]],
   "17-pickup": [
     ["away", "preview-away.png"],
@@ -34,6 +37,7 @@ const stateVariants = {
     ["empty", "preview-empty.png"],
     ["detail", "preview-detail.png"],
   ],
+  "31-profile": [["switch", "preview-switch.png"]],
 };
 
 function shot(html, out, query) {

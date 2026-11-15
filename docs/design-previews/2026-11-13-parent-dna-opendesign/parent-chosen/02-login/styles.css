@@ -201,6 +201,7 @@ button {
 
 .brand {
   flex: 0 0 auto;
+  padding-top: 36px;
 }
 
 .brand-logo {
@@ -245,26 +246,11 @@ button {
   font-synthesis-weight: none;
 }
 
-.hero-art {
-  flex: 1 1 auto;
-  min-height: 248px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 0;
-}
-
-.hero-art svg {
-  display: block;
-  flex: none;
-  width: 232px;
-  height: 232px;
-}
-
 .login-actions {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
+  margin-top: auto;
 }
 
 .btn {

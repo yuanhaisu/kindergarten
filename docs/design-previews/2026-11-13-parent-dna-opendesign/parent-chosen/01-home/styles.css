@@ -311,15 +311,6 @@ svg {
   line-height: 1;
 }
 
-.header-avatar {
-  width: 40px;
-  height: 40px;
-  margin-top: 8px;
-  background: var(--surface);
-  border: 1px solid var(--hair);
-  color: var(--fg);
-  font-size: 19px;
-}
 
 /* ---------- child card ---------- */
 
@@ -406,6 +397,14 @@ svg {
   color: var(--fg);
   font-size: var(--text-body);
   line-height: var(--leading-body);
+}
+
+.child-note-source {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
 }
 
 .hl {
