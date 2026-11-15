@@ -1,19 +1,26 @@
-# 已选方案（2026-11-14）
+# 已选方案（2026-11-14，2026-11-15 收口）
 
-用户选择：**V2 / V3 / V4 三组提案进入默认方向**；V1 / V5 / V6 / V7 / V8 保留为备选，不替换 baseline。
+用户选择：**V2 / V3 / V4 三组提案进入默认方向**；V1 / V5 / V6 / V7 / V8 保留为备选。
+**交付主稿是 `parent-chosen/` 的 31 页 / 13 状态**；`parent/` 的 baseline 与 `parent-variants/` 只作参照，不是移植起点。
 
-| 页面 | 选中版本 | 路径 | 后端依赖 |
+| 页面 | 选中版本 | 路径（已并入主稿） | 后端依赖 |
 |---|---|---|---|
-| 07 通知详情 | V3 报名提案 | `parent-variants/v3-notice-signup/07-notice-detail/` | 需新增报名 API/状态 |
-| 21 亲子任务 | V2 任务积分提案 | `parent-variants/v2-task-points/21-tasks/` | `06-task` 恢复 `points` / `streak` |
-| 22 任务详情 | baseline（已含 `+10`）/ 后续补 V2 版 | `parent/22-tasks-detail/` | 同上 |
-| 24 积分与成就 | V2 任务积分提案 | `parent-variants/v2-task-points/24-points/` | 同上 |
-| 29 设置 | V4 简化版 | `parent-variants/v4-settings-simple/29-settings/` | `settings` 增加免打扰字段 |
+| 07 通知详情 | V3 报名提案 | `parent-chosen/07-notice-detail/`（源自 `parent-variants/v3-notice-signup/`） | 需新增报名 API（报名 / 取消 / 已报名状态） |
+| 21 亲子任务 | V2 任务积分提案 | `parent-chosen/21-tasks/`（源自 `parent-variants/v2-task-points/`） | `06-task` 恢复 `points` / `streak` |
+| 22 任务详情 | V2 任务积分提案（已完成） | `parent-chosen/22-tasks-detail/` | 同上 |
+| 24 积分与成就 | V2 任务积分提案 | `parent-chosen/24-points/`（源自 `parent-variants/v2-task-points/`） | 同上 |
+| 29 设置 | V4 简化版 | `parent-chosen/29-settings/`（源自 `parent-variants/v4-settings-simple/`） | `settings` 增加免打扰字段；6 个通知细分项合并为 2 个总开关 |
+
+## 后端依赖（移植前先改契约）
+
+- **07 V3 报名提案**：报名 / 取消 / 已报名状态需新增报名 API；当前契约没有这些字段。
+- **21 / 22 / 24 V2 任务积分提案**：`06-task` 需恢复 `points` / `streak`，任务打卡作为积分来源。
+- **29 V4 简化提案**：`settings` 需增加免打扰字段。6 个通知细分项按来源合并为 2 个总开关（接收园所通知 / 接收老师消息），这是刻意的简化取舍，**不恢复** 9 个开关。
 
 ## 底部导航
 
 - 「成长」tab 统一为 **V1 的叶子图标**（`M20 4C12 4 5 8 5 16c0 2 1 4 3 4 8 0 12-7 12-16Z` + `M5 20c2-5 6-8 11-10`）。
-- 已覆盖有底部导航的页面：`parent/01`、`parent/11`、`parent/17`、`parent/31`；`parent-variants/v1/01`、`v1/17`、`v8/31`。
+- 已覆盖有底部导航的页面：`parent-chosen/01-home`、`11-growth`、`17-pickup`、`31-profile`；变体参照 `parent-variants/v1-leave-day/01-home`、`v1-leave-day/17-pickup`、`v8-single-child/31-profile`。
 - 二级页没有底部导航，不需要改。
 
 ## Logo 使用
@@ -28,7 +35,7 @@
 - 移植资产：`_shared/logo-dna-168.png` / `logo-dna-84.png` / `logo-dna-48.png`（168/84/48 = 56/28/16 @3x，圆盘外透明）；小程序 `<image>` 不支持 SVG，移植时用这三档
 - 重新导出：`node _shared/export-logo-png.mjs`（本机 Chrome 栅格化 `_shared/logo-dna.svg`，不联网）；校验：`node _shared/verify-logo-png.mjs`
 
-## Baseline 对齐（2026-11-15）
+## 内容对齐（2026-11-15，已并入 chosen）
 
 - 06 家长会：11/21（周六）10:00 小一班教室（原已正确）
 - 18 接送码：今日 23:59 前有效；移除“截图不可用”，保留“一次有效 · 核验后失效”
@@ -40,18 +47,31 @@
 
 ## 合并落点（parent-chosen/）
 
-- `parent-chosen/`：31 页已选方案；07 / 21 / 24 / 29 用提案，其余用 baseline。
+- `parent-chosen/`：31 页交付主稿；07 / 21 / 24 / 29 用提案，其余用 baseline，22 补 V2 详情。
 - 01 首页：10:20、通知角标 2、任务卡改“给家人讲一件今天开心的事 / 今天还没提交”、午睡改“12:30 开始”。
 - 17 接送：10:20、可接送人改“妈妈、爸爸，共 2 位（外婆待审核）”、接送码说明改“当日有效，核验后失效”。
 - 14 报告：页头加“乐乐”，本期积分改 +218。
+- 22 任务详情：补 V2 提案态 `+10 积分` / `本周 2 / 3 天`，页脚标注 `积分提案`。
 - 31 我的：统计卡改“累计数据 / 32 成长记录”，补“消息”菜单；保留多孩子“切换”。
 - 所有 chosen 页面状态栏统一 10:20。
 - V1 / V5 / V6 / V7 / V8 作为状态/数据集并存，不替换主稿。
 - 画廊：`chosen.html`（31 页 / 13 状态）；重建：`node _shared/build-gallery.mjs --chosen`。
 - 截图：`node _shared/shots-chosen.mjs`（31 默认 + 13 状态）。
 
+## 验收命令
+
+```bash
+cd docs/design-previews/2026-11-13-parent-dna-opendesign
+node _shared/check-variants.mjs --chosen   # 31 页，0 失败
+node _shared/audit.mjs --chosen            # 0 error
+node _shared/font-check.mjs --chosen       # 31 / 31 通过
+node _shared/build-gallery.mjs --chosen    # chosen.html，31 页 / 13 状态
+node _shared/shots-chosen.mjs              # 31 张默认 + 13 张状态截图
+```
+
 ## 边界
 
-- `parent/` 的 31 页 baseline **未整体替换**；当前是「baseline + 选中提案」并列。
-- 若要把三组提案合并成新的 31 页主稿，需要另开一次合并（复制 07/21/24/29 到 `parent/` 或新建 `parent-chosen/`），并把 `BRIEF-REWRITE-PLAN.md` 的 baseline 改成提案口径。
-- 选提案意味着后端契约要改：`06-task` 的 points/streak、通知报名 API、settings 的免打扰字段。移植前先改契约，不要把提案当现状。
+- 交付主稿是 `parent-chosen/` 的 31 页 / 13 状态；`parent/` 的 baseline 与 `parent-variants/` 的备选变体只作参照，**不是移植起点**。
+- `BRIEF-REWRITE-PLAN.md` 仍描述 baseline 写法；chosen 的差异以本文件与 `parent-chosen/` 页面为准。
+- 选提案意味着后端契约要改（见「后端依赖」）：`06-task` 的 points/streak、通知报名 API、settings 的免打扰字段。移植前先改契约，不要把提案当现状。
+- 不恢复 29 的 9 开关方案；那是另一次契约 / 设计决策。
