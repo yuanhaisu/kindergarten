@@ -20,8 +20,12 @@ import (
 func main() {
 	db := seedutil.Open()
 
-	app.SeedDictsAfterMigration(db)
-	app.SeedDietAfterMigration(db)
+	if err := app.SeedDictsAfterMigration(db); err != nil {
+		log.Fatalf("seed dicts: %v", err)
+	}
+	if err := app.SeedDietAfterMigration(db); err != nil {
+		log.Fatalf("seed diet: %v", err)
+	}
 	if err := service.SeedPrincipalRolesForAll(context.Background(), db); err != nil {
 		log.Fatalf("seed principal roles: %v", err)
 	}

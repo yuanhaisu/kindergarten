@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"gorm.io/gorm"
@@ -137,22 +138,25 @@ func SeedDictsForAll(db *gorm.DB) error {
 }
 
 // SeedDictsAfterMigration 由 cmd/seedbase 在 goose 迁移之后调用。
-func SeedDictsAfterMigration(db *gorm.DB) {
-	ctx := context.Background()
-	_ = db.WithContext(ctx) // satisfy the context pattern
+//
+// 返回错误而不是吞掉：种子失败会让字典/膳食数据缺失，部署流水线必须能以非零
+// 退出码停下，而不是带着半个库继续切流量。
+func SeedDictsAfterMigration(db *gorm.DB) error {
 	if err := SeedDictsForAll(db); err != nil {
-		// Log but don't fail startup — dict seeding is not critical
-		println("dict seeder: " + err.Error())
+		return fmt.Errorf("seed dicts: %w", err)
 	}
+	return nil
 }
 
 // SeedDietAfterMigration 是膳食模块的初始化种子（由 cmd/seedbase 调用；
 // openspec: add-quantified-recipe, design D10）。
 //
 // 独立于 SeedDictsAfterMigration：先种全局分类 + DRIs，再遍历园所按 preset_key
-// 复制 kg=0 预置食物、种模板。任何错误只记录，不阻断后续步骤——食物数据依赖
-// 另行导入的授权 CSV，未导入时园所没有食物是合法状态（跳过模板并告警）。
-func SeedDietAfterMigration(db *gorm.DB) {
+// 复制 kg=0 预置食物、种模板。
+//
+// 全局数据（分类/DRIs）失败返回 error；园所级问题——食物 CSV 未导入、单园失败——
+// 记入 Warnings 而不返回 error，因为食物库依赖另行导入的授权 CSV，未导入是合法状态。
+func SeedDietAfterMigration(db *gorm.DB) error {
 	ctx := context.Background()
 	seeder := service.NewDietSeedService(
 		db,
@@ -163,8 +167,7 @@ func SeedDietAfterMigration(db *gorm.DB) {
 
 	globals, err := seeder.SeedDietGlobals(ctx)
 	if err != nil {
-		slog.Error("diet seeder: 全局分类/DRIs 播种失败，跳过园所补齐", "error", err)
-		return
+		return fmt.Errorf("diet globals: %w", err)
 	}
 	slog.Info("diet seeder: 全局数据就绪",
 		"categories_added", globals.CategoriesAdded,
@@ -173,8 +176,7 @@ func SeedDietAfterMigration(db *gorm.DB) {
 
 	all, err := seeder.SeedDietForAll(ctx)
 	if err != nil {
-		slog.Error("diet seeder: 园所食物/模板播种失败", "error", err)
-		return
+		return fmt.Errorf("diet per-kindergarten: %w", err)
 	}
 	slog.Info("diet seeder: 园所补齐完成",
 		"kindergartens", all.Kindergartens,
@@ -183,4 +185,8 @@ func SeedDietAfterMigration(db *gorm.DB) {
 		"template_items_created", all.TemplateItemsCreated,
 		"warnings", len(all.Warnings),
 	)
+	for _, warning := range all.Warnings {
+		slog.Warn("diet seeder: 园所级警告", "warning", warning)
+	}
+	return nil
 }
