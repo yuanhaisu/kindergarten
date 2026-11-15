@@ -1,7 +1,7 @@
 -- 隐私政策同意记录：按「用户 × 政策版本」追加，不软删。
 -- 唯一键保证同一用户同一版本只有一条；版本升级后新增一行。
 -- +goose Up
-CREATE TABLE `user_consents` (
+CREATE TABLE IF NOT EXISTS `user_consents` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `user_id` bigint unsigned NOT NULL,

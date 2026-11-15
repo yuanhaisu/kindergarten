@@ -72,6 +72,48 @@ jobs:
       - name: Unit tests (DB-free packages)
         run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... -count=1
 
+  migrate:
+    name: 数据库迁移（干净库）
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: kindergarten_migrate_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CONFIG_PATH: configs/app.ini
+      MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_migrate_test?charset=utf8mb4&parseTime=True&loc=Local"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Prepare config
+        run: cp server/configs/app.ini.example server/configs/app.ini
+      - name: goose up (clean DB)
+        working-directory: server
+        run: go run ./cmd/migrate up
+      - name: goose status
+        working-directory: server
+        run: go run ./cmd/migrate status
+      - name: goose up is idempotent
+        working-directory: server
+        run: go run ./cmd/migrate up
+      - name: Verify schema
+        working-directory: server
+        run: |
+          go run ./cmd/dbcheck user_consents
+          go run ./cmd/dbcheck --query "SHOW COLUMNS FROM payments LIKE 'idempotency_key'" | grep -q idempotency_key
+          go run ./cmd/dbcheck --query "SHOW COLUMNS FROM commission_ledger LIKE 'reversed_amount_cents'" | grep -q reversed_amount_cents
+
   admin:
     name: 管理端静态构建
     runs-on: ubuntu-latest
