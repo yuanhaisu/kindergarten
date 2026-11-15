@@ -699,3 +699,5 @@ single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agent
 ### CI / 合并等待
 
 推送 PR 后，不要在主会话空转或提前开始下一项。起一个只读 subagent 监听 CI 与合并结果：`gh pr checks <n> --watch` 等 CI 终态，`gh pr view <n> --json state,mergeStateStatus,mergedAt` 看合并；收到 CI/合并终态后再提出下一项工作。subagent 不得 merge、push 或改文件。
+
+**合并必须等到 `MERGED` 或 `CLOSED`，不能因为 15 分钟没合并就结束监听。** 轮询间隔 60 秒；若工具/会话有硬上限，达到安全上限时只报告“仍未合并”，并立即重新起监听。

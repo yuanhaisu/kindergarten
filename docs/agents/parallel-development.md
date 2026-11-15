@@ -96,7 +96,7 @@ PR 推送后，主会话必须起一个只读 subagent 监听结果，不能空�
 
 1. CI：`gh pr checks <n> --watch`，等所有 job 终态。
 2. 合并：`gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup`。
-3. 若 CI 绿但 PR 仍 OPEN，每 60 秒查一次，最多 15 分钟；MERGED / CLOSED 或超时后回报。
+3. 若 CI 绿但 PR 仍 OPEN，每 60 秒查一次，**直到 MERGED / CLOSED**；不设 15 分钟短超时。若工具/会话有硬上限，达到安全上限（如 2 小时）时只报告“仍未合并”，并立即重新起监听，不得停止等待。
 4. subagent 只读：不 merge、不 push、不改文件。
 5. 主会话收到终态反馈后，才提出下一项工作。
 
