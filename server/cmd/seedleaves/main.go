@@ -8,8 +8,8 @@ package main
 //
 // 用法：
 //
-//	go run ./cmd/seedleaves                  # 默认 kindergarten 4
-//	SEED_KG_ID=7 go run ./cmd/seedleaves     # 指定园所
+//	SEED_ALLOW_DEMO=1 go run ./cmd/seedleaves                # 默认 kindergarten 4
+//	SEED_ALLOW_DEMO=1 SEED_KG_ID=7 go run ./cmd/seedleaves   # 指定园所
 //
 // 幂等：该园请假记录已满 demoLeaveCount 条时跳过，不追加、不覆盖。
 
@@ -32,6 +32,8 @@ const (
 )
 
 func main() {
+	seedutil.RequireDemoOptIn("seedleaves")
+
 	// 先校验入参、再连库：非法 SEED_KG_ID 应当立刻报错，而不是等连库失败后才发现。
 	kgID := seedutil.KindergartenID()
 	loc := seedutil.Shanghai()

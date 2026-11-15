@@ -13,6 +13,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	"kindergarten-server/cmd/internal/seedutil"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
@@ -26,6 +27,8 @@ const (
 )
 
 func main() {
+	seedutil.RequireDemoOptIn("seedqrcode")
+
 	cfg, err := config.Load("configs/app.ini")
 	if err != nil {
 		log.Fatal(err)

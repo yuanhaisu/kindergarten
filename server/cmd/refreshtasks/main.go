@@ -5,12 +5,15 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
+	"kindergarten-server/cmd/internal/seedutil"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"time"
 )
 
 func main() {
+	seedutil.RequireDestructiveOptIn("refreshtasks")
+
 	cfg, _ := config.Load("configs/app.ini")
 	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Warn)})
 	if err != nil {

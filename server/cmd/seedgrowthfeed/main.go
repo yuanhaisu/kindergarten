@@ -11,8 +11,8 @@
 //
 // 用法:
 //
-//	go run ./cmd/seedgrowthfeed           # 幂等灌入
-//	go run ./cmd/seedgrowthfeed -reset    # 清除本命令造的数据
+//	SEED_ALLOW_DEMO=1 go run ./cmd/seedgrowthfeed           # 幂等灌入
+//	SEED_ALLOW_DEMO=1 go run ./cmd/seedgrowthfeed -reset    # 清除本命令造的数据
 //
 // 数据标记：记录正文以 R1| … R4| 开头，学生学号 SEED-S2，据此识别与清理。
 package main
@@ -28,6 +28,7 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
+	"kindergarten-server/cmd/internal/seedutil"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 )
@@ -79,6 +80,8 @@ var specs = []seedSpec{
 }
 
 func main() {
+	seedutil.RequireDemoOptIn("seedgrowthfeed")
+
 	reset := flag.Bool("reset", false, "清除本命令造的验证数据")
 	flag.Parse()
 

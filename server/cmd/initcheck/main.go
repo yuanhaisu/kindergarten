@@ -11,6 +11,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	"kindergarten-server/cmd/internal/seedutil"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
@@ -18,8 +19,11 @@ import (
 )
 
 // 注意：本命令会 Unscoped 清空 users / user_roles / kindergartens 三张表，
-// 只能在确认过目标的测试库上运行。
+// 只能在确认过目标的测试库上运行。运行前必须设置
+// SEED_ALLOW_DESTRUCTIVE=1 与 SEED_ALLOW_DEMO=1。
 func main() {
+	seedutil.RequireDestructiveOptIn("initcheck")
+
 	cfg, err := config.Load("configs/app.ini")
 	if err != nil {
 		log.Fatal("load config:", err)

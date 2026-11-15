@@ -5,8 +5,10 @@
 package seedutil
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -67,4 +69,74 @@ func Shanghai() *time.Location {
 		log.Fatal("加载 Asia/Shanghai 失败（容器缺 tzdata？）:", err)
 	}
 	return loc
+}
+
+const (
+	envAllowDemo        = "SEED_ALLOW_DEMO"
+	envAllowDestructive = "SEED_ALLOW_DESTRUCTIVE"
+)
+
+// RequireDemoOptIn 是演示数据命令的护栏：没有显式 opt-in 直接退出。
+//
+// 这些命令会往目标库写入编造数据；开发时习惯性地 `go run ./cmd/seed*`，
+// 到了生产环境就是误写的源头。报错里带脱敏后的 host:port/db，便于核对目标。
+func RequireDemoOptIn(command string) {
+	if err := demoOptInError(command, targetSummary()); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// RequireDestructiveOptIn 在演示开关之上再要求破坏性开关。
+// 适用于会先删除再重建数据的命令（initcheck / refreshtasks）。
+func RequireDestructiveOptIn(command string) {
+	if err := destructiveOptInError(command, targetSummary()); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func demoOptInError(command, target string) error {
+	if os.Getenv(envAllowDemo) == "1" {
+		return nil
+	}
+	return fmt.Errorf("%s 会写入演示数据；确认目标库后设置 %s=1 再运行（目标：%s）",
+		command, envAllowDemo, target)
+}
+
+func destructiveOptInError(command, target string) error {
+	if os.Getenv(envAllowDestructive) != "1" {
+		return fmt.Errorf("%s 会删除并重建数据；确认目标库后设置 %s=1 再运行（目标：%s）",
+			command, envAllowDestructive, target)
+	}
+	if os.Getenv(envAllowDemo) != "1" {
+		return fmt.Errorf("%s 同时会写入演示数据；再设置 %s=1 后重试（目标：%s）",
+			command, envAllowDemo, target)
+	}
+	return nil
+}
+
+var dsnTargetPattern = regexp.MustCompile(`@tcp\(([^)]+)\)/([^?]+)`)
+
+// targetSummary 返回脱敏后的目标库 host:port/db。
+// 配置读不到时只返回占位描述，不影响护栏本身的判断。
+func targetSummary() string {
+	cfgPath := os.Getenv("CONFIG_PATH")
+	if cfgPath == "" {
+		cfgPath = "configs/app.ini"
+	}
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		return "未知（读取 " + cfgPath + " 失败）"
+	}
+	if cfg.MySQL.DSN == "" {
+		return "未知（DSN 为空）"
+	}
+	return dsnTarget(cfg.MySQL.DSN)
+}
+
+// dsnTarget 只保留 host:port/db，丢掉账号与口令。
+func dsnTarget(dsn string) string {
+	if m := dsnTargetPattern.FindStringSubmatch(dsn); m != nil {
+		return m[1] + "/" + m[2]
+	}
+	return "无法解析 DSN（仅支持 tcp 形式）"
 }
