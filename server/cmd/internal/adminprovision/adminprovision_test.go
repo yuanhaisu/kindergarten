@@ -182,6 +182,83 @@ func TestEnsureTenantAdminRebindsExistingRole(t *testing.T) {
 	assert.Equal(t, "super_admin", roles[0].AdminRole)
 }
 
+func TestEnsureTenantAdminNormalizesAdminRole(t *testing.T) {
+	db := openTestDB(t)
+	resetData(t, db)
+	t.Cleanup(func() { cleanupAfterTest(t, db) })
+	ensureKindergarten(t, db, testKGID, "测试园所-供给")
+
+	ctx := context.Background()
+	first, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
+	})
+	require.NoError(t, err)
+
+	// 模拟历史数据：admin 角色的 admin_role 缺失或被写成别的值。
+	require.NoError(t, db.Model(&domain.UserRole{}).
+		Where("user_id = ? AND role = ?", first.UserID, "admin").
+		Update("admin_role", "teacher").Error)
+
+	second, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
+	})
+	require.NoError(t, err)
+	assert.False(t, second.RoleCreated, "已存在的角色不应新建")
+
+	var role domain.UserRole
+	require.NoError(t, db.Where("user_id = ? AND role = ?", first.UserID, "admin").First(&role).Error)
+	assert.Equal(t, "super_admin", role.AdminRole, "供给应把 admin_role 规范为 super_admin")
+}
+
+func TestEnsureTenantAdminCollapsesDuplicateAdminRoles(t *testing.T) {
+	db := openTestDB(t)
+	resetData(t, db)
+	t.Cleanup(func() { cleanupAfterTest(t, db) })
+	ensureKindergarten(t, db, testKGID, "测试园所-供给")
+	ensureKindergarten(t, db, testKG2ID, "测试园所-供给二")
+
+	ctx := context.Background()
+	first, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
+	})
+	require.NoError(t, err)
+
+	var kept domain.UserRole
+	require.NoError(t, db.Where("user_id = ? AND role = ?", first.UserID, "admin").First(&kept).Error)
+
+	// 模拟历史重复：同一 user 已有第二条 admin 角色，且值都不正确。
+	kg2 := testKG2ID
+	require.NoError(t, db.Create(&domain.UserRole{
+		UserID:           first.UserID,
+		Role:             "admin",
+		KindergartenID:   &kg2,
+		KindergartenName: "测试园所-供给二",
+		AdminRole:        "teacher",
+	}).Error)
+
+	_, err = adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKG2ID,
+	})
+	require.NoError(t, err)
+
+	var active []domain.UserRole
+	require.NoError(t, db.Where("user_id = ? AND role = ?", first.UserID, "admin").Find(&active).Error)
+	require.Len(t, active, 1, "重复的 admin 角色应被收敛为一条")
+	assert.Equal(t, kept.ID, active[0].ID, "应保留 id 最小的那条")
+	require.NotNil(t, active[0].KindergartenID)
+	assert.Equal(t, testKG2ID, *active[0].KindergartenID)
+	assert.Equal(t, "测试园所-供给二", active[0].KindergartenName)
+	assert.Equal(t, "super_admin", active[0].AdminRole)
+
+	// 历史行按软删语义保留，不做物理删除。
+	var all []domain.UserRole
+	require.NoError(t, db.Unscoped().
+		Where("user_id = ? AND role = ?", first.UserID, "admin").Order("id").Find(&all).Error)
+	require.Len(t, all, 2, "软删行应仍在表中")
+	assert.False(t, all[0].DeletedAt.Valid, "保留行不应被软删")
+	assert.True(t, all[1].DeletedAt.Valid, "多余行应被软删")
+}
+
 func TestEnsureTenantAdminRejectsMissingKindergarten(t *testing.T) {
 	db := openTestDB(t)
 
@@ -216,8 +293,9 @@ func TestEnsureTenantAdminRejectsMissingKindergarten(t *testing.T) {
 	}
 }
 
+// 参数校验必须先于任何数据库访问：传 nil DB 也能拿到 ErrInvalidOptions。
+// 若未来把校验挪到查询之后，这里会以 nil pointer panic 暴露，而不是静默通过。
 func TestEnsureTenantAdminRejectsIncompleteOptions(t *testing.T) {
-	db := openTestDB(t)
 	ctx := context.Background()
 
 	cases := []struct {
@@ -230,7 +308,7 @@ func TestEnsureTenantAdminRejectsIncompleteOptions(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := adminprovision.EnsureTenantAdmin(ctx, db, tc.opts)
+			_, err := adminprovision.EnsureTenantAdmin(ctx, nil, tc.opts)
 			require.Error(t, err)
 			assert.ErrorIs(t, err, adminprovision.ErrInvalidOptions)
 		})

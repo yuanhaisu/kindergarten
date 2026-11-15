@@ -14,8 +14,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -29,31 +31,48 @@ import (
 	"kindergarten-server/internal/config"
 )
 
-func main() {
-	phone := flag.String("phone", "", "管理员手机号（必填）")
-	kgID := flag.Uint64("kg", 0, "目标园所 ID（必填，必须已存在）")
-	password := flag.String("password", "", "管理员口令；建议改用环境变量 SETADMIN_PASSWORD")
-	flag.Usage = func() {
-		out := flag.CommandLine.Output()
-		_, _ = fmt.Fprint(out, "setadmin — 供给园所租户管理员账号（创建/更新用户与 admin 角色）\n\n"+
-			"用法: setadmin -phone <手机号> -kg <园所ID> [-password <口令>]\n"+
-			"口令也可由环境变量 SETADMIN_PASSWORD 提供（推荐）。\n\n参数:\n")
-		flag.PrintDefaults()
+// parseOptions 解析并校验命令行参数，口令依次取 -password 与 SETADMIN_PASSWORD。
+// 纯函数：不读配置、不连库，缺参分支无需 DB 即可覆盖。
+func parseOptions(args []string, getenv func(string) string) (adminprovision.Options, error) {
+	fs := flag.NewFlagSet("setadmin", flag.ContinueOnError)
+	fs.SetOutput(io.Discard) // 错误由调用方统一打印，避免 flag 重复输出
+	phone := fs.String("phone", "", "管理员手机号（必填）")
+	kgID := fs.Uint64("kg", 0, "目标园所 ID（必填，必须已存在）")
+	password := fs.String("password", "", "管理员口令；建议改用环境变量 SETADMIN_PASSWORD")
+	if err := fs.Parse(args); err != nil {
+		return adminprovision.Options{}, err
 	}
-	flag.Parse()
-
-	if *phone == "" || *kgID == 0 {
-		fmt.Fprintln(os.Stderr, "setadmin: -phone 与 -kg 均为必填")
-		flag.Usage()
-		os.Exit(2)
+	if *phone == "" {
+		return adminprovision.Options{}, errors.New("-phone 必填")
+	}
+	if *kgID == 0 {
+		return adminprovision.Options{}, errors.New("-kg 必填（目标园所 ID，必须大于 0）")
 	}
 	pwd := *password
 	if pwd == "" {
-		pwd = os.Getenv("SETADMIN_PASSWORD")
+		pwd = getenv("SETADMIN_PASSWORD")
 	}
 	if pwd == "" {
-		fmt.Fprintln(os.Stderr, "setadmin: 缺少口令：用 -password 或环境变量 SETADMIN_PASSWORD 提供")
-		flag.Usage()
+		return adminprovision.Options{}, errors.New("缺少口令：用 -password 或环境变量 SETADMIN_PASSWORD 提供")
+	}
+	return adminprovision.Options{Phone: *phone, Password: pwd, KindergartenID: *kgID}, nil
+}
+
+// usage 手写参数说明：parseOptions 用独立 FlagSet，不能再借 flag.PrintDefaults。
+func usage() {
+	_, _ = fmt.Fprint(os.Stderr, "setadmin — 供给园所租户管理员账号（创建/更新用户与 admin 角色）\n\n"+
+		"用法: setadmin -phone <手机号> -kg <园所ID> [-password <口令>]\n"+
+		"口令也可由环境变量 SETADMIN_PASSWORD 提供（推荐）。\n\n参数:\n"+
+		"  -phone string\n    \t管理员手机号（必填）\n"+
+		"  -kg uint\n    \t目标园所 ID（必填，必须已存在）\n"+
+		"  -password string\n    \t管理员口令；建议改用环境变量 SETADMIN_PASSWORD\n")
+}
+
+func main() {
+	opts, err := parseOptions(os.Args[1:], os.Getenv)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "setadmin: ", err)
+		usage()
 		os.Exit(2)
 	}
 
@@ -81,11 +100,7 @@ func main() {
 		log.Fatal("open db: ", err)
 	}
 
-	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, adminprovision.Options{
-		Phone:          *phone,
-		Password:       pwd,
-		KindergartenID: *kgID,
-	})
+	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, opts)
 	if err != nil {
 		log.Fatal("setadmin: ", err)
 	}

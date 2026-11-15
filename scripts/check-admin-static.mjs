@@ -34,7 +34,7 @@ const failures = []
 const seen = new Set()
 
 function addFailure(rule, file, detail, line) {
-  // 同一文件同一条规则只报第一处，避免压缩后的单行 bundle 刷屏
+  // 同一文件、同一规则、同一命中值只报一次，避免压缩后的单行 bundle 刷屏
   const key = `${rule}\0${file}\0${detail}`
   if (seen.has(key)) return
   seen.add(key)

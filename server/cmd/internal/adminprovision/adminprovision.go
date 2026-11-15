@@ -56,7 +56,10 @@ func (r Result) Summary() string {
 //
 // 幂等语义：
 //   - 用户按手机号 upsert（与 PasswordLogin 的 FindByPhone 口径一致，取最小 id）；
-//   - admin 角色按 user_id + role 唯一；已存在时只更新园所绑定，不新增第二条。
+//   - admin 角色按 user_id + role 唯一；已存在时更新园所绑定并把 admin_role
+//     规范为 super_admin，不新增第二条；
+//   - 同一 user 的历史重复 admin 角色在供给后收敛：保留 id 最小的一条，
+//     其余按模型软删除语义置 deleted_at，不物理删历史数据。
 //
 // 园所查询走 GORM 默认作用域，已软删除的园所视为不存在。
 func EnsureTenantAdmin(ctx context.Context, db *gorm.DB, opts Options) (Result, error) {
@@ -89,11 +92,15 @@ func EnsureTenantAdmin(ctx context.Context, db *gorm.DB, opts Options) (Result, 
 		res.UserID = user.ID
 		res.UserCreated = created
 
-		roleCreated, err := upsertAdminRole(tx, user.ID, kg)
+		role, roleCreated, err := upsertAdminRole(tx, user.ID, kg)
 		if err != nil {
 			return err
 		}
 		res.RoleCreated = roleCreated
+
+		if err := pruneDuplicateAdminRoles(tx, user.ID, role.ID); err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -136,8 +143,10 @@ func upsertUser(tx *gorm.DB, phone, passwordHash string) (*domain.User, bool, er
 }
 
 // upsertAdminRole 按 user_id + role 找管理员角色，绑定到 kg。
-// 返回 true 表示本次新建。
-func upsertAdminRole(tx *gorm.DB, userID uint64, kg *domain.Kindergarten) (bool, error) {
+// 已存在时同时改绑 kindergarten_id / kindergarten_name，并把 admin_role
+// 规范为 super_admin（历史数据可能缺失或残留其他值）。
+// 返回落库后的角色与「本次是否新建」。
+func upsertAdminRole(tx *gorm.DB, userID uint64, kg *domain.Kindergarten) (*domain.UserRole, bool, error) {
 	kgID := kg.ID
 	var role domain.UserRole
 	err := tx.Where("user_id = ? AND role = ?", userID, "admin").First(&role).Error
@@ -150,19 +159,30 @@ func upsertAdminRole(tx *gorm.DB, userID uint64, kg *domain.Kindergarten) (bool,
 			AdminRole:        "super_admin",
 		}
 		if err := tx.Create(&role).Error; err != nil {
-			return false, fmt.Errorf("创建管理员角色失败: %w", err)
+			return nil, false, fmt.Errorf("创建管理员角色失败: %w", err)
 		}
-		return true, nil
+		return &role, true, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("查询管理员角色失败: %w", err)
+		return nil, false, fmt.Errorf("查询管理员角色失败: %w", err)
 	}
 	if err := tx.Model(&role).Updates(map[string]any{
 		"kindergarten_id":   kgID,
 		"kindergarten_name": kg.Name,
 		"admin_role":        "super_admin",
 	}).Error; err != nil {
-		return false, fmt.Errorf("更新管理员角色失败: %w", err)
+		return nil, false, fmt.Errorf("更新管理员角色失败: %w", err)
 	}
-	return false, nil
+	return &role, false, nil
+}
+
+// pruneDuplicateAdminRoles 软删同一用户除 keepID 之外的 admin 角色。
+// 旧的供给逻辑按 user+role 取 First，历史库可能留下多条；这里幂等收敛。
+// 用 GORM 默认作用域删除：UserRole 带 DeletedAt，历史行保留、可回溯。
+func pruneDuplicateAdminRoles(tx *gorm.DB, userID, keepID uint64) error {
+	if err := tx.Where("user_id = ? AND role = ? AND id <> ?", userID, "admin", keepID).
+		Delete(&domain.UserRole{}).Error; err != nil {
+		return fmt.Errorf("清理重复管理员角色失败: %w", err)
+	}
+	return nil
 }
