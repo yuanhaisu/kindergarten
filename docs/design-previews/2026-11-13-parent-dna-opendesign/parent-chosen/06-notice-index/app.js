@@ -16,16 +16,23 @@
   listView.hidden = isEmpty;
   emptyView.hidden = !isEmpty;
 
+  // 「通知」是作业/带物/健康/其他的前端聚合视图：契约里没有 category=notice，
+  // 这个筛选只在本地合并子分类，不会被当成请求参数。
+  const NOTICE_AGGREGATE = ["homework", "bring", "health", "other"];
+
+  const matchesFilter = (card, filter) => {
+    const isUnread = card.dataset.unread === "true";
+    const category = card.dataset.category;
+
+    if (filter === "all") return true;
+    if (filter === "unread") return isUnread;
+    if (filter === "notice") return NOTICE_AGGREGATE.includes(category);
+    return category === filter;
+  };
+
   const applyFilter = (filter) => {
     noticeCards.forEach((card) => {
-      const isUnread = card.dataset.unread === "true";
-      const matchesCategory = card.dataset.category === filter;
-
-      card.hidden = !(
-        filter === "all" ||
-        (filter === "unread" && isUnread) ||
-        matchesCategory
-      );
+      card.hidden = !matchesFilter(card, filter);
     });
   };
 
