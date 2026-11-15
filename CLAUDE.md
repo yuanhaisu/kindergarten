@@ -732,3 +732,11 @@ single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agent
 ### Parallel development
 
 多个会话并行时，一个会话 = 一个分支 = 一个独立 worktree；主工作树始终留在 `main` 且保持干净。纪律与脚本见 `docs/agents/parallel-development.md`。
+
+### CI / 合并等待
+
+推送 PR 后，不要在主会话空转或提前开始下一项。起一个只读 subagent 监听 CI 与合并结果：`gh pr checks <n> --watch` 等 CI 终态，`gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup` 看合并与检查汇总；收到 CI/合并终态后再提出下一项工作。subagent 不得 merge、push 或改文件。
+
+**合并必须等到 `MERGED` 或 `CLOSED`，不能因为短时间没合并就结束监听。** 轮询用阶梯：0–5 分钟 15 秒，5–15 分钟 30 秒，15–60 分钟 60 秒，1–4 小时 5 分钟，4–12 小时 15 分钟；12 小时后只报告“仍未合并”并立即重新起监听。
+
+**重起后的档位**：正常走满 12 小时而重起的，**新一轮从 15 秒重新走阶梯**；若只是单轮因工具/会话硬限制（如 subagent 运行上限、命令超时）被打断，则**续用本轮已持久化的开始时间**继续当前档位，只有开始时间丢失才回到 15 秒。起监听时把 PR 号与本轮开始时间（UTC）写进 subagent 提示，避免重起后算错档位。
