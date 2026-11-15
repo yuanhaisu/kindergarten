@@ -36,6 +36,14 @@
 4. **配置**：`/etc/kindergarten/staging/app.ini`（0600）。MySQL/Redis 指向 compose 服务名；OSS 用 `oss-cn-guangzhou-internal.aliyuncs.com` + `kindergarten-staging`；微信 teacher/parent AppID/Secret 填真实值。
 5. **容器**：`docker compose -f docker-compose.yml -f docker-compose.local.yml up -d mysql redis` → `run --rm migrate` → `run --rm --entrypoint /app/kindergarten-seedbase api` → `up -d api`。
 6. **静态包**：解压到 `admin/releases/<tag>`、`website/releases/<tag>`，`current` 指向该 release（当前 `staging-20261115-1`）。
+
+   > **构建即检查（管理端）**：`npm run generate` 的 `postgenerate` 会自动执行
+   > `node scripts/check-admin-static.mjs .output/public`，校验 `index.html`、
+   > `_nuxt` 下的 JS/CSS、远程字体（`fonts.googleapis.com` / `fonts.gstatic.com`）
+   > 与 `localhost` / `127.0.0.1` 地址（仅放行 axios 浏览器适配器的兜底表达式，见脚本白名单）；
+   > 任一命中即构建失败，并打印规则与命中文件。
+   > 通过后日志末尾打印入口、资源数与体积摘要。CI 与 release 流水线都跑
+   > `npm run generate`，因此无需额外步骤；打包/上传前也不必再人工抽查产物内容。
 7. **证书**：
    ```bash
    /root/.acme.sh/acme.sh --issue --server letsencrypt \
