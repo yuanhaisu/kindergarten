@@ -199,7 +199,10 @@ server {
         try_files $uri =404;
     }
     location / {
-        try_files $uri $uri/ =404;
+        # 目录型页面（/privacy、/terms）直接读 index.html，不 301 到带斜杠；
+        # 带斜杠的重复地址反向 301 到无斜杠，保持 canonical / sitemap 一致。
+        rewrite ^/(.+)/$ /$1 permanent;
+        try_files $uri $uri/index.html $uri/ =404;
     }
     error_page 404 /404.html;
 }
@@ -234,7 +237,10 @@ server {
         try_files $uri =404;
     }
     location / {
-        try_files $uri $uri/ =404;
+        # 目录型页面（/privacy、/terms）直接读 index.html，不 301 到带斜杠；
+        # 带斜杠的重复地址反向 301 到无斜杠，保持 canonical / sitemap 一致。
+        rewrite ^/(.+)/$ /$1 permanent;
+        try_files $uri $uri/index.html $uri/ =404;
     }
     error_page 404 /404.html;
 }
