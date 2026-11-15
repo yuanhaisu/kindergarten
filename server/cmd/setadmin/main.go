@@ -1,7 +1,7 @@
 // setadmin — 创建/更新管理后台默认账号。
 //
-// 用法: go run ./cmd/setadmin [phone] [password]
-// 默认: phone=admin password=123456
+// 用法: go run ./cmd/setadmin [phone] <password>
+// 密码也可通过 SETADMIN_PASSWORD 提供；两者都没有时直接退出，不使用默认口令。
 package main
 
 import (
@@ -19,12 +19,16 @@ import (
 
 func main() {
 	phone := "admin"
-	password := "123456"
+	password := os.Getenv("SETADMIN_PASSWORD")
 	if len(os.Args) >= 3 {
 		phone = os.Args[1]
 		password = os.Args[2]
 	} else if len(os.Args) == 2 {
 		password = os.Args[1]
+	}
+	if password == "" {
+		fmt.Fprintln(os.Stderr, "usage: setadmin [phone] <password>  (or set SETADMIN_PASSWORD)")
+		os.Exit(2)
 	}
 
 	cfg, err := config.Load("configs/app.ini")
