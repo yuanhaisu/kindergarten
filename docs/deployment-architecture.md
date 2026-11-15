@@ -1,36 +1,54 @@
 # 养成星球 · 部署架构
 
-- Status: Proposed（设计定稿，待实施）
-- Date: 2026-11-03
+- Status: Partially implemented — staging-only（2026-11-15）；prod 未创建
+- Date: 2026-11-03（初版）；Updated: 2026-11-15
 - Scope: 端到端——Go 后端、管理端、两个微信小程序、发布与运维
 - Related: [ADR-0007](adr/0007-single-ecs-compose-single-instance.md)、[ADR-0008](adr/0008-versioned-migrations-goose.md)、[ADR-0009](adr/0009-miniprogram-api-backward-compatibility.md)、[ADR-0010](adr/0010-private-oss-presigned-urls.md)
+
+## 0. 当前实施状态（2026-11-15）
+
+> **本文 §2–§16 描述的是 prod 目标设计，尚未实施。** 当前只落地了 staging；实际状态以本节和 [`docs/handoffs/2026-11-15-staging-bootstrap.md`](handoffs/2026-11-15-staging-bootstrap.md) 为准。
+
+| 项 | 当前状态 |
+|---|---|
+| 地域 / 可用区 | 华南3（广州）/ `cn-guangzhou-b` |
+| 域名 / 备案 | `nurtureplanet.cn` / 湘ICP备2026054245号-1 |
+| 服务器 | A `np-staging`：2C4G，`8.148.144.201`，ALinux 4 LTS，跑 staging；B `np-idle`：2C4G，`8.166.119.31`，CentOS 7.9，闲置 |
+| 公网入口 | A 用**固定公网 IP**（不是 EIP）；B 也有固定公网 IP，但未开放 80/443 |
+| staging 组件 | Nginx 1.30.4 + API 容器（`127.0.0.1:8081`）+ 本地 `mysql:8` / `redis:7` 容器；静态包 `staging-20261115-1` |
+| staging 域名 | `test-api` / `test-admin` / `test-www` → `8.148.144.201`，解析线路默认，TTL 600 |
+| 证书 | Let's Encrypt（issuer `YR1`），SAN 覆盖三个 test 域名，有效期至 2027-02-12；acme.sh 每天 4 次续期检查 |
+| 未创建 | RDS、托管 Redis、EIP、ACR、`api` / `admin` / `www` 生产域名；GitHub Actions 发布流水线未启用 |
+| staging 发布方式 | 本地构建 API 镜像 / admin / website，再传输到 A；镜像未走 ACR |
 
 ## 1. 目标与约束
 
 | 项 | 结论 |
 |---|---|
-| 项目阶段 | 绿地：尚无生产环境，可推倒重来 |
+| 项目阶段 | staging-only 已落地（2026-11-15）；prod 暂缓 |
 | 规模 | ≤10 所园、≤3000 注册用户、峰值 ≤50 QPS |
-| 预算 | ≤ ¥500/月（估算见 §10） |
+| 预算 | staging 阶段无新增 RDS/Redis/ACR 费用；prod 估算见 §10 |
 | 租户模型 | 单部署、共享 MySQL、`kindergarten_id` 隔离 |
-| 环境 | 本地开发 + 预发（staging） + 生产（prod） |
-| 扩展性 | **单实例**；首期不引入 SLB、K8s、CDN、WAF |
-| 地域 | 暂定阿里云华东1（杭州）；目标园所在北方则改华北2（北京） |
-| 域名/备案 | 新注册主域名 + 公司主体 ICP 备案；本文用 `<domain>` 占位 |
+| 环境 | 本地开发 + staging（prod 未创建） |
+| 扩展性 | prod 计划单实例；staging 单机；首期不引入 SLB、K8s、CDN、WAF |
+| 地域 | 华南3（广州）`cn-guangzhou-b` |
+| 域名/备案 | `nurtureplanet.cn` + 湘ICP备2026054245号-1 |
 
-**上线关键路径**：ICP 备案通常需要 1–3 周，必须先于小程序生产发布启动。
+**上线关键路径**：域名 ICP 已完成；小程序备案、隐私保护指引与类目资质仍是 prod 前置。
 
 ## 2. 目标拓扑
+
+> 下图是 **prod 目标设计**（原单 ECS 方案），尚未实施；当前 staging-only 拓扑见 §0。
 
 ```
                         用户 / 微信小程序
                               │ HTTPS
                     ┌─────────▼─────────┐
-                    │ 阿里云 DNS + EIP   │
+                    │ 阿里云 DNS + 固定公网 IP │
                     └─────────┬─────────┘
                               │ 80/443
         ┌─────────────────────▼──────────────────────────────┐
-        │ ECS 2C4G · 40–60GB ESSD（VPC · 华东1）              │
+        │ ECS 2C4G · 40–60GB ESSD（VPC · 华南3 广州）         │
         │                                                     │
         │ 宿主机 Nginx                                        │
         │  ├ api.<domain>        → 127.0.0.1:8080  prod api  │
@@ -80,6 +98,8 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 | 数据 | 任意 | **仅合成/种子数据** | 真实数据 |
 | 配置来源 | 本地 `app.ini` | GitHub Secrets 渲染 | GitHub Secrets 渲染 |
 
+> 上表 prod 列尚未创建；staging 实际：API `:8081`、`test-*` 域名、容器 MySQL/Redis、OSS `kindergarten-staging`、配置为服务器本地 `app.ini`（尚未接 GitHub Secrets）。
+
 ## 4. 组件与规格
 
 | 组件 | 规格 | 说明 |
@@ -96,6 +116,8 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 | 监控 | CloudMonitor | 站点探测 + 资源告警 |
 | 证书 | acme.sh + Let's Encrypt | DNS/HTTP 校验，自动续期 |
 
+> 当前实际只有 2 台 2C4G ECS（A staging / B idle）；RDS、托管 Redis、ACR、EIP、SLS、CloudMonitor 均未创建。
+
 **首期不引入**：SLB、ACK/K8s、CDN、WAF、Prometheus/Grafana、KMS/Secrets Manager。
 
 ## 5. 网络与安全
@@ -108,6 +130,7 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 - 管理端 Cookie 使用 `Secure` + `SameSite=Lax`。
 - CI 与日常运维使用阿里云 RAM 子账号（ACR 推送、ECS 部署各自最小权限），不使用主账号 AccessKey。
 - 生产 `[face].enabled=false`，人脸识别未接真实供应商前不启 worker。
+- **当前实际（2026-11-15）**：`sg-np-staging`（A）开放 80/443，22 仍为 `0.0.0.0/0`，需收紧；`sg-np-idle`（B）只开 22，未开放 80/443。旧共享安全组已从实例移出。
 
 ## 6. 配置与密钥
 
@@ -211,6 +234,8 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 | 告警通道 | 短信 + 邮件（阿里云联系人组） |
 | 健康检查 | `/health` 存活；`/ready` 检查 MySQL/Redis |
 
+> 当前只完成了 `/health`、`/ready` 与 acme.sh 续期 cron；SLS 与 CloudMonitor 尚未接入。
+
 ## 11. 成本估算
 
 > 估算值，以实际询价为准；年付通常更便宜。
@@ -223,6 +248,8 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 | OSS + 流量 + SLS | 媒体/日志 | 60 |
 | 域名 + 证书 | — | 10 |
 | **合计** | | **≈ 400** |
+
+> 当前 staging 阶段：两台 ECS 已预付，无 RDS/Redis/ACR 新增费用；增量只有 OSS、域名与少量流量。prod 落地时再按上表采购 RDS/Redis/ACR/EIP。
 
 ## 12. 上线前代码加固清单
 
@@ -262,6 +289,17 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 /etc/nginx/ssl/<domain>/  # acme.sh 签发
 ```
 
+当前实际只创建了 staging：
+
+```
+/opt/kindergarten/staging/{docker-compose.yml,docker-compose.local.yml,.env,admin,website}
+/etc/kindergarten/staging/{app.ini,app.ini.tmpl,deploy.env}
+/etc/nginx/conf.d/kindergarten-staging.conf
+/etc/nginx/ssl/nurtureplanet.cn/
+```
+
+prod 目录尚未创建。
+
 | 服务 | 监听 |
 |---|---|
 | Nginx | 0.0.0.0:80 / 443 |
@@ -282,6 +320,12 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 | 人脸识别为 mock | 生产误启 worker | `[face].enabled=false` |
 | 2C4G 内存余量 | staging MySQL/Redis 与 prod api 争内存 | 监控；不足则 staging DB 迁出或升配 |
 | 无 CDN | 媒体加载慢/流量成本 | 首期接受；量级上来再评估 |
+| np-staging 到期 | 2026-12-14 后实例释放 | 12 月初前续费并开自动续费 |
+| np-idle 系统 EOL | CentOS 7.9 无安全更新 | 启用前重装为 ALinux 4 |
+| Docker Hub 从广州不可达 | 无法直接拉镜像 | 本地构建后 `docker save \| ssh ... docker load`，或配镜像加速/ACR |
+| 服务器 IPv6 出口不通 | acme.sh 默认走 IPv6 会超时 | `ACME_USE_IPV4_REQUESTS=1` 已持久化；续期不要删 |
+| DNS 解析线路 | 非「默认/境外」线路会让 Let's Encrypt 看到 NXDOMAIN | A 记录保持在默认线路，或额外加境外线路 |
+| 1 Mbps 出方向 | 静态资源/API 响应慢 | staging 可接受；prod 前评估升级或静态上 OSS/CDN |
 
 ## 15. 未纳入本期
 
@@ -296,3 +340,4 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 | 日期 | 变更 |
 |---|---|
 | 2026-11-03 | 初版设计定稿（21 项决策） |
+| 2026-11-15 | staging-only 落地（华南3广州、两台 2C4G、Let's Encrypt、静态包）；prod 暂缓 |

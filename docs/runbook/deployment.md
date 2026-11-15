@@ -2,16 +2,19 @@
 
 配套设计：[部署架构](../deployment-architecture.md)；决策：[ADR-0007 ~ ADR-0010](../adr/)。
 
+> **当前阶段（2026-11-15）**：只落地了 staging；§1–§5 是 prod 目标流程，尚未启用。staging 实际步骤见 §1.0，详细状态见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。
+
 ## 0. 约定与前置
 
 | 项 | 值 |
 |---|---|
-| 生产域名 | `api.<domain>`、`admin.<domain>`、`www.<domain>`（`<domain>` 301 → `www`） |
-| 预发域名 | `test-api.<domain>`、`test-admin.<domain>`、`test-www.<domain>` |
-| 生产 API 端口 | ECS 本机 `127.0.0.1:8080` |
+| 生产域名 | `api.nurtureplanet.cn`、`admin.nurtureplanet.cn`、`www.nurtureplanet.cn`（apex 301 → `www`）；**未创建** |
+| 预发域名 | `test-api.nurtureplanet.cn`、`test-admin.nurtureplanet.cn`、`test-www.nurtureplanet.cn` |
+| 生产 API 端口 | ECS 本机 `127.0.0.1:8080`（未启用） |
 | 预发 API 端口 | ECS 本机 `127.0.0.1:8081` |
-| 目录 | `/opt/kindergarten/{prod,staging}` |
-| 配置 | `/etc/kindergarten/{prod,staging}/app.ini`（0600） |
+| 当前服务器 | A `np-staging` `8.148.144.201`（staging）；B `np-idle` `8.166.119.31`（闲置） |
+| 目录 | `/opt/kindergarten/{prod,staging}`；当前只有 `staging` |
+| 配置 | `/etc/kindergarten/{prod,staging}/app.ini`（0600）；当前只有 `staging` |
 | 部署密钥 | `/etc/kindergarten/{prod,staging}/deploy.env`（0600，含 `MIGRATE_MYSQL_DSN`） |
 
 前置条件（缺一不可）：
@@ -23,7 +26,34 @@
 5. ECS 已安装 Docker + Compose 插件、Nginx、curl；安全组仅开 80/443，SSH 限管理员 IP。
 6. RDS 已创建 `kg_app`（DML）与 `kg_migrate`（DDL）账号；`kg_migrate` 凭据只放在 `deploy.env` 与 GitHub Secrets。
 
+## 1.0 staging 首次部署（2026-11-15 实际）
+
+> 详细状态与待办见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。以下为当前 staging 的实际流程；prod 尚未使用。
+
+1. **DNS**：`test-api` / `test-admin` / `test-www` → `8.148.144.201`，TTL 600。解析线路必须是「默认」或额外加「境外」，否则 Let's Encrypt 会看到 NXDOMAIN。
+2. **安全组**：A（`sg-np-staging`）开放 80/443，22 限管理员 IP；B（`sg-np-idle`）只开 22。
+3. **安装**：Docker 24 + Compose、Nginx 1.30、acme.sh 3.1.5、jq/curl/git/rsync/httpd-tools。
+4. **配置**：`/etc/kindergarten/staging/app.ini`（0600）。MySQL/Redis 指向 compose 服务名；OSS 用 `oss-cn-guangzhou-internal.aliyuncs.com` + `kindergarten-staging`；微信 teacher/parent AppID/Secret 填真实值。
+5. **容器**：`docker compose -f docker-compose.yml -f docker-compose.local.yml up -d mysql redis` → `run --rm migrate` → `run --rm --entrypoint /app/kindergarten-seedbase api` → `up -d api`。
+6. **静态包**：解压到 `admin/releases/<tag>`、`website/releases/<tag>`，`current` 指向该 release（当前 `staging-20261115-1`）。
+7. **证书**：
+   ```bash
+   /root/.acme.sh/acme.sh --issue --server letsencrypt \
+     -d test-api.nurtureplanet.cn -d test-admin.nurtureplanet.cn -d test-www.nurtureplanet.cn \
+     -w /var/www/acme --keylength 2048 --request-v4
+   /root/.acme.sh/acme.sh --install-cert -d test-api.nurtureplanet.cn \
+     --key-file /etc/nginx/ssl/nurtureplanet.cn/privkey.pem \
+     --fullchain-file /etc/nginx/ssl/nurtureplanet.cn/fullchain.pem \
+     --reloadcmd "systemctl reload nginx"
+   ```
+   `ACME_USE_IPV4_REQUESTS=1` 必须保留（服务器 IPv6 出口不通）。
+8. **验证**：`curl -s https://test-api.nurtureplanet.cn/ready`、`https://test-admin.nurtureplanet.cn/`、`https://test-www.nurtureplanet.cn/`。
+
+> 当前 staging 不走 ACR：API 镜像在本地构建后 `docker save | gzip | ssh ... docker load` 传到 A。GitHub Actions tag 流水线尚未启用。
+
 ## 1. 首次部署
+
+> 以下为 prod 目标流程，尚未实施；当前 staging 见 §1.0。
 
 ```bash
 # 1) 目录
@@ -132,11 +162,18 @@ docker compose run --rm --entrypoint /app/kindergarten-seedbase api
     --reloadcmd "systemctl reload nginx"
   ```
 - 检查到期：`acme.sh --list`。
+- **IPv4 与 DNS 线路**：本机 IPv6 出口不通时必须加 `--request-v4`；acme.sh 已持久化 `ACME_USE_IPV4_REQUESTS=1`。A 记录若不在「默认/境外」线路，Let's Encrypt 的解析器会看到 NXDOMAIN。
 
 ## 7. 常用命令
 
 ```bash
-# 查看服务
+# staging（当前）
+cd /opt/kindergarten/staging
+docker compose -f docker-compose.yml -f docker-compose.local.yml ps
+docker compose -f docker-compose.yml -f docker-compose.local.yml logs -f --tail=100 api
+curl -s https://test-api.nurtureplanet.cn/ready
+
+# prod（未来）
 cd /opt/kindergarten/prod && docker compose ps
 docker compose logs -f --tail=200 api
 
@@ -165,6 +202,10 @@ sudo nginx -t && sudo systemctl reload nginx
 | 图片全部裂开 | 桶是否私有但响应未签名；检查响应层 `SignRef` 与 OSS endpoint |
 | 小程序请求合法域名报错 | 两个小程序后台分别配置 `https://api` / `https://test-api` |
 | GitHub Actions 推 ACR 超时 | 重试；持续失败则评估云效 Flow（见 Q11 备选） |
+| acme.sh 报 NXDOMAIN 但国内能解析 | 检查 A 记录的解析线路是否为「默认/境外」；用 `1.1.1.1` 验证 |
+| acme.sh 连接 CA 超时 | 服务器 IPv6 出口不通；加 `--request-v4`，确认 `ACME_USE_IPV4_REQUESTS=1` |
+| `docker pull` 超时 | Docker Hub 从广州不可达；本地构建后 `docker save` / `ssh docker load`，或配镜像加速 |
+| `np-staging` 实例到期 | 2026-12-14；提前续费并开自动续费 |
 
 ## 9. 安全清单（每次上线前）
 
@@ -176,6 +217,8 @@ sudo nginx -t && sudo systemctl reload nginx
 - [ ] 发布前快照已成功
 - [ ] 回滚 tag / admin symlink 已知
 - [ ] MCP 使用专用 RAM 用户，AK 未进入任何被跟踪文件
+- [ ] staging 安全组 22 已限管理员 IP（当前仍为 `0.0.0.0/0`，待收）
+- [ ] `np-staging` 续费已确认（2026-12-14 到期）
 
 ## 10. MCP 运维凭据（alibaba-cloud-ops-mcp-server）
 
