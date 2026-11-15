@@ -310,6 +310,11 @@ cd /path/to/repo/server
 MYSQL_DSN='<app-dsn>' go run ./cmd/dbcheck task_check_ins
 MYSQL_DSN='<app-dsn>' go run ./cmd/dbcheck --query "SELECT COUNT(*) FROM files"
 
+# 供给园所管理员（幂等；园所必须已存在，软删除视为不存在）
+# -phone / -kg 必填；口令走环境变量，避免留在 shell 历史与进程参数里
+CONFIG_PATH=/etc/kindergarten/prod/app.ini SETADMIN_PASSWORD='<强密码>' \
+  go run ./cmd/setadmin -phone <手机号> -kg <园所ID>
+
 # Nginx
 sudo nginx -t && sudo systemctl reload nginx
 ```

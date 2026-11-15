@@ -1,98 +1,93 @@
-// setadmin — 创建/更新管理后台默认账号。
+// setadmin — 供给园所租户管理员账号：幂等地创建/更新用户与 admin 角色。
 //
-// 用法: go run ./cmd/setadmin [phone] <password>
-// 密码也可通过 SETADMIN_PASSWORD 提供；两者都没有时直接退出，不使用默认口令。
+// 用法:
+//
+//	SETADMIN_PASSWORD='...' go run ./cmd/setadmin -phone 13800000000 -kg 7
+//	go run ./cmd/setadmin -phone 13800000000 -kg 7 -password '...'
+//
+// -phone 与 -kg 必填；口令只从 -password 或环境变量 SETADMIN_PASSWORD 读取
+// （推荐环境变量，避免进入 shell 历史与进程参数）。没有默认口令，也不会回显。
+// 目标园所必须存在，软删除视为不存在。重复执行是幂等的。
+//
+// CONFIG_PATH 可覆盖配置文件路径（默认 configs/app.ini）；MYSQL_DSN 可覆盖连接串。
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
-	"golang.org/x/crypto/bcrypt"
+	gormlogger "gorm.io/gorm/logger"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	"kindergarten-server/cmd/internal/adminprovision"
 	"kindergarten-server/internal/config"
-	"kindergarten-server/internal/domain"
 )
 
 func main() {
-	phone := "admin"
-	password := os.Getenv("SETADMIN_PASSWORD")
-	if len(os.Args) >= 3 {
-		phone = os.Args[1]
-		password = os.Args[2]
-	} else if len(os.Args) == 2 {
-		password = os.Args[1]
+	phone := flag.String("phone", "", "管理员手机号（必填）")
+	kgID := flag.Uint64("kg", 0, "目标园所 ID（必填，必须已存在）")
+	password := flag.String("password", "", "管理员口令；建议改用环境变量 SETADMIN_PASSWORD")
+	flag.Usage = func() {
+		out := flag.CommandLine.Output()
+		_, _ = fmt.Fprint(out, "setadmin — 供给园所租户管理员账号（创建/更新用户与 admin 角色）\n\n"+
+			"用法: setadmin -phone <手机号> -kg <园所ID> [-password <口令>]\n"+
+			"口令也可由环境变量 SETADMIN_PASSWORD 提供（推荐）。\n\n参数:\n")
+		flag.PrintDefaults()
 	}
-	if password == "" {
-		fmt.Fprintln(os.Stderr, "usage: setadmin [phone] <password>  (or set SETADMIN_PASSWORD)")
+	flag.Parse()
+
+	if *phone == "" || *kgID == 0 {
+		fmt.Fprintln(os.Stderr, "setadmin: -phone 与 -kg 均为必填")
+		flag.Usage()
+		os.Exit(2)
+	}
+	pwd := *password
+	if pwd == "" {
+		pwd = os.Getenv("SETADMIN_PASSWORD")
+	}
+	if pwd == "" {
+		fmt.Fprintln(os.Stderr, "setadmin: 缺少口令：用 -password 或环境变量 SETADMIN_PASSWORD 提供")
+		flag.Usage()
 		os.Exit(2)
 	}
 
-	cfg, err := config.Load("configs/app.ini")
-	if err != nil {
-		log.Fatal(err)
+	cfgPath := os.Getenv("CONFIG_PATH")
+	if cfgPath == "" {
+		cfgPath = "configs/app.ini"
 	}
-	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{})
+	cfg, err := config.Load(cfgPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("load config: ", err)
+	}
+	if cfg.MySQL.DSN == "" {
+		log.Fatal("MySQL DSN 为空：请检查配置或设置 MYSQL_DSN")
+	}
+	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
+		// 首次供给时按手机号/角色查询会命中 record-not-found，属正常分支；
+		// 不忽略会把「命令成功」刷成一片红色错误日志，误导运维。
+		Logger: gormlogger.New(log.New(os.Stderr, "", log.LstdFlags), gormlogger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  gormlogger.Warn,
+			IgnoreRecordNotFoundError: true,
+		}),
+	})
+	if err != nil {
+		log.Fatal("open db: ", err)
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, adminprovision.Options{
+		Phone:          *phone,
+		Password:       pwd,
+		KindergartenID: *kgID,
+	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("setadmin: ", err)
 	}
-
-	// 查找是否已有该 phone 的用户
-	var user domain.User
-	err = db.Where("phone = ?", phone).First(&user).Error
-	if err != nil {
-		// 不存在则创建
-		user = domain.User{
-			Nickname:     "admin",
-			Phone:        phone,
-			PasswordHash: string(hash),
-		}
-		if err := db.Create(&user).Error; err != nil {
-			log.Fatal("create user:", err)
-		}
-		fmt.Printf("created admin user id=%d phone=%s\n", user.ID, phone)
-	} else {
-		// 已存在则更新密码
-		user.PasswordHash = string(hash)
-		user.Nickname = "admin"
-		if err := db.Save(&user).Error; err != nil {
-			log.Fatal("update user:", err)
-		}
-		fmt.Printf("updated admin user id=%d phone=%s\n", user.ID, phone)
-	}
-
-	// 确保 admin 角色（绑定园所 ID=4）
-	kgID := uint64(4)
-	var roleCount int64
-	db.Model(&domain.UserRole{}).
-		Where("user_id = ? AND role = ?", user.ID, "admin").
-		Count(&roleCount)
-	if roleCount == 0 {
-		ur := domain.UserRole{
-			UserID:          user.ID,
-			Role:            "admin",
-			AdminRole:       "super_admin",
-			KindergartenID:  &kgID,
-		}
-		if err := db.Create(&ur).Error; err != nil {
-			log.Fatal("create role:", err)
-		}
-		fmt.Println("created admin role (kg=4)")
-	} else {
-		// 更新 KindergartenID
-		db.Model(&domain.UserRole{}).
-			Where("user_id = ? AND role = ?", user.ID, "admin").
-			Update("kindergarten_id", kgID)
-		fmt.Println("updated admin role kindergarten_id=4")
-	}
-
-	fmt.Printf("\n=== 管理后台账号就绪 ===\n账号: %s\n密码: %s\n", phone, password)
+	fmt.Println(res.Summary())
 }
