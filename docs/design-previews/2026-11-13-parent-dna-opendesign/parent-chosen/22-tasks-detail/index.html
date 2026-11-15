@@ -49,6 +49,7 @@
         <span class="kicker__label">亲子任务</span>
         <span class="kicker__dot" aria-hidden="true">·</span>
         <span class="points">+10 积分</span>
+        <span class="proposal-flag" data-od-id="proposal-flag">积分提案</span>
       </p>
       <h1 class="task-head__title" data-od-id="task-title">给家人讲一件<br />今天开心的事</h1>
       <p class="task-lead">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。<br /><span class="hl">不用引导答案</span>，他愿意讲就好。</p>
@@ -126,6 +127,16 @@
           </span>
         </span>
       </div>
+      <div class="week-streak" data-od-id="week-streak">
+        <div class="streak" id="week-streak-bar" role="img" aria-label="本周已完成 2 天，还差 1 天">
+          <span class="streak-seg is-on"></span>
+          <span class="streak-seg is-on"></span>
+          <span class="streak-seg is-off" id="week-streak-third">
+            <svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><line x1="3" y1="3" x2="97" y2="3" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="6 12" /></svg>
+          </span>
+        </div>
+        <p class="week-meta" id="week-meta">本周 2 / 3 天 · 今天还没打卡</p>
+      </div>
       <p class="checkin-hint">照片和一句话都可以，交过之后老师晚上统一回应。</p>
       <div class="photo-grid" data-od-id="photo-grid">
         <span class="photo photo--sage" role="img" aria-label="已添加的照片"></span>
@@ -168,6 +179,8 @@
         </div>
       </article>
     </section>
+
+    <p class="proposal-note" data-od-id="proposal-note">提案：需 06-task 恢复 points/streak</p>
 
   </main>
 

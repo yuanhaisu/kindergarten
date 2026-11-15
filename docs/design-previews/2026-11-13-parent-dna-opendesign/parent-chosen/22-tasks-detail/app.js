@@ -9,6 +9,9 @@
   var submitBtn = document.getElementById('submit-btn');
   var timeLive = document.getElementById('time-left-live');
   var timeDone = document.getElementById('time-left-done');
+  var weekStreakBar = document.getElementById('week-streak-bar');
+  var weekStreakThird = document.getElementById('week-streak-third');
+  var weekMeta = document.getElementById('week-meta');
   var addPhoto = document.getElementById('add-photo');
   var photoGrid = document.getElementById('photo-grid');
   var toast = document.getElementById('toast');
@@ -46,6 +49,12 @@
     submitBtn.textContent = '今天已提交';
     timeLive.hidden = true;
     timeDone.hidden = false;
+    if (weekStreakBar && weekStreakThird && weekMeta) {
+      weekStreakThird.classList.remove('is-off');
+      weekStreakThird.classList.add('is-on');
+      weekStreakBar.setAttribute('aria-label', '本周已完成 3 天');
+      weekMeta.textContent = '本周 3 / 3 天 · 今天已打卡';
+    }
     if (withToast) showToast('已提交，老师晚上会看到');
   }
 
