@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Silent Failures**: Always add explicit error boundaries and logs. Never catch exceptions silently.
 
 ## ✍️ Coding Style & Preferences
-- **Language**: TypeScript / Python (根据你项目实际情况修改)
+- **Language**: Go / TypeScript / Vue 3 / SCSS
 - **Patterns**: Prefer composition over inheritance. Keep functions small and pure.
 - **Comments**: Write why, not what. Avoid obvious comments.
 
@@ -36,12 +36,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 API contracts live in `backend/api/` (spec-first). Data models live in `server/internal/domain/`（**不是** `backend/model/`，见下方说明）. Design data JSON files live in `design-data/`.
 
 > `backend/` 下**两个子目录状态不同**，别看错：
-> - `backend/api/`（`api-admin/`、`api-teacher/`、`api-parent/`、`api-common.md`）— **仍在维护**，是接口契约的 source of truth，改接口先改这里。
-> - `backend/model/`（18 个 .go 文件，全部停留在 2026-03-22）— **早期模型草案，已停更**，被 `server/internal/domain/`（29 个文件 / 58 个 struct）取代。**以 `server/internal/domain/` 为准**。该目录的 `README.md` 本身也已漂移（例如它列出 `leave.go`，但该文件并不存在）。
+> - `backend/api/`（`api-admin/`、`api-teacher/`、`api-parent/`、`api-doctor/`、`api-platform/`、`api-common.md`）— **仍在维护**，是接口契约的 source of truth，改接口先改这里。
+> - `backend/model/`（18 个 .go 文件，全部停留在 2026-03，最新 2026-03-22）— **早期模型草案，已停更**，被 `server/internal/domain/`（42 个模型文件 + 1 个测试 / 108 个 struct）取代。**以 `server/internal/domain/` 为准**。该目录的 `README.md` 本身也已漂移（例如它列出 `leave.go`，但该文件并不存在）。
 
 ## Spec Workflow (功能规格化)
 
-**规格化工具：OpenSpec**（`openspec/` + `/opsx:*` 命令）。曾评估过 GitHub Spec Kit，结论是不引入——理由与翻盘条件见文末。
+**规格化工具：OpenSpec**（`openspec/` + `/opsx:*` 命令）。曾评估过 GitHub Spec Kit，结论是不引入——理由与翻盘条件见下方「为什么不是 Spec Kit」。
 
 ### 先判断要不要走规格
 
@@ -99,7 +99,7 @@ Project-specific knowledge skills live in `.claude/skills/`:
 ### Go backend (`server/`)
 
 ```bash
-make run               # Start dev server (CONFIG=configs/app.ini go run cmd/api/main.go)
+make run               # Start dev server (CONFIG_PATH=$(CONFIG) go run cmd/api/main.go，CONFIG 默认 configs/app.ini)
 make build             # Build binary to bin/
 make wire              # Regenerate Wire DI code (cd internal/app && wire)
 make test              # Run all tests with race detector
@@ -109,7 +109,7 @@ make tidy              # go mod tidy
 make check             # vet + lint + test
 ```
 
-Config file path via env: `CONFIG_PATH=configs/app.local.ini make run`. Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
+Config file path: `CONFIG=configs/app.local.ini make run`（Makefile 的 `CONFIG` 变量会转成 `CONFIG_PATH` 传给进程；直接 `go run` 时用 `CONFIG_PATH`）。 Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
 
 ### 数据库迁移（`server/`）
 
@@ -169,6 +169,16 @@ npm run build:mp-weixin:test  # Test env build
 >
 > 改完**必须重启 Claude Code**（env 在进程 spawn 时固定，热改无效）。判定是否生效：`wechat_ide(action='status')` 返回的 `node_available` 字段。
 
+### Parent mini-program (`parent/`)
+
+与老师端同构，命令相同；构建产物在 `parent/dist/dev/mp-weixin`：
+
+```bash
+npm run dev:mp-weixin
+npm run build:mp-weixin
+npm run build:mp-weixin:test
+```
+
 ## 🧪 小程序测试验证纪律
 
 **MCP 导航 ≠ 用户操作验证。** `wechat_navigate` 通过 CDP 直接调用 IDE 的路由跳转 API（`reLaunch` / `switchTab`），完全绕过了页面内的业务代码。因此：
@@ -202,8 +212,6 @@ npm run build:mp-weixin:test  # Test env build
 - 端口传错时，`wechat_navigate` 能"成功"导航到只在另一端存在的 `pages/more/index`
 
 **判别是否真的双端**：每次都显式传端口（家长端 9420/9222，老师端 9421/9223）+ 探该端**独有**页面 + 比对 `page_data` 业务字段是否不同。详见下方「🔀 双端同时验证」。
-
-> 🔴 **`success: true` 不代表"验证的是我想要的那个项目"。**
 
 **2. appid 必须是真实值。** 占位符 `请替换为真实小程序AppID` 会让 `cli auto` 在 prepare 阶段以 `code 10 AppID 不合法` 中止 → 端口 9420 永不监听 → automator/screenshot 全废。MCP 把这个报成"CLI auto 连续 3 次返回成功但端口 9420 未监听"——**CLI 退出码是 0**，极具误导性。改完 appid **必须重新构建**（IDE 读 `dist/dev/mp-weixin/project.config.json`，不是 `src/manifest.json`）。
 
@@ -328,12 +336,13 @@ internal/
   app/                   # Wire injector, providers, router registration, wire_gen.go
   config/                # INI loader with env var override
   auth/                  # JWT issue/parse, WeChat code2session, refresh token
-  middleware/             # RequestID → CORS → Logger → AuthJWT → CasbinRBAC
+  middleware/             # Recovery/CORS/RequestID/Logger → AuthJWT → 园所状态 → CasbinRBAC → ModuleGate → consent（按端）→ RequirePermission（admin）
   rbac/                  # Casbin enforcer init
-  domain/                # GORM entity models (58 structs covering 6 business layers)
+  domain/                # GORM entity models (108 structs / 42 files)
   repository/            # Data access layer (one repo file per domain)
   service/               # Business logic layer (one service file per domain)
   handler/http/          # HTTP handlers: Handler struct aggregates all *Service fields
+  ai/face/               # 腾讯云人脸识别（照片点名 / 底库）
   storage/oss/           # Alibaba Cloud OSS (presigned URLs, upload)
 pkg/
   log/                   # slog init + context propagation
@@ -341,21 +350,32 @@ pkg/
   pagination/            # Page/PageSize helpers
 ```
 
-**辅助命令（`cmd/` 下的独立 `main.go`）**：不进 HTTP 服务，用 `go run ./cmd/<name>` 单独执行。除 `initcheck` 外均读取 `configs/app.ini`。
+**辅助命令（`cmd/` 下的独立 `main.go`）**：不进 HTTP 服务，用 `go run ./cmd/<name>` 单独执行。均读取 `configs/app.ini`（可用 `CONFIG_PATH` / `MYSQL_DSN` 覆盖）。
 
 | 命令 | 作用 | 性质 |
 | ------------ | ---------------------------------------------- | ---- |
 | `chkgrowth`  | 打印 kindergarten 4 的成长记录总数与最近 3 条 | 只读 |
 | `dbcheck`    | 打印指定表的索引定义与行数，用于核对迁移是否生效 | 只读 |
-| `fixpwd`     | 把指定手机号家长的密码重置为固定值 | 写入 |
-| `linkwx`     | 打印指定手机号的 openid 绑定情况 | 只读 |
-| `openid`     | 打印最近 5 个用户 openid，并把最新 openid 绑给家长账号 | 写入 |
+| `fixpwd`     | 把两个硬编码演示手机号（13900010001/10002）的密码重置为 `Parent@123` | 写入 |
+| `linkwx`     | 打印上述两个硬编码手机号的 openid 绑定情况 | 只读 |
+| `openid`     | 打印最近 5 个用户 openid，并把最新 openid 绑给上述两个演示家长账号 | 写入 |
 | `seedgrowth` | 灌入成长记录种子数据 | 写入 |
 | `seedattendance` | 灌入出勤演示数据（3 个工作日 × 全体在读学生） | 写入 |
 | `seedleaves` | 灌入 6 条请假演示数据 | 写入 |
 | `seedpickup` | 灌入当日接送记录 + 待审核授权人 | 写入 |
 | `refreshtasks` | **删除** kindergarten 4 的全部 `ParentTask` / `TaskCheckIn` 后重建种子任务 | ⚠️ **破坏性** |
 | `initcheck`  | 创建测试园所+管理员并打印计数，随后 **`Unscoped().Where("1=1")` 清空 `users` / `user_roles` / `kindergartens`** | ⚠️ **破坏性** |
+| `mktoken`    | 为指定手机号+角色签发本地 JWT（验证辅助） | 只读/测试 |
+| `setadmin` / `setpwd` | `setadmin` 创建/更新后台账号（默认 admin/123456）；`setpwd` 重置硬编码用户 id 61/65 | 写入 |
+| `platformadmin` | 创建或重置首个平台方账号 | 写入 |
+| `redactlogs` | 回填脱敏 `operation_logs.detail` 中的手机号/身份证 | 写入 |
+| `albumretention` | **硬删**软删已满 180 天的相册及关联（支持 `-dry-run`） | ⚠️ **破坏性** |
+| `dietfood`   | 导入食物成分 CSV 到平台预置食物库（kg=0） | 写入 |
+| `facecheck`  | 腾讯云人脸识别接入验证与质量实测 | 读取/诊断 |
+| `seedgrowthfeed` | 灌入家长端成长 feed 验证所需最小数据 | 写入 |
+| `seedqrcode` | 补全接送二维码链路种子数据 | 写入 |
+
+> `migrate` / `seedbase` / `schemadump` 见上方「数据库迁移」一节，此处不重复。
 
 > ✅ **三个 `seed*` 命令的由来**：出勤 / 请假 / 接送的演示数据原先由 service 层的
 > `ensureBootstrap*` 函数在**读取路径**上按需生成。那意味着打开一次后台看板或列表页
@@ -365,9 +385,11 @@ pkg/
 > 三者共用 `cmd/internal/seedutil`（配置、连库、园所、时区），
 > 园所默认 4，可用 `SEED_KG_ID=7 go run ./cmd/seedleaves` 覆盖；均幂等。
 
-> ⚠️ 这批命令是**针对特定 kindergarten（id=4）的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、手机号、任务文案全部硬编码。**不要在生产库上执行。**
+> ⚠️ 表中 `chkgrowth` / `fixpwd` / `linkwx` / `openid` / `refreshtasks` 及多数 `seed*` 是**针对特定 kindergarten（id=4）或硬编码手机号的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、手机号、任务文案全部写死。**不要在生产库上执行。**
 >
-> ⚠️ 两个破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部用户、角色与园所**。后者只适用于一次性的测试库自检。
+> `migrate` / `seedbase` / `schemadump` / `setadmin` / `platformadmin` / `albumretention` / `mktoken` 是环境级工具，可按需复用；仍需遵守各自的权限与备份要求。
+>
+> ⚠️ 破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部用户、角色与园所**；`albumretention` 会**硬删**到期相册及关联。前两者只适用于一次性测试库自检。
 >
 > `initcheck` 的连接串已改为读 `configs/app.ini`（可用 `MYSQL_DSN` 覆盖），管理员口令改为读环境变量 `INIT_ADMIN_PASSWORD`（未设置则直接退出）。**不要再把凭据写回源码**——即使后续删除，git 历史仍可追溯。
 
@@ -379,7 +401,7 @@ pkg/
 >
 > 会打印该表的全部索引（标注唯一/普通、列出列序）与行数。跑完 `make migrate` 或手工 SQL 后，用它确认线上库真的变了，而不是假设迁移会按预期执行。
 
-**Middleware chain**: `gin.Recovery → CORS → RequestID → RequestContextLogger → [AuthJWT → CasbinRBAC on authed groups]`
+**Middleware chain**: `gin.Recovery → CORS → RequestID → RequestContextLogger`；authed 组：`AuthJWT → RequireActiveKindergarten → CasbinRBAC → ModuleGate`，再按端叠加 `RequireConsent`（admin/teacher/parent）与 `RequirePermission`（仅 admin）；`/platform` 走 `PlatformAuth → CasbinRBAC`
 
 **Auth flow (mini-program)**: Client calls `wx.login()` → gets code → `POST /api/v1/auth/login/wechat` with code + role → backend calls WeChat code2session → issues JWT access + refresh tokens.
 
@@ -400,9 +422,9 @@ pkg/
 
 **Auth flow (admin)**: `POST /api/v1/auth/login/password` with username/password → JWT access + refresh tokens. Tokens stored in cookies (`admin_token`, `admin_refresh`).
 
-**Casbin RBAC**: Enforcer checks `(role, route_path, http_method)` for every authenticated request. `CasbinRBAC` middleware iterates user's roles and allows if any role matches. Admin-specific RBAC (roles/permissions) also stored in DB (`admin_rbac.go`).
+**Casbin RBAC**: Enforcer checks `(role, route_path, http_method)` for every authenticated request. `CasbinRBAC` middleware iterates user's roles and allows if any role matches. Admin-specific RBAC (roles/permissions) also stored in DB（见 `service/admin_authz_service.go`、`role_service.go`、`role_catalog.go`）。
 
-**Wire DI**: After adding a new repository/service/handler, run `make wire` in `server/internal/app` to regenerate `wire_gen.go`. The handler struct aggregates all services; a new module requires updates to handler struct, constructor, provider set, and router registration.
+**Wire DI**: After adding a new repository/service/handler, run `make wire` in `server/` (it runs `cd internal/app && wire`) to regenerate `wire_gen.go`. The handler struct aggregates all services; a new module requires updates to handler struct, constructor, provider set, and router registration.
 
 > ⚠️ **Wire 不会隐式把具体类型匹配到接口。** service 层为可测试性把依赖声明成接口（`ClassRepository`、`GrowthRepository`、`OpLogger`、`TeacherLookup`），每新增一个都必须在上面的 `wire.go` 里补一条 `wire.Bind`，否则报 `no provider found for <iface>`。
 >
@@ -414,19 +436,21 @@ pkg/
 
 ### API route structure (`/api/v1`)
 
-- `POST /auth/login/wechat|password|sms`, `POST /auth/refresh`, `POST /auth/logout`
+- `POST /auth/login/wechat|password|sms`, `POST /auth/sms/send`, `POST /auth/refresh`, `POST /auth/logout`
+- `POST /platform/auth/login`；`GET /system/status`、`POST /system/init`（初始化/健康自检）
 - `GET|PUT /common/user/profile`, `POST /common/upload`
-- `GET|PUT /common/messages`, `/common/messages/unread-count`
-- `/admin/*` — 22 个资源组：dashboard, classes, students, teachers, parents, settings, kindergarten, admins, roles, attendance, leaves, pickup, growth, tasks, points, achievements, notices, announcements, audit, export, health, dicts；另有单条路由 `GET /admin/logs`（操作日志，不构成组）
-- `/teacher/*` — 10 个资源组：home, notices, leaves, growth, pickup, calendar, class, messages, tasks, dicts
-- `/parent/*` — 9 个资源组：home, notices, leaves, growth, pickup, tasks, points, class, student
-- `/doctor/*` — 1 个资源组：health（晨检/保健医）
+- `GET /common/messages`、`GET /common/messages/unread-count`、`PUT /common/messages/:id/read`、`PUT /common/messages/read-all`
+- `/admin/*` — 28 个资源组：billing, dashboard, classes, students, teachers, parents, settings, kindergarten, admins, roles, attendance, leaves, pickup, growth, albums, tasks, task-activities, points, achievements, notices, announcements, audit, export, health, calendar, timetable, diet, dicts；另有单条路由 `GET /admin/logs`（操作日志，不构成组）
+- `/teacher/*` — 12 个资源组：home, notices, leaves, growth, achievements, pickup, calendar, class, albums, messages, tasks, dicts
+- `/parent/*` — 11 个资源组：home, notices, leaves, growth, pickup, tasks, points, class, class-albums, student, health
+- `/doctor/*` — 2 个资源组：calendar, health（晨检/保健医）
+- `/platform/*` — 24 条路由（园所入驻 / 套餐 / 订单 / 分销 / 佣金），独立信任域：`PlatformAuth` + `CasbinRBAC`，凭证 `scope=platform`，不走 JWT / 园所门禁（ADR-0014）
 
-> 四端路由分组见 `server/internal/app/router.go`。新增端或分组时必须同步此列表与 Casbin policy。
+> 五个路由分组（admin / teacher / parent / doctor / platform）见 `server/internal/app/router.go`。新增端或分组时必须同步此列表与 Casbin policy。
 
 ### Data model layers
 
-> 概念分层引自 `backend/model/README.md`（该文件已停更，**具体 struct 以 `server/internal/domain/` 为准**，共 58 个 struct / 29 个文件）。
+> 概念分层引自 `backend/model/README.md`（该文件已停更，**具体 struct 以 `server/internal/domain/` 为准**，共 108 个 struct / 42 个模型文件）。
 
 1. **Organization & People**: Kindergarten, Class, User (+ UserRole), Student, StudentParent, ClassTeacher
 2. **Notices & Communication**: Notice, NoticeReadLog, NoticeTemplate, LeaveRequest, Announcement
@@ -434,10 +458,14 @@ pkg/
 4. **Growth Records**: GrowthDailyLog, GrowthMedia, GrowthComment, GrowthLike, GrowthReport
 5. **Tasks & Points**: ParentTask, TaskCheckIn, PointAccount, PointTransaction, Achievement
 6. **Admin-only**: ContentAudit, AdminRole, AdminPermission, OperationLog
+7. **Health & Face**: MorningHealthCheck, HealthCheckMedia, StudentFace, RecognitionJob
+8. **Diet & Nutrition**: DietConfigSnapshot, MealConfig, Food, FoodCategory, DriAgeTarget, DietGroupObject, MealPlan, Recipe 等 19 个 struct
+9. **Albums**: Album, AlbumPhoto, AlbumStudent, AlbumPhotoStudent
+10. **SaaS Commercial**: Plan, PlanModule, PlanTier, Order, Payment, Entitlement, Distributor, CommissionLedger, PlatformAdmin, PlatformOperationLog
 
-`server/internal/domain/` 中另有上述分层未涵盖的域：`academic_year`、`calendar`（班级日历）、`daily_summary`、`dict`、`export_task`、`feedback`、`health_check`、`message`、`teacher_invitation`、`teacher_message`、`kindergarten_app_setting`；`base.go` / `file.go` 为共享基础模型（`BaseModel` / `SoftDeleteModel` / 文件表），不属于业务域。
+`server/internal/domain/` 中另有上述分层未涵盖的域：`academic_year`、`calendar`（班级日历）、`consent`（隐私同意）、`daily_summary`、`dict`、`export_task`、`feedback`、`message`、`parent_setting`、`teacher_invitation`、`teacher_message`、`kindergarten_app_setting`、`audit` / `rbac`（管理端权限）；`base.go` / `file.go` 为共享基础模型（`BaseModel` / `SoftDeleteModel` / 文件表），不属于业务域。
 
-All business tables include `kindergarten_id` for multi-tenancy. Core business data uses `SoftDeleteModel`.
+All tenant business tables include `kindergarten_id` for multi-tenancy; platform-level tables (`platform_admins` / `distributors` / `plans` / `plan_modules` / `plan_tiers`) are intentionally global (ADR-0014). Core business data uses `SoftDeleteModel`.
 
 ### Admin web structure (`admin/`)
 
@@ -451,12 +479,12 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 ### Teacher mini-program structure (`teacher/`)
 
-- `src/pages.json` — uni-app page routing (**22 pages**, 无 `tabBar` 字段；工作台/班级/消息/我的 4 页用自绘底栏):
+- `src/pages.json` — uni-app page routing (**23 pages**, 无 `tabBar` 字段；工作台/班级/消息/我的 4 页用自绘底栏):
 
   | 模块 | 页面 |
   | --------- | ------------------------------------------------------ |
   | 工作台    | `index/index`                                          |
-  | 登录      | `auth/login`                                           |
+  | 登录/同意 | `auth/login`、`auth/consent`                           |
   | 通知      | `notice/index`、`notice/create`                        |
   | 成长记录  | `growth/index`、`growth/create`、`growth/detail`       |
   | 接送      | `pickup/index`、`pickup/records`                       |
@@ -478,13 +506,19 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 
 与老师端同构（同版本 uni-app、同样的 `utils/`+`api/` 分层与静默登录），差异如下：
 
-- `src/pages.json` — **29 pages，有 tabBar**（老师端没有）
+- `src/pages.json` — **31 pages，有 tabBar**（老师端没有）
 - tabBar 4 项：`index/index` 首页、`growth/index` 成长时光、`pickup/index` 接送、`profile/index` 我的
-- 页面模块：首页、登录/绑定（`auth/login`、`auth/bind`）、通知（列表+详情）、请假（列表+新建+详情）、成长（列表+详情+相册+**报告**）、接送（+**二维码**、**授权人管理**）、亲子任务（列表+详情）、**积分**、班级、日历、**幼儿档案**、**反馈**、设置、消息、我的
+- 页面模块：首页、登录/绑定/同意（`auth/login`、`auth/bind`、`auth/consent`、`auth/policy`）、通知（列表+详情）、请假（列表+新建+详情）、成长（列表+详情+相册+**报告**）、**班级相册**（`album/*`）、接送（+**二维码**、**授权人管理**）、亲子任务（列表+详情+**任务墙**）、**积分**、班级、日历、**幼儿档案**、**反馈**、设置、消息、我的
 - 相对老师端多出的能力：绑定关系、成长报告、接送二维码与授权人、积分、反馈
 - 登录同样静默：`App.vue` `onLaunch` → `ensureLogin()`，`role` 在 `src/api/auth.js` 硬编码为 `"parent"`
 
 > 两端登录逻辑各自独立实现（各有一份 `utils/login.js`，导出签名一致），**不是共享包**。修改登录流程时两端都要改。
+
+### Shared frontend assets（teacher / parent）
+
+- `shared-ui/` — 两端共用组件的**唯一真相源**；两端的 `src/components/` 由 `scripts/sync-ui.js` 生成，**禁止手改**（`predev` / `prebuild` 自动同步）。
+- `shared-design-tokens/` — 三端样式 token 唯一真相源，详见下方「Design Token 规范」。
+- `website/` 复用 `kindergarten-design-tokens/tokens-admin.css`（`predev` / `prebuild` 会先构建 tokens）。
 
 ## ⚠️ Known Issues（已知问题，动手前先看）
 
@@ -497,11 +531,11 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
      3. 检查仓库托管方是否有该仓库的公开/共享访问
    - 在密码轮换前，**不要把该仓库公开或分享给外部**。
 
-2. **`backend/model/` 已停更，与 `server/internal/domain/` 漂移** — `backend/model/` 18 个 .go 文件全部停在 2026-03-22；`server/internal/domain/` 有 29 个文件 / 58 个 struct，是唯一实现。`backend/api/` 则相反（最近更新 2026-06-02），仍是接口契约的 source of truth。**写 model 看 `server/`，写 API 看 `backend/api/`。**
+2. **`backend/model/` 已停更，与 `server/internal/domain/` 漂移** — `backend/model/` 18 个 .go 文件全部停在 2026-03（最新 2026-03-22）；`server/internal/domain/` 有 42 个模型文件 / 108 个 struct，是唯一实现。`backend/api/` 则相反（最近更新 2026-11-15），仍是接口契约的 source of truth。**写 model 看 `server/`，写 API 看 `backend/api/`。**
 
 3. **`server/cmd/` 下多为一次性调试脚本** — 见「辅助命令」一节的警告，`refreshtasks` 具有破坏性。
 
-4. **`.gitignore` 的 `*.exe` 匹配不到 Delve 调试产物** — `__debug_bin.exe<数字>` 的扩展名是 `.exe<数字>`，不匹配 `*.exe`，导致 3 个调试二进制被提交进仓库。修复方式见 `server/.gitignore`。
+4. **`.gitignore` 的 `*.exe` 匹配不到 Delve 调试产物** — `__debug_bin.exe<数字>` 的扩展名是 `.exe<数字>`，不匹配 `*.exe`，曾导致 3 个调试二进制被提交进仓库。✅ 已在 `server/.gitignore` 增加 `__debug_bin*`，当前无跟踪产物。
 
 ## 🎨 Design Token 规范（三端必须遵守）
 
@@ -528,7 +562,7 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
   padding: $spacing-md $spacing-lg;
   box-shadow: $shadow-sm;
   color: $color-text-primary;
-  font-size: $font-size-base;
+  font-size: $typography-font-size-base;
 }
 
 // ✅ 正确：语义色
@@ -576,18 +610,18 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 |---|---|---|
 | 品牌主色 | `$color-brand-primary` | 老师端 #ff8a3d / 家长端 #F97316 / 管理端 #3B82F6 |
 | 背景 | `$color-bg-page`, `$color-bg-card` | 端差异 |
-| 文字 | `$color-text-primary`, `body`, `muted`, `hint` | 共享 |
+| 文字 | `$color-text-primary` / `-body` / `-muted` / `-hint` | 共享 |
 | 功能色 | `$color-semantic-success`, `warning`, `danger`, `info` + 对应的 `-bg` 浅底 | 共享 |
-| 圆角 | `$border-radius-sm`(12rpx) ~ `2xl`(48rpx), `full`(19998rpx) | 共享 |
+| 圆角 | `$border-radius-sm`(8rpx) ~ `2xl`(48rpx), `full`(19998rpx) | 共享 |
 | 阴影 | `$shadow-sm`, `md`, `lg`（多层琥珀暖调） | 共享 |
 | 渐变 | `$gradient-brand`, `-brand-soft`, `-page` | 共享 |
 | 间距 | `$spacing-xs`(8rpx) ~ `xl`(32rpx) | 共享 |
-| 字号 | `$font-size-xs`(22rpx) ~ `3xl`(40rpx) | 共享 |
-| 字重 | `$font-weight-normal`(400) ~ `bold`(700) | 共享 |
+| 字号 | `$typography-font-size-xs`(22rpx) ~ `3xl`(40rpx) | 共享 |
+| 字重 | `$typography-font-weight-normal`(400) ~ `bold`(700) | 共享 |
 | 动画 | `$animation-duration-fast`(150ms), `base`(300ms), `slow`(500ms) | 共享 |
 
 > 📐 **单位换算**：`tokens.json` 的数值是 **px 设计稿值**，`sd.config.js` 构建时 `×2` 输出 rpx。
-> 例：`borderRadius.xl = 16` → 构建产物 `$border-radius-xl: 32rpx`。**改 token 时写 px，不是 rpx。**
+> 例：`borderRadius.xl = 12` → 构建产物 `$border-radius-xl: 24rpx`。**改 token 时写 px，不是 rpx。**
 
 ### 组件级 Token（原子 token 之上的语义层）
 
@@ -615,7 +649,7 @@ All business tables include `kindergarten_id` for multi-tenancy. Core business d
 | **输入框** | `$component-input-height` | 88rpx | 输入框高度 |
 | | `$component-input-radius` | 24rpx | 输入框圆角 |
 | **标签** | `$component-badge-padding-x` | 20rpx | 标签水平内边距 |
-| | `$component-badge-radius` | 9999rpx | 标签圆角（胶囊） |
+| | `$component-badge-radius` | 19998rpx | 标签圆角（胶囊） |
 | | `$component-badge-font-size` | 22rpx | 标签字号 |
 
 **产物路径:**
@@ -681,6 +715,9 @@ npm run design:test                                  # 门禁自身的结构断�
 - Wire-generated file `internal/app/wire_gen.go` must be regenerated (`make wire`) after DI changes
 - API specs in `backend/api/` are the source of truth; handlers and services must conform to them
 - Design tokens source: `shared-design-tokens/tokens.json`. Generated `build/` files must be committed alongside source changes
+- 新增 `/admin` 路由必须在 `server/internal/middleware/admin_perm.go` 的 `adminRoutePermission` 登记权限码，否则启动自检直接失败（`router.go` 拒绝启动）
+- 新增 premium 模块必须在 `server/internal/middleware/module_gate.go` 的 `premiumRouteRules` 命中至少一条已注册路由，否则启动失败
+- `teacher/src/components/`、`parent/src/components/` **禁止手改**：唯一真相源是 `shared-ui/`，由 `scripts/sync-ui.js` 在 `predev` / `prebuild` 同步
 
 ## Agent skills
 
