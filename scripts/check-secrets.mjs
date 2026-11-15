@@ -52,7 +52,7 @@ const CONTENT_RULES = [
   ['wechat-app-secret', /\b[a-z_]*secret\s*[:=]\s*['"]?[0-9a-f]{32}['"]?\s*$/i],
   ['oss-secret', /\bOSS_[A-Z0-9_]*(?:SECRET|KEY)\s*[:=]\s*['"][^'"]{8,}['"]/i],
   ['password-assignment', /\b(?:password|passwd|pwd|secret|token|api[_-]?key)\s*[:=]\s*['"][^'"]{6,}['"]/i],
-  // ini 风格不加引号：password = xiniaoshop / access_key_id = LTAI...
+  // ini 风格不加引号：password = <明文口令> / access_key_id = <明文 AK>
   [
     'ini-credential-assignment',
     /^\s*(?:password|passwd|pwd|secret|secret_key|secret_id|access_key_id|access_key_secret|token|api[_-]?key)\s*=\s*[^\s$"'<>*{}()[\].;,]{8,}\s*$/i,
