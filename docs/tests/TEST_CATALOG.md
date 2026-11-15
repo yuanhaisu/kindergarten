@@ -1332,45 +1332,53 @@
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
-| TC-NEW-CAT-0001 | 新建套餐引用已注册模块 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0001 | 新建套餐引用已注册模块 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-CAT-0002 | 引用未注册模块被拒 | P0 | Unit / Contract | ✅ (`TestPlan_RejectsUnknownModule`) |
-| TC-NEW-CAT-0003 | 套餐新增模块后老园所不获得 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-CAT-0004 | 套餐调价后老订单金额不变 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0003 | 套餐新增模块后老园所不获得 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PlanChangeAfterConfirmKeepsSnapshot`) |
+| TC-NEW-CAT-0004 | 套餐调价后老订单金额不变 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-CAT-0005 | 改价后新订单使用新价 | P0 | Unit / Contract | ✅ (`TestOrder_NewOrdersUseCurrentPrice`) |
 | TC-NEW-CAT-0006 | 按幼儿数落入对应档位 | P0 | Unit / Contract | ✅ (`TestOrder_TierByStudentCountAndFrozen`) |
 | TC-NEW-CAT-0007 | 学期中人数变动不改档位 | P0 | Unit / Contract | ✅ (`TestOrder_TierByStudentCountAndFrozen`) |
 | TC-NEW-CAT-0008 | 可查询可售模块清单 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-CAT-0009 | 档位区间必须连续且最高档开口 | P0 | Unit / Contract | ✅ (`TestPlanTier_RejectsCoverageGapOrOverlap`) |
+| TC-NEW-CAT-0010 | 历史配置落不到档时拒绝建单 | P0 | Unit / Contract | ✅ (`TestOrder_UnresolvedTierReturnsError`) |
+| TC-NEW-CAT-0011 | 只统计在读幼儿数 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_OnlyActiveStudentsDriveTier`) |
 
 ### 订单收款 (ORD)
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
-| TC-NEW-ORD-0001 | 确认后目录变更不影响订单 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ORD-0002 | 首付后进入部分收款 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ORD-0003 | 收清后进入已收清 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ORD-0004 | 退款后已收金额回落 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ORD-0005 | 退款冲回佣金 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ORD-0006 | 订单生效即发放授权 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ORD-0007 | 取消订单后授权失效 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ORD-0001 | 确认后目录变更不影响订单 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PlanChangeAfterConfirmKeepsSnapshot`) |
+| TC-NEW-ORD-0002 | 首付后进入部分收款 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-ORD-0003 | 收清后进入已收清 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-ORD-0004 | 退款后已收金额回落 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-ORD-0005 | 退款冲回佣金 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-ORD-0006 | 订单生效即发放授权 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-ORD-0007 | 取消订单后授权失效 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-ORD-0008 | 保存开票信息 | P0 | Unit / Contract | ✅ (`TestOrder_InvoiceInfoRoundTrip`) |
+| TC-NEW-ORD-0009 | 退款后满三十天净额归零 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_RefundNetZeroAfter30Days`) |
+| TC-NEW-ORD-0010 | 有未退款收款时取消被拒 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_CancelGuardThenRefundThenCancel`) |
+| TC-NEW-ORD-0011 | 重复幂等键只落一条收款 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentIdempotencyAndCaps`) |
+| TC-NEW-ORD-0012 | 超额收款与超额退款被拒 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentIdempotencyAndCaps`) |
+| TC-NEW-ORD-0013 | 未来收款时间被拒 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentIdempotencyAndCaps`) |
 
 ### 功能授权 (ENT)
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
-| TC-NEW-ENT-0001 | 一模块在期另一模块已过期 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ENT-0002 | 同一模块叠加时取并集 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0001 | 一模块在期另一模块已过期 | P0 | Unit / Contract | ✅ (`TestEntitlement_DecideGraceAndReadOnly`) |
+| TC-NEW-ENT-0002 | 同一模块叠加时取并集 | P0 | Unit / Contract | ✅ (`TestEntitlement_UnionOfOverlappingGrants`) |
 | TC-NEW-ENT-0003 | 未购模块接口被拒 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-ENT-0004 | base 模块始终可用 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-ENT-0005 | 未购模块入口不可见 | P0 | Unit / Contract | 🔲 |
 | TC-NEW-ENT-0006 | 授权变更后入口即时更新 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ENT-0007 | 宽限期内仍可写入 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ENT-0008 | 降级后新增被拒 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ENT-0009 | 降级后历史仍可读 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ENT-0010 | 收款后立刻可写 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-ENT-0011 | 新开通园所获得试用 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0007 | 宽限期内仍可写入 | P0 | Unit / Contract | ✅ (`TestEntitlement_DecideGraceAndReadOnly`) |
+| TC-NEW-ENT-0008 | 降级后新增被拒 | P0 | Unit / Contract | ✅ (`TestEntitlement_DecideGraceAndReadOnly`) |
+| TC-NEW-ENT-0009 | 降级后历史仍可读 | P0 | Unit / Contract | ✅ (`TestEntitlement_DecideGraceAndReadOnly`) |
+| TC-NEW-ENT-0010 | 收款后立刻可写 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentThenConfirmRestoresWrite`) |
+| TC-NEW-ENT-0011 | 新开通园所获得试用 | P0 | Unit / Contract | ✅ (`TestPlatformService_LoginAndOnboard`) |
 | TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | ✅ (`TestEntitlement_TrialExpiryKeepsData`) |
-| TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_OverLimitDoesNotBlockExistingBusiness`) |
 
 ### 分销佣金 (DST)
 
@@ -1378,11 +1386,15 @@
 |---|---|---|---|---|
 | TC-NEW-DST-0001 | 订单确认后改归因被拒 | P0 | Unit / Contract | ✅ (`TestOrder_AttributionFrozen`) |
 | TC-NEW-DST-0002 | 分销商无登录入口 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-DST-0003 | 部分收款只按已收部分计佣 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-DST-0004 | 收款退款后佣金冲回 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-DST-0005 | 未满三十天不可结算 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0003 | 部分收款只按已收部分计佣 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-DST-0004 | 收款退款后佣金冲回 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-DST-0005 | 未满三十天不可结算 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-DST-0006 | 满三十天后可结算 | P0 | Unit / Contract | ✅ (`TestCommission_PromotedAfter30Days`) |
 | TC-NEW-DST-0007 | 台账金额不可手工改写 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-DST-0008 | 部分退款后剩余净额可结算 | P0 | Unit / Contract | ✅ (`TestCommissionNet_PartialRefundKeepsRemainingNetSettleable`) |
+| TC-NEW-DST-0009 | 冲回精确关联被退收款 | P0 | Unit / Contract | ✅ (`TestCommissionNet_RefundLinksExactPaymentCommission`) |
+| TC-NEW-DST-0010 | 冲回行合计与累计冲回一致 | P0 | Unit / Contract | ✅ (`TestCommissionNet_ReversalRowsSumToAccumulated`) |
+| TC-NEW-DST-0011 | 已退款佣金不计入可结算 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_RefundNetZeroAfter30Days`) |
 
 ### 隐私政策同意 (CNS)
 
