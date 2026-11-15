@@ -36,8 +36,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api/v1',
-      // 官网地址：同意页的隐私政策/用户协议链接；生产由部署环境注入。
-      // 生产构建不能把 localhost 烤进产物（check-admin-static 会拦），故 dev 之外回退到线上官网。
+      // 官网地址：同意页的隐私政策/用户协议链接。
+      // 生产构建不能把 localhost 烤进产物（check-admin-static 会拦），故 dev 之外回退到
+      // 生产默认值 https://www.nurtureplanet.cn；部署时用 NUXT_PUBLIC_SITE_URL 覆盖
+      // （例如 staging 指向 https://test-www.nurtureplanet.cn）。
       siteUrl:
         process.env.NUXT_PUBLIC_SITE_URL ||
         (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://www.nurtureplanet.cn'),

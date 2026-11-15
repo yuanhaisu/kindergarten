@@ -19,7 +19,7 @@ export const ADMIN_TOKEN_MAX_AGE = 60 * 60 * 24 * 7
 export const PLATFORM_TOKEN_MAX_AGE = 60 * 60 * 24
 
 /** 不随环境变化的 Cookie 默认属性 */
-export const AUTH_COOKIE_DEFAULTS = { sameSite: 'lax' } as const
+const authCookieDefaults = { sameSite: 'lax' } as const
 
 export interface AuthCookieOptions {
   sameSite: 'lax'
@@ -43,7 +43,7 @@ export function buildAuthCookieOptions(
 ): AuthCookieOptions {
   const protocol = input.protocol ?? currentProtocol()
   const options: AuthCookieOptions = {
-    ...AUTH_COOKIE_DEFAULTS,
+    ...authCookieDefaults,
     secure: protocol === 'https:',
   }
   // maxAge 缺省时不出现该键：Nuxt 据此把 Cookie 写成会话级。

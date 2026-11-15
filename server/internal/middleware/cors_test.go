@@ -61,6 +61,9 @@ func TestCORSWildcardAllowsAnyOrigin(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
+	// 通配符分支同样要 Vary：响应与来源无关，但缓存仍须按 Origin 分桶，
+	// 否则将来把 "*" 改回白名单时，中间缓存可能把旧响应复用给其他来源。
+	assert.Equal(t, "Origin", w.Header().Get("Vary"))
 }
 
 // 配置项两侧的空格不能影响精确匹配；回显值必须是去空格后的来源。
