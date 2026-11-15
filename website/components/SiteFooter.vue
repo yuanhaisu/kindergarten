@@ -20,7 +20,17 @@ const year = new Date().getFullYear()
         </nav>
 
         <div class="footer__meta">
-          <span>{{ site.filingName }} · {{ site.icp }}</span>
+          <span>
+            {{ site.filingName }} ·
+            <a
+              class="footer__icp"
+              href="https://beian.miit.gov.cn/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ site.icp }}
+            </a>
+          </span>
           <span>© {{ year }} {{ site.name }}</span>
         </div>
       </div>

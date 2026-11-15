@@ -5,15 +5,15 @@
 - 域名：`nurtureplanet.cn`（ICP 备案已于 2026-11-13 通过；DNS 尚未解析）。
 - 站点已建完，并通过 Impeccable finish review：`disposition: ship`，7 项 material fix 全部 resolved，无回归。
 - 本地构建通过：`cd website && npm run generate` → `.output/public`。
-- **未公开部署**：域名 ICP 备案进行中，DNS 尚未解析。
+- **未公开部署**：ICP 已通过，DNS 与证书 SAN 尚未就绪。
 
 ## 阻塞项与待补项（需人工 / 外部条件）
 
 | # | 事项 | 说明 |
 |---|---|---|
-| 1 | ICP 备案 | ✅ **2026-11-13 已通过**；待把备案号填入 `site.ts` 的 `icp`，再按下方顺序做 DNS 与证书 |
-| 2 | DNS | `www` / `test-www` 各加一条 A 记录指向 ECS EIP |
-| 3 | 证书 SAN | 现有证书需覆盖 `www` / `test-www`（以及 apex）；少一个主机名会让对应 server block 握手失败 |
+| 1 | ICP 备案 | ✅ **2026-11-13 已通过**；备案号 `湘ICP备2026054245号-1` 已填入 `site.ts`，页脚已展示并链接工信部备案系统 |
+| 2 | DNS | 为 `@`、`www`、`api`、`admin`、`test-www`、`test-api`、`test-admin` 各加一条 A 记录指向 ECS EIP |
+| 3 | 证书 SAN | 现有证书需覆盖 `nurtureplanet.cn`、`www`、`api`、`admin`、`test-www`、`test-api`、`test-admin`；少一个主机名会让对应 server block 握手失败 |
 | 4 | 企业微信二维码 | **已暂缓（2026-11-09）**：企业微信认证需 300 元，暂不支出。官网当前以邮件为唯一联系方式；代码保留 `contact.wecomQr` 条件位，认证后放二维码即可启用 |
 | 5 | 域名邮箱 | ✅ **已完成**：`contact@nurtureplanet.cn`（阿里企业邮箱免费版），已填入 `content/site.ts` → `contact.email` |
 | 6 | 主体与备案号 | ✅ **已完成**：主体 `湘潭市岳塘区稚序软件开发工作室` 在 `legalEntity`；备案号 `湘ICP备2026054245号-1` 已填 `icp`；备案网站名称 `稚序saas软件服务平台` 已在页脚展示。两个法务页定稿后再把 `legalDraft` 改为 `false` |
@@ -27,13 +27,13 @@
 - `deploy/nginx/kindergarten.conf.tmpl`：新增 `www.${DOMAIN}`（生产）与 `test-www.${DOMAIN}`（预发），apex 301 → `www`。
 - `docs/runbook/deployment.md`、`docs/deployment-architecture.md` 已同步。
 - `docs/adr/0017-website-on-shared-ecs-static.md`：官网作为同一 ECS / nginx 的第三个静态产物。
-- ⚠️ `deploy/` 与 `.github/workflows/release.yml` 在当前工作区是**未跟踪文件**，提交时不要漏。
+- ✅ `deploy/` 与 `.github/workflows/release.yml` 已提交，不需要再补。
 
 ## 备案通过后的执行顺序
 
-1. 补 DNS A 记录（`www.nurtureplanet.cn` / `test-www.nurtureplanet.cn`），等生效。
-2. 重签证书，把 `www` / `test-www` 加入 SAN。
-3. 填剩余占位项：`website/content/site.ts` 的 `icp`（`baiduAnalyticsId` 可选）。主体已是「湘潭市岳塘区稚序软件开发工作室」；企业微信二维码已暂缓，不阻塞上线。
+1. 补 DNS A 记录：`@`、`www`、`api`、`admin`、`test-www`、`test-api`、`test-admin` 指向 ECS EIP，等生效。
+2. 重签证书，把上述 7 个主机名加入 SAN。
+3. 可选占位项：`website/content/site.ts` 的 `baiduAnalyticsId`。主体、备案号与页脚备案名称均已完成；企业微信二维码已暂缓，不阻塞上线。
 4. 本地 `cd website && npm run generate` 复核。
 5. 打 tag 走 release：先 staging（`test-www`），再 production（人工批准）。
 6. 验证：`curl -fsSI https://www.<domain>/`、`/privacy`、`/terms`、一个不存在的路径返回品牌化 404。
