@@ -2,9 +2,9 @@
 # 由 GitHub Actions 通过 SSH stdin 执行：
 #   ssh deploy@host "bash -s -- prod v2026.11.04-1 /tmp/admin-....tar.gz /tmp/website-....tar.gz" < deploy/scripts/deploy.sh
 #
-# 顺序：迁移 → 拉取/启动 api → /ready 探测 → 切换 admin/website symlink → 记录 tag。
+# 顺序：迁移 → 基础种子 → 拉取/启动 api → /ready 探测 → 切换 admin/website symlink → 记录 tag。
 # api 必须先于静态包就绪：新静态包可能调用新接口，反序会出现「新页面打旧 api」的 502/404 窗口。
-# 迁移失败不动旧 api 与静态包；api 不就绪只回滚 api；静态切换失败则回滚静态与 api。
+# 迁移或种子失败不动旧 api 与静态包；api 不就绪只回滚 api；静态切换失败则回滚静态与 api。
 set -euo pipefail
 
 env=${1:?usage: deploy.sh <prod|staging> <tag> <admin-tar> [website-tar]}
@@ -93,6 +93,11 @@ switch_static() {
 
 echo "==> migrate ($env $tag)"
 IMAGE_TAG="$tag" docker compose --profile migrate run --rm migrate
+
+# 幂等基础种子（字典/膳食/园长角色）。复用 api 服务的挂载与 DML 账号，
+# 不另开 compose service；失败即中止，不动旧 api 与静态包。
+echo "==> seedbase ($env $tag)"
+IMAGE_TAG="$tag" docker compose run --rm --entrypoint /app/kindergarten-seedbase api
 
 echo "==> deploy api ($env $tag)"
 IMAGE_TAG="$tag" docker compose pull api

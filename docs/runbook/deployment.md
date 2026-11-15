@@ -97,7 +97,7 @@ docker compose run --rm --entrypoint /app/kindergarten-seedbase api
    - 自动部署 staging；
    - 等待 `production` 环境人工批准；
    - 生产发布前调用 `snapshot-rds.sh`；
-   - 执行迁移、启动 API 并等 `/ready`、再切 admin/website symlink（顺序不能反）。
+   - 执行迁移与基础种子（`seedbase`）、启动 API 并等 `/ready`、再切 admin/website symlink（顺序不能反）。
 3. 生产验证：
    ```bash
    curl -fsS https://api.<domain>/ready

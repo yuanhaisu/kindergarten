@@ -107,6 +107,22 @@ jobs:
       - name: goose up is idempotent
         working-directory: server
         run: go run ./cmd/migrate up
+      - name: seedbase (first run)
+        working-directory: server
+        run: go run ./cmd/seedbase
+      - name: Snapshot seed row counts
+        working-directory: server
+        run: |
+          go run ./cmd/dbcheck --query "SELECT (SELECT COUNT(*) FROM sys_dict_types) AS dict_types, (SELECT COUNT(*) FROM sys_dict_items) AS dict_items, (SELECT COUNT(*) FROM diet_food_categories) AS food_categories, (SELECT COUNT(*) FROM diet_dri_age_targets) AS dri_targets" > /tmp/seed-before.txt
+          cat /tmp/seed-before.txt
+      - name: seedbase (second run is idempotent)
+        working-directory: server
+        run: go run ./cmd/seedbase
+      - name: Seed row counts unchanged
+        working-directory: server
+        run: |
+          go run ./cmd/dbcheck --query "SELECT (SELECT COUNT(*) FROM sys_dict_types) AS dict_types, (SELECT COUNT(*) FROM sys_dict_items) AS dict_items, (SELECT COUNT(*) FROM diet_food_categories) AS food_categories, (SELECT COUNT(*) FROM diet_dri_age_targets) AS dri_targets" > /tmp/seed-after.txt
+          diff -u /tmp/seed-before.txt /tmp/seed-after.txt
       - name: Verify schema
         working-directory: server
         run: |
