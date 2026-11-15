@@ -1,5 +1,6 @@
 # Staging 环境交接（2026-11-15）
 
+> ⚠️ 已脱敏：公网/内网 IP、实例 ID、安全组/VPC 标识、SSH 用户名与密钥路径均替换为占位符；真实值见运维私密记录。
 > 用途：记录 staging-only 环境的当前状态、关键路径和明天待办。prod 暂缓。
 > 相关文档：`docs/deployment-architecture.md`、`docs/runbook/deployment.md`、`deploy/ram/README.md`。
 > 历史提交：`b1d1e08`（部署架构 + runbook）、`5d7e272`（MCP 修正）、`b2678d7`（方案 C / RAM 策略）。
@@ -14,20 +15,20 @@
 
 | 项 | A（staging） | B（idle） |
 |---|---|---|
-| 实例 | `i-7xvbga12t596lzkbjt4r` / `np-staging` | `i-7xv06thh5tsvzwnigrjz` / `np-idle` |
+| 实例 | `<ecs-instance-id-staging>` / `np-staging` | `<ecs-instance-id-idle>` / `np-idle` |
 | 规格 | 2C4G / 40G ESSD | 2C4G / 40G ESSD |
 | 系统 | Alibaba Cloud Linux 4 LTS 容器优化版 | CentOS 7.9（EOL，未重装） |
-| 公网 | `8.148.144.201`（固定公网 IP，非 EIP） | `8.166.119.31`（固定公网 IP） |
-| 内网 | `172.30.8.233` | `172.30.8.232` |
+| 公网 | `<staging-public-ip>`（固定公网 IP，非 EIP） | `<idle-public-ip>`（固定公网 IP） |
+| 内网 | `<staging-private-ip>` | `<idle-private-ip>` |
 | 带宽 | 1 Mbps 出方向，固定带宽 | 1 Mbps 出方向 |
 | 到期 | **2026-12-14** | 2027-07-31 |
-| 安全组 | `sg-np-staging` = `sg-7xvbga12t596u9hz4o4d` | `sg-np-idle` = `sg-7xvgh9j3o4uuc56t1fsi` |
+| 安全组 | `sg-np-staging` = `<security-group-staging>` | `sg-np-idle` = `<security-group-idle>` |
 
-- VPC `vpc-7xvbtlr4b6lqu090velec` / vSwitch `vsw-7xvwytnefm34pntnym222` / 可用区 `cn-guangzhou-b`。
-- 旧共享安全组 `sg-7xvjc9ug5rtvox03hy6w` 已从两台实例移出，暂未删除。
-- SSH：`root@8.148.144.201`，本机密钥 `~/.ssh/id_rsa`。
-- Git Bash helper：`C:\Users\33139\bin\np-prd.sh`、`np-test.sh`；打开命令：
-  `Start-Process -FilePath "C:\Program Files\Git\bin\bash.exe" -ArgumentList '-li','-c','/c/Users/33139/bin/np-prd.sh'`
+- VPC `<vpc-id>` / vSwitch `<vswitch-id>` / 可用区 `cn-guangzhou-b`。
+- 旧共享安全组 `<security-group-legacy>` 已从两台实例移出，暂未删除。
+- SSH：`<ssh-user>@<staging-public-ip>`，密钥路径由运维保管（不入库）。
+- Git Bash helper：`<local-bin>/np-prd.sh`、`np-test.sh`；打开命令：
+  `Start-Process -FilePath "<Git Bash 路径>" -ArgumentList '-li','-c','<local-bin>/np-prd.sh'`
 
 ## 2. 已完成
 
@@ -53,7 +54,7 @@
 
 ### 2.4 DNS 与证书
 
-- `test-api` / `test-admin` / `test-www` → `8.148.144.201`，TTL 600，解析线路 **默认**。
+- `test-api` / `test-admin` / `test-www` → `<staging-public-ip>`，TTL 600，解析线路 **默认**。
 - ⚠️ 解析线路必须是「默认」或额外加「境外」线路；如果放在电信/联通等具体线路，Let's Encrypt 的境外解析器会看到 NXDOMAIN。
 - 证书：Let's Encrypt（issuer `CN=YR1`），SAN 覆盖三个 test 域名，`notBefore` 2026-11-14 16:55 UTC，`notAfter` **2027-02-12 16:55 UTC**。
 - 证书路径：`/etc/nginx/ssl/nurtureplanet.cn/fullchain.pem` + `privkey.pem`。
@@ -81,7 +82,7 @@
 | `/etc/nginx/ssl/nurtureplanet.cn/privkey.pem` | 600 |
 | `/var/www/acme/` | 755 |
 
-- `app.ini` 的 OSS 字段已填（bucket `kindergarten-staging`，endpoint `oss-cn-guangzhou-internal.aliyuncs.com`）；`[face]` 的 `secret_id` / `secret_key` 仍是 `CHANGE_ME`，因 `enabled = false` 无害。
+- `app.ini` 的 OSS 字段已填（bucket `<bucket-staging>`，endpoint `<oss-internal-endpoint>`）；`[face]` 的 `secret_id` / `secret_key` 仍是 `CHANGE_ME`，因 `enabled = false` 无害。
 - `deploy.env` 的 `MIGRATE_MYSQL_DSN` 仍是 `CHANGE_ME`；本次迁移用的是 `.env` 里的 root DSN，接 CI 前要换成独立迁移账号。
 
 ## 3. 明天待办（按顺序）
@@ -94,17 +95,17 @@
    - 登录 `https://test-admin.nurtureplanet.cn/platform/login`，再创建测试园所与租户管理员。
    - ⚠️ 不要用 `cmd/setadmin`：它把 `kindergarten_id` 硬编码为 4，staging 没有这个园所。
 4. **Basic Auth**：给 `test-admin` / `test-www` 加 `auth_basic`（htpasswd），避免公开暴露；`test-api` 保持公网，供微信测试包访问。
-5. **安全组 22**：`sg-np-staging` 与 `sg-np-idle` 当前仍是 `22 → 0.0.0.0/0`，改成 `36.148.177.165/32`（或你的当前公网 IP）。
+5. **安全组 22**：`sg-np-staging` 与 `sg-np-idle` 当前仍是 `22 → 0.0.0.0/0`，改成 `<你的固定公网 IP>/32`（或你的当前公网 IP）。
 6. **A 续费**：2026-12-14 到期，建议 12 月初前续 1 年并开自动续费。
 7. **微信后台域名白名单**：两个小程序分别配置 `https://test-api.nurtureplanet.cn` 的 request / upload / download 合法域名，再上传测试包。
-8. **媒体上传验证**：用测试包上传一张图片，确认对象落在 `kindergarten-staging`，响应 URL 是广州内网签名的 1 小时 URL。
+8. **媒体上传验证**：用测试包上传一张图片，确认对象落在 `<bucket-staging>`，响应 URL 是广州内网签名的 1 小时 URL。
 9. **后续（prod 前）**：RDS / 托管 Redis / EIP / ACR / `api` / `admin` 生产域名；修 `deploy.sh` 先切静态后启 api、`snapshot-rds.sh` 假成功、`deploy.env` DSN 引号等问题。
 
 ## 4. 常用命令
 
 ```bash
 # SSH
-ssh -i ~/.ssh/id_rsa root@8.148.144.201
+ssh -i <ssh-key-path> <ssh-user>@<staging-public-ip>
 
 # 容器状态
 cd /opt/kindergarten/staging
@@ -140,6 +141,6 @@ nginx -t && systemctl reload nginx
 ## 6. 明天会话的起点
 
 - 分支：`main`，工作区干净。
-- 服务器：A `8.148.144.201`；配置 `/etc/kindergarten/staging/app.ini`。
+- 服务器：A `<staging-public-ip>`；配置 `/etc/kindergarten/staging/app.ini`。
 - 先跑 `docker compose ... ps` 确认三个容器仍健康，再填微信字段。
-- 本文档未包含任何密钥；AppID/Secret/OSS AK/SK 只在服务器 `app.ini`（0600）中。
+- 本文档未包含任何密钥，实例与网络标识已脱敏；真实值的位置见 `docs/handoffs/README.md`。

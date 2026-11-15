@@ -56,7 +56,7 @@
 
 ## 4. 参考物
 
-- OpenDesign artifact（单方向历史稿）：`open-design/.od/projects/370dba5d-1e97-47ca-a463-fde621fa33e7/index.html`（Retest4，39,454 bytes；截图 `C:\Users\33139\Downloads\retest4-parent-growth-2026-10-19T13-06-30-210Z.png`）
+- OpenDesign artifact（单方向历史稿）：`open-design/.od/projects/370dba5d-1e97-47ca-a463-fde621fa33e7/index.html`（Retest4，39,454 bytes；截图 `<本机下载目录>/retest4-parent-growth-2026-10-19T13-06-30-210Z.png`）
 - OpenDesign artifact（两模式稿）：`kindergarten/docs/design-previews/2026-10-20-parent-growth-two-modes/index.html`（源项目 `open-design/.od/projects/efe7dad8-168c-4981-a2f1-4d988cf72caa/`；含 `styles.css` / `app.js` / `tokens.css`；截图 `preview-child.png` / `preview-all.png`）
 - `components.html`：`open-design/.od/design-systems/nurture-planet/components.html`
 - 只取意图、不取像素：紧凑 hero、琥珀阴影、胶囊按钮与时间线行比例；不逐像素复制 fixture
