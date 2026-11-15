@@ -51,65 +51,81 @@
       <section class="consent-card" aria-labelledby="consent-group-title" data-od-id="consent-card">
         <h2 class="sr-only" id="consent-group-title">需要确认的三份约定</h2>
 
-        <label class="consent-row" for="consent-privacy" data-od-id="consent-row-privacy">
-          <input class="consent-input" type="checkbox" id="consent-privacy" checked />
-          <span class="checkbox" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2.4 6.4 4.9 8.9 9.7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="row-copy">
-            <span class="row-title">隐私政策</span>
-            <span class="row-sub">我们如何收集、使用与保护你的信息</span>
-          </span>
-          <svg class="row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </label>
+        <div class="consent-row" id="row-privacy" data-od-id="consent-row-privacy">
+          <label class="row-toggle" for="consent-privacy">
+            <input class="consent-input" type="checkbox" id="consent-privacy" />
+            <span class="checkbox" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2.4 6.4 4.9 8.9 9.7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">隐私政策</span>
+              <span class="row-sub">我们如何收集、使用与保护你的信息</span>
+            </span>
+          </label>
+          <a class="row-view" href="../05-policy/index.html?doc=privacy&amp;from=consent" aria-label="查看隐私政策全文">查看</a>
+        </div>
 
-        <label class="consent-row" for="consent-minor" data-od-id="consent-row-minor">
-          <input class="consent-input" type="checkbox" id="consent-minor" checked />
-          <span class="checkbox" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2.4 6.4 4.9 8.9 9.7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="row-copy">
-            <span class="row-title">未成年人个人信息保护规则</span>
-            <span class="row-sub">孩子的信息如何被专门保护</span>
-          </span>
-          <svg class="row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </label>
+        <div class="consent-row" id="row-minor" data-od-id="consent-row-minor">
+          <label class="row-toggle" for="consent-minor">
+            <input class="consent-input" type="checkbox" id="consent-minor" />
+            <span class="checkbox" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2.4 6.4 4.9 8.9 9.7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">未成年人个人信息保护规则</span>
+              <span class="row-sub">孩子的信息如何被专门保护</span>
+            </span>
+          </label>
+          <a class="row-view" href="../05-policy/index.html?doc=minor&amp;from=consent" aria-label="查看未成年人个人信息保护规则全文">查看</a>
+        </div>
 
-        <label class="consent-row" for="consent-terms" data-od-id="consent-row-terms">
-          <input class="consent-input" type="checkbox" id="consent-terms" checked />
-          <span class="checkbox" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2.4 6.4 4.9 8.9 9.7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="row-copy">
-            <span class="row-title">用户协议</span>
-            <span class="row-sub">使用养成星球服务的约定</span>
-          </span>
-          <svg class="row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </label>
+        <div class="consent-row" id="row-terms" data-od-id="consent-row-terms">
+          <label class="row-toggle" for="consent-terms">
+            <input class="consent-input" type="checkbox" id="consent-terms" />
+            <span class="checkbox" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2.4 6.4 4.9 8.9 9.7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">用户协议</span>
+              <span class="row-sub">使用养成星球服务的约定</span>
+            </span>
+          </label>
+          <a class="row-view" href="../05-policy/index.html?doc=terms&amp;from=consent" aria-label="查看用户协议全文">查看</a>
+        </div>
       </section>
 
       <div class="actions">
-        <button class="btn-primary" id="consent-submit" type="button" data-od-id="consent-submit">同意并继续</button>
+        <button class="btn-primary" id="consent-submit" type="button" data-od-id="consent-submit" disabled>同意并继续</button>
+        <p class="gate-note" id="consent-gate" role="status" aria-live="polite">还需勾选 3 份约定</p>
         <button class="btn-text" id="consent-decline" type="button" data-od-id="consent-decline">暂不同意</button>
       </div>
 
-      <p class="footnote" data-od-id="consent-footnote">随时可以在「我的 · 隐私与协议」中查看全文或撤回授权。</p>
+      <p class="footnote" data-od-id="consent-footnote">可以在「我的 · 隐私与协议」中查看全文；授权管理见「儿童信息授权管理」。</p>
 
     </main>
 
-    <div class="toast" id="consent-toast" role="status" aria-live="polite"></div>
+    <div class="dialog-layer" id="decline-dialog" hidden>
+      <div class="dialog-scrim" data-dialog-close></div>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="decline-title" aria-describedby="decline-desc" tabindex="-1">
+        <button class="dialog-close" type="button" aria-label="关闭" data-dialog-close>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <h2 class="dialog-title" id="decline-title">不同意将无法使用家长端</h2>
+        <p class="dialog-desc" id="decline-desc">三份约定是使用家长端与园所沟通的前提。你可以返回再想想，或退出登录。</p>
+        <div class="dialog-actions">
+          <button class="btn-secondary" id="decline-exit" type="button">退出登录</button>
+          <button class="btn-primary" id="decline-back" type="button">返回再想想</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
