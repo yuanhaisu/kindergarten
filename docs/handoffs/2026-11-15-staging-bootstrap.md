@@ -93,7 +93,13 @@
    - 本地构建 `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /tmp/platformadmin ./cmd/platformadmin`；
    - scp 到 A，运行：`CONFIG_PATH=/etc/kindergarten/staging/app.ini PLATFORM_ADMIN_USERNAME=ops PLATFORM_ADMIN_PASSWORD='<强密码>' PLATFORM_ADMIN_NAME='Ops' /root/platformadmin`；
    - 登录 `https://test-admin.nurtureplanet.cn/platform/login`，再创建测试园所与租户管理员。
-   - ⚠️ 不要用 `cmd/setadmin`：它把 `kindergarten_id` 硬编码为 4，staging 没有这个园所。
+   - 也可绕过后台，直接在服务器上供给租户管理员（园所已存在时；幂等，重复执行只更新口令与绑定）：
+     ```bash
+     # 本地构建：GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /tmp/setadmin ./cmd/setadmin
+     CONFIG_PATH=/etc/kindergarten/staging/app.ini SETADMIN_PASSWORD='<强密码>' \
+       /root/setadmin -phone <手机号> -kg <园所ID>
+     ```
+     `-phone` 与 `-kg` 必填；园所不存在或已软删除会直接失败；口令只从 `SETADMIN_PASSWORD` 或 `-password` 读取，不会回显。
 4. **Basic Auth**：给 `test-admin` / `test-www` 加 `auth_basic`（htpasswd），避免公开暴露；`test-api` 保持公网，供微信测试包访问。
 5. **安全组 22**：`sg-np-staging` 与 `sg-np-idle` 当前仍是 `22 → 0.0.0.0/0`，改成 `<你的固定公网 IP>/32`（或你的当前公网 IP）。
 6. **A 续费**：2026-12-14 到期，建议 12 月初前续 1 年并开自动续费。
