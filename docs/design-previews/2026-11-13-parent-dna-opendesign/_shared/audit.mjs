@@ -2,7 +2,8 @@
 /**
  * OpenDesign DNA 批次静态审计。
  *
- *   node _shared/audit.mjs
+ *   node _shared/audit.mjs              # baseline 31 页（parent/）
+ *   node _shared/audit.mjs --chosen     # chosen 31 页（parent-chosen/）
  *
  * 只检查机械可判定的项；视觉与信息密度仍需人看。
  * 退出码 1 表示有 error。
@@ -12,7 +13,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PAGES_ROOT = path.join(root, "parent");
+const CHOSEN = process.argv.includes("--chosen");
+const PAGES_ROOT = path.join(root, CHOSEN ? "parent-chosen" : "parent");
 const TAB_DIRS = new Set(["01-home", "11-growth", "17-pickup", "31-profile"]);
 
 const dirs = fs.existsSync(PAGES_ROOT)
