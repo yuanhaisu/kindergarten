@@ -6,17 +6,18 @@
   var decline = document.getElementById("consent-decline");
   var gate = document.getElementById("consent-gate");
   var dialogLayer = document.getElementById("decline-dialog");
-  var dialog = dialogLayer ? dialogLayer.querySelector(".dialog") : null;
+  var dialog = document.getElementById("decline-sheet");
   var backButton = document.getElementById("decline-back");
   var exitButton = document.getElementById("decline-exit");
 
-  if (!rows.length || !submit || !decline || !gate || !dialog || !backButton || !exitButton) {
+  if (!rows.length || !submit || !decline || !gate || !dialogLayer || !dialog || !backButton || !exitButton) {
     return;
   }
 
   var settled = false;
   var lastFocused = null;
   var focusables = [];
+  var closeTimer = null;
 
   function syncGate() {
     if (settled) return;
@@ -37,7 +38,7 @@
     gate.textContent = "已记录你的同意，正在进入绑定孩子…";
   }
 
-  // ---- 暂不同的阻断弹窗：焦点陷阱 + ESC/关闭返回 ----
+  // ---- 暂不同的阻断确认区：底部抽屉 + 焦点陷阱 + ESC/关闭返回 ----
 
   function collectFocusables() {
     focusables = Array.prototype.slice
@@ -69,8 +70,12 @@
     lastFocused = document.activeElement;
     // 程序化打开时焦点可能仍在 body，关闭后应回到触发的按钮。
     if (!lastFocused || lastFocused === document.body) lastFocused = decline;
+    window.clearTimeout(closeTimer);
     dialogLayer.hidden = false;
     document.body.classList.add("dialog-open");
+    // 先让 translateY(100%) 落到样式，再加 is-open 才能看到上滑。
+    void dialogLayer.offsetHeight;
+    dialogLayer.classList.add("is-open");
     collectFocusables();
     // 焦点落在最安全的「返回再想想」上。
     backButton.focus();
@@ -79,13 +84,17 @@
 
   function closeDialog() {
     if (dialogLayer.hidden) return;
-    dialogLayer.hidden = true;
+    dialogLayer.classList.remove("is-open");
     document.body.classList.remove("dialog-open");
     document.removeEventListener("keydown", onDialogKeydown, true);
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+    window.clearTimeout(closeTimer);
+    closeTimer = window.setTimeout(function () {
+      dialogLayer.hidden = true;
+    }, 200);
   }
 
-  Array.prototype.slice.call(dialogLayer.querySelectorAll("[data-dialog-close]")).forEach(function (element) {
+  Array.prototype.slice.call(dialogLayer.querySelectorAll("[data-sheet-close]")).forEach(function (element) {
     element.addEventListener("click", closeDialog);
   });
 
@@ -118,8 +127,8 @@
 
   if (state === "partial") {
     // 两行已勾、还差 1 份，用于复现 disabled 的提交按钮。
-    byId["consent-privacy"].checked = true;
-    byId["consent-terms"].checked = true;
+    if (byId["consent-privacy"]) byId["consent-privacy"].checked = true;
+    if (byId["consent-terms"]) byId["consent-terms"].checked = true;
   }
 
   if (state === "all") {

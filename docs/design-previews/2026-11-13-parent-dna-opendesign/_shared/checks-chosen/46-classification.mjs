@@ -7,7 +7,7 @@
  */
 import inventory from "./inventory.mjs";
 
-// 跨页口径：chosen 页集统一用「他」，不出现「她」。
+// 票 #46 明确要求孩子代词用「他」，chosen 页集统一不出现「她」。
 const noFemalePronoun = inventory.pages.map((slug) => ({ slug, mustNot: ["她"] }));
 
 export default {
@@ -47,5 +47,13 @@ export default {
       mustNot: ["其他"],
     },
     ...noFemalePronoun,
+  ],
+  // 06 的未读卡片数必须与 01 首页徽标一致：两处各写死一个数字就会漂。
+  crossPage: [
+    {
+      label: "通知未读数",
+      a: { slug: "06-notice-index", selector: '.notice-card[data-unread="true"]', measure: "count" },
+      b: { slug: "01-home", selector: ".unread-badge", measure: "number" },
+    },
   ],
 };

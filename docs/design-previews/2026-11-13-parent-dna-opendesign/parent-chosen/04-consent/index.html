@@ -106,25 +106,21 @@
         <button class="btn-text" id="consent-decline" type="button" data-od-id="consent-decline">暂不同意</button>
       </div>
 
-      <p class="footnote" data-od-id="consent-footnote">可以在「我的 · 隐私与协议」中查看全文；授权管理见「儿童信息授权管理」。</p>
+      <p class="footnote" data-od-id="consent-footnote">随时可以在「我的 · 隐私与协议」中查看全文或撤回授权。</p>
 
     </main>
 
-    <div class="dialog-layer" id="decline-dialog" hidden>
-      <div class="dialog-scrim" data-dialog-close></div>
-      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="decline-title" aria-describedby="decline-desc" tabindex="-1">
-        <button class="dialog-close" type="button" aria-label="关闭" data-dialog-close>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <h2 class="dialog-title" id="decline-title">不同意将无法使用家长端</h2>
-        <p class="dialog-desc" id="decline-desc">三份约定是使用家长端与园所沟通的前提。你可以返回再想想，或退出登录。</p>
-        <div class="dialog-actions">
-          <button class="btn-secondary" id="decline-exit" type="button">退出登录</button>
-          <button class="btn-primary" id="decline-back" type="button">返回再想想</button>
+    <div class="sheet-layer" id="decline-dialog" hidden>
+      <div class="sheet-scrim" data-sheet-close></div>
+      <section class="sheet" id="decline-sheet" role="dialog" aria-modal="true" aria-labelledby="decline-title" aria-describedby="decline-desc">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="decline-title">不同意将无法使用家长端</h2>
+        <p class="sheet-desc" id="decline-desc">三份约定是使用家长端与园所沟通的前提。你可以返回再想想，或退出登录。</p>
+        <div class="sheet-actions">
+          <button class="sheet-safe" id="decline-back" type="button" data-sheet-close>返回再想想</button>
+          <button class="sheet-danger" id="decline-exit" type="button">退出登录</button>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 

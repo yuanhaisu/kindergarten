@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 重出 parent-chosen 的 31 页默认截图 + 10 个状态变体。
+ * 重出 parent-chosen 的 31 页默认截图 + 13 个状态变体。
  *
  *   node _shared/shots-chosen.mjs
  */
