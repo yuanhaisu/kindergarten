@@ -95,6 +95,21 @@ const groups = [
   },
 ];
 
+if (CHOSEN) {
+  const addVariant = (dir, variant) => {
+    for (const group of groups) {
+      const page = group.pages.find((p) => p.dir === dir);
+      if (page) {
+        page.variants = [...(page.variants ?? []), variant];
+        return;
+      }
+    }
+  };
+  addVariant("10-leave-detail", { file: "index.html?state=cancelled", img: "preview-cancelled.png", label: "已取消" });
+  addVariant("19-pickup-authorized", { file: "index.html?state=detail", img: "preview-detail.png", label: "授权详情" });
+  addVariant("30-messages", { file: "index.html?state=detail", img: "preview-detail.png", label: "消息详情" });
+}
+
 const missing = [];
 for (const group of groups) {
   for (const page of group.pages) {

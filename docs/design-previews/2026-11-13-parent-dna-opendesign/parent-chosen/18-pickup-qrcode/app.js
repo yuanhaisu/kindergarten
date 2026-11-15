@@ -2,7 +2,9 @@
   'use strict';
 
   var INITIAL_CODE = 'A7K2-9F3D';
-  var REFRESH_SECONDS = 58;
+  var endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  var REFRESH_SECONDS = Math.max(1, Math.round((endOfDay.getTime() - Date.now()) / 1000));
   var QR_SIZE = 29;
   var QR_QUIET = 4;
   var QR_CELL = 8;

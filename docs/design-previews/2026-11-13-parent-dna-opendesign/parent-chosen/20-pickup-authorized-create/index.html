@@ -106,6 +106,22 @@
             <p class="field-error" id="phone-error" hidden>请填写正确的手机号</p>
           </div>
 
+          <div class="field" data-od-id="field-id-card">
+            <label class="field-label" for="id-card-input">身份证号 <span class="field-optional">选填</span></label>
+            <input
+              class="field-input field-input--id"
+              id="id-card-input"
+              name="id_card_number"
+              type="text"
+              maxlength="18"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="18 位身份证号"
+              aria-describedby="id-card-hint"
+            >
+            <p class="field-hint" id="id-card-hint">用于园所审核身份，不会对外提供</p>
+          </div>
+
           <div class="field" data-od-id="field-validity">
             <span class="field-label" id="validity-label">有效期</span>
             <button
@@ -142,6 +158,36 @@
             <button class="text-btn" id="photo-change" type="button" aria-label="更换人像照片" data-od-id="btn-change-photo">更换</button>
             <input class="file-input" id="photo-input" type="file" name="photo" accept="image/*" tabindex="-1" aria-hidden="true">
           </div>
+        </section>
+
+        <section class="scope-card" aria-labelledby="scope-title" data-od-id="scope-card">
+          <div class="scope-head">
+            <h2 class="scope-title" id="scope-title">授权范围</h2>
+            <p class="scope-hint">可随时调整</p>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label" id="scope-pickup-label">允许接走</span>
+            <button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="scope-pickup-label" data-scope-field="allow_pickup"></button>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label" id="scope-record-label">查看接送记录</span>
+            <button class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="scope-record-label" data-scope-field="allow_view_record"></button>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label" id="scope-status-label">查看在园状态</span>
+            <button class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="scope-status-label" data-scope-field="allow_view_status"></button>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label" id="scope-growth-label">查看成长记录</span>
+            <button class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="scope-growth-label" data-scope-field="allow_growth_view"></button>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label" id="scope-notify-label">接走时通知我</span>
+            <button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="scope-notify-label" data-scope-field="notify_on_pickup"></button>
+          </div>
+
+          <p class="scope-note">关闭“允许接走”后，该授权人暂时不能接走孩子。</p>
         </section>
 
         <div class="notice" role="note" data-od-id="warning-pickup-code">
