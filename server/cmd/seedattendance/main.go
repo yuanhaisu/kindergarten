@@ -7,8 +7,8 @@ package main
 //
 // 用法：
 //
-//	go run ./cmd/seedattendance                  # 默认 kindergarten 4
-//	SEED_KG_ID=7 go run ./cmd/seedattendance     # 指定园所
+//	SEED_ALLOW_DEMO=1 go run ./cmd/seedattendance                # 默认 kindergarten 4
+//	SEED_ALLOW_DEMO=1 SEED_KG_ID=7 go run ./cmd/seedattendance   # 指定园所
 //
 // 幂等：目标日期范围内已有出勤记录时直接跳过，不覆盖真实数据。
 
@@ -24,6 +24,8 @@ import (
 )
 
 func main() {
+	seedutil.RequireDemoOptIn("seedattendance")
+
 	// 先校验入参、再连库：非法 SEED_KG_ID 应当立刻报错，而不是等连库失败后才发现。
 	kgID := seedutil.KindergartenID()
 	loc := seedutil.Shanghai()

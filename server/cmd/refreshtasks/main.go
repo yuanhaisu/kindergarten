@@ -1,17 +1,27 @@
+// refreshtasks 清空 kindergarten 4 的任务并重建演示任务。
+//
+// 用法：
+//
+//	SEED_ALLOW_DESTRUCTIVE=1 SEED_ALLOW_DEMO=1 go run ./cmd/refreshtasks
 package main
 
 import (
 	"fmt"
+	"time"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
+
+	"kindergarten-server/cmd/internal/seedutil"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
-	"time"
 )
 
 func main() {
-	cfg, _ := config.Load("configs/app.ini")
+	seedutil.RequireDestructiveOptIn("refreshtasks")
+
+	cfg, _ := config.Load(seedutil.ConfigPath())
 	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Warn)})
 	if err != nil {
 		panic(err)

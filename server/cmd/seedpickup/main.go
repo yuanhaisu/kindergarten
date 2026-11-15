@@ -8,8 +8,8 @@ package main
 //
 // 用法：
 //
-//	go run ./cmd/seedpickup                  # 默认 kindergarten 4
-//	SEED_KG_ID=7 go run ./cmd/seedpickup     # 指定园所
+//	SEED_ALLOW_DEMO=1 go run ./cmd/seedpickup                # 默认 kindergarten 4
+//	SEED_ALLOW_DEMO=1 SEED_KG_ID=7 go run ./cmd/seedpickup   # 指定园所
 //
 // 两段各自幂等：当天已有接送记录则不追加；待审核授权人已达目标数则不追加。
 
@@ -37,6 +37,8 @@ const (
 )
 
 func main() {
+	seedutil.RequireDemoOptIn("seedpickup")
+
 	// 先校验入参、再连库：非法 SEED_KG_ID 应当立刻报错，而不是等连库失败后才发现。
 	kgID := seedutil.KindergartenID()
 	loc := seedutil.Shanghai()
