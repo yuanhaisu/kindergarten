@@ -1,0 +1,152 @@
+# 并行开发与 worktree 纪律
+
+多个 Claude Code 会话（或人 + 会话）同时改这个仓库时，按本文执行。违反纪律的代价不是冲突本身，而是冲突被发现得太晚。
+
+## 为什么要有这份文档
+
+三次真实事故：
+
+1. **mega PR / 387 项脏工作区**：多个不相关的改动挤在同一个分支上，PR 无法评审，CI 红灯时定位不到是哪一处。收尾时工作区有 387 项未提交改动，既不敢提交也不知道该丢弃哪些。
+2. **token 目录在 worktree 清理时被误删**：清理一个 worktree 时连带删掉了共享的 `shared-design-tokens/build/`，三端样式同时失效；因为它是生成产物，一开始没人意识到「重新 build 就能恢复」。
+3. **并发改设计预览**：两个会话同时跑 `design:sync` / `design:accept`，后跑的覆盖了先跑的 `design.lock.json`，页面 sha 与源码对不上，`design:check` 失败但说不清是谁改的。
+
+三条教训指向同一件事：**共享的东西必须有明确的串行规则，独占的东西必须物理隔离**。
+
+## 核心原则
+
+> **1 session = 1 branch = 1 worktree。主工作树始终留在 `main` 且保持干净。**
+
+- 每个会话在自己的 worktree 里开发，互不看见对方的未提交改动。
+- 主工作树（仓库根目录）只用来：`git fetch`、切 `main`、看日志、跑跨分支的只读命令。不在主工作树写代码。
+- 一个分支只服务一件事。发现自己在一个分支上做第二件事，停下来开新分支。
+
+## 标准流程
+
+```powershell
+# 1. 同步远端（在主工作树做）
+git fetch origin --prune
+
+# 2. 建 worktree + 分支（默认 feat/<name>，基 origin/main）
+powershell -ExecutionPolicy Bypass -File scripts/worktree-new.ps1 -Name pickup-polish
+#    docs / fix 类切片显式指定分支名：
+#   ... -Name parallel-development -Branch docs/parallel-development
+
+# 3. 进入 worktree 开发
+cd ..\kg-pickup-polish
+npm ci            # 每个 worktree 自己装依赖，不要共享 node_modules
+# 开发 / 构建 / 验证……
+
+# 4. 提交（精确 add，见下方纪律）
+git add -- path/to/a path/to/b
+git commit -m "..."
+
+# 5. 推送并开 PR
+$env:https_proxy = "http://127.0.0.1:7890"; $env:http_proxy = "http://127.0.0.1:7890"
+git push -u origin feat/pickup-polish
+~/bin/gh pr create --base main --head feat/pickup-polish --title "..." --body-file <file>
+
+# 6. 等 CI 绿、合并（由 reviewer/用户操作，不要自己合并未批准的 PR）
+
+# 7. 回到主工作树清理
+cd ..\kindergarten
+powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Name pickup-polish
+#    远端分支也要删时加 -DeleteRemote
+```
+
+`worktree-clean.ps1` 会拒绝：worktree 有未提交改动、分支不是 `origin/main` 的祖先。拒绝是保护，不要 `--force` 绕过。
+
+两个脚本都支持 `-WhatIf`，先看它准备做什么再执行。
+
+## 共享文件串行清单
+
+下列路径**同一时刻只允许一个会话修改**。动它们之前，先在会话群里声明；改完立即提交推送，缩短窗口。
+
+| 路径 | 为什么串行 |
+| --- | --- |
+| `shared-design-tokens/tokens.json`、`shared-design-tokens/build/**` | 三端样式的唯一真相源；两个会话同时 build 会互相覆盖生成产物 |
+| `shared-ui/**` | 两端 `components/` 由 `sync-ui.js` 从这里生成；改两端组件会在这里被覆盖 |
+| `design.lock.json`、`design.config.json`、`design.preview.lock.json` | `design:sync` / `design:accept` 会整份重写，并发执行必丢条目 |
+| `CLAUDE.md` | 规则入口，多人同时改会产生语义冲突而非文本冲突 |
+| `.github/workflows/**` | CI 行为影响所有分支；改坏了所有人一起红 |
+| `server/migrations/**` | goose 版本号必须线性递增；并发新增会同号或乱序 |
+| `deploy/**` | 部署脚本与配置，串行评审 |
+| 根级 `package.json` / `package-lock.json`、`scripts/**` | 锁文件与共享脚本，并发改动易产生不可复现的 `npm ci` |
+
+规则：
+
+- 在自己的 worktree 里改共享文件，然后**单独开一个 PR**，不要混进功能 PR。
+- 改 token 只改 `tokens.json`，然后 `cd shared-design-tokens && npm run build`，产物必须一起提交。**不要手改 `build/` 下的文件。**
+- 改完设计相关共享文件后跑 `npm run design:sync`，需要时 `npm run design:accept -- <page> --reason "..."`，并确认 `npm run design:check` 通过。
+
+## 共享运行时与测试资源
+
+代码可以并行，**有状态的运行时不行**。
+
+| 资源 | 规则 |
+| --- | --- |
+| 开发库迁移 / 种子 | `make migrate`、`make seedbase`、`seed*` 命令**串行**执行。一个会话在跑迁移时，另一个会话不要连库写数据。 |
+| 后端 8080 | 同时只跑一个实例。识别队列的 worker 会抢走测试任务，跑队列相关测试前先停掉 8080（见项目记忆 `running-backend-steals-queue-jobs`）。 |
+| 微信开发者工具 | 单 IDE 实例时 MCP 验证**串行**；需要双端并行时走 `scripts/dual-ide.ps1`（双实例 + 双微信账号）。端口固定：家长端 CDP `9222` / 自动化 `9420`，老师端 CDP `9223` / 自动化 `9421`；调用 MCP 时显式传端口，别依赖默认值。 |
+| 本机端口 | admin dev `5173`、website dev `3000`、server `8080`。并行起多个前端时改端口，不要抢占。 |
+| 构建产物 | 两个 uni-app 项目的 `npm run dev:mp-weixin` 是 watch 进程，会把**自己的** `dist/` 写热。不同 worktree 的 dist 互不影响，但同一个 worktree 里不要起两份。 |
+
+## 提交与 PR 纪律
+
+**只允许精确暂存**：
+
+```powershell
+git add -- docs/agents/parallel-development.md scripts/worktree-new.ps1
+```
+
+**禁止**：`git add -A`、`git add .`、`git stash`、`git reset`、`git checkout -- .`、`git clean`。这些命令会把别人的工作或你不理解的改动一起吞掉。发现工作区有不该出现的文件，先查来源，不要清理。
+
+提交前按改动范围跑验证：
+
+| 改动 | 必跑 |
+| --- | --- |
+| Go 后端 | `make build` / `make test` / `make lint`（至少 build + 相关包测试） |
+| admin | `npm run build` |
+| teacher / parent | `npm run build:mp-weixin`（或 `dev:mp-weixin` 后看编译错误） |
+| 设计 token / 页面 | `npm run design:sync`、必要时 `npm run design:accept`、`npm run design:check` |
+| 任意改动 | `node scripts/check-secrets.mjs`（或 `--files <改动文件>`） |
+
+PR 描述必须包含**「不在本 PR」**一节，显式列出被切出去、留给其他 PR 的内容。这是防止 mega PR 复发的唯一有效手段：读 PR 的人能立刻知道边界在哪。
+
+## worktree 清理纪律
+
+清理是危险操作，按顺序确认：
+
+1. **先看干净**：`git -C ..\kg-<name> status --porcelain` 必须为空（含未跟踪文件）。
+2. **先确认已合并**：分支必须是 `origin/main` 的祖先。没合并就删分支 = 丢代码。脚本用 `git merge-base --is-ancestor` 检查，失败即拒绝。
+3. **只由属主删除**：只有创建该 worktree 的会话/人有权清理。别人正在用的 worktree 不要碰。
+4. **确认没有进程占用**：IDE、`vite` watcher、后端进程如果以该目录为 cwd，先停掉再删。
+5. **不要用符号链接共享 `node_modules`**：不同 worktree 的原生依赖与 postinstall 会互相污染，升级依赖时直接炸。每个 worktree 自己 `npm ci`。
+
+误删恢复：worktree 里的**已提交**内容都在分支上（`git worktree remove` 不会删分支）；**未提交**内容无法从 git 恢复。所以第 1 条最重要。
+
+## 事故处理
+
+**共享目录被清空 / 被并发修改时，立即停止当前操作。** 不要盲目 `git restore`、`git checkout -- .`、`git clean`、`npm run build`——你可能正在覆盖另一个会话尚未提交的改动。
+
+按顺序确认：
+
+1. `git status`：被改/被删的是已提交文件还是未跟踪文件？
+2. `git worktree list`：有没有别的 worktree 正在改同一批文件？
+3. 直接问：在会话群里确认是否有其他会话正在写这个目录。
+4. 确认无人占用后再决定：已提交内容用 `git restore -- <精确路径>`；生成产物（`shared-design-tokens/build/**`）用 `npm run build` 重建，**不要手工补**；未跟踪内容丢失则接受损失并记录。
+
+拿不准就停在那里说明情况，不要「先修好再说」。
+
+## 汇报格式
+
+每个切片收工时按此格式汇报，便于主会话汇总：
+
+```
+branch=<分支名>
+commit=<sha>
+files=<文件数> +<新增行>/-<删除行>
+验证退出码=<build/test/lint/design:check 等，逐项>
+PR=<url>
+remaining_dirty=<git status --porcelain 行数>
+notes=<异常或需要人工确认的事，无则写 无>
+```

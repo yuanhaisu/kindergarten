@@ -691,3 +691,7 @@ Issues and specs live as GitHub issues on `yuanhaisu/kindergarten`, driven by th
 ### Domain docs
 
 single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agents/domain.md`.
+
+### Parallel development
+
+多个会话并行时，一个会话 = 一个分支 = 一个独立 worktree；主工作树始终留在 `main` 且保持干净。纪律与脚本见 `docs/agents/parallel-development.md`。
