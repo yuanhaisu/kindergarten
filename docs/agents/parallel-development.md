@@ -78,12 +78,13 @@ git push -u origin feat/pickup-polish
 
 推送 PR 后**立即**起一个只读 subagent，持续监听结果并反馈；主会话收到终态后再提下一项工作。
 
-- 使用 `~/bin/gh` + 本地代理：
+- **一个 subagent 只监听一个 PR**。不要把两个 PR 塞进同一个监听任务；多个 PR 并行等待时，每个 PR 各起一个 subagent，提示里写死各自的 PR 号，回报也只针对该 PR。
+- 使用 `gh` + 本地代理（PowerShell 用 `gh.exe`，Bash 用 `~/bin/gh`）：
 
   ```powershell
   $env:https_proxy = "http://127.0.0.1:7890"; $env:http_proxy = "http://127.0.0.1:7890"
-  ~/bin/gh pr checks <n> --watch
-  ~/bin/gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup
+  & "C:\Program Files\GitHub CLI\gh.exe" pr checks <n> --watch
+  & "C:\Program Files\GitHub CLI\gh.exe" pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup
   ```
 
 - 轮询间隔、重起档位、终态定义以「[CI 与合并等待](#ci-与合并等待)」为唯一口径，本节不另立策略。
@@ -137,7 +138,7 @@ git push -u origin feat/pickup-polish
 
 ## CI 与合并等待
 
-PR 推送后，主会话必须起一个只读 subagent 监听结果，不能空转或提前开始下一项。
+PR 推送后，主会话必须为**每个 PR** 各起一个只读 subagent 监听结果，不能空转或提前开始下一项。**一个 subagent 只监听一个 PR**：提示里必须有且只有一个 PR 号，不允许一个 subagent 同时轮询多个 PR；多个 PR 就起多个 subagent。
 
 1. CI：`gh pr checks <n> --watch`，等所有 job 终态。
 2. 合并：`gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup`。
