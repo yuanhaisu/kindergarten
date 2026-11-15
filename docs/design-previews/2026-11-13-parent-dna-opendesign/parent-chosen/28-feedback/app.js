@@ -4,6 +4,9 @@
   var MAX_PHOTOS = 3;
   var MAX_DESCRIPTION = 500;
 
+  // 反馈类型映射：功能建议 → suggestion / 使用问题 → bug / 内容投诉 → complaint。
+  // 本原型不发请求；移植时把选中 chip 的 data-feedback-type 原样提交即可。
+
   var form = document.getElementById('feedback-form');
   var chips = Array.prototype.slice.call(document.querySelectorAll('[data-feedback-type]'));
   var description = document.getElementById('feedback-description');
