@@ -27,6 +27,7 @@
 git fetch origin --prune
 
 # 2. 建 worktree + 分支（默认 feat/<name>，基 origin/main）
+#    <name> 由执行 agent 按业务自命名（见「Agent 会话规则」）
 powershell -ExecutionPolicy Bypass -File scripts/worktree-new.ps1 -Name pickup-polish
 #    docs / fix 类切片显式指定分支名：
 #   ... -Name parallel-development -Branch docs/parallel-development
@@ -45,17 +46,60 @@ $env:https_proxy = "http://127.0.0.1:7890"; $env:http_proxy = "http://127.0.0.1:
 git push -u origin feat/pickup-polish
 ~/bin/gh pr create --base main --head feat/pickup-polish --title "..." --body-file <file>
 
-# 6. 等 CI 绿、合并（由 reviewer/用户操作，不要自己合并未批准的 PR）
+# 5.1 起只读 subagent 监听 CI/合并（见「Agent 会话规则」第 2 条）
 
-# 7. 回到主工作树清理
-cd ..\kindergarten
-powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Name pickup-polish
+# 6. 等 CI 绿；合并由 reviewer / merge agent 执行。
+#    并行 worker 会话不执行 gh pr merge。
+
+# 7. worktree / 远端分支由 merge agent / 属主清理；并行 worker 不执行 worktree-clean。
+#    清理指令供 merge agent / 属主参考：
+#    cd ..\kindergarten
+#    powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Name pickup-polish
 #    远端分支也要删时加 -DeleteRemote
 ```
 
 `worktree-clean.ps1` 会拒绝：worktree 有未提交改动、分支不是 `origin/main` 的祖先。拒绝是保护，不要 `--force` 绕过。
 
 两个脚本都支持 `-WhatIf`，先看它准备做什么再执行。
+
+## Agent 会话规则（2026-11-15）
+
+以下三条对所有并行开发 agent 生效；与「标准流程」冲突时，以本节为准。
+
+### 1. Topic 由执行 agent 自命名
+
+开工前先读 brief / 文档确定切片边界，agent 自己为切片定一个能描述其意义的 topic，**不要**每次向用户索取。
+
+- 命名：kebab-case，`领域+动作`，如 `deploy-script-safety`、`seed-history`。
+- 分支 `fix|feat|docs/<topic>`、worktree `kg-<topic>`、PR 标题三者表达同一含义。
+- 命名后直接执行；只有**切片范围本身不清**时才问用户。
+
+### 2. 提交 PR 后起只读 subagent 监听 CI/合并
+
+推送 PR 后**立即**起一个只读 subagent，持续监听结果并反馈；主会话收到终态后再提下一项工作。
+
+- 使用 `~/bin/gh` + 本地代理：
+
+  ```powershell
+  $env:https_proxy = "http://127.0.0.1:7890"; $env:http_proxy = "http://127.0.0.1:7890"
+  ~/bin/gh pr checks <n> --watch
+  ~/bin/gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup
+  ```
+
+- CI 结束后若未合并，继续监听**有界时间**（如 20 分钟），不要无限轮询。
+- subagent **只报告**，不 merge、不改文件、不推送、不清理。
+- subagent 回报需要修改的建议时，按建议再次执行，然后再起一轮监听。
+
+### 3. 并行 worker 只提交 PR，不合并、不清理
+
+并行 worktree 会话（本流程）**只做到 push 分支 + 提交 PR**；合并、main 同步、worktree/远端分支清理由**专门的 merge agent**负责。
+
+- 不要执行 `gh pr merge`，即使 CI 全绿也不自行合并。
+- 不要执行 `worktree-clean.ps1`，不要删远端分支。
+- **一个切片一个 PR**；等当前 PR 合并后再开下一个切片，不并发开新切片。
+- 与主会话的 `subagent-driven-slicing` 区分：主会话编排 subagent 时可在 CI 绿后合并；本条只约束并行 worker 会话。
+
+完成切片后按「汇报格式」报告，然后停手。
 
 ## 共享文件串行清单
 
@@ -67,6 +111,7 @@ powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Name pickup
 | `shared-ui/**` | 两端 `components/` 由 `sync-ui.js` 从这里生成；改两端组件会在这里被覆盖 |
 | `design.lock.json`、`design.config.json`、`design.preview.lock.json` | `design:sync` / `design:accept` 会整份重写，并发执行必丢条目 |
 | `CLAUDE.md` | 规则入口，多人同时改会产生语义冲突而非文本冲突 |
+| `docs/agents/parallel-development.md` | 并行纪律的详细规则，改前先在会话群声明 |
 | `.github/workflows/**` | CI 行为影响所有分支；改坏了所有人一起红 |
 | `server/migrations/**` | goose 版本号必须线性递增；并发新增会同号或乱序 |
 | `deploy/**` | 部署脚本与配置，串行评审 |
@@ -114,11 +159,13 @@ PR 描述必须包含**「不在本 PR」**一节，显式列出被切出去、�
 
 ## worktree 清理纪律
 
+> 并行 worker 会话**不执行清理**；清理由 merge agent / 属主按本节执行。
+
 清理是危险操作，按顺序确认：
 
 1. **先看干净**：`git -C ..\kg-<name> status --porcelain` 必须为空（含未跟踪文件）。
 2. **先确认已合并**：分支必须是 `origin/main` 的祖先。没合并就删分支 = 丢代码。脚本用 `git merge-base --is-ancestor` 检查，失败即拒绝。
-3. **只由属主删除**：只有创建该 worktree 的会话/人有权清理。别人正在用的 worktree 不要碰。
+3. **只由 merge agent / 属主删除**：合并后的清理由专门的 merge agent 或创建该 worktree 的属主执行；别人正在用的 worktree 不要碰。
 4. **确认没有进程占用**：IDE、`vite` watcher、后端进程如果以该目录为 cwd，先停掉再删。
 5. **不要用符号链接共享 `node_modules`**：不同 worktree 的原生依赖与 postinstall 会互相污染，升级依赖时直接炸。每个 worktree 自己 `npm ci`。
 
@@ -150,3 +197,5 @@ PR=<url>
 remaining_dirty=<git status --porcelain 行数>
 notes=<异常或需要人工确认的事，无则写 无>
 ```
+
+报告后停手：等当前 PR 合并后再开下一个切片（见「Agent 会话规则」第 3 条）。
