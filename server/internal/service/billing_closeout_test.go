@@ -49,6 +49,7 @@ type closeoutFixture struct {
 	plan     *domain.Plan
 	dist     *domain.Distributor
 	order    *domain.Order
+	planSvc  *PlanService
 	orderSvc *OrderService
 }
 
@@ -76,7 +77,7 @@ func newCloseoutFixture(t *testing.T, db *gorm.DB, suffix string) *closeoutFixtu
 	_, _, err = orderSvc.Confirm(ctx, order.ID, "close7_ops", "127.0.0.1")
 	require.NoError(t, err)
 
-	return &closeoutFixture{kg: kg, plan: plan, dist: dist, order: order, orderSvc: orderSvc}
+	return &closeoutFixture{kg: kg, plan: plan, dist: dist, order: order, planSvc: planSvc, orderSvc: orderSvc}
 }
 
 func closeoutCommission(t *testing.T, db *gorm.DB, paymentID uint64) domain.CommissionLedger {
@@ -206,8 +207,12 @@ func TestCommercialCloseout_PaymentIdempotencyAndCaps(t *testing.T) {
 	require.Error(t, err, "超过应收的收款必须被拒绝")
 	assert.EqualValues(t, 60000, paidCloseout(t, db, f.order.ID))
 
-	_, err = f.orderSvc.AddPayment(ctx, f.order.ID, PaymentRequest{AmountCents: -70000}, "close7_ops", "127.0.0.1")
+	target := first.PaymentID
+	_, err = f.orderSvc.AddPayment(ctx, f.order.ID, PaymentRequest{
+		AmountCents: -70000, RefundOfPaymentID: &target,
+	}, "close7_ops", "127.0.0.1")
 	require.Error(t, err, "超过已收的退款必须被拒绝")
+	assert.Contains(t, err.Error(), "REFUND_EXCEEDS_PAYMENT", "拒绝原因必须是超额，而不是缺少退款关联")
 	assert.EqualValues(t, 60000, paidCloseout(t, db, f.order.ID))
 
 	_, err = f.orderSvc.AddPayment(ctx, f.order.ID, PaymentRequest{
@@ -261,6 +266,136 @@ func TestCommercialCloseout_OnlyActiveStudentsDriveTier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, order.StudentTier, "只有 2 名在读，应落第一档")
 	assert.EqualValues(t, 100000, order.AmountDueCents)
+}
+
+// TC-NEW-ORD-0001 / CAT-0003：确认后再改套餐（含新增模块），订单快照与老园所授权都不变。
+func TestCommercialCloseout_PlanChangeAfterConfirmKeepsSnapshot(t *testing.T) {
+	db := openPlatformTestDB(t)
+	beginCommercialCloseout(t, db)
+	f := newCloseoutFixture(t, db, "E")
+	ctx := context.Background()
+
+	before, err := f.orderSvc.Detail(ctx, f.order.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 100000, before.AmountDueCents)
+	require.ElementsMatch(t, []string{"base", "growth"}, before.PlanSnapshot.ModuleCodes)
+
+	require.NoError(t, f.planSvc.Update(ctx, f.plan.ID, PlanRequest{
+		Name: "S1Bclose-套餐E改名", PriceCents: 200000,
+		ModuleCodes: []string{"base", "growth", "diet"},
+	}, "close7_ops", "127.0.0.1"))
+
+	after, err := f.orderSvc.Detail(ctx, f.order.ID)
+	require.NoError(t, err)
+	assert.EqualValues(t, 100000, after.AmountDueCents, "确认后改价不影响已成交订单")
+	assert.Equal(t, "S1Bclose-套餐E", after.PlanSnapshot.PlanName, "确认后改名不影响快照")
+	assert.ElementsMatch(t, []string{"base", "growth"}, after.PlanSnapshot.ModuleCodes, "确认后新增模块不进入快照")
+
+	ents, err := repository.NewEntitlementRepo(db).ListByOrderID(ctx, f.order.ID)
+	require.NoError(t, err)
+	for _, e := range ents {
+		assert.NotEqual(t, "diet", e.ModuleCode, "老园所不得获得套餐新增模块")
+	}
+	all, err := repository.NewEntitlementRepo(db).ListByKindergarten(ctx, f.kg.ID)
+	require.NoError(t, err)
+	for _, e := range all {
+		assert.NotEqual(t, "diet", e.ModuleCode, "园所授权清单不得包含新增模块")
+	}
+}
+
+// TC-NEW-ENT-0010：已降级的园所登记收款并确认订单生效后，立即恢复写能力。
+func TestCommercialCloseout_PaymentThenConfirmRestoresWrite(t *testing.T) {
+	db := openPlatformTestDB(t)
+	beginCommercialCloseout(t, db)
+	ctx := context.Background()
+	planSvc, orderSvc, entSvc := newBillingFlowServices(t, db)
+
+	kg := &domain.Kindergarten{Name: "S1Bclose-续费园F", Status: domain.KindergartenStatusActive}
+	require.NoError(t, repository.NewKindergartenRepo(db).Create(ctx, kg))
+	now := time.Now()
+	require.NoError(t, repository.NewEntitlementRepo(db).CreateBatch(ctx, []domain.Entitlement{{
+		KindergartenID: kg.ID, ModuleCode: "growth", Source: domain.EntitlementSourceTrial,
+		StartsAt: now.AddDate(0, -2, 0), ExpiresAt: now.AddDate(0, 0, -30),
+	}}))
+
+	dec, err := entSvc.Decide(ctx, kg.ID, "growth", true)
+	require.NoError(t, err)
+	require.False(t, dec.Allowed, "过期超过宽限期后不可写")
+
+	plan, err := planSvc.Create(ctx, PlanRequest{
+		Code: "close7_restore", Name: "S1Bclose-续费套餐", PriceCents: 100000, TermMonths: 6,
+		ModuleCodes: []string{"base", "growth"},
+	}, "close7_ops", "127.0.0.1")
+	require.NoError(t, err)
+	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "close7_ops", "127.0.0.1")
+	require.NoError(t, err)
+	_, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{AmountCents: 100000}, "close7_ops", "127.0.0.1")
+	require.NoError(t, err)
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "close7_ops", "127.0.0.1")
+	require.NoError(t, err)
+
+	dec, err = entSvc.Decide(ctx, kg.ID, "growth", true)
+	require.NoError(t, err)
+	assert.True(t, dec.Allowed, "收款并确认订单后立即恢复写能力")
+	assert.Equal(t, "active", dec.Reason)
+}
+
+// TC-NEW-ENT-0013：超档只提示，不阻断新增幼儿，也不阻断 premium 写操作。
+func TestCommercialCloseout_OverLimitDoesNotBlockExistingBusiness(t *testing.T) {
+	db := openPlatformTestDB(t)
+	beginCommercialCloseout(t, db)
+	ctx := context.Background()
+	planSvc, orderSvc, entSvc := newBillingFlowServices(t, db)
+
+	kg := &domain.Kindergarten{Name: "S1Bclose-超档园G", Status: domain.KindergartenStatusActive}
+	require.NoError(t, repository.NewKindergartenRepo(db).Create(ctx, kg))
+	class := &domain.Class{KindergartenID: kg.ID, Name: "S1Bclose-超档班", Capacity: 60, Status: 1}
+	require.NoError(t, db.Create(class).Error)
+	for i := 0; i < 2; i++ {
+		require.NoError(t, db.Create(&domain.Student{
+			KindergartenID: kg.ID, ClassID: class.ID, Name: "S1Bclose-在读幼儿", Status: 1,
+			Birthday: time.Now(), EnrollDate: time.Now(),
+		}).Error)
+	}
+
+	plan, err := planSvc.Create(ctx, PlanRequest{
+		Code: "close7_over", Name: "S1Bclose-超档套餐", PriceCents: 100000, TermMonths: 6,
+		ModuleCodes: []string{"base", "growth"},
+	}, "close7_ops", "127.0.0.1")
+	require.NoError(t, err)
+	require.NoError(t, planSvc.ReplaceTiers(ctx, plan.ID, []domain.PlanTier{
+		{Tier: 1, MinStudents: 0, MaxStudents: 2, PriceMultiplier: 100},
+		{Tier: 2, MinStudents: 3, MaxStudents: 0, PriceMultiplier: 150},
+	}, "close7_ops", "127.0.0.1"))
+	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "close7_ops", "127.0.0.1")
+	require.NoError(t, err)
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "close7_ops", "127.0.0.1")
+	require.NoError(t, err)
+
+	// 成交时 2 人落第一档（上限 2），之后新增到 3 人即超档。
+	require.NoError(t, db.Create(&domain.Student{
+		KindergartenID: kg.ID, ClassID: class.ID, Name: "S1Bclose-超档幼儿", Status: 1,
+		Birthday: time.Now(), EnrollDate: time.Now(),
+	}).Error)
+
+	view, err := entSvc.Subscription(ctx, kg.ID)
+	require.NoError(t, err)
+	require.True(t, view.OverLimit, "3 名在读超过档位上限 2")
+	assert.Equal(t, 3, int(view.StudentCount))
+	assert.Equal(t, 2, view.TierMaxStudents)
+
+	// 超限后新增幼儿不被阻断。
+	require.NoError(t, db.Create(&domain.Student{
+		KindergartenID: kg.ID, ClassID: class.ID, Name: "S1Bclose-超档后新增", Status: 1,
+		Birthday: time.Now(), EnrollDate: time.Now(),
+	}).Error)
+	count, err := repository.NewKindergartenRepo(db).CountStudents(ctx, kg.ID)
+	require.NoError(t, err)
+	assert.EqualValues(t, 4, count)
+
+	dec, err := entSvc.Decide(ctx, kg.ID, "growth", true)
+	require.NoError(t, err)
+	assert.True(t, dec.Allowed, "超档不得阻断 premium 写操作")
 }
 
 func countCloseoutPayments(t *testing.T, db *gorm.DB, orderID uint64) int64 {

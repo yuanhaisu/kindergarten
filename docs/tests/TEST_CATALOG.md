@@ -1334,7 +1334,7 @@
 |---|---|---|---|---|
 | TC-NEW-CAT-0001 | 新建套餐引用已注册模块 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-CAT-0002 | 引用未注册模块被拒 | P0 | Unit / Contract | ✅ (`TestPlan_RejectsUnknownModule`) |
-| TC-NEW-CAT-0003 | 套餐新增模块后老园所不获得 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-CAT-0003 | 套餐新增模块后老园所不获得 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PlanChangeAfterConfirmKeepsSnapshot`) |
 | TC-NEW-CAT-0004 | 套餐调价后老订单金额不变 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-CAT-0005 | 改价后新订单使用新价 | P0 | Unit / Contract | ✅ (`TestOrder_NewOrdersUseCurrentPrice`) |
 | TC-NEW-CAT-0006 | 按幼儿数落入对应档位 | P0 | Unit / Contract | ✅ (`TestOrder_TierByStudentCountAndFrozen`) |
@@ -1348,7 +1348,7 @@
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
-| TC-NEW-ORD-0001 | 确认后目录变更不影响订单 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
+| TC-NEW-ORD-0001 | 确认后目录变更不影响订单 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PlanChangeAfterConfirmKeepsSnapshot`) |
 | TC-NEW-ORD-0002 | 首付后进入部分收款 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-ORD-0003 | 收清后进入已收清 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
 | TC-NEW-ORD-0004 | 退款后已收金额回落 | P0 | Unit / Contract | ✅ (`TestBillingFlow_SnapshotPaymentsAndCancel`) |
@@ -1375,10 +1375,10 @@
 | TC-NEW-ENT-0007 | 宽限期内仍可写入 | P0 | Unit / Contract | ✅ (`TestEntitlement_DecideGraceAndReadOnly`) |
 | TC-NEW-ENT-0008 | 降级后新增被拒 | P0 | Unit / Contract | ✅ (`TestEntitlement_DecideGraceAndReadOnly`) |
 | TC-NEW-ENT-0009 | 降级后历史仍可读 | P0 | Unit / Contract | ✅ (`TestEntitlement_DecideGraceAndReadOnly`) |
-| TC-NEW-ENT-0010 | 收款后立刻可写 | P0 | Unit / Contract | ✅ (`TestEntitlement_RenewalRestoresWrite`) |
+| TC-NEW-ENT-0010 | 收款后立刻可写 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentThenConfirmRestoresWrite`) |
 | TC-NEW-ENT-0011 | 新开通园所获得试用 | P0 | Unit / Contract | ✅ (`TestPlatformService_LoginAndOnboard`) |
 | TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | ✅ (`TestEntitlement_TrialExpiryKeepsData`) |
-| TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | ✅ (`TestSubscription_OverLimit`) |
+| TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_OverLimitDoesNotBlockExistingBusiness`) |
 
 ### 分销佣金 (DST)
 
