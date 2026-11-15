@@ -54,31 +54,21 @@
         </svg>
       </section>
 
-      <p class="bind-intro" data-od-id="bind-intro">绑定码由班级老师在入园时提供，一共 6 位。绑定后，孩子的通知、成长与接送都会出现在这里。</p>
+      <p class="bind-intro" id="bind-intro" data-od-id="bind-intro">绑定码由班级老师在入园时提供，共 6–20 位字母数字。绑定后，孩子的通知、成长与接送都会出现在这里。</p>
 
       <form class="bind-form" id="bind-form" novalidate data-od-id="bind-form">
 
-        <div class="field" data-od-id="field-child-name">
-          <label class="field__label" for="child-name">幼儿姓名</label>
-          <input class="field__input" id="child-name" name="childName" type="text" value="乐乐" autocomplete="off" enterkeyhint="next" aria-describedby="child-name-error" data-od-id="input-child-name">
-          <p class="field__error" id="child-name-error" role="alert" hidden>请填写幼儿姓名</p>
-        </div>
-
-        <div class="field" data-od-id="field-relation">
-          <span class="field__label" id="relation-label">与孩子关系</span>
-          <button class="picker" id="relation-trigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="relation-label relation-value" data-od-id="relation-picker">
-            <span class="picker__value" id="relation-value">母亲</span>
-            <svg class="picker__chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-              <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-          </button>
+        <div class="bind-alert" id="bind-alert" role="alert" hidden data-od-id="bind-alert">
+          <p class="bind-alert__title">绑定码无效或已过期</p>
+          <p class="bind-alert__body">请向班级老师确认绑定码，或换一个绑定码重试。</p>
+          <button class="bind-alert__retry" id="bind-retry" type="button" data-od-id="bind-retry">重新输入</button>
         </div>
 
         <div class="field" data-od-id="field-bind-code">
           <label class="field__label" for="bind-code">绑定码</label>
-          <input class="field__input field__input--code" id="bind-code" name="bindCode" type="text" value="384216" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" enterkeyhint="done" aria-describedby="bind-code-hint bind-code-error" data-od-id="input-bind-code">
-          <p class="field__hint" id="bind-code-hint">由园所老师在入园时提供</p>
-          <p class="field__error" id="bind-code-error" role="alert" hidden>请输入 6 位数字绑定码</p>
+          <input class="field__input field__input--code" id="bind-code" name="bindCode" type="text" value="ABC12345" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-describedby="bind-code-hint bind-code-error" data-od-id="input-bind-code">
+          <p class="field__hint" id="bind-code-hint">6–20 位字母数字</p>
+          <p class="field__error" id="bind-code-error" role="alert" hidden>请输入 6–20 位字母数字绑定码</p>
         </div>
 
         <div class="form-actions">
@@ -89,6 +79,25 @@
           </button>
         </div>
       </form>
+
+      <!-- ?state=success：模拟 POST /parent/students/bind 的成功响应，
+           姓名/班级/关系由服务端返回；relation=other 展示为「其他」。 -->
+      <section class="bind-success" id="bind-success" hidden data-od-id="bind-success">
+        <p class="bind-success__eyebrow" data-od-id="bind-success-title">绑定成功</p>
+        <h2 class="bind-success__name" id="success-name">乐乐</h2>
+        <dl class="bind-success__meta">
+          <div class="bind-success__row">
+            <dt>班级</dt>
+            <dd id="success-class">小一班</dd>
+          </div>
+          <div class="bind-success__row">
+            <dt>关系</dt>
+            <dd id="success-relation">其他</dd>
+          </div>
+        </dl>
+        <p class="bind-success__note">孩子的通知、成长记录与接送信息已经出现在首页。</p>
+        <button class="btn-primary" id="success-enter" type="button" data-od-id="bind-enter">进入首页</button>
+      </section>
 
       <footer class="bind-footer">
         <aside class="privacy-note" data-od-id="privacy-note">
@@ -101,44 +110,6 @@
         </aside>
       </footer>
     </main>
-
-    <div class="sheet-layer" id="relation-sheet" hidden data-od-id="relation-sheet">
-      <div class="sheet-layer__scrim" data-sheet-close></div>
-      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="relation-sheet-title">
-        <span class="sheet__handle" aria-hidden="true"></span>
-        <h2 class="sheet__title" id="relation-sheet-title">与孩子的关系</h2>
-        <div class="sheet__options" role="radiogroup" aria-labelledby="relation-sheet-title">
-          <label class="sheet__option is-selected" data-od-id="relation-option-mother">
-            <input class="sheet__radio" type="radio" name="relation" value="母亲" checked>
-            <span class="sheet__option-label">母亲</span>
-            <svg class="sheet__check" viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-              <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-          </label>
-          <label class="sheet__option" data-od-id="relation-option-father">
-            <input class="sheet__radio" type="radio" name="relation" value="父亲">
-            <span class="sheet__option-label">父亲</span>
-            <svg class="sheet__check" viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-              <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-          </label>
-          <label class="sheet__option" data-od-id="relation-option-grandparent">
-            <input class="sheet__radio" type="radio" name="relation" value="祖父母">
-            <span class="sheet__option-label">祖父母</span>
-            <svg class="sheet__check" viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-              <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-          </label>
-          <label class="sheet__option" data-od-id="relation-option-other">
-            <input class="sheet__radio" type="radio" name="relation" value="其他家人">
-            <span class="sheet__option-label">其他家人</span>
-            <svg class="sheet__check" viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-              <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-          </label>
-        </div>
-      </div>
-    </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
