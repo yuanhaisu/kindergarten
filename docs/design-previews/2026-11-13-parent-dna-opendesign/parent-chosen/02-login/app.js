@@ -51,11 +51,10 @@
     wechatButton.setAttribute("aria-busy", "true");
     wechatLabel.textContent = "正在唤起微信…";
 
+    // 首启固定进同意页；已同意用户由后端 consent_required 分流，原型只演示首启。
     window.setTimeout(function () {
-      pending = false;
-      wechatButton.removeAttribute("aria-busy");
-      wechatLabel.textContent = "微信一键登录";
-    }, 1400);
+      window.location.href = "../04-consent/index.html";
+    }, 600);
   });
 
   // Preview hook: open with ?state=need-consent to inspect the consent error state.

@@ -127,6 +127,10 @@ button {
   touch-action: manipulation;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .mp-app {
   position: relative;
   width: 390px;
@@ -270,9 +274,19 @@ button {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   min-height: 70px;
   padding: 15px 0;
+}
+
+.row-toggle {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -332,7 +346,7 @@ button {
   opacity: 1;
 }
 
-.consent-row:active .checkbox {
+.row-toggle:active .checkbox {
   opacity: 0.78;
 }
 
@@ -361,10 +375,31 @@ button {
   color: var(--muted-on-surface);
 }
 
-.row-chevron {
+.row-view {
   flex: 0 0 auto;
-  display: block;
-  color: var(--icon-soft);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px 0 10px;
+  border-radius: 4px;
+  color: var(--fg);
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  line-height: 1.4;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.row-view:active {
+  text-decoration-thickness: 2px;
+}
+
+.row-view:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
 }
 
 /* actions */
@@ -417,6 +452,16 @@ button {
   opacity: 0.68;
 }
 
+.gate-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-caption);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* focus */
 
 .back:focus-visible,
@@ -443,35 +488,103 @@ button {
   text-wrap: pretty;
 }
 
-/* toast */
+/* blocking decline dialog — not a toast */
 
-.toast {
+.dialog-layer {
   position: absolute;
-  left: 50%;
-  bottom: 40px;
-  z-index: 5;
-  max-width: calc(100% - 48px);
-  padding: 10px 18px;
-  border-radius: var(--radius-pill);
-  background: var(--fg);
-  color: var(--bg);
-  font-size: 13px;
-  font-weight: var(--weight-medium);
-  line-height: 1.4;
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 6px);
-  transition:
-    opacity var(--motion-press) ease-in,
-    transform var(--motion-press) ease-in;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
 }
 
-.toast.is-visible {
-  opacity: 1;
-  transform: translate(-50%, 0);
-  transition-duration: 200ms;
-  transition-timing-function: var(--ease-out);
+.dialog-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(23, 50, 32, 0.38);
+}
+
+.dialog {
+  position: relative;
+  width: 100%;
+  max-width: 342px;
+  padding: 22px 20px 18px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.dialog-open .mp-main {
+  overflow: hidden;
+}
+
+.dialog-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted-on-surface);
+}
+
+.dialog-close:active {
+  opacity: 0.6;
+}
+
+.dialog-title {
+  margin: 6px 32px 0 0;
+  color: var(--fg);
+  font-size: 17px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.dialog-desc {
+  margin: 8px 0 0;
+  color: var(--muted-on-surface);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+.dialog-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-secondary {
+  height: 48px;
+  padding: 0 24px;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  transition: background-color var(--motion-press) var(--ease-out);
+}
+
+.btn-secondary:active {
+  background: var(--surface-muted);
+}
+
+.dialog-close:focus-visible,
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
 }
 
 .sr-only {
@@ -497,9 +610,8 @@ button {
   .checkbox svg,
   .btn-primary,
   .btn-text,
-  .back,
-  .toast,
-  .toast.is-visible {
+  .btn-secondary,
+  .back {
     transition-duration: 1ms;
   }
 }
