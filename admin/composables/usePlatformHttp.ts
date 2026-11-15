@@ -1,5 +1,10 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import type { ApiEnvelope } from '~/types/api'
+import {
+  PLATFORM_TOKEN_COOKIE,
+  PLATFORM_TOKEN_MAX_AGE,
+  buildAuthCookieOptions,
+} from '~/utils/authCookie'
 
 let platformClient: AxiosInstance | null = null
 
@@ -35,10 +40,10 @@ export function usePlatformHttp() {
     })
 
     platformClient.interceptors.request.use((req) => {
-      const token = useCookie<string | null>('platform_token', {
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24,
-      })
+      const token = useCookie<string | null>(
+        PLATFORM_TOKEN_COOKIE,
+        buildAuthCookieOptions({ maxAge: PLATFORM_TOKEN_MAX_AGE }),
+      )
       if (token.value) {
         req.headers.Authorization = `Bearer ${token.value}`
       }
@@ -57,7 +62,7 @@ export function usePlatformHttp() {
           err.message ||
           '网络错误'
         if (import.meta.client && err.response?.status === 401) {
-          const token = useCookie<string | null>('platform_token')
+          const token = useCookie<string | null>(PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions())
           const route = useRoute()
           if (route.path !== '/platform/login') {
             token.value = null

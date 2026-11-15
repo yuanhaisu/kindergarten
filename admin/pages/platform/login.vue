@@ -21,6 +21,11 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
 import { platformLogin } from '~/api/platform'
+import {
+  PLATFORM_TOKEN_COOKIE,
+  PLATFORM_TOKEN_MAX_AGE,
+  buildAuthCookieOptions,
+} from '~/utils/authCookie'
 
 definePageMeta({ layout: 'auth' })
 
@@ -39,7 +44,10 @@ async function onSubmit() {
   loading.value = true
   try {
     const data = await platformLogin(form.username, form.password)
-    useCookie<string | null>('platform_token', { sameSite: 'lax', maxAge: 60 * 60 * 24 }).value = data.token
+    useCookie<string | null>(
+      PLATFORM_TOKEN_COOKIE,
+      buildAuthCookieOptions({ maxAge: PLATFORM_TOKEN_MAX_AGE }),
+    ).value = data.token
     const redirect = (route.query.redirect as string) || '/platform/kindergartens'
     await navigateTo(redirect)
   } catch (e: unknown) {

@@ -1,4 +1,5 @@
 import { ADMIN_MENU_GROUPS, matchMenuByPath } from '~/constants/menus'
+import { ADMIN_TOKEN_COOKIE } from '~/utils/authCookie'
 
 /**
  * 路由守卫：所需权限码从菜单表派生（matchMenuByPath），与侧栏过滤同源——
@@ -19,7 +20,7 @@ function firstAccessiblePath(can: (need: string) => boolean): string | null {
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path === '/login') return
-  const token = useCookie<string | null>('admin_token')
+  const token = useCookie<string | null>(ADMIN_TOKEN_COOKIE)
   if (!token.value) return
 
   const perm = usePermissionStore()
