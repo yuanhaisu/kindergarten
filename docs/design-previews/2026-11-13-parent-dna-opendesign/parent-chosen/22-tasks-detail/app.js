@@ -81,8 +81,4 @@
 
   refreshSteps();
   refreshCounter();
-
-  if (new URLSearchParams(window.location.search).get('state') === 'done') {
-    markSubmitted(false);
-  }
 })();

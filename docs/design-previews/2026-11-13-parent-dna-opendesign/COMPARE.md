@@ -112,7 +112,7 @@
 |---|---|
 | 页面 | 31 / 31（`parent-chosen/`） |
 | 状态变体 | 13（空态 / 错误态 / 接送三态 / 已取消 / 授权详情 / 消息详情） |
-| chosen 内容检查 | `check-variants.mjs --chosen`：31 页 0 失败（99 条断言） |
+| chosen 内容检查 | `check-variants.mjs --chosen`：31 页 0 失败（104 条断言，含 DOM 属性 / 4 条真实点击 / 跨页未读数 / 3 档 logo PNG） |
 | 静态审计 | `audit.mjs --chosen`：0 error，24 warning（聚焦光晕、内嵌描边、列表页无 `.hl`，均无害） |
 | 字体/布局 | `font-check.mjs --chosen`：31 / 31 通过，H1 衬线 400 / 30px，画布 bone，390×844 无横向溢出 |
 | 截图 | 31 张默认 + 13 张状态，390×844 @2x |

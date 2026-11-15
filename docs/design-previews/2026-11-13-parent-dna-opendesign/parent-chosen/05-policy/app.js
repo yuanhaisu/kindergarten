@@ -43,18 +43,9 @@
     }
   }
 
-  tabs.forEach(function (tab, index) {
+  tabs.forEach(function (tab) {
     tab.addEventListener("click", function () {
       selectDoc(tab.getAttribute("data-doc"), true);
-    });
-
-    tab.addEventListener("keydown", function (event) {
-      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-      event.preventDefault();
-      var step = event.key === "ArrowRight" ? 1 : tabs.length - 1;
-      var next = tabs[(index + step) % tabs.length];
-      next.focus();
-      selectDoc(next.getAttribute("data-doc"), true);
     });
   });
 
