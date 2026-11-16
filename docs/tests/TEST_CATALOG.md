@@ -1388,18 +1388,27 @@
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
 | TC-NEW-TNT-0001 | dry-run 输出清单且数据库不变 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
-| TC-NEW-TNT-0002 | apply 后清单内 trial 行延至 2027-01-31 23:59:59 | P0 | Command | 🔲 (#66) |
-| TC-NEW-TNT-0003 | 重复 apply 影响行数为 0 | P0 | Command | 🔲 (#66) |
-| TC-NEW-TNT-0004 | revert 按清单恢复原始到期日 | P0 | Command | 🔲 (#66) |
+| TC-NEW-TNT-0002 | apply 后清单内 trial 行延至 2027-01-31 23:59:59 | P0 | Command | ✅ (`TestRunApplyExtendsOnlyManifestRows`, `TestRunApplyCountsDistinctKindergartens`) |
+| TC-NEW-TNT-0003 | 重复 apply 影响行数为 0 | P0 | Command | ✅ (`TestRunApplyIsIdempotent`) |
+| TC-NEW-TNT-0004 | revert 按清单恢复原始到期日 | P0 | Command | ✅ (`TestRunRevertRestoresManifestOriginalExpiries`) |
 | TC-NEW-TNT-0005 | 政策日后开通的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
 | TC-NEW-TNT-0006 | 在期订阅/未取消订单的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
-| TC-NEW-TNT-0007 | 失败时事务回滚不留部分更新 | P0 | Command | 🔲 (#66) |
+| TC-NEW-TNT-0007 | 失败时事务回滚不留部分更新 | P0 | Command | ✅ (`TestRunApplyRollsBackWhenLogWriteFails`) |
 | TC-NEW-TNT-0008 | manifest 逐条授权固定 schema、UTF-8、SHA256 | P0 | Command | ✅ (`TestWriteManifestHasFixedSchemaAndSHA`) |
 | TC-NEW-TNT-0009 | created_at 为空的遗留行单独报告 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
 | TC-NEW-TNT-0010 | 空结果不生成 manifest | P1 | Command | ✅ (`TestRunEmptyPlanWritesNoManifest`) |
-| TC-NEW-TNT-0011 | -apply 在本 ticket 明确拒绝 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
+| TC-NEW-TNT-0011 | 未指定 -apply/-revert 时保持只读 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
 | TC-NEW-TNT-0012 | 同园到期日不同仍逐条记录可精确回滚 | P0 | Command | ✅ (`TestBuildPlanRecordsPerEntitlementRowsForExactRollback`) |
 | TC-NEW-TNT-0013 | 园所汇总另存（name/trial_count） | P1 | Command | ✅ (`TestWriteSummaryListsKindergartenTotals`) |
+| TC-NEW-TNT-0014 | apply 只处理 manifest 内授权，清单外数据不变 | P0 | Command | ✅ (`TestRunApplyExtendsOnlyManifestRows`) |
+| TC-NEW-TNT-0015 | apply 只延长不回退（已更晚的行跳过） | P0 | Command | ✅ (`TestRunApplyNeverShortensRowsBeyondTarget`) |
+| TC-NEW-TNT-0016 | revert 拒绝覆盖 apply 后的合法变更，且整体拒绝 | P0 | Command | ✅ (`TestRunRevertRefusesWhenRowChangedAfterApply`) |
+| TC-NEW-TNT-0017 | manifest 版本行/SHA256 不匹配时拒绝写库 | P0 | Command | ✅ (`TestRunApplyRejectsTamperedManifest`, `TestRunApplyRejectsUnknownManifestVersion`) |
+| TC-NEW-TNT-0018 | apply/revert 需 EXTENDTRIALS_ALLOW=1 | P0 | Command | ✅ (`TestRunWriteRequiresExplicitOptIn`) |
+| TC-NEW-TNT-0019 | 写操作需 -operator；-apply/-revert 互斥 | P1 | Command | ✅ (`TestRunWriteRequiresOperator`, `TestRunRejectsApplyAndRevertTogether`) |
+| TC-NEW-TNT-0020 | manifest 缺失/空/仅表头时拒绝 | P0 | Command | ✅ (`TestRunWriteRejectsMissingOrEmptyManifest`) |
+| TC-NEW-TNT-0021 | apply 写 platform_operation_logs（操作人/园所数/行数） | P0 | Command | ✅ (`TestRunApplyWritesPlatformOperationLog`) |
+| TC-NEW-TNT-0022 | 重复 revert 为 no-op（0 行） | P1 | Command | ✅ (`TestRunRevertIsIdempotent`) |
 
 ### 分销佣金 (DST)
 

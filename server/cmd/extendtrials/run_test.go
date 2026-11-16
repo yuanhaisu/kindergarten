@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// 命令级行为：默认 dry-run 写 manifest 但不改库；-apply 在本 ticket 明确拒绝；
-// 空结果不落盘 manifest。
+// 命令级行为：默认 dry-run 写 manifest 但不改库；空结果不落盘 manifest。
+// （写库路径由 apply_test.go / revert_test.go 覆盖。）
 func TestRunDryRunWritesManifestAndLeavesDBUnchanged(t *testing.T) {
 	db := openScratchDB(t)
 	loc := mustShanghai(t)
@@ -27,17 +27,11 @@ func TestRunDryRunWritesManifestAndLeavesDBUnchanged(t *testing.T) {
 	require.True(t, res.ManifestWritten)
 	require.NotEmpty(t, res.ManifestSHA256)
 	require.FileExists(t, opts.ManifestPath)
+	require.FileExists(t, res.SHAFilePath)
 	require.True(t, res.SummaryWritten)
 	require.FileExists(t, res.SummaryPath)
 	require.Equal(t, opts.ManifestPath+".summary.csv", res.SummaryPath)
 	require.Equal(t, before, allEntitlementExpiries(t, db), "dry-run 不得写库")
-
-	applyOpts := opts
-	applyOpts.Apply = true
-	_, err = run(context.Background(), db, applyOpts)
-	require.ErrorIs(t, err, ErrApplyNotImplemented)
-	require.Contains(t, err.Error(), "not implemented in this ticket")
-	require.Equal(t, before, allEntitlementExpiries(t, db), "-apply 被拒绝时也不得写库")
 }
 
 func TestRunEmptyPlanWritesNoManifest(t *testing.T) {

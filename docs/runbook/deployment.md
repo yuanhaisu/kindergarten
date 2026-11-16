@@ -533,3 +533,94 @@ Claude Code 的 MCP 握手默认 30 秒，加到 10 个就贴着超时线，再�
 **操作说明与占位符**：见 `deploy/ram/README.md`。
 
 **边界纪律**：MCP 与 operator CLI 都不授予删机、重置密码、换系统盘、删 RDS、Flush Redis、删桶、改桶 ACL、`ram:*`；这些动作保留在控制台人工执行。ActionTrail 开启，AK 90 天轮换。
+
+## 11. 存量 trial 延长（一次性，2026-12-06 前完成）
+
+决策依据：ADR-0018 #1。命令：`server/cmd/extendtrials/`（规格 #62、工单 #65/#66）。
+范围仅限 **2026-11-15（含）前开通、仍有 `source='trial' AND order_id IS NULL` 授权、无未取消订单、无在期订阅**的园所；目标到期日统一为 **2027-01-31 23:59:59 Asia/Shanghai**。
+
+### 11.1 流程（dry-run → 运营确认 → apply → 抽检 → revert 演练）
+
+```bash
+cd server
+
+# 1) 只读预演：不设 EXTENDTRIALS_ALLOW，数据库不会发生任何变化
+go run ./cmd/extendtrials -manifest ./extendtrials-2026-11-16.csv
+```
+
+产物三个文件，必须一起归档、一起保留在原目录：
+
+| 文件 | 用途 |
+|---|---|
+| `extendtrials-2026-11-16.csv` | 逐条授权清单（园所、授权 ID、原到期日），apply/revert 的唯一输入 |
+| `extendtrials-2026-11-16.csv.sha256` | 校验值侧车文件；apply/revert 默认读取 |
+| `extendtrials-2026-11-16.csv.summary.csv` | 园所汇总（名称、trial 条数），供运营核对 |
+
+```bash
+# 2) 运营逐行确认清单与汇总：园所名单、授权条数、原到期日
+#    确认后把 manifest 与 sha256 一起交给执行人（建议只读副本/staging 先跑一遍）
+
+# 3) 写入。缺少 EXTENDTRIALS_ALLOW=1 或 -operator 都会被拒绝
+EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
+  -manifest ./extendtrials-2026-11-16.csv \
+  -apply -operator "张三"
+
+# PowerShell: $env:EXTENDTRIALS_ALLOW="1" 后再执行同一命令
+```
+
+apply 只处理 manifest 中的授权：清单外的数据不变；已是目标日或更晚的行跳过（只延长不回退）；重复执行影响 0 行。成功后在 `platform_operation_logs` 落一条 `module=billing, action=extend_trials`，`detail` 含影响园所数、园所 ID、行数、目标日与 manifest SHA256。
+
+### 11.2 抽检
+
+```sql
+-- 期望：清单内园所的 trial 授权 max(expires_at) = 2027-01-31 23:59:59
+SELECT kindergarten_id, COUNT(*) AS rows,
+       MIN(expires_at) AS min_expires, MAX(expires_at) AS max_expires
+FROM entitlements
+WHERE deleted_at IS NULL AND source = 'trial' AND order_id IS NULL
+  AND kindergarten_id IN (<manifest 中的园所 ID>)
+GROUP BY kindergarten_id;
+
+-- 期望：能看到本次执行的 operator / detail；失败的回滚不在其中
+SELECT id, operator, module, action, detail, created_at
+FROM platform_operation_logs
+WHERE action IN ('extend_trials', 'revert_trials')
+ORDER BY id DESC LIMIT 5;
+```
+
+### 11.3 回滚与演练
+
+回滚使用**同一份 manifest 与 sha256 侧车文件**，不需要重新 dry-run：命令按清单里的 `old_expires_at` 逐条恢复。
+
+```bash
+EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
+  -manifest ./extendtrials-2026-11-16.csv \
+  -revert -operator "张三"
+```
+
+- 回滚前逐行校验：当前 `expires_at` 必须等于 apply 目标日（或已等于 manifest 原值）。**任一行不等于两者即整体拒绝并点名**，不会覆盖 apply 之后的合法续期/调整。
+- 重复回滚是 no-op（0 行），同样落一条 `action=revert_trials` 日志。
+- 演练顺序：staging/只读副本 dry-run → apply → 抽检 → revert → 再次抽检确认恢复 → 重新 apply；生产执行前把演练结果与 manifest 一并归档。
+- manifest 以**秒**精度记录原到期日；若库里原值带毫秒，revert 恢复到秒（业务等价）。需要绝对精确值时先导出原值留档，人工核对。
+
+### 11.4 拒绝条件（命令级护栏）
+
+| 场景 | 行为 |
+|---|---|
+| `-manifest` 缺失/文件不存在/空文件/只有表头 | 拒绝，并给出明确错误 |
+| manifest 版本行或 SHA256 不符 | 拒绝，不写库 |
+| 未设 `EXTENDTRIALS_ALLOW=1` | 拒绝（dry-run 不需要该开关） |
+| 未传 `-operator` | 拒绝 |
+| `-apply` 与 `-revert` 同时使用 | 拒绝 |
+| apply 时清单行已 ≥ 目标日 | 跳过，计入「未变更」 |
+| revert 时清单行既非目标日也非原值 | 整体拒绝，列出授权 ID 与当前值 |
+| 事务内任一写入失败 | 全部回滚，不留下部分更新 |
+
+### 11.5 测试
+
+```bash
+cd server
+CONFIG_PATH=configs/app.ini go test ./cmd/extendtrials -count=1
+```
+
+测试自动创建并迁移独立 scratch 库 `kindergarten_extendtrials_test`（不碰共享开发库），覆盖 apply/revert/幂等/SHA 与版本校验/写开关/防覆盖/事务回滚。可用 `EXTENDTRIALS_TEST_DSN` 指定其它测试实例。

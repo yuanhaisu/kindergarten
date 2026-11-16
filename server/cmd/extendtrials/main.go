@@ -1,8 +1,18 @@
 // extendtrials — 存量园所 trial 授权延长（ADR-0018 #1）。
 //
-// 本 ticket（#65）只实现只读预演；写库（-apply）由 #66 接手：
+// 默认 dry-run（只读预演并产出经运营确认的清单）：
 //
 //	go run ./cmd/extendtrials -manifest ./extendtrials.csv
+//
+// 写库需要显式开关、执行人与校验值（默认读 dry-run 写出的 .sha256 侧车文件）：
+//
+//	EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials -manifest ./extendtrials.csv \
+//	    -apply -operator "张三"
+//
+// 回滚按同一份清单恢复原始到期日（只撤销当前值仍等于 apply 目标值的行）：
+//
+//	EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials -manifest ./extendtrials.csv \
+//	    -revert -operator "张三"
 //
 // 口径：未删除、2026-11-15（含）前开通、存在 source='trial' AND order_id IS NULL
 // 授权的园所；排除有未取消订单或在期 subscription 授权的园所。
@@ -35,8 +45,11 @@ import (
 const policyDateLabel = "2026-11-15"
 
 func main() {
-	manifestPath := flag.String("manifest", "", "manifest CSV 输出路径（dry-run 必填）")
-	apply := flag.Bool("apply", false, "写库（本 ticket 未实现，#66 提供）")
+	manifestPath := flag.String("manifest", "", "manifest 路径（dry-run 写入；apply/revert 读取）")
+	apply := flag.Bool("apply", false, "按 manifest 延长 trial 授权至目标日（需 EXTENDTRIALS_ALLOW=1）")
+	revert := flag.Bool("revert", false, "按 manifest 恢复原始到期日（需 EXTENDTRIALS_ALLOW=1）")
+	operator := flag.String("operator", "", "写操作执行人（apply/revert 必填，写入平台操作日志）")
+	sha256Flag := flag.String("sha256", "", "期望的 manifest SHA256（缺省读取 <manifest>.sha256 侧车文件）")
 	flag.Parse()
 
 	loc, err := time.LoadLocation("Asia/Shanghai")
@@ -76,6 +89,9 @@ func main() {
 		TargetExpiry:    time.Date(2027, 1, 31, 23, 59, 59, 0, loc),
 		ManifestPath:    *manifestPath,
 		Apply:           *apply,
+		Revert:          *revert,
+		Operator:        *operator,
+		ManifestSHA256:  *sha256Flag,
 	}
 
 	res, err := run(context.Background(), db, opts)
@@ -87,6 +103,45 @@ func main() {
 }
 
 func printResult(res *Result, opts Options) {
+	if res.Mode == "apply" || res.Mode == "revert" {
+		printWriteResult(res, opts)
+		return
+	}
+	printDryRunResult(res, opts)
+}
+
+func printWriteResult(res *Result, opts Options) {
+	action := "延长"
+	if res.Mode == "revert" {
+		action = "恢复"
+	}
+	fmt.Printf("%s：按 manifest %s存量园所 trial 授权\n", res.Mode, action)
+	fmt.Printf("manifest：%s（sha256: %s）\n", res.ManifestPath, res.ManifestSHA256)
+	if res.Mode == "apply" {
+		fmt.Printf("目标到期日：%s（Asia/Shanghai）\n", opts.TargetExpiry.Format(manifestTimeLayout))
+	} else {
+		fmt.Printf("回滚判定：当前到期日须等于 apply 目标日 %s（Asia/Shanghai），否则整体拒绝\n",
+			opts.TargetExpiry.Format(manifestTimeLayout))
+	}
+	if res.AffectedRows == 0 {
+		fmt.Println("影响：0 所园 / 0 条授权（幂等重跑，无实际变更）")
+	} else {
+		fmt.Printf("影响：%d 所园 / %d 条授权\n", res.AffectedKindergartens, res.AffectedRows)
+	}
+	if res.UnchangedRows > 0 {
+		switch res.Mode {
+		case "apply":
+			fmt.Printf("未变更：%d 条（到期日已等于或晚于目标日，只延长不回退）\n", res.UnchangedRows)
+		default:
+			fmt.Printf("未变更：%d 条（已恢复过的行，跳过）\n", res.UnchangedRows)
+		}
+	}
+	if res.LogID > 0 {
+		fmt.Printf("平台操作日志：platform_operation_logs#%d\n", res.LogID)
+	}
+}
+
+func printDryRunResult(res *Result, opts Options) {
 	plan := res.Plan
 	excludedTotal := len(plan.Excluded) + len(plan.NullCreatedAt)
 
@@ -131,6 +186,7 @@ func printResult(res *Result, opts Options) {
 
 	if res.ManifestWritten {
 		fmt.Printf("manifest：%s（sha256: %s；每条 trial 授权一行，可逐条回滚）\n", res.ManifestPath, res.ManifestSHA256)
+		fmt.Printf("校验值：%s（apply/revert 默认读取）\n", res.SHAFilePath)
 		fmt.Printf("园所汇总：%s\n", res.SummaryPath)
 	} else {
 		fmt.Println("manifest：没有待延长园所，未生成 manifest（数据库未做任何修改）")

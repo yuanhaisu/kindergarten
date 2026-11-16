@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // ErrEmptyPlan 表示没有待修改的授权。此时不落盘：一份只有表头的 manifest
@@ -66,6 +68,142 @@ func WriteManifest(path string, plan *Plan) (string, error) {
 }
 
 // WriteSummary 另存园所汇总（人读视图），不参与逐条回滚。
+// manifestSHASuffix 是 dry-run 写出的校验值侧车文件后缀。apply/revert 默认读它，
+// 避免操作者手工转录哈希；也可用 -sha256 显式指定。
+const manifestSHASuffix = ".sha256"
+
+// Manifest 是 dry-run 落盘、apply/revert 读取的运营确认清单。
+type Manifest struct {
+	Path   string
+	SHA256 string
+	Rows   []TrialRow
+}
+
+// Kindergartens 返回清单涉及的园所 ID（升序去重）。
+func (m *Manifest) Kindergartens() []uint64 {
+	set := make(map[uint64]bool, len(m.Rows))
+	for _, r := range m.Rows {
+		set[r.KindergartenID] = true
+	}
+	return sortedIDs(set)
+}
+
+// WriteManifestSHA256 写出 manifest 校验值侧车文件，返回侧车路径。
+func WriteManifestSHA256(path, sha string) (string, error) {
+	if path == "" {
+		return "", errors.New("manifest 路径为空")
+	}
+	if sha == "" {
+		return "", errors.New("manifest SHA256 为空")
+	}
+	side := path + manifestSHASuffix
+	if err := os.WriteFile(side, []byte(sha+"\n"), 0o644); err != nil {
+		return "", fmt.Errorf("写出 manifest 校验值失败: %w", err)
+	}
+	return side, nil
+}
+
+// ResolveManifestSHA 返回期望的 manifest 哈希：-sha256 显式值优先，否则读侧车文件。
+func ResolveManifestSHA(path, explicit string) (sha, source string, err error) {
+	if v := strings.ToLower(strings.TrimSpace(explicit)); v != "" {
+		if _, err := hex.DecodeString(v); err != nil || len(v) != sha256.Size*2 {
+			return "", "", fmt.Errorf("-sha256 不是合法的 SHA256（需 64 位十六进制）: %q", explicit)
+		}
+		return v, "-sha256", nil
+	}
+	side := path + manifestSHASuffix
+	raw, err := os.ReadFile(side)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", "", fmt.Errorf(
+				"缺少 manifest 校验值：%s 不存在（请确认它与 dry-run 生成的 manifest 在同一目录，或用 -sha256 指定）", side)
+		}
+		return "", "", fmt.Errorf("读取 manifest 校验值 %s 失败: %w", side, err)
+	}
+	v := strings.ToLower(strings.TrimSpace(string(raw)))
+	if _, err := hex.DecodeString(v); err != nil || len(v) != sha256.Size*2 {
+		return "", "", fmt.Errorf("manifest 校验值文件 %s 内容不是合法的 SHA256: %q", side, strings.TrimSpace(string(raw)))
+	}
+	return v, side, nil
+}
+
+// ReadManifest 读取并校验 manifest：版本行、表头、逐行格式与 SHA256。
+// 空文件、只有表头的空清单、重复授权一律拒绝——残缺文件看起来像合法产物，
+// 放行会让 apply/revert 在错误范围内执行。
+func ReadManifest(path, expectedSHA string) (*Manifest, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("manifest 不存在：%s（请先用 dry-run 生成并经运营确认）", path)
+		}
+		return nil, fmt.Errorf("读取 manifest %s 失败: %w", path, err)
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return nil, fmt.Errorf("manifest 为空：%s", path)
+	}
+
+	sum := sha256.Sum256(raw)
+	actual := hex.EncodeToString(sum[:])
+	if expectedSHA != "" && !strings.EqualFold(actual, expectedSHA) {
+		return nil, fmt.Errorf(
+			"manifest SHA256 不匹配：期望 %s，实际 %s（文件在 dry-run 之后被修改？）", expectedSHA, actual)
+	}
+
+	r := csv.NewReader(bytes.NewReader(raw))
+	r.FieldsPerRecord = -1
+	records, err := r.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("解析 manifest %s 失败: %w", path, err)
+	}
+	if len(records) < 2 {
+		return nil, fmt.Errorf("manifest 结构不完整：%s（缺少版本行或表头）", path)
+	}
+	if len(records[0]) != 1 || records[0][0] != manifestMagic {
+		return nil, fmt.Errorf("manifest 版本不匹配：期望 %q，实际 %q", manifestMagic, strings.Join(records[0], ","))
+	}
+	if got := strings.Join(records[1], ","); got != manifestHeader {
+		return nil, fmt.Errorf("manifest 表头不匹配：期望 %q，实际 %q", manifestHeader, got)
+	}
+	if len(records) == 2 {
+		return nil, fmt.Errorf("manifest 没有任何授权行（空清单）：%s", path)
+	}
+
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		return nil, fmt.Errorf("加载 Asia/Shanghai 失败（容器缺 tzdata？）: %w", err)
+	}
+	rows := make([]TrialRow, 0, len(records)-2)
+	seen := make(map[uint64]bool, len(records)-2)
+	for i, rec := range records[2:] {
+		line := i + 3
+		if len(rec) != 3 {
+			return nil, fmt.Errorf("manifest 第 %d 行列数不为 3: %q", line, strings.Join(rec, ","))
+		}
+		kgID, err := strconv.ParseUint(strings.TrimSpace(rec[0]), 10, 64)
+		if err != nil || kgID == 0 {
+			return nil, fmt.Errorf("manifest 第 %d 行 kindergarten_id 非法: %q", line, rec[0])
+		}
+		entID, err := strconv.ParseUint(strings.TrimSpace(rec[1]), 10, 64)
+		if err != nil || entID == 0 {
+			return nil, fmt.Errorf("manifest 第 %d 行 entitlement_id 非法: %q", line, rec[1])
+		}
+		expiresAt, err := time.ParseInLocation(manifestTimeLayout, strings.TrimSpace(rec[2]), loc)
+		if err != nil {
+			return nil, fmt.Errorf("manifest 第 %d 行 old_expires_at 非法: %q", line, rec[2])
+		}
+		if seen[entID] {
+			return nil, fmt.Errorf("manifest 授权 %d 重复出现", entID)
+		}
+		seen[entID] = true
+		rows = append(rows, TrialRow{
+			KindergartenID: kgID,
+			EntitlementID:  entID,
+			ExpiresAt:      expiresAt,
+		})
+	}
+	return &Manifest{Path: path, SHA256: actual, Rows: rows}, nil
+}
+
 func WriteSummary(path string, plan *Plan) error {
 	if path == "" {
 		return errors.New("汇总文件路径为空")

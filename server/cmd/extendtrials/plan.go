@@ -19,6 +19,9 @@ type Options struct {
 	TargetExpiry    time.Time // 统一延长到的到期时刻
 	ManifestPath    string
 	Apply           bool
+	Revert          bool
+	Operator        string
+	ManifestSHA256  string // 显式指定的期望 SHA256；为空时读 <manifest>.sha256 侧车文件
 }
 
 // TrialGroup 是一所将被延长的园所及其待修改的 trial 授权汇总。

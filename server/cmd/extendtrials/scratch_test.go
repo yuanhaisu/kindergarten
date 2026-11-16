@@ -111,6 +111,7 @@ func resetScratchTables(t *testing.T, db *gorm.DB) {
 		"TRUNCATE TABLE `entitlements`",
 		"TRUNCATE TABLE `orders`",
 		"TRUNCATE TABLE `kindergartens`",
+		"TRUNCATE TABLE `platform_operation_logs`",
 		"SET FOREIGN_KEY_CHECKS=1",
 	}
 	for _, s := range stmts {
@@ -195,6 +196,15 @@ func allEntitlementExpiries(t *testing.T, db *gorm.DB) []expiryRow {
 		t.Fatalf("读取授权到期日失败: %v", err)
 	}
 	return rows
+}
+
+func entitlementExpiryMap(t *testing.T, db *gorm.DB) map[uint64]time.Time {
+	t.Helper()
+	out := make(map[uint64]time.Time)
+	for _, row := range allEntitlementExpiries(t, db) {
+		out[row.ID] = row.ExpiresAt
+	}
+	return out
 }
 
 func testOptions(loc *time.Location) Options {
