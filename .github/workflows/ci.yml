@@ -70,7 +70,7 @@ jobs:
           working-directory: server
           args: ./...
       - name: Unit tests (DB-free packages)
-        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... -count=1
+        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... ./cmd/internal/seedutil -count=1
 
   migrate:
     name: 数据库迁移（干净库）

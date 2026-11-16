@@ -1,7 +1,13 @@
+// seedgrowth 灌入 2 条成长记录演示数据。
+//
+// 用法：
+//
+//	SEED_ALLOW_DEMO=1 go run ./cmd/seedgrowth
 package main
-import ("fmt";"log";"time";"gorm.io/driver/mysql";"gorm.io/gorm";gormlogger "gorm.io/gorm/logger";"kindergarten-server/internal/config";"kindergarten-server/internal/domain")
+import ("fmt";"log";"time";"gorm.io/driver/mysql";"gorm.io/gorm";gormlogger "gorm.io/gorm/logger";"kindergarten-server/cmd/internal/seedutil";"kindergarten-server/internal/config";"kindergarten-server/internal/domain")
 func main() {
-	cfg,_:=config.Load("configs/app.ini")
+	seedutil.RequireDemoOptIn("seedgrowth")
+	cfg,_:=config.Load(seedutil.ConfigPath())
 	db,err:=gorm.Open(mysql.Open(cfg.MySQL.DSN),&gorm.Config{Logger:gormlogger.Default.LogMode(gormlogger.Warn)})
 	if err!=nil{log.Fatal(err)}
 	now:=time.Now()

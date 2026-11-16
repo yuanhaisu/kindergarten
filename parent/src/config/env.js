@@ -7,9 +7,9 @@ const ENV_CONFIG = {
     envName: "开发环境"
   },
   test: {
-    baseURL: import.meta.env.VITE_API_BASE_URL || "https://test-api.xxx.com/api/v1",
-    uploadURL: import.meta.env.VITE_UPLOAD_URL || "https://test-api.xxx.com/api/v1/common/upload",
-    siteURL: import.meta.env.VITE_SITE_URL || "https://test-www.xxx.com",
+    baseURL: import.meta.env.VITE_API_BASE_URL || "https://test-api.nurtureplanet.cn/api/v1",
+    uploadURL: import.meta.env.VITE_UPLOAD_URL || "https://test-api.nurtureplanet.cn/api/v1/common/upload",
+    siteURL: import.meta.env.VITE_SITE_URL || "https://test-www.nurtureplanet.cn",
     env: "test",
     envName: "测试环境"
   },
