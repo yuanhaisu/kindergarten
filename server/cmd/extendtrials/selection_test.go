@@ -27,15 +27,20 @@ func TestBuildPlanExcludesPaidAndReportsLegacyRows(t *testing.T) {
 	insertKindergarten(t, db, 202, "新政园", &afterPolicy)
 	insertEntitlement(t, db, 2021, 202, "growth", "trial", nil, afterPolicy, lateTrialEnd)
 
-	// 203 有未付款订单（未取消）：排除。
+	// 203 有在期未付款订单（未取消）：排除。
 	insertKindergarten(t, db, 203, "已下单园", &early)
 	insertEntitlement(t, db, 2031, 203, "growth", "trial", nil, trialStart, trialEnd)
-	insertOrder(t, db, 2032, 203, "unpaid", lateTrialEnd)
+	insertOrder(t, db, 2032, 203, "unpaid", early, lateTrialEnd)
 
 	// 204 只有已取消订单：不阻断，应命中。
 	insertKindergarten(t, db, 204, "取消订单园", &early)
 	insertEntitlement(t, db, 2041, 204, "growth", "trial", nil, trialStart, trialEnd)
-	insertOrder(t, db, 2042, 204, "cancelled", lateTrialEnd)
+	insertOrder(t, db, 2042, 204, "cancelled", early, lateTrialEnd)
+
+	// 213 有未取消但已过生效窗口的历史订单：不阻断，应命中。
+	insertKindergarten(t, db, 213, "历史订单园", &early)
+	insertEntitlement(t, db, 2131, 213, "growth", "trial", nil, trialStart, trialEnd)
+	insertOrder(t, db, 2132, 213, "expired", early, time.Date(2025, 12, 31, 23, 59, 59, 0, loc))
 
 	// 205 有在期订阅授权：排除。
 	insertKindergarten(t, db, 205, "已付费园", &early)
@@ -81,8 +86,8 @@ func TestBuildPlanExcludesPaidAndReportsLegacyRows(t *testing.T) {
 	plan, err := BuildPlan(context.Background(), db, testOptions(loc))
 	require.NoError(t, err)
 
-	require.Equal(t, 11, plan.Scanned, "软删园所不扫描")
-	require.Equal(t, []uint64{201, 204, 206}, selectedIDs(plan))
+	require.Equal(t, 12, plan.Scanned, "软删园所不扫描")
+	require.Equal(t, []uint64{201, 204, 206, 213}, selectedIDs(plan))
 	require.Equal(t, []LegacyKindergarten{{KindergartenID: 207, Name: "遗留空时间园"}}, plan.NullCreatedAt)
 
 	reasons := map[uint64]ExclusionReason{}

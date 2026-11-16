@@ -44,41 +44,48 @@ type lockedEntitlement struct {
 	KgDeletedAt    *time.Time
 }
 
-// ApplyManifest 在单个事务内把清单内仍早于目标日的 trial 授权延到目标日。
-//
-// 只延长不回退：到期日已等于或晚于目标日的行保持不变（重复执行影响行数为 0）。
-// 清单与数据库漂移（授权消失、被删、换了园所、不再是 trial）时整体拒绝，
-// 不在运营确认过的清单之外猜意图。
-func ApplyManifest(ctx context.Context, db *gorm.DB, opts Options, m *Manifest) (*WriteStats, error) {
-	if m == nil || len(m.Rows) == 0 {
-		return nil, errors.New("manifest 为空，拒绝执行")
-	}
+// rowUpdate 是一条待写回的授权到期日变更。
+type rowUpdate struct {
+	EntitlementID  uint64
+	KindergartenID uint64
+	ExpiresAt      time.Time
+}
+
+// writeManifestTx 是 apply/revert 共用的事务骨架：
+// 行锁并校验清单 → decide 全量判定并给出写入计划 → 逐行 UPDATE → 写平台操作日志。
+// decide 返回错误时整体拒绝，事务内不落任何写入。
+func writeManifestTx(
+	ctx context.Context,
+	db *gorm.DB,
+	opts Options,
+	m *Manifest,
+	mode, action string,
+	decide func(current map[uint64]lockedEntitlement) ([]rowUpdate, *WriteStats, error),
+) (*WriteStats, error) {
 	var stats *WriteStats
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		current, err := lockManifestRows(ctx, tx, m)
 		if err != nil {
 			return err
 		}
-		s := &WriteStats{}
+		updates, s, err := decide(current)
+		if err != nil {
+			return err
+		}
 		kgSet := make(map[uint64]bool)
-		for _, want := range m.Rows {
-			cur := current[want.EntitlementID]
-			if !cur.ExpiresAt.Before(opts.TargetExpiry) {
-				s.Unchanged++
-				continue
-			}
+		for _, u := range updates {
 			if err := tx.Exec(
 				"UPDATE entitlements SET expires_at = ?, updated_at = ? WHERE id = ?",
-				opts.TargetExpiry, opts.Now, want.EntitlementID,
+				u.ExpiresAt, opts.Now, u.EntitlementID,
 			).Error; err != nil {
-				return fmt.Errorf("更新授权 %d 失败: %w", want.EntitlementID, err)
+				return fmt.Errorf("更新授权 %d 失败: %w", u.EntitlementID, err)
 			}
 			s.Rows++
-			kgSet[want.KindergartenID] = true
+			kgSet[u.KindergartenID] = true
 		}
 		s.KindergartenIDs = sortedIDs(kgSet)
 		s.Kindergartens = len(s.KindergartenIDs)
-		if err := writeOperationLog(tx, opts, "extend_trials", "apply", s, m); err != nil {
+		if err := writeOperationLog(tx, opts, action, mode, s, m); err != nil {
 			return err
 		}
 		stats = s
@@ -88,6 +95,34 @@ func ApplyManifest(ctx context.Context, db *gorm.DB, opts Options, m *Manifest) 
 		return nil, err
 	}
 	return stats, nil
+}
+
+// ApplyManifest 在单个事务内把清单内仍早于目标日的 trial 授权延到目标日。
+//
+// 只延长不回退：到期日已等于或晚于目标日的行保持不变（重复执行影响行数为 0）。
+// 清单与数据库漂移（授权消失、被删、换了园所、不再是 trial）时整体拒绝，
+// 不在运营确认过的清单之外猜意图。
+func ApplyManifest(ctx context.Context, db *gorm.DB, opts Options, m *Manifest) (*WriteStats, error) {
+	if m == nil || len(m.Rows) == 0 {
+		return nil, errors.New("manifest 为空，拒绝执行")
+	}
+	return writeManifestTx(ctx, db, opts, m, "apply", "extend_trials",
+		func(current map[uint64]lockedEntitlement) ([]rowUpdate, *WriteStats, error) {
+			s := &WriteStats{}
+			updates := make([]rowUpdate, 0, len(m.Rows))
+			for _, want := range m.Rows {
+				if !current[want.EntitlementID].ExpiresAt.Before(opts.TargetExpiry) {
+					s.Unchanged++
+					continue
+				}
+				updates = append(updates, rowUpdate{
+					EntitlementID:  want.EntitlementID,
+					KindergartenID: want.KindergartenID,
+					ExpiresAt:      opts.TargetExpiry,
+				})
+			}
+			return updates, s, nil
+		})
 }
 
 // lockManifestRows 校验清单每行在库中仍是同一园所的 trial 授权，并加行锁。

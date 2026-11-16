@@ -21,14 +21,13 @@ type Options struct {
 	Apply           bool
 	Revert          bool
 	Operator        string
-	ManifestSHA256  string // 显式指定的期望 SHA256；为空时读 <manifest>.sha256 侧车文件
 }
 
 // TrialGroup 是一所将被延长的园所及其待修改的 trial 授权汇总。
 type TrialGroup struct {
 	KindergartenID uint64
 	Name           string
-	TrialCount     int
+	TrialCount     int // 本次待延长的 trial 授权条数（不含已是目标日或更晚的行）
 	OldEarliest    time.Time
 	OldLatest      time.Time
 }
@@ -59,7 +58,7 @@ func (r ExclusionReason) Label() string {
 	case ReasonNoTrial:
 		return "无 trial 授权"
 	case ReasonUncancelledOrder:
-		return "存在未取消订单"
+		return "存在在期未取消订单"
 	case ReasonActiveSubscription:
 		return "存在在期订阅授权"
 	case ReasonNothingToExtend:
@@ -105,8 +104,8 @@ type kindergartenRow struct {
 
 type trialAggRow struct {
 	KindergartenID uint64
-	TrialCount     int
-	ToExtend       int
+	TotalRows      int // 该园全部存量 trial 授权行数（含已是目标日或更晚的行）
+	ToExtend       int // 其中本次需要延长的行数
 	OldEarliest    *time.Time
 	OldLatest      *time.Time
 }
@@ -114,7 +113,7 @@ type trialAggRow struct {
 // BuildPlan 按 ADR-0018 的存量园所口径做只读选择。它绝不写库。
 //
 // 口径：未删除、created_at 早于政策日次日零点、存在 source='trial' AND order_id IS NULL
-// 的授权；排除存在未取消订单或在期 subscription 授权的园所。
+// 的授权；排除存在在期未取消订单或在期 subscription 授权的园所。
 // 只把 expires_at < TargetExpiry 的 trial 行计入待修改行：已经延到目标日之后的
 // 行不动，重复执行影响行数为 0。
 func BuildPlan(ctx context.Context, db *gorm.DB, opts Options) (*Plan, error) {
@@ -152,7 +151,7 @@ func BuildPlan(ctx context.Context, db *gorm.DB, opts Options) (*Plan, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockedOrders, err := loadIDsWithUncancelledOrders(ctx, db, remaining)
+	blockedOrders, err := loadIDsWithUncancelledOrders(ctx, db, remaining, opts.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +168,7 @@ func BuildPlan(ctx context.Context, db *gorm.DB, opts Options) (*Plan, error) {
 	for _, id := range remaining {
 		agg, ok := trials[id]
 		switch {
-		case !ok || agg.TrialCount == 0:
+		case !ok || agg.TotalRows == 0:
 			plan.Excluded = append(plan.Excluded, Exclusion{id, nameByID[id], ReasonNoTrial})
 		case blockedOrders[id]:
 			plan.Excluded = append(plan.Excluded, Exclusion{id, nameByID[id], ReasonUncancelledOrder})
@@ -260,7 +259,7 @@ func loadTrialAggregates(ctx context.Context, db *gorm.DB, ids []uint64, target 
 	var rows []trialAggRow
 	if err := db.WithContext(ctx).Raw(`
 SELECT kindergarten_id,
-       COUNT(*) AS trial_count,
+       COUNT(*) AS total_rows,
        COUNT(CASE WHEN expires_at < ? THEN 1 END) AS to_extend,
        MIN(CASE WHEN expires_at < ? THEN expires_at END) AS old_earliest,
        MAX(CASE WHEN expires_at < ? THEN expires_at END) AS old_latest
@@ -282,12 +281,19 @@ ORDER BY kindergarten_id`,
 	return byID, nil
 }
 
-func loadIDsWithUncancelledOrders(ctx context.Context, db *gorm.DB, ids []uint64) (map[uint64]bool, error) {
+// loadIDsWithUncancelledOrders 找出在 now 处于生效窗口（starts_at <= now < expires_at）
+// 且未取消的订单所属园所。窗口外的历史订单（含 expired）不阻断延长：
+// 它们不构成「已付费在用」，本轮延长的目的正是覆盖 trial 到期后的空档。
+func loadIDsWithUncancelledOrders(ctx context.Context, db *gorm.DB, ids []uint64, now time.Time) (map[uint64]bool, error) {
 	var found []uint64
 	if err := db.WithContext(ctx).Raw(`
 SELECT DISTINCT kindergarten_id FROM orders
-WHERE deleted_at IS NULL AND status <> ? AND kindergarten_id IN ?`,
-		domain.OrderStatusCancelled, ids,
+WHERE deleted_at IS NULL
+  AND status <> ?
+  AND starts_at <= ?
+  AND expires_at > ?
+  AND kindergarten_id IN ?`,
+		domain.OrderStatusCancelled, now, now, ids,
 	).Scan(&found).Error; err != nil {
 		return nil, fmt.Errorf("查询订单失败: %w", err)
 	}

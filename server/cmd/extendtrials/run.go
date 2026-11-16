@@ -64,7 +64,7 @@ func run(ctx context.Context, db *gorm.DB, opts Options) (*Result, error) {
 			}
 			return nil, fmt.Errorf("检查 manifest %s 失败: %w", opts.ManifestPath, err)
 		}
-		expectedSHA, _, err := ResolveManifestSHA(opts.ManifestPath, opts.ManifestSHA256)
+		expectedSHA, err := ResolveManifestSHA(opts.ManifestPath)
 		if err != nil {
 			return nil, err
 		}

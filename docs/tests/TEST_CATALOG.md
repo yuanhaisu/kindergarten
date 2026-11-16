@@ -1382,7 +1382,7 @@
 
 ### 存量 trial 延长 (TNT)
 
-> 前置：独立 scratch 库 `kindergarten_extendtrials_test`（`go test ./cmd/extendtrials` 自动建库并跑 goose 迁移），不碰共享开发库。
+> 前置：独立 scratch 库 `kindergarten_extendtrials_test_<PID>`（`go test ./cmd/extendtrials` 自动建库并跑 goose 迁移，按进程 PID 隔离并发），不碰共享开发库；`CONFIG_PATH` 需传绝对路径，否则数据库用例会静默 skip。
 > 步骤：按名称执行对应命令或调用命令级入口；预期：名称后半句。
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
@@ -1409,6 +1409,9 @@
 | TC-NEW-TNT-0020 | manifest 缺失/空/仅表头时拒绝 | P0 | Command | ✅ (`TestRunWriteRejectsMissingOrEmptyManifest`) |
 | TC-NEW-TNT-0021 | apply 写 platform_operation_logs（操作人/园所数/行数） | P0 | Command | ✅ (`TestRunApplyWritesPlatformOperationLog`) |
 | TC-NEW-TNT-0022 | 重复 revert 为 no-op（0 行） | P1 | Command | ✅ (`TestRunRevertIsIdempotent`) |
+| TC-NEW-TNT-0023 | BuildPlan 选中存量 trial 并在只读路径上不写库 | P0 | Command | ✅ (`TestBuildPlanSelectsLegacyTrialsAndDoesNotWrite`) |
+| TC-NEW-TNT-0024 | 空计划不落 manifest（避免伪造可执行清单） | P0 | Command | ✅ (`TestWriteManifestRefusesEmptyPlan`) |
+| TC-NEW-TNT-0025 | 缺少 -manifest 时拒绝执行 | P0 | Command | ✅ (`TestRunRequiresManifestPath`) |
 
 ### 分销佣金 (DST)
 

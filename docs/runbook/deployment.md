@@ -553,7 +553,7 @@ go run ./cmd/extendtrials -manifest ./extendtrials-2026-11-16.csv
 | 文件 | 用途 |
 |---|---|
 | `extendtrials-2026-11-16.csv` | 逐条授权清单（园所、授权 ID、原到期日），apply/revert 的唯一输入 |
-| `extendtrials-2026-11-16.csv.sha256` | 校验值侧车文件；apply/revert 默认读取 |
+| `extendtrials-2026-11-16.csv.sha256` | 校验值侧车文件；apply/revert 只认它，没有手工覆盖哈希的参数 |
 | `extendtrials-2026-11-16.csv.summary.csv` | 园所汇总（名称、trial 条数），供运营核对 |
 
 ```bash
@@ -568,7 +568,7 @@ EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
 # PowerShell: $env:EXTENDTRIALS_ALLOW="1" 后再执行同一命令
 ```
 
-apply 只处理 manifest 中的授权：清单外的数据不变；已是目标日或更晚的行跳过（只延长不回退）；重复执行影响 0 行。成功后在 `platform_operation_logs` 落一条 `module=billing, action=extend_trials`，`detail` 含影响园所数、园所 ID、行数、目标日与 manifest SHA256。
+apply 只处理 manifest 中的授权：清单外的数据不变；已是目标日或更晚的行跳过（只延长不回退）；重复执行影响 0 行。写入前命令会先打印目标库（`host:port/库名`，不含凭据）供人工核对；成功后输出执行人、开始/结束时间、影响园所数与行数，并在 `platform_operation_logs` 落一条 `module=billing, action=extend_trials`，`detail` 含影响园所数、园所 ID、行数、目标日与 manifest SHA256。
 
 ### 11.2 抽检
 
@@ -590,7 +590,7 @@ ORDER BY id DESC LIMIT 5;
 
 ### 11.3 回滚与演练
 
-回滚使用**同一份 manifest 与 sha256 侧车文件**，不需要重新 dry-run：命令按清单里的 `old_expires_at` 逐条恢复。
+回滚使用**同一份 manifest 与 sha256 侧车文件**，不需要重新 dry-run：命令按清单里的 `old_expires_at` 逐条写回，属于**秒级近似恢复**（见下）。
 
 ```bash
 EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
@@ -601,7 +601,7 @@ EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
 - 回滚前逐行校验：当前 `expires_at` 必须等于 apply 目标日（或已等于 manifest 原值）。**任一行不等于两者即整体拒绝并点名**，不会覆盖 apply 之后的合法续期/调整。
 - 重复回滚是 no-op（0 行），同样落一条 `action=revert_trials` 日志。
 - 演练顺序：staging/只读副本 dry-run → apply → 抽检 → revert → 再次抽检确认恢复 → 重新 apply；生产执行前把演练结果与 manifest 一并归档。
-- manifest 以**秒**精度记录原到期日；若库里原值带毫秒，revert 恢复到秒（业务等价）。需要绝对精确值时先导出原值留档，人工核对。
+- manifest 以**秒**精度记录原到期日，回滚是**秒级近似恢复**而非位级还原：若库里原值带毫秒，revert 只能恢复到秒（业务等价）。需要绝对精确值时先导出原值留档，人工核对。
 
 ### 11.4 拒绝条件（命令级护栏）
 
@@ -609,6 +609,7 @@ EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
 |---|---|
 | `-manifest` 缺失/文件不存在/空文件/只有表头 | 拒绝，并给出明确错误 |
 | manifest 版本行或 SHA256 不符 | 拒绝，不写库 |
+| apply/revert 时清单行与库中不一致：授权不存在 / 授权已软删 / 园所 ID 不符 / 园所已软删 / 已不是存量 trial（`source` 变了或已挂 `order_id`） | 整体拒绝，点名具体授权，事务内不修改任何行 |
 | 未设 `EXTENDTRIALS_ALLOW=1` | 拒绝（dry-run 不需要该开关） |
 | 未传 `-operator` | 拒绝 |
 | `-apply` 与 `-revert` 同时使用 | 拒绝 |
@@ -620,7 +621,9 @@ EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
 
 ```bash
 cd server
-CONFIG_PATH=configs/app.ini go test ./cmd/extendtrials -count=1
+CONFIG_PATH=$(pwd)/configs/app.ini go test ./cmd/extendtrials -count=1
 ```
 
-测试自动创建并迁移独立 scratch 库 `kindergarten_extendtrials_test`（不碰共享开发库），覆盖 apply/revert/幂等/SHA 与版本校验/写开关/防覆盖/事务回滚。可用 `EXTENDTRIALS_TEST_DSN` 指定其它测试实例。
+`CONFIG_PATH` 用绝对路径：`go test` 的工作目录是包目录（`cmd/extendtrials`），相对路径会找不到 `configs/app.ini` 而让全部数据库用例静默 skip。
+
+测试自动创建并迁移独立 scratch 库 `kindergarten_extendtrials_test_<PID>`（按测试进程 PID 加后缀，并发跑多个 `go test` 进程互不干扰；不碰共享开发库），覆盖 apply/revert/幂等/SHA 与版本校验/写开关/防覆盖/事务回滚。可用 `EXTENDTRIALS_TEST_DSN` 指定其它测试实例。

@@ -42,14 +42,18 @@ import (
 	"kindergarten-server/internal/config"
 )
 
-const policyDateLabel = "2026-11-15"
+const (
+	// policyDateLabel 是存量园所口径的政策日（含）：该日及之前开通的园所才会被延长。
+	policyDateLabel = "2026-11-15"
+	// targetExpiryLabel 是本次统一延长到的到期时刻（Asia/Shanghai 墙钟时间）。
+	targetExpiryLabel = "2027-01-31 23:59:59"
+)
 
 func main() {
 	manifestPath := flag.String("manifest", "", "manifest 路径（dry-run 写入；apply/revert 读取）")
 	apply := flag.Bool("apply", false, "按 manifest 延长 trial 授权至目标日（需 EXTENDTRIALS_ALLOW=1）")
 	revert := flag.Bool("revert", false, "按 manifest 恢复原始到期日（需 EXTENDTRIALS_ALLOW=1）")
 	operator := flag.String("operator", "", "写操作执行人（apply/revert 必填，写入平台操作日志）")
-	sha256Flag := flag.String("sha256", "", "期望的 manifest SHA256（缺省读取 <manifest>.sha256 侧车文件）")
 	flag.Parse()
 
 	loc, err := time.LoadLocation("Asia/Shanghai")
@@ -83,39 +87,58 @@ func main() {
 		log.Fatal("open db: ", sanitizeDSN(err, dsnCfg.FormatDSN()))
 	}
 
+	// 政策日与目标日各只保留一处字面量，避免两处日期漂移。
+	policyDate, err := time.ParseInLocation("2006-01-02", policyDateLabel, loc)
+	if err != nil {
+		log.Fatal("解析政策日失败: ", err)
+	}
+	targetExpiry, err := time.ParseInLocation(manifestTimeLayout, targetExpiryLabel, loc)
+	if err != nil {
+		log.Fatal("解析目标到期日失败: ", err)
+	}
+
 	opts := Options{
 		Now:             time.Now().In(loc),
-		CutoffExclusive: time.Date(2026, 11, 16, 0, 0, 0, 0, loc),
-		TargetExpiry:    time.Date(2027, 1, 31, 23, 59, 59, 0, loc),
+		CutoffExclusive: policyDate.AddDate(0, 0, 1),
+		TargetExpiry:    targetExpiry,
 		ManifestPath:    *manifestPath,
 		Apply:           *apply,
 		Revert:          *revert,
 		Operator:        *operator,
-		ManifestSHA256:  *sha256Flag,
 	}
 
+	// 写操作前先亮出目标库（不含账号/口令），避免把生产库当测试库执行。
+	if opts.Apply || opts.Revert {
+		fmt.Printf("目标数据库：%s（配置：%s）\n", dbLabel(dsnCfg), cfgPath)
+	}
+
+	startedAt := time.Now().In(loc)
 	res, err := run(context.Background(), db, opts)
+	finishedAt := time.Now().In(loc)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "错误:", sanitizeDSN(err, dsnCfg.FormatDSN()))
 		os.Exit(1)
 	}
-	printResult(res, opts)
+	printResult(res, opts, startedAt, finishedAt)
 }
 
-func printResult(res *Result, opts Options) {
+func printResult(res *Result, opts Options, startedAt, finishedAt time.Time) {
 	if res.Mode == "apply" || res.Mode == "revert" {
-		printWriteResult(res, opts)
+		printWriteResult(res, opts, startedAt, finishedAt)
 		return
 	}
 	printDryRunResult(res, opts)
 }
 
-func printWriteResult(res *Result, opts Options) {
+func printWriteResult(res *Result, opts Options, startedAt, finishedAt time.Time) {
 	action := "延长"
 	if res.Mode == "revert" {
 		action = "恢复"
 	}
 	fmt.Printf("%s：按 manifest %s存量园所 trial 授权\n", res.Mode, action)
+	fmt.Printf("执行人：%s\n", opts.Operator)
+	fmt.Printf("开始时间：%s　结束时间：%s（Asia/Shanghai）\n",
+		startedAt.Format(manifestTimeLayout), finishedAt.Format(manifestTimeLayout))
 	fmt.Printf("manifest：%s（sha256: %s）\n", res.ManifestPath, res.ManifestSHA256)
 	if res.Mode == "apply" {
 		fmt.Printf("目标到期日：%s（Asia/Shanghai）\n", opts.TargetExpiry.Format(manifestTimeLayout))
@@ -191,6 +214,19 @@ func printDryRunResult(res *Result, opts Options) {
 	} else {
 		fmt.Println("manifest：没有待延长园所，未生成 manifest（数据库未做任何修改）")
 	}
+}
+
+// dbLabel 返回不含凭据的目标库标识（地址/库名），供写操作前人工确认。
+func dbLabel(cfg *mysqldrv.Config) string {
+	addr := cfg.Addr
+	if addr == "" {
+		addr = cfg.Net // 无地址时退回网络类型（如 unix socket）
+	}
+	db := cfg.DBName
+	if db == "" {
+		db = "(未指定库名)"
+	}
+	return addr + "/" + db
 }
 
 // sanitizeDSN 抹掉错误文本中可能出现的 DSN：连接串含口令，不能进日志。

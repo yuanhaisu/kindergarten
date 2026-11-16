@@ -25,6 +25,12 @@ const (
 	manifestTimeLayout = "2006-01-02 15:04:05"
 )
 
+// 表头只保留字符串常量一处定义，写文件时按逗号拆成 CSV 字段。
+var (
+	manifestHeaderFields = strings.Split(manifestHeader, ",")
+	summaryHeaderFields  = strings.Split(summaryHeader, ",")
+)
+
 // WriteManifest 按固定 schema 逐条写出待修改授权，并返回文件字节的 SHA256。
 //
 // 每条 trial 授权一行：同园多条授权原到期日不一致时，revert 仍能逐条精确恢复。
@@ -42,7 +48,7 @@ func WriteManifest(path string, plan *Plan) (string, error) {
 	if err := w.Write([]string{manifestMagic}); err != nil {
 		return "", fmt.Errorf("写 manifest 首行失败: %w", err)
 	}
-	if err := w.Write([]string{"kindergarten_id", "entitlement_id", "old_expires_at"}); err != nil {
+	if err := w.Write(manifestHeaderFields); err != nil {
 		return "", fmt.Errorf("写 manifest 表头失败: %w", err)
 	}
 	for _, row := range plan.Trials {
@@ -68,8 +74,8 @@ func WriteManifest(path string, plan *Plan) (string, error) {
 }
 
 // WriteSummary 另存园所汇总（人读视图），不参与逐条回滚。
-// manifestSHASuffix 是 dry-run 写出的校验值侧车文件后缀。apply/revert 默认读它，
-// 避免操作者手工转录哈希；也可用 -sha256 显式指定。
+// manifestSHASuffix 是 dry-run 写出的校验值侧车文件后缀。
+// apply/revert 只读它，不接受手工转录的哈希：侧车必须与 manifest 成对出现。
 const manifestSHASuffix = ".sha256"
 
 // Manifest 是 dry-run 落盘、apply/revert 读取的运营确认清单。
@@ -103,28 +109,22 @@ func WriteManifestSHA256(path, sha string) (string, error) {
 	return side, nil
 }
 
-// ResolveManifestSHA 返回期望的 manifest 哈希：-sha256 显式值优先，否则读侧车文件。
-func ResolveManifestSHA(path, explicit string) (sha, source string, err error) {
-	if v := strings.ToLower(strings.TrimSpace(explicit)); v != "" {
-		if _, err := hex.DecodeString(v); err != nil || len(v) != sha256.Size*2 {
-			return "", "", fmt.Errorf("-sha256 不是合法的 SHA256（需 64 位十六进制）: %q", explicit)
-		}
-		return v, "-sha256", nil
-	}
+// ResolveManifestSHA 读取 <manifest>.sha256 侧车文件里的期望哈希。
+func ResolveManifestSHA(path string) (string, error) {
 	side := path + manifestSHASuffix
 	raw, err := os.ReadFile(side)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", "", fmt.Errorf(
-				"缺少 manifest 校验值：%s 不存在（请确认它与 dry-run 生成的 manifest 在同一目录，或用 -sha256 指定）", side)
+			return "", fmt.Errorf(
+				"缺少 manifest 校验值：%s 不存在（请确认它与 dry-run 生成的 manifest 在同一目录）", side)
 		}
-		return "", "", fmt.Errorf("读取 manifest 校验值 %s 失败: %w", side, err)
+		return "", fmt.Errorf("读取 manifest 校验值 %s 失败: %w", side, err)
 	}
 	v := strings.ToLower(strings.TrimSpace(string(raw)))
 	if _, err := hex.DecodeString(v); err != nil || len(v) != sha256.Size*2 {
-		return "", "", fmt.Errorf("manifest 校验值文件 %s 内容不是合法的 SHA256: %q", side, strings.TrimSpace(string(raw)))
+		return "", fmt.Errorf("manifest 校验值文件 %s 内容不是合法的 SHA256: %q", side, strings.TrimSpace(string(raw)))
 	}
-	return v, side, nil
+	return v, nil
 }
 
 // ReadManifest 读取并校验 manifest：版本行、表头、逐行格式与 SHA256。
@@ -210,7 +210,7 @@ func WriteSummary(path string, plan *Plan) error {
 	}
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
-	if err := w.Write([]string{"kindergarten_id", "name", "trial_count"}); err != nil {
+	if err := w.Write(summaryHeaderFields); err != nil {
 		return fmt.Errorf("写汇总表头失败: %w", err)
 	}
 	for _, g := range plan.Selected {

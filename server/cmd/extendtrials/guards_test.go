@@ -100,13 +100,12 @@ func TestRunApplyRejectsUnknownManifestVersion(t *testing.T) {
 	content := "# extendtrials-manifest v2\n" +
 		"kindergarten_id,entitlement_id,old_expires_at\n" +
 		"513,5131,2026-12-06 15:04:05\n"
-	sha := writeRawManifest(t, path, content)
+	writeRawManifest(t, path, content)
 	before := allEntitlementExpiries(t, db)
 
 	t.Setenv(allowWriteEnvVar, "1")
 	opts := testOptions(loc)
 	opts.ManifestPath = path
-	opts.ManifestSHA256 = sha
 	opts.Apply = true
 	opts.Operator = "ops-version"
 	_, err := run(context.Background(), db, opts)
@@ -131,17 +130,15 @@ func TestRunWriteRejectsMissingOrEmptyManifest(t *testing.T) {
 	require.Contains(t, err.Error(), "manifest 不存在")
 
 	emptyPath := filepath.Join(t.TempDir(), "empty.csv")
-	emptySHA := writeRawManifest(t, emptyPath, "")
+	writeRawManifest(t, emptyPath, "")
 	opts.ManifestPath = emptyPath
-	opts.ManifestSHA256 = emptySHA
 	_, err = run(context.Background(), db, opts)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "manifest 为空")
 
 	headerOnly := filepath.Join(t.TempDir(), "header-only.csv")
-	headerSHA := writeRawManifest(t, headerOnly, manifestMagic+"\n"+manifestHeader+"\n")
+	writeRawManifest(t, headerOnly, manifestMagic+"\n"+manifestHeader+"\n")
 	opts.ManifestPath = headerOnly
-	opts.ManifestSHA256 = headerSHA
 	_, err = run(context.Background(), db, opts)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "没有任何授权行")
@@ -193,9 +190,12 @@ func TestRunRejectsApplyAndRevertTogether(t *testing.T) {
 	require.Contains(t, err.Error(), "不能同时使用")
 }
 
-func writeRawManifest(t *testing.T, path, content string) string {
+// writeRawManifest 写入故意不合规的清单，并同步生成 .sha256 侧车，
+// 让测试能穿过哈希校验、命中后续的内容校验。
+func writeRawManifest(t *testing.T, path, content string) {
 	t.Helper()
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 	sum := sha256.Sum256([]byte(content))
-	return hex.EncodeToString(sum[:])
+	_, err := WriteManifestSHA256(path, hex.EncodeToString(sum[:]))
+	require.NoError(t, err)
 }

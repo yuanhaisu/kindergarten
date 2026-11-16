@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -17,9 +18,10 @@ import (
 	migrations "kindergarten-server/migrations"
 )
 
-// scratchDBName 是测试专用库。测试只操作这一份 schema，绝不碰共享开发库：
+// scratchDBName 是测试专用库，按进程 PID 加后缀：并发跑多个 go test 进程时
+// 各用各的库，不会互相 TRUNCATE。测试只操作这一份 schema，绝不碰共享开发库：
 // 迁移在库内真跑一遍（goose），断言的是命令在真实 schema 上的行为。
-const scratchDBName = "kindergarten_extendtrials_test"
+var scratchDBName = fmt.Sprintf("kindergarten_extendtrials_test_%d", os.Getpid())
 
 // openScratchDB 连接本机 MySQL，重建 scratch 库、跑完全部 goose 迁移并清空业务表。
 //
@@ -173,11 +175,11 @@ func insertEntitlement(t *testing.T, db *gorm.DB, id, kgID uint64, module, sourc
 	}
 }
 
-func insertOrder(t *testing.T, db *gorm.DB, id, kgID uint64, status string, expiresAt time.Time) {
+func insertOrder(t *testing.T, db *gorm.DB, id, kgID uint64, status string, startsAt, expiresAt time.Time) {
 	t.Helper()
 	err := db.Exec(
-		"INSERT INTO orders (id, created_at, updated_at, deleted_at, order_no, kindergarten_id, plan_id, plan_snapshot, status, starts_at, expires_at) VALUES (?, NOW(3), NOW(3), NULL, ?, ?, 1, '{}', ?, NOW(3), ?)",
-		id, "TEST-"+status+"-"+time.Now().Format("150405.000000000"), kgID, status, expiresAt,
+		"INSERT INTO orders (id, created_at, updated_at, deleted_at, order_no, kindergarten_id, plan_id, plan_snapshot, status, starts_at, expires_at) VALUES (?, NOW(3), NOW(3), NULL, ?, ?, 1, '{}', ?, ?, ?)",
+		id, fmt.Sprintf("TEST-%d", id), kgID, status, startsAt, expiresAt,
 	).Error
 	if err != nil {
 		t.Fatalf("插入订单 %d 失败: %v", id, err)
