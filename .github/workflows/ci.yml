@@ -43,6 +43,14 @@ jobs:
       - name: Nginx staging auth template test
         run: npm run check-nginx-staging-auth:test
 
+  deploy-scripts:
+    name: 部署脚本回归测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run deploy script tests
+        run: bash deploy/scripts/tests/run.sh
+
   backend:
     name: 后端编译 / vet / lint / 单测
     runs-on: ubuntu-latest
@@ -109,6 +117,11 @@ jobs:
       - name: goose up is idempotent
         working-directory: server
         run: go run ./cmd/migrate up
+      - name: extendtrials command tests
+        working-directory: server
+        env:
+          EXTENDTRIALS_TEST_DSN: "root:root@tcp(127.0.0.1:3306)/?charset=utf8mb4&parseTime=True&loc=Local"
+        run: go test ./cmd/extendtrials -count=1 -timeout 300s
       - name: seedbase (first run)
         working-directory: server
         run: go run ./cmd/seedbase
