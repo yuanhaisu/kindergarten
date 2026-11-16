@@ -1380,6 +1380,25 @@
 | TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | ✅ (`TestEntitlement_TrialExpiryKeepsData`) |
 | TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_OverLimitDoesNotBlockExistingBusiness`) |
 
+### 存量 trial 延长 (TNT)
+
+> 前置：独立 scratch 库 `kindergarten_extendtrials_test`（`go test ./cmd/extendtrials` 自动建库并跑 goose 迁移），不碰共享开发库。
+> 步骤：按名称执行对应命令或调用命令级入口；预期：名称后半句。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-TNT-0001 | dry-run 输出清单且数据库不变 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
+| TC-NEW-TNT-0002 | apply 后清单内 trial 行延至 2027-01-31 23:59:59 | P0 | Command | 🔲 (#66) |
+| TC-NEW-TNT-0003 | 重复 apply 影响行数为 0 | P0 | Command | 🔲 (#66) |
+| TC-NEW-TNT-0004 | revert 按清单恢复原始到期日 | P0 | Command | 🔲 (#66) |
+| TC-NEW-TNT-0005 | 政策日后开通的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
+| TC-NEW-TNT-0006 | 在期订阅/未取消订单的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
+| TC-NEW-TNT-0007 | 失败时事务回滚不留部分更新 | P0 | Command | 🔲 (#66) |
+| TC-NEW-TNT-0008 | manifest 固定 schema、UTF-8、SHA256 | P0 | Command | ✅ (`TestWriteManifestHasFixedSchemaAndSHA`) |
+| TC-NEW-TNT-0009 | created_at 为空的遗留行单独报告 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
+| TC-NEW-TNT-0010 | 空结果不生成 manifest | P1 | Command | ✅ (`TestRunEmptyPlanWritesNoManifest`) |
+| TC-NEW-TNT-0011 | -apply 在本 ticket 明确拒绝 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
+
 ### 分销佣金 (DST)
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
