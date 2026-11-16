@@ -370,6 +370,7 @@ pkg/
 | `platformadmin` | 创建或重置首个平台方账号 | 写入 |
 | `redactlogs` | 回填脱敏 `operation_logs.detail` 中的手机号/身份证 | 写入 |
 | `albumretention` | **硬删**软删已满 180 天的相册及关联（支持 `-dry-run`） | ⚠️ **破坏性** |
+| `extendtrials` | 存量 trial 授权批量延长（dry-run / `-apply` / `-revert`；写操作需 `EXTENDTRIALS_ALLOW=1` 与 `-operator`） | 写入（显式 opt-in） |
 | `dietfood`   | 导入食物成分 CSV 到平台预置食物库（kg=0） | 写入 |
 | `facecheck`  | 腾讯云人脸识别接入验证与质量实测 | 读取/诊断 |
 | `seedgrowthfeed` | 灌入家长端成长 feed 验证所需最小数据 | 写入 |
