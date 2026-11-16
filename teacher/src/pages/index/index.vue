@@ -54,13 +54,19 @@ const visibleQuickActions = computed(() => {
   return quickActions.filter((action) => hasModule(action.module))
 })
 
+// ADR-0018 #1：存量园所在到期前 30 天开始提示转付费，日期取自授权到期时间。
+const EXPIRY_NOTICE_DAYS = 30
+
 const expiryHint = computed(() => {
   entVersion.value
   const at = entitlementExpiresAt()
   if (!at) return ""
-  const days = Math.ceil((new Date(at).getTime() - Date.now()) / 86400000)
-  if (days < 0) return "套餐已到期，部分功能仅可查看，请联系园所管理员续费"
-  if (days <= 7) return `套餐将于 ${String(at).slice(0, 10)} 到期，请提醒园所管理员续费`
+  // 用毫秒差判定过期：剩余不足一天时按天数取整会得到 -0，被误判成「在期」。
+  const diff = new Date(at).getTime() - Date.now()
+  if (diff <= 0) return "套餐已到期，部分功能仅可查看，请联系园所管理员续费"
+  if (diff <= EXPIRY_NOTICE_DAYS * 86400000) {
+    return `套餐将于 ${String(at).slice(0, 10)} 到期，请提醒园所管理员续费`
+  }
   return ""
 })
 

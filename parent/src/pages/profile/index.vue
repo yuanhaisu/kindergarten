@@ -8,7 +8,7 @@
 import { computed, ref } from "vue"
 import { onShow } from "@dcloudio/uni-app"
 import { clearAuth, getUser, setUser } from "@/utils/auth"
-import { hasModule, loadEntitlements } from "@/utils/entitlements"
+import { entitlementExpiresAt, hasModule, loadEntitlements } from "@/utils/entitlements"
 import { ensureLogin } from "@/utils/login"
 import { fetchCurrentUser } from "@/api/auth"
 import { syncTabBar } from "@/utils/tabbar"
@@ -86,6 +86,22 @@ const visibleMenuGroups = computed(() => {
       items: group.items.filter((item) => !item.module || hasModule(item.module))
     }))
     .filter((group) => group.items.length > 0)
+})
+
+// ADR-0018 #1：到期前 30 天提示转付费，日期取自授权到期时间。
+// 已到期/降级由模块锁态表达，这里只负责在期提醒，避免同一条到期事实叠加两条提示。
+const EXPIRY_NOTICE_DAYS = 30
+
+const expiryHint = computed(() => {
+  entVersion.value
+  const at = entitlementExpiresAt()
+  if (!at) return ""
+  const diff = new Date(at).getTime() - Date.now()
+  if (diff <= 0) return ""
+  if (diff <= EXPIRY_NOTICE_DAYS * 86400000) {
+    return `套餐将于 ${String(at).slice(0, 10)} 到期，请联系园所管理员续费`
+  }
+  return ""
 })
 
 const user = ref(getUser())
@@ -242,6 +258,11 @@ onShow(() => {
             <text class="identity-school">{{ displaySchool }}</text>
           </view>
         </view>
+      </view>
+
+      <!-- 到期前 30 天转付费提示（ADR-0018 #1） -->
+      <view v-if="expiryHint" class="expiry-banner">
+        <text class="expiry-banner-text">{{ expiryHint }}</text>
       </view>
 
       <!-- 菜单 · 加载骨架 -->
@@ -505,6 +526,21 @@ onShow(() => {
 
 .state-btn[disabled] {
   opacity: 0.6;
+}
+
+// ---- 到期提示 ------------------------------------------------
+
+.expiry-banner {
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-md;
+  background: $color-semantic-warning-bg;
+}
+
+.expiry-banner-text {
+  font-size: $typography-font-size-sm;
+  color: $color-semantic-warning;
+  line-height: 1.5;
 }
 
 // ---- 四组菜单 ------------------------------------------------
