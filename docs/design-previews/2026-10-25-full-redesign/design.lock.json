@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "d30674c161950c0f663512c6a3a647ed564691c8fa69a18943e5f7bcde6b7bde",
-  "supportReviewedAt": "2026-11-09",
-  "supportReason": "2026-11-09-entitlement-ui：entitlements / consent 支撑代码已纳入基线",
+  "supportHash": "84056ec76378d8074e81a0b01b7ebb85ee4cfd6fe255a1fe882c47e24584563a",
+  "supportReviewedAt": "2026-11-16",
+  "supportReason": "2026-11-16 #82 授权 utils 增加 30 天提示与 TTL 缓存",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -80,12 +80,12 @@
     "parent/09-growth-index": {
       "source": "parent/src/pages/growth/index.vue",
       "sha256": "33085fefe3d0d603abea2efbcd13424ec06fbf8f2d50d2a2e4893f9e89cea6aa",
-      "depsSha": "94e97852ec6c57e05a190a1a6aad287a07d3c6f508487f86bd3169ed6c3f4d0d",
+      "depsSha": "a9748d7e6e011a029322e6c55429a360ca7b1533dabf10a39a7b74985a9b1e11",
       "title": "成长时光",
       "tabbar": true,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #82 到期提示与授权缓存 TTL 变更（无视觉改版）"
     },
     "parent/10-growth-detail": {
       "source": "parent/src/pages/growth/detail.vue",
@@ -108,12 +108,12 @@
     "parent/12-growth-report": {
       "source": "parent/src/pages/growth/report.vue",
       "sha256": "4a4ae1a138fc59716b71531a786246d7f9b74506dbefcd23fa1ec5424ff154fc",
-      "depsSha": "1d0702a5f4f0ba7c3da310623f490bd52de553155f38de8914ec933c6f1542da",
+      "depsSha": "67421a985f814a6fc40697e953704b0d43fa6b350acbfd3fedc4c8620cfe33b9",
       "title": "成长报告",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #82 到期提示与授权缓存 TTL 变更（无视觉改版）"
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
@@ -191,12 +191,12 @@
     "parent/21-class-index": {
       "source": "parent/src/pages/class/index.vue",
       "sha256": "3cbec6f195136aa382ef6c702519e6ff5e5ce3ee16af5b3e5ef306cbe846ccac",
-      "depsSha": "dc194ff2892cbe17401bbc60eec12ff473d1e7673be366ed540e7f16ce0bda3a",
+      "depsSha": "46d0145c495d9cb7f24647eedc87bfac1d2e6c32ed9298dc92f19c025712142d",
       "title": "班级信息",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #82 到期提示与授权缓存 TTL 变更（无视觉改版）"
     },
     "parent/22-calendar-index": {
       "source": "parent/src/pages/calendar/index.vue",
@@ -245,23 +245,23 @@
     },
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
-      "sha256": "9f57615bd4fe130093c627abddfa013eff1d17f0acae5a4a37259ca86722f7ac",
-      "depsSha": "783933f05bcb41eade17d1412f0571e2ee3e706a96aa3c2fbbe2c6ee5bde01c2",
+      "sha256": "082dbe8feb8af43f781f8287e7e000b6ecb117151f8ce093e35bf963e771c6bf",
+      "depsSha": "cd3824ad8f613c715601c4950f45bade17957616274cbced02db40d6d7ae5dd1",
       "title": "我的",
       "tabbar": true,
       "reviewedAt": "2026-11-16",
-      "codeCommit": "0a5eb6a",
-      "reason": "ticket #82: 我的页新增到期前 30 天转付费提示（ADR-0018 #1，0a5eb6a）"
+      "codeCommit": "680065c",
+      "reason": "2026-11-16 #82 到期提示与授权缓存 TTL 变更（无视觉改版）"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
       "sha256": "92e6c043a8c0941a24e036c21834041dd12e0b0650a419ffa4f06f019dcd3902",
-      "depsSha": "49d9b0410376599bc42bd516dc6b85c6b06390e796121bd850d7319862fb59aa",
+      "depsSha": "d1c6184998d5a82edc8de5057e1037563951587a59b3493adc0681cbdb4373fb",
       "title": "班级相册",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #82 到期提示与授权缓存 TTL 变更（无视觉改版）"
     },
     "parent/29-album-detail": {
       "source": "parent/src/pages/album/detail.vue",
@@ -274,13 +274,13 @@
     },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
-      "sha256": "f612a35eb37b876687d964307e081d6b7a4f2b65aacd3e67dcb588e40cb3fd31",
-      "depsSha": "1cd9f616b38d7f657ec9c487be856e176a120aa71aaaa1aef4e0eba4b28f8b52",
+      "sha256": "62196020642dcbb709e74519f8119e4d367b28f6c4d53198504e225be441355a",
+      "depsSha": "7f53b675b57b033a304faa56ace5e88d9f526614556ecd7489f3d5cb05890c0b",
       "title": "老师工作台",
       "tabbar": true,
       "reviewedAt": "2026-11-16",
-      "codeCommit": "0a5eb6a",
-      "reason": "ticket #82: 到期前 30 天转付费提示（ADR-0018 #1，0a5eb6a）"
+      "codeCommit": "680065c",
+      "reason": "2026-11-16 #82 到期提示与授权缓存 TTL 变更（无视觉改版）"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
@@ -421,12 +421,12 @@
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
       "sha256": "4c625a2acaf8c1940747dd9e1b5fceaf744ebe416f571b1113ea9b33710f17a4",
-      "depsSha": "63640577ee99fac44ac90b8409f0c94f394aaf8e6cf061e7499f4698d29b9c44",
+      "depsSha": "c8a3bc68dfbef8e4a76285e45b90e9e675e9bc8ddcbc1affb05574fc8a3d0307",
       "title": "更多功能",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #82 到期提示与授权缓存 TTL 变更（无视觉改版）"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",
