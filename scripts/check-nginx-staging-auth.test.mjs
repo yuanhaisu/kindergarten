@@ -327,6 +327,18 @@ test('test-www /404.html without auth_basic off fails', (t) => {
   assert.match(result.stderr, /auth_basic off/)
 })
 
+test('test-www /_nuxt/ location without auth_basic off fails', (t) => {
+  // nginx 的 ^~ 优先于 ~*，这段匿名服务 /_nuxt/* 资源；豁免丢了同样会让政策页 401。
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), '    location ^~ /_nuxt/ {'))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /_nuxt/)
+  assert.match(result.stderr, /auth_basic off/)
+})
+
 test('test-www static asset location without auth_basic off fails', (t) => {
   const fixture = writeFixture(t, withoutExemption(validTemplate(), STATIC_ASSETS_HEADER))
 
@@ -335,6 +347,22 @@ test('test-www static asset location without auth_basic off fails', (t) => {
   assert.notEqual(result.status, 0)
   assert.match(result.stderr, /test-www/)
   assert.match(result.stderr, /静态资源/)
+})
+
+test('test-www static asset location with an invalid regex reports the regex error', (t) => {
+  const fixture = writeFixture(
+    t,
+    validTemplate().replace(STATIC_ASSETS_HEADER, '    location ~* \\.css( {'),
+  )
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  // 必须点名出错的 location 与正则错误，而不是笼统的「缺少静态扩展名 location」。
+  assert.match(result.stderr, /~\* \\\.css\(/)
+  assert.match(result.stderr, /无法编译/)
+  assert.doesNotMatch(result.stderr, /缺少覆盖静态扩展名/)
 })
 
 test('test-www without a static asset location fails', (t) => {

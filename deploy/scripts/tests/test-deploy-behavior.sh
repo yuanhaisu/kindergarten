@@ -27,12 +27,6 @@ assert_file_absent() {
   [ ! -e "$1" ] || fail "expected path to be absent: $1"
 }
 
-assert_output_absent() {
-  if printf '%s' "$OUTPUT" | grep -Fq -- "$1"; then
-    fail "output unexpectedly contains: $1"$'\n'"--- output ---"$'\n'"$OUTPUT"
-  fi
-}
-
 assert_log_min_count() {
   local pat=$1 min=$2 n
   n=$(grep -Fc -- "$pat" "$STUB_LOG" || true)
@@ -63,13 +57,9 @@ make_release_tars() {
   tar -czf "$website_tar" -C "$TEST_TMP/website-src" .
 }
 
-# deploy.env：单引号包住合法 DSN，兼容 #74 的前置校验（非空、无空白、
-# 含 @tcp( 与 parseTime=True、不含 CHANGE_ME）。口令里带 example 是刻意为之：
-# check-secrets 的 PLACEHOLDER 规则据此识别这条假 DSN，不报 go-mysql-dsn。
-write_valid_deploy_env() {
-  cat > "$TEST_TMP/deploy.env" <<'ENV'
-MIGRATE_MYSQL_DSN='kg_migrate:example-password@tcp(mysql:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Asia%2FShanghai'
-ENV
+# deploy.env：合法 DSN 由 lib.sh 的 helper 生成；路径与 export 在这里统一。
+write_deploy_env() {
+  write_valid_deploy_env "$TEST_TMP/deploy.env"
   export KINDERGARTEN_DEPLOY_ENV="$TEST_TMP/deploy.env"
 }
 
@@ -117,7 +107,7 @@ case_success_order() {
 
   make_root_with_previous
   make_release_tars
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
 
   run_capture bash "$scripts_dir/deploy.sh" staging "$TAG" "$admin_tar" "$website_tar"
@@ -153,7 +143,7 @@ case_api_start_failure() {
 
   make_root_with_previous
   make_release_tars
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
   # 只有新 tag 的 `up -d api` 失败；回滚用旧 tag 重启必须成功。
   export DOCKER_FAIL_WHEN="compose up -d api"
@@ -183,7 +173,7 @@ case_ready_timeout() {
 
   make_root_with_previous
   make_release_tars
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
 
   run_capture bash "$scripts_dir/deploy.sh" staging "$TAG" "$admin_tar" "$website_tar"
@@ -212,7 +202,7 @@ case_corrupt_admin_tar() {
   make_root_with_previous
   make_release_tars
   printf 'not a gzip stream\n' > "$admin_tar"
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
 
   run_capture bash "$scripts_dir/deploy.sh" staging "$TAG" "$admin_tar" "$website_tar"
@@ -243,7 +233,7 @@ case_corrupt_website_tar() {
   make_root_with_previous
   make_release_tars
   printf 'not a gzip stream\n' > "$website_tar"
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
 
   run_capture bash "$scripts_dir/deploy.sh" staging "$TAG" "$admin_tar" "$website_tar"
@@ -275,7 +265,7 @@ case_migrate_failure() {
 
   make_root_with_previous
   make_release_tars
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
   export DOCKER_FAIL_WHEN="compose --profile migrate run --rm migrate"
   export DOCKER_FAIL_TAG="$TAG"
@@ -305,7 +295,7 @@ case_seedbase_failure() {
 
   make_root_with_previous
   make_release_tars
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
   export DOCKER_FAIL_WHEN="compose run --rm --entrypoint /app/kindergarten-seedbase api"
   export DOCKER_FAIL_TAG="$TAG"
@@ -337,7 +327,7 @@ case_first_deploy_ready_failure() {
   root="$TEST_TMP/root"
   mkdir -p "$root"
   make_release_tars
-  write_valid_deploy_env
+  write_deploy_env
   export KINDERGARTEN_ROOT="$root"
 
   run_capture bash "$scripts_dir/deploy.sh" staging "$TAG" "$admin_tar" "$website_tar"

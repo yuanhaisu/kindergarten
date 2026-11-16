@@ -38,10 +38,8 @@ STUB
 
 printf 'RDS_INSTANCE_ID=rds-t73-smoke\n' > "$TEST_TMP/deploy.env"
 
-# 快照脚本不读写根目录；传入覆盖值确认统一的测试接缝不会报错。
-export KINDERGARTEN_ROOT="$TEST_TMP/root"
+# KINDERGARTEN_DEPLOY_ENV 是快照脚本唯一需要的路径覆盖。
 export KINDERGARTEN_DEPLOY_ENV="$TEST_TMP/deploy.env"
-mkdir -p "$KINDERGARTEN_ROOT"
 
 run_capture bash "$scripts_dir/snapshot-rds.sh" staging
 

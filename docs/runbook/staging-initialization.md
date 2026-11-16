@@ -299,21 +299,16 @@ chmod 600 "$f"
 
 ### 7.4 验证 source 完整 + 只读 dry validation
 
-先按 `deploy.sh` 的同一组条件校验（不打印 DSN 明文）：
+直接复用发布脚本的配置校验——`deploy/scripts/deploy.sh` 是唯一真相源，本文不再复制一套条件。
+在仓库根目录执行，把脚本经 stdin 交给远端 `bash`，不依赖服务器上有仓库副本。
+`DEPLOY_VALIDATE_ONLY=1` 在校验通过后立即退出，不读静态包、也不动容器，因此
+`/nonexistent` 不会被访问（校验模式下的 tag 参数也不参与判断）：
 
 ```bash
-sudo bash -c '
-set -a; . /etc/kindergarten/staging/deploy.env; set +a
-dsn=${MIGRATE_MYSQL_DSN:-}
-case "$dsn" in
-  "") echo "FAIL: empty"; exit 1 ;;
-  *[[:space:]]*) echo "FAIL: whitespace"; exit 1 ;;
-esac
-case "$dsn" in *@tcp\(*) ;; *) echo "FAIL: missing @tcp("; exit 1 ;; esac
-case "$dsn" in *parseTime=True*) ;; *) echo "FAIL: missing parseTime=True"; exit 1 ;; esac
-case "$dsn" in *CHANGE_ME*) echo "FAIL: still CHANGE_ME"; exit 1 ;; esac
-printf "OK: DSN complete (length=%d), 0600\n" "${#dsn}"
-'
+ssh <ssh-user>@<staging-public-ip> \
+  "KINDERGARTEN_DEPLOY_ENV=/etc/kindergarten/staging/deploy.env DEPLOY_VALIDATE_ONLY=1 bash -s -- staging dry-run /nonexistent" \
+  < deploy/scripts/deploy.sh
+# 期望：==> deploy env validation OK: /etc/kindergarten/staging/deploy.env（不打印 DSN 明文）
 ```
 
 再用 `kg_migrate` 实际连库跑一次只读的 `migrate status`（不执行迁移）：
@@ -322,8 +317,10 @@ printf "OK: DSN complete (length=%d), 0600\n" "${#dsn}"
 sudo bash -c '
 set -a; . /etc/kindergarten/staging/deploy.env; set +a
 cd /opt/kindergarten/staging
+# compose 的 migrate 服务用 MYSQL_DSN: ${MIGRATE_MYSQL_DSN} 从 source 后的环境插值，
+# 所以不需要 -e 覆盖（-e 只会传宿主机的 MYSQL_DSN，而 deploy.env 设置的是 MIGRATE_MYSQL_DSN）。
 docker compose -f docker-compose.yml -f docker-compose.local.yml --profile migrate \
-  run --rm -e MYSQL_DSN --entrypoint /app/kindergarten-migrate migrate status
+  run --rm --entrypoint /app/kindergarten-migrate migrate status
 '
 # 期望：打印 goose 版本列表；无 Access denied / Unknown database / connection refused。
 ```

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 由 GitHub Actions 通过 SSH stdin 执行：
 #   ssh deploy@host "bash -s -- prod v2026.11.04-1 /tmp/admin-....tar.gz /tmp/website-....tar.gz" < deploy/scripts/deploy.sh
+# 只校验 deploy.env 时可加 DEPLOY_VALIDATE_ONLY=1：校验通过即退出，不读 tarball、不动容器。
 #
 # 顺序：迁移 → 基础种子 → 拉取/启动 api → /ready 探测 → 切换 admin/website symlink → 记录 tag。
 # api 必须先于静态包就绪：新静态包可能调用新接口，反序会出现「新页面打旧 api」的 502/404 窗口。
@@ -31,8 +32,10 @@ dsn_fail() {
   exit 2
 }
 
+# 文件不存在是路径问题，不是引号问题；引号提示只留给内容校验失败。
 if [ ! -f "$deploy_env" ]; then
-  dsn_fail "file not found"
+  echo "!! deploy env file not found: $deploy_env" >&2
+  exit 2
 fi
 
 set -a
@@ -54,6 +57,12 @@ esac
 case "$dsn" in
   *CHANGE_ME*) dsn_fail "MIGRATE_MYSQL_DSN still contains the CHANGE_ME placeholder" ;;
 esac
+
+# 只做配置校验（runbook 的发布前 dry validation）：不要求静态包，也不动容器。
+if [ "${DEPLOY_VALIDATE_ONLY:-}" = "1" ]; then
+  echo "==> deploy env validation OK: $deploy_env"
+  exit 0
+fi
 
 if [ ! -f "$admin_tar" ]; then
   echo "admin artifact not found: $admin_tar" >&2

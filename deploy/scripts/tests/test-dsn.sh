@@ -21,7 +21,6 @@ root="$TEST_TMP/root"
 tag="v2026.11.16-t74"
 admin_tar="$TEST_TMP/admin.tar.gz"
 website_tar="$TEST_TMP/website.tar.gz"
-valid_dsn='kg_migrate:dummy-pass@tcp(127.0.0.1:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Local'
 
 # 旧版本 + 旧 symlink + 旧 .current_tag：合法 DSN 用例需要走完整的成功路径。
 mkdir -p "$root/admin/releases/v-old" "$root/website/releases/v-old"
@@ -54,13 +53,14 @@ assert_dsn_rejected() { # label
   echo "ok: $label"
 }
 
-# 1) 部署环境变量文件缺失。
+# 1) 部署环境变量文件缺失：错误必须指向文件路径，不得给 DSN 引号提示——
+#    文件都不存在时，引号问题不是原因。
 export KINDERGARTEN_DEPLOY_ENV="$TEST_TMP/missing-deploy.env"
 : > "$STUB_LOG"
 run_capture bash "$scripts_dir/deploy.sh" staging "$tag" "$admin_tar" "$website_tar"
 assert_rc 2
-assert_output_contains "单引号"
-assert_output_contains "&"
+assert_output_contains "deploy env file not found: $TEST_TMP/missing-deploy.env"
+assert_output_absent "单引号"
 [ ! -s "$STUB_LOG" ] || fail "missing env: deploy called external commands"$'\n'"--- log ---"$'\n'"$(cat "$STUB_LOG")"
 echo "ok: missing deploy env"
 
@@ -98,7 +98,7 @@ echo "ok: rollback with missing deploy env"
 
 # 8) 合法 quoted DSN 通过校验并继续原发布流程。
 export KINDERGARTEN_DEPLOY_ENV="$TEST_TMP/deploy.env"
-write_env "DEPLOY_TEST_MARKER=1" "MIGRATE_MYSQL_DSN='$valid_dsn'"
+write_valid_deploy_env "$KINDERGARTEN_DEPLOY_ENV" "DEPLOY_TEST_MARKER=1"
 : > "$STUB_LOG"
 run_capture bash "$scripts_dir/deploy.sh" staging "$tag" "$admin_tar" "$website_tar"
 assert_rc 0
@@ -110,3 +110,23 @@ assert_file_content "$root/.current_tag" "$tag"
 assert_same_dir "$root/admin/current" "$root/admin/releases/$tag"
 assert_same_dir "$root/website/current" "$root/website/releases/$tag"
 echo "ok: valid quoted DSN deploys"
+
+# 9) DEPLOY_VALIDATE_ONLY=1：只校验配置，不要求静态包，也不调用任何外部命令。
+#    runbook 用它做发布前 dry validation，因此 admin tarball 路径不存在也不能挡路。
+write_valid_deploy_env "$KINDERGARTEN_DEPLOY_ENV" "DEPLOY_TEST_MARKER=1"
+: > "$STUB_LOG"
+run_capture env DEPLOY_VALIDATE_ONLY=1 bash "$scripts_dir/deploy.sh" staging "$tag" "$TEST_TMP/missing-admin.tar.gz"
+assert_rc 0
+assert_output_contains "deploy env validation OK"
+[ ! -s "$STUB_LOG" ] || fail "validate-only called external commands"$'\n'"--- log ---"$'\n'"$(cat "$STUB_LOG")"
+echo "ok: validate-only accepts valid DSN"
+
+# 10) validate-only 仍然执行完整 DSN 校验：非法配置退出码 2，且不得报告 OK。
+write_env "MIGRATE_MYSQL_DSN=''"
+: > "$STUB_LOG"
+run_capture env DEPLOY_VALIDATE_ONLY=1 bash "$scripts_dir/deploy.sh" staging "$tag" "$TEST_TMP/missing-admin.tar.gz"
+assert_rc 2
+assert_output_contains "单引号"
+assert_output_absent "deploy env validation OK"
+[ ! -s "$STUB_LOG" ] || fail "validate-only called external commands on invalid DSN"$'\n'"--- log ---"$'\n'"$(cat "$STUB_LOG")"
+echo "ok: validate-only rejects invalid DSN"

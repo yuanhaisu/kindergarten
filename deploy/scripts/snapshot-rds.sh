@@ -7,9 +7,8 @@
 set -euo pipefail
 
 env=${1:-prod}
-# 与 deploy.sh / rollback.sh 共用同一测试接缝：根目录与 deploy.env 路径可被覆盖。
-# 本脚本不读写 $root 下的文件，保留该变量只为三个脚本的测试约定一致。
-root="${KINDERGARTEN_ROOT:-/opt/kindergarten/$env}"
+# 与 deploy.sh / rollback.sh 共用 deploy.env 测试接缝；本脚本不读写部署根目录，
+# 因此不接收 KINDERGARTEN_ROOT。
 deploy_env="${KINDERGARTEN_DEPLOY_ENV:-/etc/kindergarten/$env/deploy.env}"
 if [ -f "$deploy_env" ]; then
   set -a

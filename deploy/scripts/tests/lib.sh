@@ -25,6 +25,12 @@ assert_output_contains() {
   printf '%s' "$OUTPUT" | grep -Fq -- "$1" || fail "output does not contain: $1"$'\n'"--- output ---"$'\n'"$OUTPUT"
 }
 
+assert_output_absent() {
+  if printf '%s' "$OUTPUT" | grep -Fq -- "$1"; then
+    fail "output unexpectedly contains: $1"$'\n'"--- output ---"$'\n'"$OUTPUT"
+  fi
+}
+
 # stub 日志里第一次出现指定子串的行号；找不到输出空。
 log_line_of() {
   awk -v pat="$1" 'index($0, pat) { print NR; exit }' "$STUB_LOG"
@@ -59,6 +65,23 @@ assert_same_dir() {
   left=$(cd "$1" 2>/dev/null && pwd -P) || fail "directory missing: $1"
   right=$(cd "$2" 2>/dev/null && pwd -P) || fail "directory missing: $2"
   [ "$left" = "$right" ] || fail "expected same directory: $1 ($left) != $2 ($right)"
+}
+
+# 结构合法的 go-mysql DSN，可通过 deploy.sh 的前置校验。口令写 dummy：check-secrets
+# 的 PLACEHOLDER 规则据此把整行判为假值，不会报成泄漏。
+VALID_DEPLOY_DSN='kg_migrate:dummy-pass@tcp(127.0.0.1:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Local'
+
+# 写一份合法的 deploy.env：DSN 必须用单引号包住，否则 source 时 & 会被当成后台符号。
+# 额外行（如 RDS_INSTANCE_ID）写在 DSN 之前。调用方负责 export KINDERGARTEN_DEPLOY_ENV。
+write_valid_deploy_env() { # path [extra-line...]
+  local path=$1
+  shift
+  {
+    if [ "$#" -gt 0 ]; then
+      printf '%s\n' "$@"
+    fi
+    printf "MIGRATE_MYSQL_DSN='%s'\n" "$VALID_DEPLOY_DSN"
+  } > "$path"
 }
 
 # 每个用例独立的临时目录与 stub PATH；派生进程继承 PATH / STUB_LOG。
