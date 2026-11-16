@@ -8,7 +8,7 @@
 import { computed, ref } from "vue"
 import { onShow } from "@dcloudio/uni-app"
 import { clearAuth, getUser, setUser } from "@/utils/auth"
-import { entitlementExpiresAt, hasModule, loadEntitlements } from "@/utils/entitlements"
+import { entitlementExpiresAt, expiryHintText, hasModule, loadEntitlements } from "@/utils/entitlements"
 import { ensureLogin } from "@/utils/login"
 import { fetchCurrentUser } from "@/api/auth"
 import { syncTabBar } from "@/utils/tabbar"
@@ -88,20 +88,10 @@ const visibleMenuGroups = computed(() => {
     .filter((group) => group.items.length > 0)
 })
 
-// ADR-0018 #1：到期前 30 天提示转付费，日期取自授权到期时间。
-// 已到期/降级由模块锁态表达，这里只负责在期提醒，避免同一条到期事实叠加两条提示。
-const EXPIRY_NOTICE_DAYS = 30
-
+// ADR-0018 #1：到期提示（在期 30 天内 + 已到期），口径与老师端共用 utils 里的 helper。
 const expiryHint = computed(() => {
   entVersion.value
-  const at = entitlementExpiresAt()
-  if (!at) return ""
-  const diff = new Date(at).getTime() - Date.now()
-  if (diff <= 0) return ""
-  if (diff <= EXPIRY_NOTICE_DAYS * 86400000) {
-    return `套餐将于 ${String(at).slice(0, 10)} 到期，请联系园所管理员续费`
-  }
-  return ""
+  return expiryHintText(entitlementExpiresAt())
 })
 
 const user = ref(getUser())
