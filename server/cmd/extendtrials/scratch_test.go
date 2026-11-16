@@ -78,7 +78,11 @@ func testDSN(t *testing.T) string {
 		cfgPath = "configs/app.ini"
 	}
 	if _, err := os.Stat(cfgPath); err != nil {
-		t.Skipf("跳过：找不到 %s（可用 EXTENDTRIALS_TEST_DSN 指定测试库）", cfgPath)
+		// CI 里没有 configs/app.ini，但 MySQL service 会提供 MYSQL_DSN。
+		if v := os.Getenv("MYSQL_DSN"); v != "" {
+			return v
+		}
+		t.Skipf("跳过：找不到 %s，且未设置 MYSQL_DSN / EXTENDTRIALS_TEST_DSN", cfgPath)
 	}
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
