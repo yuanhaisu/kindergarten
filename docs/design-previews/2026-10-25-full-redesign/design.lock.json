@@ -245,13 +245,13 @@
     },
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
-      "sha256": "7bcc148a76d3a9183b8c29613bbd9026a15f0df03111f3c8c3e3e3eaedb2a2da",
-      "depsSha": "f5726b6dcfac643024f802eb2330d16e473c4290669358dd416262f5fe6b1dbf",
+      "sha256": "9f57615bd4fe130093c627abddfa013eff1d17f0acae5a4a37259ca86722f7ac",
+      "depsSha": "783933f05bcb41eade17d1412f0571e2ee3e706a96aa3c2fbbe2c6ee5bde01c2",
       "title": "我的",
       "tabbar": true,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-16",
+      "codeCommit": "0a5eb6a",
+      "reason": "ticket #82: 我的页新增到期前 30 天转付费提示（ADR-0018 #1，0a5eb6a）"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
@@ -274,13 +274,13 @@
     },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
-      "sha256": "5ae0edfdd3515772764dd9ec44e2ca51a93d8988f480be25d20a25243578baa3",
-      "depsSha": "4f2a07885ab49add98f60a217588a1bc05d4b8122aabdaecddb4bc226221df96",
+      "sha256": "f612a35eb37b876687d964307e081d6b7a4f2b65aacd3e67dcb588e40cb3fd31",
+      "depsSha": "1cd9f616b38d7f657ec9c487be856e176a120aa71aaaa1aef4e0eba4b28f8b52",
       "title": "老师工作台",
       "tabbar": true,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-16",
+      "codeCommit": "0a5eb6a",
+      "reason": "ticket #82: 到期前 30 天转付费提示（ADR-0018 #1，0a5eb6a）"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
