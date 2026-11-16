@@ -38,7 +38,9 @@
     reported as needs-confirm instead of active. Default 7.
 
 .PARAMETER PrLimit
-    Maximum number of PRs fetched from `gh pr list`. Default 300.
+    Maximum number of PRs fetched from `gh pr list`. Default 1000. Raise it
+    as the repository accumulates PRs; a branch whose PR falls outside the
+    window is reported as no-PR.
 
 .PARAMETER SkipSize
     Skip recursive size calculation. The daily report is much faster; sizes
@@ -59,7 +61,7 @@ param(
     [switch]$Json,
     [switch]$Fetch,
     [int]$StaleDays = 7,
-    [int]$PrLimit = 300,
+    [int]$PrLimit = 1000,
     [switch]$SkipSize,
     [string]$Proxy
 )
@@ -80,6 +82,48 @@ function Throw-Audit {
     throw $ex
 }
 
+function Assert-JsonArray {
+    param($Value, [string]$Path)
+    if ($null -eq $Value -or $Value -isnot [System.Array]) {
+        Throw-Audit 2 'json-contract' "JSON contract violation: $Path must be an array."
+    }
+}
+
+function Test-JsonArrayContract {
+    param([string]$Json)
+    $parsed = $Json | ConvertFrom-Json
+
+    Assert-JsonArray $parsed.worktrees 'worktrees'
+    Assert-JsonArray $parsed.orphans 'orphans'
+    Assert-JsonArray $parsed.strayBranches 'strayBranches'
+
+    $index = 0
+    foreach ($wt in $parsed.worktrees) {
+        Assert-JsonArray $wt.suggestedActions "worktrees[$index].suggestedActions"
+        $index++
+    }
+    $index = 0
+    foreach ($orphan in $parsed.orphans) {
+        Assert-JsonArray $orphan.suggestedActions "orphans[$index].suggestedActions"
+        $index++
+    }
+    $index = 0
+    foreach ($stray in $parsed.strayBranches) {
+        Assert-JsonArray $stray.suggestedActions "strayBranches[$index].suggestedActions"
+        $index++
+    }
+
+    # PS 5.1 regression probe: a single-element or empty array must stay an
+    # array after ConvertTo-Json. The top-level piped form @('x') | ConvertTo-Json
+    # collapses to "x"; -InputObject is used everywhere for this reason.
+    $probe = [ordered]@{ single = @('one'); empty = @(); pair = @('a', 'b') }
+    $probeJson = ConvertTo-Json -InputObject $probe -Depth 5 -Compress
+    $probeParsed = $probeJson | ConvertFrom-Json
+    Assert-JsonArray $probeParsed.single 'self-test.single'
+    Assert-JsonArray $probeParsed.empty 'self-test.empty'
+    Assert-JsonArray $probeParsed.pair 'self-test.pair'
+}
+
 function Write-AuditText {
     param($Result)
 
@@ -90,20 +134,30 @@ function Write-AuditText {
     if ($Result.summary.fetched) { $fetchedText = '是' }
     Write-Host ("fetch：{0} | 扫描 PR：{1}" -f $fetchedText, $Result.summary.prsScanned)
     Write-Host ("总 worktree：{0}（不含主工作树）" -f $Result.summary.totalWorktrees)
-    Write-Host ("可立即清理：{0} | 需确认：{1} | 活跃：{2} | 失效登记：{3} | 孤儿目录：{4} | 无 worktree 的本地分支：{5}" -f `
-        $Result.summary.autoClean, $Result.summary.needsConfirm, $Result.summary.active, `
+    Write-Host ("可立即清理：{0}（有 PR {1} / 无 PR {2}） | 需确认：{3} | 活跃：{4} | 失效登记：{5} | 孤儿目录：{6} | 无 worktree 的本地分支：{7}" -f `
+        $Result.summary.autoClean, $Result.summary.autoCleanPr, $Result.summary.autoCleanManual, `
+        $Result.summary.needsConfirm, $Result.summary.active, `
         $Result.summary.prunable, $Result.summary.orphans, $Result.summary.strayBranches)
     Write-Host ""
 
     $sections = @(
-        @{ Key = 'auto-clean'; Title = '可立即清理'; Color = 'Green' },
-        @{ Key = 'needs-confirm'; Title = '需确认'; Color = 'Yellow' },
-        @{ Key = 'prunable'; Title = '失效登记（目录已不存在）'; Color = 'DarkYellow' },
-        @{ Key = 'active'; Title = '活跃（无需动作）'; Color = 'Gray' }
+        @{
+            Title = '可立即清理（有 PR，bot 可直接执行）'
+            Color = 'Green'
+            Filter = { $_.category -eq 'auto-clean' -and $_.cleanupMode -eq 'pr' }
+        },
+        @{
+            Title = '可立即清理（无 PR，需按命令手动执行）'
+            Color = 'Green'
+            Filter = { $_.category -eq 'auto-clean' -and $_.cleanupMode -eq 'manual' }
+        },
+        @{ Title = '需确认'; Color = 'Yellow'; Filter = { $_.category -eq 'needs-confirm' } },
+        @{ Title = '失效登记（目录已不存在）'; Color = 'DarkYellow'; Filter = { $_.category -eq 'prunable' } },
+        @{ Title = '活跃（无需动作）'; Color = 'Gray'; Filter = { $_.category -eq 'active' } }
     )
 
     foreach ($section in $sections) {
-        $items = @($Result.worktrees | Where-Object { $_.category -eq $section.Key })
+        $items = @($Result.worktrees | Where-Object $section.Filter)
         Write-Host ("== {0} ({1}) ==" -f $section.Title, $items.Count) -ForegroundColor $section.Color
         if ($items.Count -eq 0) {
             Write-Host "（无）"
@@ -171,6 +225,7 @@ function Write-AuditText {
 $exitCode = 0
 $failure = $null
 $result = $null
+$resultJson = $null
 $proxyState = Set-WorktreeProxy -Proxy $Proxy
 
 try {
@@ -237,6 +292,7 @@ try {
             ageDays = $null
             sizeMB = $null
             category = ''
+            cleanupMode = ''
             reason = ''
             pr = $null
             suggestedActions = @()
@@ -325,6 +381,7 @@ try {
                 }
                 else {
                     $item.category = 'auto-clean'
+                    $item.cleanupMode = 'pr'
                     $item.reason = 'PR merged, worktree clean, HEAD matches PR'
                     $item.suggestedActions = @(
                         "powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Pr $($prInfo.number) -DeleteRemote"
@@ -366,7 +423,8 @@ try {
             }
             elseif ($isAncestor) {
                 $item.category = 'auto-clean'
-                $item.reason = 'branch is fully contained in origin/main (no PR)'
+                $item.cleanupMode = 'manual'
+                $item.reason = 'branch is fully contained in origin/main (no PR); worktree-clean.ps1 cannot clean it'
                 $item.suggestedActions = @(
                     "git worktree remove $($record.Path)",
                     "git branch -D $($record.Branch)"
@@ -492,6 +550,8 @@ try {
     }
 
     $autoClean = @($worktrees | Where-Object { $_.category -eq 'auto-clean' }).Count
+    $autoCleanPr = @($worktrees | Where-Object { $_.category -eq 'auto-clean' -and $_.cleanupMode -eq 'pr' }).Count
+    $autoCleanManual = @($worktrees | Where-Object { $_.category -eq 'auto-clean' -and $_.cleanupMode -eq 'manual' }).Count
     $needsConfirm = @($worktrees | Where-Object { $_.category -eq 'needs-confirm' }).Count
     $active = @($worktrees | Where-Object { $_.category -eq 'active' }).Count
     $prunable = @($worktrees | Where-Object { $_.category -eq 'prunable' }).Count
@@ -499,6 +559,9 @@ try {
     # Internal consistency: exit 2 means "do not trust this report".
     if (($autoClean + $needsConfirm + $active + $prunable) -ne $worktrees.Count) {
         Throw-Audit 2 'validate' "category counts do not add up to worktree count."
+    }
+    if (($autoCleanPr + $autoCleanManual) -ne $autoClean) {
+        Throw-Audit 2 'validate' "auto-clean split does not add up to auto-clean count."
     }
     foreach ($item in $worktrees) {
         if (-not $item.path -or -not $item.category) {
@@ -514,6 +577,8 @@ try {
         summary = [ordered]@{
             totalWorktrees = $worktrees.Count
             autoClean = $autoClean
+            autoCleanPr = $autoCleanPr
+            autoCleanManual = $autoCleanManual
             needsConfirm = $needsConfirm
             active = $active
             prunable = $prunable
@@ -526,6 +591,9 @@ try {
         orphans = @($orphans)
         strayBranches = @($strayBranches)
     }
+
+    $resultJson = ConvertTo-Json -InputObject $result -Depth 10
+    Test-JsonArrayContract -Json $resultJson
 }
 catch {
     $code = 1
@@ -549,7 +617,7 @@ finally {
 
 if ($null -ne $failure) {
     if ($Json) {
-        Write-Output ($failure | ConvertTo-Json -Depth 6)
+        Write-Output (ConvertTo-Json -InputObject $failure -Depth 6)
     }
     else {
         Write-Host ("[ERROR] stage={0} exit={1}: {2}" -f $failure.stage, $failure.exitCode, $failure.error) -ForegroundColor Red
@@ -559,7 +627,7 @@ if ($null -ne $failure) {
 }
 
 if ($Json) {
-    Write-Output ($result | ConvertTo-Json -Depth 10)
+    Write-Output $resultJson
 }
 else {
     Write-AuditText -Result $result

@@ -16,7 +16,9 @@
          may be commits that never reached the PR; refuse instead of guessing.
 
     Then runs `git worktree remove`, `git branch -D`, and optionally
-    `git push origin --delete` with -DeleteRemote. It never uses --force.
+    `git push origin --delete` with -DeleteRemote. It never uses
+    `git worktree remove --force`; `git branch -D` is a force delete, but it
+    is allowed only after the PR state and headRefOid checks above pass.
 
     The branch-ancestor check used by the previous version is gone: this
     repository merges some PRs with squash/rebase, so a merged branch is
@@ -297,6 +299,7 @@ try {
                 $proceed = $PSCmdlet.ShouldProcess($Branch, "Delete local branch '$Branch'")
             }
             if ($proceed) {
+                # -D is gated by the PR state + headRefOid checks above.
                 Invoke-Git @('branch', '-D', $Branch) | Out-Null
                 Write-Log "[OK] Local branch deleted: $Branch" 'Green'
                 $result.branchDeleted = $true
@@ -370,6 +373,7 @@ try {
             $result.actions += 'remove-worktree'
 
             if ($branchExists) {
+                # -D is gated by the PR state + headRefOid checks above.
                 Invoke-Git @('branch', '-D', $Branch) | Out-Null
                 Write-Log "[OK] Local branch deleted: $Branch" 'Green'
                 $result.branchDeleted = $true
@@ -415,6 +419,7 @@ catch {
         pr = $result.pr
         branch = $result.branch
         worktree = $result.worktree
+        actions = @()
     }
     $exitCode = 1
 }
@@ -424,7 +429,7 @@ finally {
 
 if ($null -ne $failure) {
     if ($Json) {
-        Write-Output ($failure | ConvertTo-Json -Depth 6)
+        Write-Output (ConvertTo-Json -InputObject $failure -Depth 6)
     }
     else {
         Write-Host ("[ERROR] stage={0}: {1}" -f $failure.stage, $failure.error) -ForegroundColor Red
@@ -434,7 +439,13 @@ if ($null -ne $failure) {
 }
 
 if ($Json) {
-    Write-Output ($result | ConvertTo-Json -Depth 6)
+    $resultJson = ConvertTo-Json -InputObject $result -Depth 6
+    $parsedResult = $resultJson | ConvertFrom-Json
+    if ($null -eq $parsedResult.actions -or $parsedResult.actions -isnot [System.Array]) {
+        [Console]::Error.WriteLine('[worktree-clean] JSON contract violation: actions must be an array.')
+        exit 1
+    }
+    Write-Output $resultJson
 }
 elseif ($WhatIfPreference) {
     Write-Host ""

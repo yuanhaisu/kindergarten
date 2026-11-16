@@ -57,7 +57,7 @@ git push -u origin feat/pickup-polish
 #    bot 不可用或清理失败时，才按「worktree 清理纪律」由属主处理。
 ```
 
-`worktree-clean.ps1` 以 PR 终态为唯一判据：PR 必须 MERGED（CLOSED 未合并需 `-AllowClosed` 且属主确认），worktree 必须干净，本地 HEAD 必须等于 PR 的 `headRefOid`。**不查 `origin/main` 祖先**——本仓存在 squash/rebase 合并，祖先检查会把已合并分支误判为未合并。拒绝是保护，不要 `--force` 绕过。
+`worktree-clean.ps1` 以 PR 终态为唯一判据：PR 必须 MERGED（CLOSED 未合并需 `-AllowClosed` 且属主确认），worktree 必须干净，本地 HEAD 必须等于 PR 的 `headRefOid`。**不查 `origin/main` 祖先**——本仓存在 squash/rebase 合并，祖先检查会把已合并分支误判为未合并。拒绝是保护，不要用 `git worktree remove --force` 绕过；脚本内部的 `git branch -D` 只在 PR 终态 + `headRefOid` 校验通过后使用。
 
 `worktree-new.ps1` / `worktree-clean.ps1` 都支持 `-WhatIf`，先看它准备做什么再执行；`worktree-audit.ps1` 是只读审计。
 
@@ -189,7 +189,7 @@ PR 描述必须包含**「不在本 PR」**一节，显式列出被切出去、�
 清理是危险操作，按顺序确认：
 
 1. **先看干净**：`git -C ..\kg-<name> status --porcelain` 必须为空（含未跟踪文件）。
-2. **先确认 PR 终态**：PR 必须 MERGED；CLOSED 未合并只能在属主明确放弃后加 `-AllowClosed`。判定用 `gh pr view <n> --json state,headRefOid`，**不要**用 `git merge-base --is-ancestor`——squash/rebase 合并会让已合并分支不是 `origin/main` 的祖先。
+2. **先确认 PR 终态**：PR 必须 MERGED；CLOSED 未合并只能在属主明确放弃后加 `-AllowClosed`。判定用 `gh pr view <n> --json state,headRefOid`，**不要**用 `git merge-base --is-ancestor`——squash/rebase 合并会让已合并分支不是 `origin/main` 的祖先。无 PR 但已确认并入 `origin/main` 的项由审计报告单列，`worktree-clean.ps1` 不处理，删前需属主逐项确认。
 3. **HEAD 必须对上**：本地 HEAD 必须等于 PR 的 `headRefOid`；不一致说明可能有没进 PR 的提交，拒绝删除。
 4. **执行者**：合并后的即时清理由 bot 执行；每日兜底的批量清理由 bot 在属主确认后执行。属主只处理异常项。
 5. **确认没有进程占用**：IDE、`vite` watcher、后端进程如果以该目录为 cwd，先停掉再删。

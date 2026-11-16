@@ -113,21 +113,23 @@ powershell -ExecutionPolicy Bypass -File scripts\worktree-audit.ps1 -Json -Fetch
 
 把 JSON 转成中文报告发给属主，**不删除任何东西**。报告必须包含：
 
-1. 概览：总 worktree、可立即清理、需确认、活跃、孤儿目录、无 worktree 的本地分支。
-2. 可立即清理：路径、分支、PR、可释放空间、建议命令。
-3. 需确认：路径、分支、PR 状态、原因（CLOSED 未合并 / 脏 / HEAD 不一致 / 无 PR 且过期 / detached / locked）。
-4. 孤儿目录：路径、大小、抽样内容；提醒先看内容再删。
-5. 无 worktree 的本地分支：分支、PR 状态、建议动作。
-6. 结尾给确认口令示例：「清理 A、C」「全部清理」。
+1. 概览：总 worktree、可立即清理（有 PR / 无 PR 分开计数）、需确认、活跃、孤儿目录、无 worktree 的本地分支。
+2. **可立即清理（有 PR）**：路径、分支、PR、可释放空间、`worktree-clean.ps1 -Pr <n>` 命令。
+3. **可立即清理（无 PR）**：路径、分支、可释放空间、显式 `git worktree remove` / `git branch -D` 命令。这类项 `worktree-clean.ps1` 会拒绝，只能逐项确认后执行。
+4. 需确认：路径、分支、PR 状态、原因（CLOSED 未合并 / 脏 / HEAD 不一致 / 无 PR 且过期 / detached / locked）。
+5. 孤儿目录：路径、大小、抽样内容；提醒先看内容再删。
+6. 无 worktree 的本地分支：分支、PR 状态、建议动作。
+7. 结尾给确认口令示例：「清理 A、C」「全部清理可立即清理项」。
 
 ### 确认协议
 
 - **用户没有明确说「清理」时，一律不动。** 沉默 = 不清理。
+- 「全部清理」的范围**只包括可立即清理且有 PR 的项**（`cleanupMode=pr`）；需确认项、无 PR 项、孤儿目录必须逐项点名。
 - 收到确认后：
   1. **重新运行一次审计**（早上的报告是快照，状态可能已变）。
-  2. 只对仍然处于 `auto-clean` 的项执行 `worktree-clean.ps1 -Pr <n> -DeleteRemote -Json`。
+  2. 只对仍然处于 `auto-clean` 且 `cleanupMode=pr` 的项执行 `worktree-clean.ps1 -Pr <n> -DeleteRemote -Json`。
   3. `CLOSED` 未合并项：只有用户明确说「放弃」时才加 `-AllowClosed`。
-  4. 无 PR 的项和孤儿目录：按用户确认的显式命令执行；执行前再核对一次路径。
+  4. 无 PR 的 `auto-clean` 项、需确认项和孤儿目录：按用户确认的显式命令逐项执行；执行前再核对一次路径。
   5. 逐项回报结果：成功 / 跳过 / 失败原因。
 - 执行前重校验不通过（变脏、HEAD 变了、PR 状态变了）就跳过并说明。
 
@@ -136,12 +138,15 @@ powershell -ExecutionPolicy Bypass -File scripts\worktree-audit.ps1 -Json -Fetch
 ```text
 worktree 残余报告 — 2026-11-16 08:30
 
-概览：总 17 | 可立即清理 13 | 需确认 1 | 活跃 3 | 孤儿 1 | 残留分支 19
+概览：总 17 | 可立即清理 13（有 PR 13 / 无 PR 0） | 需确认 1 | 活跃 3 | 孤儿 1 | 残留分支 19
 
-【可立即清理】
+【可立即清理（有 PR，bot 可直接执行）】
 1. kg-commercial-closeout（feat/commercial-closeout，PR #33 MERGED，释放 1.2 GB）
    建议：worktree-clean.ps1 -Pr 33 -DeleteRemote
 ...
+
+【可立即清理（无 PR，需按命令手动执行）】
+（本次无）
 
 【需确认】
 1. kg-parallel-dev-rules（docs/parallel-dev-rules，PR #36 CLOSED 未合并）
@@ -155,14 +160,15 @@ worktree 残余报告 — 2026-11-16 08:30
 【无 worktree 的本地分支】
 ...
 
-回复「清理 1、3」或「全部清理」；不回复则不做任何改动。
+回复「清理 1、3」或「全部清理可立即清理项」；不回复则不做任何改动。
+「全部清理」只涵盖有 PR 的可立即清理项；其余项请逐项点名。
 ```
 
 ## 硬规则
 
 1. **每日兜底未确认不得删除**；合并后的即时清理是预授权的例外。
 2. **执行前必须重校验**：PR 终态、工作区干净、本地 HEAD == `headRefOid`。
-3. **绝不使用 `--force`**；删除失败就保留并报告。
+3. **绝不使用 `git worktree remove --force`**；删除失败就保留并报告。`worktree-clean.ps1` 内部的 `git branch -D` 是 PR 终态 + `headRefOid` 校验通过后的受控强删，不是绕过检查。
 4. **不碰主工作树**（`D:\yuanhaisu\personal_projects\kindergarten`）。
 5. **不删别人正在用的 worktree**；脏检查和 HEAD 比对就是为此设置的。
 6. **审计失败如实报告**，不得把空 JSON、旧报告或部分结果当作成功。
@@ -174,6 +180,6 @@ worktree 残余报告 — 2026-11-16 08:30
 | --- | --- | --- |
 | `worktree-audit.ps1` | 0 | 审计执行成功（有无残余都算成功） |
 | | 1 | 环境/执行失败（git、gh、认证、代理、fetch） |
-| | 2 | 输出不合法（JSON 解析失败、字段缺失、计数不自洽） |
+| | 2 | 输出不合法（JSON 解析失败、字段缺失、计数不自洽、数组契约违反） |
 | `worktree-clean.ps1` | 0 | 已清理或本来就没有可清理项 |
 | | 1 | 拒绝或失败（查看 JSON 的 `stage` / `error`） |
