@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 由 GitHub Actions 通过 SSH stdin 执行：
 #   ssh deploy@host "bash -s -- prod v2026.11.04-1 /tmp/admin-....tar.gz /tmp/website-....tar.gz" < deploy/scripts/deploy.sh
+# 只校验 deploy.env 时可加 DEPLOY_VALIDATE_ONLY=1：校验通过即退出，不读 tarball、不动容器。
 #
 # 顺序：迁移 → 基础种子 → 拉取/启动 api → /ready 探测 → 切换 admin/website symlink → 记录 tag。
 # api 必须先于静态包就绪：新静态包可能调用新接口，反序会出现「新页面打旧 api」的 502/404 窗口。
@@ -17,14 +18,50 @@ case "$env" in
   *) echo "invalid env: $env (expected prod|staging)" >&2; exit 2 ;;
 esac
 
-root="/opt/kindergarten/$env"
+# 根目录与配置文件路径可被环境变量覆盖，供 deploy/scripts/tests 在临时目录做黑盒测试；
+# 未设置时仍是生产路径。
+root="${KINDERGARTEN_ROOT:-/opt/kindergarten/$env}"
 port=$([ "$env" = "prod" ] && echo 8080 || echo 8081)
-deploy_env="/etc/kindergarten/$env/deploy.env"
-if [ -f "$deploy_env" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$deploy_env"
-  set +a
+deploy_env="${KINDERGARTEN_DEPLOY_ENV:-/etc/kindergarten/$env/deploy.env}"
+
+# 配置错误必须在任何容器动作之前暴露：否则会以「数据库连不上」出现在迁移容器里，
+# 把排查方向带偏。手动回滚不跑迁移，因此 rollback.sh 刻意不做这项校验。
+dsn_fail() {
+  echo "!! invalid deploy env ($deploy_env): $1" >&2
+  echo "   MIGRATE_MYSQL_DSN 需用单引号包住，& 会被 shell 当成后台符号" >&2
+  exit 2
+}
+
+# 文件不存在是路径问题，不是引号问题；引号提示只留给内容校验失败。
+if [ ! -f "$deploy_env" ]; then
+  echo "!! deploy env file not found: $deploy_env" >&2
+  exit 2
+fi
+
+set -a
+# shellcheck disable=SC1090
+. "$deploy_env"
+set +a
+
+dsn=${MIGRATE_MYSQL_DSN:-}
+[ -n "$dsn" ] || dsn_fail "MIGRATE_MYSQL_DSN is empty"
+case "$dsn" in
+  *[[:space:]]*) dsn_fail "MIGRATE_MYSQL_DSN contains whitespace" ;;
+  *@tcp\(*) ;;
+  *) dsn_fail "MIGRATE_MYSQL_DSN must contain @tcp(" ;;
+esac
+case "$dsn" in
+  *parseTime=True*) ;;
+  *) dsn_fail "MIGRATE_MYSQL_DSN must contain parseTime=True" ;;
+esac
+case "$dsn" in
+  *CHANGE_ME*) dsn_fail "MIGRATE_MYSQL_DSN still contains the CHANGE_ME placeholder" ;;
+esac
+
+# 只做配置校验（runbook 的发布前 dry validation）：不要求静态包，也不动容器。
+if [ "${DEPLOY_VALIDATE_ONLY:-}" = "1" ]; then
+  echo "==> deploy env validation OK: $deploy_env"
+  exit 0
 fi
 
 if [ ! -f "$admin_tar" ]; then

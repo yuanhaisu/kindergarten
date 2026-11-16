@@ -4,6 +4,9 @@
 > 用途：记录 staging-only 环境的当前状态、关键路径和明天待办。prod 暂缓。
 > 相关文档：`docs/deployment-architecture.md`、`docs/runbook/deployment.md`、`deploy/ram/README.md`。
 > 历史提交：`b1d1e08`（部署架构 + runbook）、`5d7e272`（MCP 修正）、`b2678d7`（方案 C / RAM 策略）。
+>
+> ℹ️ 平台管理员与测试园所初始化已迁到 `docs/runbook/staging-initialization.md`
+> （平台账号 / 租户管理员 / 首次改密）；本文 §3.3 不再保留本地交叉编译与 scp 步骤。
 
 ## 0. 结论
 
@@ -89,17 +92,9 @@
 
 1. **填微信字段**：`/etc/kindergarten/staging/app.ini` 的 `[wechat]` 四个字段（teacher/parent AppID/Secret）。不要发聊天，直接在服务器改。
 2. **更新小程序测试域名**：`teacher/.env.test`、`parent/.env.test` 目前仍是 `https://test-api.xxx.com/...`，改成 `https://test-api.nurtureplanet.cn/api/v1` 与对应 upload URL，再 `npm run build:mp-weixin:test`。
-3. **建 staging 平台管理员**：
-   - 本地构建 `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /tmp/platformadmin ./cmd/platformadmin`；
-   - scp 到 A，运行：`CONFIG_PATH=/etc/kindergarten/staging/app.ini PLATFORM_ADMIN_USERNAME=ops PLATFORM_ADMIN_PASSWORD='<强密码>' PLATFORM_ADMIN_NAME='Ops' /root/platformadmin`；
-   - 登录 `https://test-admin.nurtureplanet.cn/platform/login`，再创建测试园所与租户管理员。
-   - 也可绕过后台，直接在服务器上供给租户管理员（园所已存在时；幂等，重复执行只更新口令与绑定）：
-     ```bash
-     # 本地构建：GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /tmp/setadmin ./cmd/setadmin
-     CONFIG_PATH=/etc/kindergarten/staging/app.ini SETADMIN_PASSWORD='<强密码>' \
-       /root/setadmin -phone <手机号> -kg <园所ID>
-     ```
-     `-phone` 与 `-kg` 必填；园所不存在或已软删除会直接失败；口令只从 `SETADMIN_PASSWORD` 或 `-password` 读取，不会回显。
+3. **建 staging 平台管理员与测试园所**：流程见 `docs/runbook/staging-initialization.md`
+   （平台账号、测试园所租户管理员、首次改密）。不再本地交叉编译 `platformadmin` / `setadmin`
+   再 scp；服务器上也不保留这两个二进制。
 4. **Basic Auth**：给 `test-admin` / `test-www` 加 `auth_basic`（htpasswd），避免公开暴露；`test-api` 保持公网，供微信测试包访问。
 5. **安全组 22**：`sg-np-staging` 与 `sg-np-idle` 当前仍是 `22 → 0.0.0.0/0`，改成 `<你的固定公网 IP>/32`（或你的当前公网 IP）。
 6. **A 续费**：2026-12-14 到期，建议 12 月初前续 1 年并开自动续费。
