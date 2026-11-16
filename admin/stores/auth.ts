@@ -1,9 +1,18 @@
 import { defineStore } from 'pinia'
 import type { AuthUser, LoginResult } from '~/types/api'
+import {
+  ADMIN_REFRESH_COOKIE,
+  ADMIN_TOKEN_COOKIE,
+  ADMIN_TOKEN_MAX_AGE,
+  buildAuthCookieOptions,
+} from '~/utils/authCookie'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
-  const refreshTokenValue = useCookie<string | null>('admin_refresh', { sameSite: 'lax' })
+  const refreshTokenValue = useCookie<string | null>(
+    ADMIN_REFRESH_COOKIE,
+    buildAuthCookieOptions(),
+  )
 
   // 隐私政策同意状态：登录响应先给一次，路由守卫再用 /common/consent 校准。
   const consentRequired = ref(false)
@@ -11,10 +20,10 @@ export const useAuthStore = defineStore('auth', () => {
   const consentChecked = ref(false)
 
   function setSession(data: LoginResult) {
-    const token = useCookie<string | null>('admin_token', {
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-    })
+    const token = useCookie<string | null>(
+      ADMIN_TOKEN_COOKIE,
+      buildAuthCookieOptions({ maxAge: ADMIN_TOKEN_MAX_AGE }),
+    )
     token.value = data.token
     refreshTokenValue.value = data.refresh_token
     user.value = data.user
@@ -24,7 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearSession() {
-    const token = useCookie<string | null>('admin_token')
+    const token = useCookie<string | null>(ADMIN_TOKEN_COOKIE, buildAuthCookieOptions())
     token.value = null
     refreshTokenValue.value = null
     user.value = null

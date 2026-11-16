@@ -11,6 +11,13 @@
 [app]
 http_addr    = :8080
 gin_mode     = release
+; 允许跨域读取 API 响应的来源（逗号分隔）。小程序请求不带 Origin、官网不调用 API，
+; 因此两者都不需要跨域来源；管理端经 Nginx 与 API 同源，同样不需要 CORS。
+; 显式白名单用于纵深防御与未来跨域（例如管理端独立域名）：
+;   staging → https://test-admin.<domain>
+;   prod    → https://admin.<domain>
+; 留空 = 默认拒绝所有跨域来源。
+; release 模式下填 * 会在启动日志记录 WARN（不阻断启动），生产环境不要使用。
 cors_origins = ${CORS_ORIGINS}
 
 [log]

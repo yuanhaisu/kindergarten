@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
 import { platformLogout } from '~/api/platform'
+import { PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions } from '~/utils/authCookie'
 
 const menus = [
   { title: '园所', path: '/platform/kindergartens' },
@@ -51,7 +52,7 @@ async function logout() {
   } catch {
     // 网络失败也要清本地登录态
   }
-  useCookie<string | null>('platform_token').value = null
+  useCookie<string | null>(PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions()).value = null
   await navigateTo('/platform/login')
 }
 </script>

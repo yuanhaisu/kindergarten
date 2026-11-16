@@ -2,7 +2,6 @@ package app
 
 import (
 	"log/slog"
-	"strings"
 	"time"
 
 	mysqldrv "github.com/go-sql-driver/mysql"
@@ -167,19 +166,6 @@ func ProvideNoticeScheduler(db *gorm.DB) *service.NoticeScheduler {
 func NewAppHandlerWithBackgroundWorkers(h *handler.Handler, scheduler *service.NoticeScheduler, cfg *config.Config, db *gorm.DB, rdb *redis.Client) *AppHandler {
 	scheduler.Start()
 	return NewAppHandler(h).
-		WithCORS(parseOrigins(cfg.App.CORSOrigins)).
+		WithCORS(cfg.App.AllowedCORSOrigins()).
 		WithInfra(db, rdb)
-}
-
-// parseOrigins 把逗号分隔的 CORS 来源配置拆成切片；空配置返回 nil，
-// 中间件据此不下发任何跨域响应头。
-func parseOrigins(raw string) []string {
-	parts := strings.Split(raw, ",")
-	origins := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if origin := strings.TrimSpace(part); origin != "" {
-			origins = append(origins, origin)
-		}
-	}
-	return origins
 }

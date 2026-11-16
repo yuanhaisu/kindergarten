@@ -2,7 +2,7 @@
 
 配套设计：[部署架构](../deployment-architecture.md)；决策：[ADR-0007 ~ ADR-0010](../adr/)。
 
-> **当前阶段（2026-11-15）**：只落地了 staging；§1–§5 是 prod 目标流程，尚未启用。staging 实际步骤见 §1.0，详细状态见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。
+> **当前阶段（2026-11-15）**：只落地了 staging；§1–§5 是 prod 目标流程，尚未启用。staging 实际步骤见 §1.0，访问门禁见 §1.1，详细状态见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。
 > 本文中的服务器 IP、bucket 名等已脱敏为占位符；真实值见运维私密记录，占位符约定见 `docs/handoffs/README.md`。
 
 ## 0. 约定与前置
@@ -37,6 +37,20 @@
 4. **配置**：`/etc/kindergarten/staging/app.ini`（0600）。MySQL/Redis 指向 compose 服务名；OSS 用 `<oss-internal-endpoint>` + `<bucket-staging>`；微信 teacher/parent AppID/Secret 填真实值。
 5. **容器**：`docker compose -f docker-compose.yml -f docker-compose.local.yml up -d mysql redis` → `run --rm migrate` → `run --rm --entrypoint /app/kindergarten-seedbase api` → `up -d api`。
 6. **静态包**：解压到 `admin/releases/<tag>`、`website/releases/<tag>`，`current` 指向该 release（当前 `staging-20261115-1`）。
+
+   > **构建即检查（管理端）**：`npm run generate` 的 `postgenerate` 会自动执行
+   > `node scripts/check-admin-static.mjs .output/public`，校验 `index.html`、
+   > `_nuxt` 下的 JS/CSS、远程字体（`fonts.googleapis.com` / `fonts.gstatic.com`）
+   > 与 `localhost` / `127.0.0.1` 地址（仅放行 axios 浏览器适配器的兜底表达式，见脚本白名单）；
+   > 任一命中即构建失败，并打印规则与命中文件。
+   > 通过后日志末尾打印入口、资源数与体积摘要。CI 与 release 流水线都跑
+   > `npm run generate`，因此无需额外步骤；打包/上传前也不必再人工抽查产物内容。
+   >
+   > **构建期环境变量**：`NUXT_PUBLIC_SITE_URL` 决定管理端同意页链接的官网地址，
+   > 未注入时回退到生产默认值 `https://www.nurtureplanet.cn`（`admin/nuxt.config.ts`）；
+   > staging 若需指向 `test-www`，构建时注入
+   > `NUXT_PUBLIC_SITE_URL=https://test-www.nurtureplanet.cn`。生产留空即用默认值。
+   > `NUXT_PUBLIC_API_BASE` 同理，默认同源 `/api/v1`。
 7. **证书**：
    ```bash
    /root/.acme.sh/acme.sh --issue --server letsencrypt \
@@ -48,9 +62,145 @@
      --reloadcmd "systemctl reload nginx"
    ```
    `ACME_USE_IPV4_REQUESTS=1` 必须保留（服务器 IPv6 出口不通）。
-8. **验证**：`curl -s https://test-api.nurtureplanet.cn/ready`、`https://test-admin.nurtureplanet.cn/`、`https://test-www.nurtureplanet.cn/`。
+8. **验证**：`curl -s https://test-api.nurtureplanet.cn/ready`、`https://test-admin.nurtureplanet.cn/`、`https://test-www.nurtureplanet.cn/`（后两者自 2026-11-15 起需要 staging Basic Auth，见 §1.1；`/privacy` 与 `/terms` 匿名可访问）。
 
 > 当前 staging 不走 ACR：API 镜像在本地构建后 `docker save | gzip | ssh ... docker load` 传到 A。GitHub Actions tag 流水线尚未启用。
+
+## 1.1 staging 访问门禁（test-admin / test-www Basic Auth，2026-11-15）
+
+对应 ticket #53。门禁只作用于 staging 的两个静态站点；`test-api` 保持公开（微信测试包匿名调用）。
+
+| 站点 | 需要凭据 | 匿名可用 |
+|---|---|---|
+| `test-admin` | `/`、`/_nuxt/`（SPA 页面与静态资源） | `/api/v1/`、`/health`、`/ready`、`/.well-known/acme-challenge/` |
+| `test-www` | 未列出的页面 | `/privacy`、`/terms`（家长端 web-view 匿名打开）、`/_nuxt/`、`/screens/`、`/brand/`、常见静态文件、`/404.html`、`/api/v1/`、`/health`、`/ready`、`/.well-known/acme-challenge/` |
+| `test-api` | 无 | 全部 |
+
+- 两个 staging 站点共用一份 realm（`Kindergarten staging`）与一份 htpasswd，用户名固定 `staging`；口令只在服务器生成。
+- 生产 `admin` / `www` 不启用门禁（模板中只在 staging 两个 server 块加了指令；生产是否启用另行决策）。
+
+> **test-www 匿名豁免范围（对 #53 US4 的有意偏离）**：test-www 与生产共用同一份官网静态产物。
+> 家长端 web-view 会匿名打开 `/privacy`、`/terms`，这两个页面及其引用的 `/_nuxt/`、`/brand/`
+> （以及 `screens/` 图片、字体等常见静态文件）必须匿名可读，否则 web-view 里版面与插图会裂开。
+> `/404.html` 也必须匿名：匿名请求在政策页缺失时会走 `error_page 404`，若被门禁拦成 401
+> 就看不到真正的 404。`/api/v1/`、`/health`、`/ready` 在该 host 显式 `return 404`
+> （官网静态站没有后端），保持匿名是为了将来接入后端时不被门禁拦截。**除上表列出的路径外，
+> 其余页面一律需要凭据。**
+
+### 1.1.1 凭据文件（只在服务器）
+
+| 项 | 值 |
+|---|---|
+| htpasswd | `/etc/nginx/htpasswd/kindergarten-staging`（**`0640 root:nginx`**） |
+| 口令备份 | `/root/kindergarten-staging-basic-auth.txt`（`0600 root:root`） |
+| 仓库 | 不含任何凭据；不要把 htpasswd 或口令写进仓库、ticket 或聊天 |
+
+> 必须是 `0640 root:nginx`：Nginx worker 以 `nginx` 用户读 htpasswd，`0600 root:root` 会让所有带凭据的请求返回 **500**（`error.log` 报 `open() ... failed (13: Permission denied)`）。目录 `/etc/nginx/htpasswd` 为 `0755 root:root`。已在 nginx 1.30.4 上实测。
+
+### 1.1.2 首次创建
+
+```bash
+sudo install -d -m 0755 /etc/nginx/htpasswd
+PW="$(openssl rand -base64 24)"
+sudo htpasswd -bc /etc/nginx/htpasswd/kindergarten-staging staging "$PW"
+sudo chown root:nginx /etc/nginx/htpasswd/kindergarten-staging
+sudo chmod 640 /etc/nginx/htpasswd/kindergarten-staging
+printf 'sites: test-admin.nurtureplanet.cn, test-www.nurtureplanet.cn\nusername: staging\npassword: %s\n' "$PW" \
+  | sudo tee /root/kindergarten-staging-basic-auth.txt >/dev/null
+sudo chmod 600 /root/kindergarten-staging-basic-auth.txt
+unset PW
+```
+
+### 1.1.3 同步 Nginx
+
+线上 staging 使用 staging 专用配置 `/etc/nginx/conf.d/kindergarten-staging.conf`；仓库模板 `deploy/nginx/kindergarten.conf.tmpl` 的 staging server 块保持同一套指令。只改 auth 相关指令时可直接编辑线上 conf，**改动前必须备份**：
+
+```bash
+sudo cp -a /etc/nginx/conf.d/kindergarten-staging.conf \
+  /etc/nginx/conf.d/kindergarten-staging.conf.bak-$(date +%Y%m%d-%H%M)
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+`nginx -t` 失败时立即用备份恢复并 reload。渲染模板（新环境/整文件替换）用：
+
+```bash
+sudo envsubst '$DOMAIN' < deploy/nginx/kindergarten.conf.tmpl > /etc/nginx/conf.d/kindergarten.conf
+```
+
+### 1.1.4 验证
+
+先做结构化契约检查（无需服务器，纯模板断言）：
+
+```bash
+node scripts/check-nginx-staging-auth.mjs
+# 期望：OK ...；staging 的 test-admin / test-www 含 auth_basic，
+#       prod admin / www / apex 与 test-api 不含，80 端口块仅 ACME + 301
+```
+
+口令从服务器文件读取，不要贴进命令历史或聊天：
+
+```bash
+PW="$(sudo sed -n 's/^password: //p' /root/kindergarten-staging-basic-auth.txt)"
+
+# 无凭据 / 错误凭据 → 401；正确凭据 → 200
+curl -sI https://test-admin.nurtureplanet.cn/ -o /dev/null -w '%{http_code}\n'                      # 401
+curl -sI -u staging:wrong https://test-admin.nurtureplanet.cn/ -o /dev/null -w '%{http_code}\n'     # 401
+curl -sI -u "staging:$PW" https://test-admin.nurtureplanet.cn/ -o /dev/null -w '%{http_code}\n'     # 200
+curl -sI -u "staging:$PW" https://test-admin.nurtureplanet.cn/_nuxt/ -o /dev/null -w '%{http_code}\n'
+
+# _nuxt 长缓存：取首页引用的第一个 JS 资源，确认 Cache-Control 含 immutable
+ASSET="$(curl -s -u "staging:$PW" https://test-admin.nurtureplanet.cn/ | grep -o '/_nuxt/[^"]*\.js' | head -1)"
+echo "$ASSET"
+curl -sI -u "staging:$PW" "https://test-admin.nurtureplanet.cn$ASSET" | grep -i '^cache-control'
+# 期望：cache-control 含 "public, immutable"（expires 另会生成 max-age）
+
+# 401 必须带 WWW-Authenticate
+curl -sI https://test-admin.nurtureplanet.cn/ | grep -i '^www-authenticate'
+
+# test-www：同一套凭据；政策页与静态资源匿名可用
+curl -sI https://test-www.nurtureplanet.cn/ -o /dev/null -w '%{http_code}\n'                        # 401
+curl -sI -u "staging:$PW" https://test-www.nurtureplanet.cn/ -o /dev/null -w '%{http_code}\n'       # 200
+curl -sI https://test-www.nurtureplanet.cn/privacy -o /dev/null -w '%{http_code}\n'                 # 200
+curl -sI https://test-www.nurtureplanet.cn/terms -o /dev/null -w '%{http_code}\n'                   # 200
+
+# 不受影响：API / 健康检查 / ACME
+curl -fsS https://test-api.nurtureplanet.cn/health -o /dev/null -w '%{http_code}\n'                 # 200
+curl -sI https://test-admin.nurtureplanet.cn/api/v1/system/status -o /dev/null -w '%{http_code}\n'  # 非 401
+curl -sI https://test-admin.nurtureplanet.cn/.well-known/acme-challenge/<file> -o /dev/null -w '%{http_code}\n'  # 非 401
+unset PW
+```
+
+浏览器验收：带凭据打开 `test-admin`，确认登录页与 `_nuxt` 资源加载正常，刷新深链接仍返回 SPA；官网首页同样带凭据打开。
+
+### 1.1.5 轮换
+
+不改应用代码，重写 htpasswd 后 reload 即可：
+
+```bash
+PW="$(openssl rand -base64 24)"
+sudo htpasswd -bc /etc/nginx/htpasswd/kindergarten-staging staging "$PW"
+sudo chown root:nginx /etc/nginx/htpasswd/kindergarten-staging
+sudo chmod 640 /etc/nginx/htpasswd/kindergarten-staging
+printf 'sites: test-admin.nurtureplanet.cn, test-www.nurtureplanet.cn\nusername: staging\npassword: %s\n' "$PW" \
+  | sudo tee /root/kindergarten-staging-basic-auth.txt >/dev/null
+sudo chmod 600 /root/kindergarten-staging-basic-auth.txt
+unset PW
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+- `htpasswd -c` 会覆盖整份文件；`-b` 把口令放进进程参数，只能在服务器本机执行，不要写进脚本仓库。
+- 轮换后必须通知所有 staging 使用者，否则他们下次访问会看到 401。
+- 不要重启应用容器：Basic Auth 完全在 Nginx 层。
+
+### 1.1.6 回滚 / 临时关闭
+
+```bash
+sudo cp -a /etc/nginx/conf.d/kindergarten-staging.conf.bak-<时间戳> \
+  /etc/nginx/conf.d/kindergarten-staging.conf
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+只临时关闭：删掉两个 staging server 块中的 `auth_basic` / `auth_basic_user_file` 后 reload；保留 htpasswd 与口令文件，恢复时无需重新生成。
 
 ## 1. 首次部署
 
@@ -189,6 +339,11 @@ cd /path/to/repo/server
 MYSQL_DSN='<app-dsn>' go run ./cmd/dbcheck task_check_ins
 MYSQL_DSN='<app-dsn>' go run ./cmd/dbcheck --query "SELECT COUNT(*) FROM files"
 
+# 供给园所管理员（幂等；园所必须已存在，软删除视为不存在）
+# -phone / -kg 必填；口令走环境变量，避免留在 shell 历史与进程参数里
+CONFIG_PATH=/etc/kindergarten/prod/app.ini SETADMIN_PASSWORD='<强密码>' \
+  go run ./cmd/setadmin -phone <手机号> -kg <园所ID>
+
 # Nginx
 sudo nginx -t && sudo systemctl reload nginx
 ```
@@ -216,12 +371,78 @@ sudo nginx -t && sudo systemctl reload nginx
 - [ ] 生产 `app.ini` 0600，属主 deploy
 - [ ] 安全组仅 80/443；SSH 限管理员 IP
 - [ ] RDS/Redis 无公网地址
-- [ ] `cors_origins` 只含 `https://admin.<domain>`
+- [ ] `cors_origins` 精确匹配本环境管理端：staging = `https://test-admin.nurtureplanet.cn`，prod = `https://admin.<domain>`；不含 `*`（见 §9.1）
 - [ ] 发布前快照已成功
 - [ ] 回滚 tag / admin symlink 已知
 - [ ] MCP 使用专用 RAM 用户，AK 未进入任何被跟踪文件
 - [ ] staging 安全组 22 已限管理员 IP（当前仍为 `0.0.0.0/0`，待收）
+- [ ] staging Basic Auth 生效：`test-admin` / `test-www` 无凭据 401、`/privacy` 匿名 200；htpasswd 为 `0640 root:nginx`，口令文件 0600（见 §1.1）
 - [ ] `np-staging` 续费已确认（2026-12-14 到期）
+
+### 9.1 CORS / 反向代理 / 上传上限验收
+
+CORS 由 `server/internal/middleware/cors.go` 实现：白名单精确匹配、留空默认拒绝、`OPTIONS` 返回 204、响应带 `Vary: Origin`。`cors_origins` 由 `deploy/config/app.ini.tmpl` 从 `CORS_ORIGINS` 渲染：
+
+| 环境 | `cors_origins` |
+|---|---|
+| staging | `https://test-admin.nurtureplanet.cn` |
+| prod | `https://admin.<domain>` |
+| 本地 | `http://localhost:3000`（admin dev 走 Vite 代理时可不填） |
+
+小程序请求不带 Origin、官网不调用 API，因此两者都不需要跨域来源；管理端经 Nginx 同源访问，同样不需要 CORS。staging 与 prod 仍显式配置上表来源，作为白名单与验收值（纵深防御与未来跨域）。留空是安全默认值。release 模式下误填 `*` 会在启动日志记录 WARN（不阻断启动），看到即应改回显式来源。
+
+```bash
+API=https://test-api.nurtureplanet.cn   # prod 换成 https://api.<domain>
+
+# 1) 白名单来源：逐字回显 + Vary: Origin
+curl -sS -o /dev/null -D - -H 'Origin: https://test-admin.nurtureplanet.cn' "$API/health" \
+  | grep -iE '^(access-control-allow-origin|vary):'
+# 期望：access-control-allow-origin: https://test-admin.nurtureplanet.cn
+#       vary: Origin
+
+# 2) 非白名单来源：无放行头，但仍有 Vary（防止缓存把 A 来源的响应复用到 B 来源）
+curl -sS -o /dev/null -D - -H 'Origin: https://evil.example.com' "$API/health" \
+  | grep -iE '^(access-control-allow-origin|vary):'
+# 期望：只有 vary: Origin，没有 access-control-allow-origin
+
+# 3) 预检：204，允许头含 terminal_from
+curl -sS -o /dev/null -D - -X OPTIONS -H 'Origin: https://test-admin.nurtureplanet.cn' \
+  -H 'Access-Control-Request-Method: GET' "$API/health" \
+  | grep -iE '^(HTTP/|access-control-allow-origin|access-control-allow-headers):'
+# 期望：HTTP/... 204；allow-headers 含 terminal_from
+```
+
+**代理头**：应用只信任来自 `127.0.0.1` / `::1`（宿主机 Nginx）的 `X-Forwarded-For`，见 `server/internal/app/router.go` 的 `SetTrustedProxies`；Nginx 用 `$proxy_add_x_forwarded_for` 追加而非透传，客户端伪造值只能排在最左。
+
+```bash
+# 1) 每个反向代理 location 都转发了三个代理头（每个块应有 3 行）
+sudo grep -nE 'X-Real-IP|X-Forwarded-For|X-Forwarded-Proto' /etc/nginx/conf.d/kindergarten-staging.conf
+
+# 2) 应用只信任宿主机回环地址（在仓库根目录执行）
+grep -n 'SetTrustedProxies' server/internal/app/router.go
+# 期望：[]string{"127.0.0.1", "::1"}；出现 0.0.0.0/0 或删掉该行都视为回归
+```
+
+**端到端核对**：`X-Forwarded-For` 只有经过一次真实写操作才会落进操作日志。用管理员账号带凭据打开 `test-admin`，登录后修改任意班级信息，然后在「操作日志」（侧栏审计 → 操作日志，路由 `/logs`）核对最新一条的 IP 为你的公网出口 IP；或直接查库：
+
+```bash
+MYSQL_DSN='<app-dsn>' go run ./cmd/dbcheck --query \
+  "SELECT id, module, action, ip, created_at FROM operation_logs WHERE ip <> '' ORDER BY id DESC LIMIT 5"
+```
+
+要验证伪造头被忽略：用 `curl` 直接对**写接口**带 `X-Forwarded-For: 1.2.3.4`（需先取得管理员 JWT），再查上面同一条记录——IP 仍应是真实出口 IP，`1.2.3.4` 不应出现。只读接口（如 `/health`）不写操作日志，不能作为验收依据。
+
+**上传上限**：`client_max_body_size 25m` 只出现在四个反向代理或静态块——`api`、`test-api`、`admin`、`test-admin`；`www` / `test-www` 是纯静态站，没有上传需求，不设该指令。后端业务层单文件限制仍是 20MB（按 `FileSize` 校验），两者不要混为一谈。用 26MB 与 24MB 各试一次：
+
+```bash
+head -c 26M /dev/zero > /tmp/26mb.bin
+head -c 24M /dev/zero > /tmp/24mb.bin
+# 超过 Nginx 上限：413，不进入应用（未带凭据也应先看到 413）
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST --data-binary @/tmp/26mb.bin "$API/api/v1/common/upload"
+# 低于 Nginx 上限：不是 413（通常是 401/400，由应用层处理）
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST --data-binary @/tmp/24mb.bin "$API/api/v1/common/upload"
+rm -f /tmp/26mb.bin /tmp/24mb.bin
+```
 
 ## 10. MCP 运维凭据（alibaba-cloud-ops-mcp-server）
 

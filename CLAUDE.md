@@ -366,7 +366,7 @@ pkg/
 | `refreshtasks` | **删除** kindergarten 4 的全部 `ParentTask` / `TaskCheckIn` 后重建种子任务 | ⚠️ **破坏性** |
 | `initcheck`  | 创建测试园所+管理员并打印计数，随后 **`Unscoped().Where("1=1")` 清空 `users` / `user_roles` / `kindergartens`** | ⚠️ **破坏性** |
 | `mktoken`    | 为指定手机号+角色签发本地 JWT（验证辅助） | 只读/测试 |
-| `setadmin` / `setpwd` | `setadmin` 创建/更新后台账号（默认 admin/123456）；`setpwd` 重置硬编码用户 id 61/65 | 写入 |
+| `setadmin` / `setpwd` | `setadmin` 按 `-phone/-kg` 供给租户管理员（园所须已存在），口令从 `-password` 或 `SETADMIN_PASSWORD` 读取，**无默认口令**；`setpwd` 重置硬编码用户 id 61/65 | 写入 |
 | `platformadmin` | 创建或重置首个平台方账号 | 写入 |
 | `redactlogs` | 回填脱敏 `operation_logs.detail` 中的手机号/身份证 | 写入 |
 | `albumretention` | **硬删**软删已满 180 天的相册及关联（支持 `-dry-run`） | ⚠️ **破坏性** |

@@ -1,5 +1,10 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import type { ApiEnvelope } from '~/types/api'
+import {
+  ADMIN_TOKEN_COOKIE,
+  ADMIN_TOKEN_MAX_AGE,
+  buildAuthCookieOptions,
+} from '~/utils/authCookie'
 
 let client: AxiosInstance | null = null
 
@@ -34,10 +39,10 @@ export function useHttp() {
     })
 
     client.interceptors.request.use((req) => {
-      const token = useCookie<string | null>('admin_token', {
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7,
-      })
+      const token = useCookie<string | null>(
+        ADMIN_TOKEN_COOKIE,
+        buildAuthCookieOptions({ maxAge: ADMIN_TOKEN_MAX_AGE }),
+      )
       if (token.value) {
         req.headers.Authorization = `Bearer ${token.value}`
       }
@@ -59,7 +64,7 @@ export function useHttp() {
           err.message ||
           '网络错误'
         if (import.meta.client && err.response?.status === 401) {
-          const token = useCookie<string | null>('admin_token')
+          const token = useCookie<string | null>(ADMIN_TOKEN_COOKIE, buildAuthCookieOptions())
           const route = useRoute()
           if (route.path !== '/login') {
             token.value = null

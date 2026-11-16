@@ -29,15 +29,14 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
+		// 无论放行与否都 Vary，避免中间缓存把 A 来源的响应复用到 B 来源。
+		// 通配符分支虽然与来源无关，仍保留该头：将来改回白名单时缓存立即按来源分桶。
+		c.Header("Vary", "Origin")
 		if allowAll {
 			c.Header("Access-Control-Allow-Origin", "*")
-		} else {
-			// 即使本次不放行也要 Vary，避免中间缓存把 A 来源的响应复用到 B 来源。
-			c.Header("Vary", "Origin")
-			if origin != "" {
-				if _, ok := allowed[origin]; ok {
-					c.Header("Access-Control-Allow-Origin", origin)
-				}
+		} else if origin != "" {
+			if _, ok := allowed[origin]; ok {
+				c.Header("Access-Control-Allow-Origin", origin)
 			}
 		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
