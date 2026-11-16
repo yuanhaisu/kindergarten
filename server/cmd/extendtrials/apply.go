@@ -52,18 +52,24 @@ type rowUpdate struct {
 }
 
 // writeManifestTx 是 apply/revert 共用的事务骨架：
-// 行锁并校验清单 → decide 全量判定并给出写入计划 → 逐行 UPDATE → 写平台操作日志。
-// decide 返回错误时整体拒绝，事务内不落任何写入。
+// 事务内前置复核（仅 apply）→ 行锁并校验清单 → decide 全量判定并给出写入计划 →
+// 逐行 UPDATE → 写平台操作日志。任一步返回错误时整体拒绝，事务内不落任何写入。
 func writeManifestTx(
 	ctx context.Context,
 	db *gorm.DB,
 	opts Options,
 	m *Manifest,
 	mode, action string,
+	precheck func(ctx context.Context, tx *gorm.DB) error,
 	decide func(current map[uint64]lockedEntitlement) ([]rowUpdate, *WriteStats, error),
 ) (*WriteStats, error) {
 	var stats *WriteStats
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if precheck != nil {
+			if err := precheck(ctx, tx); err != nil {
+				return err
+			}
+		}
 		current, err := lockManifestRows(ctx, tx, m)
 		if err != nil {
 			return err
@@ -101,12 +107,16 @@ func writeManifestTx(
 //
 // 只延长不回退：到期日已等于或晚于目标日的行保持不变（重复执行影响行数为 0）。
 // 清单与数据库漂移（授权消失、被删、换了园所、不再是 trial）时整体拒绝，
-// 不在运营确认过的清单之外猜意图。
+// 不在运营确认过的清单之外猜意图。dry-run 可能已是数天前的产物，因此事务内
+// 还要按最终口径复核园所（未删除、在营、无在期订单/订阅），不再符合即整体拒绝。
 func ApplyManifest(ctx context.Context, db *gorm.DB, opts Options, m *Manifest) (*WriteStats, error) {
 	if m == nil || len(m.Rows) == 0 {
 		return nil, errors.New("manifest 为空，拒绝执行")
 	}
 	return writeManifestTx(ctx, db, opts, m, "apply", "extend_trials",
+		func(ctx context.Context, tx *gorm.DB) error {
+			return revalidateKindergartens(ctx, tx, m.Kindergartens(), opts.Now)
+		},
 		func(current map[uint64]lockedEntitlement) ([]rowUpdate, *WriteStats, error) {
 			s := &WriteStats{}
 			updates := make([]rowUpdate, 0, len(m.Rows))

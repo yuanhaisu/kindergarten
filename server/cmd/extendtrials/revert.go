@@ -19,7 +19,7 @@ func RevertManifest(ctx context.Context, db *gorm.DB, opts Options, m *Manifest)
 	if m == nil || len(m.Rows) == 0 {
 		return nil, errors.New("manifest 为空，拒绝执行")
 	}
-	return writeManifestTx(ctx, db, opts, m, "revert", "revert_trials",
+	return writeManifestTx(ctx, db, opts, m, "revert", "revert_trials", nil,
 		func(current map[uint64]lockedEntitlement) ([]rowUpdate, *WriteStats, error) {
 			// 先全量检查再做任何写入：任一漂移都整体拒绝，事务里没有半成品。
 			var drifted []string

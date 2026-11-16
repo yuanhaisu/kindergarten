@@ -108,6 +108,14 @@ func run(ctx context.Context, db *gorm.DB, opts Options) (*Result, error) {
 	}
 	res := &Result{Plan: plan, Mode: "dry-run"}
 
+	// 只在确实要写 manifest 时检查覆盖：空计划不会落盘，也就不存在覆盖风险。
+	// apply 之后重跑 dry-run（影响 0 行）仍可正常得到「无事可做」的结果。
+	if plan.TotalTrialRows() > 0 {
+		if err := ensureManifestTargetWritable(opts.ManifestPath, opts.Force); err != nil {
+			return nil, err
+		}
+	}
+
 	sha, err := WriteManifest(opts.ManifestPath, plan)
 	if errors.Is(err, ErrEmptyPlan) {
 		return res, nil

@@ -537,7 +537,13 @@ Claude Code 的 MCP 握手默认 30 秒，加到 10 个就贴着超时线，再�
 ## 11. 存量 trial 延长（一次性，2026-12-06 前完成）
 
 决策依据：ADR-0018 #1。命令：`server/cmd/extendtrials/`（规格 #62、工单 #65/#66）。
-范围仅限 **2026-11-15（含）前开通、仍有 `source='trial' AND order_id IS NULL` 授权、无未取消订单、无在期订阅**的园所；目标到期日统一为 **2027-01-31 23:59:59 Asia/Shanghai**。
+范围仅限 **2026-11-15（含）前开通、状态为 `active` 且未删除、仍有 `source='trial' AND order_id IS NULL` 授权、无在期订单、无在期订阅**的园所；目标到期日统一为 **2027-01-31 23:59:59 Asia/Shanghai**。
+
+「在期」口径：
+
+- **在期订单**：`status <> 'cancelled'` 且 `expires_at > now`，不看 `starts_at`——尚未到起算日的已付费订单同样阻断（否则试用会叠加在已付费授权上）。
+- **在期订阅**：`source='subscription'` 且 `starts_at <= now AND expires_at > now`（与 `EntitlementRepo.ListActiveByKindergarten` 的领域惯例一致）。
+- 边界均为严格大于：恰好 `expires_at = now` 的订单/订阅不再阻断。
 
 ### 11.1 流程（dry-run → 运营确认 → apply → 抽检 → revert 演练）
 
@@ -547,6 +553,9 @@ cd server
 # 1) 只读预演：不设 EXTENDTRIALS_ALLOW，数据库不会发生任何变化
 go run ./cmd/extendtrials -manifest ./extendtrials-2026-11-16.csv
 ```
+
+- dry-run **默认拒绝覆盖已存在的 manifest（及其 `.sha256` 侧车）**：覆盖会毁掉运营已确认、用于回滚的清单。确需重新生成时显式传 `-force`；计划为空时不落盘，无需 `-force`（apply 后重跑 dry-run 的常见场景）。
+- 输出末尾会列出**排除原因**（政策日后开通 / 园所非在营 / 无 trial / 在期订单 / 在期订阅 / 无需延长），以及**孤儿 trial 授权**（所属园所不存在或已删除，不在扫描集合内）：这类行不纳入本次延长，需运营确认是否另行处理。
 
 产物三个文件，必须一起归档、一起保留在原目录：
 
@@ -569,6 +578,8 @@ EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
 ```
 
 apply 只处理 manifest 中的授权：清单外的数据不变；已是目标日或更晚的行跳过（只延长不回退）；重复执行影响 0 行。写入前命令会先打印目标库（`host:port/库名`，不含凭据）供人工核对；成功后输出执行人、开始/结束时间、影响园所数与行数，并在 `platform_operation_logs` 落一条 `module=billing, action=extend_trials`，`detail` 含影响园所数、园所 ID、行数、目标日与 manifest SHA256。
+
+**写入事务内会按最终口径复核清单内每一所园所**（未删除、状态 `active`、无在期订单、无在期订阅）：dry-run 与 apply 之间可能相隔数天，期间园所签约、停用或删除都会命中；任一园所不再符合即**整体拒绝**并在错误里点名园所 ID，不修改任何行。被拒绝时重新跑 dry-run、确认清单后再执行。
 
 ### 11.2 抽检
 
@@ -608,7 +619,9 @@ EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
 | 场景 | 行为 |
 |---|---|
 | `-manifest` 缺失/文件不存在/空文件/只有表头 | 拒绝，并给出明确错误 |
+| dry-run 时目标 manifest（或 `.sha256` 侧车）已存在且未传 `-force` | 拒绝覆盖，既有文件原样保留 |
 | manifest 版本行或 SHA256 不符 | 拒绝，不写库 |
+| **apply 时复核不通过：清单内园所已删除 / 状态非 `active` / 出现 `expires_at > now` 的非取消订单（含未来起算）/ 出现在期订阅** | 整体拒绝，点名园所 ID，事务内不修改任何行 |
 | apply/revert 时清单行与库中不一致：授权不存在 / 授权已软删 / 园所 ID 不符 / 园所已软删 / 已不是存量 trial（`source` 变了或已挂 `order_id`） | 整体拒绝，点名具体授权，事务内不修改任何行 |
 | 未设 `EXTENDTRIALS_ALLOW=1` | 拒绝（dry-run 不需要该开关） |
 | 未传 `-operator` | 拒绝 |
@@ -616,6 +629,8 @@ EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials \
 | apply 时清单行已 ≥ 目标日 | 跳过，计入「未变更」 |
 | revert 时清单行既非目标日也非原值 | 整体拒绝，列出授权 ID 与当前值 |
 | 事务内任一写入失败 | 全部回滚，不留下部分更新 |
+
+> revert **不做**口径复核：回滚是撤销已发生的事实，apply 之后园所签约/停用不应阻断回滚；但仍逐行校验当前值未漂移（上一行）。
 
 ### 11.5 测试
 

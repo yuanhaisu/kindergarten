@@ -14,9 +14,14 @@
 //	EXTENDTRIALS_ALLOW=1 go run ./cmd/extendtrials -manifest ./extendtrials.csv \
 //	    -revert -operator "张三"
 //
-// 口径：未删除、2026-11-15（含）前开通、存在 source='trial' AND order_id IS NULL
-// 授权的园所；排除有未取消订单或在期 subscription 授权的园所。
-// 默认 dry-run：只做 SELECT，数据库不会发生任何变化。
+// 口径：未删除、status='active'、2026-11-15（含）前开通、存在
+// source='trial' AND order_id IS NULL 授权的园所；排除存在在期订单
+// （未取消且 expires_at > now，含未来起算）或在期 subscription 授权
+// （starts_at <= now < expires_at）的园所。
+// 默认 dry-run：只做 SELECT，数据库不会发生任何变化。目标 manifest 已存在时
+// 拒绝覆盖（避免毁掉运营已确认的回滚清单），确需重新生成时加 -force。
+// apply 在写事务内按同一口径复核园所，dry-run 之后出现新订单/订阅或园所被停用
+// 时整体拒绝并点名，不把试用叠加到已付费授权上。
 // manifest 每条 trial 授权一行（可逐条回滚），另存园所汇总；落盘后输出 SHA256。
 //
 // 时区固定 Asia/Shanghai：DATETIME 列存墙钟时间，连接时区决定参数如何渲染，
@@ -54,6 +59,7 @@ func main() {
 	apply := flag.Bool("apply", false, "按 manifest 延长 trial 授权至目标日（需 EXTENDTRIALS_ALLOW=1）")
 	revert := flag.Bool("revert", false, "按 manifest 恢复原始到期日（需 EXTENDTRIALS_ALLOW=1）")
 	operator := flag.String("operator", "", "写操作执行人（apply/revert 必填，写入平台操作日志）")
+	force := flag.Bool("force", false, "dry-run 时允许覆盖已存在的 manifest（默认拒绝）")
 	flag.Parse()
 
 	loc, err := time.LoadLocation("Asia/Shanghai")
@@ -105,6 +111,7 @@ func main() {
 		Apply:           *apply,
 		Revert:          *revert,
 		Operator:        *operator,
+		Force:           *force,
 	}
 
 	// 写操作前先亮出目标库（不含账号/口令），避免把生产库当测试库执行。
@@ -204,6 +211,12 @@ func printDryRunResult(res *Result, opts Options) {
 		fmt.Println("遗留行（created_at 为空，无法判定开通时间，未纳入本次延长，需人工核对）：")
 		for _, legacy := range plan.NullCreatedAt {
 			fmt.Printf("  %d\t%s\n", legacy.KindergartenID, legacy.Name)
+		}
+	}
+	if len(plan.OrphanTrials) > 0 {
+		fmt.Println("孤儿 trial 授权（所属园所不存在或已删除，不在园所扫描集合内，未纳入本次延长，需运营确认是否另行处理）：")
+		for _, orphan := range plan.OrphanTrials {
+			fmt.Printf("  园所 ID %d\ttrial %d 条\n", orphan.KindergartenID, orphan.TrialCount)
 		}
 	}
 

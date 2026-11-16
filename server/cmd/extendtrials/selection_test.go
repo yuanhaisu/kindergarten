@@ -96,13 +96,79 @@ func TestBuildPlanExcludesPaidAndReportsLegacyRows(t *testing.T) {
 	}
 	require.Equal(t, map[uint64]ExclusionReason{
 		202: ReasonCreatedAfterPolicy,
-		203: ReasonUncancelledOrder,
+		203: ReasonOpenOrder,
 		205: ReasonActiveSubscription,
 		208: ReasonNoTrial,
 		210: ReasonNothingToExtend,
 		211: ReasonNoTrial,
 		212: ReasonNoTrial,
 	}, reasons)
+}
+
+// 在期订单口径：未取消且 expires_at > now，不限制 starts_at（未来起算的付费订单
+// 同样阻断）；到期瞬间按严格大于判断。订阅到期边界与领域惯例一致（expires_at > now）。
+// 非 active 园所不纳入（ADR-0018：活跃且未删除）。
+func TestBuildPlanExcludesFutureOrdersAndInactiveKindergartens(t *testing.T) {
+	db := openScratchDB(t)
+	loc := mustShanghai(t)
+	created := time.Date(2026, 10, 1, 10, 0, 0, 0, loc)
+	trialStart := time.Date(2026, 11, 6, 15, 4, 5, 0, loc)
+	trialEnd := time.Date(2026, 12, 6, 15, 4, 5, 0, loc)
+	now := testOptions(loc).Now
+
+	// 214 未取消订单从未来起算：仍属在期，排除。
+	insertKindergarten(t, db, 214, "未来起算订单园", &created)
+	insertEntitlement(t, db, 2141, 214, "growth", "trial", nil, trialStart, trialEnd)
+	insertOrder(t, db, 2142, 214, "paid",
+		time.Date(2026, 12, 1, 0, 0, 0, 0, loc), time.Date(2027, 6, 1, 0, 0, 0, 0, loc))
+
+	// 215 订单在 now 恰好到期：不再阻断，应命中。
+	insertKindergarten(t, db, 215, "订单到期边界园", &created)
+	insertEntitlement(t, db, 2151, 215, "growth", "trial", nil, trialStart, trialEnd)
+	insertOrder(t, db, 2152, 215, "paid", created, now)
+
+	// 216 订阅在 now 恰好到期：不再阻断，应命中。
+	insertKindergarten(t, db, 216, "订阅到期边界园", &created)
+	insertEntitlement(t, db, 2161, 216, "growth", "trial", nil, trialStart, trialEnd)
+	insertEntitlement(t, db, 2162, 216, "growth", "subscription", nil, created, now)
+
+	// 218 园所已停用：排除。
+	insertKindergartenWithStatus(t, db, 218, "停用园", "suspended", &created)
+	insertEntitlement(t, db, 2181, 218, "growth", "trial", nil, trialStart, trialEnd)
+
+	plan, err := BuildPlan(context.Background(), db, testOptions(loc))
+	require.NoError(t, err)
+
+	require.Equal(t, []uint64{215, 216}, selectedIDs(plan))
+	reasons := map[uint64]ExclusionReason{}
+	for _, ex := range plan.Excluded {
+		reasons[ex.KindergartenID] = ex.Reason
+	}
+	require.Equal(t, map[uint64]ExclusionReason{
+		214: ReasonOpenOrder,
+		218: ReasonNotActive,
+	}, reasons)
+}
+
+// 所属园所不存在的 trial 授权不在园所扫描集合内，必须单独报告，不能静默忽略。
+func TestBuildPlanReportsOrphanTrials(t *testing.T) {
+	db := openScratchDB(t)
+	loc := mustShanghai(t)
+	created := time.Date(2026, 10, 1, 10, 0, 0, 0, loc)
+	trialStart := time.Date(2026, 11, 6, 15, 4, 5, 0, loc)
+	trialEnd := time.Date(2026, 12, 6, 15, 4, 5, 0, loc)
+
+	insertKindergarten(t, db, 220, "正常园", &created)
+	insertEntitlement(t, db, 2201, 220, "growth", "trial", nil, trialStart, trialEnd)
+	// 园所 990301 在 kindergartens 中不存在（演练中发现的同类历史孤儿行）。
+	insertEntitlement(t, db, 9903011, 990301, "growth", "trial", nil, trialStart, trialEnd)
+
+	plan, err := BuildPlan(context.Background(), db, testOptions(loc))
+	require.NoError(t, err)
+
+	require.Equal(t, []uint64{220}, selectedIDs(plan))
+	require.Equal(t, []OrphanTrialGroup{{KindergartenID: 990301, TrialCount: 1}}, plan.OrphanTrials)
+	require.Empty(t, plan.NullCreatedAt)
 }
 
 func selectedIDs(plan *Plan) []uint64 {

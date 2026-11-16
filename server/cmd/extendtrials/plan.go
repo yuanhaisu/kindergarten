@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -21,6 +22,7 @@ type Options struct {
 	Apply           bool
 	Revert          bool
 	Operator        string
+	Force           bool // dry-run 允许覆盖已存在的 manifest
 }
 
 // TrialGroup 是一所将被延长的园所及其待修改的 trial 授权汇总。
@@ -45,8 +47,9 @@ type ExclusionReason string
 
 const (
 	ReasonCreatedAfterPolicy ExclusionReason = "created_after_policy_date"
+	ReasonNotActive          ExclusionReason = "kindergarten_not_active"
 	ReasonNoTrial            ExclusionReason = "no_trial_entitlement"
-	ReasonUncancelledOrder   ExclusionReason = "uncancelled_order"
+	ReasonOpenOrder          ExclusionReason = "open_order"
 	ReasonActiveSubscription ExclusionReason = "active_subscription"
 	ReasonNothingToExtend    ExclusionReason = "nothing_to_extend"
 )
@@ -55,10 +58,12 @@ func (r ExclusionReason) Label() string {
 	switch r {
 	case ReasonCreatedAfterPolicy:
 		return "政策日后开通"
+	case ReasonNotActive:
+		return "园所非在营状态（status ≠ active）"
 	case ReasonNoTrial:
 		return "无 trial 授权"
-	case ReasonUncancelledOrder:
-		return "存在在期未取消订单"
+	case ReasonOpenOrder:
+		return "存在在期订单（未取消且未到期，含未来起算）"
 	case ReasonActiveSubscription:
 		return "存在在期订阅授权"
 	case ReasonNothingToExtend:
@@ -82,12 +87,20 @@ type LegacyKindergarten struct {
 	Name           string
 }
 
+// OrphanTrialGroup 是所属园所不存在或已软删的 trial 授权汇总。命令按园所维度
+// 扫描，这些行不会进入 manifest；dry-run 单独报告，供运营确认是否另行处理。
+type OrphanTrialGroup struct {
+	KindergartenID uint64
+	TrialCount     int
+}
+
 // Plan 是一次只读预演的结果。
 type Plan struct {
 	Selected      []TrialGroup
 	Trials        []TrialRow // 被选中园所的待修改授权明细，逐条可回滚
 	Excluded      []Exclusion
 	NullCreatedAt []LegacyKindergarten
+	OrphanTrials  []OrphanTrialGroup
 	Scanned       int
 }
 
@@ -99,6 +112,7 @@ func (p *Plan) TotalTrialRows() int {
 type kindergartenRow struct {
 	ID        uint64
 	Name      string
+	Status    string
 	CreatedAt *time.Time
 }
 
@@ -112,22 +126,35 @@ type trialAggRow struct {
 
 // BuildPlan 按 ADR-0018 的存量园所口径做只读选择。它绝不写库。
 //
-// 口径：未删除、created_at 早于政策日次日零点、存在 source='trial' AND order_id IS NULL
-// 的授权；排除存在在期未取消订单或在期 subscription 授权的园所。
-// 只把 expires_at < TargetExpiry 的 trial 行计入待修改行：已经延到目标日之后的
-// 行不动，重复执行影响行数为 0。
+// 口径：未删除、status='active'、created_at 早于政策日次日零点、存在
+// source='trial' AND order_id IS NULL 的授权；排除存在在期订单（未取消且
+// expires_at > now，含未来起算）或在期 subscription 授权（starts_at <= now <
+// expires_at）的园所。只把 expires_at < TargetExpiry 的 trial 行计入待修改行：
+// 已经延到目标日之后的行不动，重复执行影响行数为 0。
 func BuildPlan(ctx context.Context, db *gorm.DB, opts Options) (*Plan, error) {
 	var kgs []kindergartenRow
 	if err := db.WithContext(ctx).Raw(
-		"SELECT id, name, created_at FROM kindergartens WHERE deleted_at IS NULL ORDER BY id",
+		"SELECT id, name, status, created_at FROM kindergartens WHERE deleted_at IS NULL ORDER BY id",
 	).Scan(&kgs).Error; err != nil {
 		return nil, fmt.Errorf("查询园所失败: %w", err)
 	}
 
 	plan := &Plan{Scanned: len(kgs)}
+	orphans, err := loadOrphanTrialGroups(ctx, db, opts.TargetExpiry)
+	if err != nil {
+		return nil, err
+	}
+	plan.OrphanTrials = orphans
+
 	remaining := make([]uint64, 0, len(kgs))
 	for _, kg := range kgs {
 		switch {
+		case kg.Status != domain.KindergartenStatusActive:
+			plan.Excluded = append(plan.Excluded, Exclusion{
+				KindergartenID: kg.ID,
+				Name:           kg.Name,
+				Reason:         ReasonNotActive,
+			})
 		case kg.CreatedAt == nil:
 			plan.NullCreatedAt = append(plan.NullCreatedAt, LegacyKindergarten{
 				KindergartenID: kg.ID,
@@ -151,7 +178,7 @@ func BuildPlan(ctx context.Context, db *gorm.DB, opts Options) (*Plan, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockedOrders, err := loadIDsWithUncancelledOrders(ctx, db, remaining, opts.Now)
+	blockedOrders, err := loadIDsWithOpenOrders(ctx, db, remaining, opts.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +198,7 @@ func BuildPlan(ctx context.Context, db *gorm.DB, opts Options) (*Plan, error) {
 		case !ok || agg.TotalRows == 0:
 			plan.Excluded = append(plan.Excluded, Exclusion{id, nameByID[id], ReasonNoTrial})
 		case blockedOrders[id]:
-			plan.Excluded = append(plan.Excluded, Exclusion{id, nameByID[id], ReasonUncancelledOrder})
+			plan.Excluded = append(plan.Excluded, Exclusion{id, nameByID[id], ReasonOpenOrder})
 		case activeSubs[id]:
 			plan.Excluded = append(plan.Excluded, Exclusion{id, nameByID[id], ReasonActiveSubscription})
 		case agg.ToExtend == 0:
@@ -281,25 +308,27 @@ ORDER BY kindergarten_id`,
 	return byID, nil
 }
 
-// loadIDsWithUncancelledOrders 找出在 now 处于生效窗口（starts_at <= now < expires_at）
-// 且未取消的订单所属园所。窗口外的历史订单（含 expired）不阻断延长：
-// 它们不构成「已付费在用」，本轮延长的目的正是覆盖 trial 到期后的空档。
-func loadIDsWithUncancelledOrders(ctx context.Context, db *gorm.DB, ids []uint64, now time.Time) (map[uint64]bool, error) {
+// loadIDsWithOpenOrders 找出存在「在期订单」的园所：未取消且未到期
+// （expires_at > now）。不限制 starts_at —— 已付款但从未来起算的订单同样阻断，
+// 否则 trial 延到目标日会与付费周期重叠。已取消订单不阻断；已过期的历史订单
+// 也不阻断，本轮延长的目的正是覆盖 trial 到期后的空档。
+func loadIDsWithOpenOrders(ctx context.Context, db *gorm.DB, ids []uint64, now time.Time) (map[uint64]bool, error) {
 	var found []uint64
 	if err := db.WithContext(ctx).Raw(`
 SELECT DISTINCT kindergarten_id FROM orders
 WHERE deleted_at IS NULL
   AND status <> ?
-  AND starts_at <= ?
   AND expires_at > ?
   AND kindergarten_id IN ?`,
-		domain.OrderStatusCancelled, now, now, ids,
+		domain.OrderStatusCancelled, now, ids,
 	).Scan(&found).Error; err != nil {
 		return nil, fmt.Errorf("查询订单失败: %w", err)
 	}
 	return toSet(found), nil
 }
 
+// loadIDsWithActiveSubscription 找出存在在期订阅授权的园所。到期边界与领域惯例
+// 一致（EntitlementRepo.ListActiveByKindergarten）：starts_at <= now < expires_at。
 func loadIDsWithActiveSubscription(ctx context.Context, db *gorm.DB, ids []uint64, now time.Time) (map[uint64]bool, error) {
 	var found []uint64
 	if err := db.WithContext(ctx).Raw(`
@@ -307,13 +336,98 @@ SELECT DISTINCT kindergarten_id FROM entitlements
 WHERE deleted_at IS NULL
   AND source = ?
   AND starts_at <= ?
-  AND expires_at >= ?
+  AND expires_at > ?
   AND kindergarten_id IN ?`,
 		domain.EntitlementSourceSubscription, now, now, ids,
 	).Scan(&found).Error; err != nil {
 		return nil, fmt.Errorf("查询订阅授权失败: %w", err)
 	}
 	return toSet(found), nil
+}
+
+// loadOrphanTrialGroups 找出所属园所不存在或已软删的 trial 授权。它们不在
+// 园所扫描集合内，永远不会进入 manifest；必须显式报告，不能静默忽略。
+func loadOrphanTrialGroups(ctx context.Context, db *gorm.DB, target time.Time) ([]OrphanTrialGroup, error) {
+	var groups []OrphanTrialGroup
+	if err := db.WithContext(ctx).Raw(`
+SELECT e.kindergarten_id, COUNT(*) AS trial_count
+FROM entitlements e
+LEFT JOIN kindergartens k ON k.id = e.kindergarten_id AND k.deleted_at IS NULL
+WHERE e.deleted_at IS NULL
+  AND e.source = ?
+  AND e.order_id IS NULL
+  AND e.expires_at < ?
+  AND k.id IS NULL
+GROUP BY e.kindergarten_id
+ORDER BY e.kindergarten_id`,
+		domain.EntitlementSourceTrial, target,
+	).Scan(&groups).Error; err != nil {
+		return nil, fmt.Errorf("查询孤儿 trial 授权失败: %w", err)
+	}
+	return groups, nil
+}
+
+// revalidateKindergartens 在 apply 事务内按最终口径复核清单涉及的园所。
+// dry-run 与 apply 之间可能相隔数小时到数天：期间园所可能被停用/删除，或出现
+// 新的在期订单/订阅授权。任一园所不再符合口径即整体拒绝并点名，避免把试用
+// 叠加到已付费授权上。revert 不做此复核——回滚必须能撤销已经发生的事实。
+func revalidateKindergartens(ctx context.Context, tx *gorm.DB, kgIDs []uint64, now time.Time) error {
+	if len(kgIDs) == 0 {
+		return nil
+	}
+	type kgRow struct {
+		ID        uint64
+		Status    string
+		DeletedAt *time.Time
+	}
+	var rows []kgRow
+	if err := tx.WithContext(ctx).Raw(`
+SELECT id, status, deleted_at
+FROM kindergartens
+WHERE id IN ?
+ORDER BY id
+FOR UPDATE`, kgIDs).Scan(&rows).Error; err != nil {
+		return fmt.Errorf("复核园所状态失败: %w", err)
+	}
+	byID := make(map[uint64]kgRow, len(rows))
+	for _, r := range rows {
+		byID[r.ID] = r
+	}
+
+	var problems []string
+	for _, id := range kgIDs {
+		got, ok := byID[id]
+		switch {
+		case !ok:
+			problems = append(problems, fmt.Sprintf("园所 %d 不存在", id))
+		case got.DeletedAt != nil:
+			problems = append(problems, fmt.Sprintf("园所 %d 已删除", id))
+		case got.Status != domain.KindergartenStatusActive:
+			problems = append(problems, fmt.Sprintf("园所 %d 状态为 %q（非在营）", id, got.Status))
+		}
+	}
+	openOrders, err := loadIDsWithOpenOrders(ctx, tx, kgIDs, now)
+	if err != nil {
+		return err
+	}
+	activeSubs, err := loadIDsWithActiveSubscription(ctx, tx, kgIDs, now)
+	if err != nil {
+		return err
+	}
+	for _, id := range kgIDs {
+		if openOrders[id] {
+			problems = append(problems, fmt.Sprintf("园所 %d 存在在期订单（未取消且未到期）", id))
+		}
+		if activeSubs[id] {
+			problems = append(problems, fmt.Sprintf("园所 %d 存在在期订阅授权", id))
+		}
+	}
+	if len(problems) > 0 {
+		return fmt.Errorf(
+			"apply 前置复核失败：清单内园所已不符合延长口径，拒绝执行（未修改任何行）：%s",
+			strings.Join(problems, "；"))
+	}
+	return nil
 }
 
 func toSet(ids []uint64) map[uint64]bool {

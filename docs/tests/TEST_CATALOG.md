@@ -1392,7 +1392,7 @@
 | TC-NEW-TNT-0003 | 重复 apply 影响行数为 0 | P0 | Command | ✅ (`TestRunApplyIsIdempotent`) |
 | TC-NEW-TNT-0004 | revert 按清单恢复原始到期日 | P0 | Command | ✅ (`TestRunRevertRestoresManifestOriginalExpiries`) |
 | TC-NEW-TNT-0005 | 政策日后开通的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
-| TC-NEW-TNT-0006 | 在期订阅/未取消订单的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
+| TC-NEW-TNT-0006 | 存在在期订单/在期订阅的园所被排除（订单 `status<>'cancelled' AND expires_at>now`，含未来起算；订阅 `starts_at<=now AND expires_at>now`） | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`, `TestBuildPlanExcludesFutureOrdersAndInactiveKindergartens`) |
 | TC-NEW-TNT-0007 | 失败时事务回滚不留部分更新 | P0 | Command | ✅ (`TestRunApplyRollsBackWhenLogWriteFails`) |
 | TC-NEW-TNT-0008 | manifest 逐条授权固定 schema、UTF-8、SHA256 | P0 | Command | ✅ (`TestWriteManifestHasFixedSchemaAndSHA`) |
 | TC-NEW-TNT-0009 | created_at 为空的遗留行单独报告 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
@@ -1412,6 +1412,13 @@
 | TC-NEW-TNT-0023 | BuildPlan 选中存量 trial 并在只读路径上不写库 | P0 | Command | ✅ (`TestBuildPlanSelectsLegacyTrialsAndDoesNotWrite`) |
 | TC-NEW-TNT-0024 | 空计划不落 manifest（避免伪造可执行清单） | P0 | Command | ✅ (`TestWriteManifestRefusesEmptyPlan`) |
 | TC-NEW-TNT-0025 | 缺少 -manifest 时拒绝执行 | P0 | Command | ✅ (`TestRunRequiresManifestPath`) |
+| TC-NEW-TNT-0026 | 未来起算订单同样排除；订单/订阅到期边界为严格大于 | P0 | Command | ✅ (`TestBuildPlanExcludesFutureOrdersAndInactiveKindergartens`) |
+| TC-NEW-TNT-0027 | 非 active 状态的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesFutureOrdersAndInactiveKindergartens`) |
+| TC-NEW-TNT-0028 | 孤儿 trial 授权（园所不存在/已删除）单独报告 | P1 | Command | ✅ (`TestBuildPlanReportsOrphanTrials`) |
+| TC-NEW-TNT-0029 | apply 写事务内复核口径：新增在期订单（含未来起算）/在期订阅/停用/删除均整体拒绝并点名园所 | P0 | Command | ✅ (`TestRunApplyRevalidatesEligibility`) |
+| TC-NEW-TNT-0030 | revert 不受 apply 后新增订单影响（回滚不参与口径复核） | P0 | Command | ✅ (`TestRunRevertIgnoresNewOrdersAfterApply`) |
+| TC-NEW-TNT-0031 | dry-run 默认拒绝覆盖已存在 manifest，-force 才允许 | P1 | Command | ✅ (`TestRunDryRunRefusesToOverwriteExistingManifest`) |
+| TC-NEW-TNT-0032 | 空计划不落盘时不触发防覆盖（apply 后重跑 dry-run 可用） | P1 | Command | ✅ (`TestRunEmptyPlanIgnoresExistingManifest`) |
 
 ### 分销佣金 (DST)
 

@@ -190,6 +190,66 @@ func TestRunRejectsApplyAndRevertTogether(t *testing.T) {
 	require.Contains(t, err.Error(), "不能同时使用")
 }
 
+// dry-run 默认拒绝覆盖已存在的 manifest（及其 .sha256 侧车）：
+// 覆盖会毁掉运营已确认、用于回滚的清单；确需重新生成时显式传 -force。
+func TestRunDryRunRefusesToOverwriteExistingManifest(t *testing.T) {
+	db := openScratchDB(t)
+	loc := mustShanghai(t)
+	insertEligibleKindergarten(t, db, 517, "防覆盖园", loc)
+
+	opts := testOptions(loc)
+	opts.ManifestPath = filepath.Join(t.TempDir(), "manifest.csv")
+	_, err := run(context.Background(), db, opts)
+	require.NoError(t, err)
+	original, err := os.ReadFile(opts.ManifestPath)
+	require.NoError(t, err)
+	originalSHA, err := os.ReadFile(opts.ManifestPath + manifestSHASuffix)
+	require.NoError(t, err)
+
+	_, err = run(context.Background(), db, opts)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "已存在")
+	require.Contains(t, err.Error(), "-force")
+
+	after, err := os.ReadFile(opts.ManifestPath)
+	require.NoError(t, err)
+	require.Equal(t, original, after, "未加 -force 时既有 manifest 必须原样保留")
+	afterSHA, err := os.ReadFile(opts.ManifestPath + manifestSHASuffix)
+	require.NoError(t, err)
+	require.Equal(t, originalSHA, afterSHA)
+
+	opts.Force = true
+	res, err := run(context.Background(), db, opts)
+	require.NoError(t, err)
+	require.True(t, res.ManifestWritten, "-force 时应重新生成 manifest")
+}
+
+// 空计划不会落盘，因此即使目标路径已有旧 manifest 也应正常返回「无事可做」，
+// 不需要 -force（apply 之后重跑 dry-run 的常见场景）。
+func TestRunEmptyPlanIgnoresExistingManifest(t *testing.T) {
+	db := openScratchDB(t)
+	loc := mustShanghai(t)
+	insertEligibleKindergarten(t, db, 518, "空计划防覆盖园", loc)
+
+	opts := testOptions(loc)
+	opts.ManifestPath = filepath.Join(t.TempDir(), "manifest.csv")
+	_, err := run(context.Background(), db, opts)
+	require.NoError(t, err)
+	original, err := os.ReadFile(opts.ManifestPath)
+	require.NoError(t, err)
+
+	// 模拟 apply 之后：trial 已到目标日，dry-run 无待延长行。
+	require.NoError(t, db.Exec(
+		"UPDATE entitlements SET expires_at = ? WHERE kindergarten_id = ?", opts.TargetExpiry, 518).Error)
+
+	res, err := run(context.Background(), db, opts)
+	require.NoError(t, err)
+	require.False(t, res.ManifestWritten)
+	after, err := os.ReadFile(opts.ManifestPath)
+	require.NoError(t, err)
+	require.Equal(t, original, after, "空计划不得覆盖既有 manifest")
+}
+
 // writeRawManifest 写入故意不合规的清单，并同步生成 .sha256 侧车，
 // 让测试能穿过哈希校验、命中后续的内容校验。
 func writeRawManifest(t *testing.T, path, content string) {

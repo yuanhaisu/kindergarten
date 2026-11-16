@@ -15,6 +15,7 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 
 	"kindergarten-server/internal/config"
+	"kindergarten-server/internal/domain"
 	migrations "kindergarten-server/migrations"
 )
 
@@ -136,16 +137,21 @@ func mustShanghai(t *testing.T) *time.Location {
 
 func insertKindergarten(t *testing.T, db *gorm.DB, id uint64, name string, createdAt *time.Time) {
 	t.Helper()
+	insertKindergartenWithStatus(t, db, id, name, domain.KindergartenStatusActive, createdAt)
+}
+
+func insertKindergartenWithStatus(t *testing.T, db *gorm.DB, id uint64, name, status string, createdAt *time.Time) {
+	t.Helper()
 	var err error
 	if createdAt == nil {
 		err = db.Exec(
-			"INSERT INTO kindergartens (id, created_at, updated_at, deleted_at, name) VALUES (?, NULL, NOW(3), NULL, ?)",
-			id, name,
+			"INSERT INTO kindergartens (id, created_at, updated_at, deleted_at, name, status) VALUES (?, NULL, NOW(3), NULL, ?, ?)",
+			id, name, status,
 		).Error
 	} else {
 		err = db.Exec(
-			"INSERT INTO kindergartens (id, created_at, updated_at, deleted_at, name) VALUES (?, ?, ?, NULL, ?)",
-			id, *createdAt, *createdAt, name,
+			"INSERT INTO kindergartens (id, created_at, updated_at, deleted_at, name, status) VALUES (?, ?, ?, NULL, ?, ?)",
+			id, *createdAt, *createdAt, name, status,
 		).Error
 	}
 	if err != nil {

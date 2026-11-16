@@ -61,6 +61,38 @@ func TestRunRevertRestoresManifestOriginalExpiries(t *testing.T) {
 	require.EqualValues(t, 4, detail["rows"])
 }
 
+// revert 不做口径复核：apply 之后园所签了新的付费订单，回滚仍必须可用——
+// 回滚是撤销已经发生的事实，不能被之后变化的商业状态阻断。
+func TestRunRevertIgnoresNewOrdersAfterApply(t *testing.T) {
+	db := openScratchDB(t)
+	loc := mustShanghai(t)
+	insertEligibleKindergarten(t, db, 509, "回滚不受口径影响园", loc)
+
+	opts := testOptions(loc)
+	opts.ManifestPath = filepath.Join(t.TempDir(), "manifest.csv")
+	_, err := run(context.Background(), db, opts)
+	require.NoError(t, err)
+
+	t.Setenv("EXTENDTRIALS_ALLOW", "1")
+	applyOpts := opts
+	applyOpts.Apply = true
+	applyOpts.Operator = "ops-apply"
+	_, err = run(context.Background(), db, applyOpts)
+	require.NoError(t, err)
+
+	insertOrder(t, db, 5092, 509, "paid",
+		time.Date(2026, 12, 1, 0, 0, 0, 0, loc), time.Date(2027, 6, 1, 0, 0, 0, 0, loc))
+
+	revertOpts := opts
+	revertOpts.Revert = true
+	revertOpts.Operator = "ops-revert"
+	res, err := run(context.Background(), db, revertOpts)
+	require.NoError(t, err)
+	require.Equal(t, 4, res.AffectedRows)
+	require.True(t, entitlementExpiryMap(t, db)[5091].Equal(
+		time.Date(2026, 12, 6, 15, 4, 5, 0, loc)), "应恢复 manifest 原始到期日")
+}
+
 // 第二次 revert 是 no-op：0 行受影响、日期不变。
 func TestRunRevertIsIdempotent(t *testing.T) {
 	db := openScratchDB(t)

@@ -31,6 +31,24 @@ var (
 	summaryHeaderFields  = strings.Split(summaryHeader, ",")
 )
 
+// ensureManifestTargetWritable 拒绝覆盖已存在的 manifest 或其 .sha256 侧车：
+// 覆盖会毁掉运营已确认、用于回滚的那份清单。重新生成须显式传 -force。
+func ensureManifestTargetWritable(path string, force bool) error {
+	if force {
+		return nil
+	}
+	for _, p := range []string{path, path + manifestSHASuffix} {
+		_, err := os.Stat(p)
+		if err == nil {
+			return fmt.Errorf("%s 已存在，拒绝覆盖（确认要重新生成时加 -force）", p)
+		}
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("检查 %s 失败: %w", p, err)
+		}
+	}
+	return nil
+}
+
 // WriteManifest 按固定 schema 逐条写出待修改授权，并返回文件字节的 SHA256。
 //
 // 每条 trial 授权一行：同园多条授权原到期日不一致时，revert 仍能逐条精确恢复。

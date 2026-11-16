@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
 )
@@ -146,6 +147,88 @@ func TestRunApplyCountsDistinctKindergartens(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(log.Detail), &detail))
 	require.EqualValues(t, 2, detail["kindergartens"])
 	require.Equal(t, []any{float64(515), float64(516)}, detail["kindergarten_ids"])
+}
+
+// apply 必须在写事务内按最终口径复核清单园所：dry-run 与 apply 之间可能相隔数天，
+// 期间出现新的在期订单/订阅、园所被停用或删除时，整体拒绝并点名园所，
+// 绝不把试用叠加到已付费授权上。
+func TestRunApplyRevalidatesEligibility(t *testing.T) {
+	loc := mustShanghai(t)
+	cases := []struct {
+		name    string
+		mutate  func(t *testing.T, db *gorm.DB, loc *time.Location)
+		wantMsg string
+	}{
+		{
+			name: "新增在期订单",
+			mutate: func(t *testing.T, db *gorm.DB, loc *time.Location) {
+				insertOrder(t, db, 5202, 520, "paid",
+					time.Date(2026, 11, 1, 0, 0, 0, 0, loc), time.Date(2027, 6, 1, 0, 0, 0, 0, loc))
+			},
+			wantMsg: "存在在期订单",
+		},
+		{
+			name: "新增未来起算订单",
+			mutate: func(t *testing.T, db *gorm.DB, loc *time.Location) {
+				insertOrder(t, db, 5203, 520, "paid",
+					time.Date(2026, 12, 1, 0, 0, 0, 0, loc), time.Date(2027, 6, 1, 0, 0, 0, 0, loc))
+			},
+			wantMsg: "存在在期订单",
+		},
+		{
+			name: "新增在期订阅授权",
+			mutate: func(t *testing.T, db *gorm.DB, loc *time.Location) {
+				insertEntitlement(t, db, 5299, 520, "growth", "subscription", nil,
+					time.Date(2026, 11, 1, 0, 0, 0, 0, loc), time.Date(2027, 6, 1, 0, 0, 0, 0, loc))
+			},
+			wantMsg: "存在在期订阅授权",
+		},
+		{
+			name: "园所停用",
+			mutate: func(t *testing.T, db *gorm.DB, _ *time.Location) {
+				require.NoError(t, db.Exec("UPDATE kindergartens SET status = ? WHERE id = ?",
+					domain.KindergartenStatusSuspended, 520).Error)
+			},
+			wantMsg: "非在营",
+		},
+		{
+			name: "园所删除",
+			mutate: func(t *testing.T, db *gorm.DB, _ *time.Location) {
+				require.NoError(t, db.Exec("UPDATE kindergartens SET deleted_at = NOW(3) WHERE id = ?", 520).Error)
+			},
+			wantMsg: "已删除",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			db := openScratchDB(t)
+			insertEligibleKindergarten(t, db, 520, "复核园", loc)
+
+			opts := testOptions(loc)
+			opts.ManifestPath = filepath.Join(t.TempDir(), "manifest.csv")
+			_, err := run(context.Background(), db, opts)
+			require.NoError(t, err)
+
+			tc.mutate(t, db, loc)
+			before := allEntitlementExpiries(t, db)
+
+			t.Setenv(allowWriteEnvVar, "1")
+			applyOpts := opts
+			applyOpts.Apply = true
+			applyOpts.Operator = "ops-recheck"
+			_, err = run(context.Background(), db, applyOpts)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "前置复核失败")
+			require.Contains(t, err.Error(), tc.wantMsg)
+			require.Contains(t, err.Error(), "520", "错误必须点名园所")
+			require.Equal(t, before, allEntitlementExpiries(t, db), "复核失败不得留下部分更新")
+
+			var logs []domain.PlatformOperationLog
+			require.NoError(t, db.Find(&logs).Error)
+			require.Empty(t, logs, "被拒绝的 apply 不写操作日志")
+		})
+	}
 }
 
 // 事务内任一步失败都必须整体回滚：这里让最后的操作日志写入失败，
