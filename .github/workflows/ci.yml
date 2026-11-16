@@ -40,6 +40,8 @@ jobs:
         run: node scripts/check-secrets.mjs --all
       - name: Token lint (admin)
         run: node scripts/check-tokens.mjs admin
+      - name: Nginx staging auth template test
+        run: npm run check-nginx-staging-auth:test
 
   backend:
     name: 后端编译 / vet / lint / 单测
@@ -70,7 +72,7 @@ jobs:
           working-directory: server
           args: ./...
       - name: Unit tests (DB-free packages)
-        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... ./cmd/internal/seedutil -count=1
+        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
 
   migrate:
     name: 数据库迁移（干净库）
@@ -123,6 +125,9 @@ jobs:
         run: |
           go run ./cmd/dbcheck --query "SELECT (SELECT COUNT(*) FROM sys_dict_types) AS dict_types, (SELECT COUNT(*) FROM sys_dict_items) AS dict_items, (SELECT COUNT(*) FROM diet_food_categories) AS food_categories, (SELECT COUNT(*) FROM diet_dri_age_targets) AS dri_targets" > /tmp/seed-after.txt
           diff -u /tmp/seed-before.txt /tmp/seed-after.txt
+      - name: Tenant admin provisioning test
+        working-directory: server
+        run: go test ./cmd/internal/adminprovision -count=1
       - name: Verify schema
         working-directory: server
         run: |
@@ -140,8 +145,10 @@ jobs:
           node-version: '24'
       - name: Install design tokens
         run: cd shared-design-tokens && npm ci && npm run build
+      - name: Install and test admin
+        run: cd admin && npm ci && npm test
       - name: Build admin
-        run: cd admin && npm ci && npm run generate
+        run: cd admin && npm run generate
 
   website:
     name: 官网静态构建
