@@ -48,19 +48,18 @@ git push -u origin feat/pickup-polish
 
 # 5.1 起只读 subagent 监听 CI/合并（见「Agent 会话规则」第 2 条）
 
-# 6. 等 CI 绿；合并由 reviewer / merge agent 执行。
+# 6. 等 CI 绿；合并由 Grok bot 执行。
 #    并行 worker 会话不执行 gh pr merge。
 
-# 7. worktree / 远端分支由 merge agent / 属主清理；并行 worker 不执行 worktree-clean。
-#    清理指令供 merge agent / 属主参考：
+# 7. 合并成功后，Grok bot 立即回收 worktree / 本地分支 / 远端分支：
 #    cd ..\kindergarten
-#    powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Name pickup-polish
-#    远端分支也要删时加 -DeleteRemote
+#    powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Pr <PR号> -DeleteRemote
+#    bot 不可用或清理失败时，才按「worktree 清理纪律」由属主处理。
 ```
 
-`worktree-clean.ps1` 会拒绝：worktree 有未提交改动、分支不是 `origin/main` 的祖先。拒绝是保护，不要 `--force` 绕过。
+`worktree-clean.ps1` 以 PR 终态为唯一判据：PR 必须 MERGED（CLOSED 未合并需 `-AllowClosed` 且属主确认），worktree 必须干净，本地 HEAD 必须等于 PR 的 `headRefOid`。**不查 `origin/main` 祖先**——本仓存在 squash/rebase 合并，祖先检查会把已合并分支误判为未合并。拒绝是保护，不要 `--force` 绕过。
 
-两个脚本都支持 `-WhatIf`，先看它准备做什么再执行。
+`worktree-new.ps1` / `worktree-clean.ps1` 都支持 `-WhatIf`，先看它准备做什么再执行；`worktree-audit.ps1` 是只读审计。
 
 ## Agent 会话规则（2026-11-15）
 
@@ -93,10 +92,11 @@ git push -u origin feat/pickup-polish
 
 ### 3. 并行 worker 只提交 PR，不合并、不清理
 
-并行 worktree 会话（本流程）**只做到 push 分支 + 提交 PR**；合并、main 同步、worktree/远端分支清理由**专门的 merge agent**负责。
+并行 worktree 会话（本流程）**只做到 push 分支 + 提交 PR**；合并、worktree/远端分支清理由 **Grok bot** 负责。bot 的例行任务、报告格式与确认协议见 `docs/agents/worktree-bot-routine.md`。
 
 - 不要执行 `gh pr merge`，即使 CI 全绿也不自行合并。
 - 不要执行 `worktree-clean.ps1`，不要删远端分支。
+- 收工时工作区必须干净（`git status --porcelain` 为空）；脏工作区会让 bot 拒绝清理。
 - **一个切片一个 PR**；等当前 PR 合并后再开下一个切片，不并发开新切片。
 - 与主会话的 `subagent-driven-slicing` 区分：主会话编排 subagent 时可在 CI 绿后合并；本条只约束并行 worker 会话。
 
@@ -182,15 +182,18 @@ PR 描述必须包含**「不在本 PR」**一节，显式列出被切出去、�
 
 ## worktree 清理纪律
 
-> 并行 worker 会话**不执行清理**；清理由 merge agent / 属主按本节执行。
+> **主路径**：合并成功后由 Grok bot 立即清理。并行 worker 不执行清理。
+> **兜底**：bot 每天早晨运行只读审计并出报告；非合并项的清理必须经属主确认。
+> 例行任务、报告格式与确认协议见 `docs/agents/worktree-bot-routine.md`。
 
 清理是危险操作，按顺序确认：
 
 1. **先看干净**：`git -C ..\kg-<name> status --porcelain` 必须为空（含未跟踪文件）。
-2. **先确认已合并**：分支必须是 `origin/main` 的祖先。没合并就删分支 = 丢代码。脚本用 `git merge-base --is-ancestor` 检查，失败即拒绝。
-3. **只由 merge agent / 属主删除**：合并后的清理由专门的 merge agent 或创建该 worktree 的属主执行；别人正在用的 worktree 不要碰。
-4. **确认没有进程占用**：IDE、`vite` watcher、后端进程如果以该目录为 cwd，先停掉再删。
-5. **不要用符号链接共享 `node_modules`**：不同 worktree 的原生依赖与 postinstall 会互相污染，升级依赖时直接炸。每个 worktree 自己 `npm ci`。
+2. **先确认 PR 终态**：PR 必须 MERGED；CLOSED 未合并只能在属主明确放弃后加 `-AllowClosed`。判定用 `gh pr view <n> --json state,headRefOid`，**不要**用 `git merge-base --is-ancestor`——squash/rebase 合并会让已合并分支不是 `origin/main` 的祖先。
+3. **HEAD 必须对上**：本地 HEAD 必须等于 PR 的 `headRefOid`；不一致说明可能有没进 PR 的提交，拒绝删除。
+4. **执行者**：合并后的即时清理由 bot 执行；每日兜底的批量清理由 bot 在属主确认后执行。属主只处理异常项。
+5. **确认没有进程占用**：IDE、`vite` watcher、后端进程如果以该目录为 cwd，先停掉再删。
+6. **不要用符号链接共享 `node_modules`**：不同 worktree 的原生依赖与 postinstall 会互相污染，升级依赖时直接炸。每个 worktree 自己 `npm ci`。
 
 误删恢复：worktree 里的**已提交**内容都在分支上（`git worktree remove` 不会删分支）；**未提交**内容无法从 git 恢复。所以第 1 条最重要。
 

@@ -164,6 +164,6 @@ else {
     Write-Host "  git push -u origin $Branch"
     Write-Host "  gh pr create --base main --head $Branch --title `"...`""
     Write-Host ""
-    Write-Host "After the PR is merged:" -ForegroundColor Cyan
-    Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Name $Name"
+    Write-Host "After the PR is merged (the merge bot runs this):" -ForegroundColor Cyan
+    Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/worktree-clean.ps1 -Pr <PR number> -DeleteRemote"
 }
