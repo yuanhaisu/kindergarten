@@ -49,14 +49,16 @@
 
 - `parent-chosen/`：31 页交付主稿；07 / 21 / 24 / 29 用提案，其余用 baseline，22 补 V2 详情。
 - 01 首页：10:20、通知角标 2、任务卡改“给家人讲一件今天开心的事 / 今天还没提交”、午睡改“12:30 开始”。
+- 01 首页补充：早餐优先展示今日食谱条目（小米粥、水煮蛋，来源「今日食谱」），食谱缺失时回退「早餐吃得很好」（`?state=meal-fallback`）；页头去头像；快捷入口为 请假 / 亲子任务 / 班级日历 / 通知。
 - 17 接送：10:20、可接送人改“妈妈、爸爸，共 2 位（外婆待审核）”、接送码说明改“当日有效，核验后失效”。
 - 14 报告：页头加“乐乐”，本期积分改 +218。
+- 11 成长：统计卡为 本学期 5 成长记录 / 12 照片 / 3 老师寄语，数字按当前筛选的可见记录实时重算（全部 5/12/3、本月 4/12/3、有照片 3/12/2、老师寄语 3/9/3、只看孩子 4/10/2）；筛选为 全部 / 本月 / 有照片 / 老师寄语 / 只看孩子；记录不再显示专属/班级标签；补秋游班级记录（用于「只看孩子」之外）与一条 10 月无照片记录（凑满「全部 5 条」而不改照片/寄语总量）；右上角接入班级相册；照片可点开查看抽屉。
 - 22 任务详情：补 V2 提案态 `+10 积分` / `本周 2 / 3 天`，页脚标注 `积分提案`。
 - 31 我的：统计卡改“累计数据 / 32 成长记录”，补“消息”菜单；“切换”打开孩子切换底部抽屉（乐乐 / 朵朵），选中后同步孩子行（头像首字、名字、班级园所）。
 - 所有 chosen 页面状态栏统一 10:20。
 - V1 / V5 / V6 / V7 / V8 作为状态/数据集并存，不替换主稿。
-- 画廊：`chosen.html`（31 页 / 13 契约状态 + 2 评审补充态 = 15 个状态变体）；重建：`node _shared/build-gallery.mjs --chosen`。
-- 截图：`node _shared/shots-chosen.mjs`（31 默认 + 15 状态）。13 个契约状态之外，「照片查看」（11-growth `?state=photo`）与「切换孩子」（31-profile `?state=switch`）是为本轮评审补的预览，不进契约清单。
+- 画廊：`chosen.html`（31 页 / 13 契约状态 + 3 评审补充态 = 16 个状态变体）；重建：`node _shared/build-gallery.mjs --chosen`。
+- 截图：`node _shared/shots-chosen.mjs`（31 默认 + 16 状态）。13 个契约状态之外，「早餐回退」（01-home `?state=meal-fallback`）、「照片查看」（11-growth `?state=photo`）与「切换孩子」（31-profile `?state=switch`）是为本轮评审补的预览，不进契约清单。
 
 ## 验收命令
 
@@ -65,8 +67,8 @@ cd docs/design-previews/2026-11-13-parent-dna-opendesign
 node _shared/check-variants.mjs --chosen   # 31 页，0 失败
 node _shared/audit.mjs --chosen            # 0 error
 node _shared/font-check.mjs --chosen       # 31 / 31 通过
-node _shared/build-gallery.mjs --chosen    # chosen.html，31 页 / 15 个状态变体
-node _shared/shots-chosen.mjs              # 31 张默认 + 15 张状态截图
+node _shared/build-gallery.mjs --chosen    # chosen.html，31 页 / 16 个状态变体
+node _shared/shots-chosen.mjs              # 31 张默认 + 16 张状态截图
 ```
 
 ## 边界

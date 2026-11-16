@@ -1,16 +1,36 @@
 /**
  * Round 2 设计评审：02 / 31 / 01 / 11 四页收口。
  *
- * 三条口径由评审直接给出，断言只锁用户可见事实：
+ * 口径（2026-11-15 评审更新，覆盖首版）：
  * - 02 登录移除中间轨道插图（SVG <title> 不进 innerText，插图有无以截图为准）；
  * - 31 我的页头只留「我的」，孩子切换走 01 同款底部抽屉；
- * - 01 首页快捷入口换成 请假 / 亲子任务 / 班级日历 / 通知；
- * - 11 成长换算口径：本学期的记录 / 照片 / 奖章，筛选换成「只看孩子 / 看全部」，
- *   记录标签换成服务端 scope 对应的「专属记录 / 班级记录」。
+ * - 01 首页早餐优先展示今日食谱条目（来源「今日食谱」），食谱缺失时回退
+ *   「早餐吃得很好」（?state=meal-fallback）；
+ * - 01 快捷入口换成 请假 / 亲子任务 / 班级日历 / 通知；
+ * - 11 成长顶部保留 5 成长记录 / 12 照片 / 3 老师寄语，数字随筛选联动；
+ *   筛选保留五项 全部 / 本月 / 有照片 / 老师寄语 / 只看孩子；
+ *   记录不显示「专属记录 / 班级记录」标签。
  *
- * 注意：`mustNot: ["全部"]` 无法用来排除旧的「全部」筛选——它会被「看全部」
- * 命中。这里用 `.segmented` 的两项文案与「本页 N 条 · N 张」计数锁定控件形状。
+ * 注意：`mustNot: ["全部"]` 不能用来排除旧筛选——它是本轮合法的第一项筛选。
+ * 统计数字用「数字 + 标签」的相邻文本锁定，避免命中日期里的同名单字。
  */
+const growthFilterChecks = [
+  { filter: "all", stat: "5 成长记录" },
+  { filter: "month", stat: "4 成长记录" },
+  { filter: "photo", stat: "3 成长记录" },
+  { filter: "message", stat: "9 照片" },
+  { filter: "individual", stat: "10 照片", hidden: "#record-outing" },
+].map(({ filter, stat, hidden }) => ({
+  slug: "11-growth",
+  interaction: {
+    click: `[data-filter="${filter}"]`,
+    expectStayOn: "11-growth",
+    expectVisible: ".week-card",
+    expectVisibleText: stat,
+    ...(hidden ? { expectHidden: hidden } : {}),
+  },
+}));
+
 export default {
   checks: [
     // ---- 02 登录：删除中间插图，保留标题与登录动作 ----
@@ -70,11 +90,18 @@ export default {
       must: ["早上好，妈妈"],
       mustNot: ["乐"],
     },
-    // 早备注口径来自 meal_label，不再编造具体食物；补「老师记录」来源。
+    // 早餐优先展示今日食谱条目，来源标注「今日食谱」。
     {
       slug: "01-home",
-      must: ["早餐吃得很好", "老师记录", "07:52 到园"],
-      mustNot: ["一碗粥"],
+      must: ["早餐：小米粥、水煮蛋", "今日食谱", "07:52 到园"],
+      mustNot: ["一碗粥", "早餐吃得很好", "老师记录"],
+    },
+    // 食谱缺失时回退到 meal_label 文案（?state=meal-fallback）。
+    {
+      slug: "01-home",
+      state: "meal-fallback",
+      must: ["早餐吃得很好", "老师记录"],
+      mustNot: ["小米粥", "今日食谱"],
     },
     // 快捷入口正好四项。
     {
@@ -88,20 +115,23 @@ export default {
     {
       slug: "11-growth",
       within: ".week-card",
-      must: ["本学期", "成长记录", "精彩照片", "获得奖章"],
-      mustNot: ["老师寄语"],
+      must: ["本学期", "5 成长记录", "12 照片", "3 老师寄语"],
+      mustNot: ["奖章"],
     },
+    // 五项筛选全在，文案固定。
     {
       slug: "11-growth",
-      within: ".segmented",
-      must: ["只看孩子", "本页 3 条 · 10 张", "看全部", "本页 4 条 · 12 张"],
-      mustNot: ["本月", "有照片", "老师寄语"],
+      within: ".filters",
+      must: ["全部", "本月", "有照片", "老师寄语", "只看孩子"],
     },
+    // 记录不再挂 scope 标签；班级秋游样例保留在「全部」。
     {
       slug: "11-growth",
-      must: ["只显示与乐乐相关的内容；切换「看全部」可浏览班级动态", "专属记录"],
-      mustNot: ["老师寄语", "已阅读", "自动归档", "有更新"],
+      must: ["全班一起去秋游"],
+      mustNot: ["专属记录", "班级记录", "已阅读", "自动归档", "有更新"],
     },
+    // 统计数字逐项随筛选联动。
+    ...growthFilterChecks,
     // 照片点开底部大图查看器。
     {
       slug: "11-growth",
@@ -117,16 +147,6 @@ export default {
       state: "photo",
       must: ["照片 1 / 7", "第一次自己系好了鞋带"],
       props: [{ selector: "#photo-viewer", bottomSheet: true }],
-    },
-    // 切到「看全部」后班级记录出现（含秋游样例）。
-    {
-      slug: "11-growth",
-      interaction: {
-        click: '[data-mode="class"]',
-        expectStayOn: "11-growth",
-        expectVisible: "#record-outing",
-        expectVisibleText: "全班一起去秋游",
-      },
     },
     // 页头相册入口是真链接，不是死按钮。
     {

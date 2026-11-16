@@ -339,67 +339,49 @@ button:focus-visible {
   white-space: nowrap;
 }
 
-/* ---------- scope switch ---------- */
+/* ---------- filters ---------- */
 
-.scope-controls {
+.filters {
+  display: flex;
+  gap: 5px;
   margin: 0 0 16px;
 }
 
-.segmented {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid var(--hair);
-  border-radius: var(--radius-pill);
-  background: var(--surface-muted);
-}
-
-.segment {
-  display: flex;
-  flex-direction: column;
+.filter-chip {
+  position: relative;
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 11px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-height: 50px;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: calc(var(--radius-pill) - 3px);
-  background: transparent;
-  color: var(--muted-on-surface);
-  transition: background-color var(--motion-press) var(--ease-out), color var(--motion-press) var(--ease-out), opacity var(--motion-press) ease-out;
-}
-
-.segment[aria-pressed="true"] {
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-pill);
   background: var(--surface);
-  color: var(--fg);
+  color: var(--fg-soft);
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  transition: background-color var(--motion-press) var(--ease-out),
+    border-color var(--motion-press) var(--ease-out),
+    color var(--motion-press) var(--ease-out);
 }
 
-.segment:active {
+.filter-chip::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+}
+
+.filter-chip[aria-pressed="true"] {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--accent-contrast);
+}
+
+.filter-chip:active {
   opacity: 0.9;
-}
-
-.segment-label {
-  font-size: var(--text-small);
-  font-weight: var(--weight-semibold);
-  line-height: 1.3;
-  letter-spacing: 0.01em;
-}
-
-.segment-meta {
-  font-size: 11px;
-  line-height: 1.35;
-  letter-spacing: 0.01em;
-  font-variant-numeric: tabular-nums;
-}
-
-.scope-hint {
-  margin-top: 9px;
-  padding: 0 4px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-  text-wrap: pretty;
 }
 
 /* ---------- feed ---------- */
@@ -432,30 +414,6 @@ button:focus-visible {
   letter-spacing: var(--tracking-overline);
   color: var(--muted-on-surface);
   white-space: nowrap;
-}
-
-.tag {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: var(--weight-medium);
-  line-height: 1;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.tag--own {
-  background: var(--sage-pale);
-  color: var(--fg);
-}
-
-.tag--class {
-  background: var(--surface-muted);
-  color: var(--muted-on-surface);
 }
 
 .record-title {

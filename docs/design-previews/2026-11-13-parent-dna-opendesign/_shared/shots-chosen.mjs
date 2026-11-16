@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 重出 parent-chosen 的 31 页默认截图 + 13 个状态变体。
+ * 重出 parent-chosen 的 31 页默认截图 + 13 个契约状态 + 3 个评审补充态。
  *
  *   node _shared/shots-chosen.mjs
  */
@@ -15,6 +15,7 @@ const SHOT = path.join(REPO_ROOT, "scripts", "od-shot.mjs");
 const ROOT = path.join(BATCH_ROOT, "parent-chosen");
 
 const stateVariants = {
+  "01-home": [["meal-fallback", "preview-meal-fallback.png"]],
   "06-notice-index": [["empty", "preview-empty.png"]],
   "08-leave-index": [["empty", "preview-empty.png"]],
   "09-leave-create": [["error", "preview-error.png"]],

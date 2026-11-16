@@ -55,40 +55,33 @@
         <p class="week-range">本学期</p>
         <div class="week-grid">
           <div class="week-cell">
-            <p class="week-num">5</p>
+            <p class="week-num" data-stat="records">5</p>
             <p class="week-label">成长记录</p>
           </div>
           <div class="week-cell">
-            <p class="week-num">12</p>
-            <p class="week-label">精彩照片</p>
+            <p class="week-num" data-stat="photos">12</p>
+            <p class="week-label">照片</p>
           </div>
           <div class="week-cell">
-            <p class="week-num">2</p>
-            <p class="week-label">获得奖章</p>
+            <p class="week-num" data-stat="messages">3</p>
+            <p class="week-label">老师寄语</p>
           </div>
         </div>
       </section>
 
-      <div class="scope-controls feed-only">
-        <div class="segmented" role="group" aria-label="切换成长记录范围" data-od-id="growth-scope">
-          <button class="segment" type="button" data-mode="individual" aria-pressed="true" data-od-id="scope-individual">
-            <span class="segment-label">只看孩子</span>
-            <span class="segment-meta">本页 3 条 · 10 张</span>
-          </button>
-          <button class="segment" type="button" data-mode="class" aria-pressed="false" data-od-id="scope-class">
-            <span class="segment-label">看全部</span>
-            <span class="segment-meta">本页 4 条 · 12 张</span>
-          </button>
-        </div>
-        <p class="scope-hint" id="scope-hint">只显示与乐乐相关的内容；切换「看全部」可浏览班级动态</p>
+      <div class="filters feed-only" role="group" aria-label="筛选成长记录" data-od-id="growth-filters">
+        <button class="filter-chip" type="button" data-filter="all" aria-pressed="true" data-od-id="filter-all">全部</button>
+        <button class="filter-chip" type="button" data-filter="month" aria-pressed="false" data-od-id="filter-month">本月</button>
+        <button class="filter-chip" type="button" data-filter="photo" aria-pressed="false" data-od-id="filter-photo">有照片</button>
+        <button class="filter-chip" type="button" data-filter="message" aria-pressed="false" data-od-id="filter-message">老师寄语</button>
+        <button class="filter-chip" type="button" data-filter="individual" aria-pressed="false" data-od-id="filter-individual">只看孩子</button>
       </div>
 
       <section class="feed feed-only" aria-label="成长记录" data-od-id="growth-feed">
 
-        <article class="record" data-record data-scope="individual" data-od-id="record-shoelace">
+        <article class="record" data-record data-scope="individual" data-month="2026-11" data-photos="7" data-message="true" data-od-id="record-shoelace">
           <div class="record-top">
             <p class="record-date">今天 · 11 月 12 日</p>
-            <span class="tag tag--own">专属记录</span>
           </div>
           <h2 class="record-title">第一次自己系好了鞋带</h2>
           <p class="record-body">午睡起床后，乐乐坐在床边试了很久，最后自己系好了鞋带，还转头给老师看。他今天的<span class="hl">专注力</span>比往常更久。</p>
@@ -119,10 +112,9 @@
           </div>
         </article>
 
-        <article class="record" data-record data-scope="individual" data-od-id="record-spoon">
+        <article class="record" data-record data-scope="individual" data-month="2026-11" data-photos="0" data-message="true" data-od-id="record-spoon">
           <div class="record-top">
             <p class="record-date">昨天 · 11 月 11 日</p>
-            <span class="tag tag--own">专属记录</span>
           </div>
           <h2 class="record-title">午餐时的一次主动</h2>
           <p class="record-body">他注意到旁边的小朋友没有勺子，自己起身去拿了一把递过去。</p>
@@ -144,10 +136,9 @@
           </div>
         </article>
 
-        <article class="record" data-record data-scope="individual" data-od-id="record-climb">
+        <article class="record" data-record data-scope="individual" data-month="2026-11" data-photos="3" data-message="false" data-od-id="record-climb">
           <div class="record-top">
             <p class="record-date">11 月 8 日 · 周日</p>
-            <span class="tag tag--own">专属记录</span>
           </div>
           <h2 class="record-title">户外活动：第一次爬过攀爬架</h2>
           <p class="record-body">在老师的保护下，他爬到最高一格，停下来看了看下面，然后自己下来了。</p>
@@ -173,10 +164,9 @@
           </div>
         </article>
 
-        <article class="record" data-record data-scope="class" id="record-outing" data-od-id="record-outing" hidden>
+        <article class="record" data-record data-scope="class" data-month="2026-11" data-photos="2" data-message="true" id="record-outing" data-od-id="record-outing">
           <div class="record-top">
             <p class="record-date">11 月 7 日 · 周六</p>
-            <span class="tag tag--class">班级记录</span>
           </div>
           <h2 class="record-title">全班一起去秋游</h2>
           <p class="record-body">老师带着全班去公园捡落叶，乐乐捡到一片比自己手掌还大的梧桐叶。</p>
@@ -196,6 +186,29 @@
                   <path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/>
                 </svg>
                 <span class="like-count">5</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <article class="record" data-record data-scope="individual" data-month="2026-10" data-photos="0" data-message="false" data-od-id="record-coat">
+          <div class="record-top">
+            <p class="record-date">10 月 29 日 · 周四</p>
+          </div>
+          <h2 class="record-title">自己把外套挂回了钩子上</h2>
+          <p class="record-body">离园前他脱下外套，踮脚挂回自己的钩子，还把袖子理了理。</p>
+          <div class="record-foot">
+            <div class="author">
+              <span class="avatar" aria-hidden="true">王</span>
+              <span class="author-meta">王老师 · 16:35</span>
+            </div>
+            <div class="actions">
+              <button class="text-action" type="button" data-od-id="comment-coat">写一句</button>
+              <button class="like-btn" type="button" aria-pressed="false" aria-label="点赞，当前 4 人喜欢" data-od-id="like-coat">
+                <svg class="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/>
+                </svg>
+                <span class="like-count">4</span>
               </button>
             </div>
           </div>

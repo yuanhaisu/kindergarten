@@ -18,6 +18,19 @@
   let sheetOpen = false;
   let toastTimer = 0;
 
+  // 早餐优先展示今日食谱；食谱缺失时回退到老师记录的 meal_label 文案。
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("state") === "meal-fallback") {
+    const mealLine = document.getElementById("meal-line");
+    const mealSource = document.getElementById("meal-source");
+    if (mealLine) {
+      mealLine.textContent = "早餐吃得很好。";
+    }
+    if (mealSource) {
+      mealSource.textContent = "老师记录 · 10:20 更新";
+    }
+  }
+
   function showToast(message) {
     window.clearTimeout(toastTimer);
     toast.textContent = message;

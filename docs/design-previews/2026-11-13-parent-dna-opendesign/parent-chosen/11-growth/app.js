@@ -28,34 +28,70 @@
     var main = document.querySelector('.mp-main');
     var tabbar = document.querySelector('.tabbar');
 
-    /* ----- scope switch: 只看孩子 / 看全部 ----- */
+    /* ----- filters: five chips drive feed visibility and semester stats ----- */
 
-    var modes = Array.prototype.slice.call(document.querySelectorAll('[data-mode]'));
+    var filters = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
     var records = Array.prototype.slice.call(document.querySelectorAll('[data-record]'));
-    var hint = document.getElementById('scope-hint');
-    var hints = {
-      individual: '只显示与乐乐相关的内容；切换「看全部」可浏览班级动态',
-      class: '包含班级其他孩子的动态；切换「只看孩子」可聚焦当前孩子'
+    var statNodes = {
+      records: document.querySelector('[data-stat="records"]'),
+      photos: document.querySelector('[data-stat="photos"]'),
+      messages: document.querySelector('[data-stat="messages"]')
     };
-
-    function setMode(mode) {
-      modes.forEach(function (button) {
-        button.setAttribute('aria-pressed', button.getAttribute('data-mode') === mode ? 'true' : 'false');
-      });
+    // 统计是学期口径：随当前筛选重算可见记录的条数、照片数、带老师寄语的条数。
+    // 新增的无照片、无寄语记录只是为了让「全部」凑满 5 条，不改 12 张照片 / 3 句寄语的学期总量。
+    function computeStats() {
+      var values = { records: 0, photos: 0, messages: 0 };
       records.forEach(function (card) {
-        var visible = mode !== 'individual' || card.getAttribute('data-scope') === 'individual';
-        card.hidden = !visible;
+        if (card.hidden) {
+          return;
+        }
+        values.records += 1;
+        values.photos += parseInt(card.getAttribute('data-photos'), 10) || 0;
+        if (card.getAttribute('data-message') === 'true') {
+          values.messages += 1;
+        }
       });
-      if (hint && hints[mode]) {
-        hint.textContent = hints[mode];
-      }
+      return values;
     }
 
-    modes.forEach(function (button) {
+    function matchesFilter(card, filter) {
+      if (filter === 'month') {
+        return card.getAttribute('data-month') === '2026-11';
+      }
+      if (filter === 'photo') {
+        return parseInt(card.getAttribute('data-photos'), 10) > 0;
+      }
+      if (filter === 'message') {
+        return card.getAttribute('data-message') === 'true';
+      }
+      if (filter === 'individual') {
+        return card.getAttribute('data-scope') === 'individual';
+      }
+      return true;
+    }
+
+    function setFilter(filter) {
+      filters.forEach(function (button) {
+        button.setAttribute('aria-pressed', button.getAttribute('data-filter') === filter ? 'true' : 'false');
+      });
+      records.forEach(function (card) {
+        card.hidden = !matchesFilter(card, filter);
+      });
+      var values = computeStats();
+      Object.keys(statNodes).forEach(function (key) {
+        if (statNodes[key]) {
+          statNodes[key].textContent = String(values[key]);
+        }
+      });
+    }
+
+    filters.forEach(function (button) {
       button.addEventListener('click', function () {
-        setMode(button.getAttribute('data-mode'));
+        setFilter(button.getAttribute('data-filter'));
       });
     });
+
+    setFilter('all');
 
     /* ----- photo viewer sheet ----- */
 
