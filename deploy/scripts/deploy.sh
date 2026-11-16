@@ -17,9 +17,11 @@ case "$env" in
   *) echo "invalid env: $env (expected prod|staging)" >&2; exit 2 ;;
 esac
 
-root="/opt/kindergarten/$env"
+# 根目录与配置文件路径可被环境变量覆盖，供 deploy/scripts/tests 在临时目录做黑盒测试；
+# 未设置时仍是生产路径。
+root="${KINDERGARTEN_ROOT:-/opt/kindergarten/$env}"
 port=$([ "$env" = "prod" ] && echo 8080 || echo 8081)
-deploy_env="/etc/kindergarten/$env/deploy.env"
+deploy_env="${KINDERGARTEN_DEPLOY_ENV:-/etc/kindergarten/$env/deploy.env}"
 if [ -f "$deploy_env" ]; then
   set -a
   # shellcheck disable=SC1090
