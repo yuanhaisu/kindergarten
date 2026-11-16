@@ -12,6 +12,13 @@
 <body>
   <div class="mp-app" data-od-id="growth-page">
 
+    <svg width="0" height="0" aria-hidden="true">
+      <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/></symbol>
+      <symbol id="icon-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="icon-prev" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+      <symbol id="icon-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    </svg>
+
     <div class="mp-statusbar" aria-hidden="true">
       <span class="status-time">10:20</span>
       <span class="status-icons">
@@ -79,7 +86,7 @@
 
       <section class="feed feed-only" aria-label="成长记录" data-od-id="growth-feed">
 
-        <article class="record" data-record data-scope="individual" data-month="2026-11" data-photos="7" data-message="true" data-od-id="record-shoelace">
+        <article class="record" id="record-shoelace" data-record data-record-id="record-shoelace" data-scope="individual" data-month="2026-11" data-photos="7" data-message="true" data-od-id="record-shoelace">
           <div class="record-top">
             <p class="record-date">今天 · 11 月 12 日</p>
           </div>
@@ -88,7 +95,7 @@
           <div class="photo-grid" role="group" aria-label="照片共 7 张" data-photos="7">
             <button class="photo-tile tile--sage" type="button" data-photo-index="1" aria-label="查看第 1 张照片，共 7 张"></button>
             <button class="photo-tile tile--gold" type="button" data-photo-index="2" aria-label="查看第 2 张照片，共 7 张"></button>
-            <button class="photo-tile tile--pine" type="button" data-photo-index="7" aria-label="查看第 7 张照片，共 7 张"><span class="photo-more">+4</span></button>
+            <button class="photo-tile tile--pine" type="button" data-photo-index="7" data-photo-more aria-label="查看第 7 张照片，共 7 张"><span class="photo-more">+4</span></button>
           </div>
           <div class="record-foot">
             <div class="author">
@@ -96,23 +103,21 @@
               <span class="author-meta">王老师 · 12:10</span>
             </div>
             <div class="actions">
-              <span class="comment-count" role="img" aria-label="2 条评论">
+              <button class="comment-count" type="button" aria-label="2 条评论" data-comment-for="record-shoelace">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M20 11.7c0 3.9-3.6 7.1-8 7.1-1 0-2-.2-2.9-.5L4.7 20l1.1-3.4A6.9 6.9 0 0 1 4 11.7c0-3.9 3.6-7.1 8-7.1s8 3.2 8 7.1Z"/>
                 </svg>
-                <span aria-hidden="true">2</span>
-              </span>
+                <span class="comment-num" aria-hidden="true">2</span>
+              </button>
               <button class="like-btn" type="button" aria-pressed="true" aria-label="取消点赞，当前 8 人喜欢" data-od-id="like-shoelace">
-                <svg class="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/>
-                </svg>
+                <svg class="heart" aria-hidden="true"><use href="#icon-heart"/></svg>
                 <span class="like-count">8</span>
               </button>
             </div>
           </div>
         </article>
 
-        <article class="record" data-record data-scope="individual" data-month="2026-11" data-photos="0" data-message="true" data-od-id="record-spoon">
+        <article class="record" id="record-spoon" data-record data-record-id="record-spoon" data-scope="individual" data-month="2026-11" data-photos="0" data-message="true" data-od-id="record-spoon">
           <div class="record-top">
             <p class="record-date">昨天 · 11 月 11 日</p>
           </div>
@@ -125,18 +130,16 @@
               <span class="author-meta">李老师 · 12:40</span>
             </div>
             <div class="actions">
-              <button class="text-action" type="button" data-od-id="comment-spoon">写一句</button>
+              <button class="text-action" type="button" data-comment-for="record-spoon" data-od-id="comment-spoon">写一句</button>
               <button class="like-btn" type="button" aria-pressed="false" aria-label="点赞，当前 6 人喜欢" data-od-id="like-spoon">
-                <svg class="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/>
-                </svg>
+                <svg class="heart" aria-hidden="true"><use href="#icon-heart"/></svg>
                 <span class="like-count">6</span>
               </button>
             </div>
           </div>
         </article>
 
-        <article class="record" data-record data-scope="individual" data-month="2026-11" data-photos="3" data-message="false" data-od-id="record-climb">
+        <article class="record" id="record-climb" data-record data-record-id="record-climb" data-scope="individual" data-month="2026-11" data-photos="3" data-message="false" data-od-id="record-climb">
           <div class="record-top">
             <p class="record-date">11 月 8 日 · 周日</p>
           </div>
@@ -153,18 +156,16 @@
               <span class="author-meta">张老师 · 16:20</span>
             </div>
             <div class="actions">
-              <button class="text-action" type="button" data-od-id="comment-climb">写一句</button>
+              <button class="text-action" type="button" data-comment-for="record-climb" data-od-id="comment-climb">写一句</button>
               <button class="like-btn" type="button" aria-pressed="false" aria-label="点赞，当前 3 人喜欢" data-od-id="like-climb">
-                <svg class="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/>
-                </svg>
+                <svg class="heart" aria-hidden="true"><use href="#icon-heart"/></svg>
                 <span class="like-count">3</span>
               </button>
             </div>
           </div>
         </article>
 
-        <article class="record" data-record data-scope="class" data-month="2026-11" data-photos="2" data-message="true" id="record-outing" data-od-id="record-outing">
+        <article class="record" id="record-outing" data-record data-record-id="record-outing" data-scope="class" data-month="2026-11" data-photos="2" data-message="true" data-od-id="record-outing">
           <div class="record-top">
             <p class="record-date">11 月 7 日 · 周六</p>
           </div>
@@ -180,18 +181,16 @@
               <span class="author-meta">李老师 · 15:40</span>
             </div>
             <div class="actions">
-              <button class="text-action" type="button" data-od-id="comment-outing">写一句</button>
+              <button class="text-action" type="button" data-comment-for="record-outing" data-od-id="comment-outing">写一句</button>
               <button class="like-btn" type="button" aria-pressed="false" aria-label="点赞，当前 5 人喜欢" data-od-id="like-outing">
-                <svg class="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/>
-                </svg>
+                <svg class="heart" aria-hidden="true"><use href="#icon-heart"/></svg>
                 <span class="like-count">5</span>
               </button>
             </div>
           </div>
         </article>
 
-        <article class="record" data-record data-scope="individual" data-month="2026-10" data-photos="0" data-message="false" data-od-id="record-coat">
+        <article class="record" id="record-coat" data-record data-record-id="record-coat" data-scope="individual" data-month="2026-10" data-photos="0" data-message="false" data-od-id="record-coat">
           <div class="record-top">
             <p class="record-date">10 月 29 日 · 周四</p>
           </div>
@@ -203,16 +202,19 @@
               <span class="author-meta">王老师 · 16:35</span>
             </div>
             <div class="actions">
-              <button class="text-action" type="button" data-od-id="comment-coat">写一句</button>
+              <button class="text-action" type="button" data-comment-for="record-coat" data-od-id="comment-coat">写一句</button>
               <button class="like-btn" type="button" aria-pressed="false" aria-label="点赞，当前 4 人喜欢" data-od-id="like-coat">
-                <svg class="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 20.2c-.3 0-.5-.1-.7-.3C7.4 16.6 3.8 13.4 3.8 9.6c0-2.5 1.9-4.4 4.3-4.4 1.6 0 3 .8 3.9 2.2.9-1.4 2.3-2.2 3.9-2.2 2.4 0 4.3 1.9 4.3 4.4 0 3.8-3.6 7-7.5 10.3-.2.2-.4.3-.7.3Z"/>
-                </svg>
+                <svg class="heart" aria-hidden="true"><use href="#icon-heart"/></svg>
                 <span class="like-count">4</span>
               </button>
             </div>
           </div>
         </article>
+
+        <button class="feed-footer" id="feed-footer" type="button" aria-label="加载更多">
+          <span class="feed-spinner" aria-hidden="true"></span>
+          <span id="feed-footer-text">上拉加载更多</span>
+        </button>
 
       </section>
 
@@ -276,8 +278,54 @@
           </button>
         </div>
         <div class="viewer-frame tile--sage" id="photo-frame" aria-hidden="true"></div>
-        <p class="viewer-count" id="photo-count">照片 1 / 7</p>
+        <div class="viewer-nav">
+          <button class="viewer-arrow" type="button" id="photo-prev" aria-label="上一张">
+            <svg aria-hidden="true"><use href="#icon-prev"/></svg>
+          </button>
+          <p class="viewer-count" id="photo-count">照片 1 / 7</p>
+          <button class="viewer-arrow" type="button" id="photo-next" aria-label="下一张">
+            <svg aria-hidden="true"><use href="#icon-next"/></svg>
+          </button>
+        </div>
         <p class="viewer-title" id="photo-caption">第一次自己系好了鞋带</p>
+      </section>
+    </div>
+
+    <div class="sheet-layer" id="photo-grid-layer" inert aria-hidden="true">
+      <div class="sheet-scrim" data-close-sheet></div>
+      <section class="sheet" id="photo-grid-sheet" role="dialog" aria-modal="true" aria-labelledby="photo-grid-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-heading">
+          <h2 class="sheet-title" id="photo-grid-title">全部照片 · 7 张</h2>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭">
+            <svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg>
+          </button>
+        </div>
+        <div class="photo-grid photo-grid--sheet" id="photo-grid-list" data-photos="7" data-record-ref="record-shoelace"></div>
+      </section>
+    </div>
+
+    <div class="sheet-layer" id="comment-layer" inert aria-hidden="true">
+      <div class="sheet-scrim" data-close-sheet></div>
+      <section class="sheet comment-sheet" id="comment-sheet" role="dialog" aria-modal="true" aria-labelledby="comment-sheet-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-heading">
+          <h2 class="sheet-title" id="comment-sheet-title">写一句</h2>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭">
+            <svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg>
+          </button>
+        </div>
+        <p class="comment-record-title" id="comment-record-title"></p>
+        <ul class="comment-list" id="comment-list"></ul>
+        <p class="comment-empty" id="comment-empty" hidden>还没有评论，写第一句吧</p>
+        <div class="comment-quick" role="group" aria-label="快捷短语">
+          <button class="filter-chip comment-chip" type="button" data-quick-comment="真棒">真棒</button>
+          <button class="filter-chip comment-chip" type="button" data-quick-comment="谢谢老师">谢谢老师</button>
+        </div>
+        <div class="comment-form">
+          <input class="comment-input" id="comment-input" type="text" maxlength="60" placeholder="写一句鼓励的话…" aria-label="写下你的评论" autocomplete="off" />
+          <button class="comment-send" id="comment-send" type="button" disabled>发送</button>
+        </div>
       </section>
     </div>
   </div>
