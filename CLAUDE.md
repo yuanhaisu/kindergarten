@@ -738,6 +738,8 @@ single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agent
 
 多个会话并行时，一个会话 = 一个分支 = 一个独立 worktree；主工作树始终留在 `main` 且保持干净。纪律与脚本见 `docs/agents/parallel-development.md`。
 
+并行 worker **只推分支、开 PR**，不执行 `gh pr merge`、不执行 `worktree-clean.ps1`。合并由 **Grok bot** 执行；合并成功后 bot 立即运行 `scripts/worktree-clean.ps1 -Pr <PR号> -DeleteRemote` 回收 worktree。bot 每天早晨运行 `scripts/worktree-audit.ps1` 生成残余报告，**非合并项的清理必须经属主确认**。bot 的例行任务、合并门禁、PR 评论反馈与确认协议见 `docs/agents/worktree-bot-routine.md`。
+
 ### CI / 合并等待
 
 推送 PR 后，不要在主会话空转或提前开始下一项。起一个只读 subagent 监听 CI 与合并结果：`gh pr checks <n> --watch` 等 CI 终态，`gh pr view <n> --json state,mergeStateStatus,mergedAt,statusCheckRollup` 看合并与检查汇总；收到 CI/合并终态后再提出下一项工作。subagent 不得 merge、push 或改文件。**一个 subagent 只监听一个 PR**：多个 PR 并行等待时，每个 PR 各起一个 subagent，不得用一个 subagent 同时轮询多个 PR。
