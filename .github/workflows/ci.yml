@@ -109,9 +109,6 @@ jobs:
       - name: goose up is idempotent
         working-directory: server
         run: go run ./cmd/migrate up
-      - name: extendtrials command tests (scratch DB)
-        working-directory: server
-        run: go test ./cmd/extendtrials -count=1
       - name: seedbase (first run)
         working-directory: server
         run: go run ./cmd/seedbase

@@ -21,13 +21,21 @@ type Options struct {
 	Apply           bool
 }
 
-// TrialGroup 是一所将被延长的园所及其待修改的 trial 授权。
+// TrialGroup 是一所将被延长的园所及其待修改的 trial 授权汇总。
 type TrialGroup struct {
 	KindergartenID uint64
 	Name           string
 	TrialCount     int
 	OldEarliest    time.Time
 	OldLatest      time.Time
+}
+
+// TrialRow 是一条将被修改的 trial 授权。manifest 逐条记录，revert 才能精确恢复
+// 每条授权的原到期日；只按园所汇总会在同园到期日不一致时把它们抹平。
+type TrialRow struct {
+	KindergartenID uint64
+	EntitlementID  uint64
+	ExpiresAt      time.Time
 }
 
 // ExclusionReason 是园所被排除的机器可读原因。
@@ -75,18 +83,15 @@ type LegacyKindergarten struct {
 // Plan 是一次只读预演的结果。
 type Plan struct {
 	Selected      []TrialGroup
+	Trials        []TrialRow // 被选中园所的待修改授权明细，逐条可回滚
 	Excluded      []Exclusion
 	NullCreatedAt []LegacyKindergarten
 	Scanned       int
 }
 
-// TrialRows 返回将被修改的 trial 授权总行数。
-func (p *Plan) TrialRows() int {
-	n := 0
-	for _, g := range p.Selected {
-		n += g.TrialCount
-	}
-	return n
+// TotalTrialRows 返回将被修改的 trial 授权总行数。
+func (p *Plan) TotalTrialRows() int {
+	return len(p.Trials)
 }
 
 type kindergartenRow struct {
@@ -182,7 +187,70 @@ func BuildPlan(ctx context.Context, db *gorm.DB, opts Options) (*Plan, error) {
 	sort.Slice(plan.Selected, func(i, j int) bool {
 		return plan.Selected[i].KindergartenID < plan.Selected[j].KindergartenID
 	})
+
+	if len(plan.Selected) > 0 {
+		selectedIDs := make([]uint64, 0, len(plan.Selected))
+		for _, g := range plan.Selected {
+			selectedIDs = append(selectedIDs, g.KindergartenID)
+		}
+		rows, err := loadTrialRows(ctx, db, selectedIDs, opts.TargetExpiry)
+		if err != nil {
+			return nil, err
+		}
+		plan.Trials = rows
+		if err := verifyRowCounts(plan); err != nil {
+			return nil, err
+		}
+	}
 	return plan, nil
+}
+
+// verifyRowCounts 防御两次查询之间数据被并发修改：聚合数与明细数不一致时，
+// 生成的 manifest 会与执行时看到的清单不符，必须报错而不是照写。
+func verifyRowCounts(plan *Plan) error {
+	byKg := make(map[uint64]int, len(plan.Selected))
+	for _, row := range plan.Trials {
+		byKg[row.KindergartenID]++
+	}
+	for _, g := range plan.Selected {
+		if byKg[g.KindergartenID] != g.TrialCount {
+			return fmt.Errorf(
+				"园所 %d 的 trial 授权在读取过程中发生变化（聚合 %d 条，明细 %d 条），请重试",
+				g.KindergartenID, g.TrialCount, byKg[g.KindergartenID])
+		}
+	}
+	return nil
+}
+
+func loadTrialRows(ctx context.Context, db *gorm.DB, ids []uint64, target time.Time) ([]TrialRow, error) {
+	type row struct {
+		EntitlementID  uint64
+		KindergartenID uint64
+		ExpiresAt      time.Time
+	}
+	var dbRows []row
+	if err := db.WithContext(ctx).Raw(`
+SELECT id AS entitlement_id, kindergarten_id, expires_at
+FROM entitlements
+WHERE deleted_at IS NULL
+  AND source = ?
+  AND order_id IS NULL
+  AND expires_at < ?
+  AND kindergarten_id IN ?
+ORDER BY kindergarten_id, id`,
+		domain.EntitlementSourceTrial, target, ids,
+	).Scan(&dbRows).Error; err != nil {
+		return nil, fmt.Errorf("查询待修改 trial 明细失败: %w", err)
+	}
+	rows := make([]TrialRow, 0, len(dbRows))
+	for _, r := range dbRows {
+		rows = append(rows, TrialRow{
+			KindergartenID: r.KindergartenID,
+			EntitlementID:  r.EntitlementID,
+			ExpiresAt:      r.ExpiresAt,
+		})
+	}
+	return rows, nil
 }
 
 func loadTrialAggregates(ctx context.Context, db *gorm.DB, ids []uint64, target time.Time) (map[uint64]trialAggRow, error) {

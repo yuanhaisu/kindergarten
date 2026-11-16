@@ -44,3 +44,28 @@ func TestBuildPlanSelectsLegacyTrialsAndDoesNotWrite(t *testing.T) {
 	// dry-run 阶段：BuildPlan 只读，数据库必须逐行不变。
 	require.Equal(t, before, allEntitlementExpiries(t, db))
 }
+
+// 同园多条 trial 到期日不同也必须逐条记录，revert 才能精确恢复而不是抹平。
+func TestBuildPlanRecordsPerEntitlementRowsForExactRollback(t *testing.T) {
+	db := openScratchDB(t)
+	loc := mustShanghai(t)
+	created := time.Date(2026, 10, 1, 10, 0, 0, 0, loc)
+	start := time.Date(2026, 11, 6, 15, 4, 5, 0, loc)
+	first := time.Date(2026, 12, 6, 15, 4, 5, 0, loc)
+	second := time.Date(2026, 12, 9, 16, 9, 58, 0, loc)
+
+	insertKindergarten(t, db, 401, "到期日不一致园", &created)
+	insertEntitlement(t, db, 4011, 401, "growth", "trial", nil, start, first)
+	insertEntitlement(t, db, 4012, 401, "album", "trial", nil, start, second)
+
+	plan, err := BuildPlan(context.Background(), db, testOptions(loc))
+	require.NoError(t, err)
+	require.Len(t, plan.Selected, 1)
+	require.Equal(t, 2, plan.Selected[0].TrialCount)
+	require.Equal(t, 2, plan.TotalTrialRows())
+
+	require.Equal(t, []TrialRow{
+		{KindergartenID: 401, EntitlementID: 4011, ExpiresAt: first},
+		{KindergartenID: 401, EntitlementID: 4012, ExpiresAt: second},
+	}, plan.Trials)
+}

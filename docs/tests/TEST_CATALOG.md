@@ -1394,10 +1394,12 @@
 | TC-NEW-TNT-0005 | 政策日后开通的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
 | TC-NEW-TNT-0006 | 在期订阅/未取消订单的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
 | TC-NEW-TNT-0007 | 失败时事务回滚不留部分更新 | P0 | Command | 🔲 (#66) |
-| TC-NEW-TNT-0008 | manifest 固定 schema、UTF-8、SHA256 | P0 | Command | ✅ (`TestWriteManifestHasFixedSchemaAndSHA`) |
+| TC-NEW-TNT-0008 | manifest 逐条授权固定 schema、UTF-8、SHA256 | P0 | Command | ✅ (`TestWriteManifestHasFixedSchemaAndSHA`) |
 | TC-NEW-TNT-0009 | created_at 为空的遗留行单独报告 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
 | TC-NEW-TNT-0010 | 空结果不生成 manifest | P1 | Command | ✅ (`TestRunEmptyPlanWritesNoManifest`) |
 | TC-NEW-TNT-0011 | -apply 在本 ticket 明确拒绝 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
+| TC-NEW-TNT-0012 | 同园到期日不同仍逐条记录可精确回滚 | P0 | Command | ✅ (`TestBuildPlanRecordsPerEntitlementRowsForExactRollback`) |
+| TC-NEW-TNT-0013 | 园所汇总另存（name/trial_count） | P1 | Command | ✅ (`TestWriteSummaryListsKindergartenTotals`) |
 
 ### 分销佣金 (DST)
 

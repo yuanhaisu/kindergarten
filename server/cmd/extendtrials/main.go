@@ -6,7 +6,8 @@
 //
 // 口径：未删除、2026-11-15（含）前开通、存在 source='trial' AND order_id IS NULL
 // 授权的园所；排除有未取消订单或在期 subscription 授权的园所。
-// 默认 dry-run：只做 SELECT，数据库不会发生任何变化；manifest 写盘后输出 SHA256。
+// 默认 dry-run：只做 SELECT，数据库不会发生任何变化。
+// manifest 每条 trial 授权一行（可逐条回滚），另存园所汇总；落盘后输出 SHA256。
 //
 // 时区固定 Asia/Shanghai：DATETIME 列存墙钟时间，连接时区决定参数如何渲染，
 // 因此这里强制覆盖 DSN 的 loc，避免在 UTC 容器上整体偏移 8 小时。
@@ -92,7 +93,7 @@ func printResult(res *Result, opts Options) {
 	fmt.Printf("dry-run：存量园所 trial 延长预演（政策日 %s 前开通；目标到期日 %s；时区 Asia/Shanghai）\n",
 		policyDateLabel, opts.TargetExpiry.Format(manifestTimeLayout))
 	fmt.Printf("扫描 %d 所园所：命中 %d 所 / %d 条 trial 授权；排除 %d 所（其中 created_at 为空 %d 所）\n",
-		plan.Scanned, len(plan.Selected), plan.TrialRows(), excludedTotal, len(plan.NullCreatedAt))
+		plan.Scanned, len(plan.Selected), plan.TotalTrialRows(), excludedTotal, len(plan.NullCreatedAt))
 
 	if len(plan.Selected) > 0 {
 		earliest, latest := plan.Selected[0].OldEarliest, plan.Selected[0].OldLatest
@@ -107,12 +108,9 @@ func printResult(res *Result, opts Options) {
 			fmt.Printf("  %d\t%s\ttrial %d 条\t原到期日 %s ～ %s\n",
 				g.KindergartenID, g.Name, g.TrialCount,
 				g.OldEarliest.Format(manifestTimeLayout), g.OldLatest.Format(manifestTimeLayout))
-			if hasHeterogeneousExpiry(g) {
-				fmt.Printf("    警告：该园 trial 行原到期日不一致；manifest 只记录最早值，回滚前需人工核对\n")
-			}
 		}
 		fmt.Printf("汇总：%d 所园 / %d 条授权；原到期日 %s ～ %s\n",
-			len(plan.Selected), plan.TrialRows(),
+			len(plan.Selected), plan.TotalTrialRows(),
 			earliest.Format(manifestTimeLayout), latest.Format(manifestTimeLayout))
 	} else {
 		fmt.Println("结果：没有待延长的园所（数据库未做任何修改）")
@@ -132,7 +130,8 @@ func printResult(res *Result, opts Options) {
 	}
 
 	if res.ManifestWritten {
-		fmt.Printf("manifest：%s（sha256: %s）\n", res.ManifestPath, res.ManifestSHA256)
+		fmt.Printf("manifest：%s（sha256: %s；每条 trial 授权一行，可逐条回滚）\n", res.ManifestPath, res.ManifestSHA256)
+		fmt.Printf("园所汇总：%s\n", res.SummaryPath)
 	} else {
 		fmt.Println("manifest：没有待延长园所，未生成 manifest（数据库未做任何修改）")
 	}

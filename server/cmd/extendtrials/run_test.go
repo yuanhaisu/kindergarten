@@ -27,6 +27,9 @@ func TestRunDryRunWritesManifestAndLeavesDBUnchanged(t *testing.T) {
 	require.True(t, res.ManifestWritten)
 	require.NotEmpty(t, res.ManifestSHA256)
 	require.FileExists(t, opts.ManifestPath)
+	require.True(t, res.SummaryWritten)
+	require.FileExists(t, res.SummaryPath)
+	require.Equal(t, opts.ManifestPath+".summary.csv", res.SummaryPath)
 	require.Equal(t, before, allEntitlementExpiries(t, db), "dry-run 不得写库")
 
 	applyOpts := opts
@@ -47,8 +50,11 @@ func TestRunEmptyPlanWritesNoManifest(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, res.ManifestWritten)
 	require.Empty(t, res.ManifestSHA256)
+	require.False(t, res.SummaryWritten)
 	_, statErr := os.Stat(opts.ManifestPath)
 	require.True(t, os.IsNotExist(statErr), "空结果不得生成 manifest")
+	_, statErr = os.Stat(opts.ManifestPath + ".summary.csv")
+	require.True(t, os.IsNotExist(statErr), "空结果不得生成汇总文件")
 }
 
 func TestRunRequiresManifestPath(t *testing.T) {
