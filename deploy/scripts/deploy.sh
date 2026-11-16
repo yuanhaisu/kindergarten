@@ -22,12 +22,38 @@ esac
 root="${KINDERGARTEN_ROOT:-/opt/kindergarten/$env}"
 port=$([ "$env" = "prod" ] && echo 8080 || echo 8081)
 deploy_env="${KINDERGARTEN_DEPLOY_ENV:-/etc/kindergarten/$env/deploy.env}"
-if [ -f "$deploy_env" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$deploy_env"
-  set +a
+
+# 配置错误必须在任何容器动作之前暴露：否则会以「数据库连不上」出现在迁移容器里，
+# 把排查方向带偏。手动回滚不跑迁移，因此 rollback.sh 刻意不做这项校验。
+dsn_fail() {
+  echo "!! invalid deploy env ($deploy_env): $1" >&2
+  echo "   MIGRATE_MYSQL_DSN 需用单引号包住，& 会被 shell 当成后台符号" >&2
+  exit 2
+}
+
+if [ ! -f "$deploy_env" ]; then
+  dsn_fail "file not found"
 fi
+
+set -a
+# shellcheck disable=SC1090
+. "$deploy_env"
+set +a
+
+dsn=${MIGRATE_MYSQL_DSN:-}
+[ -n "$dsn" ] || dsn_fail "MIGRATE_MYSQL_DSN is empty"
+case "$dsn" in
+  *[[:space:]]*) dsn_fail "MIGRATE_MYSQL_DSN contains whitespace" ;;
+  *@tcp\(*) ;;
+  *) dsn_fail "MIGRATE_MYSQL_DSN must contain @tcp(" ;;
+esac
+case "$dsn" in
+  *parseTime=True*) ;;
+  *) dsn_fail "MIGRATE_MYSQL_DSN must contain parseTime=True" ;;
+esac
+case "$dsn" in
+  *CHANGE_ME*) dsn_fail "MIGRATE_MYSQL_DSN still contains the CHANGE_ME placeholder" ;;
+esac
 
 if [ ! -f "$admin_tar" ]; then
   echo "admin artifact not found: $admin_tar" >&2

@@ -36,7 +36,11 @@ tar -czf "$admin_tar" -C "$TEST_TMP/admin-src" .
 tar -czf "$website_tar" -C "$TEST_TMP/website-src" .
 
 # deploy.env 路径也走覆盖：指向临时文件，绝不读 /etc。
-printf 'DEPLOY_TEST_MARKER=1\n' > "$TEST_TMP/deploy.env"
+# deploy.sh 在动容器前校验 MIGRATE_MYSQL_DSN；值必须用单引号包住，否则 source 时 & 会截断变量。
+cat > "$TEST_TMP/deploy.env" <<'ENV'
+DEPLOY_TEST_MARKER=1
+MIGRATE_MYSQL_DSN='kg_migrate:dummy-pass@tcp(127.0.0.1:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Local'
+ENV
 
 export KINDERGARTEN_ROOT="$root"
 export KINDERGARTEN_DEPLOY_ENV="$TEST_TMP/deploy.env"
