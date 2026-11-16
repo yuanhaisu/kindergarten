@@ -1,15 +1,14 @@
 import { fetchEntitlements } from "@/api/entitlements"
+import { EXPIRY_WARNING_DAYS, expiryHintText as baseExpiryHintText } from "./expiry-hint.mjs"
 
 const CACHE_KEY = "entitlement_cache"
 const CACHE_AT_KEY = "entitlement_cache_at"
 // 缓存不是永久真相：园所续费/延长后必须在有限时间内反映到 30 天到期提示。
 const CACHE_TTL_MS = 10 * 60 * 1000
-const DAY_MS = 24 * 60 * 60 * 1000
 
 // ADR-0018 #1：存量园所在到期前 30 天开始提示转付费。
-export const EXPIRY_WARNING_DAYS = 30
+export { EXPIRY_WARNING_DAYS }
 
-const EXPIRED_HINT = "套餐已到期，部分功能仅可查看，请联系园所管理员续费"
 const RENEW_HINT = "请联系园所管理员续费"
 
 let inflight = null
@@ -66,19 +65,10 @@ export function entitlementExpiresAt() {
 }
 
 /**
- * 到期提示文案。天数向上取整：剩余不足一天计为 0 天，不算过期；
- * 过期满一天才提示「已到期」——保留既有语义，避免最后一天的园所被误判。
+ * 到期提示文案：先按时间戳判断已到期，再按剩余天数决定是否进入 30 天提示窗口。
  */
 export function expiryHintText(expiresAt, now = Date.now()) {
-  if (!expiresAt) return ""
-  const at = new Date(expiresAt)
-  if (Number.isNaN(at.getTime())) return ""
-  const days = Math.ceil((at.getTime() - now) / DAY_MS)
-  if (days < 0) return EXPIRED_HINT
-  if (days <= EXPIRY_WARNING_DAYS) {
-    return `套餐将于 ${String(expiresAt).slice(0, 10)} 到期，${RENEW_HINT}`
-  }
-  return ""
+  return baseExpiryHintText(expiresAt, now, RENEW_HINT)
 }
 
 export async function loadEntitlements(force = false) {
