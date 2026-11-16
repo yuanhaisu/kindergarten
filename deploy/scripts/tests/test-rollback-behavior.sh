@@ -56,14 +56,10 @@ add_release() {
   done
 }
 
-# 带单引号的 DSN：#74 的 deploy.sh 校验要求含 @tcp( 与 parseTime=True，
-# 且 & 必须被引号包住，否则 source 时会被 shell 当成后台符号截断。
-# 口令写 dummy 让 check-secrets 的占位规则放行，同时保持校验要求的结构。
-write_valid_deploy_env() {
+# 每个用例独立的 deploy.env；DSN 由 lib.sh 的 helper 生成。
+write_deploy_env() {
   DEPLOY_ENV="$TEST_TMP/deploy.$case_no.env"
-  cat > "$DEPLOY_ENV" <<'ENV'
-MIGRATE_MYSQL_DSN='kg_migrate:dummy-pass@tcp(127.0.0.1:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Local'
-ENV
+  write_valid_deploy_env "$DEPLOY_ENV"
   export KINDERGARTEN_DEPLOY_ENV="$DEPLOY_ENV"
 }
 
@@ -101,7 +97,7 @@ echo "== rollback: 正常路径 静态 → api → /ready → .current_tag"
 setup_case
 case_root
 add_release "$tag"
-write_valid_deploy_env
+write_deploy_env
 make_docker_stub
 make_curl_stub ok
 make_ln_stub
@@ -135,7 +131,7 @@ case_root
 # admin 目标缺失、website 目标存在：若检查顺序被改成先切 website，日志会抓到那次 ln。
 mkdir -p "$CASE_ROOT/website/releases/$tag"
 echo "website $tag" > "$CASE_ROOT/website/releases/$tag/index.html"
-write_valid_deploy_env
+write_deploy_env
 make_docker_stub
 make_curl_stub ok
 make_ln_stub
@@ -158,7 +154,7 @@ echo "== rollback: 目标 api 不就绪时保留已切静态并退出非零"
 setup_case
 case_root
 add_release "$tag"
-write_valid_deploy_env
+write_deploy_env
 make_docker_stub
 make_curl_stub fail
 make_ln_stub

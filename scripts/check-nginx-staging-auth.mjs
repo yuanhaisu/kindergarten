@@ -158,18 +158,32 @@ function expectOffLocation(locations, label, spec) {
   }
 }
 
-function coversStaticAsset(spec) {
-  if (!spec.startsWith('~*')) return false
+// 返回 { covers, error }：正则写坏时不能静默当成「不覆盖」，否则最终只会得到
+// 「缺少静态扩展名 location」这种指向错误的结论。
+function staticAssetCoverage(spec) {
+  if (!spec.startsWith('~*')) return { covers: false }
   try {
-    return new RegExp(spec.slice(2).trim(), 'i').test(ASSET_SAMPLE)
-  } catch {
-    return false
+    return { covers: new RegExp(spec.slice(2).trim(), 'i').test(ASSET_SAMPLE) }
+  } catch (err) {
+    return { covers: false, error: err }
   }
 }
 
 function expectStaticAssetsOff(locations, label) {
   const regexLocations = locations.filter((location) => location.spec.startsWith('~*'))
-  if (!regexLocations.some((location) => coversStaticAsset(location.spec))) {
+  let coversSample = false
+  let invalidRegex = false
+  for (const location of regexLocations) {
+    const coverage = staticAssetCoverage(location.spec)
+    if (coverage.error) {
+      invalidRegex = true
+      failures.push(
+        `${label}: 静态资源 "location ${location.spec}" 的正则无法编译 — ${coverage.error.message}`,
+      )
+    }
+    if (coverage.covers) coversSample = true
+  }
+  if (!coversSample && !invalidRegex) {
     failures.push(
       `${label}: 缺少覆盖静态扩展名（如 *.css）的 ~* location；政策页资源会被门禁挡成 401`,
     )
@@ -237,6 +251,8 @@ if (testWww) {
     for (const spec of ['= /privacy', '= /terms', '= /404.html']) {
       expectOffLocation(locations, 'test-www', spec)
     }
+    // ^~ 优先于 ~*：这段实际服务 /_nuxt/* 资源，豁免缺失不会被静态扩展名规则兜住。
+    expectOffLocation(locations, 'test-www', '^~ /_nuxt/')
     expectStaticAssetsOff(locations, 'test-www')
     expectGatedRoot(locations, 'test-www')
   }

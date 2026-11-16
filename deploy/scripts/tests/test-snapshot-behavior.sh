@@ -36,15 +36,10 @@ setup_case() {
   rm -f "$STUB_COUNTER"
 }
 
-# deploy.env 同时带 RDS_INSTANCE_ID 与带引号的 DSN：
-# #74 的 deploy.sh 校验要求 DSN 不含空白、含 @tcp( 与 parseTime=True；
-# 口令写 dummy 让 check-secrets 的占位规则放行。
+# deploy.env 需要 RDS_INSTANCE_ID；DSN 由 lib.sh 的 helper 生成（快照脚本不校验 DSN）。
 write_deploy_env() {
   DEPLOY_ENV="$TEST_TMP/deploy.$case_no.env"
-  cat > "$DEPLOY_ENV" <<'ENV'
-RDS_INSTANCE_ID=rds-t76-behavior
-MIGRATE_MYSQL_DSN='kg_migrate:dummy-pass@tcp(127.0.0.1:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Local'
-ENV
+  write_valid_deploy_env "$DEPLOY_ENV" "RDS_INSTANCE_ID=rds-t76-behavior"
   export KINDERGARTEN_DEPLOY_ENV="$DEPLOY_ENV"
 }
 
