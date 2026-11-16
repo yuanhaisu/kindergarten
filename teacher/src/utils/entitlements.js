@@ -1,6 +1,16 @@
 import { fetchEntitlements } from "@/api/entitlements"
+import { EXPIRY_WARNING_DAYS, expiryHintText as baseExpiryHintText } from "./expiry-hint.mjs"
 
 const CACHE_KEY = "entitlement_cache"
+const CACHE_AT_KEY = "entitlement_cache_at"
+// 缓存不是永久真相：园所续费/延长后必须在有限时间内反映到 30 天到期提示。
+const CACHE_TTL_MS = 10 * 60 * 1000
+
+// ADR-0018 #1：存量园所在到期前 30 天开始提示转付费。
+export { EXPIRY_WARNING_DAYS }
+
+const RENEW_HINT = "请提醒园所管理员续费"
+
 let inflight = null
 
 function readCache() {
@@ -8,6 +18,29 @@ function readCache() {
     return uni.getStorageSync(CACHE_KEY) || null
   } catch {
     return null
+  }
+}
+
+function readCacheAt() {
+  try {
+    return Number(uni.getStorageSync(CACHE_AT_KEY)) || 0
+  } catch {
+    return 0
+  }
+}
+
+// 无时间戳的旧缓存（升级前写入）视为已过期，强制拉一次新数据。
+function isCacheFresh() {
+  const cachedAt = readCacheAt()
+  return !!readCache() && cachedAt > 0 && Date.now() - cachedAt < CACHE_TTL_MS
+}
+
+function writeCache(data) {
+  try {
+    uni.setStorageSync(CACHE_KEY, data)
+    uni.setStorageSync(CACHE_AT_KEY, Date.now())
+  } catch {
+    // 存储失败不影响本次使用
   }
 }
 
@@ -31,19 +64,23 @@ export function entitlementExpiresAt() {
   return data?.expires_at || null
 }
 
+/**
+ * 到期提示文案：先按时间戳判断已到期，再按剩余天数决定是否进入 30 天提示窗口。
+ */
+export function expiryHintText(expiresAt, now = Date.now()) {
+  return baseExpiryHintText(expiresAt, now, RENEW_HINT)
+}
+
 export async function loadEntitlements(force = false) {
-  if (!force && readCache()) return readCache()
+  if (!force && isCacheFresh()) return readCache()
   if (inflight) return inflight
   inflight = fetchEntitlements()
     .then((res) => {
       const data = res?.data || { modules: [], expires_at: null }
-      try {
-        uni.setStorageSync(CACHE_KEY, data)
-      } catch {
-        // 存储失败不影响本次使用
-      }
+      writeCache(data)
       return data
     })
+    // 网络失败时退回旧缓存：断网仍能按上次授权展示，不把入口全关掉。
     .catch(() => readCache())
     .finally(() => {
       inflight = null
@@ -54,6 +91,7 @@ export async function loadEntitlements(force = false) {
 export function clearEntitlements() {
   try {
     uni.removeStorageSync(CACHE_KEY)
+    uni.removeStorageSync(CACHE_AT_KEY)
   } catch {
     // ignore
   }

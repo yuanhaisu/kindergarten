@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "d30674c161950c0f663512c6a3a647ed564691c8fa69a18943e5f7bcde6b7bde",
-  "supportReviewedAt": "2026-11-09",
-  "supportReason": "2026-11-09-entitlement-ui：entitlements / consent 支撑代码已纳入基线",
+  "supportHash": "cb31b0309428302478ff073924dbe945dbe771b39d6cd5a81dd71ea829418cc4",
+  "supportReviewedAt": "2026-11-16",
+  "supportReason": "2026-11-16 #85 到期提示纯函数与边界修正",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -80,12 +80,12 @@
     "parent/09-growth-index": {
       "source": "parent/src/pages/growth/index.vue",
       "sha256": "33085fefe3d0d603abea2efbcd13424ec06fbf8f2d50d2a2e4893f9e89cea6aa",
-      "depsSha": "94e97852ec6c57e05a190a1a6aad287a07d3c6f508487f86bd3169ed6c3f4d0d",
+      "depsSha": "b7b9c6c8ba5433d3c7996fe1a15c3f83d026eee5b1bbeff183996f1089364f50",
       "title": "成长时光",
       "tabbar": true,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
     },
     "parent/10-growth-detail": {
       "source": "parent/src/pages/growth/detail.vue",
@@ -108,12 +108,12 @@
     "parent/12-growth-report": {
       "source": "parent/src/pages/growth/report.vue",
       "sha256": "4a4ae1a138fc59716b71531a786246d7f9b74506dbefcd23fa1ec5424ff154fc",
-      "depsSha": "1d0702a5f4f0ba7c3da310623f490bd52de553155f38de8914ec933c6f1542da",
+      "depsSha": "0327bdddb5e427a84d2746b546a685ec6018d28fbd6069d76ea280ba7336d113",
       "title": "成长报告",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
@@ -191,12 +191,12 @@
     "parent/21-class-index": {
       "source": "parent/src/pages/class/index.vue",
       "sha256": "3cbec6f195136aa382ef6c702519e6ff5e5ce3ee16af5b3e5ef306cbe846ccac",
-      "depsSha": "dc194ff2892cbe17401bbc60eec12ff473d1e7673be366ed540e7f16ce0bda3a",
+      "depsSha": "b9e7608051e9f876dc6442ef40d92fa45e32969fce778461b7e90074311f82ef",
       "title": "班级信息",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
     },
     "parent/22-calendar-index": {
       "source": "parent/src/pages/calendar/index.vue",
@@ -245,23 +245,23 @@
     },
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
-      "sha256": "7bcc148a76d3a9183b8c29613bbd9026a15f0df03111f3c8c3e3e3eaedb2a2da",
-      "depsSha": "f5726b6dcfac643024f802eb2330d16e473c4290669358dd416262f5fe6b1dbf",
+      "sha256": "082dbe8feb8af43f781f8287e7e000b6ecb117151f8ce093e35bf963e771c6bf",
+      "depsSha": "729f7fdf2b0c0cecd56d81af184b2b4b4a95332dc0ecf6ae6d13cbf843aa7997",
       "title": "我的",
       "tabbar": true,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-16",
+      "codeCommit": "680065c",
+      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
       "sha256": "92e6c043a8c0941a24e036c21834041dd12e0b0650a419ffa4f06f019dcd3902",
-      "depsSha": "49d9b0410376599bc42bd516dc6b85c6b06390e796121bd850d7319862fb59aa",
+      "depsSha": "93d040b3f67c2c79812b88db53dde46c3b1b6524a4479271b182a4abef73fd0d",
       "title": "班级相册",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
     },
     "parent/29-album-detail": {
       "source": "parent/src/pages/album/detail.vue",
@@ -274,13 +274,13 @@
     },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
-      "sha256": "5ae0edfdd3515772764dd9ec44e2ca51a93d8988f480be25d20a25243578baa3",
-      "depsSha": "4f2a07885ab49add98f60a217588a1bc05d4b8122aabdaecddb4bc226221df96",
+      "sha256": "62196020642dcbb709e74519f8119e4d367b28f6c4d53198504e225be441355a",
+      "depsSha": "461762262ea1b90c3e37e5e4a49e5b88f3c830f30626342808f068cdf0f853bb",
       "title": "老师工作台",
       "tabbar": true,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-16",
+      "codeCommit": "680065c",
+      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
@@ -421,12 +421,12 @@
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
       "sha256": "4c625a2acaf8c1940747dd9e1b5fceaf744ebe416f571b1113ea9b33710f17a4",
-      "depsSha": "63640577ee99fac44ac90b8409f0c94f394aaf8e6cf061e7499f4698d29b9c44",
+      "depsSha": "8f1d9e7444ae26faa04aed0eabd9b35551808812194254c43c62664834e87c69",
       "title": "更多功能",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
+      "reviewedAt": "2026-11-16",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",
