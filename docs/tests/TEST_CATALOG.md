@@ -1380,6 +1380,46 @@
 | TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | ✅ (`TestEntitlement_TrialExpiryKeepsData`) |
 | TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_OverLimitDoesNotBlockExistingBusiness`) |
 
+### 存量 trial 延长 (TNT)
+
+> 前置：独立 scratch 库 `kindergarten_extendtrials_test_<PID>`（`go test ./cmd/extendtrials` 自动建库并跑 goose 迁移，按进程 PID 隔离并发），不碰共享开发库；`CONFIG_PATH` 需传绝对路径，否则数据库用例会静默 skip。
+> 步骤：按名称执行对应命令或调用命令级入口；预期：名称后半句。
+
+| TC ID | 名称 | 优先级 | 类型 | 状态 |
+|---|---|---|---|---|
+| TC-NEW-TNT-0001 | dry-run 输出清单且数据库不变 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
+| TC-NEW-TNT-0002 | apply 后清单内 trial 行延至 2027-01-31 23:59:59 | P0 | Command | ✅ (`TestRunApplyExtendsOnlyManifestRows`, `TestRunApplyCountsDistinctKindergartens`) |
+| TC-NEW-TNT-0003 | 重复 apply 影响行数为 0 | P0 | Command | ✅ (`TestRunApplyIsIdempotent`) |
+| TC-NEW-TNT-0004 | revert 按清单恢复原始到期日 | P0 | Command | ✅ (`TestRunRevertRestoresManifestOriginalExpiries`) |
+| TC-NEW-TNT-0005 | 政策日后开通的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
+| TC-NEW-TNT-0006 | 存在在期订单/在期订阅的园所被排除（订单 `status<>'cancelled' AND expires_at>now`，含未来起算；订阅 `starts_at<=now AND expires_at>now`） | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`, `TestBuildPlanExcludesFutureOrdersAndInactiveKindergartens`) |
+| TC-NEW-TNT-0007 | 失败时事务回滚不留部分更新 | P0 | Command | ✅ (`TestRunApplyRollsBackWhenLogWriteFails`) |
+| TC-NEW-TNT-0008 | manifest 逐条授权固定 schema、UTF-8、SHA256 | P0 | Command | ✅ (`TestWriteManifestHasFixedSchemaAndSHA`) |
+| TC-NEW-TNT-0009 | created_at 为空的遗留行单独报告 | P0 | Command | ✅ (`TestBuildPlanExcludesPaidAndReportsLegacyRows`) |
+| TC-NEW-TNT-0010 | 空结果不生成 manifest | P1 | Command | ✅ (`TestRunEmptyPlanWritesNoManifest`) |
+| TC-NEW-TNT-0011 | 未指定 -apply/-revert 时保持只读 | P0 | Command | ✅ (`TestRunDryRunWritesManifestAndLeavesDBUnchanged`) |
+| TC-NEW-TNT-0012 | 同园到期日不同仍逐条记录可精确回滚 | P0 | Command | ✅ (`TestBuildPlanRecordsPerEntitlementRowsForExactRollback`) |
+| TC-NEW-TNT-0013 | 园所汇总另存（name/trial_count） | P1 | Command | ✅ (`TestWriteSummaryListsKindergartenTotals`) |
+| TC-NEW-TNT-0014 | apply 只处理 manifest 内授权，清单外数据不变 | P0 | Command | ✅ (`TestRunApplyExtendsOnlyManifestRows`) |
+| TC-NEW-TNT-0015 | apply 只延长不回退（已更晚的行跳过） | P0 | Command | ✅ (`TestRunApplyNeverShortensRowsBeyondTarget`) |
+| TC-NEW-TNT-0016 | revert 拒绝覆盖 apply 后的合法变更，且整体拒绝 | P0 | Command | ✅ (`TestRunRevertRefusesWhenRowChangedAfterApply`) |
+| TC-NEW-TNT-0017 | manifest 版本行/SHA256 不匹配时拒绝写库 | P0 | Command | ✅ (`TestRunApplyRejectsTamperedManifest`, `TestRunApplyRejectsUnknownManifestVersion`) |
+| TC-NEW-TNT-0018 | apply/revert 需 EXTENDTRIALS_ALLOW=1 | P0 | Command | ✅ (`TestRunWriteRequiresExplicitOptIn`) |
+| TC-NEW-TNT-0019 | 写操作需 -operator；-apply/-revert 互斥 | P1 | Command | ✅ (`TestRunWriteRequiresOperator`, `TestRunRejectsApplyAndRevertTogether`) |
+| TC-NEW-TNT-0020 | manifest 缺失/空/仅表头时拒绝 | P0 | Command | ✅ (`TestRunWriteRejectsMissingOrEmptyManifest`) |
+| TC-NEW-TNT-0021 | apply 写 platform_operation_logs（操作人/园所数/行数） | P0 | Command | ✅ (`TestRunApplyWritesPlatformOperationLog`) |
+| TC-NEW-TNT-0022 | 重复 revert 为 no-op（0 行） | P1 | Command | ✅ (`TestRunRevertIsIdempotent`) |
+| TC-NEW-TNT-0023 | BuildPlan 选中存量 trial 并在只读路径上不写库 | P0 | Command | ✅ (`TestBuildPlanSelectsLegacyTrialsAndDoesNotWrite`) |
+| TC-NEW-TNT-0024 | 空计划不落 manifest（避免伪造可执行清单） | P0 | Command | ✅ (`TestWriteManifestRefusesEmptyPlan`) |
+| TC-NEW-TNT-0025 | 缺少 -manifest 时拒绝执行 | P0 | Command | ✅ (`TestRunRequiresManifestPath`) |
+| TC-NEW-TNT-0026 | 未来起算订单同样排除；订单/订阅到期边界为严格大于 | P0 | Command | ✅ (`TestBuildPlanExcludesFutureOrdersAndInactiveKindergartens`) |
+| TC-NEW-TNT-0027 | 非 active 状态的园所被排除 | P0 | Command | ✅ (`TestBuildPlanExcludesFutureOrdersAndInactiveKindergartens`) |
+| TC-NEW-TNT-0028 | 孤儿 trial 授权（园所不存在/已删除）单独报告 | P1 | Command | ✅ (`TestBuildPlanReportsOrphanTrials`) |
+| TC-NEW-TNT-0029 | apply 写事务内复核口径：新增在期订单（含未来起算）/在期订阅/停用/删除均整体拒绝并点名园所 | P0 | Command | ✅ (`TestRunApplyRevalidatesEligibility`) |
+| TC-NEW-TNT-0030 | revert 不受 apply 后新增订单影响（回滚不参与口径复核） | P0 | Command | ✅ (`TestRunRevertIgnoresNewOrdersAfterApply`) |
+| TC-NEW-TNT-0031 | dry-run 默认拒绝覆盖已存在 manifest，-force 才允许 | P1 | Command | ✅ (`TestRunDryRunRefusesToOverwriteExistingManifest`) |
+| TC-NEW-TNT-0032 | 空计划不落盘时不触发防覆盖（apply 后重跑 dry-run 可用） | P1 | Command | ✅ (`TestRunEmptyPlanIgnoresExistingManifest`) |
+
 ### 分销佣金 (DST)
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
