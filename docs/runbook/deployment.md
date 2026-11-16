@@ -30,6 +30,8 @@
 ## 1.0 staging 首次部署（2026-11-15 实际）
 
 > 详细状态与待办见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。以下为当前 staging 的实际流程；prod 尚未使用。
+> 平台管理员、测试园所与 `kg_migrate` 账号的初始化/幂等重置步骤见
+> [staging-initialization.md](staging-initialization.md)。
 
 1. **DNS**：`test-api` / `test-admin` / `test-www` → `<staging-public-ip>`，TTL 600。解析线路必须是「默认」或额外加「境外」，否则 Let's Encrypt 会看到 NXDOMAIN。
 2. **安全组**：A（`sg-np-staging`）开放 80/443，22 限管理员 IP；B（`sg-np-idle`）只开 22。

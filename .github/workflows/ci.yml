@@ -43,6 +43,14 @@ jobs:
       - name: Nginx staging auth template test
         run: npm run check-nginx-staging-auth:test
 
+  deploy-scripts:
+    name: 部署脚本回归测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run deploy script tests
+        run: bash deploy/scripts/tests/run.sh
+
   backend:
     name: 后端编译 / vet / lint / 单测
     runs-on: ubuntu-latest

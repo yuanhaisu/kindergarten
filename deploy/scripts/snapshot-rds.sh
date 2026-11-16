@@ -7,7 +7,9 @@
 set -euo pipefail
 
 env=${1:-prod}
-deploy_env="/etc/kindergarten/$env/deploy.env"
+# 与 deploy.sh / rollback.sh 共用 deploy.env 测试接缝；本脚本不读写部署根目录，
+# 因此不接收 KINDERGARTEN_ROOT。
+deploy_env="${KINDERGARTEN_DEPLOY_ENV:-/etc/kindergarten/$env/deploy.env}"
 if [ -f "$deploy_env" ]; then
   set -a
   # shellcheck disable=SC1090
