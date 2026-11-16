@@ -63,7 +63,18 @@ server {
         auth_basic_user_file /etc/nginx/htpasswd/kindergarten-staging;
         try_files $uri $uri/ /index.html;
     }
-    location /api/v1/ { auth_basic off; proxy_pass http://127.0.0.1:8081; }
+    location /api/v1/ {
+        auth_basic off;
+        proxy_pass http://127.0.0.1:8081;
+    }
+    location = /health {
+        auth_basic off;
+        proxy_pass http://127.0.0.1:8081;
+    }
+    location = /ready {
+        auth_basic off;
+        proxy_pass http://127.0.0.1:8081;
+    }
 }
 
 server {
@@ -81,11 +92,35 @@ server {
 server {
     listen 443 ssl;
     server_name test-www.\${DOMAIN};
-    location = /privacy { auth_basic off; try_files $uri/index.html =404; }
+    location = /privacy {
+        auth_basic off;
+        try_files $uri/index.html =404;
+    }
+    location = /terms {
+        auth_basic off;
+        try_files $uri/index.html =404;
+    }
+    location = /404.html {
+        auth_basic off;
+        try_files $uri =404;
+    }
+    location ~* ^/(screens|brand)/ {
+        auth_basic off;
+        try_files $uri =404;
+    }
+    location ~* \\.(?:css|js|mjs|json|webp|png|jpe?g|gif|svg|ico|woff2?|ttf|xml|txt|webmanifest)$ {
+        auth_basic off;
+        try_files $uri =404;
+    }
+    location ^~ /_nuxt/ {
+        auth_basic off;
+        try_files $uri =404;
+    }
     location / {
         auth_basic "Kindergarten staging";
         auth_basic_user_file /etc/nginx/htpasswd/kindergarten-staging;
-        try_files $uri $uri/index.html =404;
+        rewrite ^/(.+)/$ /$1 permanent;
+        try_files $uri $uri/index.html $uri/ =404;
     }
 }
 `
@@ -101,6 +136,32 @@ function writeFixture(t, content) {
 
 function run(target) {
   return spawnSync(process.execPath, [SCRIPT, target], { encoding: 'utf8' })
+}
+
+const AUTH_OFF_LINE = '        auth_basic off;\n'
+const STATIC_ASSETS_HEADER =
+  '    location ~* \\.(?:css|js|mjs|json|webp|png|jpe?g|gif|svg|ico|woff2?|ttf|xml|txt|webmanifest)$ {'
+
+/** 去掉某个 location 里的 auth_basic off;，模拟豁免被误删。 */
+function withoutExemption(template, header) {
+  const target = `${header}\n${AUTH_OFF_LINE}`
+  assert.ok(template.includes(target), `fixture 缺少豁免：${header}`)
+  return template.replace(target, `${header}\n`)
+}
+
+/** 整个 location 块连豁免一起删掉，模拟资源回落到带门禁的 location /。 */
+function withoutLocationBlock(template, header) {
+  const start = template.indexOf(header)
+  assert.notEqual(start, -1, `fixture 缺少 location：${header}`)
+  const end = template.indexOf('\n    }', start)
+  assert.notEqual(end, -1, `fixture location 未闭合：${header}`)
+  return template.slice(0, start) + template.slice(end + '\n    }\n'.length)
+}
+
+function removeLastOccurrence(template, text) {
+  const index = template.lastIndexOf(text)
+  assert.notEqual(index, -1, `fixture 缺少文本：${text}`)
+  return template.slice(0, index) + template.slice(index + text.length)
 }
 
 test('real template passes', () => {
@@ -204,6 +265,128 @@ test('port 80 block with auth_basic fails', (t) => {
 
   assert.notEqual(result.status, 0)
   assert.match(result.stderr, /80/)
+})
+
+test('test-admin /api/v1/ without auth_basic off fails', (t) => {
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), '    location /api/v1/ {'))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-admin/)
+  assert.match(result.stderr, /auth_basic off/)
+})
+
+test('test-admin /health without auth_basic off fails', (t) => {
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), '    location = /health {'))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-admin/)
+  assert.match(result.stderr, /auth_basic off/)
+})
+
+test('test-admin /ready without auth_basic off fails', (t) => {
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), '    location = /ready {'))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-admin/)
+  assert.match(result.stderr, /auth_basic off/)
+})
+
+test('test-www /privacy without auth_basic off fails', (t) => {
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), '    location = /privacy {'))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /auth_basic off/)
+})
+
+test('test-www /terms without auth_basic off fails', (t) => {
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), '    location = /terms {'))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /auth_basic off/)
+})
+
+test('test-www /404.html without auth_basic off fails', (t) => {
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), '    location = /404.html {'))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /auth_basic off/)
+})
+
+test('test-www static asset location without auth_basic off fails', (t) => {
+  const fixture = writeFixture(t, withoutExemption(validTemplate(), STATIC_ASSETS_HEADER))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /静态资源/)
+})
+
+test('test-www without a static asset location fails', (t) => {
+  const fixture = writeFixture(t, withoutLocationBlock(validTemplate(), STATIC_ASSETS_HEADER))
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /静态扩展名|静态资源/)
+})
+
+test('test-www location / without clean URL rewrite fails', (t) => {
+  const fixture = writeFixture(
+    t,
+    validTemplate().replace('        rewrite ^/(.+)/$ /$1 permanent;\n', ''),
+  )
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /rewrite/)
+})
+
+test('test-www location / without directory try_files fails', (t) => {
+  const fixture = writeFixture(
+    t,
+    validTemplate().replace('        try_files $uri $uri/index.html $uri/ =404;\n', ''),
+  )
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /try_files/)
+})
+
+test('test-www location / without auth_basic_user_file fails', (t) => {
+  const fixture = writeFixture(
+    t,
+    removeLastOccurrence(
+      validTemplate(),
+      '        auth_basic_user_file /etc/nginx/htpasswd/kindergarten-staging;\n',
+    ),
+  )
+
+  const result = run(fixture)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /test-www/)
+  assert.match(result.stderr, /auth_basic_user_file/)
 })
 
 test('missing template fails without a stack trace', (t) => {
