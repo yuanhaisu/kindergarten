@@ -49,20 +49,6 @@
               <p class="child-sub">小一班 · 5 岁 2 个月</p>
             </div>
           </div>
-          <button
-            class="switch-child"
-            id="switch-child"
-            type="button"
-            aria-haspopup="dialog"
-            aria-controls="child-sheet"
-            aria-expanded="false"
-            data-od-id="switch-child"
-          >
-            切换孩子
-            <svg class="icon icon--chevron" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m7 9.5 5 5 5-5"></path>
-            </svg>
-          </button>
         </div>
         <p class="child-note">
           今天 <span class="hl hl--sage">已入园</span>，07:52 到园，<br />
@@ -245,39 +231,6 @@
         </span>
       </a>
     </nav>
-
-    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-
-    <div class="sheet-layer" id="child-sheet" inert aria-hidden="true" data-od-id="child-sheet">
-      <div class="sheet-scrim" data-close-sheet></div>
-      <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="child-sheet-title">
-        <div class="sheet-handle" aria-hidden="true"></div>
-        <div class="sheet-heading">
-          <h2 class="sheet-title" id="child-sheet-title">选择孩子</h2>
-          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18"></path>
-            </svg>
-          </button>
-        </div>
-        <button
-          class="child-option is-selected"
-          type="button"
-          aria-pressed="true"
-          data-child-name="乐乐"
-          data-od-id="child-option-lele"
-        >
-          <span class="avatar avatar--sheet" aria-hidden="true">乐</span>
-          <span class="child-option-copy">
-            <span class="child-option-name">乐乐</span>
-            <span class="child-option-meta">小一班 · 5 岁 2 个月</span>
-          </span>
-          <svg class="icon child-option-check" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m5 12 4.5 4.5L19 7"></path>
-          </svg>
-        </button>
-      </section>
-    </div>
   </div>
 
   <script src="app.js" defer></script>
