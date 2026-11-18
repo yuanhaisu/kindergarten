@@ -1,22 +1,23 @@
 (function () {
   'use strict';
 
-  var INITIAL_CODE = 'A7K2-9F3D';
-  var endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
-  var REFRESH_SECONDS = Math.max(1, Math.round((endOfDay.getTime() - Date.now()) / 1000));
   var QR_SIZE = 29;
   var QR_QUIET = 4;
   var QR_CELL = 8;
   var QR_OFFSET = QR_QUIET * QR_CELL;
-  var CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  /* 静态评审要稳定的图案；点「立即刷新」才换种子。 */
+  var DEFAULT_SEED = 'pickup-2026-11-12';
 
-  var countdownEl = document.getElementById('countdown');
-  var codeEl = document.getElementById('verify-code');
+  var params = new URLSearchParams(window.location.search);
+  var requested = (params.get('state') || '').toLowerCase();
+
+  var passBody = document.getElementById('pass-body');
+  var panels = document.querySelectorAll('[data-panel]');
   var qrPathEl = document.getElementById('qr-modules');
   var refreshButton = document.getElementById('refresh-button');
   var backButton = document.getElementById('back-button');
   var refreshStatus = document.getElementById('refresh-status');
+  var retryButtons = [document.getElementById('retry-expired'), document.getElementById('retry-offline')];
 
   function hashString(text) {
     var hash = 2166136261;
@@ -124,81 +125,47 @@
     return commands.join('');
   }
 
-  function newVerificationCode(previous) {
-    var next = previous;
-    var attempt = 0;
-    while (next === previous && attempt < 12) {
-      var raw = '';
-      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
-        var values = new Uint32Array(8);
-        window.crypto.getRandomValues(values);
-        for (var index = 0; index < values.length; index += 1) {
-          raw += CODE_ALPHABET[values[index] % CODE_ALPHABET.length];
-        }
-      } else {
-        for (var fallback = 0; fallback < 8; fallback += 1) {
-          raw += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-        }
-      }
-      next = raw.slice(0, 4) + '-' + raw.slice(4, 8);
-      attempt += 1;
-    }
-    return next;
-  }
-
-  function paintCode(code) {
-    if (codeEl) {
-      codeEl.textContent = code;
-    }
+  function paintQr(seed) {
     if (qrPathEl) {
-      qrPathEl.setAttribute('d', buildQrPath(code));
+      qrPathEl.setAttribute('d', buildQrPath(seed));
     }
   }
 
-  var currentCode = INITIAL_CODE;
-  var deadline = Date.now() + REFRESH_SECONDS * 1000;
-  var timer = null;
-  var lastShown = null;
-
-  function renderCountdown() {
-    if (!countdownEl) {
-      return;
-    }
-    var remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-    var next = String(remaining);
-    if (next !== lastShown) {
-      countdownEl.textContent = next;
-      lastShown = next;
+  var activePanel = null;
+  for (var index = 0; index < panels.length; index += 1) {
+    if (panels[index].getAttribute('data-panel') === requested) {
+      activePanel = panels[index];
     }
   }
 
-  function renewCode(announce) {
-    currentCode = newVerificationCode(currentCode);
-    paintCode(currentCode);
-    deadline = Date.now() + REFRESH_SECONDS * 1000;
-    lastShown = null;
-    renderCountdown();
-    if (announce && refreshStatus) {
-      refreshStatus.textContent = '接送码已刷新';
-    }
+  if (activePanel) {
+    panels.forEach(function (panel) {
+      panel.hidden = panel !== activePanel;
+    });
+    if (passBody) passBody.hidden = true;
   }
 
-  function tick() {
-    if (Date.now() >= deadline) {
-      renewCode(false);
-      return;
-    }
-    renderCountdown();
+  function restorePass() {
+    if (passBody) passBody.hidden = false;
+    panels.forEach(function (panel) {
+      panel.hidden = true;
+    });
+    paintQr('pickup-' + Date.now());
+    if (refreshStatus) refreshStatus.textContent = '已重新获取接送码';
   }
 
-  paintCode(currentCode);
-  renderCountdown();
+  paintQr(DEFAULT_SEED);
 
   if (refreshButton) {
     refreshButton.addEventListener('click', function () {
-      renewCode(true);
+      paintQr('pickup-refresh-' + Date.now());
+      if (refreshStatus) refreshStatus.textContent = '接送码已刷新';
     });
   }
+
+  retryButtons.forEach(function (button) {
+    if (button) button.addEventListener('click', restorePass);
+  });
 
   if (backButton) {
     backButton.addEventListener('click', function () {
@@ -207,15 +174,4 @@
       }
     });
   }
-
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) {
-      tick();
-    }
-  });
-
-  timer = window.setInterval(tick, 500);
-  window.addEventListener('pagehide', function () {
-    window.clearInterval(timer);
-  });
 }());

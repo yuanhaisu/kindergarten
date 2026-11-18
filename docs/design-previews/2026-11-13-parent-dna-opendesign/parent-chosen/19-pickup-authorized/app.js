@@ -34,8 +34,8 @@
     rejected: 'tag tag--rejected'
   };
   var actionsByStatus = {
-    approved: ['edit', 'pause'],
-    pending: ['withdraw'],
+    approved: ['edit'],
+    pending: [],
     rejected: ['resubmit']
   };
 
@@ -130,20 +130,15 @@
   }
 
   function askConfirm(action) {
-    if (!currentRow) return;
+    if (!currentRow || action !== 'delete') return;
 
     pendingAction = action;
     var name = currentRow.getAttribute('data-name') || '该授权人';
-    var isDelete = action === 'delete';
 
-    confirmTitle.textContent = isDelete ? '删除' + name + '？' : '暂停' + name + '的接送授权？';
-    confirmDesc.textContent = isDelete
-      ? '删除后' + name + '将从名单移除；若今日已指定该接走人，接送码会失效。'
-      : '暂停后' + name + '暂时不能接走孩子，可随时恢复。';
-    confirmOk.textContent = isDelete ? '确认删除' : '确认暂停';
-    confirmOk.className = isDelete
-      ? 'sheet-action sheet-action--danger'
-      : 'sheet-action sheet-action--primary';
+    confirmTitle.textContent = '删除' + name + '？';
+    confirmDesc.textContent = '删除后' + name + '将从名单移除；若今日已指定该接走人，接送码会失效。';
+    confirmOk.textContent = '确认删除';
+    confirmOk.className = 'sheet-action sheet-action--danger';
 
     openLayer(confirmLayer);
     window.clearTimeout(focusTimer);
@@ -183,41 +178,32 @@
 
     var action = button.getAttribute('data-detail-action');
     if (action === 'edit') {
-      window.location.href = '../20-pickup-authorized-create/index.html?mode=edit';
+      var authId = currentRow ? currentRow.getAttribute('data-auth-id') : '';
+      window.location.href = '../20-pickup-authorized-create/index.html?mode=edit&id=' + encodeURIComponent(authId);
       return;
     }
 
-    if (action === 'delete' || action === 'pause') {
+    if (action === 'delete') {
       askConfirm(action);
       return;
     }
 
     var name = currentRow ? currentRow.getAttribute('data-name') : '';
     closeDetail();
-    showToast(action === 'withdraw'
-      ? '已撤回' + name + '的申请'
-      : '已重新提交' + name + '的授权申请');
+    showToast('已重新提交' + name + '的授权申请');
   });
 
   confirmOk.addEventListener('click', function () {
     if (!currentRow) return;
 
     var name = currentRow.getAttribute('data-name') || '该授权人';
-    var action = pendingAction;
+    var row = currentRow;
 
     closeConfirm();
-
-    if (action === 'delete') {
-      var row = currentRow;
-      currentRow = null;
-      closeDetail();
-      row.hidden = true;
-      showToast(name + '已从名单移除');
-      return;
-    }
-
+    currentRow = null;
     closeDetail();
-    showToast('已暂停' + name + '的接送授权');
+    row.hidden = true;
+    showToast(name + '已从名单移除');
   });
 
   document.addEventListener('keydown', function (event) {
@@ -235,7 +221,15 @@
     }
   });
 
-  if (state === 'detail' && rows.length) {
-    openDetail(rows[0]);
+  var detailStateIds = {
+    detail: '1',
+    'detail-pending': '3',
+    'detail-rejected': '4'
+  };
+  var detailId = detailStateIds[state];
+  if (detailId) {
+    rows.forEach(function (row) {
+      if (row.getAttribute('data-auth-id') === detailId) openDetail(row);
+    });
   }
 })();

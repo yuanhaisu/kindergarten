@@ -84,7 +84,7 @@
                 <path d="m6.5 9.5 5.5 5.5 5.5-5.5"></path>
               </svg>
             </button>
-            <p class="field-hint" id="relation-hint">可选：爷爷、奶奶、外公、外婆、其他</p>
+            <p class="field-hint" id="relation-hint">可选：爸爸、妈妈、爷爷、奶奶、外公、外婆、叔叔、阿姨、其他</p>
             <input type="hidden" name="relation" id="relation-field" value="外婆">
           </div>
 
@@ -104,6 +104,26 @@
               aria-describedby="phone-error"
             >
             <p class="field-error" id="phone-error" hidden>请填写正确的手机号</p>
+          </div>
+
+          <div class="field" data-od-id="field-sms-code">
+            <label class="field-label" for="sms-code-input">短信验证码</label>
+            <div class="date-row">
+              <input
+                class="field-input date-input"
+                id="sms-code-input"
+                name="sms_code"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+                placeholder="6 位验证码"
+                aria-describedby="sms-code-hint sms-code-error"
+              >
+              <button class="btn-secondary" id="send-code" type="button">获取验证码</button>
+            </div>
+            <p class="field-hint" id="sms-code-hint">发送到上面的手机号，5 分钟内有效</p>
+            <p class="field-error" id="sms-code-error" hidden>请填写短信验证码</p>
           </div>
 
           <div class="field" data-od-id="field-id-card">
@@ -196,7 +216,7 @@
             <path d="M12 9v4.4" stroke="var(--surface-soft)" stroke-width="1.8" stroke-linecap="round"></path>
             <circle cx="12" cy="16.6" r="1.05" fill="var(--surface-soft)"></circle>
           </svg>
-          <p class="notice-text">授权人接走孩子时需出示接送码</p>
+          <p class="notice-text">到园接孩子时由家长出示接送码，老师扫码核验</p>
         </div>
 
         <p class="review-note" data-od-id="review-note">提交后需园所审核，<span class="hl">审核通过</span>后才能接走孩子。</p>
@@ -223,6 +243,14 @@
           </button>
         </div>
         <div class="sheet-options" id="relation-options">
+          <button class="sheet-option" type="button" data-value="爸爸" aria-pressed="false" data-od-id="relation-father">
+            <span>爸爸</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="妈妈" aria-pressed="false" data-od-id="relation-mother">
+            <span>妈妈</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
           <button class="sheet-option" type="button" data-value="爷爷" aria-pressed="false" data-od-id="relation-grandpa">
             <span>爷爷</span>
             <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
@@ -237,6 +265,14 @@
           </button>
           <button class="sheet-option" type="button" data-value="外婆" aria-pressed="true" data-od-id="relation-maternal-grandma">
             <span>外婆</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="叔叔" aria-pressed="false" data-od-id="relation-uncle">
+            <span>叔叔</span>
+            <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
+          </button>
+          <button class="sheet-option" type="button" data-value="阿姨" aria-pressed="false" data-od-id="relation-aunt">
+            <span>阿姨</span>
             <svg class="sheet-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.4 4.4L19 7.2"></path></svg>
           </button>
           <button class="sheet-option" type="button" data-value="其他" aria-pressed="false" data-od-id="relation-other">
