@@ -84,7 +84,9 @@ const SHARED_DIR = path.join(root, "_shared");
 const REQUIRED_FILES = ["index.html", "styles.css", "app.js", "preview.png"];
 const PAGE_DIR_RE = /^\d{2}-/;
 const PROP_KINDS = ["checked", "bottomSheet"];
-const MEASURES = ["count", "number", "text"];
+const MEASURES = ["count", "number", "text", "clock"];
+const RELATIONS = ["eq", "gte", "lte", "gt", "lt"];
+const RELATION_SYMBOLS = { eq: "=", gte: "≥", lte: "≤", gt: ">", lt: "<" };
 
 const propKindOf = (prop) => PROP_KINDS.find((kind) => prop[kind] !== undefined);
 
@@ -248,6 +250,9 @@ async function loadChosenEntries() {
         }
         validateEndpoint(item.a, file, `${item.label}.a`);
         validateEndpoint(item.b, file, `${item.label}.b`);
+        if (item.relation !== undefined && !RELATIONS.includes(item.relation)) {
+          throw new Error(`${file}: ${item.label}.relation 必须是 ${RELATIONS.join(" / ")}`);
+        }
       }
       crossPage.push(...entry.crossPage);
     }
@@ -412,6 +417,11 @@ async function runChosen() {
       const digits = (text.match(/\d+/) || [])[0];
       return digits === undefined ? { error: `${endpoint.slug} ${endpoint.selector} 无数字：${text}` } : { value: Number(digits) };
     }
+    if (endpoint.measure === "clock") {
+      const clock = text.match(/(\d{1,2}):(\d{2})/);
+      if (!clock) return { error: `${endpoint.slug} ${endpoint.selector} 无时间：${text}` };
+      return { value: Number(clock[1]) * 60 + Number(clock[2]) };
+    }
     return { value: text };
   };
 
@@ -419,13 +429,25 @@ async function runChosen() {
   for (const item of crossPage) {
     const a = measure(item.a);
     const b = measure(item.b);
+    const relation = item.relation || "eq";
+    const passes =
+      relation === "eq"
+        ? a.value === b.value
+        : relation === "gte"
+          ? a.value >= b.value
+          : relation === "lte"
+            ? a.value <= b.value
+            : relation === "gt"
+              ? a.value > b.value
+              : a.value < b.value;
     const reason = a.error
       ? `${item.label}：${a.error}`
       : b.error
         ? `${item.label}：${b.error}`
-        : a.value === b.value
+        : passes
           ? null
-          : `${item.label}：${item.a.slug} ${item.a.selector} = ${a.value}，${item.b.slug} ${item.b.selector} = ${b.value}`;
+          : `${item.label}：期望 ${item.a.slug} ${item.a.selector} ${RELATION_SYMBOLS[relation]} ` +
+            `${item.b.slug} ${item.b.selector}，实际 ${a.value} 与 ${b.value}`;
     if (reason) crossPageFailures.push({ slugs: [item.a.slug, item.b.slug], reason });
   }
 

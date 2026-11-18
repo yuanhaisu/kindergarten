@@ -14,10 +14,13 @@
   var descriptionError = document.getElementById('description-error');
   var uploadRow = document.getElementById('upload-row');
   var uploadInput = document.getElementById('photo-input');
+  var successPanel = document.getElementById('feedback-success');
+  var submitButton = document.getElementById('submit-feedback');
   var toast = document.getElementById('toast');
   var toastText = toast.querySelector('.toast__text');
 
   var photos = [];
+  var submitted = false;
   var toastTimer = null;
   var toastExitTimer = null;
 
@@ -160,8 +163,19 @@
     renderUploads();
   });
 
+  function enterSubmittedState() {
+    submitted = true;
+    form.hidden = true;
+    if (successPanel) successPanel.hidden = false;
+    if (submitButton) submitButton.disabled = true;
+  }
+
   form.addEventListener('submit', function (event) {
     event.preventDefault();
+
+    if (submitted) {
+      return;
+    }
 
     if (!description.value.trim()) {
       showDescriptionError();
@@ -170,8 +184,17 @@
     }
 
     clearDescriptionError();
-    setToast('反馈已发送给园所管理员');
+    enterSubmittedState();
+    setToast('反馈已提交');
   });
+
+  // ?state=sent 直接展示成功态；?state=filled 预填事由，便于验证重复提交被拦住。
+  var requestedState = new URLSearchParams(window.location.search).get('state');
+  if (requestedState === 'sent') {
+    enterSubmittedState();
+  } else if (requestedState === 'filled') {
+    description.value = '午睡起床后孩子经常来不及穿外套，希望老师能多留十分钟。';
+  }
 
   window.addEventListener('beforeunload', function () {
     photos.forEach(function (photo) {
