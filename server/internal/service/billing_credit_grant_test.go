@@ -57,6 +57,7 @@ func cleanupCreditGrant(t *testing.T, db *gorm.DB) {
 }
 
 func TestBillingCreditGrant_ZeroPaidConfirmRequiresReason(t *testing.T) {
+	// TC-NEW-ORD-0015：零收款确认缺理由被拒。
 	db := openPlatformTestDB(t)
 	cleanupCreditGrant(t, db)
 	t.Cleanup(func() { cleanupCreditGrant(t, db) })
@@ -84,6 +85,7 @@ func TestBillingCreditGrant_ZeroPaidConfirmRequiresReason(t *testing.T) {
 }
 
 func TestBillingCreditGrant_ConfirmRecordsCreditAndAudit(t *testing.T) {
+	// TC-NEW-ORD-0017：信用开通计入未收余额并留痕。
 	db := openPlatformTestDB(t)
 	cleanupCreditGrant(t, db)
 	t.Cleanup(func() { cleanupCreditGrant(t, db) })
