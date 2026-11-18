@@ -192,6 +192,8 @@ jobs:
         run: cd shared-design-tokens && npm ci && npm run build
       - name: Build ${{ matrix.app }}
         run: cd ${{ matrix.app }} && npm ci && npm run build:mp-weixin
+      - name: Test ${{ matrix.app }}
+        run: cd ${{ matrix.app }} && npm test
 
   design-sync:
     name: 设计稿同步检查

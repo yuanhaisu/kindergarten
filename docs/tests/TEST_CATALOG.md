@@ -1379,6 +1379,12 @@
 | TC-NEW-ENT-0011 | 新开通园所获得试用 | P0 | Unit / Contract | ✅ (`TestPlatformService_LoginAndOnboard`) |
 | TC-NEW-ENT-0012 | 试用结束后数据保留 | P0 | Unit / Contract | ✅ (`TestEntitlement_TrialExpiryKeepsData`) |
 | TC-NEW-ENT-0013 | 超限后既有业务不受影响 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_OverLimitDoesNotBlockExistingBusiness`) |
+| TC-NEW-ENT-0014 | 到期提示：空值与非法日期不提示 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「空值与非法日期不显示」; `parent/tests/expiry-hint.test.mjs` 同名) |
+| TC-NEW-ENT-0015 | 到期提示：超 30 天不提示 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「超过 30 天不显示」; `parent/tests/expiry-hint.test.mjs` 同名) |
+| TC-NEW-ENT-0016 | 到期提示：恰好 30 天提示 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「恰好 30 天显示提示」; `parent/tests/expiry-hint.test.mjs` 同名) |
+| TC-NEW-ENT-0017 | 到期提示：剩余不足一天仍显示在期 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「剩余不足一天仍显示在期提示」; `parent/tests/expiry-hint.test.mjs` 同名) |
+| TC-NEW-ENT-0018 | 到期提示：过期 1 分钟显示已到期 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「已过期 1 分钟必须显示已到期」; `parent/tests/expiry-hint.test.mjs` 同名) |
+| TC-NEW-ENT-0019 | 到期提示：过期 1 天显示已到期 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「已过期 1 天显示已到期」; `parent/tests/expiry-hint.test.mjs` 同名) |
 
 ### 存量 trial 延长 (TNT)
 

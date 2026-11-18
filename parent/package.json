@@ -4,6 +4,7 @@
   "private": true,
   "description": "幼儿园家长端微信小程序",
   "scripts": {
+    "test": "node --test \"tests/**/*.test.mjs\"",
     "predev:mp-weixin": "node ../scripts/sync-ui.js && cd ../shared-design-tokens && npm run build",
     "prebuild:mp-weixin": "node ../scripts/sync-ui.js && cd ../shared-design-tokens && npm run build",
     "prebuild:mp-weixin:test": "node ../scripts/sync-ui.js && cd ../shared-design-tokens && npm run build",
