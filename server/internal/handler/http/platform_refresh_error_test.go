@@ -25,14 +25,14 @@ func newPlatformSessionOnlyService(t *testing.T, rdbPresent bool) (*service.Plat
 	t.Helper()
 	if !rdbPresent {
 		return service.NewPlatformService(
-			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 			[]byte("test-platform-secret"), 15*time.Minute, 7*24*time.Hour,
 		), nil
 	}
 	f := fakeredis.New(t)
 	rdb := f.Client(t)
 	return service.NewPlatformService(
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		auth.NewPlatformEpochStore(rdb), auth.NewTokenRevoker(rdb), rdb,
 		[]byte("test-platform-secret"), 15*time.Minute, 7*24*time.Hour,
 	), f

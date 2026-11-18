@@ -30,6 +30,9 @@ type PlatformService struct {
 	userRepo      *repository.UserRepo
 	userRoleRepo  *repository.UserRoleRepo
 	adminRoleRepo *repository.AdminRepo
+	paymentRepo   *repository.PaymentRepo
+	commRepo      *repository.CommissionRepo
+	distRepo      *repository.DistributorRepo
 	logRepo       PlatformAuditStore
 	dietSeed      *DietSeedService
 	kgStatus      *KindergartenStatusService
@@ -50,6 +53,9 @@ func NewPlatformService(
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
 	adminRoleRepo *repository.AdminRepo,
+	paymentRepo *repository.PaymentRepo,
+	commRepo *repository.CommissionRepo,
+	distRepo *repository.DistributorRepo,
 	logRepo PlatformAuditStore,
 	dietSeed *DietSeedService,
 	kgStatus *KindergartenStatusService,
@@ -63,6 +69,7 @@ func NewPlatformService(
 	return &PlatformService{
 		db: db, adminRepo: adminRepo, kgRepo: kgRepo, entRepo: entRepo, orderRepo: orderRepo,
 		userRepo: userRepo, userRoleRepo: userRoleRepo, adminRoleRepo: adminRoleRepo,
+		paymentRepo: paymentRepo, commRepo: commRepo, distRepo: distRepo,
 		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, epochs: epochs,
 		revoker: revoker, rdb: rdb, secret: secret, atTTL: atTTL, rtTTL: rtTTL,
 	}
@@ -119,6 +126,24 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		return nil, 0, err
 	}
 	now := time.Now()
+	// soonest_expire_at 与看板的「30 天内到期」共用 ListActiveExpiring，
+	// 一次取回本页园所的在期授权，避免逐园查询与两套口径（design D7）。
+	kgIDs := make([]uint64, 0, len(kgs))
+	for _, kg := range kgs {
+		kgIDs = append(kgIDs, kg.ID)
+	}
+	soonest := make(map[uint64]time.Time, len(kgIDs))
+	if len(kgIDs) > 0 {
+		if ents, err := s.entRepo.ListActiveExpiring(ctx, repository.ActiveExpiryFilter{
+			KindergartenIDs: kgIDs, Now: now,
+		}); err == nil {
+			for _, e := range ents {
+				if t, ok := soonest[e.KindergartenID]; !ok || e.ExpiresAt.Before(t) {
+					soonest[e.KindergartenID] = e.ExpiresAt
+				}
+			}
+		}
+	}
 	out := make([]PlatformKindergartenRow, 0, len(kgs))
 	for _, kg := range kgs {
 		row := PlatformKindergartenRow{
@@ -131,13 +156,9 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		if n, err := s.kgRepo.CountStudents(ctx, kg.ID); err == nil {
 			row.StudentCount = n
 		}
-		if ents, err := s.entRepo.ListActiveByKindergarten(ctx, kg.ID, now); err == nil {
-			for i, e := range ents {
-				if i == 0 || e.ExpiresAt.Before(row.soonest()) {
-					t := e.ExpiresAt
-					row.SoonestExpireAt = &t
-				}
-			}
+		if t, ok := soonest[kg.ID]; ok {
+			t := t
+			row.SoonestExpireAt = &t
 		}
 		if o, err := s.orderRepo.FindLatestActiveByKindergarten(ctx, kg.ID); err == nil && o != nil {
 			row.ActivePlanName = snapshotPlanName(o.PlanSnapshot)
@@ -150,13 +171,6 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		out = append(out, row)
 	}
 	return out, total, nil
-}
-
-func (r *PlatformKindergartenRow) soonest() time.Time {
-	if r.SoonestExpireAt == nil {
-		return time.Time{}
-	}
-	return *r.SoonestExpireAt
 }
 
 type PlatformEntitlementRow struct {
