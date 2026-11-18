@@ -187,15 +187,14 @@ func findSettleableCommission(rows []PlatformSettleableCommission, distributorID
 }
 
 // TC-NEW-PLT-0025：佣金到账满 30 天且期间无退款，即使平台方从未打开过佣金台账页，
-// 看板也必须先 PromoteEligible 再聚合，把它计入待结算佣金。
-func TestPlatformService_Dashboard_PromotesEligibleCommissions(t *testing.T) {
+// 看板也必须把它计入待结算佣金——口径是读时派生查询，不在读路径写台账状态。
+func TestPlatformService_Dashboard_DerivesSettleableCommissions(t *testing.T) {
 	db := openPlatformTestDB(t)
 	svc := newPlatformTestService(t, db)
 	ctx := context.Background()
 	cleanupDashboardTestData(t, db)
 	t.Cleanup(func() { cleanupDashboardTestData(t, db) })
 
-	// 先取基线（顺带把既有满 30 天的佣金推进掉），保证增量只来自本用例。
 	before, err := svc.Dashboard(ctx)
 	require.NoError(t, err)
 
@@ -205,13 +204,17 @@ func TestPlatformService_Dashboard_PromotesEligibleCommissions(t *testing.T) {
 	order := createDashboardOrder(t, db, kg.ID, "K", 100000, domain.OrderStatusPaid)
 	payment := createDashboardPayment(t, db, order, 100000, now.Add(-31*24*time.Hour))
 	commission := createDashboardCommission(t, db, order, payment, dist, 10000, now.Add(-31*24*time.Hour))
+	// 未满 30 天的 pending 佣金不得提前计入。
+	pendingOrder := createDashboardOrder(t, db, kg.ID, "K2", 50000, domain.OrderStatusPaid)
+	pendingPayment := createDashboardPayment(t, db, pendingOrder, 50000, now)
+	createDashboardCommission(t, db, pendingOrder, pendingPayment, dist, 5000, now.Add(24*time.Hour))
 
 	// 这里刻意不调用 DistributorService.ListCommissions：台账页未被打开过。
 	after, err := svc.Dashboard(ctx)
 	require.NoError(t, err)
 
 	assert.EqualValues(t, before.CommissionSettleableCents+10000, after.CommissionSettleableCents,
-		"满 30 天的佣金在聚合前被推进为可结算")
+		"满 30 天的佣金按派生条件计入待结算")
 
 	row := findSettleableCommission(after.SettleableCommissions, dist.ID)
 	require.NotNil(t, row, "可结算佣金待办按分销商聚合")
@@ -222,5 +225,6 @@ func TestPlatformService_Dashboard_PromotesEligibleCommissions(t *testing.T) {
 	stored, err := repository.NewCommissionRepo(db).FindByID(ctx, commission.ID)
 	require.NoError(t, err)
 	require.NotNil(t, stored)
-	assert.Equal(t, domain.CommissionStatusSettleable, stored.Status)
+	assert.Equal(t, domain.CommissionStatusPending, stored.Status,
+		"看板是读路径，不得把台账状态写回为 settleable")
 }

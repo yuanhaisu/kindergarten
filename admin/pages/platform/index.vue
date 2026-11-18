@@ -23,42 +23,42 @@
             :value="data.kindergarten_total"
             :icon="OfficeBuilding"
             icon-bg="bg-blue-50"
-            icon-color="#3B82F6"
+            icon-color="var(--color-brand-primary)"
           />
           <StatCard
             title="在营园所"
             :value="data.kindergarten_active"
             :icon="CircleCheck"
             icon-bg="bg-emerald-50"
-            icon-color="#10B981"
+            icon-color="var(--color-semantic-success)"
           />
           <StatCard
             title="30 天内到期"
             :value="data.kindergarten_expiring_30d"
             :icon="AlarmClock"
             icon-bg="bg-amber-50"
-            icon-color="#F59E0B"
+            icon-color="var(--color-semantic-warning)"
           />
           <StatCard
             title="本月实收"
             :value="formatMoney(data.received_this_month_cents)"
             :icon="Wallet"
             icon-bg="bg-violet-50"
-            icon-color="#8B5CF6"
+            icon-color="var(--color-accent-purple)"
           />
           <StatCard
             title="未收余额"
             :value="formatMoney(data.outstanding_cents)"
             :icon="Money"
             icon-bg="bg-rose-50"
-            icon-color="#F43F5E"
+            icon-color="var(--color-semantic-danger)"
           />
           <StatCard
             title="待结算佣金"
             :value="formatMoney(data.commission_settleable_cents)"
             :icon="Coin"
             icon-bg="bg-cyan-50"
-            icon-color="#06B6D4"
+            icon-color="var(--color-semantic-info)"
           />
         </div>
 

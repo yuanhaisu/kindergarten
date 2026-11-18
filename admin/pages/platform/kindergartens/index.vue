@@ -141,6 +141,7 @@ import {
   validateAdminPassword,
   validatePhone,
 } from '~/utils/platformKindergarten'
+import { formatMoney } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
 
@@ -277,9 +278,6 @@ async function toggleStatus(row: PlatformKindergartenRow) {
   }
 }
 
-function formatMoney(cents: number) {
-  return `¥${(cents / 100).toFixed(2)}`
-}
 function formatDate(value?: string | null) {
   if (!value) return '—'
   return String(value).slice(0, 10)

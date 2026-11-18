@@ -46,7 +46,7 @@
 | admin 页面 | **会改** | `pages/platform/index.vue` **改为看板**（删除重定向）、新增 `pages/platform/accounts/index.vue`、`pages/platform/logs/index.vue`；`pages/platform/kindergartens/index.vue`、`orders/index.vue`、`plans/index.vue`、`commissions/index.vue`、`login.vue`；`layouts/platform.vue`、`api/platform.ts`、`composables/usePlatformHttp.ts`、`utils/authCookie.ts`、`utils/format.ts`（补 `formatMoney`） |
 | teacher / parent | **不改** | 本次不触碰小程序；续期与只读语义都不涉及两端 |
 | design token | **不改** | 复用现有 token 与 Tailwind 类名，无新增颜色/间距/圆角 |
-| migrations | **会改** | 新增 `00008_platform_console_foundation.sql`（见 Migration Plan） |
+| migrations | **会改** | 新增 `00008_platform_console_audit.sql`、`00009_orders_pay_due_at.sql`、`00010_platform_admin_role.sql`、`00011_orders_credit_grant.sql`（见 Migration Plan） |
 | config | **会改** | 新增 `[server] trusted_proxies`（逗号分隔，默认 `127.0.0.1,::1`）；限流阈值仍为路由层常量 |
 
 ## Decisions
@@ -99,7 +99,7 @@ paid > 0                      -> partial
 新增 5 个端点：账号列表、新建、停用/启用、重置密码、修改自己的密码。守卫与规则：
 
 - 「可用账号」定义：`status=1 AND deleted_at IS NULL`；禁用账号不计入。不能停用当前登录账号（用 `claims.UserID` 比对）；停用前统计可用账号，只剩一个时拒绝。
-- 新建与重置密码的口令由操作者提供，至少 8 位且同时包含字母与数字；响应不回显口令。口令策略在服务端校验，前端只做提示。
+- 新建与重置密码的口令由操作者提供，复用既有 `validatePassword`：至少 8 位，且同时包含大写字母、小写字母与数字；响应不回显口令。口令策略在服务端校验，前端只做提示。
 - 重置他人密码必须同时使该账号的访问与续期凭证失效（写 epoch，见 D5）。
 - 账号的新建、停用/启用、重置密码必须写审计；审计与账号写入同事务，epoch 写入失败则操作失败。
 - 账号列表不返回 `password_hash`；`role` 列内部保留，不在响应中暴露、不参与鉴权。`status` 在契约中暴露为 `enabled` / `disabled`（来源：`PlatformAdmin.Status` 的既有注释 `1 enabled / 0 disabled`）。
@@ -149,12 +149,12 @@ paid > 0                      -> partial
 | 30 天内到期 | 在营园所中，存在未删除且 `starts_at<=now<expires_at<=now+30d` 的授权 |
 | 本月实收 | `payments.received_at` 落在当前自然月的 `amount_cents` 合计（含负数退款） |
 | 未收余额 | 未取消订单的 `max(amount_due - paid, 0)` 合计；`paid` 只计未删除收款 |
-| 待结算佣金 | `commission_ledger.status='settleable'` 的 `net_amount_cents` 合计 |
+| 待结算佣金 | `commission_ledger` 中 `reversal_of IS NULL` 且满足派生条件（`status='settleable'`，或 `status='pending'` 且 `eligible_at<=now` 且净额>0）的 `amount_cents - reversed_amount_cents` 合计 |
 | 7 天内到期待办 | 在营园所中最早到期授权落在 7 天内的列表 |
-| 可结算佣金待办 | 按分销商聚合的 `settleable` 金额列表 |
+| 可结算佣金待办 | 按分销商聚合的上述派生条件金额列表 |
 
 - 「本月」按服务器本地时区（与现有 `time.Now()` 一致），不引入 UTC 换算。
-- 聚合前 MUST 先执行 `PromoteEligible(now)`；否则 30 天已到但未被佣金页触发的 `pending` 行会漏算。
+- 待结算佣金是**读时派生查询**：SQL 条件同时覆盖已推进为 `settleable` 的行与到账已满 30 天但仍为 `pending` 的行；**读路径不写台账状态**，不得在看板里调用 `PromoteEligible`。满 30 天但从未打开过佣金台账页的记录同样计入。
 - 「30 天内到期」与园所列表的 `soonest_expire_at` 抽同一查询函数，避免两套口径。
 
 **备选**：前端拼多个列表接口——被否。请求数多且口径会漂移。
@@ -199,29 +199,17 @@ paid > 0                      -> partial
 
 ## Migration Plan
 
-新增 `server/migrations/00008_platform_console_foundation.sql`（goose `-- +goose NO TRANSACTION`，MySQL DDL 不走事务）：
+实际拆成四个迁移文件，各自 `-- +goose NO TRANSACTION`（MySQL DDL 隐式提交，不包事务）：
+
+**1. `server/migrations/00008_platform_console_audit.sql`** — `platform_operation_logs` 增加 `kindergarten_id`（目标园所，账号/套餐操作为 0）与 `request_id`（链路关联），并建两个检索索引：
 
 ```sql
 -- +goose Up
-ALTER TABLE `orders`
-  ADD COLUMN `pay_due_at` datetime(3) NULL AFTER `expires_at`,
-  ADD COLUMN `credit_granted` tinyint(1) NOT NULL DEFAULT '0' AFTER `pay_due_at`,
-  ADD COLUMN `credit_reason` varchar(255) NOT NULL DEFAULT '' AFTER `credit_granted`;
-
-UPDATE `orders` SET `pay_due_at` = `starts_at` WHERE `pay_due_at` IS NULL;
-
-ALTER TABLE `orders`
-  MODIFY COLUMN `pay_due_at` datetime(3) NOT NULL,
-  ADD KEY `idx_orders_pay_due_at` (`pay_due_at`);
-
-ALTER TABLE `platform_admins`
-  ADD COLUMN `role` varchar(32) NOT NULL DEFAULT 'platform' AFTER `status`;
-
 ALTER TABLE `platform_operation_logs`
   ADD COLUMN `kindergarten_id` bigint unsigned NOT NULL DEFAULT '0' AFTER `target_id`,
   ADD COLUMN `request_id` varchar(64) NOT NULL DEFAULT '' AFTER `ip`,
-  ADD KEY `idx_platform_log_kg_time` (`kindergarten_id`, `created_at`),
-  ADD KEY `idx_platform_log_operator_time` (`operator`, `created_at`);
+  ADD KEY `idx_platform_log_kg_time` (`kindergarten_id`, `created_at`) USING BTREE,
+  ADD KEY `idx_platform_log_operator_time` (`operator`, `created_at`) USING BTREE;
 
 -- +goose Down
 ALTER TABLE `platform_operation_logs`
@@ -229,15 +217,50 @@ ALTER TABLE `platform_operation_logs`
   DROP KEY `idx_platform_log_kg_time`,
   DROP COLUMN `request_id`,
   DROP COLUMN `kindergarten_id`;
-ALTER TABLE `platform_admins` DROP COLUMN `role`;
+```
+
+**2. `server/migrations/00009_orders_pay_due_at.sql`** — `orders.pay_due_at` 先加为可空列，用 `starts_at` 回填后再置 `NOT NULL` 并建索引（AutoMigrate 只加列不回填）：
+
+```sql
+-- +goose Up
+ALTER TABLE `orders` ADD COLUMN `pay_due_at` datetime(3) NULL AFTER `expires_at`;
+UPDATE `orders` SET `pay_due_at` = `starts_at` WHERE `pay_due_at` IS NULL;
+ALTER TABLE `orders`
+  MODIFY COLUMN `pay_due_at` datetime(3) NOT NULL,
+  ADD KEY `idx_orders_pay_due_at` (`pay_due_at`) USING BTREE;
+
+-- +goose Down
 ALTER TABLE `orders`
   DROP KEY `idx_orders_pay_due_at`,
-  DROP COLUMN `credit_reason`,
-  DROP COLUMN `credit_granted`,
   DROP COLUMN `pay_due_at`;
 ```
 
-部署顺序：`make migrate` → `make seedbase`（如需）→ 启动后端 → `go run ./cmd/dbcheck orders`、`go run ./cmd/dbcheck platform_operation_logs` 核对索引与行数。**开发库与测试基座也必须先跑 `make migrate`**：AutoMigrate 只加列，不会回填 `pay_due_at`，否则老订单会被判成过期。回滚先回代码再执行 Down；`pay_due_at` 回滚会丢失付款期限，需在回滚前导出。
+**3. `server/migrations/00010_platform_admin_role.sql`** — `platform_admins.role` 预留列（当前全部 `platform`，不暴露契约、不参与鉴权）：
+
+```sql
+-- +goose Up
+ALTER TABLE `platform_admins`
+  ADD COLUMN `role` varchar(32) NOT NULL DEFAULT 'platform' AFTER `status`;
+
+-- +goose Down
+ALTER TABLE `platform_admins` DROP COLUMN `role`;
+```
+
+**4. `server/migrations/00011_orders_credit_grant.sql`** — 订单信用开通标记与理由（依赖 00009 已加的 `pay_due_at`）：
+
+```sql
+-- +goose Up
+ALTER TABLE `orders`
+  ADD COLUMN `credit_granted` tinyint(1) NOT NULL DEFAULT '0' AFTER `pay_due_at`,
+  ADD COLUMN `credit_reason` varchar(255) NOT NULL DEFAULT '' AFTER `credit_granted`;
+
+-- +goose Down
+ALTER TABLE `orders`
+  DROP COLUMN `credit_reason`,
+  DROP COLUMN `credit_granted`;
+```
+
+部署顺序：`make migrate` → `make seedbase`（如需）→ 启动后端 → `go run ./cmd/dbcheck orders`、`go run ./cmd/dbcheck platform_operation_logs` 核对索引与行数。**开发库与测试基座也必须先跑 `make migrate`**：AutoMigrate 只加列，不会回填 `pay_due_at`，否则老订单会被判成过期。回滚先回代码再按 00011 → 00010 → 00009 → 00008 逆序执行 Down；`pay_due_at` 回滚会丢失付款期限，需在回滚前导出。
 
 配置新增（`configs/app.ini.example`，不提交真实值）：
 
@@ -253,7 +276,7 @@ trusted_proxies = 127.0.0.1,::1
 - [访问凭证从 24 小时缩短到 15 分钟] → 续期成为强依赖；前端单飞必须一次成功，续期接口故障会导致频繁重新登录。上线前先在 staging 验证续期链路。
 - [续期绕过停用/改密] → 已在 D5 修复：续期校验账号状态与 `issuedAt < epoch`；用 middleware + service 测试覆盖。
 - [`pay_due_at` 零值把老订单判成过期] → `BeforeCreate` + `deriveOrderStatus` 兜底 + 开发库执行 goose 回填；三者缺一不可。
-- [看板待结算佣金少算] → 聚合前调用 `PromoteEligible`；用「未打开台账页」的测试场景验证。
+- [看板待结算佣金少算] → 聚合查询按派生条件同时命中 `settleable` 与已满 30 天的 `pending`；用「未打开台账页」的测试场景验证，并断言读路径不写回台账状态。
 - [审计入事务扩大失败面] → 财务与账号操作本就不该在无审计时成功；失败返回明确错误，由前端提示重试。
 - [Redis 不可用时平台接口不可用] → 与现有 token revoker 一致，fail closed；健康检查已覆盖 Redis。限流同样改为 fail closed，避免 Redis 故障时暴力破解无限制。
 - [限流 IP 取到网桥地址] → `[server] trusted_proxies` 配置 + staging 实测；否则所有用户共享一个配额。

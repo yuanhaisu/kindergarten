@@ -3,7 +3,6 @@ package handler
 import (
 	"errors"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -135,11 +134,11 @@ func writeAccountError(c *gin.Context, err error) {
 		response.ErrConflict(c, "这是最后一个可用账号，停用后将无法登录平台")
 	case errors.Is(err, service.ErrInvalidOldPassword):
 		response.ErrValidation(c, "原密码不正确")
-	case strings.HasPrefix(err.Error(), "WEAK_PASSWORD:"):
+	case errors.Is(err, service.ErrWeakPassword):
 		response.ErrValidation(c, "密码强度不足：至少 8 位，且同时包含大写字母、小写字母和数字")
-	case strings.HasPrefix(err.Error(), "PLATFORM_AUTH_UNAVAILABLE:"):
+	case errors.Is(err, service.ErrPlatformAuthUnavailable):
 		response.ErrUnavailable(c, "认证服务暂不可用，请稍后重试")
-	case strings.HasPrefix(err.Error(), "INVALID_USERNAME"):
+	case errors.Is(err, service.ErrInvalidUsername):
 		response.ErrValidation(c, "用户名不能为空")
 	default:
 		response.ErrInternal(c, "平台账号操作失败")

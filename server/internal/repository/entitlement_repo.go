@@ -206,14 +206,19 @@ type DistributorSettleable struct {
 	Count         int64
 }
 
-// SettleableByDistributor 按分销商聚合可结算佣金净额，口径与台账 summary 一致
-// （只列原始佣金行，净额 = amount - reversed）。调用前必须先 PromoteEligible，
-// 否则满 30 天但未被台账页触发的记录会漏算（design D7）。
-func (r *CommissionRepo) SettleableByDistributor(ctx context.Context) ([]DistributorSettleable, error) {
+// SettleableByDistributor 按分销商聚合「此刻可结算」的佣金净额与笔数：
+// 已推进为 settleable 的行，加上到账已满 30 天但仍是 pending 的行。
+// 口径与台账 summary 一致（只列原始佣金行，净额 = amount - reversed）。
+// 读时派生，不要求在读路径先 PromoteEligible，也不写回台账状态（design D7）。
+func (r *CommissionRepo) SettleableByDistributor(ctx context.Context, now time.Time) ([]DistributorSettleable, error) {
 	var rows []DistributorSettleable
 	err := r.db.WithContext(ctx).Model(&domain.CommissionLedger{}).
 		Select("distributor_id, COALESCE(SUM(amount_cents - reversed_amount_cents), 0) AS amount_cents, COUNT(*) AS count").
-		Where("status = ? AND reversal_of IS NULL", domain.CommissionStatusSettleable).
+		Where("reversal_of IS NULL").
+		Where(
+			"status = ? OR (status = ? AND eligible_at <= ? AND amount_cents - reversed_amount_cents > 0)",
+			domain.CommissionStatusSettleable, domain.CommissionStatusPending, now,
+		).
 		Group("distributor_id").
 		Scan(&rows).Error
 	return rows, err

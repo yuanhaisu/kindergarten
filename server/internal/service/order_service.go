@@ -198,6 +198,9 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	if err := s.orders.Create(ctx, order); err != nil {
 		return nil, err
 	}
+	// 建单响应与列表/详情同口径：状态按付款到期日与已收金额（创建时为 0）
+	// 读时派生，不把存储的 unpaid 直接回给客户端（design D1/D3）。
+	order.Status = deriveOrderStatus(order, 0, now)
 	// 订单创建不在强一致清单内：审计失败只记日志，不阻断成交录入。
 	writeAuditBestEffort(ctx, s.logs, &domain.PlatformOperationLog{
 		Operator: operator, Module: "order", Action: "create", TargetType: "order", TargetID: order.ID,

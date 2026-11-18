@@ -14,7 +14,7 @@
 ## 2. 数据模型与迁移
 
 - [ ] 2.1 在 `server/internal/domain/billing.go` 给 `Order` 增加 `PayDueAt time.Time`、`CreditGranted bool`、`CreditReason string`，并加 `BeforeCreate` 钩子（零值时取 `StartsAt`）；给 `PlatformAdmin` 增加 `Role string`（注释注明「保留，不参与鉴权」）；给 `PlatformOperationLog` 增加 `KindergartenID uint64`、`RequestID string`；`go build ./...` 通过
-- [ ] 2.2 新增 `server/migrations/00008_platform_console_foundation.sql`，按 `design.md` 的 Migration Plan 写 Up/Down（含 `pay_due_at` 回填与索引、`role` 列、审计两列与索引）；`go run ./cmd/migrate status` 显示该迁移 pending
+- [ ] 2.2 新增 `server/migrations/00008_platform_console_audit.sql`（审计 `kindergarten_id`/`request_id` 两列与两个索引）、`00009_orders_pay_due_at.sql`（`pay_due_at` 回填后置 NOT NULL + 索引）、`00010_platform_admin_role.sql`（`role` 列）、`00011_orders_credit_grant.sql`（`credit_granted`/`credit_reason`），按 `design.md` 的 Migration Plan 写 Up/Down；`go run ./cmd/migrate status` 显示四个迁移 pending
 - [ ] 2.3 执行 `make migrate`，再运行 `go run ./cmd/dbcheck orders` 与 `go run ./cmd/dbcheck platform_operation_logs`，确认新列与索引存在；用一条 `SELECT COUNT(*) FROM orders WHERE pay_due_at IS NULL` 确认回填后为零
 - [ ] 2.4 验证：`go build ./...`；`make migrate` 无报错；Down 语句在一次性测试库回滚一次后 `dbcheck` 确认列已删除（禁止在生产库执行 Down）
 
@@ -31,10 +31,10 @@
 ## 4. 后端：平台账号、会话、看板、审计查询
 
 - [ ] 4.1 `PlatformAdminRepo` 增加分页列表、状态更新、改密、可用账号计数；**可用账号口径必须是 `status=1 AND deleted_at IS NULL`**，不得复用统计全部账号的 `Count`；用仓储测试验证禁用账号不计入
-- [ ] 4.2 `PlatformService` 增加账号列表/新建/停用启用/重置密码/改自己密码；实现「不能停用自己」「不能停用最后一个可用账号」守卫；口令至少 8 位且含字母与数字；重置他人密码同时写 epoch 使目标账号访问与续期失效；账号的新建/停用/重置写审计并与账号写入同事务；用服务测试覆盖守卫、口令策略、审计与凭证失效
+- [ ] 4.2 `PlatformService` 增加账号列表/新建/停用启用/重置密码/改自己密码；实现「不能停用自己」「不能停用最后一个可用账号」守卫（最后一个账号守卫在事务内复核，且在写 epoch 之前）；口令复用既有 `validatePassword`：至少 8 位，且同时包含大写字母、小写字母与数字；重置他人密码同时写 epoch 使目标账号访问与续期失效；账号的新建/停用/重置写审计并与账号写入同事务；用服务测试覆盖守卫、口令策略、审计与凭证失效
 - [ ] 4.3 `auth` 增加按作用域保存/消费 refresh（平台键 `refresh:platform:{jti}`，值存 `adminID:issuedAtUnix`；园所保持 `refresh:{jti}`）；`PlatformService.Login` 签发 refresh，新增 `Refresh` 服务方法与 handler；**续期必须校验 `status=1` 且 `issuedAt >= epoch`**；平台登出接收 refresh 并删除/吊销平台键；新增按作用域读取 TTL 的方法（现有 `RefreshRemainingTTL` 写死 `refresh:`）；用测试验证平台 refresh 不能在园所 `/auth/refresh` 兑换、停用后旧 refresh 被拒、登出后 refresh 被拒
 - [ ] 4.4 `middleware.PlatformAuth` 增加 epoch 校验：`claims.IssuedAt < epoch` 返回 401，Redis 错误 fail closed 503；账号停用/改密/重置时 epoch 写入失败必须让操作失败，不得返回成功；用中间件与服务测试覆盖 epoch 前后与写失败
-- [ ] 4.5 新增 `PlatformService.Dashboard` 与 handler，按 `design.md` D7 的口径一次聚合 6 个指标与 2 个待办列表；**聚合前先调用 `PromoteEligible(now)`**；「本月」按服务器本地时区；「30 天内到期」与园所列表 `soonest_expire_at` 抽同一查询函数；用测试构造两所园所与订单，核对概览与明细一致，并覆盖「未打开台账页也计入待结算佣金」
+- [ ] 4.5 新增 `PlatformService.Dashboard` 与 handler，按 `design.md` D7 的口径一次聚合 6 个指标与 2 个待办列表；**待结算佣金走读时派生查询**（`settleable` 或已满 30 天的 `pending`），**不得在读路径调用 `PromoteEligible` 或写回台账状态**；「本月」按服务器本地时区；「30 天内到期」与园所列表 `soonest_expire_at` 抽同一查询函数；用测试构造两所园所与订单，核对概览与明细一致，并覆盖「未打开台账页也计入待结算佣金」且台账状态保持 pending
 - [ ] 4.6 `PlatformLogRepo.List` 支持 `from/to/operator/module/kindergarten_id` 与分页；`PlatformService.ListLogs` 与 handler 接通；在实现说明中记录「审计至少保留 3 年，本期不自动清理」；用测试验证按园所与时间过滤
 - [ ] 4.7 给 `POST /platform/auth/login` 挂严格限流（10 次/分钟/IP）：现有 `RateLimit` 在 Redis 出错时失败开放，需加严格模式或改默认；用中间件测试覆盖超限 429 与 Redis 故障时的行为
 - [ ] 4.8 在 `docs/tests/TEST_CATALOG.md` 登记 `TC-NEW-PLT-0009`～`0025`（账号新建/停用/改密失效、两条账号守卫、续期、停用后续期被拒、登出后续期失效、限流、看板三例、审计三例、订单检索、佣金检索）

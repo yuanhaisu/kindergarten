@@ -89,13 +89,22 @@ export function formatLogTime(value?: string | null): string {
   return match ? `${match[1]} ${match[2]}` : value
 }
 
-const MODULE_LABELS: Record<string, string> = {
-  kindergarten: '园所',
-  order: '订单',
-  payment: '收款',
-  plan: '套餐',
-  distributor: '分销商',
-}
+/**
+ * 模块筛选项是模块文案的唯一来源：新增模块只加一行，
+ * 筛选下拉与表格映射自动保持一致（契约见 06-audit.md 的 `module` 取值）。
+ */
+export const PLATFORM_LOG_MODULES = [
+  { value: 'kindergarten', label: '园所' },
+  { value: 'order', label: '订单' },
+  { value: 'payment', label: '收款' },
+  { value: 'plan', label: '套餐' },
+  { value: 'distributor', label: '分销商' },
+  { value: 'account', label: '账号' },
+] as const
+
+const MODULE_LABELS: Record<string, string> = Object.fromEntries(
+  PLATFORM_LOG_MODULES.map((item) => [item.value, item.label]),
+)
 
 const ACTION_LABELS: Record<string, string> = {
   onboard: '开通园所',
@@ -105,6 +114,11 @@ const ACTION_LABELS: Record<string, string> = {
   record: '登记收款',
   create: '新建',
   update: '更新',
+  enable: '启用账号',
+  disable: '停用账号',
+  reset_password: '重置密码',
+  change_password: '修改密码',
+  replace_tiers: '更新档位',
 }
 
 export function moduleLabel(value?: string | null): string {
@@ -116,12 +130,3 @@ export function actionLabel(value?: string | null): string {
   if (!value) return '—'
   return ACTION_LABELS[value] || value
 }
-
-/** 模块筛选项，与 06-audit.md 的 `module` 取值一一对应。 */
-export const PLATFORM_LOG_MODULES = [
-  { value: 'kindergarten', label: '园所' },
-  { value: 'order', label: '订单' },
-  { value: 'payment', label: '收款' },
-  { value: 'plan', label: '套餐' },
-  { value: 'distributor', label: '分销商' },
-] as const

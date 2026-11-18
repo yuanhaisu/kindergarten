@@ -8,21 +8,27 @@
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <el-input
-          v-model="keyword"
-          placeholder="搜索用户名 / 姓名"
-          clearable
-          class="!w-52"
-          @keyup.enter="search"
-          @clear="search"
-        />
-        <el-button @click="search">查询</el-button>
         <el-button @click="openChangeOwnPassword">修改我的密码</el-button>
         <el-button type="primary" @click="openCreate">新建账号</el-button>
       </div>
     </div>
 
-    <el-table v-loading="loading" :data="rows" border stripe>
+    <SearchBar
+      v-model:keyword="keyword"
+      keyword-placeholder="搜索用户名 / 姓名"
+      @search="search"
+      @reset="search"
+    />
+
+    <DataTable
+      v-model:page="page"
+      v-model:page-size="pageSize"
+      :data="rows as unknown as Record<string, unknown>[]"
+      :loading="loading"
+      :total="total"
+      @page-change="load"
+      @size-change="onSizeChange"
+    >
       <el-table-column prop="username" label="用户名" min-width="140" />
       <el-table-column prop="name" label="姓名" min-width="120">
         <template #default="{ row }">{{ row.name || '—' }}</template>
@@ -35,29 +41,23 @@
         </template>
       </el-table-column>
       <el-table-column label="创建时间" width="140">
-        <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
+        <template #default="{ row }">{{ formatDate(row.created_at as string | null) }}</template>
       </el-table-column>
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openReset(row)">重置密码</el-button>
+          <el-button link type="primary" @click="openReset(row as { id: number; username: string })">
+            重置密码
+          </el-button>
           <el-button
             link
             :type="row.status === 'enabled' ? 'danger' : 'success'"
-            @click="toggleStatus(row)"
+            @click="toggleStatus(row as { id: number; status: string; username: string })"
           >
             {{ row.status === 'enabled' ? '停用' : '启用' }}
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
-
-    <el-pagination
-      v-model:current-page="page"
-      :page-size="pageSize"
-      :total="total"
-      layout="total, prev, pager, next"
-      @current-change="load"
-    />
+    </DataTable>
 
     <el-dialog v-model="createVisible" title="新建平台账号" width="460px">
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="88px">
@@ -135,12 +135,13 @@ import {
 } from '~/api/platform/accounts'
 import { buildAccountListQuery, validatePlatformPassword } from '~/utils/platformAccount'
 import { PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions } from '~/utils/authCookie'
+import { formatDate } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
 
 const keyword = ref('')
 const page = ref(1)
-const pageSize = 20
+const pageSize = ref(20)
 const total = ref(0)
 const rows = ref<PlatformAccountRow[]>([])
 const loading = ref(false)
@@ -159,7 +160,7 @@ const createRules: FormRules = {
 
 const resetVisible = ref(false)
 const resetFormRef = ref<FormInstance>()
-const resetTarget = ref<PlatformAccountRow | null>(null)
+const resetTarget = ref<{ id: number; username: string } | null>(null)
 const resetForm = reactive({ password: '' })
 const resetRules: FormRules = {
   password: [
@@ -189,7 +190,7 @@ async function load() {
   loading.value = true
   try {
     const data = await listAccounts(
-      buildAccountListQuery({ page: page.value, pageSize, keyword: keyword.value }),
+      buildAccountListQuery({ page: page.value, pageSize: pageSize.value, keyword: keyword.value }),
     )
     rows.value = data.list || []
     total.value = data.total || 0
@@ -201,6 +202,11 @@ async function load() {
 }
 
 function search() {
+  page.value = 1
+  void load()
+}
+
+function onSizeChange() {
   page.value = 1
   void load()
 }
@@ -230,7 +236,7 @@ async function submitCreate() {
   }
 }
 
-function openReset(row: PlatformAccountRow) {
+function openReset(row: { id: number; username: string }) {
   resetTarget.value = row
   resetForm.password = ''
   resetVisible.value = true
@@ -251,7 +257,7 @@ async function submitReset() {
   }
 }
 
-async function toggleStatus(row: PlatformAccountRow) {
+async function toggleStatus(row: { id: number; status: string; username: string }) {
   const next = row.status === 'enabled' ? 'disabled' : 'enabled'
   if (next === 'disabled') {
     try {
@@ -295,11 +301,6 @@ async function submitOwnPassword() {
   } finally {
     submitting.value = false
   }
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return '—'
-  return String(value).slice(0, 10)
 }
 
 onMounted(load)

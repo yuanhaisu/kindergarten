@@ -144,6 +144,32 @@ func TestOrderCreate_ExplicitPayDueAt(t *testing.T) {
 	require.ErrorIs(t, err, ErrInvalidPayDueAt)
 }
 
+// 建单响应必须与列表/详情同口径：付款到期日已过时返回 expired，
+// 而不是把存储的 unpaid 直接回给客户端（design D1/D3）。
+func TestOrderCreate_PastDueReturnsDerivedStatus(t *testing.T) {
+	db := openPlatformTestDB(t)
+	planSvc, orderSvc, _ := newBillingFlowServices(t, db)
+	ctx := context.Background()
+	cleanupBillingFlow(t, db)
+	t.Cleanup(func() { cleanupBillingFlow(t, db) })
+
+	kg := newDueDateTestKindergarten(t, db, "S1B订单测试到期E")
+	plan := newDueDateTestPlan(t, planSvc, "s1b_due_past")
+
+	due := time.Now().AddDate(0, 0, -3)
+	order, err := orderSvc.Create(ctx, CreateOrderRequest{
+		KindergartenID: kg.ID, PlanID: plan.ID, PayDueAt: due.Format("2006-01-02"),
+	}, "t3_ops", "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, domain.OrderStatusExpired, order.Status,
+		"建单响应不得返回存储的 unpaid，应按 pay_due_at 派生")
+
+	stored, err := repository.NewOrderRepo(db).FindByID(ctx, order.ID)
+	require.NoError(t, err)
+	require.NotNil(t, stored)
+	assert.Equal(t, domain.OrderStatusUnpaid, stored.Status, "读时派生不得写回存储状态")
+}
+
 // TC-NEW-ORD-0014：服务期未结束但已过付款到期日，列表与详情都派生出 expired。
 func TestOrderListAndDetail_ExpiredByPayDueAt(t *testing.T) {
 	db := openPlatformTestDB(t)

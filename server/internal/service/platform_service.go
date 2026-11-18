@@ -126,23 +126,13 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		return nil, 0, err
 	}
 	now := time.Now()
-	// soonest_expire_at 与看板的「30 天内到期」共用 ListActiveExpiring，
-	// 一次取回本页园所的在期授权，避免逐园查询与两套口径（design D7）。
 	kgIDs := make([]uint64, 0, len(kgs))
 	for _, kg := range kgs {
 		kgIDs = append(kgIDs, kg.ID)
 	}
-	soonest := make(map[uint64]time.Time, len(kgIDs))
-	if len(kgIDs) > 0 {
-		if ents, err := s.entRepo.ListActiveExpiring(ctx, repository.ActiveExpiryFilter{
-			KindergartenIDs: kgIDs, Now: now,
-		}); err == nil {
-			for _, e := range ents {
-				if t, ok := soonest[e.KindergartenID]; !ok || e.ExpiresAt.Before(t) {
-					soonest[e.KindergartenID] = e.ExpiresAt
-				}
-			}
-		}
+	soonest, err := s.soonestExpiryByKindergarten(ctx, kgIDs, now)
+	if err != nil {
+		return nil, 0, err
 	}
 	out := make([]PlatformKindergartenRow, 0, len(kgs))
 	for _, kg := range kgs {
@@ -171,6 +161,28 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		out = append(out, row)
 	}
 	return out, total, nil
+}
+
+// soonestExpiryByKindergarten 取本页园所每园最早的未到期授权日期。
+// soonest_expire_at 与看板的「N 天内到期」共用 ListActiveExpiring，避免两套口径
+// （design D7）。查询失败必须返回错误：静默降级会让到期园所显示成「未设到期」。
+func (s *PlatformService) soonestExpiryByKindergarten(ctx context.Context, kgIDs []uint64, now time.Time) (map[uint64]time.Time, error) {
+	soonest := make(map[uint64]time.Time, len(kgIDs))
+	if len(kgIDs) == 0 {
+		return soonest, nil
+	}
+	ents, err := s.entRepo.ListActiveExpiring(ctx, repository.ActiveExpiryFilter{
+		KindergartenIDs: kgIDs, Now: now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list active entitlements for kindergartens: %w", err)
+	}
+	for _, e := range ents {
+		if t, ok := soonest[e.KindergartenID]; !ok || e.ExpiresAt.Before(t) {
+			soonest[e.KindergartenID] = e.ExpiresAt
+		}
+	}
+	return soonest, nil
 }
 
 type PlatformEntitlementRow struct {

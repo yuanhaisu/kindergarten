@@ -4,6 +4,7 @@ import {
   formatLogTime,
   moduleLabel,
   actionLabel,
+  PLATFORM_LOG_MODULES,
 } from '../../utils/platformLogs'
 
 /**
@@ -104,12 +105,26 @@ describe('moduleLabel / actionLabel', () => {
   it('已知模块与动作使用中文标签', () => {
     expect(moduleLabel('order')).toBe('订单')
     expect(moduleLabel('payment')).toBe('收款')
+    expect(moduleLabel('account')).toBe('账号')
     expect(actionLabel('confirm')).toBe('确认订单')
     expect(actionLabel('update_status')).toBe('变更状态')
+    expect(actionLabel('enable')).toBe('启用账号')
+    expect(actionLabel('disable')).toBe('停用账号')
+    expect(actionLabel('reset_password')).toBe('重置密码')
+    expect(actionLabel('change_password')).toBe('修改密码')
+    expect(actionLabel('replace_tiers')).toBe('更新档位')
+  })
+
+  it('模块筛选项与展示标签同源，包含账号模块', () => {
+    const values = PLATFORM_LOG_MODULES.map((item) => item.value)
+    expect(values).toEqual(['kindergarten', 'order', 'payment', 'plan', 'distributor', 'account'])
+    for (const item of PLATFORM_LOG_MODULES) {
+      expect(moduleLabel(item.value)).toBe(item.label)
+    }
   })
 
   it('未知值回退到原始代码，空值显示占位符', () => {
-    expect(moduleLabel('account')).toBe('account')
+    expect(moduleLabel('system')).toBe('system')
     expect(actionLabel('rotate_secret')).toBe('rotate_secret')
     expect(moduleLabel('')).toBe('—')
     expect(actionLabel('')).toBe('—')

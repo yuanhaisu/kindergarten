@@ -10,6 +10,19 @@
       <el-button type="primary" @click="openCreate">新建套餐</el-button>
     </div>
 
+    <div class="flex items-center gap-2">
+      <el-select
+        v-model="statusFilter"
+        placeholder="全部状态"
+        clearable
+        class="!w-32"
+        @change="onStatusChange"
+      >
+        <el-option label="可售" value="active" />
+        <el-option label="已下架" value="archived" />
+      </el-select>
+    </div>
+
     <el-table v-loading="loading" :data="rows" border stripe>
       <el-table-column prop="code" label="编码" width="130" />
       <el-table-column prop="name" label="名称" min-width="140" />
@@ -166,6 +179,7 @@ const submitting = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const statusFilter = ref('')
 
 const editVisible = ref(false)
 const editingId = ref<number | null>(null)
@@ -199,7 +213,11 @@ async function load() {
   loading.value = true
   try {
     const [plans, mods] = await Promise.all([
-      listPlans({ page: page.value, page_size: pageSize.value }),
+      listPlans({
+        page: page.value,
+        page_size: pageSize.value,
+        status: statusFilter.value || undefined,
+      }),
       listModules(),
     ])
     rows.value = plans.list || []
@@ -212,6 +230,11 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function onStatusChange() {
+  page.value = 1
+  load()
 }
 
 function onPageChange(next: number) {

@@ -254,6 +254,7 @@ import { listDistributors, type DistributorRow } from '~/api/platform/distributo
 import { listKindergartens, type PlatformKindergartenRow } from '~/api/platform/kindergartens'
 import { listPlans, type PlanRow } from '~/api/platform/plans'
 import { buildOrderListParams } from '~/utils/platformOrders'
+import { formatMoney } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
 
@@ -502,9 +503,6 @@ async function submitPayment() {
   }
 }
 
-function formatMoney(cents: number) {
-  return `¥${(cents / 100).toFixed(2)}`
-}
 function outstandingCents(row: OrderRow) {
   return Math.max(0, row.amount_due_cents - row.amount_paid_cents)
 }

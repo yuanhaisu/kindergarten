@@ -78,7 +78,8 @@ func ProvidePlatformService(
 	return service.NewPlatformService(
 		db, adminRepo, kgRepo, entRepo, orderRepo, userRepo, userRoleRepo,
 		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus,
-		auth.NewPlatformEpochStore(rdb), revoker, rdb, []byte(secret),
+		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(time.Duration(rtTTL), time.Duration(atTTL))),
+		revoker, rdb, []byte(secret),
 		time.Duration(atTTL), time.Duration(rtTTL),
 	)
 }

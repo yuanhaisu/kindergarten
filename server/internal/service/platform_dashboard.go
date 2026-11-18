@@ -51,12 +51,6 @@ const (
 func (s *PlatformService) Dashboard(ctx context.Context) (*PlatformDashboard, error) {
 	now := time.Now()
 
-	// 聚合前先推进满 30 天的佣金：否则从未打开过台账页的记录不计入可结算
-	// （design D7 / TC-NEW-PLT-0025）。失败时不返回部分结果，避免金额少算。
-	if err := s.commRepo.PromoteEligible(ctx, now); err != nil {
-		return nil, fmt.Errorf("promote eligible commissions: %w", err)
-	}
-
 	total, err := s.kgRepo.Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count kindergartens: %w", err)
@@ -124,8 +118,9 @@ func (s *PlatformService) Dashboard(ctx context.Context) (*PlatformDashboard, er
 		return nil, fmt.Errorf("sum outstanding: %w", err)
 	}
 
-	// 待结算佣金：先按分销商聚合，合计由分组结果相加，保证指标与待办同口径。
-	settleable, err := s.commRepo.SettleableByDistributor(ctx)
+	// 待结算佣金：读时按派生条件聚合（settleable + 已满 30 天的 pending），
+	// 不在读路径推进台账状态（design D7）。合计由分组结果相加，保证指标与待办同口径。
+	settleable, err := s.commRepo.SettleableByDistributor(ctx, now)
 	if err != nil {
 		return nil, fmt.Errorf("sum settleable commissions: %w", err)
 	}
