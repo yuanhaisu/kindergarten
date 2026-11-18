@@ -10,6 +10,9 @@
   const childAvatar = document.getElementById("child-avatar");
   const childName = document.getElementById("child-name");
   const childMeta = document.getElementById("child-meta");
+  const statPickup = document.getElementById("stat-pickup");
+  const statGrowth = document.getElementById("stat-growth");
+  const statPoints = document.getElementById("stat-points");
 
   /* Placeholder links stay put; without this they would jump the scroll
    * container or change the URL hash. */
@@ -21,7 +24,7 @@
     });
   }
 
-  if (!app || !main || !sheetLayer || !sheet || !switchButton || !childAvatar || !childName || !childMeta) {
+  if (!app || !main || !sheetLayer || !sheet || !switchButton || !childAvatar || !childName || !childMeta || !statPickup || !statGrowth || !statPoints) {
     return;
   }
 
@@ -77,6 +80,12 @@
     childAvatar.textContent = option.dataset.childInitial || "";
     childName.textContent = option.dataset.childName || "";
     childMeta.textContent = option.dataset.childRowMeta || "";
+    const [pickup, growth, points] = (option.dataset.childStats || "").split(",");
+    if (pickup && growth && points) {
+      statPickup.textContent = pickup;
+      statGrowth.textContent = growth;
+      statPoints.textContent = points;
+    }
     closeSheet();
   }
 
