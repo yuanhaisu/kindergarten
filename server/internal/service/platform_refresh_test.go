@@ -40,7 +40,7 @@ func newPlatformRefreshService(t *testing.T, db *gorm.DB, rdb *redis.Client) *Pl
 		repository.NewPlatformLogRepo(db),
 		nil,
 		nil,
-		auth.NewPlatformEpochStore(rdb),
+		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(7*24*time.Hour, 15*time.Minute)),
 		auth.NewTokenRevoker(rdb),
 		rdb,
 		[]byte("test-platform-secret"),
@@ -154,7 +154,7 @@ func TestPlatformRefreshRejectsIssuedBeforeEpoch(t *testing.T) {
 	require.NoError(t, err)
 
 	// epoch 晚于续期签发时间（秒级精度，留 2 秒余量）。
-	require.NoError(t, auth.NewPlatformEpochStore(rdb).BumpPlatformEpoch(ctx, fmt.Sprintf("%d", admin.ID), time.Now().Add(2*time.Second)))
+	require.NoError(t, auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(7*24*time.Hour, time.Hour)).BumpPlatformEpoch(ctx, fmt.Sprintf("%d", admin.ID), time.Now().Add(2*time.Second)))
 
 	_, err = svc.Refresh(ctx, login.RefreshToken)
 	assert.Error(t, err, "签发时间早于 epoch 的续期必须被拒绝")

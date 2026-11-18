@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -161,7 +160,7 @@ func TestPlatformAccount_CreateRejectsDuplicateAndWeakPassword(t *testing.T) {
 			Username: "t6_ops_weak", Password: weak,
 		}, "t6_ops", "127.0.0.1")
 		require.Error(t, err, "口令 %q 必须被拒绝", weak)
-		assert.True(t, strings.HasPrefix(err.Error(), "WEAK_PASSWORD:"), "实际错误：%v", err)
+		assert.ErrorIs(t, err, ErrWeakPassword, "实际错误：%v", err)
 	}
 
 	// 弱口令不得留下半成品账号。
@@ -197,7 +196,8 @@ func TestPlatformAccount_LastAvailableGuard(t *testing.T) {
 	cleanupPlatformAccounts(t, db)
 	t.Cleanup(func() { cleanupPlatformAccounts(t, db) })
 
-	svc := newPlatformAccountService(t, db, nil, &spyEpochStore{})
+	epochs := &spyEpochStore{}
+	svc := newPlatformAccountService(t, db, nil, epochs)
 	a := createPlatformAccount(t, svc, "t6_ops_last_a", "Abc12345")
 	b := createPlatformAccount(t, svc, "t6_ops_last_b", "Abc12345")
 
@@ -217,10 +217,13 @@ func TestPlatformAccount_LastAvailableGuard(t *testing.T) {
 
 	require.NoError(t, svc.SetAccountStatus(ctx, b.ID, PlatformAccountDisabled, a.ID, "t6_ops", "127.0.0.1"))
 	assert.EqualValues(t, 1, countAvailable(t, db))
+	assert.Equal(t, 1, epochs.bumpCount(accountIDKey(b.ID)), "成功的停用要写 epoch")
 
 	// 操作者用 b 的 ID（与目标 a 不同），守卫应因「只剩一个」拒绝。
 	err := svc.SetAccountStatus(ctx, a.ID, PlatformAccountDisabled, b.ID, "t6_ops", "127.0.0.1")
 	assert.ErrorIs(t, err, ErrLastAvailableAccount)
+	assert.Zero(t, epochs.bumpCount(accountIDKey(a.ID)),
+		"被守卫拒绝的停用不得写 epoch，否则会把最后一个账号的会话踢下线")
 
 	reloaded, err := repository.NewPlatformAdminRepo(db).FindByID(ctx, a.ID)
 	require.NoError(t, err)
@@ -279,7 +282,7 @@ func TestPlatformAccount_ChangeOwnPassword(t *testing.T) {
 
 	err = svc.ChangeOwnPassword(ctx, row.ID, "Abc12345", "weakpass1")
 	require.Error(t, err)
-	assert.True(t, strings.HasPrefix(err.Error(), "WEAK_PASSWORD:"))
+	assert.ErrorIs(t, err, ErrWeakPassword)
 
 	require.NoError(t, svc.ChangeOwnPassword(ctx, row.ID, "Abc12345", "NewPass123"))
 	assert.Equal(t, 1, epochs.bumpCount(accountIDKey(row.ID)), "改密必须写 epoch")
@@ -355,20 +358,20 @@ func TestPlatformAccount_EpochWriteFailureLeavesDBUnchanged(t *testing.T) {
 
 	err := svc.SetAccountStatus(ctx, row.ID, PlatformAccountDisabled, 999999, "t6_ops", "127.0.0.1")
 	require.Error(t, err)
-	assert.True(t, strings.HasPrefix(err.Error(), "PLATFORM_AUTH_UNAVAILABLE:"), "实际错误：%v", err)
+	assert.ErrorIs(t, err, ErrPlatformAuthUnavailable, "实际错误：%v", err)
 	reloaded, err := repository.NewPlatformAdminRepo(db).FindByID(ctx, row.ID)
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, reloaded.Status, "epoch 写失败时停用必须失败且不改库")
 
 	err = svc.ResetAccountPassword(ctx, row.ID, "Xyz98765", "t6_ops", "127.0.0.1")
 	require.Error(t, err)
-	assert.True(t, strings.HasPrefix(err.Error(), "PLATFORM_AUTH_UNAVAILABLE:"))
+	assert.ErrorIs(t, err, ErrPlatformAuthUnavailable)
 	_, err = createSvc.Login(ctx, "t6_ops_epoch", "Abc12345")
 	assert.NoError(t, err, "epoch 写失败时口令不能变")
 
 	err = svc.ChangeOwnPassword(ctx, row.ID, "Abc12345", "Xyz98765")
 	require.Error(t, err)
-	assert.True(t, strings.HasPrefix(err.Error(), "PLATFORM_AUTH_UNAVAILABLE:"))
+	assert.ErrorIs(t, err, ErrPlatformAuthUnavailable)
 	_, err = createSvc.Login(ctx, "t6_ops_epoch", "Abc12345")
 	assert.NoError(t, err)
 }

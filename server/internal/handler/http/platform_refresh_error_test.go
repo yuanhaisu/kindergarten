@@ -33,7 +33,8 @@ func newPlatformSessionOnlyService(t *testing.T, rdbPresent bool) (*service.Plat
 	rdb := f.Client(t)
 	return service.NewPlatformService(
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		auth.NewPlatformEpochStore(rdb), auth.NewTokenRevoker(rdb), rdb,
+		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(7*24*time.Hour, 15*time.Minute)),
+		auth.NewTokenRevoker(rdb), rdb,
 		[]byte("test-platform-secret"), 15*time.Minute, 7*24*time.Hour,
 	), f
 }

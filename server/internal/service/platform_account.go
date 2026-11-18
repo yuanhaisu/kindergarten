@@ -33,6 +33,12 @@ var (
 	ErrLastAvailableAccount = errors.New("LAST_AVAILABLE_ACCOUNT")
 	// ErrInvalidOldPassword 修改本人密码时旧密码不正确。
 	ErrInvalidOldPassword = errors.New("INVALID_OLD_PASSWORD")
+	// ErrWeakPassword 新口令不满足强度要求（design D4）。
+	ErrWeakPassword = errors.New("WEAK_PASSWORD")
+	// ErrInvalidUsername 用户名为空或只有空白字符。
+	ErrInvalidUsername = errors.New("INVALID_USERNAME")
+	// ErrPlatformAuthUnavailable 凭证失效存储不可用；操作失败关闭（design D5）。
+	ErrPlatformAuthUnavailable = errors.New("PLATFORM_AUTH_UNAVAILABLE")
 )
 
 // CreateAccountRequest 新建平台账号。角色不开放给调用方：固定 platform。
@@ -82,10 +88,10 @@ func (s *PlatformService) ListAccounts(ctx context.Context, page, pageSize int, 
 func (s *PlatformService) CreateAccount(ctx context.Context, req CreateAccountRequest, operator, ip string) (*PlatformAccountRow, error) {
 	username := strings.TrimSpace(req.Username)
 	if username == "" {
-		return nil, fmt.Errorf("INVALID_USERNAME")
+		return nil, ErrInvalidUsername
 	}
 	if err := validatePassword(req.Password); err != nil {
-		return nil, fmt.Errorf("WEAK_PASSWORD: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrWeakPassword, err)
 	}
 	existing, err := s.adminRepo.FindByUsername(ctx, username)
 	if err != nil {
@@ -117,8 +123,9 @@ func (s *PlatformService) CreateAccount(ctx context.Context, req CreateAccountRe
 	return &row, nil
 }
 
-// SetAccountStatus 启用或停用平台账号。停用会先写凭证失效 epoch 再提交数据库
-// （design D5）；停用自己与停用最后一个可用账号都会被拒绝（design D4）。
+// SetAccountStatus 启用或停用平台账号。停用自己与停用最后一个可用账号都会被
+// 拒绝（design D4）；守卫在事务内复核通过后才写凭证失效 epoch，再提交数据库
+// （design D5），被拒绝的操作不写 epoch。
 func (s *PlatformService) SetAccountStatus(ctx context.Context, id uint64, status string, operatorID uint64, operator, ip string) error {
 	var newStatus int8
 	switch status {
@@ -144,29 +151,22 @@ func (s *PlatformService) SetAccountStatus(ctx context.Context, id uint64, statu
 		if operatorID != 0 && operatorID == id {
 			return ErrCannotDisableSelf
 		}
-		// 预检放在写 epoch 之前：被守卫拒绝的操作不能把目标账号踢下线。
-		available, err := s.adminRepo.CountAvailable(ctx)
-		if err != nil {
-			return err
-		}
-		if available <= 1 {
-			return ErrLastAvailableAccount
-		}
-		// 凭证失效先于数据库提交：epoch 写失败则操作失败、数据库不变。
-		if err := s.bumpPlatformEpoch(ctx, id); err != nil {
-			return err
-		}
 	}
 
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if newStatus == 0 {
 			// 事务内加锁复核，防止并发停用绕过最后一个可用账号守卫。
+			// 守卫必须先于 epoch 写入：被拒绝的操作不能把目标账号踢下线。
 			available, err := s.adminRepo.CountAvailableTx(ctx, tx)
 			if err != nil {
 				return err
 			}
 			if available <= 1 {
 				return ErrLastAvailableAccount
+			}
+			// 复核通过后才失效凭证：epoch 先于数据库提交（design D5）。
+			if err := s.bumpPlatformEpoch(ctx, id); err != nil {
+				return err
 			}
 		}
 		if err := s.adminRepo.UpdateByIDTx(ctx, tx, id, map[string]any{"status": newStatus}); err != nil {
@@ -193,7 +193,7 @@ func platformAccountStatusAction(status int8) string {
 // ResetAccountPassword 由运营重置指定账号口令。口令由操作者提供，响应不回显。
 func (s *PlatformService) ResetAccountPassword(ctx context.Context, id uint64, newPassword, operator, ip string) error {
 	if err := validatePassword(newPassword); err != nil {
-		return fmt.Errorf("WEAK_PASSWORD: %w", err)
+		return fmt.Errorf("%w: %v", ErrWeakPassword, err)
 	}
 	admin, err := s.adminRepo.FindByID(ctx, id)
 	if err != nil {
@@ -225,7 +225,7 @@ func (s *PlatformService) ResetAccountPassword(ctx context.Context, id uint64, n
 // 审计失败只记日志，不阻断改密。
 func (s *PlatformService) ChangeOwnPassword(ctx context.Context, id uint64, oldPassword, newPassword string) error {
 	if err := validatePassword(newPassword); err != nil {
-		return fmt.Errorf("WEAK_PASSWORD: %w", err)
+		return fmt.Errorf("%w: %v", ErrWeakPassword, err)
 	}
 	admin, err := s.adminRepo.FindByID(ctx, id)
 	if err != nil {
@@ -258,10 +258,10 @@ func (s *PlatformService) ChangeOwnPassword(ctx context.Context, id uint64, oldP
 // 调用方不得继续提交数据库变更（design D5）。
 func (s *PlatformService) bumpPlatformEpoch(ctx context.Context, id uint64) error {
 	if s.epochs == nil {
-		return fmt.Errorf("PLATFORM_AUTH_UNAVAILABLE: platform epoch store is not configured")
+		return fmt.Errorf("%w: platform epoch store is not configured", ErrPlatformAuthUnavailable)
 	}
 	if err := s.epochs.BumpPlatformEpoch(ctx, strconv.FormatUint(id, 10), time.Now()); err != nil {
-		return fmt.Errorf("PLATFORM_AUTH_UNAVAILABLE: invalidate platform sessions: %w", err)
+		return fmt.Errorf("%w: invalidate platform sessions: %w", ErrPlatformAuthUnavailable, err)
 	}
 	return nil
 }

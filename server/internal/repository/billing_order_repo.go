@@ -170,13 +170,12 @@ func (r *OrderRepo) FindLatestActiveByKindergarten(ctx context.Context, kinderga
 }
 
 // SumOutstanding 未收余额 = 未取消订单的 max(应收 - 已收, 0) 合计。
-// 已收只计未删除收款，与订单列表的 LEFT JOIN 聚合同口径（design D7）。
+// 已收只计未删除收款；直接复用订单列表的 orderPaidJoin，避免两处聚合口径漂移。
 func (r *OrderRepo) SumOutstanding(ctx context.Context) (int64, error) {
 	var sum int64
-	err := r.db.WithContext(ctx).Table("orders AS o").
-		Joins("LEFT JOIN (SELECT order_id, SUM(amount_cents) AS paid_cents FROM payments WHERE deleted_at IS NULL GROUP BY order_id) AS p ON p.order_id = o.id").
-		Where("o.deleted_at IS NULL AND o.status <> ?", domain.OrderStatusCancelled).
-		Select("COALESCE(SUM(GREATEST(o.amount_due_cents - COALESCE(p.paid_cents, 0), 0)), 0)").
+	err := r.db.WithContext(ctx).Model(&domain.Order{}).Joins(orderPaidJoin).
+		Where("orders.status <> ?", domain.OrderStatusCancelled).
+		Select("COALESCE(SUM(GREATEST(orders.amount_due_cents - COALESCE(p.paid_cents, 0), 0)), 0)").
 		Scan(&sum).Error
 	return sum, err
 }

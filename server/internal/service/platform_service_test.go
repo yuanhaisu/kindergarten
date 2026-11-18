@@ -80,13 +80,27 @@ func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {
 		repository.NewPlatformLogRepo(db),
 		nil,
 		nil,
-		auth.NewPlatformEpochStore(rdb),
+		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(7*24*time.Hour, time.Hour)),
 		auth.NewTokenRevoker(rdb),
 		rdb,
 		[]byte("test-platform-secret"),
 		time.Hour,
 		7*24*time.Hour,
 	)
+}
+
+// 授权查询失败不得被静默吞掉：否则园所列表会把整页的 soonest_expire_at
+// 都当空返回，运营看不出谁快到期。用已取消的 ctx 触发仓储错误路径。
+func TestPlatformService_SoonestExpiry_PropagatesError(t *testing.T) {
+	db := openPlatformTestDB(t)
+	svc := newPlatformTestService(t, db)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	soonest, err := svc.soonestExpiryByKindergarten(ctx, []uint64{1}, time.Now())
+	require.Error(t, err, "仓储失败必须向上返回，而不是降级为空结果")
+	assert.Nil(t, soonest)
 }
 
 func cleanupPlatformTestData(t *testing.T, db *gorm.DB, phone string) {
