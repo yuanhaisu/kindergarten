@@ -154,7 +154,7 @@ button{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cu
 
 /* settings groups */
 .settings-group+.settings-group{margin-top:24px}
-.group-title{margin-bottom:8px;font-size:17px;font-weight:600;line-height:1.4;letter-spacing:.01em}
+.group-title{margin-bottom:8px;font-family:var(--font-display);font-size:21px;font-weight:400;line-height:1.4;letter-spacing:0}
 .settings-card{overflow:hidden;border:1px solid var(--hair);border-radius:20px;background:var(--surface)}
 .setting-row{width:100%;min-height:48px;display:flex;align-items:center;gap:12px;padding:0 18px;font-size:15px;font-weight:500;line-height:1.4;text-align:left;transition:background-color var(--motion-press) var(--ease-out)}
 .setting-row+.setting-row{border-top:1px solid var(--hair-soft)}
