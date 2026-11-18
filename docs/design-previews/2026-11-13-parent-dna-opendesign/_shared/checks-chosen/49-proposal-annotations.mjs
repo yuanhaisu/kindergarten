@@ -16,7 +16,7 @@ export default {
     // 21 V2 任务积分提案：与 22 / 24 同一口径，依赖 06-task 恢复 points/streak。
     {
       slug: "21-tasks",
-      must: ["积分提案", "提案：需 06-task 恢复 points/streak", "+10 积分", "本周 3 / 3 天"],
+      must: ["积分提案", "提案：需 06-task 恢复 points/streak", "+10 积分", "本周 2 / 3 天"],
     },
     // 24 V2 积分页：标题与页脚都标提案，避免被当成当前积分口径。
     {
