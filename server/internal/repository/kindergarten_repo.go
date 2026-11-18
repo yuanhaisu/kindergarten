@@ -86,6 +86,14 @@ func (r *KindergartenRepo) FindByIDs(ctx context.Context, ids []uint64) ([]domai
 	return list, err
 }
 
+// ListByStatus 返回指定状态的未删除园所。平台看板需要园所 ID 与名称，
+// 一次取回避免逐所查询。
+func (r *KindergartenRepo) ListByStatus(ctx context.Context, status string) ([]domain.Kindergarten, error) {
+	var list []domain.Kindergarten
+	err := r.db.WithContext(ctx).Where("status = ?", status).Find(&list).Error
+	return list, err
+}
+
 // CountStudents 返回在园幼儿数，用于订单档位核定、超档提示与平台列表。
 // 口径：status = 1（在读）且未删除；待入学(0)、毕业(2)、退学(3) 不计入。
 func (r *KindergartenRepo) CountStudents(ctx context.Context, kindergartenID uint64) (int64, error) {

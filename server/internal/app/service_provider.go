@@ -56,6 +56,9 @@ func ProvidePlatformService(
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
 	adminRoleRepo *repository.AdminRepo,
+	paymentRepo *repository.PaymentRepo,
+	commRepo *repository.CommissionRepo,
+	distRepo *repository.DistributorRepo,
 	logRepo *repository.PlatformLogRepo,
 	dietSeed *service.DietSeedService,
 	kgStatus *service.KindergartenStatusService,
@@ -68,8 +71,8 @@ func ProvidePlatformService(
 	_ = atTTL
 	return service.NewPlatformService(
 		db, adminRepo, kgRepo, entRepo, orderRepo, userRepo, userRoleRepo,
-		adminRoleRepo, logRepo, dietSeed, kgStatus, auth.NewPlatformEpochStore(rdb),
-		[]byte(secret), 24*time.Hour,
+		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus,
+		auth.NewPlatformEpochStore(rdb), []byte(secret), 24*time.Hour,
 	)
 }
 

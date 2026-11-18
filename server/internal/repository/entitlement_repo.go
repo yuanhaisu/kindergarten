@@ -54,6 +54,32 @@ func (r *EntitlementRepo) ListActiveByKindergarten(ctx context.Context, kinderga
 	return list, err
 }
 
+// ActiveExpiryFilter 授权到期查询的共用条件（design D7）：
+// 未删除、已生效（starts_at <= Now）且尚未到期（expires_at > Now）。
+// 园所列表的 soonest_expire_at 与平台看板的 30/7 天窗口共用这一查询，避免两套口径。
+type ActiveExpiryFilter struct {
+	// KindergartenIDs 为空表示不限园所。
+	KindergartenIDs []uint64
+	Now             time.Time
+	// Until 非空时只返回到期时间不晚于它的授权（看板的到期窗口）。
+	Until *time.Time
+}
+
+// ListActiveExpiring 按 ActiveExpiryFilter 查询在期授权。
+func (r *EntitlementRepo) ListActiveExpiring(ctx context.Context, f ActiveExpiryFilter) ([]domain.Entitlement, error) {
+	q := r.db.WithContext(ctx).
+		Where("starts_at <= ? AND expires_at > ?", f.Now, f.Now)
+	if len(f.KindergartenIDs) > 0 {
+		q = q.Where("kindergarten_id IN ?", f.KindergartenIDs)
+	}
+	if f.Until != nil {
+		q = q.Where("expires_at <= ?", *f.Until)
+	}
+	var list []domain.Entitlement
+	err := q.Find(&list).Error
+	return list, err
+}
+
 func (r *EntitlementRepo) ListByOrderID(ctx context.Context, orderID uint64) ([]domain.Entitlement, error) {
 	var list []domain.Entitlement
 	err := r.db.WithContext(ctx).Where("order_id = ?", orderID).Find(&list).Error
@@ -171,6 +197,26 @@ func (r *CommissionRepo) FindByID(ctx context.Context, id uint64) (*domain.Commi
 		return nil, nil
 	}
 	return &c, err
+}
+
+// DistributorSettleable 看板待办：某分销商当前可结算的佣金净额与笔数。
+type DistributorSettleable struct {
+	DistributorID uint64
+	AmountCents   int64
+	Count         int64
+}
+
+// SettleableByDistributor 按分销商聚合可结算佣金净额，口径与台账 summary 一致
+// （只列原始佣金行，净额 = amount - reversed）。调用前必须先 PromoteEligible，
+// 否则满 30 天但未被台账页触发的记录会漏算（design D7）。
+func (r *CommissionRepo) SettleableByDistributor(ctx context.Context) ([]DistributorSettleable, error) {
+	var rows []DistributorSettleable
+	err := r.db.WithContext(ctx).Model(&domain.CommissionLedger{}).
+		Select("distributor_id, COALESCE(SUM(amount_cents - reversed_amount_cents), 0) AS amount_cents, COUNT(*) AS count").
+		Where("status = ? AND reversal_of IS NULL", domain.CommissionStatusSettleable).
+		Group("distributor_id").
+		Scan(&rows).Error
+	return rows, err
 }
 
 // List 返回台账明细。只列原始佣金行：冲回行的金额已经累计进原始行的
