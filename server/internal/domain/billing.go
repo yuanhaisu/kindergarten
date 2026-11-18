@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // 商业化域常量。取值的权威来源：openspec/changes/add-saas-commercial-layer/proposal.md
 // 「已确认的产品决策」（2026-11-06 产品方确认）。
@@ -94,25 +98,38 @@ func (PlanTier) TableName() string { return "plan_tiers" }
 // 金额与授权均由快照推导（ADR-0013）。
 type Order struct {
 	BaseModel
-	OrderNo        string     `gorm:"size:32;not null;uniqueIndex" json:"order_no"`
-	KindergartenID uint64     `gorm:"not null;index" json:"kindergarten_id"`
-	PlanID         uint64     `gorm:"not null" json:"plan_id"`
-	PlanSnapshot   string     `gorm:"type:json;not null" json:"-"`
-	StudentTier    int        `gorm:"not null;default:1" json:"student_tier"`
-	AmountDueCents int64      `gorm:"not null;default:0" json:"amount_due_cents"`
-	Status         string     `gorm:"size:16;not null;default:'unpaid'" json:"status"`
-	DistributorID  *uint64    `gorm:"index" json:"distributor_id"`
-	CommissionRate int        `gorm:"not null;default:0" json:"-"`
-	InvoiceInfo    string     `gorm:"type:json" json:"-"`
-	StartsAt       time.Time  `gorm:"not null" json:"starts_at"`
-	ExpiresAt      time.Time  `gorm:"not null" json:"expires_at"`
-	ConfirmedAt    *time.Time `json:"confirmed_at"`
-	CancelledAt    *time.Time `json:"cancelled_at"`
-	CancelReason   string     `gorm:"size:255;not null;default:''" json:"cancel_reason"`
-	CreatedBy      string     `gorm:"size:64;not null;default:''" json:"created_by"`
+	OrderNo        string    `gorm:"size:32;not null;uniqueIndex" json:"order_no"`
+	KindergartenID uint64    `gorm:"not null;index" json:"kindergarten_id"`
+	PlanID         uint64    `gorm:"not null" json:"plan_id"`
+	PlanSnapshot   string    `gorm:"type:json;not null" json:"-"`
+	StudentTier    int       `gorm:"not null;default:1" json:"student_tier"`
+	AmountDueCents int64     `gorm:"not null;default:0" json:"amount_due_cents"`
+	Status         string    `gorm:"size:16;not null;default:'unpaid'" json:"status"`
+	DistributorID  *uint64   `gorm:"index" json:"distributor_id"`
+	CommissionRate int       `gorm:"not null;default:0" json:"-"`
+	InvoiceInfo    string    `gorm:"type:json" json:"-"`
+	StartsAt       time.Time `gorm:"not null" json:"starts_at"`
+	ExpiresAt      time.Time `gorm:"not null" json:"expires_at"`
+	// PayDueAt 是付款到期日，独立于服务期（design D1）：默认等于 StartsAt，
+	// 逾期判定只看它。BeforeCreate 兜底，保证任何建单路径都不会写入零值。
+	PayDueAt     time.Time  `gorm:"not null" json:"pay_due_at"`
+	ConfirmedAt  *time.Time `json:"confirmed_at"`
+	CancelledAt  *time.Time `json:"cancelled_at"`
+	CancelReason string     `gorm:"size:255;not null;default:''" json:"cancel_reason"`
+	CreatedBy    string     `gorm:"size:64;not null;default:''" json:"created_by"`
 }
 
 func (Order) TableName() string { return "orders" }
+
+// BeforeCreate 在付款到期日为零值时取服务起始日。
+// 除了 OrderService.Create 之外，测试、种子与历史数据也走这条兜底，
+// 避免零值被 deriveOrderStatus 判成「早已逾期」（design D1）。
+func (o *Order) BeforeCreate(tx *gorm.DB) error {
+	if o.PayDueAt.IsZero() {
+		o.PayDueAt = o.StartsAt
+	}
+	return nil
+}
 
 // Payment 收款登记。退款以负数金额表达，不设独立退款单（ADR-0016 / design D7）。
 // 负数收款必须用 RefundOfPaymentID 指明被退的原收款，佣金冲回据此精确定位。

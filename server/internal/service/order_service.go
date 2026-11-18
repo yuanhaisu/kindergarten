@@ -25,6 +25,8 @@ var (
 	ErrRefundExceedsPaidAmount = errors.New("REFUND_EXCEEDS_PAID_AMOUNT")
 	ErrReceivedAtInFuture      = errors.New("RECEIVED_AT_IN_FUTURE")
 	ErrInvalidIdempotencyKey   = errors.New("INVALID_IDEMPOTENCY_KEY")
+	// ErrInvalidPayDueAt 表示创建订单时显式传入的付款到期日不是 YYYY-MM-DD。
+	ErrInvalidPayDueAt = errors.New("INVALID_PAY_DUE_AT")
 )
 
 // PaymentExceedsAmountDueError 携带超出金额与剩余应收，供管理端与园所核对。
@@ -108,6 +110,8 @@ type CreateOrderRequest struct {
 	PlanID         uint64          `json:"plan_id" binding:"required"`
 	DistributorID  *uint64         `json:"distributor_id"`
 	InvoiceInfo    json.RawMessage `json:"invoice_info"`
+	// PayDueAt 可选，YYYY-MM-DD；缺省时由 Order.BeforeCreate 取服务起始日。
+	PayDueAt string `json:"pay_due_at"`
 }
 
 func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, operator, ip string) (*domain.Order, error) {
@@ -154,6 +158,10 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	}
 
 	now := time.Now()
+	payDueAt, err := parsePayDueAt(req.PayDueAt)
+	if err != nil {
+		return nil, err
+	}
 	snapshot, err := json.Marshal(PlanSnapshot{
 		PlanCode: plan.Code, PlanName: plan.Name, ModuleCodes: modules,
 		PriceCents: plan.PriceCents, TermMonths: plan.TermMonths,
@@ -180,6 +188,7 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 		InvoiceInfo:    invoice,
 		StartsAt:       now,
 		ExpiresAt:      now.AddDate(0, plan.TermMonths, 0),
+		PayDueAt:       payDueAt,
 		CreatedBy:      operator,
 	}
 	if err := s.orders.Create(ctx, order); err != nil {
@@ -594,6 +603,9 @@ func deriveCommissionStatus(eligibleAt, now time.Time) string {
 	return domain.CommissionStatusPending
 }
 
+// deriveOrderStatus 是付款状态的唯一出口：逾期只看付款到期日，
+// 服务期结束日不再参与。PayDueAt 为零值时回退到服务起始日，
+// 让绕过 BeforeCreate 的历史数据也不会被判成过期（design D1）。
 func deriveOrderStatus(order *domain.Order, paid int64, now time.Time) string {
 	if order.CancelledAt != nil {
 		return domain.OrderStatusCancelled
@@ -601,13 +613,31 @@ func deriveOrderStatus(order *domain.Order, paid int64, now time.Time) string {
 	if order.AmountDueCents > 0 && paid >= order.AmountDueCents {
 		return domain.OrderStatusPaid
 	}
-	if now.After(order.ExpiresAt) {
+	dueAt := order.PayDueAt
+	if dueAt.IsZero() {
+		dueAt = order.StartsAt
+	}
+	if now.After(dueAt) {
 		return domain.OrderStatusExpired
 	}
 	if paid > 0 {
 		return domain.OrderStatusPartial
 	}
 	return domain.OrderStatusUnpaid
+}
+
+// parsePayDueAt 解析创建订单时显式指定的付款到期日（YYYY-MM-DD）。
+// 空串表示未指定，返回零值由 BeforeCreate 兜底为服务起始日。
+func parsePayDueAt(raw string) (time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, nil
+	}
+	t, err := time.ParseInLocation("2006-01-02", raw, time.Local)
+	if err != nil {
+		return time.Time{}, ErrInvalidPayDueAt
+	}
+	return t, nil
 }
 
 func (s *OrderService) invalidate(ctx context.Context, kgID uint64) {
@@ -633,6 +663,7 @@ type OrderRow struct {
 	Status           string    `json:"status"`
 	StartsAt         time.Time `json:"starts_at"`
 	ExpiresAt        time.Time `json:"expires_at"`
+	PayDueAt         time.Time `json:"pay_due_at"`
 	DistributorName  string    `json:"distributor_name"`
 	CreatedAt        time.Time `json:"created_at"`
 }
@@ -642,6 +673,7 @@ func (s *OrderService) List(ctx context.Context, f repository.OrderFilter) ([]Or
 	if err != nil {
 		return nil, 0, err
 	}
+	now := time.Now()
 	kgIDs := make([]uint64, 0, len(orders))
 	distIDs := make([]uint64, 0, len(orders))
 	for _, o := range orders {
@@ -664,18 +696,20 @@ func (s *OrderService) List(ctx context.Context, f repository.OrderFilter) ([]Or
 	}
 	rows := make([]OrderRow, 0, len(orders))
 	for _, o := range orders {
-		paid, _ := s.payments.SumByOrder(ctx, o.ID)
 		var snap PlanSnapshot
 		_ = json.Unmarshal([]byte(o.PlanSnapshot), &snap)
 		var distName string
 		if o.DistributorID != nil {
 			distName = distMap[*o.DistributorID]
 		}
+		// 已收金额来自列表的单次聚合；展示状态统一读时派生，
+		// 不直接返回存储的 status（design D3）。
 		rows = append(rows, OrderRow{
 			ID: o.ID, OrderNo: o.OrderNo, KindergartenID: o.KindergartenID,
 			KindergartenName: kgMap[o.KindergartenID], PlanName: snap.PlanName,
-			StudentTier: o.StudentTier, AmountDueCents: o.AmountDueCents, AmountPaidCents: paid,
-			Status: o.Status, StartsAt: o.StartsAt, ExpiresAt: o.ExpiresAt,
+			StudentTier: o.StudentTier, AmountDueCents: o.AmountDueCents, AmountPaidCents: o.PaidCents,
+			Status: deriveOrderStatus(&o.Order, o.PaidCents, now), StartsAt: o.StartsAt,
+			ExpiresAt: o.ExpiresAt, PayDueAt: o.PayDueAt,
 			DistributorName: distName, CreatedAt: o.CreatedAt,
 		})
 	}
@@ -703,6 +737,7 @@ type OrderDetail struct {
 	AmountPaidCents  int64           `json:"amount_paid_cents"`
 	StartsAt         time.Time       `json:"starts_at"`
 	ExpiresAt        time.Time       `json:"expires_at"`
+	PayDueAt         time.Time       `json:"pay_due_at"`
 	PlanSnapshot     PlanSnapshot    `json:"plan_snapshot"`
 	Distributor      *DistributorRef `json:"distributor"`
 	InvoiceInfo      json.RawMessage `json:"invoice_info"`
@@ -753,8 +788,9 @@ func (s *OrderService) Detail(ctx context.Context, id uint64) (*OrderDetail, err
 	}
 	detail := &OrderDetail{
 		ID: o.ID, OrderNo: o.OrderNo, KindergartenID: o.KindergartenID, KindergartenName: kgName,
-		Status: o.Status, AmountDueCents: o.AmountDueCents, AmountPaidCents: paid,
-		StartsAt: o.StartsAt, ExpiresAt: o.ExpiresAt, PlanSnapshot: snap,
+		// 详情与列表一致：状态按付款到期日读时派生。
+		Status: deriveOrderStatus(o, paid, time.Now()), AmountDueCents: o.AmountDueCents, AmountPaidCents: paid,
+		StartsAt: o.StartsAt, ExpiresAt: o.ExpiresAt, PayDueAt: o.PayDueAt, PlanSnapshot: snap,
 		Distributor: distRef, Payments: paymentRows,
 	}
 	if o.InvoiceInfo != "" && o.InvoiceInfo != "{}" {
