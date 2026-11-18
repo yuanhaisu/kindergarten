@@ -1,4 +1,5 @@
 import { usePlatformHttp } from '~/composables/usePlatformHttp'
+import type { OrderListQuery } from '~/utils/platformOrders'
 import type { Paged } from './types'
 
 export interface OrderRow {
@@ -13,6 +14,7 @@ export interface OrderRow {
   status: string
   starts_at: string
   expires_at: string
+  pay_due_at: string
   distributor_name: string
   created_at: string
 }
@@ -27,6 +29,7 @@ export interface OrderDetail {
   amount_paid_cents: number
   starts_at: string
   expires_at: string
+  pay_due_at: string
   plan_snapshot: { plan_name: string; module_codes: string[]; price_cents: number }
   distributor: { id: number; name: string; commission_rate: number } | null
   invoice_info: Record<string, string> | null
@@ -40,12 +43,17 @@ export interface OrderDetail {
   }[]
 }
 
-export function listOrders(params: Record<string, unknown>) {
+export function listOrders(params: OrderListQuery) {
   return usePlatformHttp().get<Paged<OrderRow>>('/platform/orders', { params })
 }
 
 export function createOrder(body: Record<string, unknown>) {
-  return usePlatformHttp().post<{ id: number; order_no: string; amount_due_cents: number }>('/platform/orders', body)
+  return usePlatformHttp().post<{
+    id: number
+    order_no: string
+    amount_due_cents: number
+    pay_due_at: string
+  }>('/platform/orders', body)
 }
 
 export function getOrder(id: number) {

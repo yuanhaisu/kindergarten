@@ -21,6 +21,11 @@ export function formatPercent(v: string | number) {
   return v || '-'
 }
 
+/** 金额（分 → 元），保留两位小数；退款等负数保留负号。 */
+export function formatMoney(cents: number): string {
+  return `¥${(cents / 100).toFixed(2)}`
+}
+
 /**
  * 比率的展示值。后端把「无法计算」（分母为 0）一律返回 null，
  * 与真正的 0% 是两件事，必须显示「—」而不是 Number(null) → 0%。
