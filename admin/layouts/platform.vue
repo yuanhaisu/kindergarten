@@ -30,19 +30,24 @@
 </template>
 
 <script setup lang="ts">
-import { platformLogout } from '~/api/platform'
+import { platformLogout } from '~/api/platform/auth'
 import { PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions } from '~/utils/authCookie'
 
 const menus = [
+  { title: '看板', path: '/platform' },
   { title: '园所', path: '/platform/kindergartens' },
   { title: '套餐', path: '/platform/plans' },
   { title: '订单', path: '/platform/orders' },
   { title: '分销商', path: '/platform/distributors' },
   { title: '佣金台账', path: '/platform/commissions' },
+  { title: '账号', path: '/platform/accounts' },
+  { title: '审计', path: '/platform/logs' },
 ]
 
 const route = useRoute()
 function isActive(path: string) {
+  // 看板位于 /platform 根路径，用前缀匹配会让它在所有平台页都高亮。
+  if (path === '/platform') return route.path === '/platform'
   return route.path.startsWith(path)
 }
 
