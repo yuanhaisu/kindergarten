@@ -44,7 +44,7 @@
 | `page` / `page_size` | int | 分页，默认 `1` / `20`，`page_size` 上限 100 |
 | `from` / `to` | RFC 3339 | 时间区间，**左闭右开** `[from, to)`；格式不合法返回 `422` |
 | `operator` | string | 平台账号用户名，精确匹配 |
-| `module` | string | 模块，精确匹配：`kindergarten` / `order` / `payment` / `plan` / `distributor` |
+| `module` | string | 模块，精确匹配：`kindergarten` / `order` / `payment` / `plan` / `distributor` / `account` |
 | `kindergarten_id` | uint64 | 目标园所 ID，精确匹配 |
 
 > 过滤条件之间是「且」关系，省略即不限制。`kindergarten_id` 只能过滤出记录本身
@@ -67,6 +67,6 @@
 
 > **审计只覆盖成功操作。** 业务失败时事务回滚，不产生记录，因此没有 `result` 字段。
 >
-> **强一致操作**（开通园所、启停园所、确认/取消订单、登记收款与退款）的审计与业务
-> 写入同一数据库事务：审计写入失败时业务操作一并回滚并返回错误。
+> **强一致操作**（开通园所、启停园所、确认/取消订单、登记收款与退款、平台账号的新建/停用/重置密码）
+> 的审计与业务写入同一数据库事务：审计写入失败时业务操作一并回滚并返回错误。
 > **best-effort 操作**（套餐与分销商目录变更）的审计失败只记服务端错误日志，不阻断业务。

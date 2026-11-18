@@ -32,6 +32,7 @@ type PlatformService struct {
 	logRepo       PlatformAuditStore
 	dietSeed      *DietSeedService
 	kgStatus      *KindergartenStatusService
+	epochs        auth.PlatformEpochStore
 	secret        []byte
 	atTTL         time.Duration
 }
@@ -48,15 +49,20 @@ func NewPlatformService(
 	logRepo PlatformAuditStore,
 	dietSeed *DietSeedService,
 	kgStatus *KindergartenStatusService,
+	epochs auth.PlatformEpochStore,
 	secret []byte,
 	atTTL time.Duration,
 ) *PlatformService {
 	return &PlatformService{
 		db: db, adminRepo: adminRepo, kgRepo: kgRepo, entRepo: entRepo, orderRepo: orderRepo,
 		userRepo: userRepo, userRoleRepo: userRoleRepo, adminRoleRepo: adminRoleRepo,
-		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, secret: secret, atTTL: atTTL,
+		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, epochs: epochs,
+		secret: secret, atTTL: atTTL,
 	}
 }
+
+// EpochStore 暴露平台账号的凭证失效存储给路由装配（PlatformAuth）。
+func (s *PlatformService) EpochStore() auth.PlatformEpochStore { return s.epochs }
 
 type PlatformAdminInfo struct {
 	ID       uint64 `json:"id"`

@@ -8,12 +8,22 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
 	"kindergarten-server/pkg/response"
 )
+
+// PlatformEpochStore 暴露平台账号的凭证失效存储给路由装配。
+// 与 TokenRevoker 同理，走 Handler 以避免改 NewRouter 签名。
+func (h *Handler) PlatformEpochStore() auth.PlatformEpochStore {
+	if h == nil || h.platformSvc == nil {
+		return nil
+	}
+	return h.platformSvc.EpochStore()
+}
 
 // operatorOf 取当前平台账号的用户名，用于操作留痕。
 func (h *Handler) operatorOf(c *gin.Context) string {
