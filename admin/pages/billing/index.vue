@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { getSubscription, type SubscriptionView } from '~/api/platform'
+import { getSubscription, type SubscriptionView } from '~/api/platform/subscription'
 
 const loading = ref(false)
 const view = ref<SubscriptionView | null>(null)

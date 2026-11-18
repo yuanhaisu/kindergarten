@@ -141,7 +141,7 @@ import {
   updatePlan,
   type ModuleDef,
   type PlanRow,
-} from '~/api/platform'
+} from '~/api/platform/plans'
 
 definePageMeta({ layout: 'platform' })
 
