@@ -2,9 +2,8 @@ import test from "node:test"
 import assert from "node:assert/strict"
 
 import {
-  ENTITLEMENT_CACHE_KEY,
-  ENTITLEMENT_CACHE_AT_KEY,
-  clearEntitlementCache
+  clearEntitlementCache,
+  entitlementCacheEpoch
 } from "../src/utils/entitlement-cache.mjs"
 
 function fakeStorage(initial = {}) {
@@ -33,22 +32,48 @@ test("清理授权缓存只移除 entitlement 两个 key", () => {
   assert.deepEqual(storage.data.get("teacher_user"), { id: 1 })
 })
 
-test("缓存 key 是两端共用的存储契约", () => {
-  assert.equal(ENTITLEMENT_CACHE_KEY, "entitlement_cache")
-  assert.equal(ENTITLEMENT_CACHE_AT_KEY, "entitlement_cache_at")
+test("清理一次递增缓存代数", () => {
+  const before = entitlementCacheEpoch()
+
+  clearEntitlementCache(fakeStorage())
+
+  assert.equal(entitlementCacheEpoch(), before + 1)
 })
 
-test("存储异常不阻断清理流程", () => {
+test("连续清理按次数递增缓存代数", () => {
+  const before = entitlementCacheEpoch()
+
+  clearEntitlementCache(fakeStorage())
+  clearEntitlementCache(fakeStorage())
+
+  assert.equal(entitlementCacheEpoch(), before + 2)
+})
+
+test("没有 storage 时安全返回并递增缓存代数", () => {
+  const before = entitlementCacheEpoch()
+
+  assert.doesNotThrow(() => clearEntitlementCache())
+  assert.doesNotThrow(() => clearEntitlementCache(null))
+
+  assert.equal(entitlementCacheEpoch(), before + 2)
+})
+
+test("存储异常不阻断清理流程且留下告警", () => {
   const storage = {
     removeStorageSync() {
       throw new Error("storage unavailable")
     }
   }
+  const originalWarn = console.warn
+  const warnings = []
+  console.warn = (...args) => warnings.push(args.join(" "))
+  try {
+    assert.doesNotThrow(() => clearEntitlementCache(storage))
+  } finally {
+    console.warn = originalWarn
+  }
 
-  assert.doesNotThrow(() => clearEntitlementCache(storage))
-})
-
-test("没有 storage 时安全返回", () => {
-  assert.doesNotThrow(() => clearEntitlementCache())
-  assert.doesNotThrow(() => clearEntitlementCache(null))
+  assert.equal(warnings.length, 1)
+  assert.match(warnings[0], /clear cache failed/)
+  assert.match(warnings[0], /storage unavailable/)
 })

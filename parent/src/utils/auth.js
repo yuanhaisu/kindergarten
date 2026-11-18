@@ -1,4 +1,4 @@
-import { clearCurrentStudentId } from "@/utils/currentStudent"
+import { clearCurrentStudentId } from "./currentStudent.js"
 import { clearEntitlementCache } from "./entitlement-cache.mjs"
 
 const TOKEN_KEY = "parent_token"

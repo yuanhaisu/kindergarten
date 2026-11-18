@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "e314369de66694f377822b397eeb54ae8f15147623c63332dddc22f3693fa5a7",
+  "supportHash": "c951ce616ea5103140f4bc20723639392de2c29391ea26cb8f869d9591d08695",
   "supportReviewedAt": "2026-11-18",
-  "supportReason": "#102 授权缓存清理：utils/auth、utils/login 增加 entitlement 缓存清理，utils/entitlements 复用 entitlement-cache.mjs",
+  "supportReason": "code review fix #102: 授权缓存清理与登录态接线测试，无 UI 变化",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -80,12 +80,12 @@
     "parent/09-growth-index": {
       "source": "parent/src/pages/growth/index.vue",
       "sha256": "33085fefe3d0d603abea2efbcd13424ec06fbf8f2d50d2a2e4893f9e89cea6aa",
-      "depsSha": "7afc64bf0db30ca0f2dc1927b13aae66544403b57594aad24fc61a0b33e5cf16",
+      "depsSha": "8718bea4c35aa59e433b3ecbe749ba66ad49898b6e1d84f65d153c50b56779f9",
       "title": "成长时光",
       "tabbar": true,
       "reviewedAt": "2026-11-18",
       "codeCommit": "7d71f06",
-      "reason": "#102 授权缓存清理：utils/entitlements 仅内部复用 entitlement-cache.mjs，页面无视觉/交互变化"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/10-growth-detail": {
       "source": "parent/src/pages/growth/detail.vue",
@@ -108,12 +108,12 @@
     "parent/12-growth-report": {
       "source": "parent/src/pages/growth/report.vue",
       "sha256": "4a4ae1a138fc59716b71531a786246d7f9b74506dbefcd23fa1ec5424ff154fc",
-      "depsSha": "7bf899b4119abb7924eb7bd06a762cca99432283729d94b22e5e8b46b8cfd3eb",
+      "depsSha": "88fb8776b8e02ecf6fcc0c2c8fdbeaca50c34bff8b399d79403e17fef08b8080",
       "title": "成长报告",
       "tabbar": false,
       "reviewedAt": "2026-11-18",
       "codeCommit": "d6733c7",
-      "reason": "#102 授权缓存清理：utils/entitlements 仅内部复用 entitlement-cache.mjs，页面无视觉/交互变化"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
@@ -191,12 +191,12 @@
     "parent/21-class-index": {
       "source": "parent/src/pages/class/index.vue",
       "sha256": "3cbec6f195136aa382ef6c702519e6ff5e5ce3ee16af5b3e5ef306cbe846ccac",
-      "depsSha": "580e5fb372dfbb52d68f8d82d979975297c856c63473daf4c8d69a99f63dfa73",
+      "depsSha": "289937ce3586a4b73d9a70af598aa44108c9e5dd5eb71c6c3f826d323caad1c5",
       "title": "班级信息",
       "tabbar": false,
       "reviewedAt": "2026-11-18",
       "codeCommit": "d6733c7",
-      "reason": "#102 授权缓存清理：utils/entitlements 仅内部复用 entitlement-cache.mjs，页面无视觉/交互变化"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/22-calendar-index": {
       "source": "parent/src/pages/calendar/index.vue",
@@ -246,22 +246,22 @@
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
       "sha256": "082dbe8feb8af43f781f8287e7e000b6ecb117151f8ce093e35bf963e771c6bf",
-      "depsSha": "869991055ebfd99716685d81b5b88533015b3ee3c0597fddead484f5f3010fd5",
+      "depsSha": "2a2b1d7072f891206d85c947b0d86781c0ad738adba5e805ba5465d954d8cee9",
       "title": "我的",
       "tabbar": true,
       "reviewedAt": "2026-11-18",
       "codeCommit": "0f3f799",
-      "reason": "#102 授权缓存清理：utils/entitlements 仅内部复用 entitlement-cache.mjs，页面无视觉/交互变化"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
       "sha256": "92e6c043a8c0941a24e036c21834041dd12e0b0650a419ffa4f06f019dcd3902",
-      "depsSha": "c321fcdcc879a83b209d084a00c464d04a247146f8332fe3b9bded5c6e25dab4",
+      "depsSha": "01421c976d09aefc94aa3c7dc232b751a00064862f5c23832b42daf05911c961",
       "title": "班级相册",
       "tabbar": false,
       "reviewedAt": "2026-11-18",
       "codeCommit": "d6733c7",
-      "reason": "#102 授权缓存清理：utils/entitlements 仅内部复用 entitlement-cache.mjs，页面无视觉/交互变化"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/29-album-detail": {
       "source": "parent/src/pages/album/detail.vue",
@@ -275,12 +275,12 @@
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
       "sha256": "62196020642dcbb709e74519f8119e4d367b28f6c4d53198504e225be441355a",
-      "depsSha": "f09c57e3e6e82063510d34905730f846b5f15778f04d775a33d3600a1e7d99bc",
+      "depsSha": "68c200d1a42d668fe12b1c4e965086cbd55e9997908791033897d8a335564cf3",
       "title": "老师工作台",
       "tabbar": true,
       "reviewedAt": "2026-11-18",
       "codeCommit": "0f3f799",
-      "reason": "#102 授权缓存清理：utils/entitlements 仅内部复用 entitlement-cache.mjs，页面无视觉/交互变化"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
@@ -421,12 +421,12 @@
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
       "sha256": "4c625a2acaf8c1940747dd9e1b5fceaf744ebe416f571b1113ea9b33710f17a4",
-      "depsSha": "0c8129cc8fb069d6d95ee52092fa92fd87603dbb59969ba5f36b1e8324154c68",
+      "depsSha": "356199337f543b2462e6c5f38d21c720486fc3ccf7486efa0d1701d4831bd5cd",
       "title": "更多功能",
       "tabbar": false,
       "reviewedAt": "2026-11-18",
       "codeCommit": "7d71f06",
-      "reason": "#102 授权缓存清理：utils/entitlements 仅内部复用 entitlement-cache.mjs，页面无视觉/交互变化"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",
