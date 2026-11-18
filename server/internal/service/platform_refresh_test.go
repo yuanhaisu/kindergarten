@@ -34,6 +34,9 @@ func newPlatformRefreshService(t *testing.T, db *gorm.DB, rdb *redis.Client) *Pl
 		repository.NewUserRepo(db),
 		repository.NewUserRoleRepo(db),
 		repository.NewAdminRepo(db),
+		repository.NewPaymentRepo(db),
+		repository.NewCommissionRepo(db),
+		repository.NewDistributorRepo(db),
 		repository.NewPlatformLogRepo(db),
 		nil,
 		nil,
@@ -214,7 +217,7 @@ func TestPlatformSessionFailsClosedWhenStorageUnavailable(t *testing.T) {
 	f.SetFailReads(true)
 	f.SetFailWrites(true)
 	svc := NewPlatformService(
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		auth.NewTokenRevoker(rdb), rdb, []byte("test-platform-secret"),
 		15*time.Minute, 7*24*time.Hour,
 	)

@@ -169,6 +169,18 @@ func (r *OrderRepo) FindLatestActiveByKindergarten(ctx context.Context, kinderga
 	return &o, err
 }
 
+// SumOutstanding 未收余额 = 未取消订单的 max(应收 - 已收, 0) 合计。
+// 已收只计未删除收款，与订单列表的 LEFT JOIN 聚合同口径（design D7）。
+func (r *OrderRepo) SumOutstanding(ctx context.Context) (int64, error) {
+	var sum int64
+	err := r.db.WithContext(ctx).Table("orders AS o").
+		Joins("LEFT JOIN (SELECT order_id, SUM(amount_cents) AS paid_cents FROM payments WHERE deleted_at IS NULL GROUP BY order_id) AS p ON p.order_id = o.id").
+		Where("o.deleted_at IS NULL AND o.status <> ?", domain.OrderStatusCancelled).
+		Select("COALESCE(SUM(GREATEST(o.amount_due_cents - COALESCE(p.paid_cents, 0), 0)), 0)").
+		Scan(&sum).Error
+	return sum, err
+}
+
 // ListDueForExpiry 返回已过到期日但仍未收清、未取消的订单，供状态推进使用。
 func (r *OrderRepo) ListDueForExpiry(ctx context.Context, before any) ([]domain.Order, error) {
 	var list []domain.Order
@@ -239,6 +251,17 @@ func (r *PaymentRepo) SumRefundsOfTx(ctx context.Context, tx *gorm.DB, paymentID
 	err := tx.WithContext(ctx).Model(&domain.Payment{}).
 		Where("refund_of_payment_id = ?", paymentID).
 		Select("COALESCE(SUM(-amount_cents), 0)").
+		Scan(&sum).Error
+	return sum, err
+}
+
+// SumReceivedBetween 统计 received_at 落在 [from, to) 的收款净额（含负数退款）。
+// 看板的「本月实收」按服务器本地时区取自然月（design D7）。
+func (r *PaymentRepo) SumReceivedBetween(ctx context.Context, from, to time.Time) (int64, error) {
+	var sum int64
+	err := r.db.WithContext(ctx).Model(&domain.Payment{}).
+		Where("received_at >= ? AND received_at < ?", from, to).
+		Select("COALESCE(SUM(amount_cents), 0)").
 		Scan(&sum).Error
 	return sum, err
 }

@@ -57,6 +57,7 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		platformG.Use(middleware.CasbinRBAC(e))
 		{
 			platformG.POST("/auth/logout", h.inner.PlatformLogout)
+			platformG.GET("/dashboard", h.inner.PlatformDashboard)
 			platformG.GET("/admins", h.inner.PlatformListAccounts)
 			platformG.POST("/admins", h.inner.PlatformCreateAccount)
 			platformG.PUT("/admins/me/password", h.inner.PlatformChangeOwnPassword)
