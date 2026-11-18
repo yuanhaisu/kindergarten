@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/pagination"
 	"kindergarten-server/pkg/response"
 )
 
@@ -156,18 +158,31 @@ func (h *Handler) PlatformListLogs(c *gin.Context) {
 
 // ==================== 套餐目录 ====================
 
+// planCatalogService 是套餐目录 handler 依赖的行为集合。抽成接口让分页契约
+// 可以用测试替身验证，不必为了跑 handler 测试而连开发库。
+type planCatalogService interface {
+	ListModules() []service.ModuleDef
+	ListPlans(ctx context.Context, status string, pq pagination.Query) ([]service.PlanRow, int64, int, int, error)
+	Create(ctx context.Context, req service.PlanRequest, operator, ip string) (*domain.Plan, error)
+	Update(ctx context.Context, id uint64, req service.PlanRequest, operator, ip string) error
+	ListTiers(ctx context.Context, planID uint64) ([]domain.PlanTier, error)
+	ReplaceTiers(ctx context.Context, planID uint64, tiers []domain.PlanTier, operator, ip string) error
+}
+
 func (h *Handler) PlatformListModules(c *gin.Context) {
 	response.OK(c, gin.H{"list": h.planSvc.ListModules()})
 }
 
 func (h *Handler) PlatformListPlans(c *gin.Context) {
-	status := c.Query("status")
-	list, total, err := h.planSvc.ListPlans(c.Request.Context(), status)
+	var q pagination.Query
+	_ = c.ShouldBindQuery(&q)
+	q.Normalize()
+	list, total, page, pageSize, err := h.planSvc.ListPlans(c.Request.Context(), c.Query("status"), q)
 	if err != nil {
 		response.ErrInternal(c, "获取套餐列表失败")
 		return
 	}
-	response.OKList(c, list, total, 1, int(total))
+	response.OKList(c, list, total, page, pageSize)
 }
 
 func (h *Handler) PlatformCreatePlan(c *gin.Context) {

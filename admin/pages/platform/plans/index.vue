@@ -42,6 +42,19 @@
       </el-table-column>
     </el-table>
 
+    <div class="flex justify-end">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50]"
+        :total="total"
+        layout="total, sizes, prev, pager, next"
+        background
+        @current-change="onPageChange"
+        @size-change="onSizeChange"
+      />
+    </div>
+
     <el-dialog v-model="editVisible" :title="editingId ? '编辑套餐' : '新建套餐'" width="520px">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px">
         <el-form-item label="套餐编码" prop="code">
@@ -142,6 +155,7 @@ import {
   type ModuleDef,
   type PlanRow,
 } from '~/api/platform/plans'
+import { formatMoney } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
 
@@ -149,6 +163,9 @@ const rows = ref<PlanRow[]>([])
 const modules = ref<ModuleDef[]>([])
 const loading = ref(false)
 const submitting = ref(false)
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
 
 const editVisible = ref(false)
 const editingId = ref<number | null>(null)
@@ -181,14 +198,31 @@ const tiers = ref<{ tier: number; min_students: number; max_students: number; pr
 async function load() {
   loading.value = true
   try {
-    const [plans, mods] = await Promise.all([listPlans(), listModules()])
+    const [plans, mods] = await Promise.all([
+      listPlans({ page: page.value, page_size: pageSize.value }),
+      listModules(),
+    ])
     rows.value = plans.list || []
+    total.value = plans.total || 0
+    page.value = plans.page || 1
+    pageSize.value = plans.page_size || pageSize.value
     modules.value = mods.list || []
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '加载失败')
   } finally {
     loading.value = false
   }
+}
+
+function onPageChange(next: number) {
+  page.value = next
+  load()
+}
+
+function onSizeChange(size: number) {
+  pageSize.value = size
+  page.value = 1
+  load()
 }
 
 function openCreate() {
@@ -264,9 +298,6 @@ function uniqueCodes(codes: string[]) {
 }
 function moduleName(code: string) {
   return modules.value.find((m) => m.code === code)?.name || code
-}
-function formatMoney(cents: number) {
-  return `¥${(cents / 100).toFixed(2)}`
 }
 
 onMounted(load)
