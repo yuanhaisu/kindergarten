@@ -6,8 +6,19 @@
         <p class="mt-1 text-xs text-text-muted">一个园所 = 一个租户；开通后立即获得 30 天全功能试用。</p>
       </div>
       <div class="flex items-center gap-2">
-        <el-input v-model="keyword" placeholder="搜索园所 / 园长" clearable class="!w-56" @keyup.enter="load" />
-        <el-button @click="load">查询</el-button>
+        <el-input
+          v-model="keyword"
+          placeholder="搜索园所 / 园长"
+          clearable
+          class="!w-56"
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <el-select v-model="statusFilter" clearable placeholder="全部状态" class="!w-32" @change="search">
+          <el-option label="在营" value="active" />
+          <el-option label="停用" value="suspended" />
+        </el-select>
+        <el-button @click="search">查询</el-button>
         <el-button type="primary" @click="openCreate">开通园所</el-button>
       </div>
     </div>
@@ -36,7 +47,7 @@
       </el-table-column>
       <el-table-column label="操作" width="170" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openDetail(row.id)">详情</el-button>
+          <el-button link type="primary" @click="openDetail(row)">详情</el-button>
           <el-button link :type="row.status === 'active' ? 'danger' : 'success'" @click="toggleStatus(row)">
             {{ row.status === 'active' ? '停用' : '启用' }}
           </el-button>
@@ -125,10 +136,16 @@ import {
   type PlatformKindergartenDetail,
   type PlatformKindergartenRow,
 } from '~/api/platform/kindergartens'
+import {
+  buildKindergartenListQuery,
+  validateAdminPassword,
+  validatePhone,
+} from '~/utils/platformKindergarten'
 
 definePageMeta({ layout: 'platform' })
 
 const keyword = ref('')
+const statusFilter = ref('')
 const page = ref(1)
 const pageSize = 20
 const total = ref(0)
@@ -142,18 +159,46 @@ const form = reactive({ name: '', principal: '', phone: '', admin_password: '', 
 const formRules: FormRules = {
   name: [{ required: true, message: '请输入园所名称', trigger: 'blur' }],
   principal: [{ required: true, message: '请输入园长姓名', trigger: 'blur' }],
-  phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
-  admin_password: [{ required: true, min: 8, message: '至少 8 位', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    {
+      validator: (_rule, value, callback) => {
+        const error = validatePhone(String(value ?? ''))
+        if (error) callback(new Error(error))
+        else callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+  admin_password: [
+    { required: true, message: '请输入初始口令', trigger: 'blur' },
+    {
+      validator: (_rule, value, callback) => {
+        const error = validateAdminPassword(String(value ?? ''))
+        if (error) callback(new Error(error))
+        else callback()
+      },
+      trigger: 'blur',
+    },
+  ],
 }
 
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const detail = ref<PlatformKindergartenDetail | null>(null)
+const detailId = ref<number | null>(null)
 
 async function load() {
   loading.value = true
   try {
-    const data = await listKindergartens({ page: page.value, page_size: pageSize, keyword: keyword.value })
+    const data = await listKindergartens(
+      buildKindergartenListQuery({
+        page: page.value,
+        pageSize,
+        keyword: keyword.value,
+        status: statusFilter.value,
+      }),
+    )
     rows.value = data.list || []
     total.value = data.total || 0
   } catch (e) {
@@ -163,17 +208,24 @@ async function load() {
   }
 }
 
+/** 关键词或状态筛选变化时回到第 1 页，避免落在不存在的页码上看到空列表。 */
+function search() {
+  page.value = 1
+  void load()
+}
+
 function openCreate() {
   Object.assign(form, { name: '', principal: '', phone: '', admin_password: '', address: '' })
   createVisible.value = true
 }
 
 async function submitCreate() {
-  await formRef.value?.validate().catch(() => Promise.reject())
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   submitting.value = true
   try {
     const res = await onboardKindergarten({ ...form })
-    ElMessage.success(`已开通，园所 ID ${res.kindergarten_id}，请把初始密码告知园长`)
+    ElMessage.success(`已开通，园所 ID ${res.kindergarten_id}，请把初始口令告知园长`)
     createVisible.value = false
     await load()
   } catch (e) {
@@ -183,11 +235,19 @@ async function submitCreate() {
   }
 }
 
-async function openDetail(id: number) {
+async function openDetail(row: PlatformKindergartenRow) {
+  detailId.value = row.id
+  // 先清空上一所园的数据，避免加载期间抽屉里短暂显示错误的授权/订单。
+  detail.value = null
   detailVisible.value = true
+  await refreshDetail()
+}
+
+async function refreshDetail() {
+  if (detailId.value == null) return
   detailLoading.value = true
   try {
-    detail.value = await getKindergarten(id)
+    detail.value = await getKindergarten(detailId.value)
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '加载详情失败')
   } finally {
@@ -197,6 +257,17 @@ async function openDetail(id: number) {
 
 async function toggleStatus(row: PlatformKindergartenRow) {
   const next = row.status === 'active' ? 'suspended' : 'active'
+  if (next === 'suspended') {
+    try {
+      await ElMessageBox.confirm(
+        `停用「${row.name}」后，该园全部园所端会话立即不可用。确定停用？`,
+        '停用园所',
+        { type: 'warning', confirmButtonText: '停用', cancelButtonText: '取消' },
+      )
+    } catch {
+      return
+    }
+  }
   try {
     await setKindergartenStatus(row.id, next)
     ElMessage.success(next === 'active' ? '已启用' : '已停用')
