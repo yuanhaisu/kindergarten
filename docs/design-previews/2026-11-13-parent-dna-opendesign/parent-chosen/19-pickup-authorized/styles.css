@@ -774,6 +774,161 @@ button:focus:not(:focus-visible) {
 
 /* ---------- motion preferences ---------- */
 
+/* ---------- management tabs ---------- */
+
+.manage-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 4px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-pill);
+}
+
+.manage-tab {
+  flex: 1;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  transition: background-color var(--motion-press) var(--ease-out), color var(--motion-press) var(--ease-out);
+}
+
+.manage-tab.is-active {
+  background: var(--surface);
+  border-color: var(--hair);
+  color: var(--fg);
+}
+
+.manage-tab:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* ---------- pickup history ---------- */
+
+.history-view {
+  margin-top: 0;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
+  font-weight: var(--weight-regular);
+  color: var(--fg);
+}
+
+.section-meta {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--muted);
+}
+
+.history-card {
+  padding: 2px 18px 4px;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.day {
+  padding: 12px 0 10px;
+}
+
+.day + .day {
+  border-top: 1px solid var(--hair-soft);
+}
+
+.day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.day-date {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: var(--weight-regular);
+  color: var(--fg);
+}
+
+.day-week {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--muted-on-surface);
+}
+
+.record-row {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rec-type {
+  flex: none;
+  width: 34px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+}
+
+.rec-in {
+  color: var(--sage-deep);
+}
+
+.rec-out {
+  color: var(--terracotta-text);
+}
+
+.rec-person {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.rec-name {
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+.rec-rel {
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--muted-on-surface);
+}
+
+.rec-time {
+  flex: none;
+  font-size: var(--text-small);
+  line-height: 1.4;
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .back-button,
   .person-row,

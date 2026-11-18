@@ -232,4 +232,29 @@
       if (row.getAttribute('data-auth-id') === detailId) openDetail(row);
     });
   }
+
+  var tabButtons = Array.prototype.slice.call(document.querySelectorAll('[data-tab]'));
+  var historyPanel = document.getElementById('pickup-panel-history');
+
+  function setTab(tab) {
+    tabButtons.forEach(function (button) {
+      var active = button.getAttribute('data-tab') === tab;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+
+    document.querySelectorAll('[data-panel="people"]').forEach(function (panel) {
+      panel.hidden = tab !== 'people' || panel.getAttribute('data-view') !== activeView;
+    });
+
+    if (historyPanel) historyPanel.hidden = tab !== 'history';
+  }
+
+  tabButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      setTab(button.getAttribute('data-tab'));
+    });
+  });
+
+  setTab(state === 'history' ? 'history' : 'people');
 })();
