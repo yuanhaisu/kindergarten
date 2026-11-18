@@ -6,8 +6,8 @@
  * - 查看器有上一张 / 下一张，编号严格是「照片 n / 7」；
  * - 「写一句」与评论数图标打开同一张评论抽屉，记录 1 预置 2 条评论，
  *   其余记录显示空态；发送后抽屉关闭、评论数 +1；
- * - 上拉加载两批共 4 条样例记录，第二批之后显示「已经到底了」；
- * - 五项筛选与新记录并存，统计卡仍随筛选联动。
+ * - 上拉加载两批共 4 条上一学期（8 月 / 7 月）样例记录，第二批之后显示「已经到底了」；
+ * - 五项筛选与新记录并存；统计卡是「本学期」stats 摘要，不随上拉加载增长。
  *
  * 不触碰 13 个状态截图契约：?state=photo-grid / comments / loading / end
  * 只用于本文件的渲染断言，不新增 preview-*.png。
@@ -39,14 +39,20 @@ export default {
       within: "#feed-footer",
       must: ["已经到底了"],
     },
-    // 两批样例全部加载后，学期统计随记录数 / 照片数 / 寄语数重算。
+    // 两批样例都是上一学期（8 月 / 7 月）记录，不进入本学期统计。
     {
       slug: "11-growth",
       state: "end",
       within: ".week-card",
-      must: ["9 成长记录", "17 照片", "5 老师寄语"],
+      must: ["5 成长记录", "12 照片", "3 老师寄语"],
     },
-    // 新记录进入「有照片」筛选后，统计必须按筛选重算。
+    {
+      slug: "11-growth",
+      state: "end",
+      within: ".feed",
+      must: ["8 月 22 日", "7 月 28 日"],
+    },
+    // 筛选仍按本学期的 5 条记录重算：有照片 3 条。
     {
       slug: "11-growth",
       state: "end",
@@ -54,7 +60,7 @@ export default {
         click: '[data-filter="photo"]',
         expectStayOn: "11-growth",
         expectVisible: ".week-card",
-        expectVisibleText: "6 成长记录",
+        expectVisibleText: "3 成长记录",
       },
     },
 

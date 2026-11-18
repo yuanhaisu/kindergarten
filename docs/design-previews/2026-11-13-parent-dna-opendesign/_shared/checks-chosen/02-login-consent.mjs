@@ -16,7 +16,7 @@ export default {
         click: "#wechat-login",
         expectStayOn: "02-login",
         expectVisible: "#consent-error",
-        expectVisibleText: "请先阅读并同意《用户协议》与《隐私政策》",
+        expectVisibleText: "请先阅读并同意《隐私政策》《未成年人个人信息保护规则》与《用户协议》",
       },
     },
     {

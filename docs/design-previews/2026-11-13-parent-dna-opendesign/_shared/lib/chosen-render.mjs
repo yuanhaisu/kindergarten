@@ -40,6 +40,8 @@ const TEXT_EXPRESSION = (selectors, props) => `(() => {
     if (spec.check === "checked") {
       props[spec.selector + "|checked"] =
         element && typeof element.checked === "boolean" ? element.checked : null;
+    } else if (spec.check === "tagName") {
+      props[spec.selector + "|tagName"] = element ? element.tagName.toLowerCase() : null;
     } else if (spec.check === "bottomSheet") {
       if (!element) {
         props[spec.selector + "|bottomSheet"] = null;

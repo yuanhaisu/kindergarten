@@ -300,19 +300,6 @@ button {
   height: 22px;
 }
 
-.btn-secondary {
-  height: 52px;
-  margin-top: 12px;
-  border: 1px solid var(--fg);
-  background: var(--surface);
-  color: var(--fg);
-  font-size: 16px;
-}
-
-.btn-secondary:active {
-  background: var(--surface-muted);
-}
-
 .consent-row {
   position: relative;
   min-height: 44px;
@@ -384,6 +371,9 @@ button {
 }
 
 .legal-link {
+  display: inline-block;
+  padding: 14px 0;
+  margin: -14px 0;
   border-radius: 2px;
   color: var(--fg);
   font-weight: var(--weight-medium);

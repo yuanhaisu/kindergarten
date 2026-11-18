@@ -280,7 +280,7 @@ body {
 .doc-tab {
   flex: 1 1 0;
   min-width: 0;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 8px;
   border: 0;
   border-radius: var(--radius-pill);

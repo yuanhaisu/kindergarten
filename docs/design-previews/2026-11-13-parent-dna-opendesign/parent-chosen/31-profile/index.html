@@ -70,15 +70,15 @@
         <p class="stats-title" id="stats-title">累计数据</p>
         <div class="stats-grid">
           <div class="stat">
-            <p class="stat-value">42</p>
+            <p class="stat-value" id="stat-pickup">42</p>
             <p class="stat-label">接送记录</p>
           </div>
           <div class="stat">
-            <p class="stat-value">32</p>
+            <p class="stat-value" id="stat-growth">32</p>
             <p class="stat-label">成长记录</p>
           </div>
           <div class="stat">
-            <p class="stat-value">1245</p>
+            <p class="stat-value" id="stat-points">1245</p>
             <p class="stat-label">累计积分</p>
           </div>
         </div>
@@ -114,6 +114,24 @@
             <span class="row-copy">
               <span class="row-title">班级信息</span>
               <span class="row-sub">小一班 · 李老师、王老师</span>
+            </span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 6 6 6-6 6"/>
+            </svg>
+          </a>
+
+          <a class="list-row service-row" href="../14-growth-report/index.html" data-od-id="service-growth-report">
+            <span class="icon-circle icon-circle--sage" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M4.5 19.5h15"/>
+                <path d="M7 19.5V12h3v7.5"/>
+                <path d="M12.5 19.5V8h3v11.5"/>
+                <path d="M18 19.5V4.5"/>
+              </svg>
+            </span>
+            <span class="row-copy">
+              <span class="row-title">成长报告</span>
+              <span class="row-sub">本学期记录与老师观察</span>
             </span>
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
               <path d="m9 6 6 6-6 6"/>
@@ -253,6 +271,7 @@
           data-child-name="乐乐"
           data-child-initial="乐"
           data-child-row-meta="小一班 · 阳光幼儿园"
+          data-child-stats="42,32,1245"
           data-od-id="child-option-lele"
         >
           <span class="avatar avatar--sheet" aria-hidden="true">乐</span>
@@ -272,6 +291,7 @@
           data-child-name="朵朵"
           data-child-initial="朵"
           data-child-row-meta="中二班 · 阳光幼儿园"
+          data-child-stats="18,12,640"
           data-od-id="child-option-duoduo"
         >
           <span class="avatar avatar--sheet" aria-hidden="true">朵</span>
@@ -283,10 +303,21 @@
             <path d="m5 12 4.5 4.5L19 7"/>
           </svg>
         </button>
+        <button class="child-add" id="child-add" type="button" disabled data-od-id="child-add">
+          <span class="icon-circle icon-circle--add" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" focusable="false">
+              <path d="M12 5.5v13M5.5 12h13"/>
+            </svg>
+          </span>
+          <span class="row-copy">
+            <span class="row-title">添加孩子</span>
+            <span class="row-sub">即将支持</span>
+          </span>
+        </button>
       </section>
     </div>
   </div>
 
   <script src="app.js" defer></script>
-</body>
+<script src="../../_shared/nav.js"></script></body>
 </html>

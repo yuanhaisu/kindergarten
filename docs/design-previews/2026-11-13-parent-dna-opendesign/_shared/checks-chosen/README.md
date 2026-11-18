@@ -3,6 +3,7 @@
 `node _shared/check-variants.mjs --chosen` 的断言不写死在共享检查脚本里。
 本目录每个 `.mjs` 文件（`_` 开头的除外，可放共享辅助模块）都是一个入口，
 按文件名排序加载。**新增页面/票的断言时只加文件，不改 `check-variants.mjs`。**
+例外（spec #88 / ticket #98）：引擎允许增加 `clock` measure 与 `relation`（`eq/gte/lte/gt/lt`）以支持时间顺序断言；该扩展由 #99 终检统一维护。
 
 ## 运行
 
@@ -79,8 +80,9 @@ export default {
 | `props` | 否 | DOM 属性断言数组，见下 |
 | `interaction` | 否 | 点击交互断言，见下 |
 
-`props` 目前支持 `checked`（原生 checkbox）与 `bottomSheet`（元素是否贴底、横向占满：
-危险确认必须是底部确认区，不是居中弹窗）。`selector` 未命中算失败，不静默跳过。
+`props` 目前支持 `checked`（原生 checkbox）、`bottomSheet`（元素是否贴底、横向占满：
+危险确认必须是底部确认区，不是居中弹窗）与 `tagName`（元素标签名，如 `textarea`）。
+`selector` 未命中算失败，不静默跳过。
 
 `interaction` 与 `must` / `mustNot` / `within` / `props` 互斥；字段：
 
@@ -121,5 +123,6 @@ export default {
   不要把所有页面塞进同一个文件。
 - 只断言用户可见事实：文案、字段有无、默认状态、真实点击后果、跨页一致的数字。
 - 不要断言 CSS 类名、内部 DOM 结构或 `data-*` 实现细节。
+- `data-od-id` 是原型评审钩子，可作为 `within` 的稳定容器定位；不要把它的存在或取值当作业务事实断言。
 - 页面文案会随票改，断言写该票的验收口径；共享冒烟断言（`smoke.mjs`）
   只锁定页面身份，不锁定业务口径。

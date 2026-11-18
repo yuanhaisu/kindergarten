@@ -39,11 +39,11 @@
         <p class="card-overline">今天 · 11 月 12 日</p>
 
         <div class="status-headline">
-          <h2 class="status-title" id="status-title">
+          <p class="status-title" id="status-title">
             <span data-when="in">在园中</span>
             <span data-when="away">未入园</span>
             <span data-when="done">已接走</span>
-          </h2>
+          </p>
           <span class="status-icon" aria-hidden="true">
             <svg data-when="in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 10.8 12 4.2l8 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19v-8.2Z" />
@@ -61,7 +61,7 @@
 
         <p class="status-desc">
           <span data-when="in">07:52 由妈妈送入，下午 <span class="hl">17:00 后可接</span>。</span>
-          <span data-when="away">今天还没到园，请在 <span class="hl">08:30 前送入</span>。</span>
+          <span data-when="away">今天还未入园，请联系老师。</span>
           <span data-when="done">17:12 由妈妈接走，今天在园 <span class="hl">9 小时 20 分</span>。</span>
         </p>
 
@@ -100,6 +100,38 @@
           <span data-when="away">到园时在门口出示，老师扫码后自动记录</span>
           <span data-when="done">已离开园区，今日接送码已失效</span>
         </p>
+      </section>
+
+      <section class="designate-card" aria-labelledby="designate-title" data-od-id="designate-card">
+        <div class="designate-head">
+          <span class="designate-title" id="designate-title">今天谁来接</span>
+          <button
+            class="designate-change"
+            id="designate-change"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="pickup-person-sheet"
+            data-od-id="designate-change"
+          >更换</button>
+        </div>
+        <p class="designate-name" id="designate-name" data-od-id="designate-name">
+          <span class="designate-person" id="designate-person">王磊</span>
+          <span class="designate-rel" id="designate-rel">爸爸 · 已通过</span>
+        </p>
+        <p class="designate-hint">到园接走时，老师会核对这里指定的人。</p>
+        <div class="designate-empty" id="designate-empty" hidden>
+          <p class="designate-empty__title">还没指定今天接走人</p>
+          <button
+            class="designate-cta"
+            id="designate-cta"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="pickup-person-sheet"
+            data-od-id="designate-cta"
+          >去指定</button>
+        </div>
       </section>
 
       <button class="people-card" type="button" data-od-id="authorized-pickup-card">
@@ -169,7 +201,7 @@
             </div>
             <div class="record-row">
               <span class="rec-type rec-out">接走</span>
-              <span class="rec-person"><span class="rec-name">外婆</span><span class="rec-rel">（外祖母 · 授权人）</span></span>
+              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
               <span class="rec-time">16:48</span>
             </div>
           </article>
@@ -223,7 +255,67 @@
         <span>我的</span>
       </button>
     </nav>
+
+    <div class="sheet-layer" id="pickup-sheet-layer">
+      <div class="sheet-scrim" data-close-sheet aria-hidden="true"></div>
+      <section
+        class="sheet"
+        id="pickup-person-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pickup-sheet-title"
+        data-od-id="pickup-person-sheet"
+      >
+        <div class="sheet-head">
+          <h2 class="sheet-title" id="pickup-sheet-title">选择今天接走的人</h2>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+              <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+            </svg>
+          </button>
+        </div>
+        <div class="sheet-options" id="pickup-person-options">
+          <button class="person-option" type="button" id="pick-option-mother" data-person="李静" data-relation="妈妈" aria-pressed="false">
+            <span class="person-option__body">
+              <span class="person-option__name">李静</span>
+              <span class="person-option__meta">妈妈 · 已通过</span>
+            </span>
+            <svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m5 12.5 4.4 4.4L19 7.2" />
+            </svg>
+          </button>
+          <button class="person-option" type="button" id="pick-option-father" data-person="王磊" data-relation="爸爸" aria-pressed="true">
+            <span class="person-option__body">
+              <span class="person-option__name">王磊</span>
+              <span class="person-option__meta">爸爸 · 已通过</span>
+            </span>
+            <svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m5 12.5 4.4 4.4L19 7.2" />
+            </svg>
+          </button>
+          <button
+            class="person-option"
+            type="button"
+            id="pick-option-grandma"
+            data-person="陈秀兰"
+            data-relation="外婆"
+            aria-pressed="false"
+            disabled
+          >
+            <span class="person-option__body">
+              <span class="person-option__name">陈秀兰</span>
+              <span class="person-option__meta">外婆 · 待审核</span>
+            </span>
+          </button>
+        </div>
+        <div class="sheet-empty" id="picker-empty" hidden>
+          <p class="sheet-empty__title">还没有可接送的授权人</p>
+          <p class="sheet-empty__copy">添加并通过审核后，就能在这里指定今天谁来接。</p>
+          <a class="sheet-empty__cta" href="../20-pickup-authorized-create/index.html">添加授权人</a>
+        </div>
+      </section>
+    </div>
   </div>
   <script src="app.js"></script>
-</body>
+<script src="../../_shared/nav.js"></script></body>
 </html>

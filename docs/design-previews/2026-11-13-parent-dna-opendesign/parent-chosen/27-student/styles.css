@@ -556,6 +556,183 @@ button {
   color: var(--icon-soft);
 }
 
+/* ---------- health note ---------- */
+
+.health-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.health-note__copy {
+  min-width: 0;
+}
+
+.health-note__value {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  overflow-wrap: break-word;
+}
+
+.health-note__edit {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--motion-press) var(--ease-out);
+}
+
+.health-note__edit:hover {
+  background: var(--surface-muted);
+}
+
+.health-note__edit:active {
+  background: var(--hair);
+}
+
+.health-note__edit:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 0;
+}
+
+/* ---------- health note sheet ---------- */
+
+.sheet-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(23, 50, 32, 0.55);
+}
+
+.sheet-layer[hidden] {
+  display: none;
+}
+
+.sheet-panel {
+  width: 100%;
+  padding: 14px var(--page-x) 26px;
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 18px;
+  border-radius: var(--radius-pill);
+  background: var(--hair-strong);
+}
+
+.sheet-title {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h2);
+  letter-spacing: 0;
+  font-synthesis: none;
+}
+
+.sheet-desc {
+  margin: 8px 0 0;
+  color: var(--muted-on-surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.7;
+}
+
+.sheet-label {
+  display: block;
+  margin: 18px 0 6px;
+  color: var(--muted-on-surface);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+  letter-spacing: 0.02em;
+}
+
+.sheet-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  resize: none;
+}
+
+.sheet-input:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 0;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 18px;
+}
+
+.sheet-save {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-family: var(--font-sans);
+  font-size: var(--text-serif-body);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  transition: filter var(--motion-press) ease-out;
+}
+
+.sheet-save:active {
+  filter: brightness(0.9);
+}
+
+.sheet-save:focus-visible {
+  outline-offset: 3px;
+}
+
+.sheet-cancel {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-on-surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1.4;
+}
+
+.sheet-cancel:focus-visible {
+  outline-offset: 3px;
+}
+
 /* ---------- self-drawn toast ---------- */
 
 .toast {

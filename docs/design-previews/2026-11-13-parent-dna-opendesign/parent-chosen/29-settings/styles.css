@@ -154,7 +154,7 @@ button{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cu
 
 /* settings groups */
 .settings-group+.settings-group{margin-top:24px}
-.group-title{margin-bottom:8px;font-size:17px;font-weight:600;line-height:1.4;letter-spacing:.01em}
+.group-title{margin-bottom:8px;font-family:var(--font-display);font-size:21px;font-weight:400;line-height:1.4;letter-spacing:0}
 .settings-card{overflow:hidden;border:1px solid var(--hair);border-radius:20px;background:var(--surface)}
 .setting-row{width:100%;min-height:48px;display:flex;align-items:center;gap:12px;padding:0 18px;font-size:15px;font-weight:500;line-height:1.4;text-align:left;transition:background-color var(--motion-press) var(--ease-out)}
 .setting-row+.setting-row{border-top:1px solid var(--hair-soft)}
@@ -172,6 +172,9 @@ button{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cu
 .setting-row--danger:focus-visible{outline-color:var(--danger)}
 .setting-row--static{cursor:default}
 .setting-row--static:active{background:transparent}
+a.setting-row{color:inherit;text-decoration:none}
+.setting-row--toggle{cursor:pointer}
+.setting-row--toggle:active{background:var(--surface-muted)}
 .card-note{display:flex;align-items:flex-start;gap:7px;margin-top:8px;padding:0 4px;font-size:11.5px;line-height:1.5;letter-spacing:.01em;color:var(--muted)}
 .card-note__dot{flex:0 0 5px;width:5px;height:5px;margin-top:5px;border-radius:50%;background:var(--orange)}
 .logout-button{width:100%;height:48px;margin-top:16px;display:flex;align-items:center;justify-content:center;border-radius:12px;color:var(--muted);font-size:15px;font-weight:500;letter-spacing:.02em;transition:background-color var(--motion-press) var(--ease-out)}
@@ -180,25 +183,6 @@ button{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cu
 .spec-note{margin-top:26px;padding:12px 2px 0;border-top:1px solid var(--hair)}
 .spec-note p{font-size:11px;line-height:1.65;letter-spacing:.01em;color:var(--muted)}
 .spec-note__label{font-weight:600;color:var(--fg-soft)}
-
-/* docs */
-.doc-main{padding-top:6px;padding-bottom:56px}
-.doc-title{font-family:var(--font-display);font-size:30px;font-weight:400;line-height:1.35;font-synthesis:none}
-.doc-meta{margin-top:8px;font-size:11.5px;line-height:1.5;color:var(--muted)}
-.doc-lede{margin-top:18px;font-family:var(--font-serif);font-size:17px;line-height:1.8;color:var(--fg-soft)}
-.doc-section{margin-top:24px}
-.doc-head+.doc-section{margin-top:30px}
-.section-head{display:flex;align-items:center;gap:10px;height:12px;margin-bottom:7px}
-.section-no{font-size:11px;font-weight:600;line-height:1;letter-spacing:.14em;color:var(--muted)}
-.section-head::after{content:"";flex:1;height:1px;background:var(--hair-soft)}
-.section-title{margin-bottom:10px;font-family:var(--font-display);font-size:21px;font-weight:400;line-height:1.4;font-synthesis:none}
-.doc-section p{font-size:15px;line-height:1.65}
-.doc-section p+p{margin-top:10px}
-.hl{padding:0 3px;background-color:rgba(141,163,134,.28);-webkit-box-decoration-break:clone;box-decoration-break:clone}
-.hl--marigold{background-color:rgba(221,177,74,.32)}
-.mail{font-weight:500;overflow-wrap:anywhere}
-.doc-foot{margin-top:32px;padding-top:14px;border-top:1px solid var(--hair)}
-.doc-foot p{font-size:11.5px;line-height:1.65;color:var(--muted)}
 
 /* sheet */
 .sheet-layer{position:absolute;inset:0;z-index:40}
@@ -224,6 +208,12 @@ button{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cu
 .switch[aria-checked=false]{background:var(--surface-muted);border:1px solid var(--hair-strong)}
 .switch[aria-checked=false]::after{left:3px}
 .switch:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+/* 设置行内的原生 checkbox 开关：默认勾选态由 DOM 承载，视觉与 .switch 对齐 */
+.switch-input{position:relative;flex:none;width:46px;height:28px;margin:0;border:1px solid var(--fg);border-radius:999px;background:var(--fg);cursor:pointer;-webkit-appearance:none;appearance:none;transition:background-color var(--motion-press) var(--ease-out),border-color var(--motion-press) var(--ease-out)}
+.switch-input::after{content:"";position:absolute;top:2px;left:20px;width:22px;height:22px;border:1px solid var(--hair);border-radius:50%;background:var(--surface);transition:left var(--motion-press) var(--ease-out)}
+.switch-input:not(:checked){border-color:var(--hair-strong);background:var(--surface-muted)}
+.switch-input:not(:checked)::after{left:2px}
+.switch-input:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 
 /* quiet hours */
 .time-range{display:flex;align-items:flex-end;gap:8px;margin-top:16px}
@@ -252,6 +242,7 @@ button{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cu
 /* buttons */
 .sheet-actions{display:flex;gap:10px;margin-top:20px}
 .btn{min-height:48px;display:inline-flex;align-items:center;justify-content:center;padding:0 18px;border-radius:999px;font-size:15px;font-weight:600;line-height:1.4;letter-spacing:.02em;transition:background-color var(--motion-press) var(--ease-out),opacity var(--motion-press) var(--ease-out)}
+a.btn{text-decoration:none}
 .btn--primary{flex:1;background:var(--fg);color:var(--accent-contrast)}
 .btn--primary:active{opacity:.86}
 .btn--secondary{flex:0 0 96px;border:1px solid var(--fg);background:var(--surface);color:var(--fg)}
@@ -301,3 +292,9 @@ button{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cu
 .toast.is-visible{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out),visibility 0s}
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:1ms!important;animation-duration:1ms!important}}
+
+/* #88: proposal annotations are review-only; keep them out of the user-facing prototype. */
+.proposal-tag,.proposal-note,.proposal-flag,.proposal-mark,.tag--proposal,.phase-tag,.phase-note,.phase-inline,.spec-note,.notice-foot__proposal{display:none!important}
+
+/* #88: proposal-only notes are review artifacts, not user-facing copy. */
+[data-od-id="quiet-proposal-note"],.sheet-note{display:none!important}

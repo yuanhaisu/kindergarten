@@ -273,6 +273,15 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.album-note {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-small);
+}
+
 /* ---------- filter chips: the only pills on the page ---------- */
 
 .filter-row {

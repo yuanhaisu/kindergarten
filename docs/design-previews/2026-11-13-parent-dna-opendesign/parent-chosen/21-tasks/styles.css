@@ -777,3 +777,6 @@ svg { display: block; }
     animation-duration: 1ms !important;
   }
 }
+
+/* #88: proposal annotations are review-only; keep them out of the user-facing prototype. */
+.proposal-tag,.proposal-note,.proposal-flag,.proposal-mark,.tag--proposal,.phase-tag,.phase-note,.phase-inline,.spec-note,.notice-foot__proposal{display:none!important}

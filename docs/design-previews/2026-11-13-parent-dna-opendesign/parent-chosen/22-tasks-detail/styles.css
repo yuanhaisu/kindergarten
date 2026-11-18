@@ -366,6 +366,34 @@ svg { display: block; }
   color: var(--fg);
 }
 
+/* ---------- requirements ---------- */
+.requirements {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  list-style: none;
+}
+
+.requirements li {
+  position: relative;
+  padding-left: 16px;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--fg);
+  text-wrap: pretty;
+}
+
+.requirements li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.66em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sage-deep);
+}
+
 /* ---------- steps ---------- */
 .steps-progress {
   display: flex;
@@ -538,6 +566,11 @@ svg { display: block; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 14px;
+}
+
+.photo-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 160px;
 }
 
 .photo {

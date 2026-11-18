@@ -799,6 +799,36 @@ button:focus-visible {
   opacity: 0;
 }
 
+/* 添加孩子：本版本没有真实流程，以禁用行明确「即将支持」。 */
+.child-add {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--hair-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  text-align: left;
+  opacity: 0.55;
+}
+
+.child-add:disabled {
+  cursor: default;
+}
+
+.child-add .row-title {
+  font-weight: var(--weight-medium);
+  color: var(--muted-on-surface);
+}
+
+.icon-circle--add {
+  background: var(--surface-muted);
+  color: var(--muted-on-surface);
+}
+
 /* Floating tab bar */
 
 .mp-nav {
@@ -841,7 +871,7 @@ button:focus-visible {
 }
 
 .tab[aria-current="page"] {
-  background: var(--sage-pale);
+  background: var(--sage-soft);
   color: var(--fg);
   font-weight: var(--weight-semibold);
 }

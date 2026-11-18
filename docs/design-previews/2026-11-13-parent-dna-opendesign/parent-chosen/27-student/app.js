@@ -1,5 +1,12 @@
 (() => {
   const toast = document.querySelector("[data-toast]");
+  const sheet = document.getElementById("health-note-sheet");
+  const scrim = document.getElementById("health-note-scrim");
+  const editButton = document.getElementById("edit-health-note");
+  const cancelButton = document.getElementById("health-note-cancel");
+  const saveButton = document.getElementById("health-note-save");
+  const input = document.getElementById("health-note-input");
+  const valueEl = document.getElementById("health-note-value");
   let hideTimer = 0;
   let clearTimer = 0;
 
@@ -17,21 +24,42 @@
     }, 2000);
   };
 
+  const closeSheet = () => {
+    if (sheet) sheet.hidden = true;
+    if (editButton) editButton.focus({ preventScroll: true });
+  };
+
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => {
-      const action = button.getAttribute("data-action");
-      if (action === "back") {
+      if (button.getAttribute("data-action") === "back") {
         showToast("返回「我的」");
-      } else if (action === "edit") {
-        showToast("资料修改请联系班级老师");
       }
     });
   });
 
-  document.querySelectorAll("[data-call]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const contact = button.getAttribute("data-call");
-      showToast(`正在拨打 ${contact}`);
+  if (sheet && editButton && input) {
+    editButton.addEventListener("click", () => {
+      if (valueEl) input.value = valueEl.textContent.trim();
+      sheet.hidden = false;
+      input.focus({ preventScroll: true });
     });
+  }
+
+  if (scrim) scrim.addEventListener("click", closeSheet);
+  if (cancelButton) cancelButton.addEventListener("click", closeSheet);
+
+  if (saveButton && input && sheet) {
+    saveButton.addEventListener("click", () => {
+      if (valueEl) valueEl.textContent = input.value.trim() || "无";
+      closeSheet();
+      showToast("健康备注已保存");
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && sheet && !sheet.hidden) {
+      event.preventDefault();
+      closeSheet();
+    }
   });
 })();

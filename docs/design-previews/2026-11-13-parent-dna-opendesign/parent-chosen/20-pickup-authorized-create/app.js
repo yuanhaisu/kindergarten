@@ -27,7 +27,24 @@
   const pageSubtitle = document.querySelector('.page-subtitle');
   const reviewNote = document.querySelector('.review-note');
   const submitButton = document.querySelector('.btn-primary');
-  const mode = new URLSearchParams(window.location.search).get('mode');
+  const smsInput = document.getElementById('sms-code-input');
+  const smsError = document.getElementById('sms-code-error');
+  const sendCodeButton = document.getElementById('send-code');
+
+  /* 授权人名单与 19 页的 data-auth-id 对齐：?mode=edit&id=2 回填王磊。 */
+  const AUTHORIZED_PEOPLE = {
+    '1': { name: '李静', relation: '妈妈', phone: '13800006721' },
+    '2': { name: '王磊', relation: '爸爸', phone: '13900002035' },
+    '3': { name: '陈秀兰', relation: '外婆', phone: '13700004418' },
+    '4': { name: '赵国强', relation: '叔叔', phone: '13500008890' }
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  const pageState = (params.get('state') || '').toLowerCase();
+  const stateEditMatch = pageState.match(/^edit-([1-4])$/);
+  const editId = stateEditMatch ? stateEditMatch[1] : (mode === 'edit' ? (params.get('id') || '2') : '');
+  const isEdit = Boolean(editId);
 
   let activeSheet = null;
   let lastTrigger = null;
@@ -258,18 +275,20 @@
     photoThumb.setAttribute('aria-label', `${name}的人像照片`);
   }
 
-  if (mode === 'edit') {
+  if (isEdit) {
+    const person = AUTHORIZED_PEOPLE[editId] || AUTHORIZED_PEOPLE['2'];
     document.title = '编辑授权人 · 接送';
     pageTitle.textContent = '编辑授权人';
-    pageSubtitle.textContent = '修改陈秀兰的授权信息';
+    pageSubtitle.textContent = `修改${person.name}的授权信息`;
     submitButton.textContent = '保存修改';
     reviewNote.innerHTML = '修改后需园所重新审核，<span class="hl">审核通过</span>后生效。';
-    nameInput.value = '陈秀兰';
-    phoneInput.value = '13700004418';
-    relationValue.textContent = '外婆';
-    relationField.value = '外婆';
+    nameInput.value = person.name;
+    phoneInput.value = person.phone;
+    relationValue.textContent = person.relation;
+    relationField.value = person.relation;
     validityValue.textContent = '长期授权';
     validityField.value = '长期授权';
+    photoThumb.setAttribute('aria-label', `${person.name}的人像照片`);
     syncRelationSheet();
     syncValiditySheet();
     updatePhotoLabel();
@@ -302,11 +321,26 @@
     clearFieldError(phoneInput, phoneError);
   });
 
+  smsInput.addEventListener('input', () => {
+    clearFieldError(smsInput, smsError);
+  });
+
+  sendCodeButton.addEventListener('click', () => {
+    if (!phonePattern.test(phoneInput.value.trim())) {
+      setFieldError(phoneInput, phoneError, '请填写正确的手机号');
+      phoneInput.focus();
+      return;
+    }
+    showToast('验证码已发送，5 分钟内有效');
+    smsInput.focus();
+  });
+
   form.addEventListener('submit', (event) => {
     event.preventDefault();
 
     const name = nameInput.value.trim();
     const phone = phoneInput.value.trim();
+    const smsCode = smsInput.value.trim();
     let firstInvalid = null;
 
     if (!name) {
@@ -323,12 +357,19 @@
       clearFieldError(phoneInput, phoneError);
     }
 
+    if (!/^\d{4,6}$/.test(smsCode)) {
+      setFieldError(smsInput, smsError, '请填写短信验证码');
+      if (!firstInvalid) firstInvalid = smsInput;
+    } else {
+      clearFieldError(smsInput, smsError);
+    }
+
     if (firstInvalid) {
       firstInvalid.focus();
       return;
     }
 
-    showToast(mode === 'edit' ? '已保存修改' : '已提交，等待园所审核');
+    showToast(isEdit ? '已保存修改' : '已提交，等待园所审核');
     window.setTimeout(() => {
       window.location.href = '../19-pickup-authorized/index.html';
     }, 900);
@@ -337,4 +378,8 @@
   window.addEventListener('beforeunload', () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
   });
+
+  if (pageState === 'relation') {
+    openSheet('relation', relationPicker);
+  }
 })();
