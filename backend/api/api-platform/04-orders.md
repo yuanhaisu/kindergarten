@@ -49,7 +49,7 @@
 >
 > | 参数 | 说明 |
 > | --- | --- |
-> | `status` | `unpaid` / `partial` / `paid` / `expired` / `cancelled`。`expired` 匹配「已过付款到期日且未收清」的订单（存储状态为 `unpaid` 或 `partial`）；`unpaid` / `partial` 只匹配尚未过付款到期日的订单 |
+> | `status` | `unpaid` / `partial` / `paid` / `expired` / `cancelled`。`expired` 匹配「已过付款到期日且未收清」的订单（含存储状态为 `expired` 的记录）；`unpaid` / `partial` 只匹配尚未过付款到期日的订单 |
 > | `order_no` | 订单号模糊匹配 |
 > | `start_date` / `end_date` | 订单创建时间的日期范围，`YYYY-MM-DD`，`end_date` 含当日；非法格式或结束早于开始返回 422 |
 > | `outstanding_only` | `true` 时仅返回未收清且未取消的订单 |

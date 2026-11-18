@@ -97,13 +97,15 @@ func (r *OrderRepo) List(ctx context.Context, f OrderFilter) ([]OrderWithPaid, i
 	if f.KindergartenID != 0 {
 		q = q.Where("orders.kindergarten_id = ?", f.KindergartenID)
 	}
-	// 状态筛选在 SQL 中按付款到期日翻译：expired 不是存储状态，
-	// 而是「未收清且已过付款到期日」；unpaid/partial 只匹配尚未到期的记录。
+	// 状态筛选在 SQL 中按付款到期日翻译：expired 不是唯一存储值——
+	// Confirm/AddPayment 会把读时派生的状态写回 status，因此存储层也可能出现
+	// expired。筛选必须同时覆盖「未收清且已过付款到期日」与这种已落库的 expired。
 	switch f.Status {
 	case "":
 	case domain.OrderStatusExpired:
-		q = q.Where("orders.status IN ?", []string{domain.OrderStatusUnpaid, domain.OrderStatusPartial}).
-			Where("orders.pay_due_at < ?", now)
+		q = q.Where("orders.status IN ?", []string{
+			domain.OrderStatusUnpaid, domain.OrderStatusPartial, domain.OrderStatusExpired,
+		}).Where("orders.pay_due_at < ?", now)
 	case domain.OrderStatusUnpaid, domain.OrderStatusPartial:
 		q = q.Where("orders.status = ?", f.Status).Where("orders.pay_due_at >= ?", now)
 	default:

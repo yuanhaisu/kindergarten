@@ -49,6 +49,8 @@ func TestOrderRepo_ListAggregatesPaidAndFilters(t *testing.T) {
 		{no: "T3-D", status: domain.OrderStatusCancelled, due: duePast, created: time.Date(2026, 11, 15, 9, 0, 0, 0, time.Local)},
 		{no: "T3-E", status: domain.OrderStatusUnpaid, due: duePast, created: time.Date(2026, 10, 20, 9, 0, 0, 0, time.Local)},
 		{no: "T3-F", status: domain.OrderStatusPaid, due: duePast, created: time.Date(2026, 11, 5, 9, 0, 0, 0, time.Local), paid: []int64{100000}},
+		// Confirm/AddPayment 会把读时派生的状态写回 status，存储层可能已有 expired。
+		{no: "T3-G", status: domain.OrderStatusExpired, due: duePast, created: time.Date(2026, 10, 25, 9, 0, 0, 0, time.Local)},
 	}
 
 	orders := make(map[string]*domain.Order, len(seeds))
@@ -99,8 +101,8 @@ func TestOrderRepo_ListAggregatesPaidAndFilters(t *testing.T) {
 
 	expired, total, err := orderRepo.List(ctx, OrderFilter{KindergartenID: kg.ID, Status: "expired", Page: 1, PageSize: 20})
 	require.NoError(t, err)
-	assert.EqualValues(t, 2, total)
-	assert.ElementsMatch(t, []string{"T3-B", "T3-E"}, nos(expired), "cancelled 与未过到期日的不应判为 expired")
+	assert.EqualValues(t, 3, total)
+	assert.ElementsMatch(t, []string{"T3-B", "T3-E", "T3-G"}, nos(expired), "cancelled 与未过到期日的不应判为 expired；已落库的 expired 不能被漏掉")
 
 	unpaid, total, err := orderRepo.List(ctx, OrderFilter{KindergartenID: kg.ID, Status: "unpaid", Page: 1, PageSize: 20})
 	require.NoError(t, err)
@@ -134,6 +136,6 @@ func TestOrderRepo_ListAggregatesPaidAndFilters(t *testing.T) {
 		KindergartenID: kg.ID, OutstandingOnly: true, Page: 1, PageSize: 20,
 	})
 	require.NoError(t, err)
-	assert.EqualValues(t, 3, total)
-	assert.ElementsMatch(t, []string{"T3-A", "T3-B", "T3-E"}, nos(outstanding), "只返回未取消且未收清的订单")
+	assert.EqualValues(t, 4, total)
+	assert.ElementsMatch(t, []string{"T3-A", "T3-B", "T3-E", "T3-G"}, nos(outstanding), "只返回未取消且未收清的订单")
 }
