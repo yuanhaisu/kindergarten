@@ -61,7 +61,7 @@ export default {
       },
     },
 
-    // ---- 05 政策：相册口径 + 班级相册披露 + 3 年保留 ----
+    // ---- 05 政策：相册口径 + 班级相册披露 + 保留期限口径 ----
     {
       slug: "05-policy",
       must: ["只访问你主动选择的照片", "班级相册"],
@@ -75,7 +75,7 @@ export default {
     {
       slug: "05-policy",
       within: '[data-od-id="section-storage"]',
-      must: ["3 年"],
+      must: ["按《隐私政策》约定期限"],
     },
   ],
 };

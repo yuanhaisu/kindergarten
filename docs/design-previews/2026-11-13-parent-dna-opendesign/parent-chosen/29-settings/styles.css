@@ -292,3 +292,9 @@ a.btn{text-decoration:none}
 .toast.is-visible{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out),visibility 0s}
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:1ms!important;animation-duration:1ms!important}}
+
+/* #88: proposal annotations are review-only; keep them out of the user-facing prototype. */
+.proposal-tag,.proposal-note,.proposal-flag,.proposal-mark,.tag--proposal,.phase-tag,.phase-note,.phase-inline,.spec-note,.notice-foot__proposal{display:none!important}
+
+/* #88: proposal-only notes are review artifacts, not user-facing copy. */
+[data-od-id="quiet-proposal-note"],.sheet-note{display:none!important}
