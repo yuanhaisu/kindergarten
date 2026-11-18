@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>登录 · 养成星球</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app" data-od-id="parent-login-screen">
+    <header class="statusbar" aria-label="状态栏" data-od-id="status-bar">
+      <span class="status-time">10:20</span>
+      <svg class="status-icons" width="66" height="13" viewBox="0 0 66 13" fill="none" aria-hidden="true" focusable="false">
+        <g fill="currentColor">
+          <rect x="0" y="8.5" width="3" height="4" rx="1"/>
+          <rect x="4.5" y="6.5" width="3" height="6" rx="1"/>
+          <rect x="9" y="4.5" width="3" height="8" rx="1"/>
+          <rect x="13.5" y="2" width="3" height="10.5" rx="1"/>
+        </g>
+        <path d="M24.1 5.2a8.1 8.1 0 0 1 10.8 0M26.4 8.1a5 5 0 0 1 6.2 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="29.5" cy="10.9" r="1.15" fill="currentColor"/>
+        <rect x="43" y="1.5" width="20" height="10" rx="3" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="45.2" y="3.7" width="15.6" height="5.6" rx="1.7" fill="currentColor"/>
+        <path d="M64.5 4.6v3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>
+      </svg>
+    </header>
+
+    <main class="login-main" data-od-id="login-main">
+      <section class="brand" aria-labelledby="login-title" data-od-id="brand-section">
+        <div class="brand-lockup">
+          <img class="brand-mark" src="_shared/logo-dna.svg" width="56" height="56" alt="养成星球" data-od-id="brand-logo">
+          <p class="eyebrow" data-od-id="brand-eyebrow">养成星球 · NURTURE PLANET</p>
+        </div>
+
+        <h1 class="login-title" id="login-title" data-od-id="login-title">孩子的每一天<br>都值得<span class="hl">被看见</span></h1>
+        <p class="login-lead" data-od-id="brand-lead">家园沟通、成长记录与接送，都在这一个地方。</p>
+      </section>
+
+      <ul class="benefits" aria-label="家长端服务" data-od-id="benefit-list">
+        <li class="benefit" data-od-id="benefit-daily-growth">
+          <span class="benefit-name">每日成长</span>
+          <span class="benefit-copy">在园照片与老师寄语，当天就能看到</span>
+        </li>
+        <li class="benefit" data-od-id="benefit-pickup-safety">
+          <span class="benefit-name">接送安全</span>
+          <span class="benefit-copy">谁接走孩子，授权一次就够</span>
+        </li>
+        <li class="benefit" data-od-id="benefit-family-communication">
+          <span class="benefit-name">家园沟通</span>
+          <span class="benefit-copy">通知、请假与班级安排，都在这里</span>
+        </li>
+      </ul>
+
+      <section class="login-panel" aria-labelledby="panel-title" data-od-id="login-panel">
+        <div class="panel-head" data-od-id="login-panel-head">
+          <h2 class="panel-title" id="panel-title">家长登录</h2>
+          <p class="panel-note">使用微信账号快速登录</p>
+        </div>
+
+        <button class="wechat-button" type="button" id="wechat-login" data-od-id="wechat-login-button" aria-busy="false">
+          <svg class="wechat-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M10.15 4.3C6.35 4.3 3.35 6.7 3.35 9.64c0 1.62 1.01 3.06 2.57 4.05l-.69 2.1 2.43-1.2c.82.22 1.68.34 2.49.34 3.8 0 6.8-2.35 6.8-5.29s-3-5.34-6.8-5.34Z"/>
+            <path d="M15.05 10.45c3.14 0 5.6 2.01 5.6 4.5 0 1.4-.84 2.67-2.16 3.51l.57 1.85-2.06-.98c-.62.17-1.27.26-1.95.26-3.14 0-5.6-2-5.6-4.5s2.46-4.64 5.6-4.64Z"/>
+            <circle cx="7.55" cy="9.1" r=".72" fill="currentColor" stroke="none"/>
+            <circle cx="12.15" cy="9.1" r=".72" fill="currentColor" stroke="none"/>
+            <circle cx="12.85" cy="15.05" r=".62" fill="currentColor" stroke="none"/>
+            <circle cx="16.7" cy="15.05" r=".62" fill="currentColor" stroke="none"/>
+          </svg>
+          <span id="wechat-label" aria-live="polite">微信一键登录</span>
+        </button>
+
+        <div class="consent-row" id="consent-row" data-od-id="consent-row">
+          <input class="consent-input" type="checkbox" id="consent-checkbox" data-od-id="consent-checkbox" aria-label="我已阅读并同意《隐私政策》《未成年人个人信息保护规则》与《用户协议》" aria-describedby="consent-error" aria-invalid="false">
+          <label class="consent-check" for="consent-checkbox">
+            <span class="consent-box">
+              <svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true" focusable="false">
+                <path d="m4.4 10.3 3.4 3.4 7.8-7.7" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </label>
+          <p class="consent-copy">
+            <span class="consent-line">我已阅读并同意<a class="legal-link" href="../../../parent-chosen/05-policy/index.html?doc=privacy&amp;from=login" data-od-id="privacy-policy-link">《隐私政策》</a></span>
+            <span class="consent-line"><a class="legal-link" href="../../../parent-chosen/05-policy/index.html?doc=minor&amp;from=login" data-od-id="minor-policy-link">《未成年人个人信息保护规则》</a><a class="legal-link" href="../../../parent-chosen/05-policy/index.html?doc=terms&amp;from=login" data-od-id="terms-link">《用户协议》</a></span>
+          </p>
+        </div>
+        <p class="consent-error" id="consent-error" role="alert" aria-atomic="true" hidden>请先阅读并同意《隐私政策》《未成年人个人信息保护规则》与《用户协议》</p>
+
+        <footer class="support" data-od-id="support-note">
+          <p>遇到问题？请联系园所老师协助绑定</p>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
