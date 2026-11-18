@@ -210,7 +210,11 @@ func (s *PlatformService) GetKindergarten(ctx context.Context, id uint64) (*Plat
 	}
 	briefs := make([]PlatformOrderBrief, 0, len(orders))
 	for _, o := range orders {
-		briefs = append(briefs, PlatformOrderBrief{ID: o.ID, OrderNo: o.OrderNo, AmountDueCents: o.AmountDueCents, Status: o.Status})
+		briefs = append(briefs, PlatformOrderBrief{
+			ID: o.ID, OrderNo: o.OrderNo, AmountDueCents: o.AmountDueCents,
+			// 与订单列表同口径：已收金额来自单次聚合，状态读时派生。
+			Status: deriveOrderStatus(&o.Order, o.PaidCents, now),
+		})
 	}
 	status := kg.Status
 	if status == "" {

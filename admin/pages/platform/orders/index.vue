@@ -8,15 +8,41 @@
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <el-select v-model="status" clearable placeholder="全部状态" class="!w-36" @change="load">
-          <el-option label="待收款" value="unpaid" />
-          <el-option label="部分收款" value="partial" />
-          <el-option label="已收清" value="paid" />
-          <el-option label="已到期" value="expired" />
-          <el-option label="已取消" value="cancelled" />
-        </el-select>
         <el-button type="primary" @click="openCreate">新建订单</el-button>
       </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 rounded-md bg-bg-card p-3 shadow-sm">
+      <el-input
+        v-model="orderNo"
+        placeholder="订单号"
+        clearable
+        class="!w-48"
+        @keyup.enter="search"
+        @clear="search"
+      />
+      <el-select v-model="kindergartenFilter" clearable filterable placeholder="全部园所" class="!w-48" @change="search">
+        <el-option v-for="kg in kindergartens" :key="kg.id" :label="kg.name" :value="kg.id" />
+      </el-select>
+      <el-date-picker
+        v-model="dateRange"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        start-placeholder="创建开始"
+        end-placeholder="创建结束"
+        class="!w-72"
+        @change="search"
+      />
+      <el-select v-model="status" clearable placeholder="全部状态" class="!w-32" @change="search">
+        <el-option label="待收款" value="unpaid" />
+        <el-option label="部分收款" value="partial" />
+        <el-option label="已收清" value="paid" />
+        <el-option label="已到期" value="expired" />
+        <el-option label="已取消" value="cancelled" />
+      </el-select>
+      <el-checkbox v-model="outstandingOnly" @change="search">只看未收清</el-checkbox>
+      <el-button @click="search">查询</el-button>
+      <el-button text @click="resetFilters">重置</el-button>
     </div>
 
     <el-table v-loading="loading" :data="rows" border stripe>
@@ -29,12 +55,26 @@
       <el-table-column label="已收" width="110" align="right">
         <template #default="{ row }">{{ formatMoney(row.amount_paid_cents) }}</template>
       </el-table-column>
+      <el-table-column label="未清" width="110" align="right">
+        <template #default="{ row }">
+          <span :class="outstandingCents(row) > 0 ? 'font-medium text-semantic-danger' : 'text-text-hint'">
+            {{ outstandingCents(row) > 0 ? formatMoney(outstandingCents(row)) : '—' }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="到期" width="110">
+      <el-table-column label="付款到期" width="116">
+        <template #default="{ row }">
+          <span :class="row.status === 'expired' ? 'text-semantic-danger' : ''">
+            {{ formatDate(row.pay_due_at) }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column label="服务期至" width="116">
         <template #default="{ row }">{{ formatDate(row.expires_at) }}</template>
       </el-table-column>
       <el-table-column prop="distributor_name" label="分销商" width="120">
@@ -92,7 +132,7 @@
             <el-tag :type="statusType(detail.status)">{{ statusLabel(detail.status) }}</el-tag>
           </div>
 
-          <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="grid grid-cols-3 gap-3 text-sm">
             <div class="rounded-md bg-bg-page p-3">
               <div class="text-xs text-text-muted">应收</div>
               <div class="mt-1 font-medium text-text-primary">{{ formatMoney(detail.amount_due_cents) }}</div>
@@ -101,10 +141,17 @@
               <div class="text-xs text-text-muted">已收</div>
               <div class="mt-1 font-medium text-text-primary">{{ formatMoney(detail.amount_paid_cents) }}</div>
             </div>
+            <div class="rounded-md bg-bg-page p-3">
+              <div class="text-xs text-text-muted">未清</div>
+              <div class="mt-1 font-medium text-text-primary">
+                {{ formatMoney(Math.max(0, detail.amount_due_cents - detail.amount_paid_cents)) }}
+              </div>
+            </div>
           </div>
 
           <div class="text-xs text-text-muted">
-            起止：{{ formatDate(detail.starts_at) }} — {{ formatDate(detail.expires_at) }}
+            服务期：{{ formatDate(detail.starts_at) }} — {{ formatDate(detail.expires_at) }}
+            · 付款到期：<span :class="detail.status === 'expired' ? 'text-semantic-danger' : ''">{{ formatDate(detail.pay_due_at) }}</span>
             <template v-if="detail.distributor">
               · 分销商 {{ detail.distributor.name }}（{{ detail.distributor.commission_rate }}%）
             </template>
@@ -192,6 +239,7 @@ import { addPayment, cancelOrder, confirmOrder, createOrder, getOrder, listOrder
 import { listDistributors, type DistributorRow } from '~/api/platform/distributors'
 import { listKindergartens, type PlatformKindergartenRow } from '~/api/platform/kindergartens'
 import { listPlans, type PlanRow } from '~/api/platform/plans'
+import { buildOrderListParams } from '~/utils/platformOrders'
 
 definePageMeta({ layout: 'platform' })
 
@@ -200,6 +248,10 @@ const page = ref(1)
 const pageSize = 20
 const total = ref(0)
 const status = ref('')
+const orderNo = ref('')
+const kindergartenFilter = ref<number>()
+const dateRange = ref<[string, string] | null>(null)
+const outstandingOnly = ref(false)
 const loading = ref(false)
 const submitting = ref(false)
 
@@ -235,7 +287,17 @@ const refundablePayments = computed(() =>
 async function load() {
   loading.value = true
   try {
-    const data = await listOrders({ page: page.value, page_size: pageSize, status: status.value })
+    const data = await listOrders(
+      buildOrderListParams({
+        page: page.value,
+        pageSize,
+        orderNo: orderNo.value,
+        dateRange: dateRange.value,
+        kindergartenId: kindergartenFilter.value,
+        status: status.value,
+        outstandingOnly: outstandingOnly.value,
+      }),
+    )
     rows.value = data.list || []
     total.value = data.total || 0
   } catch (e) {
@@ -243,6 +305,21 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+/** 筛选变化时回到第 1 页，避免落在不存在的页码上看到空列表。 */
+function search() {
+  page.value = 1
+  void load()
+}
+
+function resetFilters() {
+  orderNo.value = ''
+  kindergartenFilter.value = undefined
+  dateRange.value = null
+  status.value = ''
+  outstandingOnly.value = false
+  search()
 }
 
 async function loadOptions() {
@@ -386,6 +463,9 @@ async function submitPayment() {
 
 function formatMoney(cents: number) {
   return `¥${(cents / 100).toFixed(2)}`
+}
+function outstandingCents(row: OrderRow) {
+  return Math.max(0, row.amount_due_cents - row.amount_paid_cents)
 }
 function formatDate(value?: string | null) {
   if (!value) return '—'
