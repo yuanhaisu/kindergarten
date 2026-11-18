@@ -46,7 +46,7 @@
       <div class="page-view" data-view="default">
         <section class="person-card" aria-label="可接送人名单" data-od-id="authorized-pickup-list">
           <button class="person-row" type="button" data-od-id="authorized-person-li-jing"
-            data-name="李静" data-relation="妈妈" data-phone="138****6721" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
+            data-auth-id="1" data-name="李静" data-relation="妈妈" data-phone="138****6721" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
             <span class="avatar avatar--default" aria-hidden="true">李</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -61,7 +61,7 @@
           </button>
 
           <button class="person-row" type="button" data-od-id="authorized-person-wang-lei"
-            data-name="王磊" data-relation="爸爸" data-phone="139****2035" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
+            data-auth-id="2" data-name="王磊" data-relation="爸爸" data-phone="139****2035" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
             <span class="avatar avatar--sage" aria-hidden="true">王</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -76,7 +76,7 @@
           </button>
 
           <button class="person-row" type="button" data-od-id="authorized-person-chen-xiulan"
-            data-name="陈秀兰" data-relation="外婆" data-phone="137****4418" data-status="pending" data-status-label="待审核" data-auth-type="长期授权">
+            data-auth-id="3" data-name="陈秀兰" data-relation="外婆" data-phone="137****4418" data-status="pending" data-status-label="待审核" data-auth-type="长期授权">
             <span class="avatar avatar--clay" aria-hidden="true">陈</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -91,7 +91,7 @@
           </button>
 
           <button class="person-row" type="button" data-od-id="authorized-person-zhao-guoqiang"
-            data-name="赵国强" data-relation="叔叔" data-phone="135****8890" data-status="rejected" data-status-label="已拒绝" data-auth-type="长期授权">
+            data-auth-id="4" data-name="赵国强" data-relation="叔叔" data-phone="135****8890" data-status="rejected" data-status-label="已拒绝" data-auth-type="长期授权">
             <span class="avatar avatar--plain" aria-hidden="true">赵</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -187,8 +187,6 @@
 
         <div class="detail-actions" id="detail-actions">
           <button class="sheet-action sheet-action--primary" type="button" data-detail-action="edit" hidden>编辑资料</button>
-          <button class="sheet-action sheet-action--ghost" type="button" data-detail-action="pause" hidden>暂停接送</button>
-          <button class="sheet-action sheet-action--ghost" type="button" data-detail-action="withdraw" hidden>撤回申请</button>
           <button class="sheet-action sheet-action--primary" type="button" data-detail-action="resubmit" hidden>重新提交</button>
           <button class="sheet-action sheet-action--danger" type="button" data-detail-action="delete">删除</button>
         </div>

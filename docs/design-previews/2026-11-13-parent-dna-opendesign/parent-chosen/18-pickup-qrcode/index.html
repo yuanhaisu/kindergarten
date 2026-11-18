@@ -48,6 +48,7 @@
         <p>在园门口出示给老师核验</p>
       </header>
 
+      <div id="pass-body">
       <section class="pass-card" aria-label="接送核验卡" data-od-id="pickup-code-card">
         <svg class="qr-code" viewBox="0 0 296 296" width="220" height="220" role="img" aria-labelledby="qr-title">
           <title id="qr-title">乐乐本次接送的动态二维码</title>
@@ -57,13 +58,8 @@
 
         <p class="child-name" id="child-name">乐乐 · 小一班</p>
 
-        <div class="verify">
-          <span class="verify__label">核验码</span>
-          <span class="verify__code" id="verify-code" data-od-id="verify-code">A7K2-9F3D</span>
-        </div>
-
         <div class="refresh-row">
-          <span class="refresh-row__count">今日 23:59 前有效</span>
+          <span class="refresh-row__count"><span class="hl">当日有效</span>，核验后失效</span>
           <button class="refresh-button" id="refresh-button" type="button" data-od-id="pickup-refresh-button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 11a8 8 0 1 0-2.3 5.7" />
@@ -92,7 +88,7 @@
           </li>
           <li>
             <span class="step-no" aria-hidden="true">2</span>
-            <p>把二维码或下方核验码出示给老师。</p>
+            <p>把二维码出示给老师。</p>
           </li>
           <li>
             <span class="step-no" aria-hidden="true">3</span>
@@ -102,6 +98,35 @@
       </section>
 
       <p class="footnote" data-od-id="pickup-validity-note">一次有效 · 核验后自动失效</p>
+      </div>
+
+      <section class="state-panel" data-panel="unassigned" hidden>
+        <p class="state-kicker">未指定</p>
+        <h2 class="state-title">今天还没指定接走人</h2>
+        <p class="state-copy">在「接送」页指定今天由谁接走后，这里才会生成接送码。</p>
+        <a class="state-cta" href="../17-pickup/index.html">去指定</a>
+      </section>
+
+      <section class="state-panel" data-panel="loading" hidden>
+        <div class="skeleton-qr" aria-hidden="true"></div>
+        <p class="state-title">接送码加载中</p>
+        <p class="state-copy">正在生成今天的一次性二维码，请稍候。</p>
+      </section>
+
+      <section class="state-panel" data-panel="expired" hidden>
+        <p class="state-kicker">已过期</p>
+        <h2 class="state-title">接送码已过期</h2>
+        <p class="state-copy">接送码核验后即失效。需要再次使用，请重新获取。</p>
+        <button class="state-cta" id="retry-expired" type="button">重新获取</button>
+      </section>
+
+      <section class="state-panel" data-panel="offline" hidden>
+        <p class="state-kicker">网络不可用</p>
+        <h2 class="state-title">二维码没有加载出来</h2>
+        <p class="state-copy">请检查手机网络，恢复后重试。</p>
+        <button class="state-cta" id="retry-offline" type="button">重试</button>
+      </section>
+
       <p class="sr-only" id="refresh-status" role="status" aria-live="polite"></p>
     </main>
   </div>
