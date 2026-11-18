@@ -27,10 +27,10 @@ var (
 // PlanService 套餐目录。目录可改，但已成交订单只认快照（ADR-0013）。
 type PlanService struct {
 	plans *repository.PlanRepo
-	logs  *repository.PlatformLogRepo
+	logs  PlatformAuditWriter
 }
 
-func NewPlanService(plans *repository.PlanRepo, logs *repository.PlatformLogRepo) *PlanService {
+func NewPlanService(plans *repository.PlanRepo, logs PlatformAuditWriter) *PlanService {
 	return &PlanService{plans: plans, logs: logs}
 }
 
@@ -108,7 +108,8 @@ func (s *PlanService) Create(ctx context.Context, req PlanRequest, operator, ip 
 	if err := s.plans.ReplaceModules(ctx, plan.ID, normalizeModuleCodes(req.ModuleCodes)); err != nil {
 		return nil, err
 	}
-	_ = s.logs.Create(ctx, &domain.PlatformOperationLog{
+	// 套餐目录变更属 best-effort：审计故障只记日志，不回滚目录。
+	writeAuditBestEffort(ctx, s.logs, &domain.PlatformOperationLog{
 		Operator: operator, Module: "plan", Action: "create", TargetType: "plan", TargetID: plan.ID,
 		Detail: req.Name, IP: ip,
 	})
@@ -144,10 +145,11 @@ func (s *PlanService) Update(ctx context.Context, id uint64, req PlanRequest, op
 			return err
 		}
 	}
-	return s.logs.Create(ctx, &domain.PlatformOperationLog{
+	writeAuditBestEffort(ctx, s.logs, &domain.PlatformOperationLog{
 		Operator: operator, Module: "plan", Action: "update", TargetType: "plan", TargetID: id,
 		Detail: req.Name, IP: ip,
 	})
+	return nil
 }
 
 func (s *PlanService) ListTiers(ctx context.Context, planID uint64) ([]domain.PlanTier, error) {
@@ -186,10 +188,11 @@ func (s *PlanService) ReplaceTiers(ctx context.Context, planID uint64, tiers []d
 	if err := s.plans.ReplaceTiers(ctx, planID, tiers); err != nil {
 		return err
 	}
-	return s.logs.Create(ctx, &domain.PlatformOperationLog{
+	writeAuditBestEffort(ctx, s.logs, &domain.PlatformOperationLog{
 		Operator: operator, Module: "plan", Action: "replace_tiers", TargetType: "plan", TargetID: planID,
 		Detail: fmt.Sprintf("%d 档", len(tiers)), IP: ip,
 	})
+	return nil
 }
 
 // validateTierCoverage 校验档位覆盖：从 0 开始、区间连续、最高档开口。

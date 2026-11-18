@@ -67,7 +67,7 @@ type OrderService struct {
 	ents      *repository.EntitlementRepo
 	dists     *repository.DistributorRepo
 	comm      *repository.CommissionRepo
-	logs      *repository.PlatformLogRepo
+	logs      PlatformAuditWriter
 	entsCache *EntitlementCache
 }
 
@@ -80,7 +80,7 @@ func NewOrderService(
 	ents *repository.EntitlementRepo,
 	dists *repository.DistributorRepo,
 	comm *repository.CommissionRepo,
-	logs *repository.PlatformLogRepo,
+	logs PlatformAuditWriter,
 	entsCache *EntitlementCache,
 ) *OrderService {
 	return &OrderService{
@@ -185,9 +185,10 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	if err := s.orders.Create(ctx, order); err != nil {
 		return nil, err
 	}
-	_ = s.logs.Create(ctx, &domain.PlatformOperationLog{
+	// 订单创建不在强一致清单内：审计失败只记日志，不阻断成交录入。
+	writeAuditBestEffort(ctx, s.logs, &domain.PlatformOperationLog{
 		Operator: operator, Module: "order", Action: "create", TargetType: "order", TargetID: order.ID,
-		Detail: fmt.Sprintf("%s / %s", kg.Name, plan.Name), IP: ip,
+		KindergartenID: kg.ID, Detail: fmt.Sprintf("%s / %s", kg.Name, plan.Name), IP: ip,
 	})
 	return order, nil
 }
@@ -258,17 +259,21 @@ func (s *OrderService) Confirm(ctx context.Context, id uint64, operator, ip stri
 		}); err != nil {
 			return err
 		}
-		return s.ents.CreateBatchTx(ctx, tx, ents)
+		if err := s.ents.CreateBatchTx(ctx, tx, ents); err != nil {
+			return err
+		}
+		// 确认订单属于强一致清单（design D6）：审计与授权同事务，
+		// 审计失败即整体回滚，不允许「授权发了、痕迹没留」。
+		return s.logs.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "order", Action: "confirm", TargetType: "order", TargetID: order.ID,
+			KindergartenID: order.KindergartenID, Detail: order.OrderNo, IP: ip,
+		})
 	}); err != nil {
 		return nil, nil, err
 	}
 	order.ConfirmedAt = &now
 	order.Status = status
 	s.invalidate(ctx, order.KindergartenID)
-	_ = s.logs.Create(ctx, &domain.PlatformOperationLog{
-		Operator: operator, Module: "order", Action: "confirm", TargetType: "order", TargetID: order.ID,
-		Detail: order.OrderNo, IP: ip,
-	})
 	return order, ents, nil
 }
 
@@ -299,7 +304,14 @@ func (s *OrderService) Cancel(ctx context.Context, id uint64, reason, operator, 
 		}); err != nil {
 			return err
 		}
-		return s.ents.DeleteByOrderID(ctx, tx, order.ID)
+		if err := s.ents.DeleteByOrderID(ctx, tx, order.ID); err != nil {
+			return err
+		}
+		// 取消订单属于强一致清单：审计失败时状态与授权回收一并回滚。
+		return s.logs.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "order", Action: "cancel", TargetType: "order", TargetID: order.ID,
+			KindergartenID: order.KindergartenID, Detail: reason, IP: ip,
+		})
 	}); err != nil {
 		return nil, err
 	}
@@ -307,10 +319,6 @@ func (s *OrderService) Cancel(ctx context.Context, id uint64, reason, operator, 
 	order.CancelReason = reason
 	order.Status = domain.OrderStatusCancelled
 	s.invalidate(ctx, order.KindergartenID)
-	_ = s.logs.Create(ctx, &domain.PlatformOperationLog{
-		Operator: operator, Module: "order", Action: "cancel", TargetType: "order", TargetID: order.ID,
-		Detail: reason, IP: ip,
-	})
 	return order, nil
 }
 
@@ -440,6 +448,15 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 		if err := s.writeCommission(ctx, tx, locked, payment, recordedAt); err != nil {
 			return err
 		}
+		// 收款/退款属于强一致清单：审计失败时收款、状态与佣金一并回滚。
+		// 幂等重放不写新审计（上面已提前返回）。
+		if err := s.logs.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "payment", Action: "record", TargetType: "order", TargetID: order.ID,
+			KindergartenID: order.KindergartenID,
+			Detail:         fmt.Sprintf("%d 分 / %s", req.AmountCents, method), IP: ip,
+		}); err != nil {
+			return err
+		}
 		result = &PaymentResult{PaymentID: payment.ID, OrderStatus: status, AmountPaidCents: sum}
 		return nil
 	}); err != nil {
@@ -464,14 +481,9 @@ func (s *OrderService) AddPayment(ctx context.Context, orderID uint64, req Payme
 		}
 		return nil, err
 	}
-	if !created {
-		return result, nil
+	if created {
+		s.invalidate(ctx, order.KindergartenID)
 	}
-	s.invalidate(ctx, order.KindergartenID)
-	_ = s.logs.Create(ctx, &domain.PlatformOperationLog{
-		Operator: operator, Module: "payment", Action: "record", TargetType: "order", TargetID: order.ID,
-		Detail: fmt.Sprintf("%d 分 / %s", req.AmountCents, method), IP: ip,
-	})
 	return result, nil
 }
 

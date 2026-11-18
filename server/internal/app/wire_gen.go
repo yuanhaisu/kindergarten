@@ -136,7 +136,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService, kindergartenStatusService)
+	trustedProxies := ProvideTrustedProxies(cfg)
+	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService, kindergartenStatusService, trustedProxies)
 	if err != nil {
 		return nil, err
 	}

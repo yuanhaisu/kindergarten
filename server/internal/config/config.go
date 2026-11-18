@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	App     AppConfig     `ini:"app"`
+	Server  ServerConfig  `ini:"server"`
 	Log     LogConfig     `ini:"log"`
 	MySQL   MySQLConfig   `ini:"mysql"`
 	Redis   RedisConfig   `ini:"redis"`
@@ -20,6 +21,33 @@ type Config struct {
 	OSS     OSSConfig     `ini:"oss"`
 	Face    FaceConfig    `ini:"face"`
 	Consent ConsentConfig `ini:"consent"`
+}
+
+// ServerConfig 进程级网络配置。
+type ServerConfig struct {
+	// TrustedProxies 是可信反向代理来源，逗号分隔。只有来自这些地址的
+	// X-Forwarded-For 才会被采信为 ClientIP（审计 IP 依赖它）。
+	// 未配置时回落到本机回环：生产 Nginx 与后端同机。
+	TrustedProxies string `ini:"trusted_proxies"`
+}
+
+// DefaultTrustedProxies 是未配置 [server] trusted_proxies 时的回环回退。
+var DefaultTrustedProxies = []string{"127.0.0.1", "::1"}
+
+// TrustedProxyList 把逗号分隔的 trusted_proxies 拆成去空格的来源列表；
+// 空配置返回本机回环默认值。
+func (s ServerConfig) TrustedProxyList() []string {
+	parts := strings.Split(s.TrustedProxies, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if proxy := strings.TrimSpace(part); proxy != "" {
+			out = append(out, proxy)
+		}
+	}
+	if len(out) == 0 {
+		return append([]string(nil), DefaultTrustedProxies...)
+	}
+	return out
 }
 
 type AppConfig struct {

@@ -149,6 +149,50 @@ func TestAppConfigAllowedCORSOrigins(t *testing.T) {
 	}
 }
 
+// trusted_proxies 未配置时回落到本机回环（Nginx 同机反代）；
+// 配置后按逗号拆分并去空格，空项丢弃。
+func TestServerTrustedProxyList(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		want []string
+	}{
+		{name: "default", raw: "", want: []string{"127.0.0.1", "::1"}},
+		{name: "configured", raw: "10.0.0.5, 10.0.0.6", want: []string{"10.0.0.5", "10.0.0.6"}},
+		{name: "blank items", raw: " , 10.0.0.5 ,, ", want: []string{"10.0.0.5"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ServerConfig{TrustedProxies: tc.raw}.TrustedProxyList()
+			if len(got) != len(tc.want) {
+				t.Fatalf("TrustedProxyList(%q) = %#v, want %#v", tc.raw, got, tc.want)
+			}
+			for i := range tc.want {
+				if got[i] != tc.want[i] {
+					t.Errorf("TrustedProxyList(%q)[%d] = %q, want %q", tc.raw, i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// Load 必须能读出 [server] trusted_proxies；缺节时保持默认回环。
+func TestLoadTrustedProxies(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "app.ini")
+	content := "[server]\ntrusted_proxies = 10.1.2.3, ::1\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write temp ini: %v", err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	got := cfg.Server.TrustedProxyList()
+	if len(got) != 2 || got[0] != "10.1.2.3" || got[1] != "::1" {
+		t.Fatalf("TrustedProxyList() = %#v, want [10.1.2.3 ::1]", got)
+	}
+}
+
 // Load 必须把 app.ini 的 cors_origins 原样读入字符串，再由 AllowedCORSOrigins 解析；
 // 空值与通配符是两种不同的部署契约，不能在加载阶段被归一化。
 func TestLoadCORSOrigins(t *testing.T) {

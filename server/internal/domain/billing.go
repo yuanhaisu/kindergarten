@@ -177,8 +177,12 @@ type PlatformOperationLog struct {
 	Action     string `gorm:"size:50;not null" json:"action"`
 	TargetType string `gorm:"size:50;not null;default:''" json:"target_type"`
 	TargetID   uint64 `gorm:"not null;default:0" json:"target_id"`
-	Detail     string `gorm:"type:text" json:"detail"`
-	IP         string `gorm:"size:50;not null;default:''" json:"ip"`
+	// KindergartenID 目标园所；套餐 / 分销商 / 平台账号类操作为 0。
+	KindergartenID uint64 `gorm:"not null;default:0" json:"kindergarten_id"`
+	Detail         string `gorm:"type:text" json:"detail"`
+	IP             string `gorm:"size:50;not null;default:''" json:"ip"`
+	// RequestID 是 HTTP 请求链路标识，与 RequestContextLogger 的 request_id 对齐。
+	RequestID string `gorm:"size:64;not null;default:''" json:"request_id"`
 }
 
 func (PlatformOperationLog) TableName() string { return "platform_operation_logs" }

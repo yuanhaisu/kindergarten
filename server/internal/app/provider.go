@@ -89,6 +89,13 @@ func ProvideWeChatClient(cfg *config.Config, rdb *redis.Client) *auth.WeChatClie
 	)
 }
 
+// TrustedProxies gin SetTrustedProxies 的来源列表，由 [server] trusted_proxies 提供。
+type TrustedProxies []string
+
+func ProvideTrustedProxies(cfg *config.Config) TrustedProxies {
+	return TrustedProxies(cfg.Server.TrustedProxyList())
+}
+
 type JWTSecret []byte
 
 func ProvideJWTSecret(cfg *config.Config) JWTSecret {
