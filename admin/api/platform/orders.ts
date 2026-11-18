@@ -15,6 +15,8 @@ export interface OrderRow {
   starts_at: string
   expires_at: string
   pay_due_at: string
+  // 零收款确认的信用开通标记；理由只在详情返回。
+  credit_granted: boolean
   distributor_name: string
   created_at: string
 }
@@ -30,6 +32,8 @@ export interface OrderDetail {
   starts_at: string
   expires_at: string
   pay_due_at: string
+  credit_granted: boolean
+  credit_reason: string
   plan_snapshot: { plan_name: string; module_codes: string[]; price_cents: number }
   distributor: { id: number; name: string; commission_rate: number } | null
   invoice_info: Record<string, string> | null
@@ -60,8 +64,9 @@ export function getOrder(id: number) {
   return usePlatformHttp().get<OrderDetail>(`/platform/orders/${id}`)
 }
 
-export function confirmOrder(id: number) {
-  return usePlatformHttp().post(`/platform/orders/${id}/confirm`, {})
+// 净收款为零时后端要求 reason（信用开通理由），缺省返回 422。
+export function confirmOrder(id: number, reason?: string) {
+  return usePlatformHttp().post(`/platform/orders/${id}/confirm`, reason ? { reason } : {})
 }
 
 export function cancelOrder(id: number, reason: string) {

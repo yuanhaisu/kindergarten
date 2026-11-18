@@ -31,6 +31,7 @@
       "starts_at": "2026-11-06",
       "expires_at": "2027-05-05",
       "pay_due_at": "2026-11-06",
+      "credit_granted": true,
       "distributor_name": "华东渠道",
       "created_at": "2026-11-06T10:00:00+08:00"
     }
@@ -44,6 +45,7 @@
 > `amount_paid_cents` 由收款登记推导（单次聚合，排除已软删收款），不允许人工设置。
 > `status` 读时推导：取消 → 已收清 → 已过付款到期日（`expired`）→ 部分收款 → 待收款。
 > `pay_due_at` 是付款到期日，独立于服务期 `starts_at` / `expires_at`；缺省等于服务起始日。
+> `credit_granted` 标记该订单是零收款确认的信用开通；信用开通理由**只在详情返回**，列表不返回。
 >
 > **筛选参数**
 >
@@ -126,6 +128,8 @@
   "starts_at": "2026-11-06",
   "expires_at": "2027-05-05",
   "pay_due_at": "2026-11-06",
+  "credit_granted": true,
+  "credit_reason": "合同已签署，对公转账到账后补录",
   "plan_snapshot": { "module_codes": ["attendance", "notice", "pickup", "growth", "diet"] },
   "distributor": { "id": 3, "name": "华东渠道", "commission_rate": 10 },
   "invoice_info": { "title": "阳光幼儿园", "tax_no": "91330100XXXXXXXX" },
@@ -154,13 +158,19 @@
 }
 ```
 
+> `credit_reason` 只在详情返回：非信用开通订单为 `false` / 空串。
+> 列表只暴露 `credit_granted` 标记，不返回理由。
+
 ---
 
 ## POST `/platform/orders/:id/confirm`
 
-> 确认订单：冻结快照、发放模块授权
+> 确认订单：冻结快照、发放模块授权。净收款为零时确认即「信用开通」，必须填写理由。
 
 ```json
+// Request（净收款为零时 reason 必填；有实收时可省略）
+{ "reason": "合同已签署，对公转账到账后补录" }
+
 // Response
 {
   "id": 12,
@@ -171,8 +181,24 @@
 }
 ```
 
+> 净收款为零（`已收净额 = 正数收款 − 负数退款 = 0`）时，`reason` 必填；缺失返回 422
+> `CREDIT_REASON_REQUIRED`。确认成功后订单被标记 `credit_granted=true` 并保存 `credit_reason`
+> （理由只在详情返回），同时写入审计（操作账号、时间与理由）。
+> 有实收的确认不需要理由，也不会被标记为信用开通。
+> 信用开通不改金额口径：应收全额仍计入未收余额。
+> `reason` 超过 255 个字符返回 422 `CREDIT_REASON_TOO_LONG`。
 > 确认后不得再修改分销商归因。
 > 取消订单会收回其产生且尚未到期的授权。
+
+**零收款确认缺理由（422）**
+
+```json
+{
+  "code": 42200,
+  "message": "零收款确认必须填写信用开通理由",
+  "data": null
+}
+```
 
 ---
 
