@@ -9,6 +9,7 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/pkg/pagination"
 )
 
 // 档位覆盖校验错误。管理端按错误类型给出具体的修复提示，
@@ -58,10 +59,14 @@ type PlanRequest struct {
 
 func (s *PlanService) ListModules() []ModuleDef { return AllModules() }
 
-func (s *PlanService) ListPlans(ctx context.Context, status string) ([]PlanRow, int64, error) {
-	list, total, err := s.plans.List(ctx, status)
+// ListPlans 返回真实分页的套餐目录。分页参数在入口归一化，
+// total 始终是筛选后的总数，与当前页无关。
+func (s *PlanService) ListPlans(ctx context.Context, status string, pq pagination.Query) ([]PlanRow, int64, int, int, error) {
+	pn := pq
+	pn.Normalize()
+	list, total, err := s.plans.List(ctx, status, pn.Offset(), pn.PageSize)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, 0, err
 	}
 	ids := make([]uint64, 0, len(list))
 	for _, p := range list {
@@ -69,7 +74,7 @@ func (s *PlanService) ListPlans(ctx context.Context, status string) ([]PlanRow, 
 	}
 	mods, err := s.plans.ListModuleCodesByPlanIDs(ctx, ids)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, 0, err
 	}
 	rows := make([]PlanRow, 0, len(list))
 	for _, p := range list {
@@ -80,7 +85,7 @@ func (s *PlanService) ListPlans(ctx context.Context, status string) ([]PlanRow, 
 			CreatedAt: p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		})
 	}
-	return rows, total, nil
+	return rows, total, pn.Page, pn.PageSize, nil
 }
 
 func (s *PlanService) Create(ctx context.Context, req PlanRequest, operator, ip string) (*domain.Plan, error) {
