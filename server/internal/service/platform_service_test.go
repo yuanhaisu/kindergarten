@@ -73,6 +73,7 @@ func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {
 		repository.NewPlatformLogRepo(db),
 		nil,
 		nil,
+		nil,
 		[]byte("test-platform-secret"),
 		time.Hour,
 	)

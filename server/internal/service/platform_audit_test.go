@@ -50,6 +50,7 @@ func newPlatformServiceWithAudit(t *testing.T, db *gorm.DB, audit PlatformAuditS
 		audit,
 		nil,
 		nil,
+		nil,
 		[]byte("test-platform-secret"),
 		time.Hour,
 	)

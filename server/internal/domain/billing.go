@@ -43,7 +43,9 @@ type PlatformAdmin struct {
 	Username     string `gorm:"size:64;not null;uniqueIndex" json:"username"`
 	PasswordHash string `gorm:"size:255;not null" json:"-"`
 	Name         string `gorm:"size:64;not null;default:''" json:"name"`
-	Status       int8   `gorm:"not null;default:1" json:"status"` // 1=启用 0=停用
+	// Role 为后续平台内分权预留，当前所有账号一律 platform，不参与鉴权。
+	Role   string `gorm:"size:32;not null;default:'platform'" json:"-"`
+	Status int8   `gorm:"not null;default:1" json:"status"` // 1=启用 0=停用
 }
 
 func (PlatformAdmin) TableName() string { return "platform_admins" }

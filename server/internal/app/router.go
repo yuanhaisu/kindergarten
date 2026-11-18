@@ -47,10 +47,15 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		// 平台方：独立信任域，凭证 scope=platform（ADR-0014）。
 		v1.POST("/platform/auth/login", h.inner.PlatformLogin)
 		platformG := v1.Group("/platform")
-		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker))
+		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker, h.platformEpochs))
 		platformG.Use(middleware.CasbinRBAC(e))
 		{
 			platformG.POST("/auth/logout", h.inner.PlatformLogout)
+			platformG.GET("/admins", h.inner.PlatformListAccounts)
+			platformG.POST("/admins", h.inner.PlatformCreateAccount)
+			platformG.PUT("/admins/me/password", h.inner.PlatformChangeOwnPassword)
+			platformG.PATCH("/admins/:id/status", h.inner.PlatformSetAccountStatus)
+			platformG.POST("/admins/:id/reset-password", h.inner.PlatformResetAccountPassword)
 			platformG.GET("/kindergartens", h.inner.PlatformListKindergartens)
 			platformG.POST("/kindergartens", h.inner.PlatformOnboardKindergarten)
 			platformG.GET("/kindergartens/:id", h.inner.PlatformGetKindergarten)
@@ -732,6 +737,8 @@ type AppHandler struct {
 	inner *handler.Handler
 	// tokenRevoker 由认证服务提供，AuthJWT 用它校验登出黑名单；两处必须是同一份存储。
 	tokenRevoker auth.TokenRevoker
+	// platformEpochs 由平台服务提供，PlatformAuth 用它拒绝改密/停用前的旧凭证。
+	platformEpochs auth.PlatformEpochStore
 	// corsOrigins 为空表示不向任何跨域来源下发 CORS 头。
 	corsOrigins []string
 	// ready 为 nil 时 /ready 视为就绪（仅用于不装配基础设施的单元测试）。
@@ -741,7 +748,10 @@ type AppHandler struct {
 }
 
 func NewAppHandler(h *handler.Handler) *AppHandler {
-	return &AppHandler{inner: h, tokenRevoker: h.TokenRevoker(), consent: h.AuthService()}
+	return &AppHandler{
+		inner: h, tokenRevoker: h.TokenRevoker(),
+		platformEpochs: h.PlatformEpochStore(), consent: h.AuthService(),
+	}
 }
 
 // WithCORS 设置允许跨域的来源；由装配层从配置传入。

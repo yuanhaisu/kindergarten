@@ -117,7 +117,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	entitlementRepo := repository.NewEntitlementRepo(db)
 	orderRepo := repository.NewOrderRepo(db)
 	platformLogRepo := repository.NewPlatformLogRepo(db)
-	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, platformLogRepo, dietSeedService, kindergartenStatusService, jwtSecret, accessTTL)
+	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, platformLogRepo, dietSeedService, kindergartenStatusService, client, jwtSecret, accessTTL)
 	planRepo := repository.NewPlanRepo(db)
 	planService := service.NewPlanService(planRepo, platformLogRepo)
 	paymentRepo := repository.NewPaymentRepo(db)
