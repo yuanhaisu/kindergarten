@@ -188,22 +188,10 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
-import {
-  addPayment,
-  cancelOrder,
-  confirmOrder,
-  createOrder,
-  getOrder,
-  listDistributors,
-  listKindergartens,
-  listOrders,
-  listPlans,
-  type DistributorRow,
-  type OrderDetail,
-  type OrderRow,
-  type PlanRow,
-  type PlatformKindergartenRow,
-} from '~/api/platform'
+import { addPayment, cancelOrder, confirmOrder, createOrder, getOrder, listOrders, type OrderDetail, type OrderRow } from '~/api/platform/orders'
+import { listDistributors, type DistributorRow } from '~/api/platform/distributors'
+import { listKindergartens, type PlatformKindergartenRow } from '~/api/platform/kindergartens'
+import { listPlans, type PlanRow } from '~/api/platform/plans'
 
 definePageMeta({ layout: 'platform' })
 

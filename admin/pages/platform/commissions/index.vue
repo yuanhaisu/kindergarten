@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { listCommissions, type CommissionRow, type CommissionSummary } from '~/api/platform'
+import { listCommissions, type CommissionRow, type CommissionSummary } from '~/api/platform/commissions'
 
 definePageMeta({ layout: 'platform' })
 
