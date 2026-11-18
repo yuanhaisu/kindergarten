@@ -73,39 +73,11 @@
 
   applyFilter('pending');
 
-  /* ---------- check in ---------- */
-
-  var checkinBtn = document.getElementById('checkin-btn');
-  var streak = document.getElementById('streak');
-  var streakThird = document.getElementById('streak-third');
-  var todayMeta = document.getElementById('today-meta');
-  var ghostIdle = document.getElementById('ghost-idle');
-  var ghostDone = document.getElementById('ghost-done');
-  var checked = false;
-
-  if (checkinBtn && streak && streakThird && todayMeta && ghostIdle && ghostDone) {
-    checkinBtn.addEventListener('click', function () {
-      if (checked) { return; }
-      checked = true;
-
-      streakThird.classList.remove('is-off');
-      streakThird.classList.add('is-on');
-      streak.setAttribute('aria-label', '本周已完成 3 天');
-      todayMeta.textContent = '本周 3 / 3 天 · 今天已打卡';
-
-      ghostIdle.hidden = true;
-      ghostDone.hidden = false;
-      checkinBtn.disabled = true;
-
-      showToast('打卡成功 · +10 积分');
-    });
-  }
-
   /* ---------- class wall / back ---------- */
 
   Array.prototype.slice.call(document.querySelectorAll('[data-wall]')).forEach(function (el) {
     el.addEventListener('click', function () {
-      showToast('班级墙 · 今天 18 位小朋友完成了任务');
+      showToast('班级墙 · 今天 8 位小朋友完成了任务');
     });
   });
 

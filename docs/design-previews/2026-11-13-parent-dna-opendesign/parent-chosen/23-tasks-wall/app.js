@@ -9,8 +9,7 @@
   const sheetPhoto = document.getElementById("sheet-photo");
   const sheetName = document.getElementById("sheet-name");
   const sheetTask = document.getElementById("sheet-task");
-  const sheetLikes = document.getElementById("sheet-likes");
-  const sheetLikeCount = sheetLikes.querySelector(".like-count");
+  const sheetMeta = document.getElementById("sheet-meta");
   const closeBtn = document.getElementById("sheet-close");
   const mask = layer.querySelector(".sheet-mask");
 
@@ -26,10 +25,7 @@
 
     cards.forEach(function (card) {
       const isMine = card.dataset.mine === "true";
-      const show =
-        filter === "all" ||
-        filter === "class" ||
-        (filter === "mine" && isMine);
+      const show = filter === "all" || (filter === "mine" && isMine);
       card.hidden = !show;
     });
   }
@@ -44,8 +40,7 @@
       (card.dataset.flip === "true" ? " photo--flip" : "");
     sheetName.textContent = card.dataset.name;
     sheetTask.textContent = card.dataset.task;
-    sheetLikeCount.textContent = card.dataset.likes;
-    sheetLikes.setAttribute("aria-label", card.dataset.likes + " 个赞");
+    sheetMeta.textContent = "小一班 · 今天 " + card.dataset.time + " 已打卡";
 
     layer.hidden = false;
     main.classList.add("is-locked");
