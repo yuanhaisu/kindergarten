@@ -25,6 +25,8 @@ type readiness struct {
 // WithInfra 把基础设施依赖挂到 AppHandler 上，供 /ready 检查。
 // 未装配依赖时（单元测试）保持 ready=nil，/ready 直接视为就绪。
 func (h *AppHandler) WithInfra(db *gorm.DB, rdb *redis.Client) *AppHandler {
+	// 平台登录限流依赖同一份 Redis；nil 时限流失败关闭。
+	h.rdb = rdb
 	checks := make([]readinessCheck, 0, 2)
 	if db != nil {
 		checks = append(checks, readinessCheck{
