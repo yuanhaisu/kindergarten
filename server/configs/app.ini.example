@@ -15,6 +15,11 @@ gin_mode  = debug
 ; 管理端生产通过 Nginx 同源访问，不需要 CORS；本地 admin dev 走 Vite 代理。
 cors_origins = http://localhost:3000
 
+[server]
+; 可信反向代理来源，逗号分隔。只有来自这些地址的 X-Forwarded-For 才会被
+; 采信为 ClientIP（平台审计 IP 依赖它）。默认本机回环，对应 Nginx 与后端同机。
+trusted_proxies = 127.0.0.1,::1
+
 [log]
 level  = debug
 format = text

@@ -40,6 +40,10 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		wire.Bind(new(middleware.PermissionResolver), new(*service.AdminAuthzService)),
 		wire.Bind(new(service.ModuleAuthorizer), new(*service.EntitlementService)),
 		wire.Bind(new(service.KindergartenStatusChecker), new(*service.KindergartenStatusService)),
+		// 平台审计写入接缝：订单/套餐/分销服务按接口收依赖，
+		// 生产实现就是 PlatformLogRepo（PlatformService 经 ProvidePlatformService 直取具体类型）。
+		wire.Bind(new(service.PlatformAuditWriter), new(*repository.PlatformLogRepo)),
+		ProvideTrustedProxies,
 		ProvideAuthService,
 		ProvidePlatformService,
 		ProvideBillingEnforceModules,

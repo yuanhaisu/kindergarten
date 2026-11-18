@@ -37,10 +37,15 @@ func (r *KindergartenRepo) FindByID(ctx context.Context, id uint64) (*domain.Kin
 }
 
 func (r *KindergartenRepo) UpdateByID(ctx context.Context, id uint64, cols map[string]any) error {
+	return r.UpdateByIDTx(ctx, r.db, id, cols)
+}
+
+// UpdateByIDTx 与平台审计等写入共用事务（design D6）。
+func (r *KindergartenRepo) UpdateByIDTx(ctx context.Context, tx *gorm.DB, id uint64, cols map[string]any) error {
 	if len(cols) == 0 {
 		return nil
 	}
-	return r.db.WithContext(ctx).Model(&domain.Kindergarten{}).Where("id = ?", id).Updates(cols).Error
+	return tx.WithContext(ctx).Model(&domain.Kindergarten{}).Where("id = ?", id).Updates(cols).Error
 }
 
 // List 平台侧园所列表：显式跨租户，按关键字与状态过滤。
