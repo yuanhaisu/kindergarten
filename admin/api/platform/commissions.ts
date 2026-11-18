@@ -38,3 +38,8 @@ export interface CommissionSummary {
 export function listCommissions(params: Record<string, unknown>) {
   return usePlatformHttp().get<Paged<CommissionRow> & { summary: CommissionSummary }>('/platform/commissions', { params })
 }
+
+/** 单条佣金明细：原始行附带 `reversals` 冲回记录。 */
+export function getCommission(id: number) {
+  return usePlatformHttp().get<CommissionRow>(`/platform/commissions/${id}`)
+}
