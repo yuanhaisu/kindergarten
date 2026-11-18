@@ -14,9 +14,11 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/testutil/fakeredis"
 )
 
 var (
@@ -61,6 +63,8 @@ func openPlatformTestDB(t *testing.T) *gorm.DB {
 
 func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {
 	t.Helper()
+	f := fakeredis.New(t)
+	rdb := f.Client(t)
 	return NewPlatformService(
 		db,
 		repository.NewPlatformAdminRepo(db),
@@ -76,9 +80,12 @@ func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {
 		repository.NewPlatformLogRepo(db),
 		nil,
 		nil,
-		nil,
+		auth.NewPlatformEpochStore(rdb),
+		auth.NewTokenRevoker(rdb),
+		rdb,
 		[]byte("test-platform-secret"),
 		time.Hour,
+		7*24*time.Hour,
 	)
 }
 

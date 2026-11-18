@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
@@ -36,8 +37,11 @@ type PlatformService struct {
 	dietSeed      *DietSeedService
 	kgStatus      *KindergartenStatusService
 	epochs        auth.PlatformEpochStore
+	revoker       auth.TokenRevoker
+	rdb           *redis.Client
 	secret        []byte
 	atTTL         time.Duration
+	rtTTL         time.Duration
 }
 
 func NewPlatformService(
@@ -56,15 +60,18 @@ func NewPlatformService(
 	dietSeed *DietSeedService,
 	kgStatus *KindergartenStatusService,
 	epochs auth.PlatformEpochStore,
+	revoker auth.TokenRevoker,
+	rdb *redis.Client,
 	secret []byte,
 	atTTL time.Duration,
+	rtTTL time.Duration,
 ) *PlatformService {
 	return &PlatformService{
 		db: db, adminRepo: adminRepo, kgRepo: kgRepo, entRepo: entRepo, orderRepo: orderRepo,
 		userRepo: userRepo, userRoleRepo: userRoleRepo, adminRoleRepo: adminRoleRepo,
 		paymentRepo: paymentRepo, commRepo: commRepo, distRepo: distRepo,
 		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, epochs: epochs,
-		secret: secret, atTTL: atTTL,
+		revoker: revoker, rdb: rdb, secret: secret, atTTL: atTTL, rtTTL: rtTTL,
 	}
 }
 
@@ -78,9 +85,10 @@ type PlatformAdminInfo struct {
 }
 
 type PlatformLoginResult struct {
-	Token     string            `json:"token"`
-	ExpiresIn int64             `json:"expires_in"`
-	Admin     PlatformAdminInfo `json:"admin"`
+	Token        string            `json:"token"`
+	RefreshToken string            `json:"refresh_token"`
+	ExpiresIn    int64             `json:"expires_in"`
+	Admin        PlatformAdminInfo `json:"admin"`
 }
 
 func (s *PlatformService) Login(ctx context.Context, username, password string) (*PlatformLoginResult, error) {
@@ -94,15 +102,7 @@ func (s *PlatformService) Login(ctx context.Context, username, password string) 
 	if err := bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(password)); err != nil {
 		return nil, fmt.Errorf("INVALID_CREDENTIALS")
 	}
-	token, err := auth.SignPlatformAccess(s.secret, fmt.Sprintf("%d", admin.ID), s.atTTL)
-	if err != nil {
-		return nil, err
-	}
-	return &PlatformLoginResult{
-		Token:     token,
-		ExpiresIn: int64(s.atTTL.Seconds()),
-		Admin:     PlatformAdminInfo{ID: admin.ID, Username: admin.Username, Name: admin.Name},
-	}, nil
+	return s.issuePlatformSession(ctx, admin)
 }
 
 // PlatformKindergartenRow 园所列表行。

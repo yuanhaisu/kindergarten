@@ -70,7 +70,7 @@ func newCommissionNetFixture(t *testing.T, db *gorm.DB, suffix string) *commissi
 		KindergartenID: kg.ID, PlanID: plan.ID, DistributorID: &dist.ID,
 	}, "s1bnet_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "s1bnet_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "s1bnet_ops", "127.0.0.1")
 	require.NoError(t, err)
 
 	return &commissionNetFixture{

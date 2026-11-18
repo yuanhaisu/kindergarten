@@ -114,11 +114,15 @@ type Order struct {
 	ExpiresAt      time.Time `gorm:"not null" json:"expires_at"`
 	// PayDueAt 是付款到期日，独立于服务期（design D1）：默认等于 StartsAt，
 	// 逾期判定只看它。BeforeCreate 兜底，保证任何建单路径都不会写入零值。
-	PayDueAt     time.Time  `gorm:"not null" json:"pay_due_at"`
-	ConfirmedAt  *time.Time `json:"confirmed_at"`
-	CancelledAt  *time.Time `json:"cancelled_at"`
-	CancelReason string     `gorm:"size:255;not null;default:''" json:"cancel_reason"`
-	CreatedBy    string     `gorm:"size:64;not null;default:''" json:"created_by"`
+	PayDueAt time.Time `gorm:"not null" json:"pay_due_at"`
+	// CreditGranted/CreditReason 记录零收款确认：信用开通必须留理由（design D2）。
+	// 理由只在详情返回，列表只暴露标记。
+	CreditGranted bool       `gorm:"not null;default:false" json:"credit_granted"`
+	CreditReason  string     `gorm:"size:255;not null;default:''" json:"credit_reason"`
+	ConfirmedAt   *time.Time `json:"confirmed_at"`
+	CancelledAt   *time.Time `json:"cancelled_at"`
+	CancelReason  string     `gorm:"size:255;not null;default:''" json:"cancel_reason"`
+	CreatedBy     string     `gorm:"size:64;not null;default:''" json:"created_by"`
 }
 
 func (Order) TableName() string { return "orders" }

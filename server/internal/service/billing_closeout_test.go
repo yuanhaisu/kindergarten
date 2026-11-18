@@ -74,7 +74,7 @@ func newCloseoutFixture(t *testing.T, db *gorm.DB, suffix string) *closeoutFixtu
 		KindergartenID: kg.ID, PlanID: plan.ID, DistributorID: &dist.ID,
 	}, "close7_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "close7_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "close7_ops", "127.0.0.1")
 	require.NoError(t, err)
 
 	return &closeoutFixture{kg: kg, plan: plan, dist: dist, order: order, planSvc: planSvc, orderSvc: orderSvc}
@@ -331,7 +331,7 @@ func TestCommercialCloseout_PaymentThenConfirmRestoresWrite(t *testing.T) {
 	require.NoError(t, err)
 	_, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{AmountCents: 100000}, "close7_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "close7_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "close7_ops", "127.0.0.1")
 	require.NoError(t, err)
 
 	dec, err = entSvc.Decide(ctx, kg.ID, "growth", true)
@@ -369,7 +369,7 @@ func TestCommercialCloseout_OverLimitDoesNotBlockExistingBusiness(t *testing.T) 
 	}, "close7_ops", "127.0.0.1"))
 	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "close7_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "close7_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "close7_ops", "127.0.0.1")
 	require.NoError(t, err)
 
 	// 成交时 2 人落第一档（上限 2），之后新增到 3 人即超档。

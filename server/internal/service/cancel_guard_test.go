@@ -56,7 +56,7 @@ func newCancelGuardOrder(t *testing.T, db *gorm.DB, kgName string) (*OrderServic
 	require.NoError(t, err)
 	order, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "s1b_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	return orderSvc, order, plan
 }

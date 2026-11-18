@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/pagination"
 	"kindergarten-server/pkg/response"
 )
@@ -59,11 +61,54 @@ func (h *Handler) PlatformLogin(c *gin.Context) {
 	response.OK(c, res)
 }
 
-// PlatformLogout 注销平台会话。
+// PlatformRefresh 用续期凭证换取新的访问凭证；旧续期凭证在服务端轮换。
+// 此端点不接受访问凭证（access 已过期的客户端才能续期），因此挂在
+// platformG 之外，与登录同组。
+func (h *Handler) PlatformRefresh(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	res, err := h.platformSvc.Refresh(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		if errors.Is(err, service.ErrPlatformAuthStorageUnavailable) {
+			log.L(c.Request.Context()).Error("platform refresh storage unavailable", "err", err)
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
+			return
+		}
+		// 不存在、已消费、已吊销、账号停用与 epoch 失效统一为 401，
+		// 不向客户端区分具体原因。
+		response.ErrUnauthorized(c, "续期凭证无效或已过期，请重新登录")
+		return
+	}
+	response.OK(c, res)
+}
+
+// PlatformLogout 注销平台会话：吊销访问凭证，并在请求带 refresh_token 时
+// 一并删除/吊销平台续期凭证（design D5）。
 func (h *Handler) PlatformLogout(c *gin.Context) {
-	auth := c.GetHeader("Authorization")
-	if token, ok := strings.CutPrefix(auth, "Bearer "); ok {
-		_ = h.authSvc.Logout(c.Request.Context(), token, "")
+	token, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
+	if !ok {
+		response.ErrUnauthorized(c, "缺少认证凭证")
+		return
+	}
+
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	// 允许空 body：客户端只发 `{}`，没带续期凭证时仍应吊销访问凭证。
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+
+	if err := h.platformSvc.Logout(c.Request.Context(), token, req.RefreshToken); err != nil {
+		log.L(c.Request.Context()).Error("platform logout revoke failed", "err", err)
+		response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
+		return
 	}
 	response.OK(c, gin.H{})
 }

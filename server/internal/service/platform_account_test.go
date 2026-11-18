@@ -16,6 +16,7 @@ import (
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/testutil/fakeredis"
 	"kindergarten-server/pkg/requestid"
 )
 
@@ -59,6 +60,8 @@ func newPlatformAccountService(t *testing.T, db *gorm.DB, audit PlatformAuditSto
 	if audit == nil {
 		audit = repository.NewPlatformLogRepo(db)
 	}
+	f := fakeredis.New(t)
+	rdb := f.Client(t)
 	return NewPlatformService(
 		db,
 		repository.NewPlatformAdminRepo(db),
@@ -75,8 +78,11 @@ func newPlatformAccountService(t *testing.T, db *gorm.DB, audit PlatformAuditSto
 		nil,
 		nil,
 		epochs,
+		auth.NewTokenRevoker(rdb),
+		rdb,
 		[]byte("test-platform-secret"),
 		time.Hour,
+		7*24*time.Hour,
 	)
 }
 
