@@ -40,7 +40,9 @@ func (r *PlanRepo) FindByCode(ctx context.Context, code string) (*domain.Plan, e
 	return &p, err
 }
 
-func (r *PlanRepo) List(ctx context.Context, status string) ([]domain.Plan, int64, error) {
+// List 返回满足状态筛选的一页套餐与真实总数。
+// total 在分页之前统计，与 offset/limit 无关。
+func (r *PlanRepo) List(ctx context.Context, status string, offset, limit int) ([]domain.Plan, int64, error) {
 	q := r.db.WithContext(ctx).Model(&domain.Plan{})
 	if status != "" {
 		q = q.Where("status = ?", status)
@@ -50,7 +52,7 @@ func (r *PlanRepo) List(ctx context.Context, status string) ([]domain.Plan, int6
 		return nil, 0, err
 	}
 	var list []domain.Plan
-	if err := q.Order("tier ASC, id ASC").Find(&list).Error; err != nil {
+	if err := q.Order("tier ASC, id ASC").Offset(offset).Limit(limit).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 	return list, total, nil

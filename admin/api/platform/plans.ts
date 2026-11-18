@@ -24,8 +24,14 @@ export function listModules() {
   return usePlatformHttp().get<{ list: ModuleDef[] }>('/platform/modules')
 }
 
-export function listPlans(status?: string) {
-  return usePlatformHttp().get<Paged<PlanRow>>('/platform/plans', { params: { status } })
+export interface PlanListParams {
+  status?: string
+  page?: number
+  page_size?: number
+}
+
+export function listPlans(params: PlanListParams = {}) {
+  return usePlatformHttp().get<Paged<PlanRow>>('/platform/plans', { params })
 }
 
 export function createPlan(body: Record<string, unknown>) {
