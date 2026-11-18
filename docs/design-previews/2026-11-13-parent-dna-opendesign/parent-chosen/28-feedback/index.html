@@ -124,6 +124,46 @@
         <button class="submit-button" id="submit-feedback" type="submit" data-od-id="submit-feedback">提交反馈</button>
       </form>
 
+      <section class="feedback-success" id="feedback-success" aria-labelledby="feedback-success-title" data-od-id="feedback-success" hidden>
+        <span class="success-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m5.5 12.5 4.2 4.2 8.8-9.4" />
+          </svg>
+        </span>
+        <h2 class="success-title" id="feedback-success-title">反馈已提交</h2>
+        <p class="success-desc">园所管理员会尽快查看，处理结果会出现在「我的反馈」里。</p>
+      </section>
+
+      <section class="history" aria-labelledby="history-heading" data-od-id="feedback-history">
+        <div class="history-head">
+          <h2 class="history-title" id="history-heading">我的反馈</h2>
+          <span class="history-count">2 条</span>
+        </div>
+
+        <article class="history-card" data-od-id="feedback-history-replied">
+          <div class="history-meta">
+            <span class="history-type">功能建议</span>
+            <span class="history-status history-status--replied">已回复</span>
+          </div>
+          <p class="history-text">希望成长报告能按月导出 PDF，方便发给家人。</p>
+          <p class="history-date">11 月 08 日提交</p>
+          <div class="history-reply">
+            <p class="history-reply__label">园所回复</p>
+            <p class="history-reply__text">成长报告的导出功能已经排期，预计下个版本上线，届时会在班级群通知。</p>
+            <p class="history-reply__date">11 月 10 日</p>
+          </div>
+        </article>
+
+        <article class="history-card" data-od-id="feedback-history-pending">
+          <div class="history-meta">
+            <span class="history-type">使用问题</span>
+            <span class="history-status history-status--pending">待处理</span>
+          </div>
+          <p class="history-text">接送二维码偶尔加载不出来。</p>
+          <p class="history-date">11 月 11 日提交</p>
+        </article>
+      </section>
+
       <section class="faq" aria-labelledby="faq-heading">
         <p class="faq__overline" id="faq-heading">常见问题</p>
         <div class="faq-card" data-od-id="faq-card">

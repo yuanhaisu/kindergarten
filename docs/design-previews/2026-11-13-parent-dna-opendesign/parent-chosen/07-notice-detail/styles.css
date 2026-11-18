@@ -510,6 +510,16 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.action-bar__status {
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.01em;
+  color: var(--fg);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .action-bar__read {
   font-size: var(--text-caption);
   line-height: var(--leading-caption);

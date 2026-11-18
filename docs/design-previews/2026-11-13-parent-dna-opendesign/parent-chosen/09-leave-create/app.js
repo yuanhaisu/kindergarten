@@ -21,6 +21,7 @@
   var toast = document.getElementById("toast");
   var backButton = document.getElementById("backButton");
   var toastTimer;
+  var params = new URLSearchParams(window.location.search);
 
   function formatDate(value) {
     if (!value) {
@@ -97,7 +98,43 @@
   setEndDateError(false);
   setReasonError(false);
 
-  if (new URLSearchParams(window.location.search).get("state") === "error") {
+  // 从 10 请假详情「重新提交」进入时，带出原申请内容，家长可改后再提交。
+  function applyResubmitPrefill() {
+    if (params.get("from") !== "10") {
+      return;
+    }
+
+    var type = params.get("type");
+    if (type) {
+      var radio = document.querySelector('input[name="leaveType"][value="' + type + '"]');
+      if (radio) {
+        radio.checked = true;
+      }
+    }
+
+    var startValue = params.get("start");
+    if (startValue) {
+      startDate.value = startValue;
+      syncDateLabel(startDate, startDateLabel);
+    }
+
+    var endValue = params.get("end");
+    if (endValue) {
+      endDate.value = endValue;
+      syncDateLabel(endDate, endDateLabel);
+    }
+
+    var reasonValue = params.get("reason");
+    if (reasonValue) {
+      var limit = Number(reason.maxLength) || 120;
+      reason.value = reasonValue.slice(0, limit);
+      syncReasonCount();
+    }
+  }
+
+  applyResubmitPrefill();
+
+  if (params.get("state") === "error") {
     endDate.value = "";
     syncDateLabel(endDate, endDateLabel);
     setEndDateError(true);
