@@ -141,6 +141,9 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 - `[casbin]` 的 `rbac_model.conf` / `rbac_policy.csv` 随镜像发布，路径改为容器内绝对路径（如 `/app/configs/...`）。
 - 容器与数据库统一 `Asia/Shanghai`：容器 `TZ=Asia/Shanghai`，DSN `loc=Asia%2FShanghai`。
 - 生产配置示例：`gin_mode=release`、`log.format=json`、`log.level=info`。
+- **平台访问凭证 TTL 是行为变更**：`[jwt] access_ttl_min`（默认 15）现在同时决定平台访问凭证有效期——平台会话从旧版硬编码的 24 小时缩短为 15 分钟，靠 7 天续期凭证维持（`refresh_ttl_day`，默认 7）。这不是「维持现状」，上线前须在 staging 验证 `登录 → access 过期 → 自动续期` 全链路；把 `access_ttl_min` 调成 1 可缩短验证时间。
+- **可信代理**：`[server] trusted_proxies`（默认 `127.0.0.1,::1`）决定 `ClientIP()`。API 跑在容器、Nginx 跑在宿主机时，必须把网桥网关地址（如 `172.17.0.1`）加入，否则限流会退化成全站共享配额、平台审计 IP 失真。上线前在 staging 反代后核对一次日志中的 `ClientIP()` 是真实客户端地址。
+- **平台审计保留**：平台操作审计至少保留 3 年，本期不做自动清理（见 `backend/api/api-platform/06-audit.md`）。
 
 ### 6.1 上线前必须轮换/清理的凭据
 

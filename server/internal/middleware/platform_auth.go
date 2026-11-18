@@ -70,7 +70,7 @@ func PlatformAuth(secret []byte, revoker auth.TokenRevoker, epochs auth.Platform
 			c.Abort()
 			return
 		}
-		if claims.IssuedAt == nil || claims.IssuedAt.Time.Before(epoch) {
+		if claims.IssuedAt == nil || claims.IssuedAt.Before(epoch) {
 			response.ErrUnauthorized(c, "登录状态已失效，请重新登录")
 			c.Abort()
 			return

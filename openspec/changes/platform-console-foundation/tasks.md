@@ -70,3 +70,46 @@
 - [ ] 7.3 逐条对照 `specs/platform-console/spec.md` 与 `specs/billing-orders/spec.md` 的每个 Scenario，确认通过；任何一条不通过则停下修 spec 或实现，不得带病宣布完成
 - [ ] 7.4 验证门：`make check`（vet + lint + test，测试加 `-timeout 600s`）与 `cd admin; npm run generate` 全绿；`git diff --stat` 核对只触达 design 列出的层；契约门逐条对照路由清单与 `backend/api/api-platform/`
 - [ ] 7.5 生成 checkpoint 摘要：实际触达层 vs design 触点清单、迁移是否已执行、`trusted_proxies` 在 staging 的实际取值、未验证项与原因；确认无残留后端进程后结束
+
+## 执行记录（T9 收口，2026-11-19）
+
+### 已完成
+
+- 7.1 已登记 `TC-NEW-ORD-0014～0018`、`TC-NEW-PLT-0009～0025`；仅「实际跑过并通过」的用例标 ✅。
+- 7.4 本地门禁：`go vet ./...`、`golangci-lint run ./...`、`go test ./... -race -timeout 600s`（DB 用例 SKIP）、`cd admin && npm run generate`、`cd admin && npm run test`、`node scripts/check-tokens.mjs admin` 全部通过；`platformG` 32 条路由与 `backend/api/api-platform/` 的 32 个接口逐条对应，无未文档化路由、无反向缺口。
+- 7.5 checkpoint 摘要已随 #122 交付说明给出：实际触达层与 design `跨端触点清单` 一致（admin 布局/页面、后端 middleware/config/router、契约文档、ADR、测试目录、部署文档）；迁移 `00008～00011` 已在树内但**未执行**（本地 MySQL 未运行）；`trusted_proxies` 配置默认为 `127.0.0.1,::1`，staging 实际取值未验证。
+
+### 阻塞未完成
+
+- **7.2 staging 端到端未执行**：本机 MySQL(3316)/Redis(6379)/后端(8080) 均无监听，且当前 worktree 无 `server/configs/app.ini`；没有可用平台账号与迁移后的库，无法真实登录、续期、看板与订单操作。**不得以本地 mock 或页面加载代替。**
+- **7.3 spec 逐 Scenario 验收未完成**：依赖 7.2 的真实运行结果与 DB 用例（本机无 DB，相关 service/repository 测试 SKIP）。
+
+### 恢复执行所需的命令
+
+```bash
+# 1) 起依赖：MySQL 监听 127.0.0.1:3316、Redis 监听 6379（本机服务/容器均可）
+# 2) 准备配置（不要提交）：
+cd server
+cp configs/app.ini.example configs/app.ini   # 填 MYSQL_DSN / REDIS_ADDR / JWT_SECRET
+make migrate && make seedbase
+
+# 3) 造平台账号（账号已存在时只重置密码）
+PLATFORM_ADMIN_USERNAME=ops PLATFORM_ADMIN_PASSWORD="<至少8位字母数字>" go run ./cmd/platformadmin
+
+# 4) 为验证续期，临时把 [jwt] access_ttl_min 调为 1，再启动后端
+CONFIG=configs/app.ini make run
+
+# 5) 管理端静态产物 + 反代到 8080
+cd ../admin && npm run generate
+# 用 nginx 或等价方式把 /api/v1 反代到 127.0.0.1:8080
+
+# 6) 真实交互（headless Chrome CDP，不能只用页面加载）：
+#    登录 → 等 access 过期 → 自动续期 → 停用后旧 refresh 被拒 → 登出后 refresh 被拒
+#    → 看板 → 新建账号 → 重置密码 → 审计查询 → 订单筛选 → 零收款确认（填理由）
+
+# 7) 回归 DB 用例
+cd ../server && go test ./internal/service ./internal/repository -run "Platform|Order|Billing" -timeout 600s -v
+```
+
+> staging 部署侧另需确认 `[server] trusted_proxies` 实际取值（反代/网桥网关地址），
+> 并在日志中核对 `ClientIP()` 为真实客户端地址。
