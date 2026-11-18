@@ -95,7 +95,7 @@ func TestPlatformAudit_StrongWritesRollBackOnAuditFailure(t *testing.T) {
 	orderSvc := newOrderServiceWithAudit(db, failingAuditWriter{err: errAuditDown})
 	kg, order := auditedOrderFixture(t, db, orderSvc, "A")
 
-	_, _, err := orderSvc.Confirm(ctx, order.ID, "t2a_ops", "127.0.0.1")
+	_, _, err := orderSvc.Confirm(ctx, order.ID, "测试信用开通", "t2a_ops", "127.0.0.1")
 	require.ErrorIs(t, err, errAuditDown)
 	reloaded, err := repository.NewOrderRepo(db).FindByID(ctx, order.ID)
 	require.NoError(t, err)
@@ -184,7 +184,7 @@ func TestPlatformAudit_StrongRowsCarryKindergartenAndRequestID(t *testing.T) {
 	orderSvc := newOrderServiceWithAudit(db, audit)
 	kg, order := auditedOrderFixture(t, db, orderSvc, "B")
 
-	_, _, err := orderSvc.Confirm(ctx, order.ID, "t2a_ops", "127.0.0.1")
+	_, _, err := orderSvc.Confirm(ctx, order.ID, "测试信用开通", "t2a_ops", "127.0.0.1")
 	require.NoError(t, err)
 	_, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{AmountCents: 1000}, "t2a_ops", "127.0.0.1")
 	require.NoError(t, err)

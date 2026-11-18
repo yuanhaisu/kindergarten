@@ -144,7 +144,7 @@ func TestOrder_InvoiceInfoRoundTrip(t *testing.T) {
 		KindergartenID: kg.ID, PlanID: plan.ID, InvoiceInfo: invoice,
 	}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, withInvoice.ID, "s1b_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, withInvoice.ID, "测试信用开通", "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	detail, err := orderSvc.Detail(ctx, withInvoice.ID)
 	require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestOrder_InvoiceInfoRoundTrip(t *testing.T) {
 	// 不填开票信息也能确认
 	noInvoice, err := orderSvc.Create(ctx, CreateOrderRequest{KindergartenID: kg.ID, PlanID: plan.ID}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, noInvoice.ID, "s1b_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, noInvoice.ID, "测试信用开通", "s1b_ops", "127.0.0.1")
 	require.NoError(t, err, "缺少开票信息不得阻断订单生效")
 	detail, err = orderSvc.Detail(ctx, noInvoice.ID)
 	require.NoError(t, err)
@@ -185,7 +185,7 @@ func TestOrder_AttributionFrozen(t *testing.T) {
 		KindergartenID: kg.ID, PlanID: plan.ID, DistributorID: &dist.ID,
 	}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "s1b_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	_, err = orderSvc.AddPayment(ctx, order.ID, PaymentRequest{AmountCents: 50000}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)

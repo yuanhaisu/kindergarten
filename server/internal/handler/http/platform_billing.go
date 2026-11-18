@@ -141,16 +141,15 @@ func (h *Handler) PlatformConfirmOrder(c *gin.Context) {
 		response.ErrValidation(c, "订单 ID 不合法")
 		return
 	}
-	order, ents, err := h.orderSvc.Confirm(c.Request.Context(), id, h.operatorOf(c), c.ClientIP())
+	// reason 只在净收款为零时必填：它就是信用开通的审计理由（design D2）。
+	// 空 body 仍是合法请求，由 service 按实收金额判断是否缺理由。
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	order, ents, err := h.orderSvc.Confirm(c.Request.Context(), id, req.Reason, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		switch err.Error() {
-		case "ORDER_NOT_FOUND":
-			response.ErrNotFound(c, "订单不存在")
-		case "ORDER_ALREADY_CONFIRMED", "ORDER_CANCELLED":
-			response.ErrConflict(c, "订单状态不允许确认")
-		default:
-			response.ErrInternal(c, "确认订单失败")
-		}
+		writeConfirmOrderError(c, err)
 		return
 	}
 	items := make([]gin.H, 0, len(ents))
@@ -161,6 +160,28 @@ func (h *Handler) PlatformConfirmOrder(c *gin.Context) {
 		})
 	}
 	response.OK(c, gin.H{"id": order.ID, "status": order.Status, "entitlements": items})
+}
+
+// writeConfirmOrderError 是确认失败的唯一映射出口。
+// 零收款确认缺理由必须返回可识别的 422，管理端据此提示补充理由，
+// 而不是让运营把 500 当成系统故障。
+func writeConfirmOrderError(c *gin.Context, err error) {
+	if errors.Is(err, service.ErrCreditReasonRequired) {
+		response.ErrValidation(c, "零收款确认必须填写信用开通理由")
+		return
+	}
+	if errors.Is(err, service.ErrCreditReasonTooLong) {
+		response.ErrValidation(c, "信用开通理由不能超过 255 个字符")
+		return
+	}
+	switch err.Error() {
+	case "ORDER_NOT_FOUND":
+		response.ErrNotFound(c, "订单不存在")
+	case "ORDER_ALREADY_CONFIRMED", "ORDER_CANCELLED":
+		response.ErrConflict(c, "订单状态不允许确认")
+	default:
+		response.ErrInternal(c, "确认订单失败")
+	}
 }
 
 func (h *Handler) PlatformCancelOrder(c *gin.Context) {

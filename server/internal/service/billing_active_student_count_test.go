@@ -104,7 +104,7 @@ func TestActiveStudentCount_DrivesTierAndOverLimit(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(order.PlanSnapshot), &snap))
 	assert.EqualValues(t, 2, snap.StudentCount, "快照里的在园幼儿数只含在读")
 
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "s1bact_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "s1bact_ops", "127.0.0.1")
 	require.NoError(t, err)
 
 	view, err := entSvc.Subscription(ctx, kg.ID)
