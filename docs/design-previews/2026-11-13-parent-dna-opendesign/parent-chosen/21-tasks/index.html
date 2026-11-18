@@ -41,22 +41,19 @@
         <h2 class="today-title" data-od-id="today-task-title">给家人讲一件今天开心的事</h2>
         <p class="today-desc">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。</p>
 
-        <div class="streak" id="streak" role="img" aria-label="本周已完成 2 天，还差 1 天">
+        <div class="streak" id="streak" role="img" aria-label="本周已完成 3 天">
           <span class="streak-seg is-on"></span>
           <span class="streak-seg is-on"></span>
-          <span class="streak-seg is-off" id="streak-third">
-            <svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><line x1="3" y1="3" x2="97" y2="3" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="6 12" /></svg>
-          </span>
+          <span class="streak-seg is-on"></span>
         </div>
-        <p class="today-meta" id="today-meta">本周 2 / 3 天 · 今天还没打卡</p>
+        <p class="today-meta" id="today-meta">本周 3 / 3 天 · 今天已打卡</p>
 
         <div class="today-divider" aria-hidden="true"></div>
 
         <div class="today-foot">
           <p class="today-points" data-od-id="today-points"><span class="today-points__num">+10</span><span class="today-points__unit">积分</span></p>
-          <button class="ghost-btn" id="checkin-btn" type="button" data-od-id="today-checkin">
-            <span id="ghost-idle">去打卡</span>
-            <span class="ghost-done" id="ghost-done" hidden>
+          <button class="ghost-btn" id="checkin-btn" type="button" data-od-id="today-checkin" disabled>
+            <span class="ghost-done" id="ghost-done">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
               已打卡
             </span>
@@ -132,7 +129,7 @@
       <button class="wall-row" type="button" data-wall data-od-id="class-wall-row">
         <span class="wall-row__body">
           <span class="wall-row__title">班级墙</span>
-          <span class="wall-row__sub">今天 <span class="hl">18 位小朋友</span>完成了任务</span>
+          <span class="wall-row__sub">今天 <span class="hl">8 位小朋友</span>完成了任务</span>
         </span>
         <svg class="wall-row__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
       </button>
