@@ -67,6 +67,12 @@
           <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="标记" width="100">
+        <template #default="{ row }">
+          <el-tag v-if="row.credit_granted" type="warning" size="small">信用开通</el-tag>
+          <span v-else class="text-text-hint">—</span>
+        </template>
+      </el-table-column>
       <el-table-column label="付款到期" width="116">
         <template #default="{ row }">
           <span :class="row.status === 'expired' ? 'text-semantic-danger' : ''">
@@ -129,7 +135,10 @@
                 {{ detail.kindergarten_name }} · {{ detail.plan_snapshot.plan_name }}
               </div>
             </div>
-            <el-tag :type="statusType(detail.status)">{{ statusLabel(detail.status) }}</el-tag>
+            <div class="flex items-center gap-2">
+              <el-tag v-if="detail.credit_granted" type="warning">信用开通</el-tag>
+              <el-tag :type="statusType(detail.status)">{{ statusLabel(detail.status) }}</el-tag>
+            </div>
           </div>
 
           <div class="grid grid-cols-3 gap-3 text-sm">
@@ -157,8 +166,13 @@
             </template>
           </div>
 
+          <div v-if="detail.credit_granted" class="rounded-md bg-bg-page p-3 text-sm">
+            <div class="text-xs text-text-muted">信用开通理由</div>
+            <div class="mt-1 text-text-primary">{{ detail.credit_reason || '—' }}</div>
+          </div>
+
           <div class="flex flex-wrap gap-2">
-            <el-button v-if="!detail.status.startsWith('cancelled')" size="small" type="primary" @click="onConfirm">
+            <el-button v-if="canConfirm(detail.status)" size="small" type="primary" @click="onConfirm">
               确认订单
             </el-button>
             <el-button v-if="!detail.status.startsWith('cancelled')" size="small" type="success" @click="openPayment">
@@ -373,10 +387,37 @@ async function refreshDetail() {
   if (detail.value) await openDetail(detail.value.id)
 }
 
+/**
+ * 确认按钮只在「尚未收清且未结束」的订单上出现：
+ * 已收清（paid）与已过付款到期日（expired）不再提供确认，已取消的订单由调用处的
+ * cancelled 判断隐藏全部操作（design D2 / D9）。
+ */
+function canConfirm(status: string) {
+  return status !== 'paid' && status !== 'expired' && !status.startsWith('cancelled')
+}
+
 async function onConfirm() {
   if (!detail.value) return
+  // 净收款为零的确认即信用开通：理由由后端强制要求（422），
+  // 这里先收口，避免把一次必然失败的请求发出去。
+  let reason: string | undefined
+  if (detail.value.amount_paid_cents === 0) {
+    try {
+      const res = await ElMessageBox.prompt('零收款确认将标记为「信用开通」。请填写理由：', '确认订单', {
+        inputPlaceholder: '如：合同已签署，对公转账到账后补录',
+        inputValidator: (value: string) => (value?.trim() ? true : '必须填写信用开通理由'),
+      })
+      reason = res.value?.trim()
+    } catch {
+      return
+    }
+  }
   try {
-    await confirmOrder(detail.value.id)
+    if (reason) {
+      await confirmOrder(detail.value.id, reason)
+    } else {
+      await confirmOrder(detail.value.id)
+    }
     ElMessage.success('订单已确认，授权已发放')
     await Promise.all([refreshDetail(), load()])
   } catch (e) {
