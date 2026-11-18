@@ -14,6 +14,7 @@
     'no-auth': { designated: false, openSheet: true, emptySheet: true }
   };
   var plan = designations[requested] || { designated: true, openSheet: false, emptySheet: false };
+  document.body.dataset.designated = String(plan.designated);
 
   var main = document.querySelector('.mp-main');
   var nav = document.querySelector('.mp-nav');

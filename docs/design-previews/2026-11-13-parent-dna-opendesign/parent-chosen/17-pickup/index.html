@@ -32,7 +32,6 @@
           <p class="overline">乐乐 · 小一班</p>
           <h1 class="page-title">接送</h1>
         </div>
-        <button class="head-action" type="button" data-od-id="pickup-code-shortcut">接送码</button>
       </header>
 
       <section class="status-card" aria-labelledby="status-title" data-od-id="status-card">
@@ -89,141 +88,58 @@
             </div>
           </div>
         </div>
-
-        <button class="btn-primary" type="button" data-od-id="pickup-primary-cta">
-          <span data-when="in">出示接送码</span>
-          <span data-when="away">出示接送码</span>
-          <span data-when="done">看看今天的成长记录</span>
-        </button>
-        <p class="cta-note">
-          <span data-when="in">当日有效，核验后失效</span>
-          <span data-when="away">到园时在门口出示，老师扫码后自动记录</span>
-          <span data-when="done">已离开园区，今日接送码已失效</span>
-        </p>
       </section>
-
-      <section class="designate-card" aria-labelledby="designate-title" data-od-id="designate-card">
+      <section class="designate-card designate-card--compact" aria-labelledby="designate-title" data-od-id="designate-card">
         <div class="designate-head">
           <span class="designate-title" id="designate-title">今天谁来接</span>
-          <button
-            class="designate-change"
-            id="designate-change"
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded="false"
-            aria-controls="pickup-person-sheet"
-            data-od-id="designate-change"
-          >更换</button>
+          <button class="designate-change" id="designate-change" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="pickup-person-sheet" data-od-id="designate-change">更换</button>
         </div>
         <p class="designate-name" id="designate-name" data-od-id="designate-name">
           <span class="designate-person" id="designate-person">王磊</span>
           <span class="designate-rel" id="designate-rel">爸爸 · 已通过</span>
         </p>
-        <p class="designate-hint">到园接走时，老师会核对这里指定的人。</p>
         <div class="designate-empty" id="designate-empty" hidden>
           <p class="designate-empty__title">还没指定今天接走人</p>
-          <button
-            class="designate-cta"
-            id="designate-cta"
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded="false"
-            aria-controls="pickup-person-sheet"
-            data-od-id="designate-cta"
-          >去指定</button>
+          <button class="designate-cta" id="designate-cta" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="pickup-person-sheet" data-od-id="designate-cta">去指定</button>
         </div>
       </section>
 
-      <button class="people-card" type="button" data-od-id="authorized-pickup-card">
-        <span class="people-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="9" cy="8.6" r="2.7" />
-            <path d="M4.4 19.2c.3-3 2.2-4.7 4.6-4.7s4.3 1.7 4.6 4.7" />
-            <path d="M15.2 6.8a2.5 2.5 0 0 1 0 4.8" />
-            <path d="M16.6 14.8c1.8.3 3 1.7 3.3 4.2" />
-          </svg>
-        </span>
-        <span class="people-copy">
-          <span class="people-title">可接送人</span>
-          <span class="people-sub">妈妈、爸爸，共 2 位（外婆待审核）</span>
-        </span>
-        <span class="chev" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m9 5 7 7-7 7" />
-          </svg>
-        </span>
-      </button>
-
-      <div class="info-strip" role="note" data-od-id="change-pickup-notice">
-        <span class="info-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="8.6" />
-            <path d="M12 11.2v5.2" />
-            <circle cx="12" cy="7.9" r=".9" fill="currentColor" stroke="none" />
-          </svg>
-        </span>
-        <p>临时更换接送人，请提前在「可接送人」中添加，并告知班级老师。</p>
-      </div>
-
-      <section class="history" aria-labelledby="history-title" data-od-id="history-section">
-        <div class="section-head">
-          <h2 class="section-title" id="history-title">历史记录</h2>
-          <span class="section-meta">近 30 天</span>
+      <section class="code-card" id="pickup-code-card" data-od-id="pickup-code-card" aria-labelledby="pickup-code-title">
+        <div class="code-head">
+          <h2 class="code-title" id="pickup-code-title">今日接送码 · 到门口出示</h2>
+          <span class="code-badge code-status">有效</span>
         </div>
-
-        <div class="history-card">
-          <article class="day" data-od-id="history-day-1111">
-            <div class="day-head">
-              <span class="day-date">11 月 11 日</span>
-              <span class="day-week">周三</span>
-            </div>
-            <div class="record-row">
-              <span class="rec-type rec-in">送入</span>
-              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
-              <span class="rec-time">07:55</span>
-            </div>
-            <div class="record-row">
-              <span class="rec-type rec-out">接走</span>
-              <span class="rec-person"><span class="rec-name">爸爸</span><span class="rec-rel">（父亲）</span></span>
-              <span class="rec-time">17:32</span>
-            </div>
-          </article>
-
-          <article class="day" data-od-id="history-day-1110">
-            <div class="day-head">
-              <span class="day-date">11 月 10 日</span>
-              <span class="day-week">周二</span>
-            </div>
-            <div class="record-row">
-              <span class="rec-type rec-in">送入</span>
-              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
-              <span class="rec-time">08:01</span>
-            </div>
-            <div class="record-row">
-              <span class="rec-type rec-out">接走</span>
-              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
-              <span class="rec-time">16:48</span>
-            </div>
-          </article>
-
-          <article class="day" data-od-id="history-day-1107">
-            <div class="day-head">
-              <span class="day-date">11 月 7 日</span>
-              <span class="day-week">周六</span>
-            </div>
-            <div class="record-row">
-              <span class="rec-type rec-in">送入</span>
-              <span class="rec-person"><span class="rec-name">爸爸</span><span class="rec-rel">（父亲）</span></span>
-              <span class="rec-time">07:47</span>
-            </div>
-            <div class="record-row">
-              <span class="rec-type rec-out">接走</span>
-              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
-              <span class="rec-time">17:10</span>
-            </div>
-          </article>
+        <div class="code-live">
+          <a class="qr-link" href="../18-pickup-qrcode/index.html" data-od-id="pickup-fullscreen-cta" aria-label="全屏出示今日接送码">
+            <span class="qr-frame"><svg class="qr-code" viewBox="0 0 296 296" width="168" height="168" role="img" aria-labelledby="qr-title">
+          <title id="qr-title">乐乐本次接送的动态二维码</title>
+          <rect class="qr-ground" width="296" height="296" />
+          <path class="qr-modules" id="qr-modules" d="M32 32h56v8h-56zM96 32h8v8h-8zM112 32h16v8h-16zM160 32h8v8h-8zM176 32h16v8h-16zM208 32h56v8h-56zM32 40h8v8h-8zM80 40h8v8h-8zM104 40h16v8h-16zM152 40h8v8h-8zM168 40h8v8h-8zM208 40h8v8h-8zM256 40h8v8h-8zM32 48h8v8h-8zM48 48h24v8h-24zM80 48h8v8h-8zM96 48h32v8h-32zM136 48h8v8h-8zM152 48h8v8h-8zM176 48h8v8h-8zM208 48h8v8h-8zM224 48h24v8h-24zM256 48h8v8h-8zM32 56h8v8h-8zM48 56h24v8h-24zM80 56h8v8h-8zM96 56h8v8h-8zM120 56h8v8h-8zM136 56h8v8h-8zM160 56h16v8h-16zM192 56h8v8h-8zM208 56h8v8h-8zM224 56h24v8h-24zM256 56h8v8h-8zM32 64h8v8h-8zM48 64h24v8h-24zM80 64h8v8h-8zM120 64h16v8h-16zM144 64h24v8h-24zM176 64h8v8h-8zM208 64h8v8h-8zM224 64h24v8h-24zM256 64h8v8h-8zM32 72h8v8h-8zM80 72h8v8h-8zM104 72h16v8h-16zM144 72h8v8h-8zM168 72h8v8h-8zM192 72h8v8h-8zM208 72h8v8h-8zM256 72h8v8h-8zM32 80h56v8h-56zM96 80h8v8h-8zM112 80h8v8h-8zM128 80h8v8h-8zM144 80h8v8h-8zM160 80h8v8h-8zM176 80h8v8h-8zM192 80h8v8h-8zM208 80h56v8h-56zM96 88h8v8h-8zM112 88h32v8h-32zM152 88h48v8h-48zM32 96h40v8h-40zM80 96h8v8h-8zM104 96h24v8h-24zM136 96h8v8h-8zM152 96h8v8h-8zM176 96h8v8h-8zM192 96h8v8h-8zM216 96h32v8h-32zM56 104h8v8h-8zM88 104h8v8h-8zM112 104h16v8h-16zM152 104h8v8h-8zM232 104h16v8h-16zM256 104h8v8h-8zM56 112h8v8h-8zM72 112h32v8h-32zM120 112h24v8h-24zM152 112h16v8h-16zM192 112h8v8h-8zM208 112h8v8h-8zM232 112h24v8h-24zM72 120h8v8h-8zM88 120h8v8h-8zM104 120h8v8h-8zM120 120h8v8h-8zM136 120h32v8h-32zM176 120h8v8h-8zM192 120h8v8h-8zM208 120h8v8h-8zM240 120h16v8h-16zM56 128h8v8h-8zM80 128h8v8h-8zM112 128h8v8h-8zM128 128h8v8h-8zM152 128h16v8h-16zM176 128h8v8h-8zM200 128h32v8h-32zM256 128h8v8h-8zM32 136h16v8h-16zM88 136h40v8h-40zM136 136h8v8h-8zM160 136h16v8h-16zM192 136h8v8h-8zM224 136h16v8h-16zM256 136h8v8h-8zM40 144h8v8h-8zM56 144h8v8h-8zM80 144h24v8h-24zM144 144h24v8h-24zM192 144h8v8h-8zM232 144h8v8h-8zM248 144h8v8h-8zM32 152h16v8h-16zM112 152h8v8h-8zM128 152h8v8h-8zM152 152h16v8h-16zM184 152h8v8h-8zM200 152h8v8h-8zM240 152h24v8h-24zM48 160h8v8h-8zM64 160h8v8h-8zM80 160h16v8h-16zM104 160h16v8h-16zM136 160h8v8h-8zM168 160h8v8h-8zM184 160h8v8h-8zM200 160h8v8h-8zM216 160h32v8h-32zM48 168h24v8h-24zM96 168h40v8h-40zM144 168h24v8h-24zM184 168h16v8h-16zM216 168h16v8h-16zM240 168h24v8h-24zM40 176h8v8h-8zM80 176h8v8h-8zM104 176h32v8h-32zM152 176h16v8h-16zM176 176h40v8h-40zM48 184h8v8h-8zM72 184h8v8h-8zM96 184h8v8h-8zM120 184h16v8h-16zM144 184h40v8h-40zM208 184h16v8h-16zM232 184h32v8h-32zM56 192h40v8h-40zM104 192h48v8h-48zM168 192h16v8h-16zM192 192h8v8h-8zM208 192h8v8h-8zM224 192h24v8h-24zM96 200h8v8h-8zM120 200h8v8h-8zM136 200h8v8h-8zM160 200h24v8h-24zM208 200h24v8h-24zM240 200h16v8h-16zM32 208h56v8h-56zM136 208h8v8h-8zM152 208h8v8h-8zM176 208h56v8h-56zM240 208h8v8h-8zM32 216h8v8h-8zM80 216h8v8h-8zM112 216h24v8h-24zM144 216h8v8h-8zM168 216h8v8h-8zM184 216h16v8h-16zM216 216h8v8h-8zM248 216h8v8h-8zM32 224h8v8h-8zM48 224h24v8h-24zM80 224h8v8h-8zM96 224h8v8h-8zM112 224h16v8h-16zM144 224h8v8h-8zM160 224h16v8h-16zM184 224h8v8h-8zM216 224h8v8h-8zM248 224h16v8h-16zM32 232h8v8h-8zM48 232h24v8h-24zM80 232h8v8h-8zM96 232h8v8h-8zM136 232h16v8h-16zM176 232h16v8h-16zM200 232h16v8h-16zM256 232h8v8h-8zM32 240h8v8h-8zM48 240h24v8h-24zM80 240h8v8h-8zM136 240h40v8h-40zM200 240h16v8h-16zM232 240h32v8h-32zM32 248h8v8h-8zM80 248h8v8h-8zM96 248h8v8h-8zM112 248h40v8h-40zM208 248h8v8h-8zM224 248h16v8h-16zM256 248h8v8h-8zM32 256h56v8h-56zM96 256h16v8h-16zM128 256h32v8h-32zM192 256h8v8h-8zM232 256h24v8h-24z" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true" />
+        </svg></span>
+          </a>
+          <div class="code-side">
+            <a class="code-fullscreen" href="../18-pickup-qrcode/index.html">全屏出示</a>
+            <p class="code-valid">当日有效，核验后失效<br>请勿转发给他人</p>
+          </div>
+        </div>
+        <div class="code-done">
+          <p class="code-done__title">今日接送码已失效</p>
+          <p class="code-done__copy">孩子今天已被接走，明天会重新生成。</p>
+          <a class="code-done__link" href="../12-growth-detail/index.html">看看今天的成长记录</a>
+        </div>
+        <div class="code-empty">
+          <p class="code-empty__title">今天的接送码还没生成</p>
+          <p class="code-empty__copy">指定接走人后，码会立即显示在这里。</p>
         </div>
       </section>
+
+      <a class="manage-row" href="../19-pickup-authorized/index.html" data-od-id="pickup-manage-entry">
+        <span class="manage-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 8v4l2.6 1.6"/></svg>
+        </span>
+        <span class="manage-copy"><span class="manage-title">接送管理</span><span class="manage-sub">可接送人 · 历史记录</span></span>
+        <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg></span>
+      </a>
     </main>
 
     <nav class="mp-nav" aria-label="主导航" data-od-id="bottom-tab-bar">

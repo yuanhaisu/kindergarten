@@ -36,7 +36,7 @@ export default {
     { slug: "16-album-detail", must: ["秋日远足 · 班级相册", "秋日远足"] },
     { slug: "17-pickup", must: ["接送 · 养成星球", "接送"] },
     { slug: "18-pickup-qrcode", must: ["接送码 · 养成星球", "接送码"] },
-    { slug: "19-pickup-authorized", must: ["可接送人 · 接送", "可接送人"] },
+    { slug: "19-pickup-authorized", must: ["接送管理 · 接送", "接送管理"] },
     { slug: "20-pickup-authorized-create", must: ["添加授权人 · 接送", "添加授权人"] },
     { slug: "21-tasks", must: ["亲子任务 — 养成星球", "亲子任务"] },
     { slug: "22-tasks-detail", must: ["任务详情 · 养成星球", "给家人讲一件"] },

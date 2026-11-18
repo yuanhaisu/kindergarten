@@ -67,7 +67,7 @@ const groups = [
     note: "门口场景与激励",
     pages: [
       { dir: "18-pickup-qrcode", title: "接送二维码" },
-      { dir: "19-pickup-authorized", title: "可接送人", variants: [{ file: "index.html?state=empty", img: "preview-empty.png", label: "空态" }] },
+      { dir: "19-pickup-authorized", title: "接送管理", variants: [{ file: "index.html?state=empty", img: "preview-empty.png", label: "空态" }] },
       { dir: "20-pickup-authorized-create", title: "新增授权人" },
       { dir: "24-points", title: "积分与成就" },
     ],

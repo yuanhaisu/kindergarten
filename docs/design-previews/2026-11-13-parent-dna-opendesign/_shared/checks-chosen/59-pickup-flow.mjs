@@ -1,5 +1,5 @@
 /**
- * #92 T4 接送主流程：17 接送 / 18 接送码 / 19 可接送人 / 20 添加授权人。
+ * #92 T4 接送主流程：17 接送 / 18 接送码 / 19 接送管理 / 20 添加授权人。
  *
  * 口径：
  * - 17 新增「今天谁来接」，默认取上次接走的人（11/11 记录为王磊·爸爸）；
@@ -90,9 +90,39 @@ export default {
       must: ["今天还未入园，请联系老师"],
       mustNot: ["08:30"],
     },
-    // 11/10 起接走人从外婆改为妈妈，历史里不再出现外婆。
+    // 接送码在 17 直接可见，不再多点一次；全屏出示才去 18。
     {
       slug: "17-pickup",
+      within: "#pickup-code-card",
+      must: ["今日接送码", "到门口出示", "请勿转发给他人", "全屏出示"],
+      mustNot: ["接送管理"],
+    },
+    // 未指定接走人时，码位直接变成空态。
+    {
+      slug: "17-pickup",
+      state: "undesignated",
+      within: "#pickup-code-card",
+      must: ["今天的接送码还没生成", "指定接走人后，码会立即显示在这里"],
+      mustNot: ["全屏出示"],
+    },
+    // 已接走：码位收起，给当天成长记录出口。
+    {
+      slug: "17-pickup",
+      state: "done",
+      within: "#pickup-code-card",
+      must: ["今日接送码已失效", "看看今天的成长记录"],
+      mustNot: ["全屏出示"],
+    },
+    // 低频管理收进一个入口，不再占多张卡片。
+    {
+      slug: "17-pickup",
+      within: '[data-od-id="pickup-manage-entry"]',
+      must: ["接送管理", "可接送人", "历史记录"],
+    },
+    // 11/10 起接走人从外婆改为妈妈，历史里不再出现外婆。
+    {
+      slug: "19-pickup-authorized",
+      state: "history",
       within: ".history-card",
       must: ["11 月 10 日"],
       mustNot: ["外婆", "外祖母"],
@@ -130,10 +160,19 @@ export default {
       mustNot: ["请勿转发给他人"],
     },
 
-    // ---- 19 可接送人：无端点的动作下线 ----
+    // ---- 19 接送管理：可接送人 / 历史记录 两个低频管理 tab ----
     {
       slug: "19-pickup-authorized",
-      must: ["可接送人", "已通过", "待审核", "已拒绝"],
+      must: ["接送管理", "可接送人", "历史记录", "已通过", "待审核", "已拒绝"],
+    },
+    {
+      slug: "19-pickup-authorized",
+      interaction: {
+        click: '[data-od-id="pickup-tab-history"]',
+        expectStayOn: "19-pickup-authorized",
+        expectVisible: "#pickup-panel-history",
+        expectVisibleText: "11 月 10 日",
+      },
     },
     // 已通过：编辑 + 删除，没有暂停。
     {
