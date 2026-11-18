@@ -118,6 +118,29 @@ export default {
         expectVisibleText: "第一次自己系好了鞋带",
       },
     },
+    // 语音输入：微信同声传译转写后填入输入框，可编辑再发送。
+    {
+      slug: "11-growth",
+      state: "voice",
+      within: "#comment-sheet",
+      must: ["正在聆听"],
+    },
+    {
+      slug: "11-growth",
+      state: "voice-done",
+      within: "#comment-sheet",
+      must: ["已转写，可编辑后发送"],
+    },
+    {
+      slug: "11-growth",
+      state: "comments",
+      interaction: {
+        click: "#comment-voice",
+        expectStayOn: "11-growth",
+        expectVisible: ".voice-status",
+        expectVisibleText: "正在聆听",
+      },
+    },
     // 发送评论：抽屉关闭，记录 1 的评论数从 2 变 3。
     {
       slug: "11-growth",
