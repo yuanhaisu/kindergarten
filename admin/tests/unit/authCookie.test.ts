@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest'
 import {
   ADMIN_REFRESH_COOKIE,
   ADMIN_TOKEN_COOKIE,
+  PLATFORM_REFRESH_COOKIE,
+  PLATFORM_REFRESH_MAX_AGE,
   PLATFORM_TOKEN_COOKIE,
+  PLATFORM_TOKEN_MAX_AGE,
   buildAuthCookieOptions,
 } from '../../utils/authCookie'
 
@@ -16,10 +19,17 @@ import {
  */
 
 describe('auth cookie names', () => {
-  it('三个 Cookie 名称稳定', () => {
+  it('四个 Cookie 名称稳定', () => {
     expect(ADMIN_TOKEN_COOKIE).toBe('admin_token')
     expect(ADMIN_REFRESH_COOKIE).toBe('admin_refresh')
     expect(PLATFORM_TOKEN_COOKIE).toBe('platform_token')
+    expect(PLATFORM_REFRESH_COOKIE).toBe('platform_refresh')
+  })
+
+  it('平台续期 Cookie 有效期 7 天，与访问凭证 Cookie 分开', () => {
+    expect(PLATFORM_REFRESH_MAX_AGE).toBe(60 * 60 * 24 * 7)
+    expect(PLATFORM_TOKEN_MAX_AGE).toBe(60 * 60 * 24)
+    expect(PLATFORM_REFRESH_MAX_AGE).toBeGreaterThan(PLATFORM_TOKEN_MAX_AGE)
   })
 })
 
@@ -52,7 +62,12 @@ describe('buildAuthCookieOptions', () => {
 describe('cookie literal regression guard', () => {
   const adminRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
   const SCANNED_DIRS = ['composables', 'stores', 'middleware', 'pages', 'layouts']
-  const COOKIE_NAMES = [ADMIN_TOKEN_COOKIE, ADMIN_REFRESH_COOKIE, PLATFORM_TOKEN_COOKIE]
+  const COOKIE_NAMES = [
+    ADMIN_TOKEN_COOKIE,
+    ADMIN_REFRESH_COOKIE,
+    PLATFORM_TOKEN_COOKIE,
+    PLATFORM_REFRESH_COOKIE,
+  ]
   const SOURCE_EXTENSIONS = new Set(['.ts', '.js', '.vue'])
 
   function* walk(dir: string): Generator<string> {

@@ -22,12 +22,23 @@
 import type { FormInstance, FormRules } from 'element-plus'
 import { platformLogin } from '~/api/platform/auth'
 import {
+  PLATFORM_REFRESH_COOKIE,
+  PLATFORM_REFRESH_MAX_AGE,
   PLATFORM_TOKEN_COOKIE,
   PLATFORM_TOKEN_MAX_AGE,
   buildAuthCookieOptions,
 } from '~/utils/authCookie'
 
-definePageMeta({ layout: 'auth' })
+definePageMeta({
+  layout: 'auth',
+  middleware: [
+    // 已有登录态时不必再看登录页，直接回看板。
+    () => {
+      const token = useCookie<string | null>(PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions())
+      if (token.value) return navigateTo('/platform')
+    },
+  ],
+})
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
@@ -48,10 +59,23 @@ async function onSubmit() {
       PLATFORM_TOKEN_COOKIE,
       buildAuthCookieOptions({ maxAge: PLATFORM_TOKEN_MAX_AGE }),
     ).value = data.token
-    const redirect = (route.query.redirect as string) || '/platform/kindergartens'
+    if (data.refresh_token) {
+      useCookie<string | null>(
+        PLATFORM_REFRESH_COOKIE,
+        buildAuthCookieOptions({ maxAge: PLATFORM_REFRESH_MAX_AGE }),
+      ).value = data.refresh_token
+    }
+    const redirect = (route.query.redirect as string) || '/platform'
     await navigateTo(redirect)
   } catch (e: unknown) {
-    ElMessage.error(e instanceof Error ? e.message : '登录失败')
+    const status = (e as { status?: number }).status
+    ElMessage.error(
+      status === 429
+        ? '登录尝试过于频繁，请稍后再试'
+        : e instanceof Error
+          ? e.message
+          : '登录失败',
+    )
   } finally {
     loading.value = false
   }
