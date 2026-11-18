@@ -56,62 +56,17 @@
       <p class="task-meta">
         <span>每天</span>
         <span class="task-meta__dot" aria-hidden="true"></span>
-        <span class="task-meta__now">今天 21:00 前</span>
-        <span class="task-meta__dot" aria-hidden="true"></span>
         <span>王老师布置</span>
       </p>
     </header>
 
-    <section class="card" aria-labelledby="steps-title" data-od-id="steps-card">
+    <section class="card" aria-labelledby="requirements-title" data-od-id="requirements-card">
       <div class="card-head">
-        <h2 class="card-title" id="steps-title">打卡步骤</h2>
-        <span class="card-meta">已完成 <strong id="step-count">1</strong> / 3</span>
+        <h2 class="card-title" id="requirements-title">任务要求</h2>
       </div>
-      <div class="steps-progress" aria-hidden="true">
-        <span class="steps-progress__seg is-done"></span>
-        <span class="steps-progress__seg"></span>
-        <span class="steps-progress__seg"></span>
-      </div>
-      <ul class="checklist" data-od-id="steps-list">
-        <li class="check-row is-done" data-od-id="step-1">
-          <label class="check-item">
-            <span class="check-box">
-              <input class="check-input" type="checkbox" checked />
-              <span class="check-visual" aria-hidden="true">
-                <svg class="check-tick" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-                </svg>
-              </span>
-            </span>
-            <span class="check-label">先问问孩子今天在幼儿园最开心的一件事</span>
-          </label>
-        </li>
-        <li class="check-row" data-od-id="step-2">
-          <label class="check-item">
-            <span class="check-box">
-              <input class="check-input" type="checkbox" />
-              <span class="check-visual" aria-hidden="true">
-                <svg class="check-tick" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-                </svg>
-              </span>
-            </span>
-            <span class="check-label">听孩子讲完，不打断，也不急着评价</span>
-          </label>
-        </li>
-        <li class="check-row" data-od-id="step-3">
-          <label class="check-item">
-            <span class="check-box">
-              <input class="check-input" type="checkbox" />
-              <span class="check-visual" aria-hidden="true">
-                <svg class="check-tick" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-                </svg>
-              </span>
-            </span>
-            <span class="check-label">拍一张他讲故事时的照片<span class="check-optional">（选填）</span></span>
-          </label>
-        </li>
+      <ul class="requirements" data-od-id="requirements-list">
+        <li>晚饭后问问孩子今天在幼儿园最开心的一件事</li>
+        <li>听孩子讲完，不打断，也不急着评价</li>
       </ul>
     </section>
 
@@ -119,45 +74,26 @@
       <div class="card-head">
         <h2 class="card-title" id="checkin-title">今日打卡</h2>
         <span class="time-left">
-          <span class="time-left__live" id="time-left-live"><span class="attention-dot" aria-hidden="true"></span>还剩 11 小时</span>
-          <span class="time-left__done" id="time-left-done" hidden>
-            <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <span class="time-left__done">
+            <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-            </svg>已打卡
+            </svg>已完成 · 今天 19:20
           </span>
         </span>
       </div>
       <div class="week-streak" data-od-id="week-streak">
-        <div class="streak" id="week-streak-bar" role="img" aria-label="本周已完成 2 天，还差 1 天">
+        <div class="streak" id="week-streak-bar" role="img" aria-label="本周已完成 3 天">
           <span class="streak-seg is-on"></span>
           <span class="streak-seg is-on"></span>
-          <span class="streak-seg is-off" id="week-streak-third">
-            <svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><line x1="3" y1="3" x2="97" y2="3" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="6 12" /></svg>
-          </span>
+          <span class="streak-seg is-on"></span>
         </div>
-        <p class="week-meta" id="week-meta">本周 2 / 3 天 · 今天还没打卡</p>
+        <p class="week-meta" id="week-meta">本周 3 / 3 天 · 今天已打卡</p>
       </div>
-      <p class="checkin-hint">照片和一句话都可以，交过之后老师晚上统一回应。</p>
-      <div class="photo-grid" data-od-id="photo-grid">
-        <span class="photo photo--sage" role="img" aria-label="已添加的照片"></span>
-        <span class="photo photo--gold" role="img" aria-label="已添加的照片"></span>
-        <button class="photo-add" id="add-photo" type="button" data-od-id="add-photo">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          <span>加照片</span>
-        </button>
-      </div>
-      <div class="compose">
-        <textarea id="checkin-note" maxlength="200" placeholder="写一句今天的记录，老师会看到" aria-label="今天的记录" data-od-id="checkin-note"></textarea>
-        <span class="counter" id="note-counter">0 / 200</span>
+      <p class="checkin-hint">今天的打卡已提交，老师晚上统一回应。</p>
+      <div class="photo-grid photo-grid--single" data-od-id="photo-grid">
+        <span class="photo photo--sage" role="img" aria-label="已提交的照片"></span>
       </div>
     </section>
-
-    <div class="submit-block">
-      <button class="btn-primary" id="submit-btn" type="button" data-od-id="submit-checkin">提交打卡</button>
-      <p class="submit-note">每日任务每天可提交一次</p>
-    </div>
 
     <section class="history" aria-labelledby="history-title" data-od-id="submission-history">
       <div class="section-head">
@@ -184,7 +120,6 @@
 
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 <script src="app.js"></script>
 </body>

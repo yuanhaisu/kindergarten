@@ -417,6 +417,15 @@ h1 {
   color: rgba(236, 230, 215, 0.78);
 }
 
+.points-note {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(236, 230, 215, 0.18);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: rgba(236, 230, 215, 0.72);
+}
+
 /* ---------- 区块 ---------- */
 
 .section {
