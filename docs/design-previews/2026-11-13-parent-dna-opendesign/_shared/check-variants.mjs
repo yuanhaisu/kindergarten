@@ -83,7 +83,7 @@ const CHECKS_DIR = path.join(root, "_shared", "checks-chosen");
 const SHARED_DIR = path.join(root, "_shared");
 const REQUIRED_FILES = ["index.html", "styles.css", "app.js", "preview.png"];
 const PAGE_DIR_RE = /^\d{2}-/;
-const PROP_KINDS = ["checked", "bottomSheet"];
+const PROP_KINDS = ["checked", "bottomSheet", "tagName"];
 const MEASURES = ["count", "number", "text", "clock"];
 const RELATIONS = ["eq", "gte", "lte", "gt", "lt"];
 const RELATION_SYMBOLS = { eq: "=", gte: "≥", lte: "≤", gt: ">", lt: "<" };
@@ -97,8 +97,12 @@ function validateProps(propList, file) {
       throw new Error(`${file}: props 条目缺少 selector`);
     }
     const kinds = PROP_KINDS.filter((kind) => prop[kind] !== undefined);
-    if (kinds.length !== 1 || typeof prop[kinds[0]] !== "boolean") {
-      throw new Error(`${file}: props.${prop.selector} 必须且只能声明 checked/bottomSheet 中的一个布尔值`);
+    if (kinds.length !== 1) {
+      throw new Error(`${file}: props.${prop.selector} 必须声明 checked/bottomSheet/tagName 中的一个值`);
+    }
+    const value = prop[kinds[0]];
+    if (kinds[0] === "tagName" ? typeof value !== "string" : typeof value !== "boolean") {
+      throw new Error(`${file}: props.${prop.selector} 的 ${kinds[0]} 类型不正确`);
     }
   }
 }

@@ -139,6 +139,25 @@ for (const dir of dirs) {
     }
   }
 
+  if (dir === "29-settings") {
+    const groupTitle = css.match(/\.group-title\s*\{([^}]*)\}/);
+    const rule = groupTitle ? groupTitle[1] : "";
+    if (!/font-family\s*:\s*var\(--font-display\)/.test(rule)) {
+      problems.push("29 分组标题未使用 DNA 衬线字体");
+    }
+    if (!/font-size\s*:\s*21px/.test(rule) || !/font-weight\s*:\s*400/.test(rule)) {
+      problems.push("29 分组标题未使用 H2 21px/400");
+    }
+  }
+
+  if (dir === "11-growth") {
+    const footer = css.match(/\.feed-footer\s*\{([^}]*)\}/);
+    const rule = footer ? footer[1] : "";
+    if (/--muted-on-surface|#5E6B7A/i.test(rule) || !/--muted\b|#55616F/i.test(rule)) {
+      problems.push("11 页脚未使用 on-bone muted 色（#55616F）");
+    }
+  }
+
   checkCss(`${dir}/styles.css`, css, problems, warns);
 
   if (problems.length) errors += problems.length;

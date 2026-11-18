@@ -80,8 +80,9 @@ export default {
 | `props` | 否 | DOM 属性断言数组，见下 |
 | `interaction` | 否 | 点击交互断言，见下 |
 
-`props` 目前支持 `checked`（原生 checkbox）与 `bottomSheet`（元素是否贴底、横向占满：
-危险确认必须是底部确认区，不是居中弹窗）。`selector` 未命中算失败，不静默跳过。
+`props` 目前支持 `checked`（原生 checkbox）、`bottomSheet`（元素是否贴底、横向占满：
+危险确认必须是底部确认区，不是居中弹窗）与 `tagName`（元素标签名，如 `textarea`）。
+`selector` 未命中算失败，不静默跳过。
 
 `interaction` 与 `must` / `mustNot` / `within` / `props` 互斥；字段：
 

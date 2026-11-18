@@ -37,14 +37,18 @@
           <path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </button>
-      <h2 class="page-bar__title">班级日历</h2>
+      <span class="page-bar__title">班级日历</span>
       <button class="page-bar__today" type="button" id="today-button" aria-label="回到今天，11 月 12 日" data-od-id="today-button">今天</button>
     </header>
 
     <main class="mp-main" data-od-id="calendar-main">
-      <h1 class="month-title" id="calendar-month-title" data-od-id="calendar-month-title">
-        <time datetime="2026-11">2026 年 11 月</time>
-      </h1>
+      <div class="month-switch">
+        <button class="month-nav" type="button" id="month-prev" aria-label="上一个月">‹</button>
+        <h1 class="month-title" id="calendar-month-title" data-od-id="calendar-month-title">
+          <time datetime="2026-11">2026 年 11 月</time>
+        </h1>
+        <button class="month-nav" type="button" id="month-next" aria-label="下一个月">›</button>
+      </div>
 
       <section class="month-card" aria-labelledby="calendar-month-title" data-od-id="month-card">
         <div class="weekday-row" aria-hidden="true">
@@ -225,15 +229,29 @@
                 <p class="agenda-detail">小一班教室 · <span class="hl hl--marigold">班级活动</span></p>
               </div>
             </li>
-            <li class="agenda-row" data-od-id="event-sports-signup">
-              <time class="agenda-time" datetime="2026-11-12T18:00">18:00</time>
-              <div class="agenda-body">
-                <p class="agenda-event">亲子运动会报名截止</p>
-                <p class="agenda-detail">线上提交回执 · <span class="hl hl--marigold">截止</span></p>
-              </div>
-            </li>
+
           </ul>
         </div>
+      </section>
+
+      <section class="deadline-section" id="deadline-card" aria-labelledby="deadline-title">
+        <div class="section-head">
+          <h2 class="section-title" id="deadline-title">待办 / 截止</h2>
+        </div>
+        <div class="card deadline-card">
+          <div class="deadline-row">
+            <time class="agenda-time" datetime="2026-11-12T18:00">18:00</time>
+            <div class="agenda-body">
+              <p class="agenda-event">亲子运动会报名截止</p>
+              <p class="agenda-detail">线上提交回执 · <span class="hl hl--marigold">截止</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="month-empty" id="month-empty" hidden>
+        <p class="month-empty__title">本月暂无安排</p>
+        <p class="month-empty__copy">切回 2026 年 11 月查看班级日历。</p>
       </section>
 
       <ul class="legend" aria-label="日历图例" data-od-id="calendar-legend">

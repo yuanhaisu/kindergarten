@@ -152,7 +152,7 @@ export default {
     {
       slug: "11-growth",
       interaction: {
-        click: ".icon-btn",
+        click: '[data-od-id="album-shortcut"]',
         expectNavigateTo: "15-album-index",
       },
     },

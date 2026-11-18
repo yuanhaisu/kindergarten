@@ -871,7 +871,7 @@ button:focus-visible {
 }
 
 .tab[aria-current="page"] {
-  background: var(--sage-pale);
+  background: var(--sage-soft);
   color: var(--fg);
   font-weight: var(--weight-semibold);
 }

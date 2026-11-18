@@ -673,7 +673,7 @@ svg {
 .all-link::before {
   content: "";
   position: absolute;
-  inset: -12px -8px;
+  inset: -13px -8px;
 }
 
 .all-link:active {
