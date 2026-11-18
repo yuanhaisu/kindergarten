@@ -3,9 +3,11 @@ package app
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
@@ -45,7 +47,11 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
 		// 平台方：独立信任域，凭证 scope=platform（ADR-0014）。
-		v1.POST("/platform/auth/login", h.inner.PlatformLogin)
+		// 登录与续期是唯一不需要平台凭证的两个端点；登录额外挂
+		// 10 次/分钟/IP 的严格限流，Redis 故障时失败关闭（design D5）。
+		platformLoginLimit := middleware.RateLimit(h.rdb, "platform_login", 10, time.Minute)
+		v1.POST("/platform/auth/login", platformLoginLimit, h.inner.PlatformLogin)
+		v1.POST("/platform/auth/refresh", h.inner.PlatformRefresh)
 		platformG := v1.Group("/platform")
 		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker, h.platformEpochs))
 		platformG.Use(middleware.CasbinRBAC(e))
@@ -739,6 +745,8 @@ type AppHandler struct {
 	tokenRevoker auth.TokenRevoker
 	// platformEpochs 由平台服务提供，PlatformAuth 用它拒绝改密/停用前的旧凭证。
 	platformEpochs auth.PlatformEpochStore
+	// rdb 用于平台登录限流；nil 时限流失败关闭（design D5）。
+	rdb *redis.Client
 	// corsOrigins 为空表示不向任何跨域来源下发 CORS 头。
 	corsOrigins []string
 	// ready 为 nil 时 /ready 视为就绪（仅用于不装配基础设施的单元测试）。
