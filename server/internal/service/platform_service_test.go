@@ -139,7 +139,7 @@ func TestPlatformService_LoginAndOnboard(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, domain.KindergartenStatusSuspended, kg.Status)
 
-	logs, total, err := svc.ListLogs(ctx, 1, 20, "kindergarten")
+	logs, total, err := svc.ListLogs(ctx, repository.PlatformLogFilter{Module: "kindergarten"})
 	require.NoError(t, err)
 	assert.NotZero(t, total)
 	assert.NotEmpty(t, logs)

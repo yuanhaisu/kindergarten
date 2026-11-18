@@ -8,16 +8,21 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/auth"
+	"kindergarten-server/internal/config"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
 )
 
-func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker) (*gin.Engine, error) {
+func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker, trustedProxies TrustedProxies) (*gin.Engine, error) {
 	r := gin.New()
-	// 只在宿主机 Nginx 反代（127.0.0.1 / ::1）时信任 X-Forwarded-For；
-	// 直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
-	if err := r.SetTrustedProxies([]string{"127.0.0.1", "::1"}); err != nil {
+	// 只采信配置里的反向代理来源的 X-Forwarded-For（[server] trusted_proxies，
+	// 默认本机回环）；直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
+	proxies := []string(trustedProxies)
+	if len(proxies) == 0 {
+		proxies = append([]string(nil), config.DefaultTrustedProxies...)
+	}
+	if err := r.SetTrustedProxies(proxies); err != nil {
 		return nil, fmt.Errorf("configure trusted proxies: %w", err)
 	}
 	r.Use(gin.Recovery())

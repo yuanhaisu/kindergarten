@@ -10,6 +10,7 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
 	"kindergarten-server/pkg/response"
 )
@@ -141,12 +142,41 @@ func (h *Handler) PlatformSetKindergartenStatus(c *gin.Context) {
 	response.OK(c, gin.H{"updated_at": time.Now().Format(time.RFC3339)})
 }
 
-// PlatformListLogs 平台操作留痕。
+// PlatformListLogs 平台操作留痕。支持按时间范围、操作人、模块与目标园所检索。
 func (h *Handler) PlatformListLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	module := c.Query("module")
-	list, total, err := h.platformSvc.ListLogs(c.Request.Context(), page, pageSize, module)
+	f := repository.PlatformLogFilter{
+		Operator: c.Query("operator"),
+		Module:   c.Query("module"),
+		Page:     page,
+		PageSize: pageSize,
+	}
+	if v := c.Query("kindergarten_id"); v != "" {
+		id, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			response.ErrValidation(c, "园所 ID 不合法")
+			return
+		}
+		f.KindergartenID = id
+	}
+	if v := c.Query("from"); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			response.ErrValidation(c, "from 时间格式不合法：需要 RFC 3339")
+			return
+		}
+		f.From = &t
+	}
+	if v := c.Query("to"); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			response.ErrValidation(c, "to 时间格式不合法：需要 RFC 3339")
+			return
+		}
+		f.To = &t
+	}
+	list, total, err := h.platformSvc.ListLogs(c.Request.Context(), f)
 	if err != nil {
 		response.ErrInternal(c, "获取操作记录失败")
 		return

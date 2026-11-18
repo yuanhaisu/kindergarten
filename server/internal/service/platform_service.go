@@ -29,7 +29,7 @@ type PlatformService struct {
 	userRepo      *repository.UserRepo
 	userRoleRepo  *repository.UserRoleRepo
 	adminRoleRepo *repository.AdminRepo
-	logRepo       *repository.PlatformLogRepo
+	logRepo       PlatformAuditStore
 	dietSeed      *DietSeedService
 	kgStatus      *KindergartenStatusService
 	secret        []byte
@@ -45,7 +45,7 @@ func NewPlatformService(
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
 	adminRoleRepo *repository.AdminRepo,
-	logRepo *repository.PlatformLogRepo,
+	logRepo PlatformAuditStore,
 	dietSeed *DietSeedService,
 	kgStatus *KindergartenStatusService,
 	secret []byte,
@@ -308,7 +308,14 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 				StartsAt: now, ExpiresAt: trialEnd,
 			})
 		}
-		return tx.Create(&ents).Error
+		if err := tx.Create(&ents).Error; err != nil {
+			return err
+		}
+		// 开通园所属于强一致清单（design D6）：审计失败时园所、园长与授权一并回滚。
+		return s.logRepo.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "kindergarten", Action: "onboard", TargetType: "kindergarten",
+			TargetID: kg.ID, KindergartenID: kg.ID, Detail: fmt.Sprintf("开通园所：%s", req.Name), IP: ip,
+		})
 	}); err != nil {
 		return nil, err
 	}
@@ -316,13 +323,14 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 	// 新园膳食数据在园所事务提交后补齐；失败只记日志，不回滚园所创建。
 	if s.dietSeed != nil {
 		if _, err := s.dietSeed.EnsureKindergartenSeeded(ctx, kgID); err != nil {
-			_ = s.logPlatform(ctx, operator, "kindergarten", "onboard", "kindergarten", kgID,
-				fmt.Sprintf("园所已创建，膳食数据初始化失败：%v", err), ip)
+			writeAuditBestEffort(ctx, s.logRepo, &domain.PlatformOperationLog{
+				Operator: operator, Module: "kindergarten", Action: "onboard", TargetType: "kindergarten",
+				TargetID: kgID, KindergartenID: kgID,
+				Detail: fmt.Sprintf("园所已创建，膳食数据初始化失败：%v", err), IP: ip,
+			})
 		}
 	}
 
-	_ = s.logPlatform(ctx, operator, "kindergarten", "onboard", "kindergarten", kgID,
-		fmt.Sprintf("开通园所：%s", req.Name), ip)
 	return &OnboardResult{
 		KindergartenID: kgID, AdminPhone: req.Phone,
 		MustChangePassword: true, TrialExpiresAt: trialEnd,
@@ -340,7 +348,16 @@ func (s *PlatformService) SetKindergartenStatus(ctx context.Context, id uint64, 
 	if kg == nil {
 		return fmt.Errorf("KINDERGARTEN_NOT_FOUND")
 	}
-	if err := s.kgRepo.UpdateByID(ctx, id, map[string]any{"status": status}); err != nil {
+	// 园所启停属于强一致清单：状态与审计同事务，审计失败时状态不变。
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := s.kgRepo.UpdateByIDTx(ctx, tx, id, map[string]any{"status": status}); err != nil {
+			return err
+		}
+		return s.logRepo.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "kindergarten", Action: "update_status", TargetType: "kindergarten",
+			TargetID: id, KindergartenID: id, Detail: fmt.Sprintf("%s -> %s", kg.Status, status), IP: ip,
+		})
+	}); err != nil {
 		return err
 	}
 	// 立即失效状态缓存：停用后第一次请求就要被拦下，而不是等 60 秒 TTL。
@@ -349,12 +366,11 @@ func (s *PlatformService) SetKindergartenStatus(ctx context.Context, id uint64, 
 			return fmt.Errorf("invalidate kindergarten status cache: %w", err)
 		}
 	}
-	return s.logPlatform(ctx, operator, "kindergarten", "update_status", "kindergarten", id,
-		fmt.Sprintf("%s -> %s", kg.Status, status), ip)
+	return nil
 }
 
-func (s *PlatformService) ListLogs(ctx context.Context, page, pageSize int, module string) ([]domain.PlatformOperationLog, int64, error) {
-	return s.logRepo.List(ctx, page, pageSize, module)
+func (s *PlatformService) ListLogs(ctx context.Context, f repository.PlatformLogFilter) ([]domain.PlatformOperationLog, int64, error) {
+	return s.logRepo.List(ctx, f)
 }
 
 func (s *PlatformService) logPlatform(ctx context.Context, operator, module, action, targetType string, targetID uint64, detail, ip string) error {
