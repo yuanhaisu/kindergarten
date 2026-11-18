@@ -107,7 +107,7 @@
   });
 
   enterButton.addEventListener('click', () => {
-    showToast('已进入首页（预览）');
+    window.location.href = '../01-home/index.html';
   });
 
   /* ---------- 预览态 ---------- */
