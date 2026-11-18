@@ -124,7 +124,7 @@ import {
   setKindergartenStatus,
   type PlatformKindergartenDetail,
   type PlatformKindergartenRow,
-} from '~/api/platform'
+} from '~/api/platform/kindergartens'
 
 definePageMeta({ layout: 'platform' })
 

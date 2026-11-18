@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
-import { createDistributor, listDistributors, updateDistributor, type DistributorRow } from '~/api/platform'
+import { createDistributor, listDistributors, updateDistributor, type DistributorRow } from '~/api/platform/distributors'
 
 definePageMeta({ layout: 'platform' })
 

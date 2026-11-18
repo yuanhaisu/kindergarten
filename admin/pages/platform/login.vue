@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
-import { platformLogin } from '~/api/platform'
+import { platformLogin } from '~/api/platform/auth'
 import {
   PLATFORM_TOKEN_COOKIE,
   PLATFORM_TOKEN_MAX_AGE,
