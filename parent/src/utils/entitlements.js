@@ -1,8 +1,11 @@
 import { fetchEntitlements } from "@/api/entitlements"
+import {
+  ENTITLEMENT_CACHE_KEY as CACHE_KEY,
+  ENTITLEMENT_CACHE_AT_KEY as CACHE_AT_KEY,
+  clearEntitlementCache
+} from "./entitlement-cache.mjs"
 import { EXPIRY_WARNING_DAYS, expiryHintText as baseExpiryHintText } from "./expiry-hint.mjs"
 
-const CACHE_KEY = "entitlement_cache"
-const CACHE_AT_KEY = "entitlement_cache_at"
 // 缓存不是永久真相：园所续费/延长后必须在有限时间内反映到 30 天到期提示。
 const CACHE_TTL_MS = 10 * 60 * 1000
 
@@ -89,10 +92,5 @@ export async function loadEntitlements(force = false) {
 }
 
 export function clearEntitlements() {
-  try {
-    uni.removeStorageSync(CACHE_KEY)
-    uni.removeStorageSync(CACHE_AT_KEY)
-  } catch {
-    // ignore
-  }
+  clearEntitlementCache(uni)
 }

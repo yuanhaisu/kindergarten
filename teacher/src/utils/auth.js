@@ -1,3 +1,5 @@
+import { clearEntitlementCache } from "./entitlement-cache.mjs"
+
 const TOKEN_KEY = "teacher_token"
 const REFRESH_TOKEN_KEY = "teacher_refresh_token"
 const USER_KEY = "teacher_user"
@@ -30,4 +32,6 @@ export function clearAuth() {
   uni.removeStorageSync(TOKEN_KEY)
   uni.removeStorageSync(REFRESH_TOKEN_KEY)
   uni.removeStorageSync(USER_KEY)
+  // 授权缓存属于上一个会话：共享设备换账号后不能继续按上一园所展示入口与到期日。
+  clearEntitlementCache(uni)
 }
