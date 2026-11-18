@@ -17,8 +17,12 @@
   var panels = Array.prototype.slice.call(document.querySelectorAll(".doc-panel"));
   var backButton = document.getElementById("back-button");
 
-  // 05 从 02 的协议链接或 04 的「查看」进入；默认返回同意页。
-  var backTarget = from === "login" ? "../02-login/index.html" : "../04-consent/index.html";
+  // 05 从 02 的协议链接、04 的「查看」或 29 的隐私设置进入；默认返回同意页。
+  var backTarget = from === "login"
+    ? "../02-login/index.html"
+    : from === "settings"
+      ? "../29-settings/index.html"
+      : "../04-consent/index.html";
 
   function selectDoc(doc, updateUrl) {
     if (docs.indexOf(doc) < 0) doc = "privacy";

@@ -83,18 +83,28 @@
         <section class="settings-group" aria-labelledby="privacy-heading" data-od-id="privacy-account-group">
           <h2 class="group-title" id="privacy-heading" data-od-id="privacy-settings-heading">隐私与账号</h2>
           <div class="settings-card" data-od-id="privacy-account-card">
-            <button class="setting-row" type="button" data-action="policy" data-od-id="privacy-policy-row">
+            <label class="setting-row setting-row--toggle" for="phone-visibility" data-od-id="phone-visibility-row">
+              <span class="setting-row__label">向老师展示手机号</span>
+              <input class="switch-input" id="phone-visibility" type="checkbox" role="switch" checked />
+            </label>
+            <a class="setting-row" href="../05-policy/index.html?doc=privacy&amp;from=settings" data-od-id="privacy-policy-row">
               <span class="setting-row__label">隐私政策</span>
               <span class="setting-row__trailing">
                 <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
               </span>
-            </button>
-            <button class="setting-row" type="button" data-action="terms" data-od-id="user-agreement-row">
+            </a>
+            <a class="setting-row" href="../05-policy/index.html?doc=minor&amp;from=settings" data-od-id="minor-rules-row">
+              <span class="setting-row__label">未成年人个人信息保护规则</span>
+              <span class="setting-row__trailing">
+                <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
+              </span>
+            </a>
+            <a class="setting-row" href="../05-policy/index.html?doc=terms&amp;from=settings" data-od-id="user-agreement-row">
               <span class="setting-row__label">用户协议</span>
               <span class="setting-row__trailing">
                 <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev" /></svg>
               </span>
-            </button>
+            </a>
             <button class="setting-row" type="button" data-action="child" data-od-id="child-info-auth-row">
               <span class="setting-row__label">儿童信息授权管理</span>
               <span class="setting-row__trailing">
@@ -109,6 +119,10 @@
               </span>
             </button>
           </div>
+          <p class="card-note" data-od-id="class-album-note">
+            <span class="card-note__dot" aria-hidden="true"></span>
+            班级相册默认对同班家长可见；本版本暂不提供家长端关闭入口。
+          </p>
         </section>
 
         <section class="settings-group" aria-labelledby="about-heading" data-od-id="about-group">
@@ -133,19 +147,6 @@
         <footer class="spec-note" data-od-id="proposal-note">
           <p><span class="spec-note__label">简化提案</span> · 当前 API 共 9 项（6 通知 + 2 隐私 + 1 未展示）。<br />免打扰时段为提案：需后端补字段。</p>
         </footer>
-      </main>
-    </div>
-
-    <div class="mp-view" id="view-doc" hidden>
-      <header class="page-bar" data-od-id="doc-page-bar">
-        <button class="back-button" type="button" aria-label="返回设置" data-action="back-doc" data-od-id="doc-back">
-          <svg class="icon icon--back" aria-hidden="true"><use href="#i-back" /></svg>
-        </button>
-        <span class="page-bar__title">隐私与协议</span>
-        <span class="page-bar__spacer" aria-hidden="true"></span>
-      </header>
-
-      <main class="mp-main doc-main" id="doc-main" data-od-id="doc-content">
       </main>
     </div>
 
@@ -224,7 +225,7 @@
           <div><dt>接送授权人</dt><dd>姓名、关系与联系方式</dd></div>
         </dl>
         <p class="sheet-note">授权范围由园所维护；如需变更或撤回，请联系班主任。</p>
-        <button class="btn btn--secondary btn--block" type="button" data-action="open-policy">查看隐私政策</button>
+        <a class="btn btn--secondary btn--block" href="../05-policy/index.html?doc=privacy&amp;from=settings">查看隐私政策</a>
         <button class="text-btn" type="button" data-action="close-sheet">关闭</button>
       </section>
 
