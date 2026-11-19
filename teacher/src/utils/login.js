@@ -1,6 +1,7 @@
 import { wxCodeLogin } from "@/api/auth"
 import { getConsentStatus } from "@/api/consent"
 import { getToken, setRefreshToken, setToken, setUser } from "@/utils/auth"
+import { clearEntitlementCache } from "./entitlement-cache.mjs"
 
 let loginPromise = null
 
@@ -25,6 +26,8 @@ export async function silentLogin(extra = {}) {
   })
 
   const data = res.data || {}
+  // 登录成功即换会话：未走登出直接登录另一账号时，也要丢弃上一会话的授权缓存。
+  clearEntitlementCache(uni)
   setToken(data.token)
   setRefreshToken(data.refresh_token)
   setUser(data.user)

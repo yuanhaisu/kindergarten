@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "cb31b0309428302478ff073924dbe945dbe771b39d6cd5a81dd71ea829418cc4",
-  "supportReviewedAt": "2026-11-16",
-  "supportReason": "2026-11-16 #85 到期提示纯函数与边界修正",
+  "supportHash": "c951ce616ea5103140f4bc20723639392de2c29391ea26cb8f869d9591d08695",
+  "supportReviewedAt": "2026-11-18",
+  "supportReason": "code review fix #102: 授权缓存清理与登录态接线测试，无 UI 变化",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -80,12 +80,12 @@
     "parent/09-growth-index": {
       "source": "parent/src/pages/growth/index.vue",
       "sha256": "33085fefe3d0d603abea2efbcd13424ec06fbf8f2d50d2a2e4893f9e89cea6aa",
-      "depsSha": "b7b9c6c8ba5433d3c7996fe1a15c3f83d026eee5b1bbeff183996f1089364f50",
+      "depsSha": "8718bea4c35aa59e433b3ecbe749ba66ad49898b6e1d84f65d153c50b56779f9",
       "title": "成长时光",
       "tabbar": true,
-      "reviewedAt": "2026-11-16",
+      "reviewedAt": "2026-11-18",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/10-growth-detail": {
       "source": "parent/src/pages/growth/detail.vue",
@@ -108,12 +108,12 @@
     "parent/12-growth-report": {
       "source": "parent/src/pages/growth/report.vue",
       "sha256": "4a4ae1a138fc59716b71531a786246d7f9b74506dbefcd23fa1ec5424ff154fc",
-      "depsSha": "0327bdddb5e427a84d2746b546a685ec6018d28fbd6069d76ea280ba7336d113",
+      "depsSha": "88fb8776b8e02ecf6fcc0c2c8fdbeaca50c34bff8b399d79403e17fef08b8080",
       "title": "成长报告",
       "tabbar": false,
-      "reviewedAt": "2026-11-16",
+      "reviewedAt": "2026-11-18",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/13-pickup-index": {
       "source": "parent/src/pages/pickup/index.vue",
@@ -191,12 +191,12 @@
     "parent/21-class-index": {
       "source": "parent/src/pages/class/index.vue",
       "sha256": "3cbec6f195136aa382ef6c702519e6ff5e5ce3ee16af5b3e5ef306cbe846ccac",
-      "depsSha": "b9e7608051e9f876dc6442ef40d92fa45e32969fce778461b7e90074311f82ef",
+      "depsSha": "289937ce3586a4b73d9a70af598aa44108c9e5dd5eb71c6c3f826d323caad1c5",
       "title": "班级信息",
       "tabbar": false,
-      "reviewedAt": "2026-11-16",
+      "reviewedAt": "2026-11-18",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/22-calendar-index": {
       "source": "parent/src/pages/calendar/index.vue",
@@ -246,22 +246,22 @@
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
       "sha256": "082dbe8feb8af43f781f8287e7e000b6ecb117151f8ce093e35bf963e771c6bf",
-      "depsSha": "729f7fdf2b0c0cecd56d81af184b2b4b4a95332dc0ecf6ae6d13cbf843aa7997",
+      "depsSha": "2a2b1d7072f891206d85c947b0d86781c0ad738adba5e805ba5465d954d8cee9",
       "title": "我的",
       "tabbar": true,
-      "reviewedAt": "2026-11-16",
-      "codeCommit": "680065c",
-      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
+      "reviewedAt": "2026-11-18",
+      "codeCommit": "0f3f799",
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
       "sha256": "92e6c043a8c0941a24e036c21834041dd12e0b0650a419ffa4f06f019dcd3902",
-      "depsSha": "93d040b3f67c2c79812b88db53dde46c3b1b6524a4479271b182a4abef73fd0d",
+      "depsSha": "01421c976d09aefc94aa3c7dc232b751a00064862f5c23832b42daf05911c961",
       "title": "班级相册",
       "tabbar": false,
-      "reviewedAt": "2026-11-16",
+      "reviewedAt": "2026-11-18",
       "codeCommit": "d6733c7",
-      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "parent/29-album-detail": {
       "source": "parent/src/pages/album/detail.vue",
@@ -275,12 +275,12 @@
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
       "sha256": "62196020642dcbb709e74519f8119e4d367b28f6c4d53198504e225be441355a",
-      "depsSha": "461762262ea1b90c3e37e5e4a49e5b88f3c830f30626342808f068cdf0f853bb",
+      "depsSha": "68c200d1a42d668fe12b1c4e965086cbd55e9997908791033897d8a335564cf3",
       "title": "老师工作台",
       "tabbar": true,
-      "reviewedAt": "2026-11-16",
-      "codeCommit": "680065c",
-      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
+      "reviewedAt": "2026-11-18",
+      "codeCommit": "0f3f799",
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
@@ -421,12 +421,12 @@
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
       "sha256": "4c625a2acaf8c1940747dd9e1b5fceaf744ebe416f571b1113ea9b33710f17a4",
-      "depsSha": "8f1d9e7444ae26faa04aed0eabd9b35551808812194254c43c62664834e87c69",
+      "depsSha": "356199337f543b2462e6c5f38d21c720486fc3ccf7486efa0d1701d4831bd5cd",
       "title": "更多功能",
       "tabbar": false,
-      "reviewedAt": "2026-11-16",
+      "reviewedAt": "2026-11-18",
       "codeCommit": "7d71f06",
-      "reason": "2026-11-16 #85 过期判定修正（无视觉改版）"
+      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",
