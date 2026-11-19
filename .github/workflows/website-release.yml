@@ -1,0 +1,142 @@
+name: Website Release
+
+# 官网单独发布（ticket #130 / spec #126）：只构建、检查、打包并部署静态站。
+# 官网是纯静态站，不依赖任何后端资源，也不构建服务端镜像或管理端静态包。
+# production 环境的人工批准规则配置在仓库 Settings → Environments 中；
+# 本文件只引用 environment，不内联任何凭据。
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy target'
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+
+# 按目标环境串行：同环境的新发布排队等待，绝不取消已开始的发布；
+# 不同环境互不阻塞（cancel-in-progress: false 是硬约束，重试不得覆盖在线 release）。
+concurrency:
+  group: website-release-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  # 先校验再请求 environment 批准：非法 production ref 不应让 reviewer 看到
+  # 一条待批准的发布；本 job 不引用 environment，因此不会触发人工批准。
+  guard:
+    name: 校验发布目标
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_env: ${{ steps.target.outputs.deploy_env }}
+      version: ${{ steps.target.outputs.version }}
+    steps:
+      - name: Resolve deploy target
+        id: target
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          case "$INPUT_ENVIRONMENT" in
+            production)
+              # 生产只允许 main 或 v* tag：从临时分支发布一律拒绝。
+              case "$GITHUB_REF" in
+                refs/heads/main) ;;
+                refs/tags/v*) ;;
+                *)
+                  echo "::error::production deploy requires refs/heads/main or a v* tag, got $GITHUB_REF"
+                  exit 1
+                  ;;
+              esac
+              deploy_env=prod
+              ;;
+            staging)
+              # staging 接受任意 ref，作为发布前演练。
+              deploy_env=staging
+              ;;
+            *)
+              echo "::error::invalid environment: $INPUT_ENVIRONMENT"
+              exit 1
+              ;;
+          esac
+          # run_number + run_attempt + sha7：重跑与重试都不会复用旧版本目录。
+          version="website-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:7}"
+          echo "deploy_env=$deploy_env" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "deploy target: $INPUT_ENVIRONMENT -> $deploy_env ($version)"
+
+  release:
+    name: 发布官网（${{ inputs.environment }}）
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Build design tokens
+        run: cd shared-design-tokens && npm ci && npm run build
+
+      - name: Build website
+        run: cd website && npm ci && npm run generate
+
+      - name: Test website content checker
+        run: cd website && npm test
+
+      - name: Check website content (staging)
+        if: inputs.environment == 'staging'
+        run: cd website && npm run check:content
+
+      # 生产在打包前跑 --production：隐私政策/服务条款仍标「草案」时直接失败，
+      # 草稿不进入上传产物。
+      - name: Check website content (production)
+        if: inputs.environment == 'production'
+        run: cd website && npm run check:content -- --production
+
+      - name: Package website
+        env:
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          set -euo pipefail
+          tar -czf "$RUNNER_TEMP/$VERSION.tar.gz" -C website/.output/public .
+
+      - name: Setup SSH
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_SSH_KEY: ${{ secrets.ECS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$ECS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$ECS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload website artifact
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/id_ed25519 \
+            "$RUNNER_TEMP/$VERSION.tar.gz" \
+            "$ECS_USER@$ECS_HOST:/tmp/$VERSION.tar.gz"
+
+      - name: Deploy website
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+          DEPLOY_ENV: ${{ needs.guard.outputs.deploy_env }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 "$ECS_USER@$ECS_HOST" \
+            "bash -s -- '$DEPLOY_ENV' '$VERSION' '/tmp/$VERSION.tar.gz'" \
+            < deploy/scripts/deploy-website.sh

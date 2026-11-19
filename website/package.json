@@ -8,6 +8,8 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "generate": "nuxt generate",
+    "check:content": "node scripts/check-content.mjs",
+    "test": "node --test \"scripts/**/*.test.mjs\"",
     "preview": "nuxt preview",
     "screens": "node scripts/prepare-screens.mjs",
     "og": "node scripts/make-og.mjs",

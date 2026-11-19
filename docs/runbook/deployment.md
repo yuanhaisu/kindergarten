@@ -1,6 +1,7 @@
 # 部署 Runbook
 
 配套设计：[部署架构](../deployment-architecture.md)；决策：[ADR-0007 ~ ADR-0010](../adr/)。
+官网是纯静态站，可独立于后端发布：见 [官网发布 Runbook](website-launch.md)。
 
 > **当前阶段（2026-11-15）**：只落地了 staging；§1–§5 是 prod 目标流程，尚未启用。staging 实际步骤见 §1.0，访问门禁见 §1.1，详细状态见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。
 > 本文中的服务器 IP、bucket 名等已脱敏为占位符；真实值见运维私密记录，占位符约定见 `docs/handoffs/README.md`。
@@ -243,21 +244,23 @@ docker compose run --rm --entrypoint /app/kindergarten-seedbase api
 
 ## 2. 日常发布
 
+> 官网（纯静态）可绕过本节的 tag / 全量 release，单独走 [官网发布 Runbook](website-launch.md)；
+> 生产同样经过 `production` 环境人工批准。
+
 1. 合并代码，打 tag：`git tag v2026.11.04-1 && git push origin v2026.11.04-1`。
 2. GitHub Actions `release`：
    - 构建后端镜像并推 ACR；
-   - 构建 admin 与 website 静态包；
+   - 构建 admin 静态包（官网不随 tag release 发布，见官网发布 Runbook）；
    - 自动部署 staging；
    - 等待 `production` 环境人工批准；
    - 生产发布前调用 `snapshot-rds.sh`；
-   - 执行迁移与基础种子（`seedbase`）、启动 API 并等 `/ready`、再切 admin/website symlink（顺序不能反）。
+   - 执行迁移与基础种子（`seedbase`）、启动 API 并等 `/ready`、再切 admin symlink（顺序不能反）。
 3. 生产验证：
    ```bash
    curl -fsS https://api.<domain>/ready
    curl -fsS https://api.<domain>/health
-   curl -fsSI https://www.<domain>/ | head -1
    # 管理端登录、相册/成长页图片可加载
-   # 官网：首屏截图、/privacy、/terms 均可打开
+   # 官网单独发布与验收：见 website-launch.md §6
    ```
 4. 小程序：在微信后台用测试包验收 staging，正式包走审核后发布。
 
