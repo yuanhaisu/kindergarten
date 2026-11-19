@@ -1,4 +1,5 @@
-import { clearCurrentStudentId } from "@/utils/currentStudent"
+import { clearCurrentStudentId } from "./currentStudent.js"
+import { clearEntitlementCache } from "./entitlement-cache.mjs"
 
 const TOKEN_KEY = "parent_token"
 const REFRESH_TOKEN_KEY = "parent_refresh_token"
@@ -35,4 +36,6 @@ export function clearAuth() {
   // 一并清掉当前孩子：换账号登录后，上一个账号的孩子 id 属于别人，
   // 留着会让 ResolveContext 静默回退，排查起来很费劲。
   clearCurrentStudentId()
+  // 授权缓存属于上一个会话：共享设备换账号后不能继续按上一园所展示入口与到期日。
+  clearEntitlementCache(uni)
 }
