@@ -7,6 +7,20 @@
 - 本地构建通过：`cd website && npm run generate` → `.output/public`。
 - **未公开部署**：ICP 已通过，DNS 与证书 SAN 尚未就绪。
 
+## 2026-11-19 上线收口状态（#126 / #131）
+
+| 项 | 状态 |
+|---|---|
+| staging 部署 | 已部署在 `test-www.nurtureplanet.cn`：营销页与普通页面受 Basic Auth 保护，`/privacy`、`/terms`、`/404.html` 匿名可访问（门禁见 `docs/runbook/deployment.md` §1.1） |
+| ICP 备案 | ✅ 已通过（2026-11-13），备案号 `湘ICP备2026054245号-1`；页脚已展示并链接工信部 |
+| 生产发布 | ⏳ 未发布：待 apex / `www` DNS、证书 SAN、生产 nginx 块与 `/opt/kindergarten/prod` 静态目录 |
+| 法务草案 | ⏳ 两份法务页仍标「生效日期：待定 · 版本：草案」，`legalDraft: true`；生产 `--production` 门禁会拒绝，仍阻断公开上线 |
+| 班内共享文案 | ⏸ 钉住当前行为（后端 `allow_class_share` 仍可关闭）；等 #88 的后端 / 家长端改动落地后，文案与门禁同次更新 |
+| 官网单独发布 | ✅ `Website Release` workflow、`deploy-website.sh` 与内容门禁已实现；staging 实跑演练待合入 `main` 后执行（`workflow_dispatch` 只认默认分支），证据记录在 #131 |
+
+完整步骤（前置、staging 演练、生产批准、法务跟进、回滚、验收）见
+[官网发布 Runbook](../runbook/website-launch.md)。
+
 ## 阻塞项与待补项（需人工 / 外部条件）
 
 | # | 事项 | 说明 |
@@ -23,6 +37,7 @@
 ## 部署接入（已写好，未启用）
 
 - `.github/workflows/release.yml`：新增 website 静态包构建、上传、scp，并作为第 4 个参数传给 `deploy.sh`。
+- ✅ `.github/workflows/website-release.yml`：官网单独发布（`staging` / `production`），不构建后端、不跑迁移；步骤见 [官网发布 Runbook](../runbook/website-launch.md)。
 - `deploy/scripts/deploy.sh` / `rollback.sh`：新增 `website/releases/<tag>` 与 `website/current` 的切换与回滚。
 - `deploy/nginx/kindergarten.conf.tmpl`：新增 `www.${DOMAIN}`（生产）与 `test-www.${DOMAIN}`（预发），apex 301 → `www`。
 - `docs/runbook/deployment.md`、`docs/deployment-architecture.md` 已同步。
@@ -35,8 +50,8 @@
 2. 重签证书，把上述 7 个主机名加入 SAN。
 3. 可选占位项：`website/content/site.ts` 的 `baiduAnalyticsId`。主体、备案号与页脚备案名称均已完成；企业微信二维码已暂缓，不阻塞上线。
 4. 本地 `cd website && npm run generate` 复核。
-5. 打 tag 走 release：先 staging（`test-www`），再 production（人工批准）。
-6. 验证：`curl -fsSI https://www.<domain>/`、`/privacy`、`/terms`、一个不存在的路径返回品牌化 404。
+5. 优先用 `Website Release` workflow 单独发布官网：先 staging（`test-www`）演练，再 production（人工批准）；完整 tag release 仍可发布全栈。步骤见 [官网发布 Runbook](../runbook/website-launch.md)。
+6. 验证：`curl -fsSI https://www.<domain>/`、`/privacy`、`/terms`、一个不存在的路径返回品牌化 404；完整清单见 runbook §6。
 
 ## 已知未做（非阻塞）
 
