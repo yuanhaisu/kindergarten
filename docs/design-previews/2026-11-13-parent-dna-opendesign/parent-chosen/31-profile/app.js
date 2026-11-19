@@ -131,4 +131,55 @@
   if (new URLSearchParams(window.location.search).get("state") === "switch") {
     openSheet();
   }
+
+  const aboutTrigger = document.getElementById("setting-about");
+  const aboutLayer = document.getElementById("about-sheet-layer");
+  const aboutSheet = document.getElementById("about-sheet");
+  let aboutOpen = false;
+  let aboutLastFocus = null;
+
+  function openAbout() {
+    if (!aboutLayer || !aboutSheet || aboutOpen) return;
+    aboutOpen = true;
+    aboutLastFocus = document.activeElement;
+    aboutLayer.removeAttribute("inert");
+    aboutLayer.setAttribute("aria-hidden", "false");
+    aboutLayer.classList.add("is-open");
+    aboutTrigger.setAttribute("aria-expanded", "true");
+    main.setAttribute("inert", "");
+    if (bottomNav) bottomNav.setAttribute("inert", "");
+    const closeAboutButton = aboutSheet.querySelector(".sheet-close");
+    window.requestAnimationFrame(() => {
+      if (closeAboutButton) closeAboutButton.focus({ preventScroll: true });
+    });
+  }
+
+  function closeAbout() {
+    if (!aboutLayer || !aboutOpen) return;
+    aboutOpen = false;
+    aboutLayer.classList.remove("is-open");
+    aboutLayer.setAttribute("aria-hidden", "true");
+    aboutLayer.setAttribute("inert", "");
+    aboutTrigger.setAttribute("aria-expanded", "false");
+    main.removeAttribute("inert");
+    if (bottomNav) bottomNav.removeAttribute("inert");
+    const focusTarget = aboutLastFocus instanceof HTMLElement ? aboutLastFocus : aboutTrigger;
+    focusTarget.focus({ preventScroll: true });
+  }
+
+  if (aboutTrigger && aboutLayer && aboutSheet) {
+    aboutTrigger.addEventListener("click", openAbout);
+    aboutLayer.addEventListener("click", (event) => {
+      if (event.target.closest("[data-close-about]")) closeAbout();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && aboutOpen) {
+        event.preventDefault();
+        closeAbout();
+      }
+    });
+  }
+  if (new URLSearchParams(window.location.search).get("state") === "about") {
+    openAbout();
+  }
 })();

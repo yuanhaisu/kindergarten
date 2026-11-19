@@ -49,6 +49,37 @@ export default {
       must: ["5 成长记录", "+218", "48 /50", "10 /12"],
     },
 
+    // 14 是「按学期」的报告：至少有 3 个学期可切换，且能看到跨学期渐进增长。
+    {
+      slug: "14-growth-report",
+      within: '[data-od-id="semester-switch"]',
+      must: ["2026 秋季", "2026 春季", "2025 秋季"],
+    },
+    {
+      slug: "14-growth-report",
+      within: '[data-od-id="growth-trend"]',
+      must: ["学期变化", "语言表达", "77", "83", "88", "+11", "四个维度都保持上升"],
+    },
+    {
+      slug: "14-growth-report",
+      interaction: {
+        click: '[data-semester="2026-spring"]',
+        expectStayOn: "14-growth-report",
+        expectVisible: "#report-title",
+        expectVisibleText: "2026 春季学期成长报告",
+      },
+    },
+    {
+      slug: "14-growth-report",
+      interaction: {
+        steps: [{ click: '[data-semester="2026-spring"]' }],
+        click: '[data-od-id="stat-attendance"]',
+        expectStayOn: "14-growth-report",
+        expectVisible: '[data-od-id="stat-attendance"]',
+        expectVisibleText: "46",
+      },
+    },
+
     // ---- 31 只读：乐乐累计口径 ----
     {
       slug: "31-profile",

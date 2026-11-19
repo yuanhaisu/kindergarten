@@ -83,6 +83,24 @@ export default {
       },
     },
 
+    // 关于养成星球：不再是一个空跳转，打开后有应用信息与联系方式。
+    {
+      slug: "31-profile",
+      state: "about",
+      within: "#about-sheet",
+      must: ["关于养成星球", "养成星球 · 家长端", "v1.0.0", "开发主体", "湘潭市岳塘区稚序软件开发工作室", "contact@nurtureplanet.cn"],
+      props: [{ selector: "#about-sheet", bottomSheet: true }],
+    },
+    {
+      slug: "31-profile",
+      interaction: {
+        click: "#setting-about",
+        expectStayOn: "31-profile",
+        expectVisible: "#about-sheet",
+        expectVisibleText: "contact@nurtureplanet.cn",
+      },
+    },
+
     // ---- 01 首页：身份只由孩子卡承载 ----
     {
       slug: "01-home",
