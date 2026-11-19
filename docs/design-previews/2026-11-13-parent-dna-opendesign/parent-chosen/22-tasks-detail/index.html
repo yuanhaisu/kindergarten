@@ -49,7 +49,6 @@
         <span class="kicker__label">亲子任务</span>
         <span class="kicker__dot" aria-hidden="true">·</span>
         <span class="points">+10 积分</span>
-        <span class="proposal-flag" data-od-id="proposal-flag">积分提案</span>
       </p>
       <h1 class="task-head__title" data-od-id="task-title">给家人讲一件<br />今天开心的事</h1>
       <p class="task-lead">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。<br /><span class="hl">不用引导答案</span>，他愿意讲就好。</p>
@@ -71,27 +70,50 @@
     </section>
 
     <section class="card checkin" id="checkin-card" aria-labelledby="checkin-title" data-od-id="checkin-card">
-      <div class="card-head">
-        <h2 class="card-title" id="checkin-title">今日打卡</h2>
-        <span class="time-left">
-          <span class="time-left__done">
-            <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-            </svg>已完成 · 今天 19:20
+      <div class="checkin-state" id="checkin-complete">
+        <div class="card-head">
+          <h2 class="card-title" id="checkin-title">今日打卡</h2>
+          <span class="time-left">
+            <span class="time-left__done" id="checkin-status">
+              <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
+              </svg>已完成 · 今天 19:20
+            </span>
           </span>
-        </span>
-      </div>
-      <div class="week-streak" data-od-id="week-streak">
-        <div class="streak" id="week-streak-bar" role="img" aria-label="本周已完成 3 天">
-          <span class="streak-seg is-on"></span>
-          <span class="streak-seg is-on"></span>
-          <span class="streak-seg is-on"></span>
         </div>
-        <p class="week-meta" id="week-meta">本周 3 / 3 天 · 今天已打卡</p>
+        <div class="week-streak" data-od-id="week-streak">
+          <div class="streak" id="week-streak-bar" role="img" aria-label="本周已完成 3 天">
+            <span class="streak-seg is-on"></span>
+            <span class="streak-seg is-on"></span>
+            <span class="streak-seg is-on"></span>
+          </div>
+          <p class="week-meta" id="week-meta">本周 3 / 3 天 · 今天已打卡</p>
+        </div>
+        <p class="checkin-hint">今天的打卡已提交，老师晚上统一回应。</p>
+        <div class="photo-grid photo-grid--single" id="checkin-photo" data-od-id="photo-grid">
+          <span class="photo photo--sage" role="img" aria-label="已提交的照片"></span>
+        </div>
       </div>
-      <p class="checkin-hint">今天的打卡已提交，老师晚上统一回应。</p>
-      <div class="photo-grid photo-grid--single" data-od-id="photo-grid">
-        <span class="photo photo--sage" role="img" aria-label="已提交的照片"></span>
+
+      <div class="checkin-state" id="checkin-pending" hidden>
+        <div class="card-head">
+          <h2 class="card-title">今日打卡</h2>
+          <span class="tag tag--pending">未打开</span>
+        </div>
+        <div class="week-streak" data-od-id="week-streak-pending">
+          <div class="streak" role="img" aria-label="本周已完成 2 天">
+            <span class="streak-seg is-on"></span>
+            <span class="streak-seg is-on"></span>
+            <span class="streak-seg is-off"></span>
+          </div>
+          <p class="week-meta" id="week-meta-pending">本周 2 / 3 天 · 今天还没打卡</p>
+        </div>
+        <p class="checkin-hint">今天还没打卡。完成任务后，记一句或传一张照片。</p>
+        <button class="btn-primary checkin-cta" type="button" id="checkin-open" data-od-id="checkin-open">去打卡</button>
+        <div class="checkin-form" id="checkin-form" hidden>
+          <textarea class="checkin-input" id="checkin-input" rows="3" maxlength="200" placeholder="写一句今天的记录，老师会看到" aria-label="今天的打卡记录"></textarea>
+          <button class="btn-primary" type="button" id="checkin-submit" data-od-id="checkin-submit">提交打卡</button>
+        </div>
       </div>
     </section>
 
@@ -115,8 +137,6 @@
         </div>
       </article>
     </section>
-
-    <p class="proposal-note" data-od-id="proposal-note">提案：需 06-task 恢复 points/streak</p>
 
   </main>
 

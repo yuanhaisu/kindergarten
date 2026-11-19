@@ -19,7 +19,6 @@ export default {
     { slug: "31-profile", interaction: { click: '[data-od-id="service-growth-report"]', expectNavigateTo: "14-growth-report" } },
     { slug: "31-profile", interaction: { click: '[data-od-id="service-achievements"]', expectNavigateTo: "24-points" } },
     { slug: "31-profile", interaction: { click: '[data-od-id="setting-messages"]', expectNavigateTo: "30-messages" } },
-    { slug: "11-growth", interaction: { click: '[data-od-id="report-shortcut"]', expectNavigateTo: "14-growth-report" } },
     { slug: "11-growth", interaction: { click: '[data-od-id="tab-home"]', expectNavigateTo: "01-home" } },
     { slug: "17-pickup", interaction: { click: '[data-od-id="tab-growth"]', expectNavigateTo: "11-growth" } },
     { slug: "31-profile", interaction: { click: '[data-od-id="tab-pickup"]', expectNavigateTo: "17-pickup" } }

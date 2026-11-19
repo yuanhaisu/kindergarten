@@ -45,7 +45,7 @@ export default {
       mustNot: ["18 位"],
     },
 
-    // ---- 22 任务详情：已完成 + 打卡时间 ----
+    // ---- 22 任务详情：已完成 / 未打开 + 打卡交互 ----
     {
       slug: "22-tasks-detail",
       within: '[data-od-id="checkin-card"]',
@@ -59,10 +59,37 @@ export default {
       must: ["任务要求", "晚饭后问问孩子今天在幼儿园最开心的一件事", "听孩子讲完，不打断，也不急着评价"],
       mustNot: ["已完成 1 / 3", "步骤"],
     },
-    // 发明出来的步骤勾选、截止时间、多图预填、提交入口全部下线。
+    // 默认已完成态仍不露出提交入口；未打开态才显示「去打卡」。
     {
       slug: "22-tasks-detail",
-      mustNot: ["21:00", "打卡步骤", "已完成 1 / 3", "加照片", "提交打卡", "还剩 11 小时"],
+      mustNot: ["21:00", "打卡步骤", "已完成 1 / 3", "加照片", "提交打卡", "还剩 11 小时", "未打开"],
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "unopened",
+      within: '[data-od-id="checkin-card"]',
+      must: ["未打开", "本周 2 / 3 天", "去打卡"],
+      mustNot: ["已完成 · 今天 19:20"],
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "unopened",
+      interaction: {
+        click: "#checkin-open",
+        expectStayOn: "22-tasks-detail",
+        expectVisible: "#checkin-form",
+      },
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "unopened",
+      interaction: {
+        steps: [{ click: "#checkin-open" }, { click: "#checkin-submit" }],
+        click: "#checkin-card",
+        expectStayOn: "22-tasks-detail",
+        expectVisible: "#checkin-card",
+        expectVisibleText: "已完成 · 今天 20:05",
+      },
     },
 
     // ---- 23 班级墙：摘要 8 位，没有 18 ----

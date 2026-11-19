@@ -829,6 +829,89 @@ button:focus-visible {
   color: var(--muted-on-surface);
 }
 
+/* About sheet */
+#about-sheet {
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.about-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.about-logo {
+  flex: none;
+  border-radius: 50%;
+}
+
+.about-name {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
+  font-weight: var(--weight-regular);
+  color: var(--fg);
+}
+
+.about-version {
+  margin-top: 2px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--muted-on-surface);
+}
+
+.about-copy {
+  margin-top: 14px;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--fg-soft);
+}
+
+.about-meta {
+  margin: 16px 0 0;
+  border-top: 1px solid var(--hair-soft);
+}
+
+.about-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hair-soft);
+}
+
+.about-meta dt {
+  flex: none;
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--muted-on-surface);
+}
+
+.about-meta dd {
+  margin: 0;
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--fg);
+  text-align: right;
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 14px;
+}
+
+.about-links a {
+  color: var(--fg-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* Floating tab bar */
 
 .mp-nav {

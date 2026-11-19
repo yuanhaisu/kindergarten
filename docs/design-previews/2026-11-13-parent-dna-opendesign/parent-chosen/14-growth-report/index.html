@@ -44,32 +44,68 @@
       </div>
 
       <header class="page-head" data-od-id="report-header">
-        <p class="overline">2026 秋季学期 · 乐乐 · 小一班</p>
-        <h1>本学期成长报告</h1>
+        <p class="overline" id="report-overline">2026 秋季学期 · 乐乐 · 小一班</p>
+        <h1 id="report-title">本学期成长报告</h1>
       </header>
+
+      <nav class="semester-switch" role="tablist" aria-label="选择学期报告" data-od-id="semester-switch">
+        <button class="semester-tab is-active" type="button" role="tab" aria-selected="true" data-semester="2026-fall">2026 秋季</button>
+        <button class="semester-tab" type="button" role="tab" aria-selected="false" data-semester="2026-spring">2026 春季</button>
+        <button class="semester-tab" type="button" role="tab" aria-selected="false" data-semester="2025-fall">2025 秋季</button>
+      </nav>
 
       <section class="intro-card" data-od-id="intro-card" aria-labelledby="intro-title">
         <h2 id="intro-title">乐乐，正在长成他自己</h2>
-        <p>这个学期他学会了自己穿外套、系鞋带，也开始在集体里主动说话。比起「学会了什么」，我们更高兴看到他<span class="hl">愿意试一试</span>。</p>
+        <p id="intro-copy">这个学期他学会了自己穿外套、系鞋带，也开始在集体里主动说话。比起「学会了什么」，我们更高兴看到他<span class="hl">愿意试一试</span>。</p>
       </section>
 
       <section class="stats" data-od-id="report-stats" aria-label="本学期数据">
         <div class="stat" data-od-id="stat-attendance">
-          <p class="stat__value"><span>48</span><span class="stat__denom">/50</span></p>
+          <p class="stat__value"><span id="stat-attendance">48</span><span class="stat__denom" id="stat-attendance-denom">/50</span></p>
           <p class="stat__label">出勤（天）</p>
         </div>
         <div class="stat" data-od-id="stat-points">
-          <p class="stat__value"><span>+218</span></p>
+          <p class="stat__value"><span id="stat-points">+218</span></p>
           <p class="stat__label">本期积分</p>
         </div>
         <div class="stat" data-od-id="stat-tasks">
-          <p class="stat__value"><span>10</span><span class="stat__denom">/12</span></p>
+          <p class="stat__value"><span id="stat-tasks">10</span><span class="stat__denom" id="stat-tasks-denom">/12</span></p>
           <p class="stat__label">任务完成</p>
         </div>
         <div class="stat" data-od-id="stat-records">
-          <p class="stat__value"><span>5</span></p>
+          <p class="stat__value"><span id="stat-records">5</span></p>
           <p class="stat__label">成长记录</p>
         </div>
+      </section>
+
+      <section class="section" data-od-id="growth-trend" aria-labelledby="trend-title">
+        <div class="section-head">
+          <h2 id="trend-title">学期变化</h2>
+          <span class="section-meta">2025 秋 → 2026 秋</span>
+        </div>
+        <div class="trend-card">
+          <div class="trend-row">
+            <span class="trend-name">语言表达</span>
+            <span class="trend-values">77<span class="trend-arrow">→</span>83<span class="trend-arrow">→</span>88</span>
+            <span class="trend-delta">+11</span>
+          </div>
+          <div class="trend-row">
+            <span class="trend-name">社交交往</span>
+            <span class="trend-values">72<span class="trend-arrow">→</span>77<span class="trend-arrow">→</span>82</span>
+            <span class="trend-delta">+10</span>
+          </div>
+          <div class="trend-row">
+            <span class="trend-name">大动作</span>
+            <span class="trend-values">66<span class="trend-arrow">→</span>71<span class="trend-arrow">→</span>76</span>
+            <span class="trend-delta">+10</span>
+          </div>
+          <div class="trend-row">
+            <span class="trend-name">自理能力</span>
+            <span class="trend-values">80<span class="trend-arrow">→</span>85<span class="trend-arrow">→</span>90</span>
+            <span class="trend-delta">+10</span>
+          </div>
+        </div>
+        <p class="trend-note">从 2025 秋季到 2026 秋季，四个维度都保持上升；语言表达提升 11 分。</p>
       </section>
 
       <section class="section" data-od-id="dimensions-section" aria-labelledby="dimensions-title">
@@ -78,7 +114,7 @@
           <span class="section-meta">满分 100</span>
         </div>
         <div class="dimension-band">
-          <article class="dimension" data-od-id="dimension-language">
+          <article class="dimension" data-dimension="language" data-od-id="dimension-language">
             <div class="dimension__head">
               <p class="dimension__name">语言表达</p>
               <span class="dimension__score">88</span>
@@ -89,7 +125,7 @@
             <p class="dimension__desc">能用完整的句子讲清一件事，最近总爱追问「为什么」。</p>
           </article>
 
-          <article class="dimension" data-od-id="dimension-social">
+          <article class="dimension" data-dimension="social" data-od-id="dimension-social">
             <div class="dimension__head">
               <p class="dimension__name">社交交往</p>
               <span class="dimension__score">82</span>
@@ -100,7 +136,7 @@
             <p class="dimension__desc">开始主动邀请同伴一起玩，遇到争执会先说自己的想法。</p>
           </article>
 
-          <article class="dimension" data-od-id="dimension-motor">
+          <article class="dimension" data-dimension="motor" data-od-id="dimension-motor">
             <div class="dimension__head">
               <p class="dimension__name">大动作</p>
               <span class="dimension__score">76</span>
@@ -111,7 +147,7 @@
             <p class="dimension__desc">跑跳稳了，攀爬时还是会在最高一格停下来看看。</p>
           </article>
 
-          <article class="dimension" data-od-id="dimension-selfcare">
+          <article class="dimension" data-dimension="selfcare" data-od-id="dimension-selfcare">
             <div class="dimension__head">
               <p class="dimension__name">自理能力</p>
               <span class="dimension__score">90</span>
@@ -133,7 +169,7 @@
           <div class="photo-slot photo-slot--sage" data-od-id="highlight-photo-2" role="img" aria-label="本学期成长记录照片二"></div>
           <div class="photo-slot photo-slot--clay" data-od-id="highlight-photo-3" role="img" aria-label="本学期成长记录照片三"></div>
         </div>
-        <p class="section-note">从本学期的成长记录中选出的 3 张照片</p>
+        <p class="section-note" id="highlight-note">从本学期的成长记录中选出的 3 张照片</p>
       </section>
 
       <section class="section" data-od-id="teacher-note" aria-labelledby="teacher-note-title">
@@ -141,9 +177,9 @@
           <h2 id="teacher-note-title">老师想对你说</h2>
         </div>
         <blockquote class="quote">
-          <p>乐乐，你系鞋带的时候特别认真。老师希望你知道，<span class="hl hl--marigold">慢一点没关系</span>，愿意再试一次就很了不起。</p>
+          <p id="teacher-quote">乐乐，你系鞋带的时候特别认真。老师希望你知道，<span class="hl hl--marigold">慢一点没关系</span>，愿意再试一次就很了不起。</p>
         </blockquote>
-        <p class="quote-sign">王老师 · 11 月 12 日</p>
+        <p class="quote-sign" id="teacher-sign">王老师 · 11 月 12 日</p>
       </section>
 
       <section class="actions" data-od-id="report-actions" aria-label="报告操作">
