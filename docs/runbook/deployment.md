@@ -1,6 +1,7 @@
 # 部署 Runbook
 
 配套设计：[部署架构](../deployment-architecture.md)；决策：[ADR-0007 ~ ADR-0010](../adr/)。
+官网是纯静态站，可独立于后端发布：见 [官网发布 Runbook](website-launch.md)。
 
 > **当前阶段（2026-11-15）**：只落地了 staging；§1–§5 是 prod 目标流程，尚未启用。staging 实际步骤见 §1.0，访问门禁见 §1.1，详细状态见 `docs/handoffs/2026-11-15-staging-bootstrap.md`。
 > 本文中的服务器 IP、bucket 名等已脱敏为占位符；真实值见运维私密记录，占位符约定见 `docs/handoffs/README.md`。
@@ -242,6 +243,9 @@ docker compose run --rm --entrypoint /app/kindergarten-seedbase api
 > **不要**用应用启动代替迁移或种子。
 
 ## 2. 日常发布
+
+> 官网（纯静态）可绕过本节的 tag / 全量 release，单独走 [官网发布 Runbook](website-launch.md)；
+> 生产同样经过 `production` 环境人工批准。
 
 1. 合并代码，打 tag：`git tag v2026.11.04-1 && git push origin v2026.11.04-1`。
 2. GitHub Actions `release`：
