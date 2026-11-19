@@ -1388,6 +1388,7 @@
 | TC-NEW-ENT-0020 | 登出清空登录态并清理授权缓存 | P1 | Unit / Frontend | ✅ (`teacher/tests/auth-cache-wiring.test.mjs`「clearAuth 清理登录态与授权缓存」; `parent/tests/auth-cache-wiring.test.mjs` 同名) |
 | TC-NEW-ENT-0021 | 清理递增缓存代数，旧在途响应不得写回 | P1 | Unit / Frontend | ✅ (`teacher/tests/entitlement-cache.test.mjs`「清理一次递增缓存代数」「连续清理按次数递增缓存代数」; `parent/tests/entitlement-cache.test.mjs` 同名。在途响应写回抑制在 `utils/entitlements.js` 的 epoch 校验，为代码审查结论) |
 | TC-NEW-ENT-0022 | 存储异常不阻断清理 | P1 | Unit / Frontend | ✅ (`teacher/tests/entitlement-cache.test.mjs`「存储异常不阻断清理流程且留下告警」; `parent/tests/entitlement-cache.test.mjs` 同名) |
+| TC-NEW-ENT-0023 | 到期提示：全部授权越过宽限期仍返回到期日 | P1 | Unit / Contract | ✅ (`TestEntitlementModules_ExpiredFallback`) |
 
 ### 存量 trial 延长 (TNT)
 
