@@ -72,9 +72,8 @@ func newOrderServiceWithAudit(db *gorm.DB, audit PlatformAuditWriter) *OrderServ
 }
 
 // auditedOrderFixture 建一个园所 + 套餐 + 未确认订单，供强一致/回滚断言复用。
-func auditedOrderFixture(t *testing.T, db *gorm.DB, orderSvc *OrderService, suffix string) (*domain.Kindergarten, *domain.Order) {
+func auditedOrderFixture(ctx context.Context, t *testing.T, db *gorm.DB, orderSvc *OrderService, suffix string) (*domain.Kindergarten, *domain.Order) {
 	t.Helper()
-	ctx := context.Background()
 	kg := &domain.Kindergarten{Name: "T2A审计测试园" + suffix, Status: domain.KindergartenStatusActive}
 	require.NoError(t, repository.NewKindergartenRepo(db).Create(ctx, kg))
 	plan := &domain.Plan{
@@ -99,7 +98,7 @@ func TestPlatformAudit_StrongWritesRollBackOnAuditFailure(t *testing.T) {
 	t.Cleanup(func() { cleanupPlatformAudit(t, db) })
 
 	orderSvc := newOrderServiceWithAudit(db, failingAuditWriter{err: errAuditDown})
-	kg, order := auditedOrderFixture(t, db, orderSvc, "A")
+	kg, order := auditedOrderFixture(context.Background(), t, db, orderSvc, "A")
 
 	_, _, err := orderSvc.Confirm(ctx, order.ID, "测试信用开通", "t2a_ops", "127.0.0.1")
 	require.ErrorIs(t, err, errAuditDown)
@@ -188,7 +187,7 @@ func TestPlatformAudit_StrongRowsCarryKindergartenAndRequestID(t *testing.T) {
 	ctx := requestid.With(context.Background(), "req-t2a-strong")
 	audit := repository.NewPlatformLogRepo(db)
 	orderSvc := newOrderServiceWithAudit(db, audit)
-	kg, order := auditedOrderFixture(t, db, orderSvc, "B")
+	kg, order := auditedOrderFixture(ctx, t, db, orderSvc, "B")
 
 	_, _, err := orderSvc.Confirm(ctx, order.ID, "测试信用开通", "t2a_ops", "127.0.0.1")
 	require.NoError(t, err)
@@ -258,19 +257,27 @@ func TestPlatformAudit_QueryFiltersAndRequestID(t *testing.T) {
 	svc := newPlatformTestService(t, db)
 	ctx := requestid.With(context.Background(), "req-t2a-query")
 
-	now := time.Now().Truncate(time.Second)
+	// 固定在一个远离历史数据的未来窗口，避免 dev 库既有审计行污染时间筛选；
+	// GORM 会自动把 created_at 设成当前时间，所以插入后必须逐行改写。
+	now := time.Date(2035, 1, 1, 12, 0, 0, 0, time.Local)
 	rows := []domain.PlatformOperationLog{
 		{Operator: "t2a_a", Module: "order", Action: "confirm", TargetType: "order", TargetID: 1, KindergartenID: 910001, Detail: "首单", IP: "127.0.0.1"},
-		{Operator: "t2a_b", Module: "plan", Action: "create", TargetType: "plan", TargetID: 2, KindergartenID: 0, Detail: "套餐", IP: "127.0.0.1"},
-		{Operator: "t2a_a", Module: "plan", Action: "update", TargetType: "plan", TargetID: 2, KindergartenID: 0, Detail: "调价", IP: "127.0.0.1"},
+		{Operator: "t2a_b", Module: "t2a_plan", Action: "create", TargetType: "plan", TargetID: 2, KindergartenID: 0, Detail: "套餐", IP: "127.0.0.1"},
+		{Operator: "t2a_a", Module: "t2a_plan", Action: "update", TargetType: "plan", TargetID: 2, KindergartenID: 0, Detail: "调价", IP: "127.0.0.1"},
 	}
 	for i := range rows {
 		require.NoError(t, repo.Create(ctx, &rows[i]))
 		assert.Equal(t, "req-t2a-query", rows[i].RequestID, "写入时必须从 context 落 request_id")
 	}
-	// 把首行时间推前一天，验证时间范围筛选。
-	require.NoError(t, db.Model(&domain.PlatformOperationLog{}).Where("id = ?", rows[0].ID).
-		UpdateColumn("created_at", now.AddDate(0, 0, -1)).Error)
+	// 把首行时间推前一天，验证时间范围筛选；其余两行固定在 now。
+	for i := range rows {
+		created := now
+		if i == 0 {
+			created = now.AddDate(0, 0, -1)
+		}
+		require.NoError(t, db.Model(&domain.PlatformOperationLog{}).Where("id = ?", rows[i].ID).
+			UpdateColumn("created_at", created).Error)
+	}
 
 	from := now.AddDate(0, 0, -2)
 	to := now.AddDate(0, 0, 1)
@@ -281,9 +288,9 @@ func TestPlatformAudit_QueryFiltersAndRequestID(t *testing.T) {
 	}{
 		{"按园所", repository.PlatformLogFilter{KindergartenID: 910001}, 1},
 		{"按操作人", repository.PlatformLogFilter{Operator: "t2a_a"}, 2},
-		{"按模块", repository.PlatformLogFilter{Module: "plan"}, 2},
+		{"按模块", repository.PlatformLogFilter{Module: "t2a_plan"}, 2},
 		{"按时间范围", repository.PlatformLogFilter{From: &from, To: &to}, 3},
-		{"组合筛选", repository.PlatformLogFilter{Operator: "t2a_a", Module: "plan"}, 1},
+		{"组合筛选", repository.PlatformLogFilter{Operator: "t2a_a", Module: "t2a_plan"}, 1},
 		{"排除时间范围", repository.PlatformLogFilter{From: &now}, 2},
 	}
 	for _, tc := range cases {

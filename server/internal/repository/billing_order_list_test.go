@@ -57,6 +57,7 @@ func TestOrderRepo_ListAggregatesPaidAndFilters(t *testing.T) {
 	for _, s := range seeds {
 		o := &domain.Order{
 			OrderNo: s.no, KindergartenID: kg.ID, PlanID: 1, PlanSnapshot: "{}",
+			InvoiceInfo:    "{}",
 			AmountDueCents: 100000, Status: s.status,
 			StartsAt: start, ExpiresAt: start.AddDate(0, 6, 0), PayDueAt: s.due,
 		}

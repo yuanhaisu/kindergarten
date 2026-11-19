@@ -98,7 +98,13 @@ func cleanupPlatformAccounts(t *testing.T, db *gorm.DB) {
 
 func createPlatformAccount(t *testing.T, svc *PlatformService, username, password string) *PlatformAccountRow {
 	t.Helper()
-	row, err := svc.CreateAccount(context.Background(), CreateAccountRequest{
+	return createPlatformAccountWithCtx(context.Background(), t, svc, username, password)
+}
+
+// createPlatformAccountWithCtx 保留请求链路 context，供断言 request_id 的用例使用。
+func createPlatformAccountWithCtx(ctx context.Context, t *testing.T, svc *PlatformService, username, password string) *PlatformAccountRow {
+	t.Helper()
+	row, err := svc.CreateAccount(ctx, CreateAccountRequest{
 		Username: username, Name: "T6 " + username, Password: password,
 	}, "t6_ops", "127.0.0.1")
 	require.NoError(t, err)
@@ -238,7 +244,7 @@ func TestPlatformAccount_ResetPassword(t *testing.T) {
 
 	epochs := &spyEpochStore{}
 	svc := newPlatformAccountService(t, db, nil, epochs)
-	row := createPlatformAccount(t, svc, "t6_ops_reset", "Abc12345")
+	row := createPlatformAccountWithCtx(ctx, t, svc, "t6_ops_reset", "Abc12345")
 
 	// 重置时数据库里仍是旧哈希——证明 epoch 先于数据库写入。
 	epochs.onBump = func(string) {

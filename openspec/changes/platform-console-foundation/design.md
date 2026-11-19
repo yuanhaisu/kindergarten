@@ -58,12 +58,12 @@
 ```
 cancelledAt != nil            -> cancelled
 amount_due > 0 && paid >= due -> paid
-now > pay_due_at && paid < due-> expired
+today > date(pay_due_at) && paid < due -> expired
 paid > 0                      -> partial
                               -> unpaid
 ```
 
-`expires_at` 只表示服务期，不再参与收款状态。
+到期日按日期比较：当天仍可付款，次日零时起才算逾期。`expires_at` 只表示服务期，不再参与收款状态。
 
 **非空保证**（防止零值把老订单全判成过期）：`Order` 增加 `BeforeCreate` 钩子，`PayDueAt` 为零值时取 `StartsAt`；`deriveOrderStatus` 对零值再做一次兜底（回退到 `StartsAt`）。任何绕过 `OrderService.Create` 的建单路径（测试、种子、历史数据）都不会因此被判成过期。开发库必须执行 `make migrate` 回填——AutoMigrate 只加列，不回填。
 
@@ -85,9 +85,9 @@ paid > 0                      -> partial
 
 状态筛选在 SQL 中翻译：
 
-- `expired` → `status IN ('unpaid','partial') AND pay_due_at < now`
-- `unpaid` → `status='unpaid' AND pay_due_at >= now`
-- `partial` → `status='partial' AND pay_due_at >= now`
+- `expired` → `status IN ('unpaid','partial','expired') AND pay_due_at < 当天零点`
+- `unpaid` → `status='unpaid' AND pay_due_at >= 当天零点`
+- `partial` → `status='partial' AND pay_due_at >= 当天零点`
 - `paid` / `cancelled` → 存储状态直接匹配
 
 **备选**：读路径顺手把 `status` 写回数据库——被否。项目已明确禁止在读取路径写业务表。

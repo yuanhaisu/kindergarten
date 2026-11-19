@@ -67,6 +67,7 @@ func TestBillingFlow_SnapshotPaymentsAndCancel(t *testing.T) {
 
 	order, err := orderSvc.Create(ctx, CreateOrderRequest{
 		KindergartenID: kg.ID, PlanID: plan.ID, DistributorID: &dist.ID,
+		PayDueAt: time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
 	}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.EqualValues(t, 100000, order.AmountDueCents)

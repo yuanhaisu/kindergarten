@@ -42,6 +42,11 @@ func TestDeriveOrderStatus_PayDueAt(t *testing.T) {
 			want:   domain.OrderStatusPartial,
 		},
 		{
+			name:   "到期日当天不算逾期",
+			mutate: func(o *domain.Order) { o.PayDueAt = now.Add(-time.Hour) },
+			want:   domain.OrderStatusUnpaid,
+		},
+		{
 			name:   "服务期内但已过付款到期日且未收款（TC-NEW-ORD-0014）",
 			mutate: func(o *domain.Order) { o.PayDueAt = now.AddDate(0, 0, -7) },
 			want:   domain.OrderStatusExpired,

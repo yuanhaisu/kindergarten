@@ -93,6 +93,8 @@ const orderPaidJoin = "LEFT JOIN (SELECT order_id, SUM(amount_cents) AS paid_cen
 func (r *OrderRepo) List(ctx context.Context, f OrderFilter) ([]OrderWithPaid, int64, error) {
 	f.normalize()
 	now := time.Now()
+	// 到期日按日期比较：当天不算逾期，次日零时起才算。
+	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	q := r.db.WithContext(ctx).Model(&domain.Order{}).Joins(orderPaidJoin)
 	if f.KindergartenID != 0 {
 		q = q.Where("orders.kindergarten_id = ?", f.KindergartenID)
@@ -105,9 +107,9 @@ func (r *OrderRepo) List(ctx context.Context, f OrderFilter) ([]OrderWithPaid, i
 	case domain.OrderStatusExpired:
 		q = q.Where("orders.status IN ?", []string{
 			domain.OrderStatusUnpaid, domain.OrderStatusPartial, domain.OrderStatusExpired,
-		}).Where("orders.pay_due_at < ?", now)
+		}).Where("orders.pay_due_at < ?", dayStart)
 	case domain.OrderStatusUnpaid, domain.OrderStatusPartial:
-		q = q.Where("orders.status = ?", f.Status).Where("orders.pay_due_at >= ?", now)
+		q = q.Where("orders.status = ?", f.Status).Where("orders.pay_due_at >= ?", dayStart)
 	default:
 		q = q.Where("orders.status = ?", f.Status)
 	}

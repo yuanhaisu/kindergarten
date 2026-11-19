@@ -24,12 +24,12 @@
 ```
 cancelledAt != nil              -> cancelled
 amount_due > 0 && paid >= due   -> paid
-now > pay_due_at && paid < due  -> expired
+today > date(pay_due_at) && paid < due -> expired
 paid > 0                        -> partial
                                 -> unpaid
 ```
 
-`expires_at` 只表示服务期，不再参与收款状态。列表筛选在 SQL 中翻译状态（`expired` 匹配「存储状态为 unpaid/partial 且已过付款到期日」，`unpaid`/`partial` 只匹配未过付款到期日的记录）。
+到期日按日期比较：当天仍可付款，次日零时起才算逾期。`expires_at` 只表示服务期，不再参与收款状态。列表筛选在 SQL 中翻译状态（`expired` 匹配「存储状态为 unpaid/partial/expired 且已过付款到期日」，`unpaid`/`partial` 只匹配未过付款到期日的记录）。
 
 ### 2. 零收款确认 = 信用开通，必须留理由
 

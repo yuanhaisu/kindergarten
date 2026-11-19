@@ -47,7 +47,8 @@ func createDashboardOrder(t *testing.T, db *gorm.DB, kgID uint64, tag string, am
 		OrderNo:        fmt.Sprintf("T8DASH%s%d", tag, now.UnixNano()),
 		KindergartenID: kgID, PlanID: 0, PlanSnapshot: "{}", StudentTier: 1,
 		AmountDueCents: amountDue, Status: status,
-		StartsAt: now, ExpiresAt: now.AddDate(0, 1, 0),
+		InvoiceInfo: "{}",
+		StartsAt:    now, ExpiresAt: now.AddDate(0, 1, 0),
 	}
 	require.NoError(t, db.Create(o).Error)
 	return o

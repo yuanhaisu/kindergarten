@@ -646,7 +646,11 @@ func deriveOrderStatus(order *domain.Order, paid int64, now time.Time) string {
 	if dueAt.IsZero() {
 		dueAt = order.StartsAt
 	}
-	if now.After(dueAt) {
+	// 到期日是日期口径：当天仍可付款，次日零时起才算逾期。
+	localDue := dueAt.In(now.Location())
+	dueDay := time.Date(localDue.Year(), localDue.Month(), localDue.Day(), 0, 0, 0, 0, now.Location())
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	if today.After(dueDay) {
 		return domain.OrderStatusExpired
 	}
 	if paid > 0 {
