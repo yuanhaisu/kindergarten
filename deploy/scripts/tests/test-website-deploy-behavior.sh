@@ -58,16 +58,19 @@ write_forbidden_stubs() {
   make_ok_stub curl
 }
 
-# ln：对指定目标模拟最坏失败——先移除旧链接再创建失败，逼脚本恢复旧 release。
-write_ln_fail_stub() { # fail-target
-  local target=$1
+# ln：对列出目标模拟最坏失败——先移除旧链接再创建失败，逼脚本恢复旧 release。
+# 传多个目标时可以同时打断切换与随后的恢复，验证恢复失败不会静默。
+write_ln_fail_stub() { # fail-target...
+  local targets="$*"
   cat > "$STUB_DIR/ln" <<STUB
 #!/usr/bin/env bash
 printf 'ln %s\n' "\$*" >> "\$STUB_LOG"
-if [ "\${1:-}" = "-sfn" ] && [ "\${2:-}" = "$target" ]; then
-  rm -f "\${3:-}"
-  exit 1
-fi
+for target in $targets; do
+  if [ "\${1:-}" = "-sfn" ] && [ "\${2:-}" = "\$target" ]; then
+    rm -f "\${3:-}"
+    exit 1
+  fi
+done
 exec "$REAL_LN" "\$@"
 STUB
   chmod +x "$STUB_DIR/ln"
@@ -243,6 +246,24 @@ case_duplicate_version() {
   assert_no_temp_dirs
 }
 
+# 恢复旧链接也失败：切换失败后 restore 的 ln 再次失败时必须告警，不能静默吞掉。
+# 退出码仍由原始切换失败决定（非零）。
+case_restore_failure_warns() {
+  setup_test
+  write_forbidden_stubs
+  make_root_with_old
+  tar_file="$TEST_TMP/website-v1.tar.gz"
+  make_website_tar "$tar_file" "new-website-v1"
+  write_ln_fail_stub "$root/website/releases/v1" "$root/website/releases/$OLD_VERSION"
+
+  run_capture bash "$DEPLOY_SCRIPT" staging v1 "$tar_file"
+
+  assert_rc 1
+  assert_output_contains "website switch failed"
+  assert_output_contains "failed to restore previous release"
+  assert_no_temp_dirs
+}
+
 # extraction 期间收到 TERM：清理临时目录、恢复旧 symlink，旧 release 继续在线。
 case_term_during_extraction() {
   setup_test
@@ -298,6 +319,7 @@ run_case "second-deploy" case_second_deploy
 run_case "missing-artifact" case_missing_artifact
 run_case "extraction-failure" case_extraction_failure
 run_case "switch-failure" case_switch_failure
+run_case "restore-failure-warns" case_restore_failure_warns
 run_case "invalid-usage-and-env" case_invalid_usage_and_env
 run_case "duplicate-version" case_duplicate_version
 run_case "term-during-extraction" case_term_during_extraction

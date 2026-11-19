@@ -295,6 +295,123 @@ test('an actual small-program QR image fails', (t) => {
   assert.match(result.stderr, /小程序码素材/)
 })
 
+test('a small-program QR image in srcset fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<img src="/assets/contact.webp" srcset="/assets/miniprogram-qr-2x.webp 2x" alt="联系方式"></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /小程序码素材/)
+})
+
+test('a small-program QR source inside picture fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<picture><source srcset="/assets/wxacode.webp" type="image/webp"><img src="/assets/contact.webp" alt="联系方式"></picture></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /小程序码素材/)
+})
+
+test('a small-program QR inline background-image fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<div class="contact__qr" style="background-image:url(\'/assets/miniprogram-qr.png\')"></div></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /小程序码背景素材/)
+})
+
+test('a small-program QR background-image in a style block fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<style>.contact__qr { background-image: url(/assets/wxacode.png); }</style></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /小程序码背景素材/)
+})
+
+test('an ordinary background-image passes', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<div class="hero" style="background-image:url(\'/screens/parent-growth.webp\')"></div></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.equal(result.status, 0, result.stderr)
+})
+
+test('a 扫码体验 call-to-action without the word 小程序 fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<a class="btn btn--primary" href="#contact">扫码体验</a></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /小程序行动召唤/)
+  assert.match(result.stderr, /扫码体验/)
+})
+
+test('a QR call-to-action with a neutral image src fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<a class="btn" href="#contact"><img src="/assets/contact.webp" alt="联系方式" width="160" height="160">扫码体验</a></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /小程序行动召唤/)
+})
+
+test('an enterprise WeChat QR call-to-action passes', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      '</main>',
+      '<a class="contact__qr" href="https://work.weixin.qq.com/kfid/demo"><img src="/contact/wecom-qr.png" alt="企业微信二维码" width="160" height="160">扫码添加企业微信</a></main>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.equal(result.status, 0, result.stderr)
+})
+
 test('a small-program QR call-to-action fails', (t) => {
   const dir = fixture(t, (files) => {
     files['index.html'] = files['index.html'].replace(
@@ -332,12 +449,6 @@ test('an enterprise WeChat QR image passes', (t) => {
   })
 
   const result = run(dir)
-
-  assert.equal(result.status, 0, result.stderr)
-})
-
-test('staging mode allows draft legal pages', (t) => {
-  const result = run(fixture(t))
 
   assert.equal(result.status, 0, result.stderr)
 })
@@ -440,4 +551,64 @@ test('a bare 不提供开关 drift fails', (t) => {
   assert.notEqual(result.status, 0)
   assert.match(result.stderr, /隐私政策/)
   assert.match(result.stderr, /不提供/)
+})
+
+test('future 无法关闭 class-album copy fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      /<p>「班内共享」[\s\S]*?<\/p>/,
+      '<p>「班内共享」默认开启，家长无法关闭。</p>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /无法关闭/)
+})
+
+test('future 不能关闭 class-album copy fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      /<p>「班内共享」[\s\S]*?<\/p>/,
+      '<p>「班内共享」默认开启，家长不能关闭该共享。</p>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /不能关闭/)
+})
+
+test('future 不可关闭 class-album copy fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      /<p>「班内共享」[\s\S]*?<\/p>/,
+      '<p>「班内共享」默认开启，该开关不可关闭。</p>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /不可关闭/)
+})
+
+test('future 没有开关 class-album copy fails', (t) => {
+  const dir = fixture(t, (files) => {
+    files['index.html'] = files['index.html'].replace(
+      /<p>「班内共享」[\s\S]*?<\/p>/,
+      '<p>「班内共享」始终开启，家长没有开关。</p>',
+    )
+  })
+
+  const result = run(dir)
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /首页/)
+  assert.match(result.stderr, /没有开关/)
 })

@@ -50,18 +50,22 @@ if [ -L "$link" ]; then
   prev_target=$(readlink -f "$link")
 fi
 
+# 恢复失败不能静默：脚本仍按原始失败退出非零，但必须留下可排查的告警。
 restore_previous() {
   if [ -n "$prev_target" ]; then
-    ln -sfn "$prev_target" "$link" || true
+    ln -sfn "$prev_target" "$link" \
+      || echo "!! failed to restore previous release: $link -> $prev_target; manual rollback required" >&2
   elif [ -L "$link" ]; then
-    rm -f "$link" || true
+    rm -f "$link" \
+      || echo "!! failed to remove website symlink: $link; manual rollback required" >&2
   fi
 }
 
 tmp_dir=""
 cleanup() {
   if [ -n "$tmp_dir" ] && [ -d "$tmp_dir" ]; then
-    rm -rf "$tmp_dir" || true
+    rm -rf "$tmp_dir" \
+      || echo "!! failed to remove temporary directory: $tmp_dir; remove it manually" >&2
   fi
 }
 

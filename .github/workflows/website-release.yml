@@ -26,13 +26,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: 发布官网（${{ inputs.environment }}）
+  # 先校验再请求 environment 批准：非法 production ref 不应让 reviewer 看到
+  # 一条待批准的发布；本 job 不引用 environment，因此不会触发人工批准。
+  guard:
+    name: 校验发布目标
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    outputs:
+      deploy_env: ${{ steps.target.outputs.deploy_env }}
+      version: ${{ steps.target.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-
       - name: Resolve deploy target
         id: target
         env:
@@ -67,6 +69,14 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "deploy target: $INPUT_ENVIRONMENT -> $deploy_env ($version)"
 
+  release:
+    name: 发布官网（${{ inputs.environment }}）
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -92,7 +102,7 @@ jobs:
 
       - name: Package website
         env:
-          VERSION: ${{ steps.target.outputs.version }}
+          VERSION: ${{ needs.guard.outputs.version }}
         run: |
           set -euo pipefail
           tar -czf "$RUNNER_TEMP/$VERSION.tar.gz" -C website/.output/public .
@@ -112,7 +122,7 @@ jobs:
         env:
           ECS_HOST: ${{ secrets.ECS_HOST }}
           ECS_USER: ${{ secrets.ECS_USER }}
-          VERSION: ${{ steps.target.outputs.version }}
+          VERSION: ${{ needs.guard.outputs.version }}
         run: |
           set -euo pipefail
           scp -i ~/.ssh/id_ed25519 \
@@ -123,8 +133,8 @@ jobs:
         env:
           ECS_HOST: ${{ secrets.ECS_HOST }}
           ECS_USER: ${{ secrets.ECS_USER }}
-          DEPLOY_ENV: ${{ steps.target.outputs.deploy_env }}
-          VERSION: ${{ steps.target.outputs.version }}
+          DEPLOY_ENV: ${{ needs.guard.outputs.deploy_env }}
+          VERSION: ${{ needs.guard.outputs.version }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_ed25519 "$ECS_USER@$ECS_HOST" \

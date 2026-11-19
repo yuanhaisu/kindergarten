@@ -1,7 +1,8 @@
 # 0017 — 官网作为同一 ECS / nginx 的第三个静态产物
 
-- Status: Accepted
+- Status: Accepted（发布耦合条款部分被 ADR-0019 取代，见下）
 - Date: 2026-11-06
+- Note: 2026-11-19 — 官网已改为由 `website-release.yml` 单独发布，`release.yml` 不再构建、打包或部署官网（ADR-0019）。本 ADR 的共享 ECS / nginx / symlink 决策仍然有效，只有「官网与后端同 tag 发布」的耦合条款失效。
 
 ## Context
 

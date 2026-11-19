@@ -46,19 +46,12 @@ jobs:
           cd ../admin && npm ci && npm run generate
       - name: Package admin static
         run: tar -czf admin-dist.tar.gz -C admin/.output/public .
-      - name: Build website static
-        run: cd website && npm ci && npm run generate
-      - name: Package website static
-        run: tar -czf website-dist.tar.gz -C website/.output/public .
+      # 官网不随全栈 release 发布：唯一自动发布路径是 website-release.yml
+      # （见 ADR-0019），避免绕开 production 内容门禁。
       - uses: actions/upload-artifact@v4
         with:
           name: admin-dist
           path: admin-dist.tar.gz
-          retention-days: 14
-      - uses: actions/upload-artifact@v4
-        with:
-          name: website-dist
-          path: website-dist.tar.gz
           retention-days: 14
 
   deploy-staging:
@@ -71,9 +64,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: admin-dist
-      - uses: actions/download-artifact@v4
-        with:
-          name: website-dist
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -83,11 +73,10 @@ jobs:
       - name: Upload admin artifact
         run: |
           scp -i ~/.ssh/id_ed25519 admin-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/admin-${GITHUB_REF_NAME}.tar.gz"
-          scp -i ~/.ssh/id_ed25519 website-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/website-${GITHUB_REF_NAME}.tar.gz"
       - name: Deploy staging
         run: |
           ssh -i ~/.ssh/id_ed25519 "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
-            "bash -s -- staging ${GITHUB_REF_NAME} /tmp/admin-${GITHUB_REF_NAME}.tar.gz /tmp/website-${GITHUB_REF_NAME}.tar.gz" \
+            "bash -s -- staging ${GITHUB_REF_NAME} /tmp/admin-${GITHUB_REF_NAME}.tar.gz" \
             < deploy/scripts/deploy.sh
 
   deploy-production:
@@ -100,9 +89,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: admin-dist
-      - uses: actions/download-artifact@v4
-        with:
-          name: website-dist
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -116,9 +102,8 @@ jobs:
       - name: Upload admin artifact
         run: |
           scp -i ~/.ssh/id_ed25519 admin-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/admin-${GITHUB_REF_NAME}.tar.gz"
-          scp -i ~/.ssh/id_ed25519 website-dist.tar.gz "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/website-${GITHUB_REF_NAME}.tar.gz"
       - name: Deploy production
         run: |
           ssh -i ~/.ssh/id_ed25519 "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
-            "bash -s -- prod ${GITHUB_REF_NAME} /tmp/admin-${GITHUB_REF_NAME}.tar.gz /tmp/website-${GITHUB_REF_NAME}.tar.gz" \
+            "bash -s -- prod ${GITHUB_REF_NAME} /tmp/admin-${GITHUB_REF_NAME}.tar.gz" \
             < deploy/scripts/deploy.sh

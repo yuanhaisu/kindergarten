@@ -250,18 +250,17 @@ docker compose run --rm --entrypoint /app/kindergarten-seedbase api
 1. 合并代码，打 tag：`git tag v2026.11.04-1 && git push origin v2026.11.04-1`。
 2. GitHub Actions `release`：
    - 构建后端镜像并推 ACR；
-   - 构建 admin 与 website 静态包；
+   - 构建 admin 静态包（官网不随 tag release 发布，见官网发布 Runbook）；
    - 自动部署 staging；
    - 等待 `production` 环境人工批准；
    - 生产发布前调用 `snapshot-rds.sh`；
-   - 执行迁移与基础种子（`seedbase`）、启动 API 并等 `/ready`、再切 admin/website symlink（顺序不能反）。
+   - 执行迁移与基础种子（`seedbase`）、启动 API 并等 `/ready`、再切 admin symlink（顺序不能反）。
 3. 生产验证：
    ```bash
    curl -fsS https://api.<domain>/ready
    curl -fsS https://api.<domain>/health
-   curl -fsSI https://www.<domain>/ | head -1
    # 管理端登录、相册/成长页图片可加载
-   # 官网：首屏截图、/privacy、/terms 均可打开
+   # 官网单独发布与验收：见 website-launch.md §6
    ```
 4. 小程序：在微信后台用测试包验收 staging，正式包走审核后发布。
 
