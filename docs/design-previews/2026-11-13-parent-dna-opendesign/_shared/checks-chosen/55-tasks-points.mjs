@@ -80,6 +80,22 @@ export default {
         expectVisible: "#checkin-form",
       },
     },
+    // 图片是选填：接口 media_file_id 可选，文字也可以为空；表单提供可选照片。
+    {
+      slug: "22-tasks-detail",
+      state: "unopened-open",
+      within: "#checkin-form",
+      must: ["添加照片", "选填，写一句也可以", "提交打卡"],
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "unopened-open",
+      interaction: {
+        click: "#checkin-add-photo",
+        expectStayOn: "22-tasks-detail",
+        expectVisible: "#checkin-photo-preview .photo",
+      },
+    },
     {
       slug: "22-tasks-detail",
       state: "unopened",

@@ -10,6 +10,9 @@
   var status = document.getElementById('checkin-status');
   var weekMeta = document.getElementById('week-meta');
   var photo = document.getElementById('checkin-photo');
+  var photoPreview = document.getElementById('checkin-photo-preview');
+  var addPhoto = document.getElementById('checkin-add-photo');
+  var addPhotoLabel = document.getElementById('checkin-add-photo-label');
 
   if (!pending || !complete || !openButton || !form || !submitButton || !status || !weekMeta) return;
 
@@ -20,15 +23,27 @@
     if (input) input.focus();
   }
 
+  function togglePhoto() {
+    if (!photoPreview || !addPhotoLabel) return;
+    if (photoPreview.querySelector('.photo')) {
+      photoPreview.innerHTML = '';
+      addPhotoLabel.textContent = '添加照片';
+      return;
+    }
+    photoPreview.innerHTML = '<span class="photo photo--sage" role="img" aria-label="已添加的照片"></span>';
+    addPhotoLabel.textContent = '移除照片';
+  }
+
   function submitCheckin() {
     pending.hidden = true;
     complete.hidden = false;
     status.textContent = '已完成 · 今天 20:05';
     weekMeta.textContent = '本周 3 / 3 天 · 今天已打卡';
-    if (photo) photo.hidden = true;
+    if (photo) photo.hidden = !(photoPreview && photoPreview.querySelector('.photo'));
   }
 
   openButton.addEventListener('click', openCheckin);
+  if (addPhoto) addPhoto.addEventListener('click', togglePhoto);
   submitButton.addEventListener('click', submitCheckin);
 
   var state = new URLSearchParams(window.location.search).get('state');
