@@ -1385,6 +1385,7 @@
 | TC-NEW-ENT-0017 | 到期提示：剩余不足一天仍显示在期 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「剩余不足一天仍显示在期提示」; `parent/tests/expiry-hint.test.mjs` 同名) |
 | TC-NEW-ENT-0018 | 到期提示：过期 1 分钟显示已到期 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「已过期 1 分钟必须显示已到期」; `parent/tests/expiry-hint.test.mjs` 同名) |
 | TC-NEW-ENT-0019 | 到期提示：过期 1 天显示已到期 | P1 | Unit / Frontend | ✅ (`teacher/tests/expiry-hint.test.mjs`「已过期 1 天显示已到期」; `parent/tests/expiry-hint.test.mjs` 同名) |
+| TC-NEW-ENT-0023 | 到期提示：全部授权越过宽限期仍返回到期日 | P1 | Unit / Contract | ✅ (`TestEntitlementModules_ExpiredFallback`) |
 
 ### 存量 trial 延长 (TNT)
 

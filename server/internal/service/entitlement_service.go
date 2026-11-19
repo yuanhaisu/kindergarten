@@ -206,21 +206,31 @@ func (s *EntitlementService) EntitlementModules(ctx context.Context, kindergarte
 	seen := map[string]struct{}{"base": {}}
 	modules := []string{"base"}
 	var soonest *time.Time
+	// 全部越过宽限期时没有可用 premium 模块，用最早的过期日兜底，
+	// 保证两端仍能按过去时间显示「已到期」（#125）。base 不参与到期提示。
+	var expiredSoonest *time.Time
 	for code, a := range access {
+		if code == "base" {
+			continue
+		}
 		if a.State == "expired" {
+			if expiredSoonest == nil || a.ExpiresAt.Before(*expiredSoonest) {
+				t := a.ExpiresAt
+				expiredSoonest = &t
+			}
 			continue
 		}
 		if _, ok := seen[code]; !ok {
 			seen[code] = struct{}{}
 			modules = append(modules, code)
 		}
-		if code == "base" {
-			continue
-		}
 		if soonest == nil || a.ExpiresAt.Before(*soonest) {
 			t := a.ExpiresAt
 			soonest = &t
 		}
+	}
+	if soonest == nil {
+		soonest = expiredSoonest
 	}
 	return modules, soonest, nil
 }
