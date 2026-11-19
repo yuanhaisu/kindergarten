@@ -3,7 +3,7 @@
 官网是纯静态站，不依赖后端。`Website Release` workflow 只构建、检查、打包并部署静态产物，
 不构建镜像、不跑迁移、不访问 RDS/Redis/ACR，也不调用快照脚本。
 
-- 配套：[部署 Runbook](deployment.md)（全栈发布）、[部署架构](../deployment-architecture.md)、ADR-0017。
+- 配套：[部署 Runbook](deployment.md)（全栈发布）、[部署架构](../deployment-architecture.md)、ADR-0017（同机托管）、ADR-0019（独立发布路径）。
 - 状态交接：[官网交付与未完成项](../handoffs/2026-11-07-website-pending.md)。
 - 服务器 IP / SSH 入口不入库；本文用 `<staging-public-ip>`、`<prod-host>` 等占位符，真实值见运维私密记录。
 

@@ -47,8 +47,9 @@ website/
 
 ## 部署
 
-静态产物接入现有 `deploy/` 体系：nginx 增加 `www.${DOMAIN}` server block，
-`release.yml` 增加官网构建与发布步骤。ICP 已通过；DNS 与证书就绪后即可对外解析。
+静态产物接入现有 `deploy/` 体系：nginx 增加 `www.${DOMAIN}` server block；
+官网由 `.github/workflows/website-release.yml` 单独发布（ADR-0019），不随后端 tag release 发布。
+ICP 已通过；DNS 与证书就绪后即可对外解析。
 
 ## 上线前未完成
 

@@ -36,13 +36,13 @@
 
 ## 部署接入（已写好，未启用）
 
-- `.github/workflows/release.yml`：新增 website 静态包构建、上传、scp，并作为第 4 个参数传给 `deploy.sh`。
+- `.github/workflows/release.yml`：只发布后端镜像与 admin 静态包；官网不再随 tag release 发布（ADR-0019）。
 - ✅ `.github/workflows/website-release.yml`：官网单独发布（`staging` / `production`），不构建后端、不跑迁移；步骤见 [官网发布 Runbook](../runbook/website-launch.md)。
 - `deploy/scripts/deploy.sh` / `rollback.sh`：新增 `website/releases/<tag>` 与 `website/current` 的切换与回滚。
 - `deploy/nginx/kindergarten.conf.tmpl`：新增 `www.${DOMAIN}`（生产）与 `test-www.${DOMAIN}`（预发），apex 301 → `www`。
 - `docs/runbook/deployment.md`、`docs/deployment-architecture.md` 已同步。
 - `docs/adr/0017-website-on-shared-ecs-static.md`：官网作为同一 ECS / nginx 的第三个静态产物。
-- ✅ `deploy/` 与 `.github/workflows/release.yml` 已提交，不需要再补。
+- ✅ `deploy/`、`.github/workflows/release.yml` 与 `.github/workflows/website-release.yml` 已提交，不需要再补。
 
 ## 备案通过后的执行顺序
 
@@ -50,7 +50,7 @@
 2. 重签证书，把上述 7 个主机名加入 SAN。
 3. 可选占位项：`website/content/site.ts` 的 `baiduAnalyticsId`。主体、备案号与页脚备案名称均已完成；企业微信二维码已暂缓，不阻塞上线。
 4. 本地 `cd website && npm run generate` 复核。
-5. 优先用 `Website Release` workflow 单独发布官网：先 staging（`test-www`）演练，再 production（人工批准）；完整 tag release 仍可发布全栈。步骤见 [官网发布 Runbook](../runbook/website-launch.md)。
+5. 用 `Website Release` workflow 单独发布官网：先 staging（`test-www`）演练，再 production（人工批准）。完整 tag release 只发布后端与管理端，不再更新官网（ADR-0019）。步骤见 [官网发布 Runbook](../runbook/website-launch.md)。
 6. 验证：`curl -fsSI https://www.<domain>/`、`/privacy`、`/terms`、一个不存在的路径返回品牌化 404；完整清单见 runbook §6。
 
 ## 已知未做（非阻塞）

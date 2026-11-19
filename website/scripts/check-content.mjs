@@ -83,10 +83,10 @@ function toVisibleText(html) {
     .trim()
 }
 
-function requireFact(visible, key, needle, fact) {
+function requireFact(visible, key, needle, description) {
   const text = visible[key]
   if (text === undefined) return // 页面缺失已在上面报过
-  if (!text.includes(needle)) fail(`${pageLabel(key)}：缺少${fact}`)
+  if (!text.includes(needle)) fail(`${pageLabel(key)}：缺少${description}`)
 }
 
 function attr(tag, name) {
@@ -152,7 +152,7 @@ function checkSitemap(xml) {
 // 只把 legalDraft 改成 false 不会清掉它。生产发布前必须两条都消失。
 const DRAFT_MARKERS = ['版本：草案', '生效日期：待定']
 
-function checkProduction(visible) {
+function checkLegalDraftMarkers(visible) {
   for (const key of ['privacy', 'terms']) {
     const text = visible[key]
     if (text === undefined) continue
@@ -173,7 +173,9 @@ const CLASS_SHARE_TERM = '班内共享'
 const CLASS_SHARE_DEFAULT = '默认开启'
 const CLASS_SHARE_WITHDRAW = ['可随时撤回', '可随时关闭']
 // 未来的「没有家长开关」文案：出现即说明文案先于产品改了。
-const CLASS_SHARE_DRIFT = /不提供[^。；\n]{0,30}开关/
+// 覆盖 不提供…开关 / 无法关闭 / 不能关闭 / 不可关闭 / 没有…开关 等变体。
+const CLASS_SHARE_DRIFT =
+  /(?:不提供|无法|不能|不可)[^。；\n]{0,30}(?:开关|关闭)|没有[^。；\n]{0,20}开关/
 
 function checkClassShare(visible) {
   for (const key of ['home', 'privacy']) {
@@ -198,6 +200,73 @@ function checkClassShare(visible) {
 const SMALL_PROGRAM_QR = /小程序码|miniprogram|wxacode|xcx/i
 const WECOM_QR = /企业微信|wecom|work\.weixin/i
 
+// 图片素材候选：src、srcset（逐条 URL）与 alt。浏览器可能选中 srcset 里的
+// 任意候选，只看 src 会被 `src="占位.webp" srcset="小程序码.webp 2x"` 绕过。
+function imageCandidates(html) {
+  const candidates = []
+  for (const tag of html.match(/<(?:img|source)\b[^>]*>/gi) ?? []) {
+    const values = []
+    for (const name of ['src', 'srcset', 'alt']) {
+      const value = attr(tag, name)
+      if (!value) continue
+      if (name === 'srcset') {
+        for (const entry of value.split(',')) {
+          const url = entry.trim().split(/\s+/)[0]
+          if (url) values.push(url)
+        }
+      } else {
+        values.push(value)
+      }
+    }
+    candidates.push({ tag, values })
+  }
+  return candidates
+}
+
+// CSS background-image 的 url()：内联 style 与 <style> 块都要扫，否则把
+// QR 换成背景图即可绕过素材检查。只看 background 声明，避开字体等资源。
+function backgroundImageUrls(html) {
+  const declarations = []
+  for (const match of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)) {
+    declarations.push(match[1])
+  }
+  for (const match of html.matchAll(/\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi)) {
+    declarations.push(match[1] ?? match[2] ?? match[3])
+  }
+
+  const urls = []
+  for (const css of declarations) {
+    for (const declaration of css.matchAll(/background(?:-image)?\s*:\s*([^;{}]+)/gi)) {
+      for (const url of declaration[1].matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)'"]+))\s*\)/gi)) {
+        const value = (url[1] ?? url[2] ?? url[3] ?? '').trim()
+        if (value) urls.push(value)
+      }
+    }
+  }
+  return urls
+}
+
+const QR_CTA_STRONG = /扫码/
+const QR_CTA_GENERIC = /立即|体验|查看/
+
+// 行动召唤：「扫码」本身已足够指向 QR；其余动词只在链接/按钮携带图片时
+// 才算 QR CTA（src 不含关键词也要能识别），避免把普通文本链接误判。
+function checkCta(html, key) {
+  for (const block of html.match(/<(a|button)\b[^>]*>[\s\S]*?<\/\1\s*>/gi) ?? []) {
+    // 企业微信二维码已获准：整段带 wecom 标记的 CTA 放行。
+    if (WECOM_QR.test(block)) continue
+    const label = toVisibleText(block)
+    const altText = [...block.matchAll(/<img\b[^>]*>/gi)]
+      .map((match) => attr(match[0], 'alt') ?? '')
+      .join(' ')
+    const text = `${label} ${altText}`.trim()
+    if (!text) continue
+    const hasImage = /<(?:img|picture|source)\b/i.test(block)
+    if (!QR_CTA_STRONG.test(text) && !(hasImage && QR_CTA_GENERIC.test(text))) continue
+    fail(`${pageLabel(key)}：出现小程序行动召唤「${text}」，小程序尚未发布`)
+  }
+}
+
 function checkForbidden(html, visibleText, key) {
   if (visibleText.includes('立即使用')) {
     fail(`${pageLabel(key)}：出现「立即使用」行动召唤，小程序尚未发布`)
@@ -210,20 +279,22 @@ function checkForbidden(html, visibleText, key) {
     )
   }
 
-  for (const tag of html.match(/<img\b[^>]*>/gi) ?? []) {
-    const source = `${attr(tag, 'src') ?? ''} ${attr(tag, 'alt') ?? ''}`
+  for (const { tag, values } of imageCandidates(html)) {
+    const source = values.join(' ')
     if (WECOM_QR.test(source)) continue // 企业微信二维码允许
-    if (SMALL_PROGRAM_QR.test(source)) {
+    if (values.some((value) => SMALL_PROGRAM_QR.test(value))) {
       fail(`${pageLabel(key)}：出现小程序码素材 ${tag.trim()}，小程序尚未发布`)
     }
   }
 
-  for (const tag of html.match(/<(?:a|button)\b[^>]*>[\s\S]*?<\/(?:a|button)>/gi) ?? []) {
-    const label = toVisibleText(tag)
-    if (label.includes('小程序') && /扫码|立即|体验|查看/.test(label)) {
-      fail(`${pageLabel(key)}：出现小程序行动召唤「${label}」，小程序尚未发布`)
+  for (const url of backgroundImageUrls(html)) {
+    if (WECOM_QR.test(url)) continue
+    if (SMALL_PROGRAM_QR.test(url)) {
+      fail(`${pageLabel(key)}：出现小程序码背景素材「${url}」，小程序尚未发布`)
     }
   }
+
+  checkCta(html, key)
 }
 
 function loadText(relative) {
@@ -273,7 +344,7 @@ function main() {
   checkCanonical(sources)
   checkSitemap(assets['sitemap.xml'])
   checkClassShare(visible)
-  if (production) checkProduction(visible)
+  if (production) checkLegalDraftMarkers(visible)
   for (const page of PAGES) {
     if (sources[page.key] === undefined) continue
     checkForbidden(sources[page.key], visible[page.key], page.key)
