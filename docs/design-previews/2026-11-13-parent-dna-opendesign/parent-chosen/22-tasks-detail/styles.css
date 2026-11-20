@@ -260,17 +260,6 @@ svg { display: block; }
   color: var(--icon-soft);
 }
 
-.points {
-  padding: 4px 7px 3px;
-  border-radius: var(--radius-xs);
-  background: rgba(221, 177, 74, .32);
-  font-size: var(--text-overline);
-  font-weight: var(--weight-semibold);
-  line-height: 1;
-  letter-spacing: .02em;
-  color: var(--fg);
-}
-
 .task-head__title {
   margin-top: 14px;
   font-family: var(--font-display);
@@ -403,40 +392,6 @@ svg { display: block; }
 .steps-progress__seg.is-done { background: var(--fg); }
 
 /* ---------- today's check-in ---------- */
-.week-streak {
-  margin-top: 14px;
-}
-
-.streak {
-  display: flex;
-  gap: 6px;
-}
-
-.streak-seg {
-  flex: 1 1 0;
-  height: 6px;
-  border-radius: var(--radius-pill);
-}
-
-.streak-seg.is-on { background: var(--fg); }
-
-.streak-seg.is-off svg {
-  display: block;
-  width: 100%;
-  height: 6px;
-  color: var(--icon-soft);
-  opacity: 0.55;
-}
-
-.streak-seg.is-on svg { display: none; }
-
-.week-meta {
-  margin: 9px 0 0;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--muted-on-surface);
-}
-
 .checkin-hint {
   margin-top: 8px;
   font-size: 12.5px;
@@ -713,10 +668,6 @@ svg { display: block; }
   color: var(--orange-text);
 }
 
-.streak-seg.is-off {
-  background: var(--surface-muted);
-}
-
 .checkin-state[hidden] {
   display: none;
 }
@@ -782,8 +733,69 @@ svg { display: block; }
   color: var(--muted-on-surface);
 }
 
-.checkin-form .btn-primary {
+.checkin-content {
   margin-top: 12px;
+}
+
+.checkin-text {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--fg);
+  text-wrap: pretty;
+}
+
+.checkin-meta-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.checkin-rule {
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--muted-on-surface);
+}
+
+.checkin-count {
+  flex: none;
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--muted-on-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.checkin-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.checkin-submit {
+  flex: 1;
+  margin-top: 0;
+}
+
+.checkin-cancel {
+  flex: none;
+  min-width: 72px;
+  height: 52px;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius-pill);
+  color: var(--muted-on-surface);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+.checkin-cancel:active {
+  background: var(--surface-soft);
+}
+
+.checkin-cancel:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
 }
 
 /* ---------- toast ---------- */
