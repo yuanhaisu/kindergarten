@@ -187,9 +187,11 @@ func insertEntitlement(t *testing.T, db *gorm.DB, id, kgID uint64, module, sourc
 
 func insertOrder(t *testing.T, db *gorm.DB, id, kgID uint64, status string, startsAt, expiresAt time.Time) {
 	t.Helper()
+	// pay_due_at 是 00009 加的非空列；原始 SQL 不经过 Order.BeforeCreate，
+	// 必须显式写入，口径与服务端默认值一致：未指定时取 starts_at。
 	err := db.Exec(
-		"INSERT INTO orders (id, created_at, updated_at, deleted_at, order_no, kindergarten_id, plan_id, plan_snapshot, status, starts_at, expires_at) VALUES (?, NOW(3), NOW(3), NULL, ?, ?, 1, '{}', ?, ?, ?)",
-		id, fmt.Sprintf("TEST-%d", id), kgID, status, startsAt, expiresAt,
+		"INSERT INTO orders (id, created_at, updated_at, deleted_at, order_no, kindergarten_id, plan_id, plan_snapshot, status, starts_at, expires_at, pay_due_at) VALUES (?, NOW(3), NOW(3), NULL, ?, ?, 1, '{}', ?, ?, ?, ?)",
+		id, fmt.Sprintf("TEST-%d", id), kgID, status, startsAt, expiresAt, startsAt,
 	).Error
 	if err != nil {
 		t.Fatalf("插入订单 %d 失败: %v", id, err)
