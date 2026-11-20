@@ -6,6 +6,7 @@
 <title>任务详情 · 养成星球</title>
 <link rel="stylesheet" href="../../_shared/fonts.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="states.css" />
 </head>
 <body>
 <div class="mp-app" data-od-id="parent-task-detail">
@@ -39,7 +40,7 @@
         <path d="M14.5 5.5 8 12l6.5 6.5" />
       </svg>
     </button>
-    <span class="page-bar__title">乐乐 · 小一班</span>
+    <span class="page-bar__title" id="page-child">乐乐 · 小一班</span>
   </header>
 
   <main class="mp-main" data-od-id="task-detail">
@@ -64,7 +65,8 @@
         </span>
         <h2 class="state-title">已记录</h2>
         <p class="state-copy" id="done-copy">今天 19:20 · 老师会在群里看到</p>
-        <p class="state-note">不需要上传照片或视频。</p>
+        <p class="state-note">不需要上传照片或视频 · 5 分钟内可撤销。</p>
+        <button class="state-undo" type="button" id="undo-complete">记录错了？撤销</button>
       </div>
 
       <div class="light-state" id="state-pending" hidden>
@@ -75,10 +77,17 @@
       </div>
 
       <div class="light-state" id="state-unbound" hidden>
-        <h2 class="state-title">先绑定孩子</h2>
-        <p class="state-copy">绑定后才能记录任务完成情况。</p>
-        <a class="btn-primary" href="../03-bind/index.html" data-od-id="bind-child">绑定孩子</a>
-        <p class="state-note">不是本园家长？<a href="#" id="enroll-link">了解入园</a></p>
+        <h2 class="state-title" id="unbound-title">先绑定孩子</h2>
+        <p class="state-copy" id="unbound-copy">绑定后才能记录任务完成情况。</p>
+        <button class="btn-primary" type="button" id="bind-child" data-od-id="bind-child">绑定孩子</button>
+        <p class="state-note" id="unbound-note">绑定手机号后，选择这次任务记录给哪个孩子。</p>
+        <p class="state-note" id="enroll-note">不是本园家长？<a href="#" id="enroll-link">了解入园</a></p>
+      </div>
+
+      <div class="light-state" id="state-ended" hidden>
+        <h2 class="state-title">任务已结束</h2>
+        <p class="state-copy">截止 11 月 22 日 18:00，未完成不再记录。</p>
+        <p class="state-note">统计已锁定，可以看看其他任务。</p>
       </div>
     </section>
 
@@ -95,6 +104,42 @@
 
     <p class="light-footnote" id="light-footnote">完成记录只用于班级统计。</p>
   </main>
+
+  <section class="viewer-layer" id="viewer-layer" hidden aria-label="查看资源">
+    <header class="viewer-bar">
+      <button class="viewer-back" type="button" id="viewer-close" aria-label="返回任务">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="viewer-title">秋天为什么落叶</span>
+    </header>
+    <div class="viewer-stage">
+      <div class="viewer-screen" aria-hidden="true">
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 7.8v8.4l7-4.2-7-4.2Z"/></svg>
+      </div>
+      <p class="viewer-time"><span id="viewer-elapsed">0:00</span> / 2:30</p>
+      <div class="viewer-track" aria-hidden="true"><span class="viewer-fill" id="viewer-fill"></span></div>
+      <p class="viewer-status" id="viewer-status" hidden>已记录</p>
+      <button class="viewer-play" type="button" id="viewer-play">播放</button>
+      <p class="viewer-note">看到 90% 后自动记录；中途退出会从上次位置继续。</p>
+    </div>
+  </section>
+
+  <div class="sheet-layer" id="child-sheet" hidden>
+    <button class="sheet-scrim" type="button" id="child-close" aria-label="关闭"></button>
+    <section class="child-sheet" role="dialog" aria-modal="true" aria-labelledby="child-title">
+      <p class="sheet-overline">已绑定手机号</p>
+      <h2 class="sheet-title" id="child-title">这次任务记录给谁？</h2>
+      <button class="child-option" type="button" data-child="乐乐" data-class="小一班">
+        <span><strong>乐乐</strong><small>小一班</small></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+      <button class="child-option" type="button" data-child="朵朵" data-class="小二班">
+        <span><strong>朵朵</strong><small>小二班</small></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+      <p class="sheet-note">只影响本次任务；默认孩子可以在「我的」里切换。</p>
+    </section>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

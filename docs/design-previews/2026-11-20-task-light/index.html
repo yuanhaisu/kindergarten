@@ -43,7 +43,7 @@
   <main>
     <p class="eyebrow">2026-11-20 · 亲子任务轻量版 v1</p>
     <h1>发布在群里，完成在小程序</h1>
-    <p class="lead">老师发布任务并分享卡片；家长打开后点一下完成，或看完资源自动记录；老师粘贴群聊文字即可自动标记。v1 不上传任何家长媒体。</p>
+    <p class="lead">老师发布任务并分享卡片；家长打开后点一下完成，或按资源进度记录；老师粘贴群聊文字自动标记。已结束任务锁定，聊天只自动标记明确完成语义。v1 不上传任何家长媒体。</p>
     <hr class="rule">
 
     <h2>家长端</h2>
@@ -60,12 +60,18 @@
         <div class="links">
           <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html">已记录态</a>
           <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=unbound">未绑定</a>
+          <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=child">绑定后选孩子</a>
+          <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=ended">已结束</a>
         </div>
       </article>
       <article class="card">
         <span class="tag">观看型</span>
         <h3><a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=view">秋天为什么落叶</a></h3>
-        <p>打开资源，按观看进度自动记录；外部链接只算已打开。</p>
+        <p>打开资源，看到 90% 才记录；外部链接只算已打开。</p>
+        <div class="links">
+          <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=viewer">资源查看页</a>
+          <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=view-done">看完已记录</a>
+        </div>
       </article>
     </div>
 
@@ -77,19 +83,20 @@
         <p>标题 + 一句提示 + 类型 + 截止时间；观看型补资源。</p>
         <div class="links">
           <a href="teacher/06-task-publish/index.html?state=published">发布后分享面板</a>
+          <a href="teacher/06-task-publish/index.html?state=poster">含小程序码海报</a>
         </div>
       </article>
       <article class="card">
         <span class="tag">统计</span>
         <h3><a href="teacher/07-task-stats/index.html">任务统计</a></h3>
-        <p>粘贴群聊文字，自动识别并标记；不需要逐个点孩子。</p>
+        <p>粘贴群聊文字，只自动标记明确完成语义；收到/好的进入待确认，可点名单修正。</p>
         <div class="links">
           <a href="teacher/07-task-stats/index.html?state=marked">粘贴后的结果</a>
         </div>
       </article>
     </div>
 
-    <p class="note">边界：不做家长上传、不做积分/星星罐、23 班级墙暂不接入；群聊只解析文字，图片/语音不自动识别。</p>
+    <p class="note">边界：不做家长上传、不做积分/星星罐、23 班级墙暂不接入；群聊只解析文字，图片/语音不自动识别。任务到期后锁定，不再接受完成记录。</p>
   </main>
 </body>
 </html>

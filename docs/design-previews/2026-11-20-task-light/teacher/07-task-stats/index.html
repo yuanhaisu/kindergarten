@@ -43,19 +43,22 @@
           <span class="stat-label">聊天记录</span>
         </div>
       </section>
+      <p class="stat-note">「已记录」= 家长自报或聊天记录，不等于老师确认。</p>
 
       <section class="card import-card" aria-labelledby="import-title">
         <div class="card-head">
           <h2 class="card-title" id="import-title">从群聊记录标记</h2>
           <span class="card-meta">粘贴即自动识别</span>
         </div>
-        <p class="import-hint">复制群里的接龙或文字消息，粘贴到下面。系统按孩子名/家长备注自动匹配，不需要逐个点。</p>
-        <textarea class="import-area" id="chat-input" rows="4" aria-label="粘贴群聊记录">辰辰妈妈：已完成
+        <p class="import-hint">复制群里的接龙或文字消息，粘贴到下面。只自动标记明确说「完成 / 做了 / 打卡」的消息；「收到 / 好的」需要你确认。</p>
+        <textarea class="import-area" id="chat-input" rows="6" aria-label="粘贴群聊记录">乐乐妈妈：已完成
 安然爸爸：收到
 果果妈妈：做了
-阳阳爸爸：完成</textarea>
+阳阳爸爸：完成
+辰辰妈妈：完成
+豆豆妈妈：豆豆今天请假，明天补</textarea>
         <button class="import-btn" id="import-btn" type="button">识别并自动标记</button>
-        <p class="import-note">只读取文字；图片/语音消息请老师手动确认。</p>
+        <p class="import-note">只读取文字，不保存原文；图片/语音请点孩子手动调整。</p>
         <div class="import-result" id="import-result" hidden aria-live="polite">
           <span class="result-icon" aria-hidden="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.2 4.2L19 7"/></svg>
@@ -63,6 +66,11 @@
           <span class="result-copy" id="result-copy">已自动标记 4 人</span>
           <button class="result-undo" id="undo-import" type="button">撤销本次</button>
         </div>
+        <div class="review" id="import-review" hidden>
+          <p class="review-title">需要确认</p>
+          <div id="review-rows"></div>
+        </div>
+        <p class="import-unmatched" id="import-unmatched" hidden></p>
       </section>
 
       <section class="roster" aria-labelledby="roster-title">
@@ -112,7 +120,7 @@
             <span class="student-status">未完成</span>
           </div>
         </div>
-        <p class="roster-note">已记录：家长完成 3 · 聊天记录 0 · 未完成 5</p>
+        <p class="roster-note">已记录：家长完成 3 · 聊天记录 0 · 手动 0 · 未完成 5。识别有误？点孩子可手动标记或取消。</p>
       </section>
     </main>
 

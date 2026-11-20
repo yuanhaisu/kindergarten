@@ -1,0 +1,213 @@
+/* 22 补充状态：已结束 / 资源查看 / 选孩子 / 撤销。
+ * 单独成文件，避免 styles.css 越过 20KB 门禁。
+ */
+
+.state-undo {
+  display: inline-block;
+  margin-top: 10px;
+  border: 0;
+  background: none;
+  color: var(--muted-on-surface);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.state-undo:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+}
+
+/* ---------- 资源查看层 ---------- */
+
+.viewer-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.viewer-bar {
+  flex: 0 0 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+
+.viewer-back {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--fg);
+}
+
+.viewer-back:active { opacity: 0.6; }
+
+.viewer-title {
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.viewer-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 20px 30px;
+}
+
+.viewer-screen {
+  flex: 1 1 auto;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(circle at 50% 38%, var(--sage-pale) 0 28%, transparent 28.5%),
+    var(--surface-muted);
+  color: var(--sage-deep);
+}
+
+.viewer-time {
+  margin: 14px 0 0;
+  font-size: var(--text-caption);
+  line-height: 1.4;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer-track {
+  height: 6px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+}
+
+.viewer-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sage-deep);
+}
+
+.viewer-status {
+  margin: 12px 0 0;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  line-height: 1.5;
+  color: var(--sage-deep);
+}
+
+.viewer-play {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 16px;
+  font-weight: var(--weight-semibold);
+}
+
+.viewer-play:disabled {
+  background: var(--surface-muted);
+  color: var(--muted-on-surface);
+}
+
+.viewer-note {
+  margin: 12px 4px 0;
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- 选孩子底部抽屉 ---------- */
+
+.sheet-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(13, 32, 20, 0.36);
+}
+
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+}
+
+.child-sheet {
+  position: relative;
+  width: 100%;
+  padding: 20px 20px 28px;
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+}
+
+.sheet-overline {
+  margin: 0;
+  font-size: var(--text-overline);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-overline);
+  color: var(--muted);
+}
+
+.sheet-title {
+  margin: 8px 0 14px;
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+.child-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--hair);
+  color: var(--fg);
+  text-align: left;
+}
+
+.child-option span {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.child-option strong {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+
+.child-option small {
+  font-size: var(--text-caption);
+  color: var(--muted-on-surface);
+}
+
+.child-option:active { opacity: 0.6; }
+
+.sheet-note {
+  margin: 14px 0 0;
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--muted);
+}
