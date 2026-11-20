@@ -1,49 +1,26 @@
-/* 22 任务详情：待完成 → 展开打卡 → 已提交（等老师回应）。
- * 图片与文字都选填；状态由 ?state=pending / pending-open 驱动，兼容旧的 unopened 参数。
+/* 22 亲子任务 landing：完成型一键完成；观看型按资源进度记录。
+ * ?state=pending | view | view-done | unbound；默认已记录。
+ * 不上传任何家长媒体。
  */
 (function () {
   'use strict';
 
-  var pending = document.getElementById('checkin-pending');
-  var complete = document.getElementById('checkin-complete');
-  var openButton = document.getElementById('checkin-open');
-  var cancelButton = document.getElementById('checkin-cancel');
-  var form = document.getElementById('checkin-form');
-  var submitButton = document.getElementById('checkin-submit');
-  var status = document.getElementById('checkin-status');
-  var hint = document.getElementById('checkin-hint');
-  var currentText = document.getElementById('current-checkin-text');
-  var photo = document.getElementById('checkin-photo');
-  var photoPreview = document.getElementById('checkin-photo-preview');
-  var addPhoto = document.getElementById('checkin-add-photo');
-  var addPhotoLabel = document.getElementById('checkin-add-photo-label');
-  var input = document.getElementById('checkin-input');
-  var count = document.getElementById('checkin-count');
-  var historySection = document.getElementById('submission-history');
-  var historyCount = historySection ? historySection.querySelector('.section-count') : null;
-  var toast = document.getElementById('toast');
+  var stateCard = document.getElementById('state-card');
+  var doneState = document.getElementById('state-done');
+  var pendingState = document.getElementById('state-pending');
+  var unboundState = document.getElementById('state-unbound');
+  var resourceCard = document.getElementById('resource-card');
+  var completeButton = document.getElementById('complete-btn');
+  var resourceButton = document.getElementById('resource-btn');
+  var progress = document.getElementById('resource-progress');
+  var doneCopy = document.getElementById('done-copy');
+  var footnote = document.getElementById('light-footnote');
   var backButton = document.getElementById('back-btn');
+  var enrollLink = document.getElementById('enroll-link');
+  var toast = document.getElementById('toast');
   var toastTimer = 0;
 
-  if (!pending || !complete || !openButton || !form || !submitButton || !status || !hint || !currentText || !historySection || !historyCount) return;
-
-  function setExpanded(value) {
-    openButton.setAttribute('aria-expanded', String(value));
-  }
-
-  function openCheckin() {
-    form.hidden = false;
-    openButton.hidden = true;
-    setExpanded(true);
-    if (input) input.focus();
-  }
-
-  function cancelCheckin() {
-    form.hidden = true;
-    openButton.hidden = false;
-    setExpanded(false);
-    openButton.focus();
-  }
+  if (!stateCard || !doneState || !pendingState || !unboundState || !resourceCard) return;
 
   function showToast(message) {
     if (!toast) return;
@@ -55,70 +32,49 @@
     }, 2200);
   }
 
-  function togglePhoto() {
-    if (!photoPreview || !addPhotoLabel) return;
-    if (photoPreview.querySelector('.photo')) {
-      photoPreview.innerHTML = '';
-      addPhotoLabel.textContent = '添加照片';
-      return;
-    }
-    photoPreview.innerHTML = '<span class="photo photo--sage" role="img" aria-label="已添加的照片"></span>';
-    addPhotoLabel.textContent = '移除照片';
-  }
-
-  function addHistory(note) {
-    var first = historySection.querySelector('.submission');
-    var article = document.createElement('article');
-    article.className = 'submission';
-    article.setAttribute('data-od-id', 'submission-today');
-
-    var head = document.createElement('div');
-    head.className = 'submission-head';
-    var date = document.createElement('span');
-    date.className = 'submission-date';
-    date.textContent = '今天 · 11 月 12 日';
-    var tag = document.createElement('span');
-    tag.className = 'tag tag--pending';
-    tag.textContent = '等老师回应';
-    head.appendChild(date);
-    head.appendChild(tag);
-
-    var noteEl = document.createElement('p');
-    noteEl.className = 'submission-note';
-    noteEl.textContent = note;
-
-    article.appendChild(head);
-    article.appendChild(noteEl);
-    historySection.insertBefore(article, first || null);
-  }
-
-  function submitCheckin() {
-    var note = input ? input.value.trim() : '';
-    var hasPhoto = !!(photoPreview && photoPreview.querySelector('.photo'));
-    var displayNote = note || '（未填写文字）';
-
-    pending.hidden = true;
-    complete.hidden = false;
-    status.textContent = '已提交 · 今天 20:05';
-    hint.textContent = '已提交，等老师回应。';
-    currentText.textContent = displayNote;
-    if (photo) photo.hidden = !hasPhoto;
-
-    addHistory(displayNote);
-    var total = parseInt(historyCount.textContent.replace(/\D/g, ''), 10) || 0;
-    historyCount.textContent = '共 ' + (total + 1) + ' 条';
-    showToast('已提交，等老师回应');
-  }
-
-  openButton.addEventListener('click', openCheckin);
-  if (cancelButton) cancelButton.addEventListener('click', cancelCheckin);
-  if (addPhoto) addPhoto.addEventListener('click', togglePhoto);
-  submitButton.addEventListener('click', submitCheckin);
-
-  if (input && count) {
-    input.addEventListener('input', function () {
-      count.textContent = input.value.length + ' / 200';
+  function showOnly(target) {
+    [doneState, pendingState, unboundState].forEach(function (el) {
+      el.hidden = el !== target;
     });
+  }
+
+  function setViewTask() {
+    var title = document.getElementById('task-title');
+    var lead = document.getElementById('task-lead');
+    var deadline = document.getElementById('task-deadline');
+    var teacher = document.getElementById('task-teacher');
+    var type = document.getElementById('task-type');
+    if (title) title.innerHTML = '一起看秋天落叶';
+    if (lead) lead.textContent = '和乐乐一起看 2 分钟短片，看看秋天树叶为什么会落下来。';
+    if (deadline) deadline.textContent = '截止 11 月 24 日';
+    if (teacher) teacher.textContent = '李老师';
+    if (type) type.textContent = '观看型';
+    stateCard.hidden = true;
+    resourceCard.hidden = false;
+    if (footnote) footnote.textContent = '观看进度会自动记录，不需要上传照片。';
+  }
+
+  function markViewDone() {
+    if (progress) progress.style.width = '100%';
+    if (resourceButton) {
+      resourceButton.textContent = '已记录';
+      resourceButton.disabled = true;
+    }
+    if (footnote) footnote.textContent = '已记录 · 老师会在群里看到。';
+    showToast('已记录，老师会在群里看到');
+  }
+
+  if (completeButton) {
+    completeButton.addEventListener('click', function () {
+      showOnly(doneState);
+      if (doneCopy) doneCopy.textContent = '今天 20:05 · 老师会在群里看到';
+      if (footnote) footnote.textContent = '完成记录只用于班级统计。';
+      showToast('已记录，老师会在群里看到');
+    });
+  }
+
+  if (resourceButton) {
+    resourceButton.addEventListener('click', markViewDone);
   }
 
   if (backButton) {
@@ -127,10 +83,22 @@
     });
   }
 
-  var state = new URLSearchParams(window.location.search).get('state');
-  if (state === 'pending' || state === 'unopened' || state === 'pending-open' || state === 'unopened-open') {
-    complete.hidden = true;
-    pending.hidden = false;
+  if (enrollLink) {
+    enrollLink.addEventListener('click', function (event) {
+      event.preventDefault();
+      showToast('招生咨询请关注园所公众号');
+    });
   }
-  if (state === 'pending-open' || state === 'unopened-open') openCheckin();
+
+  var state = new URLSearchParams(window.location.search).get('state');
+  if (state === 'pending') {
+    showOnly(pendingState);
+    if (footnote) footnote.textContent = '记录后老师会在群里看到。';
+  } else if (state === 'unbound') {
+    showOnly(unboundState);
+    if (footnote) footnote.textContent = '绑定只用于记录任务完成情况。';
+  } else if (state === 'view' || state === 'view-done') {
+    setViewTask();
+    if (state === 'view-done') markViewDone();
+  }
 })();

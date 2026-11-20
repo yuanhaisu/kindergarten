@@ -43,104 +43,57 @@
   </header>
 
   <main class="mp-main" data-od-id="task-detail">
-
     <header class="task-head" data-od-id="task-header">
       <p class="kicker">
         <span class="kicker__label">亲子任务</span>
+        <span class="task-type" id="task-type">完成型</span>
       </p>
-      <h1 class="task-head__title" data-od-id="task-title">给家人讲一件<br />今天开心的事</h1>
-      <p class="task-lead">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。<br /><span class="hl">不用引导答案</span>，他愿意讲就好。</p>
+      <h1 class="task-head__title" id="task-title" data-od-id="task-title">给家人讲一件<br />今天开心的事</h1>
+      <p class="task-lead" id="task-lead">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。<br /><span class="hl">不用引导答案</span>，他愿意讲就好。</p>
       <p class="task-meta">
-        <span>每天</span>
+        <span id="task-deadline">截止 11 月 22 日</span>
         <span class="task-meta__dot" aria-hidden="true"></span>
-        <span>王老师布置</span>
+        <span id="task-teacher">王老师</span>
       </p>
     </header>
 
-    <section class="card" aria-labelledby="requirements-title" data-od-id="requirements-card">
-      <div class="card-head">
-        <h2 class="card-title" id="requirements-title">任务要求</h2>
-      </div>
-      <ul class="requirements" data-od-id="requirements-list">
-        <li>晚饭后问问孩子今天在幼儿园最开心的一件事</li>
-        <li>听孩子讲完，不打断，也不急着评价</li>
-      </ul>
-    </section>
-
-    <section class="card checkin" id="checkin-card" aria-labelledby="checkin-title" data-od-id="checkin-card">
-      <div class="checkin-state" id="checkin-complete">
-        <div class="card-head">
-          <h2 class="card-title" id="checkin-title">今日打卡</h2>
-          <span class="time-left">
-            <span class="time-left__done" id="checkin-status">
-              <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-              </svg>已提交 · 今天 19:20
-            </span>
-          </span>
-        </div>
-        <p class="checkin-hint" id="checkin-hint">已提交，等老师回应。</p>
-        <div class="checkin-content" id="current-checkin">
-          <p class="checkin-text" id="current-checkin-text">今天他主动讲了在幼儿园最开心的事，还说了当时的心情。</p>
-          <div class="photo-grid photo-grid--single" id="checkin-photo" data-od-id="photo-grid">
-            <span class="photo photo--sage" role="img" aria-label="已提交的照片"></span>
-          </div>
-        </div>
+    <section class="card light-state-card" id="state-card" data-od-id="task-state-card">
+      <div class="light-state" id="state-done">
+        <span class="state-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+        </span>
+        <h2 class="state-title">已记录</h2>
+        <p class="state-copy" id="done-copy">今天 19:20 · 老师会在群里看到</p>
+        <p class="state-note">不需要上传照片或视频。</p>
       </div>
 
-      <div class="checkin-state" id="checkin-pending" hidden>
-        <div class="card-head">
-          <h2 class="card-title">今日打卡</h2>
-          <span class="tag tag--pending">待完成</span>
-        </div>
-        <p class="checkin-hint">今天还没打卡。完成任务后，记一句或传一张照片。</p>
-        <button class="btn-primary checkin-cta" type="button" id="checkin-open" aria-expanded="false" aria-controls="checkin-form" data-od-id="checkin-open">去打卡</button>
-        <div class="checkin-form" id="checkin-form" hidden>
-          <textarea class="checkin-input" id="checkin-input" rows="3" maxlength="200" placeholder="写一句今天的记录，老师会看到" aria-label="今天的打卡记录"></textarea>
-          <div class="checkin-meta-row">
-            <span class="checkin-rule">每天可提交一次</span>
-            <span class="checkin-count" id="checkin-count">0 / 200</span>
-          </div>
-          <div class="checkin-media">
-            <div class="checkin-media__preview" id="checkin-photo-preview"></div>
-            <button class="photo-add" type="button" id="checkin-add-photo" aria-label="添加照片，选填" data-od-id="checkin-add-photo">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4.5 8.5h3l1.4-2h6.2l1.4 2h3v9.5a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V8.5Z"/>
-                <circle cx="12" cy="13.2" r="3.2"/>
-              </svg>
-              <span id="checkin-add-photo-label">添加照片</span>
-            </button>
-            <p class="checkin-media__note">选填，写一句也可以</p>
-          </div>
-          <div class="checkin-actions">
-            <button class="checkin-cancel" type="button" id="checkin-cancel">取消</button>
-            <button class="btn-primary checkin-submit" type="button" id="checkin-submit" data-od-id="checkin-submit">提交打卡</button>
-          </div>
-        </div>
+      <div class="light-state" id="state-pending" hidden>
+        <h2 class="state-title">今天完成了吗？</h2>
+        <p class="state-copy">完成后点一下即可，不需要上传照片。</p>
+        <button class="btn-primary" type="button" id="complete-btn" data-od-id="complete-btn">完成了</button>
+        <p class="state-note">也可以直接在群里回复老师。</p>
+      </div>
+
+      <div class="light-state" id="state-unbound" hidden>
+        <h2 class="state-title">先绑定孩子</h2>
+        <p class="state-copy">绑定后才能记录任务完成情况。</p>
+        <a class="btn-primary" href="../03-bind/index.html" data-od-id="bind-child">绑定孩子</a>
+        <p class="state-note">不是本园家长？<a href="#" id="enroll-link">了解入园</a></p>
       </div>
     </section>
 
-    <section class="history" id="submission-history" aria-labelledby="history-title" data-od-id="submission-history">
-      <div class="section-head">
-        <h2 class="section-title" id="history-title">我的提交记录</h2>
-        <span class="section-count">共 1 条</span>
+    <section class="resource-card" id="resource-card" data-od-id="task-resource-card" hidden>
+      <div class="resource-cover" aria-hidden="true">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5v9l8-4.5-8-4.5Z"/><circle cx="12" cy="12" r="9"/></svg>
       </div>
-      <article class="submission" data-od-id="submission-nov-11">
-        <div class="submission-head">
-          <span class="submission-date">11 月 11 日 · 周三</span>
-          <span class="tag tag--sage">老师已回应</span>
-        </div>
-        <p class="submission-note">晚上讲了在滑梯上帮小朋友捡帽子的事，他说下次还要帮忙。</p>
-        <div class="reply" data-od-id="teacher-reply">
-          <span class="avatar" aria-hidden="true">王</span>
-          <div class="reply-body">
-            <span class="reply-name">王老师</span>
-            <p class="reply-text">讲得很完整。明天可以问问他当时的心情，他大概会说得更多。</p>
-          </div>
-        </div>
-      </article>
+      <p class="resource-overline">观看型任务</p>
+      <h2 class="resource-title">秋天为什么落叶</h2>
+      <p class="resource-meta">02:30 · 看完后自动记录</p>
+      <button class="btn-primary" type="button" id="resource-btn" data-od-id="resource-btn">查看资源</button>
+      <div class="resource-progress" aria-hidden="true"><span class="resource-progress-fill" id="resource-progress"></span></div>
     </section>
 
+    <p class="light-footnote" id="light-footnote">完成记录只用于班级统计。</p>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

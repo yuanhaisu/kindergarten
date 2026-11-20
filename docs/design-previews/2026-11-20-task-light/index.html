@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>亲子任务 · 轻量版 v1</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 24px 64px;
+      background: #ece6d7;
+      color: #173220;
+      font: 15px/1.6 "Geist", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    main { max-width: 980px; margin: 0 auto; }
+    .eyebrow { font-size: 11px; letter-spacing: .14em; color: #55616f; }
+    h1 { margin: 8px 0 0; font: 400 38px/1.25 Georgia, "Songti SC", serif; }
+    .lead { max-width: 660px; margin: 14px 0 0; color: #3d5141; }
+    .rule { margin: 24px 0 28px; border: 0; border-top: 1px solid rgba(23,50,32,.16); }
+    h2 { margin: 0 0 12px; font: 400 22px/1.4 Georgia, "Songti SC", serif; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .card {
+      display: block;
+      padding: 18px;
+      border: 1px solid rgba(23,50,32,.12);
+      border-radius: 18px;
+      background: #fff;
+      color: inherit;
+      text-decoration: none;
+    }
+    .card:active { background: #fcfaf4; }
+    .card h3 a { color: inherit; text-decoration: none; }
+    .tag { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #f2edde; font-size: 11px; color: #55616f; }
+    .card h3 { margin: 10px 0 0; font-size: 17px; }
+    .card p { margin: 6px 0 0; color: #5e6b7a; font-size: 13px; }
+    .links { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; }
+    .links a { color: #173220; font-size: 12.5px; text-underline-offset: 3px; }
+    .note { margin-top: 28px; padding: 16px 18px; border-radius: 16px; background: #fcfaf4; color: #55616f; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">2026-11-20 · 亲子任务轻量版 v1</p>
+    <h1>发布在群里，完成在小程序</h1>
+    <p class="lead">老师发布任务并分享卡片；家长打开后点一下完成，或看完资源自动记录；老师粘贴群聊文字即可自动标记。v1 不上传任何家长媒体。</p>
+    <hr class="rule">
+
+    <h2>家长端</h2>
+    <div class="grid">
+      <article class="card">
+        <span class="tag">任务列表</span>
+        <h3><a href="../2026-11-13-parent-dna-opendesign/parent-chosen/21-tasks/index.html">亲子任务</a></h3>
+        <p>只有待完成 / 已记录，没有积分、连续打卡、班级墙。</p>
+      </article>
+      <article class="card">
+        <span class="tag">完成型</span>
+        <h3><a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=pending">今天完成了吗？</a></h3>
+        <p>一键完成，不需要上传照片；也可以直接在群里回复老师。</p>
+        <div class="links">
+          <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html">已记录态</a>
+          <a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=unbound">未绑定</a>
+        </div>
+      </article>
+      <article class="card">
+        <span class="tag">观看型</span>
+        <h3><a href="../2026-11-13-parent-dna-opendesign/parent-chosen/22-tasks-detail/index.html?state=view">秋天为什么落叶</a></h3>
+        <p>打开资源，按观看进度自动记录；外部链接只算已打开。</p>
+      </article>
+    </div>
+
+    <h2 style="margin-top:32px">老师端</h2>
+    <div class="grid">
+      <article class="card">
+        <span class="tag">发布</span>
+        <h3><a href="teacher/06-task-publish/index.html">发布亲子任务</a></h3>
+        <p>标题 + 一句提示 + 类型 + 截止时间；观看型补资源。</p>
+        <div class="links">
+          <a href="teacher/06-task-publish/index.html?state=published">发布后分享面板</a>
+        </div>
+      </article>
+      <article class="card">
+        <span class="tag">统计</span>
+        <h3><a href="teacher/07-task-stats/index.html">任务统计</a></h3>
+        <p>粘贴群聊文字，自动识别并标记；不需要逐个点孩子。</p>
+        <div class="links">
+          <a href="teacher/07-task-stats/index.html?state=marked">粘贴后的结果</a>
+        </div>
+      </article>
+    </div>
+
+    <p class="note">边界：不做家长上传、不做积分/星星罐、23 班级墙暂不接入；群聊只解析文字，图片/语音不自动识别。</p>
+  </main>
+</body>
+</html>

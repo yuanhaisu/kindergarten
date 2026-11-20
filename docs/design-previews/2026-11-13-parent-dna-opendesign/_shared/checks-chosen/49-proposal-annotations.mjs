@@ -13,8 +13,8 @@ export default {
     },
     {
       slug: "21-tasks",
-      must: ["+10 积分", "本周 3 / 3 天"],
-      mustNot: ["积分提案", "提案：需 06-task 恢复 points/streak"],
+      must: ["亲子任务", "已记录", "待完成"],
+      mustNot: ["积分提案", "+10 积分", "本周 3 / 3 天", "班级墙"],
     },
     {
       slug: "24-points",
