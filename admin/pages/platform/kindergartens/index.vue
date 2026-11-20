@@ -1,34 +1,35 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-xl font-semibold text-text-primary">园所</h1>
-        <p class="mt-1 text-xs text-text-muted">一个园所 = 一个租户；开通后立即获得 30 天全功能试用。</p>
+        <h1 class="text-2xl font-semibold tracking-tight text-platform-textPrimary">园所</h1>
+        <p class="mt-1 text-sm text-platform-textMuted">一个园所 = 一个租户；开通后立即获得 30 天全功能试用。</p>
       </div>
-      <div class="flex items-center gap-2">
-        <el-input
-          v-model="keyword"
-          placeholder="搜索园所 / 园长"
-          clearable
-          class="!w-56"
-          @keyup.enter="search"
-          @clear="search"
-        />
-        <el-select v-model="statusFilter" clearable placeholder="全部状态" class="!w-32" @change="search">
-          <el-option label="在营" value="active" />
-          <el-option label="停用" value="suspended" />
-        </el-select>
-        <el-button @click="search">查询</el-button>
-        <el-button type="primary" @click="openCreate">开通园所</el-button>
-      </div>
+      <el-button type="primary" class="self-start" @click="openCreate">开通园所</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="rows" border stripe>
+    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-platform-border bg-platform-card p-4 shadow-platformXs">
+      <el-input
+        v-model="keyword"
+        placeholder="搜索园所 / 园长"
+        clearable
+        class="!w-56"
+        @keyup.enter="search"
+        @clear="search"
+      />
+      <el-select v-model="statusFilter" clearable placeholder="全部状态" class="!w-32" @change="search">
+        <el-option label="在营" value="active" />
+        <el-option label="停用" value="suspended" />
+      </el-select>
+      <el-button @click="search">查询</el-button>
+    </div>
+
+    <el-table v-loading="loading" :data="rows">
       <el-table-column prop="name" label="园所" min-width="160" />
       <el-table-column prop="principal" label="园长" width="110" />
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+          <el-tag :type="row.status === 'active' ? 'success' : ''" size="small">
             {{ row.status === 'active' ? '在营' : '停用' }}
           </el-tag>
         </template>
@@ -45,7 +46,7 @@
       <el-table-column label="最早到期" width="120">
         <template #default="{ row }">{{ formatDate(row.soonest_expire_at) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="170" fixed="right">
+      <el-table-column label="操作" width="170">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDetail(row)">详情</el-button>
           <el-button link :type="row.status === 'active' ? 'danger' : 'success'" @click="toggleStatus(row)">
@@ -55,16 +56,21 @@
       </el-table-column>
     </el-table>
 
-    <el-pagination
-      v-model:current-page="page"
-      :page-size="pageSize"
-      :total="total"
-      layout="total, prev, pager, next"
-      @current-change="load"
-    />
+    <div class="flex justify-end">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50]"
+        :total="total"
+        layout="total, sizes, prev, pager, next"
+        background
+        @current-change="load"
+        @size-change="onSizeChange"
+      />
+    </div>
 
     <el-dialog v-model="createVisible" title="开通园所" width="480px">
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px">
+      <el-form ref="formRef" :model="form" :rules="formRules" label-position="top">
         <el-form-item label="园所名称" prop="name">
           <el-input v-model="form.name" placeholder="如：阳光幼儿园" />
         </el-form-item>
@@ -90,15 +96,15 @@
     <el-drawer v-model="detailVisible" title="园所详情" size="520px">
       <div v-loading="detailLoading" class="space-y-5">
         <div v-if="detail">
-          <div class="text-lg font-semibold text-text-primary">{{ detail.name }}</div>
-          <div class="mt-1 text-sm text-text-muted">
+          <div class="text-lg font-semibold text-platform-textPrimary">{{ detail.name }}</div>
+          <div class="mt-1 text-sm text-platform-textMuted">
             园长 {{ detail.principal }} · 在园 {{ detail.student_count }} 人 ·
             {{ detail.status === 'active' ? '在营' : '停用' }}
           </div>
         </div>
         <div>
-          <div class="mb-2 text-sm font-medium text-text-primary">功能授权</div>
-          <el-table :data="detail?.entitlements || []" size="small" border>
+          <div class="mb-2 text-sm font-medium text-platform-textPrimary">功能授权</div>
+          <el-table :data="detail?.entitlements || []" size="small">
             <el-table-column prop="module_name" label="模块" />
             <el-table-column prop="source" label="来源" width="80" />
             <el-table-column label="状态" width="80">
@@ -112,8 +118,8 @@
           </el-table>
         </div>
         <div>
-          <div class="mb-2 text-sm font-medium text-text-primary">最近订单</div>
-          <el-table :data="detail?.recent_orders || []" size="small" border>
+          <div class="mb-2 text-sm font-medium text-platform-textPrimary">最近订单</div>
+          <el-table :data="detail?.recent_orders || []" size="small">
             <el-table-column prop="order_no" label="订单号" />
             <el-table-column label="应收" width="100" align="right">
               <template #default="{ row }">{{ formatMoney(row.amount_due_cents) }}</template>
@@ -148,7 +154,7 @@ definePageMeta({ layout: 'platform' })
 const keyword = ref('')
 const statusFilter = ref('')
 const page = ref(1)
-const pageSize = 20
+const pageSize = ref(20)
 const total = ref(0)
 const rows = ref<PlatformKindergartenRow[]>([])
 const loading = ref(false)
@@ -195,7 +201,7 @@ async function load() {
     const data = await listKindergartens(
       buildKindergartenListQuery({
         page: page.value,
-        pageSize,
+        pageSize: pageSize.value,
         keyword: keyword.value,
         status: statusFilter.value,
       }),
@@ -211,6 +217,11 @@ async function load() {
 
 /** 关键词或状态筛选变化时回到第 1 页，避免落在不存在的页码上看到空列表。 */
 function search() {
+  page.value = 1
+  void load()
+}
+
+function onSizeChange() {
   page.value = 1
   void load()
 }

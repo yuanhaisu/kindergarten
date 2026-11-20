@@ -1,16 +1,16 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-xl font-semibold text-text-primary">分销商</h1>
-        <p class="mt-1 text-xs text-text-muted">
+        <h1 class="text-2xl font-semibold tracking-tight text-platform-textPrimary">分销商</h1>
+        <p class="mt-1 text-sm text-platform-textMuted">
           分销商不登录系统。佣金比例在订单确认时冻结，之后修改只影响新订单。
         </p>
       </div>
-      <el-button type="primary" @click="openCreate">新增分销商</el-button>
+      <el-button type="primary" class="self-start" @click="openCreate">新增分销商</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="rows" border stripe>
+    <el-table v-loading="loading" :data="rows">
       <el-table-column prop="name" label="名称" min-width="140" />
       <el-table-column prop="contact" label="联系人" width="110" />
       <el-table-column prop="phone" label="电话" width="140" />
@@ -19,12 +19,12 @@
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+          <el-tag :type="row.status === 1 ? 'success' : ''" size="small">
             {{ row.status === 1 ? '启用' : '停用' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="110" fixed="right">
+      <el-table-column label="操作" width="110">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
         </template>
@@ -32,7 +32,7 @@
     </el-table>
 
     <el-dialog v-model="editVisible" :title="editingId ? '编辑分销商' : '新增分销商'" width="460px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>

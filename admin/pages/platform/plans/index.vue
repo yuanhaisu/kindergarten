@@ -1,16 +1,16 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-xl font-semibold text-text-primary">套餐</h1>
-        <p class="mt-1 text-xs text-text-muted">
+        <h1 class="text-2xl font-semibold tracking-tight text-platform-textPrimary">套餐</h1>
+        <p class="mt-1 text-sm text-platform-textMuted">
           套餐目录可以改；已成交订单只认成交时的快照，不会被这里的改动影响。
         </p>
       </div>
-      <el-button type="primary" @click="openCreate">新建套餐</el-button>
+      <el-button type="primary" class="self-start" @click="openCreate">新建套餐</el-button>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-platform-border bg-platform-card p-4 shadow-platformXs">
       <el-select
         v-model="statusFilter"
         placeholder="全部状态"
@@ -23,14 +23,14 @@
       </el-select>
     </div>
 
-    <el-table v-loading="loading" :data="rows" border stripe>
+    <el-table v-loading="loading" :data="rows">
       <el-table-column prop="code" label="编码" width="130" />
       <el-table-column prop="name" label="名称" min-width="140" />
       <el-table-column prop="tier" label="档位" width="70" align="center" />
       <el-table-column label="价格" width="110" align="right">
         <template #default="{ row }">{{ formatMoney(row.price_cents) }}</template>
       </el-table-column>
-      <el-table-column label="周期" width="80" align="center">
+      <el-table-column label="周期" width="100" align="center">
         <template #default="{ row }">{{ row.term_months }} 个月</template>
       </el-table-column>
       <el-table-column label="包含模块" min-width="220">
@@ -42,12 +42,12 @@
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+          <el-tag :type="row.status === 'active' ? 'success' : ''" size="small">
             {{ row.status === 'active' ? '可售' : '已下架' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="170" fixed="right">
+      <el-table-column label="操作" width="170">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="openTiers(row)">档位</el-button>
@@ -69,7 +69,7 @@
     </div>
 
     <el-dialog v-model="editVisible" :title="editingId ? '编辑套餐' : '新建套餐'" width="520px">
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px">
+      <el-form ref="formRef" :model="form" :rules="formRules" label-position="top">
         <el-form-item label="套餐编码" prop="code">
           <el-input v-model="form.code" :disabled="!!editingId" placeholder="如 basic / flagship" />
         </el-form-item>
@@ -81,7 +81,7 @@
         </el-form-item>
         <el-form-item label="价格（元）">
           <el-input-number v-model="priceYuan" :min="0" :precision="2" :step="100" />
-          <span class="ml-2 text-xs text-text-muted">每个计费周期、每所园</span>
+          <span class="ml-2 text-xs text-platform-textMuted">每个计费周期、每所园</span>
         </el-form-item>
         <el-form-item label="周期（月）">
           <el-input-number v-model="form.term_months" :min="1" :max="36" />
@@ -107,7 +107,7 @@
     </el-dialog>
 
     <el-dialog v-model="tiersVisible" title="幼儿数档位" width="620px">
-      <p class="mb-3 text-xs text-text-muted">
+      <p class="mb-3 text-xs text-platform-textMuted">
         按在园幼儿数落入的区间决定价格系数（100 = 不加价）。档位必须从 0 人开始、区间连续，且最高档上限填 0（无上限）。档位变更只影响之后创建的订单。
       </p>
       <el-alert
@@ -118,7 +118,7 @@
         :closable="false"
         class="mb-3"
       />
-      <el-table :data="tiers" size="small" border>
+      <el-table :data="tiers" size="small">
         <el-table-column label="档位" width="80">
           <template #default="{ row }">
             <el-input-number v-model="row.tier" :min="1" :max="9" size="small" controls-position="right" />

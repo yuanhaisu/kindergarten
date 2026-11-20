@@ -1,46 +1,48 @@
 <template>
   <div class="space-y-4">
     <div>
-      <h1 class="text-xl font-semibold text-text-primary">审计</h1>
-      <p class="mt-1 text-xs text-text-muted">
+      <h1 class="text-2xl font-semibold tracking-tight text-platform-textPrimary">审计</h1>
+      <p class="mt-1 text-sm text-platform-textMuted">
         平台操作留痕：只记录成功操作。可按时间范围、操作人、模块与目标园所检索。
       </p>
     </div>
 
-    <SearchBar :show-keyword="false" @search="search" @reset="resetFilters">
-      <el-date-picker
-        v-model="range"
-        type="daterange"
-        value-format="YYYY-MM-DD"
-        unlink-panels
-        start-placeholder="开始日期"
-        end-placeholder="结束日期"
-        range-separator="至"
-        class="!w-80"
-        @change="search"
-      />
-      <el-input
-        v-model="operator"
-        placeholder="操作人（精确匹配）"
-        clearable
-        class="!w-44"
-        @keyup.enter="search"
-        @clear="search"
-      />
-      <el-select v-model="moduleFilter" clearable placeholder="全部模块" class="!w-36" @change="search">
-        <el-option v-for="item in PLATFORM_LOG_MODULES" :key="item.value" :label="item.label" :value="item.value" />
-      </el-select>
-      <el-select
-        v-model="kindergartenID"
-        filterable
-        clearable
-        placeholder="全部园所"
-        class="!w-48"
-        @change="search"
-      >
-        <el-option v-for="kg in kindergartens" :key="kg.id" :label="kg.name" :value="kg.id" />
-      </el-select>
-    </SearchBar>
+    <div class="rounded-xl border border-platform-border bg-platform-card p-4 shadow-platformXs">
+      <SearchBar :show-keyword="false" class="!mb-0" @search="search" @reset="resetFilters">
+        <el-date-picker
+          v-model="range"
+          type="daterange"
+          value-format="YYYY-MM-DD"
+          unlink-panels
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          range-separator="至"
+          class="!w-80"
+          @change="search"
+        />
+        <el-input
+          v-model="operator"
+          placeholder="操作人（精确匹配）"
+          clearable
+          class="!w-44"
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <el-select v-model="moduleFilter" clearable placeholder="全部模块" class="!w-36" @change="search">
+          <el-option v-for="item in PLATFORM_LOG_MODULES" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
+        <el-select
+          v-model="kindergartenID"
+          filterable
+          clearable
+          placeholder="全部园所"
+          class="!w-48"
+          @change="search"
+        >
+          <el-option v-for="kg in kindergartens" :key="kg.id" :label="kg.name" :value="kg.id" />
+        </el-select>
+      </SearchBar>
+    </div>
 
     <el-alert v-if="errorMessage" type="error" show-icon :closable="false" :title="`加载审计记录失败：${errorMessage}`">
       <template #default>
@@ -65,7 +67,7 @@
       <el-table-column label="模块" width="90">
         <template #default="{ row }">{{ moduleLabel(row.module) }}</template>
       </el-table-column>
-      <el-table-column label="动作" width="110">
+      <el-table-column label="动作" width="150" show-overflow-tooltip>
         <template #default="{ row }">
           <span :title="row.action">{{ actionLabel(row.action) }}</span>
         </template>
@@ -78,7 +80,7 @@
       </el-table-column>
       <el-table-column label="请求链路" min-width="230" show-overflow-tooltip>
         <template #default="{ row }">
-          <span class="font-mono text-xs text-text-muted">{{ row.request_id || '—' }}</span>
+          <span class="font-mono text-xs text-platform-textMuted">{{ row.request_id || '—' }}</span>
         </template>
       </el-table-column>
     </DataTable>

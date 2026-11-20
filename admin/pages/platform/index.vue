@@ -1,9 +1,9 @@
 <template>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
+  <div class="space-y-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 class="text-xl font-semibold text-text-primary">运营看板</h1>
-        <p class="mt-1 text-xs text-text-muted">
+        <h1 class="text-2xl font-semibold tracking-tight text-platform-textPrimary">运营看板</h1>
+        <p class="mt-1 text-sm text-platform-textMuted">
           园所、收款与佣金的全局概览；数字为打开页面时的一次聚合快照。
         </p>
       </div>
@@ -15,119 +15,124 @@
       <el-button link type="primary" @click="load">重试</el-button>
     </el-alert>
 
-    <div v-loading="loading && !data">
+    <div v-loading="loading && !data" class="min-h-[240px]">
       <template v-if="data">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
+          <PlatformStatCard
             title="园所总数"
             :value="data.kindergarten_total"
             :icon="OfficeBuilding"
-            icon-bg="bg-blue-50"
-            icon-color="var(--color-brand-primary)"
+            tone="brand"
+            unit="所"
           />
-          <StatCard
+          <PlatformStatCard
             title="在营园所"
             :value="data.kindergarten_active"
             :icon="CircleCheck"
-            icon-bg="bg-emerald-50"
-            icon-color="var(--color-semantic-success)"
+            tone="success"
+            unit="所"
           />
-          <StatCard
+          <PlatformStatCard
             title="30 天内到期"
             :value="data.kindergarten_expiring_30d"
             :icon="AlarmClock"
-            icon-bg="bg-amber-50"
-            icon-color="var(--color-semantic-warning)"
+            tone="warning"
+            unit="所"
           />
-          <StatCard
+          <PlatformStatCard
             title="本月实收"
             :value="formatMoney(data.received_this_month_cents)"
             :icon="Wallet"
-            icon-bg="bg-violet-50"
-            icon-color="var(--color-accent-purple)"
+            tone="brand"
           />
-          <StatCard
+          <PlatformStatCard
             title="未收余额"
             :value="formatMoney(data.outstanding_cents)"
             :icon="Money"
-            icon-bg="bg-rose-50"
-            icon-color="var(--color-semantic-danger)"
+            tone="danger"
           />
-          <StatCard
+          <PlatformStatCard
             title="待结算佣金"
             :value="formatMoney(data.commission_settleable_cents)"
             :icon="Coin"
-            icon-bg="bg-cyan-50"
-            icon-color="var(--color-semantic-info)"
+            tone="info"
           />
         </div>
 
-        <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div class="rounded-lg bg-bg-card p-4 shadow-sm">
-            <div class="flex items-start justify-between">
+        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <section class="overflow-hidden rounded-xl border border-platform-border bg-platform-card shadow-platformXs">
+            <header class="flex items-start justify-between gap-3 border-b border-platform-borderLight px-5 py-4">
               <div>
-                <div class="text-sm font-medium text-text-primary">7 天内到期</div>
-                <div class="mt-0.5 text-xs text-text-muted">需要联系续费的在营园所</div>
+                <h2 class="text-base font-semibold text-platform-textPrimary">7 天内到期</h2>
+                <p class="mt-0.5 text-sm text-platform-textMuted">需要联系续费的在营园所</p>
               </div>
-              <NuxtLink to="/platform/kindergartens" class="text-xs text-brand-primaryDark hover:underline">
+              <NuxtLink
+                to="/platform/kindergartens"
+                class="shrink-0 text-sm font-medium text-platform-brand hover:underline"
+              >
                 园所列表
               </NuxtLink>
-            </div>
+            </header>
             <div
               v-if="!data.expiring_kindergartens.length"
-              class="py-10 text-center text-xs text-text-hint"
+              class="px-5 py-12 text-center text-sm text-platform-textMuted"
             >
               近 7 天没有到期园所
             </div>
-            <ul v-else class="mt-2 divide-y divide-border-subtle">
+            <ul v-else class="divide-y divide-platform-borderLight">
               <li
                 v-for="kg in data.expiring_kindergartens"
                 :key="kg.id"
-                class="flex items-center justify-between gap-3 py-2.5"
+                class="flex items-center justify-between gap-3 px-5 py-3"
               >
                 <div class="min-w-0">
-                  <div class="truncate text-sm text-text-primary">{{ kg.name }}</div>
-                  <div class="mt-0.5 text-xs text-text-muted">到期 {{ formatDate(kg.expires_at) }}</div>
+                  <div class="truncate text-sm font-medium text-platform-textPrimary">{{ kg.name }}</div>
+                  <div class="mt-0.5 text-xs text-platform-textMuted">到期 {{ formatDate(kg.expires_at) }}</div>
                 </div>
-                <el-tag :type="daysLeft(kg.expires_at) <= 3 ? 'danger' : 'warning'" size="small">
+                <el-tag :type="daysLeft(kg.expires_at) <= 3 ? 'danger' : 'warning'">
                   {{ daysLeftLabel(kg.expires_at) }}
                 </el-tag>
               </li>
             </ul>
-          </div>
+          </section>
 
-          <div class="rounded-lg bg-bg-card p-4 shadow-sm">
-            <div class="flex items-start justify-between">
+          <section class="overflow-hidden rounded-xl border border-platform-border bg-platform-card shadow-platformXs">
+            <header class="flex items-start justify-between gap-3 border-b border-platform-borderLight px-5 py-4">
               <div>
-                <div class="text-sm font-medium text-text-primary">可结算佣金</div>
-                <div class="mt-0.5 text-xs text-text-muted">按分销商聚合的当前可结算净额</div>
+                <h2 class="text-base font-semibold text-platform-textPrimary">可结算佣金</h2>
+                <p class="mt-0.5 text-sm text-platform-textMuted">按分销商聚合的当前可结算净额</p>
               </div>
-              <NuxtLink to="/platform/commissions" class="text-xs text-brand-primaryDark hover:underline">
+              <NuxtLink
+                to="/platform/commissions"
+                class="shrink-0 text-sm font-medium text-platform-brand hover:underline"
+              >
                 佣金台账
               </NuxtLink>
-            </div>
+            </header>
             <div
               v-if="!data.settleable_commissions.length"
-              class="py-10 text-center text-xs text-text-hint"
+              class="px-5 py-12 text-center text-sm text-platform-textMuted"
             >
               当前没有可结算佣金
             </div>
-            <ul v-else class="mt-2 divide-y divide-border-subtle">
+            <ul v-else class="divide-y divide-platform-borderLight">
               <li
                 v-for="row in data.settleable_commissions"
                 :key="row.distributor_id"
-                class="flex items-center justify-between gap-3 py-2.5"
+                class="flex items-center justify-between gap-3 px-5 py-3"
               >
                 <div class="min-w-0">
-                  <div class="truncate text-sm text-text-primary">{{ row.distributor_name || '—' }}</div>
-                  <div class="mt-0.5 text-xs text-text-muted">{{ row.commission_count }} 笔佣金</div>
+                  <div class="truncate text-sm font-medium text-platform-textPrimary">
+                    {{ row.distributor_name || '—' }}
+                  </div>
+                  <div class="mt-0.5 text-xs text-platform-textMuted">{{ row.commission_count }} 笔佣金</div>
                 </div>
-                <div class="shrink-0 text-sm font-medium text-text-primary tabular-nums">
+                <div class="shrink-0 text-sm font-semibold tabular-nums text-platform-textPrimary">
                   {{ formatMoney(row.amount_cents) }}
                 </div>
               </li>
             </ul>
-          </div>
+          </section>
         </div>
       </template>
     </div>

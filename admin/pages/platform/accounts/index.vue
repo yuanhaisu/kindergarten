@@ -1,24 +1,27 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-xl font-semibold text-text-primary">平台账号</h1>
-        <p class="mt-1 text-xs text-text-muted">
+        <h1 class="text-2xl font-semibold tracking-tight text-platform-textPrimary">平台账号</h1>
+        <p class="mt-1 text-sm text-platform-textMuted">
           平台账号与园所账号完全隔离。停用或改密后，该账号已登录的会话立即失效。
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <el-button @click="openChangeOwnPassword">修改我的密码</el-button>
         <el-button type="primary" @click="openCreate">新建账号</el-button>
       </div>
     </div>
 
-    <SearchBar
-      v-model:keyword="keyword"
-      keyword-placeholder="搜索用户名 / 姓名"
-      @search="search"
-      @reset="search"
-    />
+    <div class="rounded-xl border border-platform-border bg-platform-card p-4 shadow-platformXs">
+      <SearchBar
+        v-model:keyword="keyword"
+        class="!mb-0"
+        keyword-placeholder="搜索用户名 / 姓名"
+        @search="search"
+        @reset="search"
+      />
+    </div>
 
     <DataTable
       v-model:page="page"
@@ -35,7 +38,7 @@
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 'enabled' ? 'success' : 'info'" size="small">
+          <el-tag :type="row.status === 'enabled' ? 'success' : ''" size="small">
             {{ row.status === 'enabled' ? '启用' : '停用' }}
           </el-tag>
         </template>
@@ -43,7 +46,7 @@
       <el-table-column label="创建时间" width="140">
         <template #default="{ row }">{{ formatDate(row.created_at as string | null) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" width="180">
         <template #default="{ row }">
           <el-button link type="primary" @click="openReset(row as { id: number; username: string })">
             重置密码
@@ -60,7 +63,7 @@
     </DataTable>
 
     <el-dialog v-model="createVisible" title="新建平台账号" width="460px">
-      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="88px">
+      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="createForm.username" maxlength="64" placeholder="登录用户名" />
         </el-form-item>
@@ -83,7 +86,7 @@
     </el-dialog>
 
     <el-dialog v-model="resetVisible" :title="`重置密码：${resetTarget?.username || ''}`" width="460px">
-      <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-width="88px">
+      <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-position="top">
         <el-form-item label="新密码" prop="password">
           <el-input
             v-model="resetForm.password"
@@ -93,7 +96,7 @@
           />
         </el-form-item>
       </el-form>
-      <p class="text-xs text-text-muted">重置成功后该账号已登录的会话立即失效，请把新口令告知对方。</p>
+      <p class="text-xs text-platform-textMuted">重置成功后该账号已登录的会话立即失效，请把新口令告知对方。</p>
       <template #footer>
         <el-button @click="resetVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitReset">重置</el-button>
@@ -101,7 +104,7 @@
     </el-dialog>
 
     <el-dialog v-model="ownVisible" title="修改我的密码" width="460px">
-      <el-form ref="ownFormRef" :model="ownForm" :rules="ownRules" label-width="88px">
+      <el-form ref="ownFormRef" :model="ownForm" :rules="ownRules" label-position="top">
         <el-form-item label="原密码" prop="old_password">
           <el-input v-model="ownForm.old_password" type="password" show-password />
         </el-form-item>
@@ -114,7 +117,7 @@
           />
         </el-form-item>
       </el-form>
-      <p class="text-xs text-text-muted">修改成功后需要重新登录。</p>
+      <p class="text-xs text-platform-textMuted">修改成功后需要重新登录。</p>
       <template #footer>
         <el-button @click="ownVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitOwnPassword">确认修改</el-button>

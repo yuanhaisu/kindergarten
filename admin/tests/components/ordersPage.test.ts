@@ -123,8 +123,9 @@ function buttonLabels(wrapper: ReturnType<typeof mountPage>): string[] {
 
 async function openDetail(wrapper: ReturnType<typeof mountPage>, detail: Record<string, unknown>) {
   getOrder.mockResolvedValue({ ...baseDetail, ...detail })
-  const detailButton = wrapper.findAll('button').find((b) => b.text().trim() === '详情')
-  if (!detailButton) throw new Error('未找到「详情」按钮')
+  // 操作列已移除；订单号本身是详情入口。
+  const detailButton = wrapper.findAll('button').find((b) => b.attributes('title') === '查看订单详情')
+  if (!detailButton) throw new Error('未找到订单详情入口')
   await detailButton.trigger('click')
   await flushPromises()
 }
