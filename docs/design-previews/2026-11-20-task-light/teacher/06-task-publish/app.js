@@ -42,17 +42,36 @@
 
   var shareGroup = document.getElementById('share-group');
   var savePoster = document.getElementById('save-poster');
+  var posterPanel = document.getElementById('poster-panel');
+  var posterTitle = document.getElementById('poster-title');
+  var posterSave = document.getElementById('poster-save');
+  var posterClose = document.getElementById('poster-close');
+
+  function openPoster() {
+    if (posterPanel) posterPanel.hidden = false;
+    if (posterTitle && shareTitle) posterTitle.textContent = shareTitle.textContent;
+  }
+
   if (shareGroup) shareGroup.addEventListener('click', function () { showToast('已打开班级群分享'); });
-  if (savePoster) savePoster.addEventListener('click', function () { showToast('海报已保存'); });
+  if (savePoster) savePoster.addEventListener('click', openPoster);
+  if (posterSave) posterSave.addEventListener('click', function () { showToast('海报已保存到相册（含小程序码）'); });
+  if (posterClose) posterClose.addEventListener('click', function () { if (posterPanel) posterPanel.hidden = true; });
 
   var shareClose = document.getElementById('share-close');
-  if (shareClose) shareClose.addEventListener('click', function () { if (panel) panel.hidden = true; });
+  if (shareClose) {
+    shareClose.addEventListener('click', function () {
+      if (panel) panel.hidden = true;
+      if (posterPanel) posterPanel.hidden = true;
+    });
+  }
 
   var viewStats = document.getElementById('view-stats');
   if (viewStats) viewStats.addEventListener('click', function () { window.location.href = '../07-task-stats/index.html'; });
 
-  if (new URLSearchParams(window.location.search).get('state') === 'published') {
+  var state = new URLSearchParams(window.location.search).get('state');
+  if (state === 'published' || state === 'poster') {
     if (panel) panel.hidden = false;
+    if (state === 'poster') openPoster();
   }
 
   var back = document.getElementById('back');

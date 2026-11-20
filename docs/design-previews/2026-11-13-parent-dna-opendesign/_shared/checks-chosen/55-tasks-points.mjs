@@ -4,8 +4,8 @@
  * 口径（#88 Today's task，2026-11-18）：
  * - 亲子任务 v1（2026-11-20）：01 / 21 / 22 收敛为轻量完成回路。
  * - 01 任务卡：「今天已记录 · 老师会在群里回应」，CTA「看看详情」跳到 22。
- * - 21 列表：今日已记录 + 两条待完成任务；无积分、无连续打卡、无班级墙入口。
- * - 22 landing：完成型一键完成、观看型按资源进度记录、未绑定先绑定；不上传媒体。
+ * - 21 列表：今日已记录 + 两条待完成 + 一条已结束任务；无积分、无连续打卡、无班级墙入口。
+ * - 22 landing：完成型一键完成、观看型按资源进度记录、未绑定先绑定、已结束锁定；不上传媒体。
  * - 23 班级墙：本期不接入任务主路径，页面保留为后续能力。
  * - 24 积分：本期不动；任务不产生积分。
  *
@@ -76,7 +76,20 @@ export default {
       interaction: {
         click: "#resource-btn",
         expectStayOn: "22-tasks-detail",
-        expectVisible: "#resource-btn",
+        expectVisible: "#viewer-layer",
+        expectVisibleText: "秋天为什么落叶",
+      },
+    },
+    // 打开资源不算完成；播放到 90% 后才记录。原型用 6 秒模拟 2:30 播放。
+    {
+      slug: "22-tasks-detail",
+      state: "view",
+      interaction: {
+        steps: [{ click: "#resource-btn" }],
+        click: "#viewer-play",
+        settleMs: 7500,
+        expectStayOn: "22-tasks-detail",
+        expectVisible: "#viewer-status",
         expectVisibleText: "已记录",
       },
     },
@@ -84,7 +97,42 @@ export default {
       slug: "22-tasks-detail",
       state: "unbound",
       within: '[data-od-id="task-state-card"]',
-      must: ["先绑定孩子", "绑定孩子", "了解入园"],
+      must: ["先绑定孩子", "绑定孩子", "了解入园", "选择这次任务记录给哪个孩子"],
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "child",
+      within: "#child-sheet",
+      must: ["这次任务记录给谁？", "乐乐", "朵朵", "只影响本次任务"],
+    },
+    // 绑定后必须选孩子，选完才进入待完成；完成记录落到所选孩子。
+    {
+      slug: "22-tasks-detail",
+      state: "unbound",
+      interaction: {
+        steps: [{ click: "#bind-child" }, { click: '[data-child="朵朵"]' }],
+        click: "#complete-btn",
+        expectStayOn: "22-tasks-detail",
+        expectVisible: "#state-done",
+        expectVisibleText: "已记录",
+      },
+    },
+    // 家长误点后可撤销回到待完成。
+    {
+      slug: "22-tasks-detail",
+      interaction: {
+        click: "#undo-complete",
+        expectStayOn: "22-tasks-detail",
+        expectVisible: "#state-pending",
+        expectVisibleText: "今天完成了吗？",
+      },
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "ended",
+      within: '[data-od-id="task-state-card"]',
+      must: ["任务已结束", "未完成不再记录", "统计已锁定"],
+      mustNot: ["完成了"],
     },
 
     // ---- 23 班级墙：摘要 8 位，没有 18 ----

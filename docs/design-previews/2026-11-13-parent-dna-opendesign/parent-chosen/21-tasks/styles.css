@@ -796,6 +796,15 @@ svg { display: block; }
   color: var(--fg);
 }
 
+.tag--ended {
+  background: var(--surface-muted);
+  color: var(--muted-on-surface);
+}
+
+.task-row--ended .task-title {
+  color: var(--fg-soft);
+}
+
 .light-link {
   color: var(--accent-contrast);
   font-size: var(--text-small);
