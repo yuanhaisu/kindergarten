@@ -5,8 +5,8 @@
  * - 今天 11/12 的任务「给家人讲一件今天开心的事」在 01 / 21 / 22 / 23 是同一状态：已打卡。
  * - 01 任务卡：「今天已打卡 · 等老师点评」，CTA「看看详情」跳到 22。
  * - 21 今日任务卡：「本周 3 / 3 天 · 今天已打卡」；班级墙入口写 8 位。
- * - 22 详情：「已完成」+ 打卡时间；按契约只保留 requirements 说明文字 + 1 张图，
- *   不再有 1/3 步骤、21:00 截止、多图预填与提交入口。
+ * - 22 详情：默认「已提交」+ 打卡时间；不再有积分/连续打卡、1/3 步骤、21:00 截止、
+ *   多图预填与旧提交入口；待完成态用 ?state=pending 展示。
  * - 23 班级墙：8 张卡、无赞/赞数、无「18」、筛选只剩 全部 / 我的；
  *   乐乐卡与 01/21/22 同任务、同打卡时间。
  * - 24 积分：11/12 +10、余额 1245、「查看全部」打开完整一周流水（+45）、「暂不支持兑换」。
@@ -45,12 +45,12 @@ export default {
       mustNot: ["18 位"],
     },
 
-    // ---- 22 任务详情：已完成 / 未打开 + 打卡交互 ----
+    // ---- 22 任务详情：已提交 / 待完成 + 打卡交互 ----
     {
       slug: "22-tasks-detail",
       within: '[data-od-id="checkin-card"]',
-      must: ["已完成", "今天 19:20", "本周 3 / 3 天", "今天已打卡"],
-      mustNot: ["还剩", "21:00"],
+      must: ["已提交", "今天 19:20", "等老师回应"],
+      mustNot: ["本周", "+10", "还剩", "21:00", "待完成"],
     },
     // 契约的 requirements 是说明文字，不是可勾选步骤。
     {
@@ -59,21 +59,21 @@ export default {
       must: ["任务要求", "晚饭后问问孩子今天在幼儿园最开心的一件事", "听孩子讲完，不打断，也不急着评价"],
       mustNot: ["已完成 1 / 3", "步骤"],
     },
-    // 默认已完成态仍不露出提交入口；未打开态才显示「去打卡」。
+    // 默认已提交态仍不露出提交入口；待完成态才显示「去打卡」。
     {
       slug: "22-tasks-detail",
-      mustNot: ["21:00", "打卡步骤", "已完成 1 / 3", "加照片", "提交打卡", "还剩 11 小时", "未打开"],
+      mustNot: ["21:00", "打卡步骤", "已完成 1 / 3", "加照片", "提交打卡", "还剩 11 小时", "未打开", "+10 积分", "本周 3 / 3 天"],
     },
     {
       slug: "22-tasks-detail",
-      state: "unopened",
+      state: "pending",
       within: '[data-od-id="checkin-card"]',
-      must: ["未打开", "本周 2 / 3 天", "去打卡"],
-      mustNot: ["已完成 · 今天 19:20"],
+      must: ["待完成", "去打卡"],
+      mustNot: ["已提交", "本周", "+10"],
     },
     {
       slug: "22-tasks-detail",
-      state: "unopened",
+      state: "pending",
       interaction: {
         click: "#checkin-open",
         expectStayOn: "22-tasks-detail",
@@ -83,13 +83,13 @@ export default {
     // 图片是选填：接口 media_file_id 可选，文字也可以为空；表单提供可选照片。
     {
       slug: "22-tasks-detail",
-      state: "unopened-open",
+      state: "pending-open",
       within: "#checkin-form",
-      must: ["添加照片", "选填，写一句也可以", "提交打卡"],
+      must: ["添加照片", "选填，写一句也可以", "每天可提交一次", "0 / 200", "提交打卡", "取消"],
     },
     {
       slug: "22-tasks-detail",
-      state: "unopened-open",
+      state: "pending-open",
       interaction: {
         click: "#checkin-add-photo",
         expectStayOn: "22-tasks-detail",
@@ -98,13 +98,35 @@ export default {
     },
     {
       slug: "22-tasks-detail",
-      state: "unopened",
+      state: "pending",
+      interaction: {
+        steps: [{ click: "#checkin-open" }, { click: "#checkin-cancel" }],
+        click: "#checkin-card",
+        expectStayOn: "22-tasks-detail",
+        expectHidden: "#checkin-form",
+        expectVisible: "#checkin-open",
+      },
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "pending",
       interaction: {
         steps: [{ click: "#checkin-open" }, { click: "#checkin-submit" }],
         click: "#checkin-card",
         expectStayOn: "22-tasks-detail",
         expectVisible: "#checkin-card",
-        expectVisibleText: "已完成 · 今天 20:05",
+        expectVisibleText: "已提交 · 今天 20:05",
+      },
+    },
+    {
+      slug: "22-tasks-detail",
+      state: "pending",
+      interaction: {
+        steps: [{ click: "#checkin-open" }, { click: "#checkin-submit" }],
+        click: "#submission-history",
+        expectStayOn: "22-tasks-detail",
+        expectVisible: "#submission-history",
+        expectVisibleText: "共 2 条",
       },
     },
 
