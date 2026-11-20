@@ -1,15 +1,13 @@
 /**
- * 票 #91 / T3：今日任务与积分收口（01 / 21 / 22 / 23 / 24）。
+ * 票 #91 / T3：今日任务轻量化（01 / 21 / 22）；23、24 本期不接入。
  *
  * 口径（#88 Today's task，2026-11-18）：
- * - 今天 11/12 的任务「给家人讲一件今天开心的事」在 01 / 21 / 22 / 23 是同一状态：已打卡。
- * - 01 任务卡：「今天已打卡 · 等老师点评」，CTA「看看详情」跳到 22。
- * - 21 今日任务卡：「本周 3 / 3 天 · 今天已打卡」；班级墙入口写 8 位。
- * - 22 详情：默认「已提交」+ 打卡时间；不再有积分/连续打卡、1/3 步骤、21:00 截止、
- *   多图预填与旧提交入口；待完成态用 ?state=pending 展示。
- * - 23 班级墙：8 张卡、无赞/赞数、无「18」、筛选只剩 全部 / 我的；
- *   乐乐卡与 01/21/22 同任务、同打卡时间。
- * - 24 积分：11/12 +10、余额 1245、「查看全部」打开完整一周流水（+45）、「暂不支持兑换」。
+ * - 亲子任务 v1（2026-11-20）：01 / 21 / 22 收敛为轻量完成回路。
+ * - 01 任务卡：「今天已记录 · 老师会在群里回应」，CTA「看看详情」跳到 22。
+ * - 21 列表：今日已记录 + 两条待完成任务；无积分、无连续打卡、无班级墙入口。
+ * - 22 landing：完成型一键完成、观看型按资源进度记录、未绑定先绑定；不上传媒体。
+ * - 23 班级墙：本期不接入任务主路径，页面保留为后续能力。
+ * - 24 积分：本期不动；任务不产生积分。
  *
  * 「8 张卡」用 8 个孩子名字锁定：innerText 不含隐藏节点，只能来自真实卡片。
  */
@@ -19,7 +17,7 @@ export default {
     {
       slug: "01-home",
       within: '[data-od-id="tonight-task"]',
-      must: ["给家人讲一件今天开心的事", "今天已打卡", "等老师点评", "看看详情"],
+      must: ["给家人讲一件今天开心的事", "今天已记录", "老师会在群里回应", "看看详情"],
       mustNot: ["今天还没提交", "去完成"],
     },
     {
@@ -30,104 +28,63 @@ export default {
       },
     },
 
-    // ---- 21 亲子任务：今日任务行已打卡 ----
+    // ---- 21 亲子任务：轻量列表 ----
     {
       slug: "21-tasks",
       within: '[data-od-id="today-card"]',
-      must: ["给家人讲一件今天开心的事", "本周 3 / 3 天", "今天已打卡", "已打卡"],
-      mustNot: ["今天还没打卡", "去打卡"],
+      must: ["给家人讲一件今天开心的事", "已记录", "看看"],
+      mustNot: ["本周", "+10", "已打卡"],
     },
-    // 班级墙入口与 23 的摘要同一口径。
     {
       slug: "21-tasks",
-      within: '[data-od-id="class-wall-row"]',
-      must: ["8 位小朋友"],
-      mustNot: ["18 位"],
+      within: '[data-od-id="task-list"]',
+      must: ["一起看秋天落叶", "待完成", "睡前整理书包"],
+      mustNot: ["积分", "班级墙"],
     },
 
-    // ---- 22 任务详情：已提交 / 待完成 + 打卡交互 ----
+    // ---- 22 亲子任务 landing：完成型 / 观看型 / 绑定 ----
     {
       slug: "22-tasks-detail",
-      within: '[data-od-id="checkin-card"]',
-      must: ["已提交", "今天 19:20", "等老师回应"],
-      mustNot: ["本周", "+10", "还剩", "21:00", "待完成"],
-    },
-    // 契约的 requirements 是说明文字，不是可勾选步骤。
-    {
-      slug: "22-tasks-detail",
-      within: '[data-od-id="requirements-card"]',
-      must: ["任务要求", "晚饭后问问孩子今天在幼儿园最开心的一件事", "听孩子讲完，不打断，也不急着评价"],
-      mustNot: ["已完成 1 / 3", "步骤"],
-    },
-    // 默认已提交态仍不露出提交入口；待完成态才显示「去打卡」。
-    {
-      slug: "22-tasks-detail",
-      mustNot: ["21:00", "打卡步骤", "已完成 1 / 3", "加照片", "提交打卡", "还剩 11 小时", "未打开", "+10 积分", "本周 3 / 3 天"],
+      within: '[data-od-id="task-state-card"]',
+      must: ["已记录", "不需要上传照片或视频"],
     },
     {
       slug: "22-tasks-detail",
       state: "pending",
-      within: '[data-od-id="checkin-card"]',
-      must: ["待完成", "去打卡"],
-      mustNot: ["已提交", "本周", "+10"],
+      within: '[data-od-id="task-state-card"]',
+      must: ["今天完成了吗？", "完成了", "也可以直接在群里回复老师"],
     },
     {
       slug: "22-tasks-detail",
       state: "pending",
       interaction: {
-        click: "#checkin-open",
+        click: "#complete-btn",
         expectStayOn: "22-tasks-detail",
-        expectVisible: "#checkin-form",
+        expectVisible: "#state-done",
+        expectVisibleText: "已记录",
       },
     },
-    // 图片是选填：接口 media_file_id 可选，文字也可以为空；表单提供可选照片。
     {
       slug: "22-tasks-detail",
-      state: "pending-open",
-      within: "#checkin-form",
-      must: ["添加照片", "选填，写一句也可以", "每天可提交一次", "0 / 200", "提交打卡", "取消"],
+      state: "view",
+      within: '[data-od-id="task-resource-card"]',
+      must: ["观看型任务", "秋天为什么落叶", "查看资源"],
     },
     {
       slug: "22-tasks-detail",
-      state: "pending-open",
+      state: "view",
       interaction: {
-        click: "#checkin-add-photo",
+        click: "#resource-btn",
         expectStayOn: "22-tasks-detail",
-        expectVisible: "#checkin-photo-preview .photo",
+        expectVisible: "#resource-btn",
+        expectVisibleText: "已记录",
       },
     },
     {
       slug: "22-tasks-detail",
-      state: "pending",
-      interaction: {
-        steps: [{ click: "#checkin-open" }, { click: "#checkin-cancel" }],
-        click: "#checkin-card",
-        expectStayOn: "22-tasks-detail",
-        expectHidden: "#checkin-form",
-        expectVisible: "#checkin-open",
-      },
-    },
-    {
-      slug: "22-tasks-detail",
-      state: "pending",
-      interaction: {
-        steps: [{ click: "#checkin-open" }, { click: "#checkin-submit" }],
-        click: "#checkin-card",
-        expectStayOn: "22-tasks-detail",
-        expectVisible: "#checkin-card",
-        expectVisibleText: "已提交 · 今天 20:05",
-      },
-    },
-    {
-      slug: "22-tasks-detail",
-      state: "pending",
-      interaction: {
-        steps: [{ click: "#checkin-open" }, { click: "#checkin-submit" }],
-        click: "#submission-history",
-        expectStayOn: "22-tasks-detail",
-        expectVisible: "#submission-history",
-        expectVisibleText: "共 2 条",
-      },
+      state: "unbound",
+      within: '[data-od-id="task-state-card"]',
+      must: ["先绑定孩子", "绑定孩子", "了解入园"],
     },
 
     // ---- 23 班级墙：摘要 8 位，没有 18 ----

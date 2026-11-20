@@ -780,3 +780,48 @@ svg { display: block; }
 
 /* #88: proposal annotations are review-only; keep them out of the user-facing prototype. */
 .proposal-tag,.proposal-note,.proposal-flag,.proposal-mark,.tag--proposal,.phase-tag,.phase-note,.phase-inline,.spec-note,.notice-foot__proposal{display:none!important}
+
+/* ---------- 轻任务列表 ---------- */
+.page-head { display: block; }
+
+.head-sub {
+  margin: 4px 0 0;
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.tag--done {
+  background: var(--sage-pale);
+  color: var(--fg);
+}
+
+.light-link {
+  color: var(--accent-contrast);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.task-row {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.task-row .task-body {
+  display: block;
+}
+
+.task-chevron {
+  flex: none;
+  color: var(--icon-soft);
+}
+
+.light-note {
+  margin: 20px 2px 0;
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--muted);
+}

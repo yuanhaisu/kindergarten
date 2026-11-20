@@ -1,0 +1,464 @@
+/* Teacher surfaces — DNA v1 · 顺手优先
+   Shared tokens and components for the 2026-11-20 task-light batch (copied from the 2026-11-19 validation batch).
+   Same paper and ink as the parent end; higher density, less display type.
+   Per-page CSS owns layout only. Do not fork these tokens per page. */
+
+:root {
+  /* surfaces */
+  --bone: #ece6d7;
+  --bone-cool: #f2edde;
+  --card: #ffffff;
+  --card-soft: #fcfaf4;
+  --canvas-light: #f4f0e7;   /* chosen teacher canvas, 2026-11-19 */
+
+  /* ink */
+  --pine: #173220;
+  --pine-ink: #0d2014;
+  --ink-mid: #3d5141;
+  --ink-soft-text: #55616f;   /* secondary text on bone — 5.07:1 */
+  --ink-soft-card: #5e6b7a;   /* secondary text on white — 5.44:1 */
+  --icon-soft: #728173;       /* icons, dividers, >=24px text only */
+
+  /* accents — signals, not narration */
+  --sage: #8da386;
+  --sage-deep: #5c7359;
+  --sage-soft: #cfd9c5;
+  --marigold: #ddb14a;
+  --marigold-soft: #efd485;
+  --terracotta: #c36540;      /* "needs a teacher action" only */
+  --terracotta-deep: #a04d2a;
+  --terracotta-soft: #e5bca1;
+  --orange: #f97316;          /* attention dot / badge only */
+
+  --hair: rgba(23, 50, 32, 0.1);
+  --hair-strong: rgba(23, 50, 32, 0.22);
+  --hair-soft: rgba(23, 50, 32, 0.07);
+
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-card: 18px;
+  --r-lg: 24px;
+  --r-pill: 999px;
+
+  --shadow-dock: 0 -10px 24px -18px rgba(23, 50, 32, 0.35);
+  --shadow-float: 0 10px 30px -14px rgba(23, 50, 32, 0.35);
+
+  --serif: "Instrument Serif", "Noto Serif SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+  --sans: "Geist", "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+
+  /* type — teacher scale, not the parent display scale */
+  --t-h1: 22px;
+  --t-h2: 16px;
+  --t-body: 14px;
+  --t-small: 12.5px;
+  --t-caption: 11.5px;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-press: 150ms;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #ded6c6;
+  color: var(--pine);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection { background: rgba(141, 163, 134, 0.35); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- phone shell ---------- */
+
+.mp-app {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  overflow: hidden;
+  border-radius: 44px;
+  background: var(--bone);
+  box-shadow: 0 28px 60px -22px rgba(0, 0, 0, 0.45);
+}
+
+/* Teacher pages use class="mp-app mp-app--light" for the chosen canvas. */
+.mp-app--light { background: var(--canvas-light); }
+
+.mp-statusbar {
+  height: 44px;
+  padding: 14px 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--pine);
+}
+
+.mp-status-icons { display: flex; gap: 5px; align-items: center; }
+
+.mp-main {
+  height: calc(844px - 44px);
+  overflow-y: auto;
+  padding: 6px 16px 132px;
+  scrollbar-width: none;
+}
+.mp-main::-webkit-scrollbar { display: none; }
+
+/* ---------- type ---------- */
+
+.page-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: var(--t-h1);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--pine);
+}
+
+.block-title {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--pine);
+}
+
+.block-meta {
+  font-size: var(--t-caption);
+  color: var(--ink-soft-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted { color: var(--ink-soft-text); }
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------- surfaces ---------- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-card);
+}
+
+.card-soft { background: var(--card-soft); }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.between { justify-content: space-between; }
+
+/* ---------- controls ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--pine);
+  font-family: var(--sans);
+  font-size: var(--t-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--motion-press) var(--ease-out),
+              background-color var(--motion-press) var(--ease-out);
+}
+
+.btn:active { opacity: 0.82; }
+
+.btn--primary { background: var(--pine); color: var(--bone); }
+.btn--ghost { background: var(--card); border: 1px solid var(--hair-strong); }
+.btn--block { width: 100%; }
+
+.btn:disabled,
+.btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.link-btn {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-mid);
+  font-family: var(--sans);
+  font-size: var(--t-small);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.link-btn::after {
+  content: "";
+  position: absolute;
+  inset: -15px -8px;
+}
+
+.link-btn:active { opacity: 0.7; }
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-mid);
+  cursor: pointer;
+}
+.icon-btn::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+.icon-btn { position: relative; }
+.icon-btn:active { background: rgba(23, 50, 32, 0.06); }
+
+/* chips: visually 32, hit area 44 */
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--ink-mid);
+  font-family: var(--sans);
+  font-size: var(--t-small);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--motion-press) var(--ease-out),
+              border-color var(--motion-press) var(--ease-out);
+}
+
+.chip::after {
+  content: "";
+  position: absolute;
+  inset: -6px -2px;
+}
+
+.chip.is-on {
+  background: var(--sage-soft);
+  border-color: transparent;
+  color: var(--pine);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- photo placeholder ---------- */
+
+.photo-img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background:
+    radial-gradient(120px 90px at 22% 20%, rgba(221, 177, 74, 0.55), transparent 70%),
+    radial-gradient(170px 130px at 82% 82%, rgba(141, 163, 134, 0.9), transparent 72%),
+    radial-gradient(120px 90px at 78% 18%, rgba(195, 101, 64, 0.28), transparent 70%),
+    var(--card-soft);
+}
+
+/* ---------- floating nav + capture ---------- */
+
+.mp-nav {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  height: 64px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 6px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  box-shadow: var(--shadow-float);
+}
+
+.mp-nav a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: var(--r-pill);
+  color: var(--ink-soft-text);
+  text-decoration: none;
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.mp-nav a svg { color: var(--icon-soft); }
+
+.mp-nav a.is-on {
+  color: var(--pine);
+  background: rgba(141, 163, 134, 0.22);
+}
+
+.mp-nav a.is-on svg { color: var(--pine); }
+
+.mp-nav svg { width: 21px; height: 21px; }
+
+.fab {
+  position: absolute;
+  right: 20px;
+  bottom: 92px;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pine);
+  color: var(--terracotta-soft);
+  box-shadow: var(--shadow-float);
+  cursor: pointer;
+  transition: transform var(--motion-press) var(--ease-out);
+}
+
+.fab:active { transform: scale(0.96); }
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 2px solid var(--sage-deep);
+  border-radius: 50%;
+  background: var(--marigold-soft);
+  color: var(--pine);
+  font-family: var(--serif);
+  font-size: 18px;
+}
+
+/* ---------- photo label shared by teacher pages ---------- */
+
+.photo-sample {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  background: rgba(23, 50, 32, 0.55);
+  color: rgba(236, 230, 215, 0.92);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+/* ---------- bottom dock ---------- */
+
+.dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bone);
+  border-top: 1px solid var(--hair);
+  box-shadow: var(--shadow-dock);
+}
+
+.dock-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.dock-scope {
+  font-size: var(--t-caption);
+  color: var(--ink-mid);
+  font-weight: 500;
+}
+
+.dock-hint {
+  font-size: var(--t-caption);
+  color: var(--ink-soft-text);
+}
+
+.dock-note {
+  font-size: var(--t-caption);
+  color: var(--ink-soft-text);
+}
+
+/* ---------- demo toast ---------- */
+
+.demo-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 124px;
+  z-index: 5;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  background: rgba(23, 50, 32, 0.92);
+  color: var(--bone);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(6px);
+  transition: opacity var(--motion-press) var(--ease-out),
+              transform var(--motion-press) var(--ease-out);
+}
+
+.demo-toast.is-on {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- focus, selection, caret ---------- */
+
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+textarea, input {
+  caret-color: var(--pine);
+}

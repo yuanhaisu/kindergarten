@@ -15,7 +15,6 @@ export default {
     { slug: "17-pickup", interaction: { click: '[data-od-id="pickup-manage-entry"]', expectNavigateTo: "19-pickup-authorized" } },
     { slug: "19-pickup-authorized", interaction: { click: '[data-od-id="add-authorizer"]', expectNavigateTo: "20-pickup-authorized-create" } },
     { slug: "21-tasks", interaction: { click: ".task-row", expectNavigateTo: "22-tasks-detail" } },
-    { slug: "21-tasks", interaction: { click: '[data-od-id="class-wall-row"]', expectNavigateTo: "23-tasks-wall" } },
     { slug: "31-profile", interaction: { click: '[data-od-id="service-growth-report"]', expectNavigateTo: "14-growth-report" } },
     { slug: "31-profile", interaction: { click: '[data-od-id="service-achievements"]', expectNavigateTo: "24-points" } },
     { slug: "31-profile", interaction: { click: '[data-od-id="setting-messages"]', expectNavigateTo: "30-messages" } },
