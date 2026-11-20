@@ -22,7 +22,7 @@
 | 环境 | 用户名 | 显示名 | 状态 | 用途 / 备注 | 口令位置 |
 |---|---|---|---|---|---|
 | staging | `ops` | — | 启用 | 平台运营主账号 | 负责人保管 |
-| staging | `stg_verify_ops` | Staging Verify | 启用 | 2026-11-19 平台控制台 TailAdmin 验收临时账号；验收完成后应停用 | 本地口令文件 |
+| staging | `stg_verify_ops` | Staging Verify | 停用 | 2026-11-19 平台控制台 TailAdmin 验收临时账号；2026-11-20 验收完成后已停用 | 本地口令文件 |
 | staging | `stg_ip_probe` | — | 停用 | 审计真实 IP / `request_id` 探针，已验证后停用 | 无（已停用） |
 | local | `it_verify_ops` | — | 停用 | 本地平台控制台集成验证账号 | 本地口令文件 / 用命令重置 |
 
@@ -94,3 +94,4 @@ SETADMIN_PASSWORD='<口令>' go run ./cmd/setadmin -phone 13800000000 -kg 7
 | 日期 | 变更 |
 |---|---|
 | 2026-11-20 | 建立台账；登记 staging `stg_verify_ops`、`stg_ip_probe` 与本地 `it_verify_ops`；记录 `test-admin` Basic Auth 已关闭 |
+| 2026-11-20 | 验收完成，停用 `stg_verify_ops`（登录返回 401）；`ops` 保持启用 |
