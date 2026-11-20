@@ -7,6 +7,18 @@
 
     <div v-loading="loading" class="space-y-4">
       <el-alert
+        v-if="expiringNotice"
+        type="warning"
+        :closable="false"
+        show-icon
+        title="套餐即将到期"
+      >
+        <template #default>
+          套餐将于 {{ expiringNotice.expiresOn }} 到期，请联系平台方续费。
+        </template>
+      </el-alert>
+
+      <el-alert
         v-if="view && view.state !== 'active'"
         :type="view.state === 'grace' ? 'warning' : 'error'"
         :closable="false"
@@ -69,9 +81,15 @@
 
 <script setup lang="ts">
 import { getSubscription, type SubscriptionView } from '~/api/platform/subscription'
+import { expiringSoon } from '~/utils/entitlement'
 
 const loading = ref(false)
 const view = ref<SubscriptionView | null>(null)
+
+// 只在整体在期时提示；宽限期与已降级由下方既有的到期提示承担，避免叠加。
+const expiringNotice = computed(() =>
+  view.value?.state === 'active' ? expiringSoon(view.value.expires_at) : null,
+)
 
 async function load() {
   loading.value = true

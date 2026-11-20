@@ -8,7 +8,7 @@
 import { computed, ref } from "vue"
 import { onShow } from "@dcloudio/uni-app"
 import { clearAuth, getUser, setUser } from "@/utils/auth"
-import { hasModule, loadEntitlements } from "@/utils/entitlements"
+import { entitlementExpiresAt, expiryHintText, hasModule, loadEntitlements } from "@/utils/entitlements"
 import { ensureLogin } from "@/utils/login"
 import { fetchCurrentUser } from "@/api/auth"
 import { syncTabBar } from "@/utils/tabbar"
@@ -86,6 +86,12 @@ const visibleMenuGroups = computed(() => {
       items: group.items.filter((item) => !item.module || hasModule(item.module))
     }))
     .filter((group) => group.items.length > 0)
+})
+
+// ADR-0018 #1：到期提示（在期 30 天内 + 已到期），口径与老师端共用 utils 里的 helper。
+const expiryHint = computed(() => {
+  entVersion.value
+  return expiryHintText(entitlementExpiresAt())
 })
 
 const user = ref(getUser())
@@ -242,6 +248,11 @@ onShow(() => {
             <text class="identity-school">{{ displaySchool }}</text>
           </view>
         </view>
+      </view>
+
+      <!-- 到期前 30 天转付费提示（ADR-0018 #1） -->
+      <view v-if="expiryHint" class="expiry-banner">
+        <text class="expiry-banner-text">{{ expiryHint }}</text>
       </view>
 
       <!-- 菜单 · 加载骨架 -->
@@ -505,6 +516,21 @@ onShow(() => {
 
 .state-btn[disabled] {
   opacity: 0.6;
+}
+
+// ---- 到期提示 ------------------------------------------------
+
+.expiry-banner {
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-md;
+  background: $color-semantic-warning-bg;
+}
+
+.expiry-banner-text {
+  font-size: $typography-font-size-sm;
+  color: $color-semantic-warning;
+  line-height: 1.5;
 }
 
 // ---- 四组菜单 ------------------------------------------------

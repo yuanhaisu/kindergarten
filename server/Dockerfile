@@ -9,7 +9,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
     CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
         -o /out/kindergarten-migrate ./cmd/migrate && \
     CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
-        -o /out/kindergarten-seedbase ./cmd/seedbase
+        -o /out/kindergarten-seedbase ./cmd/seedbase && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
+        -o /out/kindergarten-platformadmin ./cmd/platformadmin && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
+        -o /out/kindergarten-setadmin ./cmd/setadmin
 
 # 运行阶段：只带二进制、Casbin 策略与 CA/时区数据。
 FROM alpine:3.20
@@ -20,6 +24,8 @@ WORKDIR /app
 COPY --from=build /out/kindergarten-server /app/kindergarten-server
 COPY --from=build /out/kindergarten-migrate /app/kindergarten-migrate
 COPY --from=build /out/kindergarten-seedbase /app/kindergarten-seedbase
+COPY --from=build /out/kindergarten-platformadmin /app/kindergarten-platformadmin
+COPY --from=build /out/kindergarten-setadmin /app/kindergarten-setadmin
 COPY configs/rbac_model.conf configs/rbac_policy.csv /app/configs/
 
 EXPOSE 8080

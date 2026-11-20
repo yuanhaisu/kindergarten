@@ -80,9 +80,12 @@
 ```
 GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compose
                               ├→ admin 静态包 ──→ /opt/kg/<env>/admin
-                              ├→ website 静态包 ─→ /opt/kg/<env>/website
                               └→ miniprogram-ci ─→ 微信后台（体验版）
+
+Website Release（手动） ─→ website 静态包 ──SSH──→ /opt/kg/<env>/website
 ```
+
+> 官网不随 tag release 发布：唯一自动发布路径是 `website-release.yml`（ADR-0019）。
 
 ## 3. 环境矩阵
 
@@ -194,8 +197,8 @@ GitHub tag ─→ GitHub Actions ─→ ACR 镜像 ──SSH──→ ECS compos
 3. **构建**：
    - 后端：多阶段构建静态镜像，推送 ACR（tag + commit sha）。
    - 管理端：`nuxt generate` 产出静态包。
-   - 官网：`nuxt generate` 产出静态包。
    - 小程序：分别构建测试包（`test-api`）与生产包（`api`）。
+   - 官网不在此列：由手动触发的 `website-release.yml` 单独构建、门禁与部署（ADR-0019）。
 4. **自动发预发**：渲染配置 → `goose up` → `compose pull/up` → `/ready` 探测 → 冒烟。
 5. **人工批准**：GitHub Environment `production` 配置 required reviewer。
 6. **发生产**：RDS 快照 → `goose up` → 部署 → `/ready` 探测 → 冒烟；失败切回上一个镜像 tag。

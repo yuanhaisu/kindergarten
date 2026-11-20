@@ -3,7 +3,7 @@ import { computed, ref } from "vue"
 import { onLoad, onPullDownRefresh, onShareAppMessage } from "@dcloudio/uni-app"
 import { fetchTeacherHomeOverview, fetchTeacherTodos, updateTeacherTodoAction } from "@/api/teacher-home"
 import { ensureLogin } from "@/utils/login"
-import { entitlementExpiresAt, hasModule, loadEntitlements } from "@/utils/entitlements"
+import { entitlementExpiresAt, expiryHintText, hasModule, loadEntitlements } from "@/utils/entitlements"
 import { goTab } from "@/utils/nav"
 import BottomNav from "@/components/BottomNav.vue"
 import PageShell from "@/components/PageShell.vue"
@@ -54,14 +54,10 @@ const visibleQuickActions = computed(() => {
   return quickActions.filter((action) => hasModule(action.module))
 })
 
+// ADR-0018 #1：到期提示（在期 30 天内 + 已到期），口径与家长端共用 utils 里的 helper。
 const expiryHint = computed(() => {
   entVersion.value
-  const at = entitlementExpiresAt()
-  if (!at) return ""
-  const days = Math.ceil((new Date(at).getTime() - Date.now()) / 86400000)
-  if (days < 0) return "套餐已到期，部分功能仅可查看，请联系园所管理员续费"
-  if (days <= 7) return `套餐将于 ${String(at).slice(0, 10)} 到期，请提醒园所管理员续费`
-  return ""
+  return expiryHintText(entitlementExpiresAt())
 })
 
 const todoIconMap = {

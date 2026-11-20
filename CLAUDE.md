@@ -370,6 +370,7 @@ pkg/
 | `platformadmin` | 创建或重置首个平台方账号 | 写入 |
 | `redactlogs` | 回填脱敏 `operation_logs.detail` 中的手机号/身份证 | 写入 |
 | `albumretention` | **硬删**软删已满 180 天的相册及关联（支持 `-dry-run`） | ⚠️ **破坏性** |
+| `extendtrials` | 存量 trial 授权批量延长（默认 dry-run；`-apply` / `-revert` 需 `EXTENDTRIALS_ALLOW=1` 与 `-operator`） | 写入（显式 opt-in） |
 | `dietfood`   | 导入食物成分 CSV 到平台预置食物库（kg=0） | 写入 |
 | `facecheck`  | 腾讯云人脸识别接入验证与质量实测 | 读取/诊断 |
 | `seedgrowthfeed` | 灌入家长端成长 feed 验证所需最小数据 | 写入 |
@@ -388,11 +389,12 @@ pkg/
 > 🔒 **演示/破坏性命令必须显式 opt-in**（`server/cmd/internal/seedutil`）：
 > `seedgrowth` / `seedgrowthfeed` / `seedattendance` / `seedleaves` / `seedpickup` / `seedqrcode` 需要 `SEED_ALLOW_DEMO=1`；
 > `refreshtasks` / `initcheck` 还需 `SEED_ALLOW_DESTRUCTIVE=1`（`seedgrowthfeed -reset` 同）。
+> `extendtrials` 的 `-apply` / `-revert` 需要 `EXTENDTRIALS_ALLOW=1` 且必须带 `-operator`；不传 `-apply` / `-revert` 时默认 dry-run。
 > 拒绝时打印脱敏后的目标库 `host:port/db`。所有 `cmd` 命令统一按 `CONFIG_PATH`（未设置回落 `configs/app.ini`）解析配置。
 
 > ⚠️ 表中 `chkgrowth` / `fixpwd` / `linkwx` / `openid` / `refreshtasks` 及多数 `seed*` 是**针对特定 kindergarten（id=4）或硬编码手机号的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、手机号、任务文案全部写死。**不要在生产库上执行。**
 >
-> `migrate` / `seedbase` / `schemadump` / `setadmin` / `platformadmin` / `albumretention` / `mktoken` 是环境级工具，可按需复用；仍需遵守各自的权限与备份要求。
+> `migrate` / `seedbase` / `schemadump` / `setadmin` / `platformadmin` / `albumretention` / `extendtrials` / `mktoken` 是环境级工具，可按需复用；仍需遵守各自的权限与备份要求。
 >
 > ⚠️ 破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部用户、角色与园所**；`albumretention` 会**硬删**到期相册及关联。前两者只适用于一次性测试库自检。
 >
@@ -737,6 +739,8 @@ single-context: `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agent
 ### Parallel development
 
 多个会话并行时，一个会话 = 一个分支 = 一个独立 worktree；主工作树始终留在 `main` 且保持干净。纪律与脚本见 `docs/agents/parallel-development.md`。
+
+并行 worker **只推分支、开 PR**，不执行 `gh pr merge`、不执行 `worktree-clean.ps1`。合并由 **Grok bot** 执行；合并成功后 bot 立即运行 `scripts/worktree-clean.ps1 -Pr <PR号> -DeleteRemote` 回收 worktree。bot 每天早晨运行 `scripts/worktree-audit.ps1` 生成残余报告，**非合并项的清理必须经属主确认**。bot 的例行任务、合并门禁、PR 评论反馈与确认协议见 `docs/agents/worktree-bot-routine.md`。
 
 ### CI / 合并等待
 
