@@ -12,11 +12,14 @@
 export const ADMIN_TOKEN_COOKIE = 'admin_token'
 export const ADMIN_REFRESH_COOKIE = 'admin_refresh'
 export const PLATFORM_TOKEN_COOKIE = 'platform_token'
+export const PLATFORM_REFRESH_COOKIE = 'platform_refresh'
 
 /** admin_token 有效期 7 天（沿用既有行为） */
 export const ADMIN_TOKEN_MAX_AGE = 60 * 60 * 24 * 7
-/** platform_token 有效期 24 小时（沿用既有行为） */
+/** platform_token 有效期 24 小时；访问凭证本身约 15 分钟，过期后由续期刷新 */
 export const PLATFORM_TOKEN_MAX_AGE = 60 * 60 * 24
+/** platform_refresh 有效期 7 天，与服务端 jwt.refresh_ttl_day 对齐 */
+export const PLATFORM_REFRESH_MAX_AGE = 60 * 60 * 24 * 7
 
 /** 不随环境变化的 Cookie 默认属性 */
 const authCookieDefaults = { sameSite: 'lax' } as const

@@ -51,6 +51,9 @@ pnpm-debug.log*
 # 人脸实测样本（含儿童照片，敏感，禁止提交）
 assets/face-img/
 
+# 测试账号口令台账（本地私有，禁止提交；清单见 docs/runbooks/test-accounts.md）
+test-accounts.local.md
+
 # Ruflo local secrets and runtime data
 .env
 .claude-flow/data/

@@ -1,18 +1,33 @@
 package handler
 
 import (
+	"context"
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/log"
+	"kindergarten-server/pkg/pagination"
 	"kindergarten-server/pkg/response"
 )
+
+// PlatformEpochStore 暴露平台账号的凭证失效存储给路由装配。
+// 与 TokenRevoker 同理，走 Handler 以避免改 NewRouter 签名。
+func (h *Handler) PlatformEpochStore() auth.PlatformEpochStore {
+	if h == nil || h.platformSvc == nil {
+		return nil
+	}
+	return h.platformSvc.EpochStore()
+}
 
 // operatorOf 取当前平台账号的用户名，用于操作留痕。
 func (h *Handler) operatorOf(c *gin.Context) string {
@@ -46,11 +61,54 @@ func (h *Handler) PlatformLogin(c *gin.Context) {
 	response.OK(c, res)
 }
 
-// PlatformLogout 注销平台会话。
+// PlatformRefresh 用续期凭证换取新的访问凭证；旧续期凭证在服务端轮换。
+// 此端点不接受访问凭证（access 已过期的客户端才能续期），因此挂在
+// platformG 之外，与登录同组。
+func (h *Handler) PlatformRefresh(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, "请求参数不合法")
+		return
+	}
+	res, err := h.platformSvc.Refresh(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		if errors.Is(err, service.ErrPlatformAuthStorageUnavailable) {
+			log.L(c.Request.Context()).Error("platform refresh storage unavailable", "err", err)
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
+			return
+		}
+		// 不存在、已消费、已吊销、账号停用与 epoch 失效统一为 401，
+		// 不向客户端区分具体原因。
+		response.ErrUnauthorized(c, "续期凭证无效或已过期，请重新登录")
+		return
+	}
+	response.OK(c, res)
+}
+
+// PlatformLogout 注销平台会话：吊销访问凭证，并在请求带 refresh_token 时
+// 一并删除/吊销平台续期凭证（design D5）。
 func (h *Handler) PlatformLogout(c *gin.Context) {
-	auth := c.GetHeader("Authorization")
-	if token, ok := strings.CutPrefix(auth, "Bearer "); ok {
-		_ = h.authSvc.Logout(c.Request.Context(), token, "")
+	token, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
+	if !ok {
+		response.ErrUnauthorized(c, "缺少认证凭证")
+		return
+	}
+
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	// 允许空 body：客户端只发 `{}`，没带续期凭证时仍应吊销访问凭证。
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+
+	if err := h.platformSvc.Logout(c.Request.Context(), token, req.RefreshToken); err != nil {
+		log.L(c.Request.Context()).Error("platform logout revoke failed", "err", err)
+		response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
+		return
 	}
 	response.OK(c, gin.H{})
 }
@@ -141,12 +199,41 @@ func (h *Handler) PlatformSetKindergartenStatus(c *gin.Context) {
 	response.OK(c, gin.H{"updated_at": time.Now().Format(time.RFC3339)})
 }
 
-// PlatformListLogs 平台操作留痕。
+// PlatformListLogs 平台操作留痕。支持按时间范围、操作人、模块与目标园所检索。
 func (h *Handler) PlatformListLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	module := c.Query("module")
-	list, total, err := h.platformSvc.ListLogs(c.Request.Context(), page, pageSize, module)
+	f := repository.PlatformLogFilter{
+		Operator: c.Query("operator"),
+		Module:   c.Query("module"),
+		Page:     page,
+		PageSize: pageSize,
+	}
+	if v := c.Query("kindergarten_id"); v != "" {
+		id, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			response.ErrValidation(c, "园所 ID 不合法")
+			return
+		}
+		f.KindergartenID = id
+	}
+	if v := c.Query("from"); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			response.ErrValidation(c, "from 时间格式不合法：需要 RFC 3339")
+			return
+		}
+		f.From = &t
+	}
+	if v := c.Query("to"); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			response.ErrValidation(c, "to 时间格式不合法：需要 RFC 3339")
+			return
+		}
+		f.To = &t
+	}
+	list, total, err := h.platformSvc.ListLogs(c.Request.Context(), f)
 	if err != nil {
 		response.ErrInternal(c, "获取操作记录失败")
 		return
@@ -156,18 +243,31 @@ func (h *Handler) PlatformListLogs(c *gin.Context) {
 
 // ==================== 套餐目录 ====================
 
+// planCatalogService 是套餐目录 handler 依赖的行为集合。抽成接口让分页契约
+// 可以用测试替身验证，不必为了跑 handler 测试而连开发库。
+type planCatalogService interface {
+	ListModules() []service.ModuleDef
+	ListPlans(ctx context.Context, status string, pq pagination.Query) ([]service.PlanRow, int64, int, int, error)
+	Create(ctx context.Context, req service.PlanRequest, operator, ip string) (*domain.Plan, error)
+	Update(ctx context.Context, id uint64, req service.PlanRequest, operator, ip string) error
+	ListTiers(ctx context.Context, planID uint64) ([]domain.PlanTier, error)
+	ReplaceTiers(ctx context.Context, planID uint64, tiers []domain.PlanTier, operator, ip string) error
+}
+
 func (h *Handler) PlatformListModules(c *gin.Context) {
 	response.OK(c, gin.H{"list": h.planSvc.ListModules()})
 }
 
 func (h *Handler) PlatformListPlans(c *gin.Context) {
-	status := c.Query("status")
-	list, total, err := h.planSvc.ListPlans(c.Request.Context(), status)
+	var q pagination.Query
+	_ = c.ShouldBindQuery(&q)
+	q.Normalize()
+	list, total, page, pageSize, err := h.planSvc.ListPlans(c.Request.Context(), c.Query("status"), q)
 	if err != nil {
 		response.ErrInternal(c, "获取套餐列表失败")
 		return
 	}
-	response.OKList(c, list, total, 1, int(total))
+	response.OKList(c, list, total, page, pageSize)
 }
 
 func (h *Handler) PlatformCreatePlan(c *gin.Context) {

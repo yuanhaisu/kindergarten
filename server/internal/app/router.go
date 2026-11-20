@@ -3,21 +3,28 @@ package app
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 
 	"kindergarten-server/internal/auth"
+	"kindergarten-server/internal/config"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
 )
 
-func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker) (*gin.Engine, error) {
+func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker, trustedProxies TrustedProxies) (*gin.Engine, error) {
 	r := gin.New()
-	// 只在宿主机 Nginx 反代（127.0.0.1 / ::1）时信任 X-Forwarded-For；
-	// 直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
-	if err := r.SetTrustedProxies([]string{"127.0.0.1", "::1"}); err != nil {
+	// 只采信配置里的反向代理来源的 X-Forwarded-For（[server] trusted_proxies，
+	// 默认本机回环）；直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
+	proxies := []string(trustedProxies)
+	if len(proxies) == 0 {
+		proxies = append([]string(nil), config.DefaultTrustedProxies...)
+	}
+	if err := r.SetTrustedProxies(proxies); err != nil {
 		return nil, fmt.Errorf("configure trusted proxies: %w", err)
 	}
 	r.Use(gin.Recovery())
@@ -40,12 +47,22 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
 		// 平台方：独立信任域，凭证 scope=platform（ADR-0014）。
-		v1.POST("/platform/auth/login", h.inner.PlatformLogin)
+		// 登录与续期是唯一不需要平台凭证的两个端点；登录额外挂
+		// 10 次/分钟/IP 的严格限流，Redis 故障时失败关闭（design D5）。
+		platformLoginLimit := middleware.RateLimit(h.rdb, "platform_login", 10, time.Minute)
+		v1.POST("/platform/auth/login", platformLoginLimit, h.inner.PlatformLogin)
+		v1.POST("/platform/auth/refresh", h.inner.PlatformRefresh)
 		platformG := v1.Group("/platform")
-		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker))
+		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker, h.platformEpochs))
 		platformG.Use(middleware.CasbinRBAC(e))
 		{
 			platformG.POST("/auth/logout", h.inner.PlatformLogout)
+			platformG.GET("/dashboard", h.inner.PlatformDashboard)
+			platformG.GET("/admins", h.inner.PlatformListAccounts)
+			platformG.POST("/admins", h.inner.PlatformCreateAccount)
+			platformG.PUT("/admins/me/password", h.inner.PlatformChangeOwnPassword)
+			platformG.PATCH("/admins/:id/status", h.inner.PlatformSetAccountStatus)
+			platformG.POST("/admins/:id/reset-password", h.inner.PlatformResetAccountPassword)
 			platformG.GET("/kindergartens", h.inner.PlatformListKindergartens)
 			platformG.POST("/kindergartens", h.inner.PlatformOnboardKindergarten)
 			platformG.GET("/kindergartens/:id", h.inner.PlatformGetKindergarten)
@@ -727,6 +744,10 @@ type AppHandler struct {
 	inner *handler.Handler
 	// tokenRevoker 由认证服务提供，AuthJWT 用它校验登出黑名单；两处必须是同一份存储。
 	tokenRevoker auth.TokenRevoker
+	// platformEpochs 由平台服务提供，PlatformAuth 用它拒绝改密/停用前的旧凭证。
+	platformEpochs auth.PlatformEpochStore
+	// rdb 用于平台登录限流；nil 时限流失败关闭（design D5）。
+	rdb *redis.Client
 	// corsOrigins 为空表示不向任何跨域来源下发 CORS 头。
 	corsOrigins []string
 	// ready 为 nil 时 /ready 视为就绪（仅用于不装配基础设施的单元测试）。
@@ -736,7 +757,10 @@ type AppHandler struct {
 }
 
 func NewAppHandler(h *handler.Handler) *AppHandler {
-	return &AppHandler{inner: h, tokenRevoker: h.TokenRevoker(), consent: h.AuthService()}
+	return &AppHandler{
+		inner: h, tokenRevoker: h.TokenRevoker(),
+		platformEpochs: h.PlatformEpochStore(), consent: h.AuthService(),
+	}
 }
 
 // WithCORS 设置允许跨域的来源；由装配层从配置传入。

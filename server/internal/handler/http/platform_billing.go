@@ -24,14 +24,55 @@ func (h *Handler) PlatformListOrders(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	kgID, _ := strconv.ParseUint(c.Query("kindergarten_id"), 10, 64)
 	distID, _ := strconv.ParseUint(c.Query("distributor_id"), 10, 64)
+	dateFrom, dateTo, err := parseOrderDateRange(c.Query("start_date"), c.Query("end_date"))
+	if err != nil {
+		response.ErrValidation(c, "时间范围不合法，格式为 YYYY-MM-DD 且结束日期不早于开始日期")
+		return
+	}
+	outstandingOnly := false
+	if raw := c.Query("outstanding_only"); raw != "" {
+		outstandingOnly, err = strconv.ParseBool(raw)
+		if err != nil {
+			response.ErrValidation(c, "outstanding_only 只能为 true 或 false")
+			return
+		}
+	}
 	rows, total, err := h.orderSvc.List(c.Request.Context(), repository.OrderFilter{
-		KindergartenID: kgID, Status: c.Query("status"), DistributorID: distID, Page: page, PageSize: pageSize,
+		KindergartenID: kgID, Status: c.Query("status"), DistributorID: distID,
+		OrderNo:  strings.TrimSpace(c.Query("order_no")),
+		DateFrom: dateFrom, DateTo: dateTo, OutstandingOnly: outstandingOnly,
+		Page: page, PageSize: pageSize,
 	})
 	if err != nil {
 		response.ErrInternal(c, "获取订单列表失败")
 		return
 	}
 	response.OKList(c, rows, total, page, pageSize)
+}
+
+// parseOrderDateRange 把 YYYY-MM-DD 的闭区间转成左闭右开区间。
+// end_date 含当日，因此加一天；两个参数都可单独省略。
+func parseOrderDateRange(start, end string) (*time.Time, *time.Time, error) {
+	var from, to *time.Time
+	if start != "" {
+		t, err := time.ParseInLocation("2006-01-02", start, time.Local)
+		if err != nil {
+			return nil, nil, err
+		}
+		from = &t
+	}
+	if end != "" {
+		t, err := time.ParseInLocation("2006-01-02", end, time.Local)
+		if err != nil {
+			return nil, nil, err
+		}
+		t = t.AddDate(0, 0, 1)
+		to = &t
+	}
+	if from != nil && to != nil && !to.After(*from) {
+		return nil, nil, fmt.Errorf("INVALID_DATE_RANGE")
+	}
+	return from, to, nil
 }
 
 func (h *Handler) PlatformCreateOrder(c *gin.Context) {
@@ -51,7 +92,7 @@ func (h *Handler) PlatformCreateOrder(c *gin.Context) {
 		"id": order.ID, "order_no": order.OrderNo, "status": order.Status,
 		"amount_due_cents": order.AmountDueCents, "student_tier": order.StudentTier,
 		"starts_at": order.StartsAt.Format("2006-01-02"), "expires_at": order.ExpiresAt.Format("2006-01-02"),
-		"plan_snapshot": snap,
+		"pay_due_at": order.PayDueAt.Format("2006-01-02"), "plan_snapshot": snap,
 	})
 }
 
@@ -69,6 +110,8 @@ func writeCreateOrderError(c *gin.Context, err error) {
 		response.ErrNotFound(c, "分销商不存在")
 	case errors.Is(err, service.ErrTierCoverageUnresolved):
 		response.ErrValidation(c, "按在园幼儿数无法落入该套餐的任何档位：档位配置不完整，请先修正套餐档位后重试")
+	case errors.Is(err, service.ErrInvalidPayDueAt):
+		response.ErrValidation(c, "付款到期日格式不合法，应为 YYYY-MM-DD")
 	default:
 		response.ErrInternal(c, "创建订单失败")
 	}
@@ -98,16 +141,15 @@ func (h *Handler) PlatformConfirmOrder(c *gin.Context) {
 		response.ErrValidation(c, "订单 ID 不合法")
 		return
 	}
-	order, ents, err := h.orderSvc.Confirm(c.Request.Context(), id, h.operatorOf(c), c.ClientIP())
+	// reason 只在净收款为零时必填：它就是信用开通的审计理由（design D2）。
+	// 空 body 仍是合法请求，由 service 按实收金额判断是否缺理由。
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	order, ents, err := h.orderSvc.Confirm(c.Request.Context(), id, req.Reason, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		switch err.Error() {
-		case "ORDER_NOT_FOUND":
-			response.ErrNotFound(c, "订单不存在")
-		case "ORDER_ALREADY_CONFIRMED", "ORDER_CANCELLED":
-			response.ErrConflict(c, "订单状态不允许确认")
-		default:
-			response.ErrInternal(c, "确认订单失败")
-		}
+		writeConfirmOrderError(c, err)
 		return
 	}
 	items := make([]gin.H, 0, len(ents))
@@ -118,6 +160,28 @@ func (h *Handler) PlatformConfirmOrder(c *gin.Context) {
 		})
 	}
 	response.OK(c, gin.H{"id": order.ID, "status": order.Status, "entitlements": items})
+}
+
+// writeConfirmOrderError 是确认失败的唯一映射出口。
+// 零收款确认缺理由必须返回可识别的 422，管理端据此提示补充理由，
+// 而不是让运营把 500 当成系统故障。
+func writeConfirmOrderError(c *gin.Context, err error) {
+	if errors.Is(err, service.ErrCreditReasonRequired) {
+		response.ErrValidation(c, "零收款确认必须填写信用开通理由")
+		return
+	}
+	if errors.Is(err, service.ErrCreditReasonTooLong) {
+		response.ErrValidation(c, "信用开通理由不能超过 255 个字符")
+		return
+	}
+	switch err.Error() {
+	case "ORDER_NOT_FOUND":
+		response.ErrNotFound(c, "订单不存在")
+	case "ORDER_ALREADY_CONFIRMED", "ORDER_CANCELLED":
+		response.ErrConflict(c, "订单状态不允许确认")
+	default:
+		response.ErrInternal(c, "确认订单失败")
+	}
 }
 
 func (h *Handler) PlatformCancelOrder(c *gin.Context) {

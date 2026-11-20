@@ -53,6 +53,33 @@ export default {
     "bg": {
       "page": "#F1F5F9",
       "card": "#FFFFFF"
+    },
+    "platform": {
+      "brand": "#465FFF",
+      "brandDark": "#3641F5",
+      "brandBg": "#ECF3FF",
+      "brandBorder": "#C2D6FF",
+      "bg": "#F9FAFB",
+      "card": "#FFFFFF",
+      "border": "#E4E7EC",
+      "borderLight": "#F2F4F7",
+      "textPrimary": "#101828",
+      "textBody": "#344054",
+      "textMuted": "#667085",
+      "textHint": "#98A2B3",
+      "success": "#12B76A",
+      "successStrong": "#027A48",
+      "successBg": "#ECFDF3",
+      "warning": "#F79009",
+      "warningStrong": "#B54708",
+      "warningBg": "#FFFAEB",
+      "danger": "#F04438",
+      "dangerStrong": "#B42318",
+      "dangerBg": "#FEF3F2",
+      "info": "#0BA5EC",
+      "infoStrong": "#026AA2",
+      "infoBg": "#F0F9FF",
+      "overlay": "rgba(16, 24, 40, 0.5)"
     }
   },
   "borderRadius": {
@@ -66,7 +93,10 @@ export default {
   "boxShadow": {
     "sm": "0 1px 2px rgba(120, 53, 15, 0.04), 0 2px 8px rgba(120, 53, 15, 0.04)",
     "md": "0 2px 4px rgba(120, 53, 15, 0.05), 0 6px 16px rgba(120, 53, 15, 0.06)",
-    "lg": "0 4px 8px rgba(120, 53, 15, 0.06), 0 16px 32px rgba(120, 53, 15, 0.10)"
+    "lg": "0 4px 8px rgba(120, 53, 15, 0.06), 0 16px 32px rgba(120, 53, 15, 0.10)",
+    "platformXs": "0 1px 2px rgba(16, 24, 40, 0.05)",
+    "platformSm": "0 1px 3px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06)",
+    "platformLg": "0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03)"
   },
   "fontFamily": {
     "sans": [
@@ -108,6 +138,8 @@ export default {
     "4xl": "48px",
     "5xl": "64px",
     "6xl": "96px",
-    "7xl": "128px"
+    "7xl": "128px",
+    "sidebar": "290px",
+    "sidebarCollapsed": "90px"
   }
 } as const;

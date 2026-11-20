@@ -12,6 +12,8 @@
 
 ```json
 // GET /platform/orders?page=1&page_size=20&kindergarten_id=7&status=partial
+// 可选筛选：order_no（分号匹配）、start_date / end_date（按订单创建时间，含当日）、
+// outstanding_only（只看未收清）、distributor_id
 
 // Response
 {
@@ -28,6 +30,8 @@
       "status": "partial",
       "starts_at": "2026-11-06",
       "expires_at": "2027-05-05",
+      "pay_due_at": "2026-11-06",
+      "credit_granted": true,
       "distributor_name": "华东渠道",
       "created_at": "2026-11-06T10:00:00+08:00"
     }
@@ -38,8 +42,20 @@
 }
 ```
 
-> `amount_paid_cents` 由收款登记推导，不允许人工设置。
-> `status` 由应收与已收推导；到期且未收清时变为 `expired`。
+> `amount_paid_cents` 由收款登记推导（单次聚合，排除已软删收款），不允许人工设置。
+> `status` 读时推导：取消 → 已收清 → 已过付款到期日（`expired`）→ 部分收款 → 待收款。
+> `pay_due_at` 是付款到期日，独立于服务期 `starts_at` / `expires_at`；缺省等于服务起始日。
+> `credit_granted` 标记该订单是零收款确认的信用开通；信用开通理由**只在详情返回**，列表不返回。
+>
+> **筛选参数**
+>
+> | 参数 | 说明 |
+> | --- | --- |
+> | `status` | `unpaid` / `partial` / `paid` / `expired` / `cancelled`。`expired` 匹配「已过付款到期日且未收清」的订单（含存储状态为 `expired` 的记录）；`unpaid` / `partial` 只匹配尚未过付款到期日的订单 |
+> | `order_no` | 订单号模糊匹配 |
+> | `start_date` / `end_date` | 订单创建时间的日期范围，`YYYY-MM-DD`，`end_date` 含当日；非法格式或结束早于开始返回 422 |
+> | `outstanding_only` | `true` 时仅返回未收清且未取消的订单 |
+> | `kindergarten_id` / `distributor_id` | 精确匹配 |
 
 ---
 
@@ -53,6 +69,7 @@
   "kindergarten_id": 7,
   "plan_id": 2,
   "distributor_id": 3,
+  "pay_due_at": "2026-11-20",
   "invoice_info": {
     "title": "阳光幼儿园",
     "tax_no": "91330100XXXXXXXX"
@@ -68,13 +85,16 @@
   "student_tier": 2,
   "starts_at": "2026-11-06",
   "expires_at": "2027-05-05",
+  "pay_due_at": "2026-11-20",
   "plan_snapshot": { "module_codes": ["attendance", "notice", "pickup", "growth", "diet"] }
 }
 ```
 
 > 创建时读取该园当前在园幼儿数确定档位；档位在确认时冻结，之后人数变动不改档位。
 > `plan_snapshot` 在创建时冻结，套餐目录的后续修改不影响该订单。
+> `pay_due_at` 可选，`YYYY-MM-DD`；缺省等于服务起始日，服务端保证非空。
 > `invoice_info` 可缺省，缺失不阻断确认。
+> `pay_due_at` 格式不合法返回 422。
 >
 > **档位无法匹配（422）**：套餐配置了档位，但按当前在园幼儿数落不到任何一档（通常是历史遗留的
 > 不完整配置，例如区间有缺口或最高档有界）。此时不生成订单，返回：
@@ -107,6 +127,9 @@
   "amount_paid_cents": 100000,
   "starts_at": "2026-11-06",
   "expires_at": "2027-05-05",
+  "pay_due_at": "2026-11-06",
+  "credit_granted": true,
+  "credit_reason": "合同已签署，对公转账到账后补录",
   "plan_snapshot": { "module_codes": ["attendance", "notice", "pickup", "growth", "diet"] },
   "distributor": { "id": 3, "name": "华东渠道", "commission_rate": 10 },
   "invoice_info": { "title": "阳光幼儿园", "tax_no": "91330100XXXXXXXX" },
@@ -135,13 +158,19 @@
 }
 ```
 
+> `credit_reason` 只在详情返回：非信用开通订单为 `false` / 空串。
+> 列表只暴露 `credit_granted` 标记，不返回理由。
+
 ---
 
 ## POST `/platform/orders/:id/confirm`
 
-> 确认订单：冻结快照、发放模块授权
+> 确认订单：冻结快照、发放模块授权。净收款为零时确认即「信用开通」，必须填写理由。
 
 ```json
+// Request（净收款为零时 reason 必填；有实收时可省略）
+{ "reason": "合同已签署，对公转账到账后补录" }
+
 // Response
 {
   "id": 12,
@@ -152,8 +181,24 @@
 }
 ```
 
+> 净收款为零（`已收净额 = 正数收款 − 负数退款 = 0`）时，`reason` 必填；缺失返回 422
+> `CREDIT_REASON_REQUIRED`。确认成功后订单被标记 `credit_granted=true` 并保存 `credit_reason`
+> （理由只在详情返回），同时写入审计（操作账号、时间与理由）。
+> 有实收的确认不需要理由，也不会被标记为信用开通。
+> 信用开通不改金额口径：应收全额仍计入未收余额。
+> `reason` 超过 255 个字符返回 422 `CREDIT_REASON_TOO_LONG`。
 > 确认后不得再修改分销商归因。
 > 取消订单会收回其产生且尚未到期的授权。
+
+**零收款确认缺理由（422）**
+
+```json
+{
+  "code": 42200,
+  "message": "零收款确认必须填写信用开通理由",
+  "data": null
+}
+```
 
 ---
 

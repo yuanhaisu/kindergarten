@@ -23,7 +23,7 @@
       "status": "active",
       "student_count": 180,
       "active_plan_name": "旗舰版",
-      "soonest_expire_at": "2027-06-30",
+      "soonest_expire_at": "2027-06-30T23:59:59+08:00",
       "created_at": "2026-11-06T10:00:00+08:00",
       "tier_max_students": 150,
       "over_limit": true
@@ -35,6 +35,7 @@
 }
 ```
 
+> `keyword` 匹配园所名称或园长姓名；`status` 取 `active` / `suspended`，省略表示全部。
 > `student_count` 为当前在园幼儿数，用于判断档位是否超限。
 > `soonest_expire_at` 取该园所有在期授权中最早的到期日；无授权时为 `null`。
 > `tier_max_students` 来自最近一张生效订单的快照（0 = 无上限）；`over_limit` 为
@@ -61,10 +62,13 @@
   "kindergarten_id": 7,
   "admin_phone": "13800001234",
   "must_change_password": true,
-  "trial_expires_at": "2026-12-06"
+  "trial_expires_at": "2026-12-06T10:00:00+08:00"
 }
 ```
 
+> `admin_password` 为园长初始口令，**必填**：由开通操作人填写并交付园长。
+> 口令至少 8 位，且须同时包含大写字母、小写字母和数字；不合规返回 `422`。
+> 手机号须匹配 `^1[3-9]\d{9}$`，不合规返回 `422`。
 > 开通即发放 30 天全功能试用（来源 `trial`）。
 > 手机号已存在账号（全平台查重）时返回 `409`，园所不被创建。
 > `admin_password` 必填，由平台运营在开通时设置：至少 8 位，且同时包含大写字母、小写字母和数字；
@@ -89,8 +93,8 @@
       "module_code": "growth",
       "module_name": "成长记录",
       "source": "trial",
-      "starts_at": "2026-11-06",
-      "expires_at": "2026-12-06",
+      "starts_at": "2026-11-06T10:00:00+08:00",
+      "expires_at": "2026-12-06T10:00:00+08:00",
       "state": "active"
     }
   ],

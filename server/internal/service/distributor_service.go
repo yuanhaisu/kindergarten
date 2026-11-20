@@ -15,7 +15,7 @@ type DistributorService struct {
 	comm   *repository.CommissionRepo
 	orders *repository.OrderRepo
 	kgs    *repository.KindergartenRepo
-	logs   *repository.PlatformLogRepo
+	logs   PlatformAuditWriter
 }
 
 func NewDistributorService(
@@ -23,7 +23,7 @@ func NewDistributorService(
 	comm *repository.CommissionRepo,
 	orders *repository.OrderRepo,
 	kgs *repository.KindergartenRepo,
-	logs *repository.PlatformLogRepo,
+	logs PlatformAuditWriter,
 ) *DistributorService {
 	return &DistributorService{dists: dists, comm: comm, orders: orders, kgs: kgs, logs: logs}
 }
@@ -52,7 +52,8 @@ func (s *DistributorService) CreateDistributor(ctx context.Context, req Distribu
 	if err := s.dists.Create(ctx, d); err != nil {
 		return nil, err
 	}
-	_ = s.logs.Create(ctx, &domain.PlatformOperationLog{
+	// 分销商名册变更属 best-effort：审计故障只记日志，不阻断名册维护。
+	writeAuditBestEffort(ctx, s.logs, &domain.PlatformOperationLog{
 		Operator: operator, Module: "distributor", Action: "create", TargetType: "distributor", TargetID: d.ID,
 		Detail: d.Name, IP: ip,
 	})
@@ -81,10 +82,11 @@ func (s *DistributorService) UpdateDistributor(ctx context.Context, id uint64, r
 	if err := s.dists.Update(ctx, id, cols); err != nil {
 		return err
 	}
-	return s.logs.Create(ctx, &domain.PlatformOperationLog{
+	writeAuditBestEffort(ctx, s.logs, &domain.PlatformOperationLog{
 		Operator: operator, Module: "distributor", Action: "update", TargetType: "distributor", TargetID: id,
 		Detail: req.Name, IP: ip,
 	})
+	return nil
 }
 
 type CommissionRow struct {

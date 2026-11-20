@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
@@ -29,11 +30,18 @@ type PlatformService struct {
 	userRepo      *repository.UserRepo
 	userRoleRepo  *repository.UserRoleRepo
 	adminRoleRepo *repository.AdminRepo
-	logRepo       *repository.PlatformLogRepo
+	paymentRepo   *repository.PaymentRepo
+	commRepo      *repository.CommissionRepo
+	distRepo      *repository.DistributorRepo
+	logRepo       PlatformAuditStore
 	dietSeed      *DietSeedService
 	kgStatus      *KindergartenStatusService
+	epochs        auth.PlatformEpochStore
+	revoker       auth.TokenRevoker
+	rdb           *redis.Client
 	secret        []byte
 	atTTL         time.Duration
+	rtTTL         time.Duration
 }
 
 func NewPlatformService(
@@ -45,18 +53,30 @@ func NewPlatformService(
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
 	adminRoleRepo *repository.AdminRepo,
-	logRepo *repository.PlatformLogRepo,
+	paymentRepo *repository.PaymentRepo,
+	commRepo *repository.CommissionRepo,
+	distRepo *repository.DistributorRepo,
+	logRepo PlatformAuditStore,
 	dietSeed *DietSeedService,
 	kgStatus *KindergartenStatusService,
+	epochs auth.PlatformEpochStore,
+	revoker auth.TokenRevoker,
+	rdb *redis.Client,
 	secret []byte,
 	atTTL time.Duration,
+	rtTTL time.Duration,
 ) *PlatformService {
 	return &PlatformService{
 		db: db, adminRepo: adminRepo, kgRepo: kgRepo, entRepo: entRepo, orderRepo: orderRepo,
 		userRepo: userRepo, userRoleRepo: userRoleRepo, adminRoleRepo: adminRoleRepo,
-		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, secret: secret, atTTL: atTTL,
+		paymentRepo: paymentRepo, commRepo: commRepo, distRepo: distRepo,
+		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, epochs: epochs,
+		revoker: revoker, rdb: rdb, secret: secret, atTTL: atTTL, rtTTL: rtTTL,
 	}
 }
+
+// EpochStore 暴露平台账号的凭证失效存储给路由装配（PlatformAuth）。
+func (s *PlatformService) EpochStore() auth.PlatformEpochStore { return s.epochs }
 
 type PlatformAdminInfo struct {
 	ID       uint64 `json:"id"`
@@ -65,9 +85,10 @@ type PlatformAdminInfo struct {
 }
 
 type PlatformLoginResult struct {
-	Token     string            `json:"token"`
-	ExpiresIn int64             `json:"expires_in"`
-	Admin     PlatformAdminInfo `json:"admin"`
+	Token        string            `json:"token"`
+	RefreshToken string            `json:"refresh_token"`
+	ExpiresIn    int64             `json:"expires_in"`
+	Admin        PlatformAdminInfo `json:"admin"`
 }
 
 func (s *PlatformService) Login(ctx context.Context, username, password string) (*PlatformLoginResult, error) {
@@ -81,15 +102,7 @@ func (s *PlatformService) Login(ctx context.Context, username, password string) 
 	if err := bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(password)); err != nil {
 		return nil, fmt.Errorf("INVALID_CREDENTIALS")
 	}
-	token, err := auth.SignPlatformAccess(s.secret, fmt.Sprintf("%d", admin.ID), s.atTTL)
-	if err != nil {
-		return nil, err
-	}
-	return &PlatformLoginResult{
-		Token:     token,
-		ExpiresIn: int64(s.atTTL.Seconds()),
-		Admin:     PlatformAdminInfo{ID: admin.ID, Username: admin.Username, Name: admin.Name},
-	}, nil
+	return s.issuePlatformSession(ctx, admin)
 }
 
 // PlatformKindergartenRow 园所列表行。
@@ -113,6 +126,14 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		return nil, 0, err
 	}
 	now := time.Now()
+	kgIDs := make([]uint64, 0, len(kgs))
+	for _, kg := range kgs {
+		kgIDs = append(kgIDs, kg.ID)
+	}
+	soonest, err := s.soonestExpiryByKindergarten(ctx, kgIDs, now)
+	if err != nil {
+		return nil, 0, err
+	}
 	out := make([]PlatformKindergartenRow, 0, len(kgs))
 	for _, kg := range kgs {
 		row := PlatformKindergartenRow{
@@ -125,13 +146,9 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 		if n, err := s.kgRepo.CountStudents(ctx, kg.ID); err == nil {
 			row.StudentCount = n
 		}
-		if ents, err := s.entRepo.ListActiveByKindergarten(ctx, kg.ID, now); err == nil {
-			for i, e := range ents {
-				if i == 0 || e.ExpiresAt.Before(row.soonest()) {
-					t := e.ExpiresAt
-					row.SoonestExpireAt = &t
-				}
-			}
+		if t, ok := soonest[kg.ID]; ok {
+			t := t
+			row.SoonestExpireAt = &t
 		}
 		if o, err := s.orderRepo.FindLatestActiveByKindergarten(ctx, kg.ID); err == nil && o != nil {
 			row.ActivePlanName = snapshotPlanName(o.PlanSnapshot)
@@ -146,11 +163,26 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 	return out, total, nil
 }
 
-func (r *PlatformKindergartenRow) soonest() time.Time {
-	if r.SoonestExpireAt == nil {
-		return time.Time{}
+// soonestExpiryByKindergarten 取本页园所每园最早的未到期授权日期。
+// soonest_expire_at 与看板的「N 天内到期」共用 ListActiveExpiring，避免两套口径
+// （design D7）。查询失败必须返回错误：静默降级会让到期园所显示成「未设到期」。
+func (s *PlatformService) soonestExpiryByKindergarten(ctx context.Context, kgIDs []uint64, now time.Time) (map[uint64]time.Time, error) {
+	soonest := make(map[uint64]time.Time, len(kgIDs))
+	if len(kgIDs) == 0 {
+		return soonest, nil
 	}
-	return *r.SoonestExpireAt
+	ents, err := s.entRepo.ListActiveExpiring(ctx, repository.ActiveExpiryFilter{
+		KindergartenIDs: kgIDs, Now: now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list active entitlements for kindergartens: %w", err)
+	}
+	for _, e := range ents {
+		if t, ok := soonest[e.KindergartenID]; !ok || e.ExpiresAt.Before(t) {
+			soonest[e.KindergartenID] = e.ExpiresAt
+		}
+	}
+	return soonest, nil
 }
 
 type PlatformEntitlementRow struct {
@@ -210,7 +242,11 @@ func (s *PlatformService) GetKindergarten(ctx context.Context, id uint64) (*Plat
 	}
 	briefs := make([]PlatformOrderBrief, 0, len(orders))
 	for _, o := range orders {
-		briefs = append(briefs, PlatformOrderBrief{ID: o.ID, OrderNo: o.OrderNo, AmountDueCents: o.AmountDueCents, Status: o.Status})
+		briefs = append(briefs, PlatformOrderBrief{
+			ID: o.ID, OrderNo: o.OrderNo, AmountDueCents: o.AmountDueCents,
+			// 与订单列表同口径：已收金额来自单次聚合，状态读时派生。
+			Status: deriveOrderStatus(&o.Order, o.PaidCents, now),
+		})
 	}
 	status := kg.Status
 	if status == "" {
@@ -308,7 +344,14 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 				StartsAt: now, ExpiresAt: trialEnd,
 			})
 		}
-		return tx.Create(&ents).Error
+		if err := tx.Create(&ents).Error; err != nil {
+			return err
+		}
+		// 开通园所属于强一致清单（design D6）：审计失败时园所、园长与授权一并回滚。
+		return s.logRepo.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "kindergarten", Action: "onboard", TargetType: "kindergarten",
+			TargetID: kg.ID, KindergartenID: kg.ID, Detail: fmt.Sprintf("开通园所：%s", req.Name), IP: ip,
+		})
 	}); err != nil {
 		return nil, err
 	}
@@ -316,13 +359,14 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 	// 新园膳食数据在园所事务提交后补齐；失败只记日志，不回滚园所创建。
 	if s.dietSeed != nil {
 		if _, err := s.dietSeed.EnsureKindergartenSeeded(ctx, kgID); err != nil {
-			_ = s.logPlatform(ctx, operator, "kindergarten", "onboard", "kindergarten", kgID,
-				fmt.Sprintf("园所已创建，膳食数据初始化失败：%v", err), ip)
+			writeAuditBestEffort(ctx, s.logRepo, &domain.PlatformOperationLog{
+				Operator: operator, Module: "kindergarten", Action: "onboard", TargetType: "kindergarten",
+				TargetID: kgID, KindergartenID: kgID,
+				Detail: fmt.Sprintf("园所已创建，膳食数据初始化失败：%v", err), IP: ip,
+			})
 		}
 	}
 
-	_ = s.logPlatform(ctx, operator, "kindergarten", "onboard", "kindergarten", kgID,
-		fmt.Sprintf("开通园所：%s", req.Name), ip)
 	return &OnboardResult{
 		KindergartenID: kgID, AdminPhone: req.Phone,
 		MustChangePassword: true, TrialExpiresAt: trialEnd,
@@ -340,7 +384,16 @@ func (s *PlatformService) SetKindergartenStatus(ctx context.Context, id uint64, 
 	if kg == nil {
 		return fmt.Errorf("KINDERGARTEN_NOT_FOUND")
 	}
-	if err := s.kgRepo.UpdateByID(ctx, id, map[string]any{"status": status}); err != nil {
+	// 园所启停属于强一致清单：状态与审计同事务，审计失败时状态不变。
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := s.kgRepo.UpdateByIDTx(ctx, tx, id, map[string]any{"status": status}); err != nil {
+			return err
+		}
+		return s.logRepo.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "kindergarten", Action: "update_status", TargetType: "kindergarten",
+			TargetID: id, KindergartenID: id, Detail: fmt.Sprintf("%s -> %s", kg.Status, status), IP: ip,
+		})
+	}); err != nil {
 		return err
 	}
 	// 立即失效状态缓存：停用后第一次请求就要被拦下，而不是等 60 秒 TTL。
@@ -349,12 +402,11 @@ func (s *PlatformService) SetKindergartenStatus(ctx context.Context, id uint64, 
 			return fmt.Errorf("invalidate kindergarten status cache: %w", err)
 		}
 	}
-	return s.logPlatform(ctx, operator, "kindergarten", "update_status", "kindergarten", id,
-		fmt.Sprintf("%s -> %s", kg.Status, status), ip)
+	return nil
 }
 
-func (s *PlatformService) ListLogs(ctx context.Context, page, pageSize int, module string) ([]domain.PlatformOperationLog, int64, error) {
-	return s.logRepo.List(ctx, page, pageSize, module)
+func (s *PlatformService) ListLogs(ctx context.Context, f repository.PlatformLogFilter) ([]domain.PlatformOperationLog, int64, error) {
+	return s.logRepo.List(ctx, f)
 }
 
 func (s *PlatformService) logPlatform(ctx context.Context, operator, module, action, targetType string, targetID uint64, detail, ip string) error {

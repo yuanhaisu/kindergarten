@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { getSubscription, type SubscriptionView } from '~/api/platform'
+import { getSubscription, type SubscriptionView } from '~/api/platform/subscription'
 import { expiringSoon } from '~/utils/entitlement'
 
 const loading = ref(false)

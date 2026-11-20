@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	mysqldriver "github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
@@ -23,12 +24,18 @@ func IsDuplicateKey(err error) bool {
 
 // OrderFilter 平台侧订单查询。平台查询必须显式给出过滤条件，
 // 不允许复用按 kindergarten_id 自动过滤的园所仓储（design D9）。
+// DateFrom/DateTo 为订单创建时间的左闭右开区间；Status 会在 List 内
+// 按付款到期日翻译（expired 不是存储状态）。
 type OrderFilter struct {
-	KindergartenID uint64
-	Status         string
-	DistributorID  uint64
-	Page           int
-	PageSize       int
+	KindergartenID  uint64
+	Status          string
+	DistributorID   uint64
+	OrderNo         string
+	DateFrom        *time.Time
+	DateTo          *time.Time
+	OutstandingOnly bool
+	Page            int
+	PageSize        int
 }
 
 func (f *OrderFilter) normalize() {
@@ -73,24 +80,66 @@ func (r *OrderRepo) FindByIDForUpdate(ctx context.Context, tx *gorm.DB, id uint6
 	return &o, err
 }
 
-func (r *OrderRepo) List(ctx context.Context, f OrderFilter) ([]domain.Order, int64, error) {
+// OrderWithPaid 订单列表行：订单本体 + 单次 LEFT JOIN 聚合出的已收金额。
+// 聚合子查询排除软删收款，保证列表金额与收款明细一致（design D3）。
+type OrderWithPaid struct {
+	domain.Order
+	PaidCents int64 `gorm:"column:paid_cents"`
+}
+
+// orderPaidJoin 一次聚合每张订单的已收净额，替代逐行 SumByOrder 的 N+1。
+const orderPaidJoin = "LEFT JOIN (SELECT order_id, SUM(amount_cents) AS paid_cents FROM payments WHERE deleted_at IS NULL GROUP BY order_id) AS p ON p.order_id = orders.id"
+
+func (r *OrderRepo) List(ctx context.Context, f OrderFilter) ([]OrderWithPaid, int64, error) {
 	f.normalize()
-	q := r.db.WithContext(ctx).Model(&domain.Order{})
+	now := time.Now()
+	// 到期日按日期比较：当天不算逾期，次日零时起才算。
+	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	q := r.db.WithContext(ctx).Model(&domain.Order{}).Joins(orderPaidJoin)
 	if f.KindergartenID != 0 {
-		q = q.Where("kindergarten_id = ?", f.KindergartenID)
+		q = q.Where("orders.kindergarten_id = ?", f.KindergartenID)
 	}
-	if f.Status != "" {
-		q = q.Where("status = ?", f.Status)
+	// 状态筛选在 SQL 中按付款到期日翻译：expired 不是唯一存储值——
+	// Confirm/AddPayment 会把读时派生的状态写回 status，因此存储层也可能出现
+	// expired。筛选必须同时覆盖「未收清且已过付款到期日」与这种已落库的 expired。
+	switch f.Status {
+	case "":
+	case domain.OrderStatusExpired:
+		q = q.Where("orders.status IN ?", []string{
+			domain.OrderStatusUnpaid, domain.OrderStatusPartial, domain.OrderStatusExpired,
+		}).Where("orders.pay_due_at < ?", dayStart)
+	case domain.OrderStatusUnpaid, domain.OrderStatusPartial:
+		q = q.Where("orders.status = ?", f.Status).Where("orders.pay_due_at >= ?", dayStart)
+	default:
+		q = q.Where("orders.status = ?", f.Status)
 	}
 	if f.DistributorID != 0 {
-		q = q.Where("distributor_id = ?", f.DistributorID)
+		q = q.Where("orders.distributor_id = ?", f.DistributorID)
+	}
+	if f.OrderNo != "" {
+		q = q.Where("orders.order_no LIKE ?", "%"+f.OrderNo+"%")
+	}
+	if f.DateFrom != nil {
+		q = q.Where("orders.created_at >= ?", *f.DateFrom)
+	}
+	if f.DateTo != nil {
+		q = q.Where("orders.created_at < ?", *f.DateTo)
+	}
+	if f.OutstandingOnly {
+		q = q.Where("orders.status <> ? AND COALESCE(p.paid_cents, 0) < orders.amount_due_cents",
+			domain.OrderStatusCancelled)
 	}
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	var list []domain.Order
-	err := q.Order("id DESC").Offset((f.Page - 1) * f.PageSize).Limit(f.PageSize).Find(&list).Error
+	var list []OrderWithPaid
+	err := q.Session(&gorm.Session{}).
+		Select("orders.*, COALESCE(p.paid_cents, 0) AS paid_cents").
+		Order("orders.id DESC").
+		Offset((f.Page - 1) * f.PageSize).
+		Limit(f.PageSize).
+		Scan(&list).Error
 	return list, total, err
 }
 
@@ -120,6 +169,17 @@ func (r *OrderRepo) FindLatestActiveByKindergarten(ctx context.Context, kinderga
 		return nil, nil
 	}
 	return &o, err
+}
+
+// SumOutstanding 未收余额 = 未取消订单的 max(应收 - 已收, 0) 合计。
+// 已收只计未删除收款；直接复用订单列表的 orderPaidJoin，避免两处聚合口径漂移。
+func (r *OrderRepo) SumOutstanding(ctx context.Context) (int64, error) {
+	var sum int64
+	err := r.db.WithContext(ctx).Model(&domain.Order{}).Joins(orderPaidJoin).
+		Where("orders.status <> ?", domain.OrderStatusCancelled).
+		Select("COALESCE(SUM(GREATEST(orders.amount_due_cents - COALESCE(p.paid_cents, 0), 0)), 0)").
+		Scan(&sum).Error
+	return sum, err
 }
 
 // ListDueForExpiry 返回已过到期日但仍未收清、未取消的订单，供状态推进使用。
@@ -192,6 +252,17 @@ func (r *PaymentRepo) SumRefundsOfTx(ctx context.Context, tx *gorm.DB, paymentID
 	err := tx.WithContext(ctx).Model(&domain.Payment{}).
 		Where("refund_of_payment_id = ?", paymentID).
 		Select("COALESCE(SUM(-amount_cents), 0)").
+		Scan(&sum).Error
+	return sum, err
+}
+
+// SumReceivedBetween 统计 received_at 落在 [from, to) 的收款净额（含负数退款）。
+// 看板的「本月实收」按服务器本地时区取自然月（design D7）。
+func (r *PaymentRepo) SumReceivedBetween(ctx context.Context, from, to time.Time) (int64, error) {
+	var sum int64
+	err := r.db.WithContext(ctx).Model(&domain.Payment{}).
+		Where("received_at >= ? AND received_at < ?", from, to).
+		Select("COALESCE(SUM(amount_cents), 0)").
 		Scan(&sum).Error
 	return sum, err
 }

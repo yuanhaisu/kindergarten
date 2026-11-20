@@ -56,18 +56,31 @@ func ProvidePlatformService(
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
 	adminRoleRepo *repository.AdminRepo,
+	paymentRepo *repository.PaymentRepo,
+	commRepo *repository.CommissionRepo,
+	distRepo *repository.DistributorRepo,
 	logRepo *repository.PlatformLogRepo,
 	dietSeed *service.DietSeedService,
 	kgStatus *service.KindergartenStatusService,
+	rdb *redis.Client,
+	authSvc *service.AuthService,
 	secret JWTSecret,
 	atTTL AccessTTL,
+	rtTTL RefreshTTL,
 ) *service.PlatformService {
-	// 平台方没有 refresh token 流程，凭证直接给 24 小时；园所的 access TTL
-	// （15 分钟）只适用于有 refresh 的园所会话。
-	_ = atTTL
+	// 平台访问凭证使用与园所相同的 jwt.access_ttl_min（默认 15 分钟），
+	// 续期凭证使用 jwt.refresh_ttl_day（默认 7 天）。此前硬编码 24 小时的
+	// 行为已移除（design D5，显式行为变更）。
+	var revoker auth.TokenRevoker
+	if authSvc != nil {
+		revoker = authSvc.TokenRevoker()
+	}
 	return service.NewPlatformService(
 		db, adminRepo, kgRepo, entRepo, orderRepo, userRepo, userRoleRepo,
-		adminRoleRepo, logRepo, dietSeed, kgStatus, []byte(secret), 24*time.Hour,
+		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus,
+		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(time.Duration(rtTTL), time.Duration(atTTL))),
+		revoker, rdb, []byte(secret),
+		time.Duration(atTTL), time.Duration(rtTTL),
 	)
 }
 

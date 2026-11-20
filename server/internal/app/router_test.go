@@ -32,7 +32,7 @@ const testJWTSecret = "b09-test-secret"
 func newRouterForTest(t *testing.T) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	engine, err := NewRouter(NewAppHandler(&handler.Handler{}), nil, JWTSecret(testJWTSecret), nil, nil, nil)
+	engine, err := NewRouter(NewAppHandler(&handler.Handler{}), nil, JWTSecret(testJWTSecret), nil, nil, nil, nil)
 	require.NoError(t, err)
 	return engine
 }
@@ -402,7 +402,7 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 		nil, // entitlement
 	)
 
-	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil, nil, nil)
+	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil, nil, nil, nil)
 	require.NoError(t, err)
 	return engine
 }

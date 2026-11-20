@@ -116,13 +116,13 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	platformAdminRepo := repository.NewPlatformAdminRepo(db)
 	entitlementRepo := repository.NewEntitlementRepo(db)
 	orderRepo := repository.NewOrderRepo(db)
+	paymentRepo := repository.NewPaymentRepo(db)
+	commissionRepo := repository.NewCommissionRepo(db)
+	distributorRepo := repository.NewDistributorRepo(db)
 	platformLogRepo := repository.NewPlatformLogRepo(db)
-	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, platformLogRepo, dietSeedService, kindergartenStatusService, jwtSecret, accessTTL)
+	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, paymentRepo, commissionRepo, distributorRepo, platformLogRepo, dietSeedService, kindergartenStatusService, client, authService, jwtSecret, accessTTL, refreshTTL)
 	planRepo := repository.NewPlanRepo(db)
 	planService := service.NewPlanService(planRepo, platformLogRepo)
-	paymentRepo := repository.NewPaymentRepo(db)
-	distributorRepo := repository.NewDistributorRepo(db)
-	commissionRepo := repository.NewCommissionRepo(db)
 	entitlementCache := service.NewEntitlementCache(client)
 	orderService := service.NewOrderService(db, orderRepo, paymentRepo, planRepo, kindergartenRepo, entitlementRepo, distributorRepo, commissionRepo, platformLogRepo, entitlementCache)
 	distributorService := service.NewDistributorService(distributorRepo, commissionRepo, orderRepo, kindergartenRepo, platformLogRepo)
@@ -136,7 +136,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService, kindergartenStatusService)
+	trustedProxies := ProvideTrustedProxies(cfg)
+	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService, kindergartenStatusService, trustedProxies)
 	if err != nil {
 		return nil, err
 	}

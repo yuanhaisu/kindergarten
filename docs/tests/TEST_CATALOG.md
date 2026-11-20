@@ -1319,14 +1319,40 @@
 
 | TC ID | 名称 | 优先级 | 类型 | 状态 |
 |---|---|---|---|---|
-| TC-NEW-PLT-0001 | 园所凭证调用平台接口被拒 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-PLT-0002 | 平台凭证调用园所接口被拒 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-PLT-0003 | 开通后园长可登录 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-PLT-0004 | 重复手机号被拒 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-PLT-0005 | 停用后园所管理员无法登录 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-PLT-0006 | 重新启用后恢复 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-PLT-0007 | 两所园所都出现在平台列表 | P0 | Unit / Contract | 🔲 |
-| TC-NEW-PLT-0008 | 停用操作可追溯 | P0 | Unit / Contract | 🔲 |
+| TC-NEW-PLT-0001 | 园所凭证调用平台接口被拒 | P0 | Unit / Contract | ✅ (`TestPlatformAuthRejectsTenantToken`) |
+| TC-NEW-PLT-0002 | 平台凭证调用园所接口被拒 | P0 | Unit / Contract | ✅ (`TestAuthJWTRejectsPlatformToken`) |
+| TC-NEW-PLT-0003 | 开通后园长可登录 | P0 | Unit / Contract | ✅ (`TestPlatformService_LoginAndOnboard`) |
+| TC-NEW-PLT-0004 | 重复手机号被拒 | P0 | Unit / Contract | ✅ (`TestPlatformService_LoginAndOnboard`) |
+| TC-NEW-PLT-0005 | 停用后园所管理员无法登录 | P0 | Unit / Contract | 🔲 未验证：由后续 change 按 ADR-0018 停用只读语义重写 |
+| TC-NEW-PLT-0006 | 重新启用后恢复 | P0 | Unit / Contract | 🔲 未验证：由后续 change 按 ADR-0018 停用只读语义重写 |
+| TC-NEW-PLT-0007 | 两所园所都出现在平台列表 | P0 | Unit / Contract | ✅ (`TestPlatformService_LoginAndOnboard`) |
+| TC-NEW-PLT-0008 | 停用操作可追溯 | P0 | Unit / Contract | ✅ (`TestPlatformAudit_StrongRowsCarryKindergartenAndRequestID`) |
+| TC-NEW-PLT-0009 | 新建平台账号可登录 | P0 | Unit / Contract | ✅ (`TestPlatformAccount_CreateThenLoginAndList`) |
+| TC-NEW-PLT-0010 | 停用自己被拒 | P0 | Unit / Contract | ✅ (`TestPlatformAccount_DisableSelfRejected`) |
+| TC-NEW-PLT-0011 | 访问凭证失效前可续期 | P0 | Unit / Contract | ✅ (`TestPlatformRefreshRotatesAndConsumesOldToken`) |
+| TC-NEW-PLT-0012 | 登录尝试超限被拒 | P0 | Unit / Contract | ✅ (`TestPlatformAuthLoginRateLimitRejectsBurst`；真实 API 冒烟 429) |
+| TC-NEW-PLT-0013 | 概览覆盖全部园所 | P0 | Unit / Contract | ✅ (`TestPlatformService_Dashboard_CoversAllKindergartens`) |
+| TC-NEW-PLT-0014 | 审计写入失败阻断财务操作 | P0 | Unit / Contract | ✅ (`TestPlatformAudit_StrongWritesRollBackOnAuditFailure`) |
+| TC-NEW-PLT-0015 | 按园所与时间检索审计 | P0 | Unit / Contract | ✅ (`TestPlatformAudit_QueryFiltersAndRequestID`) |
+| TC-NEW-PLT-0016 | 按未清余额检索订单 | P0 | Unit / Contract | ✅ (`TestOrderRepo_ListAggregatesPaidAndFilters`) |
+| TC-NEW-PLT-0017 | 按分销商与月份检索佣金 | P0 | Unit / Contract | 🔲 未验证：暂无自动化用例；UI CDP 仅 mock，真实后端佣金筛选未跑 |
+| TC-NEW-PLT-0018 | 改密后旧凭证失效 | P0 | Unit / Contract | ✅ (`TestPlatformAccount_ChangeOwnPassword` + middleware epoch 拒绝) |
+| TC-NEW-PLT-0019 | 停用平台账号后请求被拒 | P0 | Unit / Contract | ✅ (`TestPlatformAccount_InvalidStatusAndNotFound` + middleware epoch 拒绝) |
+| TC-NEW-PLT-0020 | 停用最后一个可用账号被拒 | P0 | Unit / Contract | ✅ (`TestPlatformAccount_LastAvailableGuard`) |
+| TC-NEW-PLT-0021 | 概览金额与明细一致 | P0 | Unit / Contract | ✅ (`TestPlatformService_Dashboard_AmountsMatchDetails`) |
+| TC-NEW-PLT-0022 | 重置平台账号密码可追溯 | P0 | Unit / Contract | ✅ (`TestPlatformAccount_ResetPassword`) |
+| TC-NEW-PLT-0023 | 停用后旧续期凭证被拒 | P0 | Unit / Contract | ✅ (`TestPlatformRefreshRejectsDisabledAccount`) |
+| TC-NEW-PLT-0024 | 退出登录后续期凭证失效 | P0 | Unit / Contract | ✅ (`TestPlatformLogoutRevokesPlatformRefresh`；真实 API 冒烟登出后 refresh 401) |
+| TC-NEW-PLT-0025 | 未打开台账页也计入待结算佣金 | P0 | Unit / Contract | ✅ (`TestPlatformService_Dashboard_DerivesSettleableCommissions`) |
+
+> **本轮阻塞（2026-11-19）**：隔离 worktree 内没有 `server/configs/app.ini`，本地 MySQL（3316）无监听，所有数据库用例统一 SKIP（输出「跳过：本地无可用 DB 配置」）。上表只把**实际运行并通过**的用例标为 ✅；SKIP 的用例保持未验证，不按「测试存在」冒充通过。数据库恢复后重跑：
+>
+> ```bash
+> cd server
+> go test ./internal/service ./internal/repository -run "Platform|Order|Billing" -timeout 600s -v
+> ```
+>
+> 按结果把对应行改为 ✅ 并附测试名。PLT-0017 尚无自动化用例，需先补佣金月份筛选测试。
 
 ### 套餐目录 (CAT)
 
@@ -1361,6 +1387,11 @@
 | TC-NEW-ORD-0011 | 重复幂等键只落一条收款 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentIdempotencyAndCaps`) |
 | TC-NEW-ORD-0012 | 超额收款与超额退款被拒 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentIdempotencyAndCaps`) |
 | TC-NEW-ORD-0013 | 未来收款时间被拒 | P0 | Unit / Contract | ✅ (`TestCommercialCloseout_PaymentIdempotencyAndCaps`) |
+| TC-NEW-ORD-0014 | 付款到期日判逾期 | P0 | Unit / Contract | ✅ (`TestDeriveOrderStatus_PayDueAt`；`TestOrderListAndDetail_ExpiredByPayDueAt` 已通过) |
+| TC-NEW-ORD-0015 | 零收款确认缺理由被拒 | P0 | Unit / Contract | ✅ (`TestBillingCreditGrant_ZeroPaidConfirmRequiresReason`) |
+| TC-NEW-ORD-0016 | 服务期变更不改付款到期日 | P0 | Unit / Contract | ✅ (`TestOrder_PayDueAtIndependentOfServicePeriod`) |
+| TC-NEW-ORD-0017 | 信用开通计入未收余额并留痕 | P0 | Unit / Contract | ✅ (`TestBillingCreditGrant_ConfirmRecordsCreditAndAudit`) |
+| TC-NEW-ORD-0018 | 未指定到期日取服务起始日 | P0 | Unit / Contract | ✅ (`TestOrderCreate_DefaultsPayDueAtToStartsAt`) |
 
 ### 功能授权 (ENT)
 

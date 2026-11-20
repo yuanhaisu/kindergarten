@@ -46,7 +46,7 @@ type Handler struct {
 	dietPlanSvc        *service.DietPlanService
 	dietAnalysisSvc    *service.DietAnalysisService
 	platformSvc        *service.PlatformService
-	planSvc            *service.PlanService
+	planSvc            planCatalogService
 	orderSvc           *service.OrderService
 	distSvc            *service.DistributorService
 	entSvc             *service.EntitlementService

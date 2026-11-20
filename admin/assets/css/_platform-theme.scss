@@ -1,0 +1,587 @@
+// 平台运营控制台（/platform/*）的 TailAdmin 视觉层。
+//
+// 园所后台仍走 main.scss + _element-overrides.scss 的 Tender Cosmos 体系；
+// 这里只在 `body.platform-surface` 下生效，两套外观互不污染。
+// 色值全部来自 tokens.json 的 admin.color.platform / admin.shadow.platform*，
+// 不在此处硬编码。
+
+// `_element-overrides.scss` 用 `:root:root`（0,2,0）写全局 EP 变量，
+// 这里必须比它更高，否则平台主色会被园所后台的晴空蓝盖回去。
+:root:root body.platform-surface {
+  --el-color-primary: var(--color-platform-brand);
+  --el-color-primary-light-3: var(--color-platform-brand-border);
+  --el-color-primary-light-5: var(--color-platform-brand-border);
+  --el-color-primary-light-7: var(--color-platform-brand-bg);
+  --el-color-primary-light-8: var(--color-platform-brand-bg);
+  --el-color-primary-light-9: var(--color-platform-brand-bg);
+  --el-color-primary-dark-2: var(--color-platform-brand-dark);
+
+  --el-color-success: var(--color-platform-success);
+  --el-color-success-light-9: var(--color-platform-success-bg);
+  --el-color-warning: var(--color-platform-warning);
+  --el-color-warning-light-9: var(--color-platform-warning-bg);
+  --el-color-danger: var(--color-platform-danger);
+  --el-color-danger-light-9: var(--color-platform-danger-bg);
+  --el-color-error: var(--color-platform-danger);
+  --el-color-error-light-9: var(--color-platform-danger-bg);
+  --el-color-info: var(--color-platform-info);
+  --el-color-info-light-9: var(--color-platform-info-bg);
+
+  --el-border-radius-base: var(--border-radius-md);
+  --el-border-radius-small: var(--border-radius-sm);
+  --el-border-radius-round: var(--border-radius-md);
+
+  --el-border-color: var(--color-platform-border);
+  --el-border-color-light: var(--color-platform-border);
+  --el-border-color-lighter: var(--color-platform-border-light);
+  --el-border-color-extra-light: var(--color-platform-border-light);
+
+  --el-text-color-primary: var(--color-platform-text-primary);
+  --el-text-color-regular: var(--color-platform-text-body);
+  --el-text-color-secondary: var(--color-platform-text-muted);
+  // TailAdmin 的 gray-400 占位符对比度不足 4.5:1；升到 gray-500。
+  --el-text-color-placeholder: var(--color-platform-text-muted);
+  --el-text-color-disabled: var(--color-platform-text-hint);
+
+  --el-bg-color: var(--color-platform-card);
+  --el-bg-color-page: var(--color-platform-bg);
+  --el-bg-color-overlay: var(--color-platform-card);
+  --el-fill-color: var(--color-platform-bg);
+  --el-fill-color-light: var(--color-platform-bg);
+  --el-fill-color-lighter: var(--color-platform-bg);
+  --el-fill-color-blank: var(--color-platform-card);
+
+  --el-box-shadow-light: var(--shadow-platform-sm);
+  --el-box-shadow: var(--shadow-platform-sm);
+  --el-box-shadow-dark: var(--shadow-platform-lg);
+}
+
+html body.platform-surface {
+  color: var(--color-platform-text-body);
+  background: var(--color-platform-bg);
+
+  // —— 浏览器原生表面：选区、焦点、插入符、滚动条 ——
+  ::selection {
+    background: var(--color-platform-brand-bg);
+    color: var(--color-platform-text-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-platform-brand-border);
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea {
+    caret-color: var(--color-platform-brand);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-platform-border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-platform-border);
+    border-radius: var(--border-radius-full);
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  // —— 按钮：TailAdmin 的 8px 圆角、40px 高、无渐变 ——
+  .el-button {
+    height: 40px;
+    padding: 0 16px;
+    border-radius: var(--border-radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--color-platform-card);
+    border-color: var(--color-platform-border);
+    color: var(--color-platform-text-body);
+    box-shadow: none;
+
+    &:hover,
+    &:focus {
+      background: var(--color-platform-bg);
+      border-color: var(--color-platform-border);
+      color: var(--color-platform-text-primary);
+    }
+  }
+
+  .el-button--small {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .el-button--large {
+    height: 44px;
+    padding: 0 20px;
+  }
+
+  // 表内 link / text 按钮不占按钮高度，保持纯文字。
+  .el-button.is-link,
+  .el-button.is-text {
+    height: auto;
+    padding: 0;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  // 主按钮：gradient 规则在 _element-overrides 里是 (0,4,1)，
+  // 这里用三重的类选择器 (0,6,2) 压住它。
+  .el-button.el-button--primary:not(.is-link):not(.is-text) {
+    background: var(--color-platform-brand);
+    border-color: var(--color-platform-brand);
+    color: var(--color-text-on-brand);
+    box-shadow: var(--shadow-platform-xs);
+
+    &:hover,
+    &:focus {
+      background: var(--color-platform-brand-dark);
+      border-color: var(--color-platform-brand-dark);
+      color: var(--color-text-on-brand);
+    }
+
+    &:active {
+      background: var(--color-platform-brand-dark);
+      border-color: var(--color-platform-brand-dark);
+    }
+  }
+
+  .el-button--danger:not(.is-link):not(.is-text) {
+    background: var(--color-platform-danger-bg);
+    border-color: transparent;
+    color: var(--color-platform-danger-strong);
+
+    &:hover,
+    &:focus {
+      background: var(--color-platform-danger-bg);
+      border-color: var(--color-platform-danger);
+      color: var(--color-platform-danger-strong);
+    }
+  }
+
+  .el-button--success:not(.is-link):not(.is-text) {
+    background: var(--color-platform-success-bg);
+    border-color: transparent;
+    color: var(--color-platform-success-strong);
+
+    &:hover,
+    &:focus {
+      background: var(--color-platform-success-bg);
+      border-color: var(--color-platform-success);
+      color: var(--color-platform-success-strong);
+    }
+  }
+
+  // 表内 link 型危险/成功操作同样需要 4.5:1。
+  .el-button--danger.is-link,
+  .el-button--danger.is-text {
+    color: var(--color-platform-danger-strong);
+  }
+
+  .el-button--success.is-link,
+  .el-button--success.is-text {
+    color: var(--color-platform-success-strong);
+  }
+
+  // —— 表单 ——
+  .el-form-item {
+    margin-bottom: 18px;
+  }
+
+  .el-form-item__label {
+    color: var(--color-platform-text-body);
+    font-size: 13px;
+    font-weight: 500;
+    padding-bottom: 6px;
+    // EP 默认右对齐；TailAdmin 的表单标签从左边读起。
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner {
+    background: var(--color-platform-card);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 0 0 1px var(--color-platform-border) inset;
+    min-height: 40px;
+    padding: 1px 12px;
+    transition: box-shadow 150ms ease;
+  }
+
+  .el-textarea__inner {
+    min-height: 88px;
+    padding: 10px 12px;
+    line-height: 1.6;
+  }
+
+  .el-input__wrapper:hover,
+  .el-select__wrapper:hover,
+  .el-textarea__inner:hover {
+    box-shadow: 0 0 0 1px var(--color-platform-text-hint) inset;
+  }
+
+  .el-input__wrapper.is-focus,
+  .el-select__wrapper.is-focused,
+  .el-textarea__inner:focus {
+    box-shadow:
+      0 0 0 1px var(--color-platform-brand) inset,
+      0 0 0 3px var(--color-platform-brand-bg);
+  }
+
+  .el-input__inner,
+  .el-select__placeholder {
+    color: var(--color-platform-text-primary);
+    font-size: 14px;
+  }
+
+  .el-input__inner::placeholder,
+  .el-textarea__inner::placeholder {
+    color: var(--color-platform-text-muted);
+  }
+
+  .el-input.is-disabled .el-input__wrapper,
+  .el-select.is-disabled .el-select__wrapper {
+    background: var(--color-platform-bg);
+    box-shadow: 0 0 0 1px var(--color-platform-border-light) inset;
+  }
+
+  .el-checkbox__inner {
+    border-color: var(--color-platform-border);
+    border-radius: 4px;
+  }
+
+  .el-checkbox__input.is-checked .el-checkbox__inner,
+  .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+    background: var(--color-platform-brand);
+    border-color: var(--color-platform-brand);
+  }
+
+  .el-checkbox__label,
+  .el-radio__label {
+    color: var(--color-platform-text-body);
+    font-size: 14px;
+  }
+
+  .el-radio__inner {
+    border-color: var(--color-platform-border);
+  }
+
+  .el-radio__input.is-checked .el-radio__inner {
+    background: var(--color-platform-brand);
+    border-color: var(--color-platform-brand);
+  }
+
+  .el-switch.is-checked .el-switch__core {
+    background: var(--color-platform-brand);
+    border-color: var(--color-platform-brand);
+  }
+
+  // —— 表格：卡片化、只有横线、表头浅底 ——
+  .el-table {
+    --el-table-bg-color: var(--color-platform-card);
+    --el-table-tr-bg-color: var(--color-platform-card);
+    --el-table-header-bg-color: var(--color-platform-bg);
+    --el-table-header-text-color: var(--color-platform-text-muted);
+    --el-table-text-color: var(--color-platform-text-body);
+    --el-table-border-color: var(--color-platform-border-light);
+    --el-table-row-hover-bg-color: var(--color-platform-bg);
+    background: var(--color-platform-card);
+    border: 1px solid var(--color-platform-border);
+    border-radius: var(--border-radius-xl);
+    overflow: hidden;
+    font-size: 14px;
+  }
+
+  .el-table th.el-table__cell {
+    background: var(--color-platform-bg);
+    color: var(--color-platform-text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 12px 0;
+  }
+
+  .el-table td.el-table__cell {
+    padding: 13px 0;
+    border-bottom: 1px solid var(--color-platform-border-light);
+  }
+
+  // 共享 DataTable 带了 stripe；平台控制台用纯白行，避免和 TailAdmin 的留白冲突。
+  .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+    background: var(--color-platform-card);
+  }
+
+  .el-table .cell {
+    padding: 0 16px;
+  }
+
+  .el-table--border .el-table__cell,
+  .el-table--border .el-table__inner-wrapper::after {
+    border-right: none;
+  }
+
+  .el-table--border::after,
+  .el-table--group::after,
+  .el-table::before,
+  .el-table__inner-wrapper::before {
+    display: none;
+  }
+
+  .el-table__empty-block {
+    min-height: 180px;
+    background: var(--color-platform-card);
+  }
+
+  .el-table__empty-text {
+    color: var(--color-platform-text-hint);
+    font-size: 13px;
+  }
+
+  .el-table__fixed-right-patch,
+  .el-table__fixed-right::before,
+  .el-table__fixed::before {
+    background: var(--color-platform-card);
+  }
+
+  // 平台表格不再用固定右列；万一内层表格启用，也别把灰底表头切成白块。
+  .el-table-fixed-column--right {
+    background: var(--color-platform-card);
+  }
+
+  th.el-table-fixed-column--right {
+    background: var(--color-platform-bg);
+  }
+
+  .el-table__fixed-right,
+  .el-table__fixed {
+    box-shadow: none;
+  }
+
+  // —— 标签：浅底胶囊徽章 ——
+  .el-tag {
+    height: 24px;
+    padding: 0 10px;
+    border: none;
+    border-radius: var(--border-radius-full);
+    background: var(--color-platform-bg);
+    color: var(--color-platform-text-body);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  // 徽章文字用 700 档：TailAdmin 的 600 档在浅底上不足 4.5:1。
+  .el-tag--primary {
+    background: var(--color-platform-bg);
+    color: var(--color-platform-text-body);
+  }
+
+  .el-tag--success {
+    background: var(--color-platform-success-bg);
+    color: var(--color-platform-success-strong);
+  }
+
+  .el-tag--warning {
+    background: var(--color-platform-warning-bg);
+    color: var(--color-platform-warning-strong);
+  }
+
+  .el-tag--danger {
+    background: var(--color-platform-danger-bg);
+    color: var(--color-platform-danger-strong);
+  }
+
+  .el-tag--info {
+    background: var(--color-platform-info-bg);
+    color: var(--color-platform-info-strong);
+  }
+
+  // —— 分页 ——
+  .el-pagination {
+    --el-pagination-button-bg-color: var(--color-platform-card);
+    --el-pagination-hover-color: var(--color-platform-brand);
+    gap: 4px;
+  }
+
+  .el-pagination button,
+  .el-pager li {
+    min-width: 36px;
+    height: 36px;
+    border: 1px solid var(--color-platform-border);
+    border-radius: var(--border-radius-md);
+    background: var(--color-platform-card);
+    color: var(--color-platform-text-body);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .el-pager li.is-active,
+  .el-pagination.is-background .el-pager li.is-active {
+    background: var(--color-platform-brand-bg);
+    border-color: var(--color-platform-brand-border);
+    color: var(--color-platform-brand);
+  }
+
+  .el-pagination.is-background .el-pager li,
+  .el-pagination.is-background button {
+    background: var(--color-platform-card);
+  }
+
+  // —— 弹层 ——
+  .el-overlay {
+    background-color: var(--color-platform-overlay);
+  }
+
+  .el-dialog {
+    padding: 0;
+    border-radius: var(--border-radius-xl);
+    background: var(--color-platform-card);
+    box-shadow: var(--shadow-platform-lg);
+    // 页面上有 420–620px 的固定宽度弹窗，窄屏时不能顶出视口。
+    max-width: calc(100vw - 32px);
+  }
+
+  .el-dialog__header {
+    padding: 20px 24px;
+    margin: 0;
+    border-bottom: 1px solid var(--color-platform-border-light);
+  }
+
+  .el-dialog__title {
+    color: var(--color-platform-text-primary);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .el-dialog__headerbtn {
+    top: 18px;
+    right: 18px;
+  }
+
+  .el-dialog__body {
+    padding: 24px;
+    color: var(--color-platform-text-body);
+  }
+
+  .el-dialog__footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--color-platform-border-light);
+  }
+
+  .el-drawer {
+    background: var(--color-platform-card);
+    max-width: 100vw;
+  }
+
+  .el-drawer__header {
+    padding: 20px 24px;
+    margin: 0;
+    border-bottom: 1px solid var(--color-platform-border-light);
+    color: var(--color-platform-text-primary);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .el-drawer__body {
+    padding: 24px;
+  }
+
+  .el-drawer__footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--color-platform-border-light);
+  }
+
+  .el-message-box {
+    padding: 24px;
+    border-radius: var(--border-radius-xl);
+    border: 1px solid var(--color-platform-border);
+    background: var(--color-platform-card);
+    box-shadow: var(--shadow-platform-lg);
+    max-width: calc(100vw - 32px);
+  }
+
+  .el-message-box__title {
+    color: var(--color-platform-text-primary);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .el-message {
+    border: 1px solid var(--color-platform-border);
+    border-radius: var(--border-radius-md);
+    background: var(--color-platform-card);
+    box-shadow: var(--shadow-platform-sm);
+  }
+
+  .el-alert {
+    padding: 12px 16px;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-platform-border);
+  }
+
+  .el-alert--error.is-light {
+    background: var(--color-platform-danger-bg);
+    border-color: var(--color-platform-danger-bg);
+    color: var(--color-platform-danger-strong);
+  }
+
+  .el-alert--warning.is-light {
+    background: var(--color-platform-warning-bg);
+    border-color: var(--color-platform-warning-bg);
+    color: var(--color-platform-warning-strong);
+  }
+
+  .el-alert--success.is-light {
+    background: var(--color-platform-success-bg);
+    border-color: var(--color-platform-success-bg);
+    color: var(--color-platform-success-strong);
+  }
+
+  .el-alert--info.is-light {
+    background: var(--color-platform-info-bg);
+    border-color: var(--color-platform-info-bg);
+    color: var(--color-platform-info-strong);
+  }
+
+  // —— 下拉 / 浮层 ——
+  .el-dropdown-menu {
+    padding: 6px;
+    border: 1px solid var(--color-platform-border);
+    border-radius: var(--border-radius-lg);
+    background: var(--color-platform-card);
+    box-shadow: var(--shadow-platform-lg);
+  }
+
+  .el-dropdown-menu__item {
+    border-radius: var(--border-radius-sm);
+    color: var(--color-platform-text-body);
+    font-size: 13px;
+  }
+
+  .el-dropdown-menu__item:not(.is-disabled):hover {
+    background: var(--color-platform-bg);
+    color: var(--color-platform-text-primary);
+  }
+
+  .el-popper.is-light {
+    border-color: var(--color-platform-border);
+    border-radius: var(--border-radius-md);
+    background: var(--color-platform-card);
+    box-shadow: var(--shadow-platform-sm);
+  }
+
+  // —— 加载遮罩：用卡片色做半透明，避免灰色死板 ——
+  .el-loading-mask {
+    background-color: color-mix(in srgb, var(--color-platform-card) 82%, transparent);
+  }
+}

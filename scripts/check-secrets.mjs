@@ -75,6 +75,10 @@ const ALLOW = [
   { rule: 'password-assignment', file: /^admin\/pages\/admins\/index\.vue$/ },
   // 测试夹具
   { rule: 'password-assignment', file: /^server\/internal\/config\/config_test\.go$/ },
+  // 平台会话单测里的假 token（new-access / new-refresh），不是凭据
+  { rule: 'password-assignment', file: /^admin\/tests\/unit\/usePlatformHttp\.test\.ts$/ },
+  // 平台账号服务测试的假口令（Abc12345），不是凭据
+  { rule: 'password-assignment', file: /^server\/internal\/service\/platform_account_test\.go$/ },
 ]
 
 function isAllowed(finding) {

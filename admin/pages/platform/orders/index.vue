@@ -1,26 +1,62 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-xl font-semibold text-text-primary">订单</h1>
-        <p class="mt-1 text-xs text-text-muted">
+        <h1 class="text-2xl font-semibold tracking-tight text-platform-textPrimary">订单</h1>
+        <p class="mt-1 text-sm text-platform-textMuted">
           订单确认时冻结套餐快照；收款状态由已收金额推导，退款以负数登记。
         </p>
       </div>
-      <div class="flex items-center gap-2">
-        <el-select v-model="status" clearable placeholder="全部状态" class="!w-36" @change="load">
-          <el-option label="待收款" value="unpaid" />
-          <el-option label="部分收款" value="partial" />
-          <el-option label="已收清" value="paid" />
-          <el-option label="已到期" value="expired" />
-          <el-option label="已取消" value="cancelled" />
-        </el-select>
+      <div class="flex flex-wrap items-center gap-2">
         <el-button type="primary" @click="openCreate">新建订单</el-button>
       </div>
     </div>
 
-    <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="order_no" label="订单号" width="180" />
+    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-platform-border bg-platform-card p-4 shadow-platformXs">
+      <el-input
+        v-model="orderNo"
+        placeholder="订单号"
+        clearable
+        class="!w-48"
+        @keyup.enter="search"
+        @clear="search"
+      />
+      <el-select v-model="kindergartenFilter" clearable filterable placeholder="全部园所" class="!w-48" @change="search">
+        <el-option v-for="kg in kindergartens" :key="kg.id" :label="kg.name" :value="kg.id" />
+      </el-select>
+      <el-date-picker
+        v-model="dateRange"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        start-placeholder="创建开始"
+        end-placeholder="创建结束"
+        class="!w-72"
+        @change="search"
+      />
+      <el-select v-model="status" clearable placeholder="全部状态" class="!w-32" @change="search">
+        <el-option label="待收款" value="unpaid" />
+        <el-option label="部分收款" value="partial" />
+        <el-option label="已收清" value="paid" />
+        <el-option label="已到期" value="expired" />
+        <el-option label="已取消" value="cancelled" />
+      </el-select>
+      <el-checkbox v-model="outstandingOnly" @change="search">只看未收清</el-checkbox>
+      <el-button @click="search">查询</el-button>
+      <el-button text @click="resetFilters">重置</el-button>
+    </div>
+
+    <el-table v-loading="loading" :data="rows">
+      <el-table-column label="订单号" width="180">
+        <template #default="{ row }">
+          <button
+            class="font-medium text-platform-brandDark hover:underline"
+            title="查看订单详情"
+            @click="openDetail(row.id)"
+          >
+            {{ row.order_no }}
+          </button>
+        </template>
+      </el-table-column>
       <el-table-column prop="kindergarten_name" label="园所" min-width="140" />
       <el-table-column prop="plan_name" label="套餐" width="120" />
       <el-table-column label="应收" width="110" align="right">
@@ -29,34 +65,54 @@
       <el-table-column label="已收" width="110" align="right">
         <template #default="{ row }">{{ formatMoney(row.amount_paid_cents) }}</template>
       </el-table-column>
+      <el-table-column label="未清" width="110" align="right">
+        <template #default="{ row }">
+          <span :class="outstandingCents(row) > 0 ? 'font-medium text-platform-dangerStrong' : 'text-platform-textHint'">
+            {{ outstandingCents(row) > 0 ? formatMoney(outstandingCents(row)) : '—' }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="到期" width="110">
+      <el-table-column label="标记" width="100">
+        <template #default="{ row }">
+          <el-tag v-if="row.credit_granted" type="warning" size="small">信用开通</el-tag>
+          <span v-else class="text-platform-textHint">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="付款到期" width="116">
+        <template #default="{ row }">
+          <span :class="row.status === 'expired' ? 'text-platform-dangerStrong' : ''">
+            {{ formatDate(row.pay_due_at) }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column label="服务期至" width="116">
         <template #default="{ row }">{{ formatDate(row.expires_at) }}</template>
       </el-table-column>
       <el-table-column prop="distributor_name" label="分销商" width="120">
         <template #default="{ row }">{{ row.distributor_name || '—' }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="90" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" @click="openDetail(row.id)">详情</el-button>
-        </template>
-      </el-table-column>
     </el-table>
 
-    <el-pagination
-      v-model:current-page="page"
-      :page-size="pageSize"
-      :total="total"
-      layout="total, prev, pager, next"
-      @current-change="load"
-    />
+    <div class="flex justify-end">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50]"
+        :total="total"
+        layout="total, sizes, prev, pager, next"
+        background
+        @current-change="load"
+        @size-change="onSizeChange"
+      />
+    </div>
 
     <el-dialog v-model="createVisible" title="新建订单" width="480px">
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="90px">
+      <el-form ref="formRef" :model="form" :rules="formRules" label-position="top">
         <el-form-item label="园所" prop="kindergarten_id">
           <el-select v-model="form.kindergarten_id" filterable placeholder="选择园所" class="w-full">
             <el-option v-for="kg in kindergartens" :key="kg.id" :label="kg.name" :value="kg.id" />
@@ -84,34 +140,49 @@
         <template v-if="detail">
           <div class="flex items-center justify-between">
             <div>
-              <div class="text-base font-semibold text-text-primary">{{ detail.order_no }}</div>
-              <div class="mt-1 text-xs text-text-muted">
+              <div class="text-base font-semibold text-platform-textPrimary">{{ detail.order_no }}</div>
+              <div class="mt-1 text-xs text-platform-textMuted">
                 {{ detail.kindergarten_name }} · {{ detail.plan_snapshot.plan_name }}
               </div>
             </div>
-            <el-tag :type="statusType(detail.status)">{{ statusLabel(detail.status) }}</el-tag>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div class="rounded-md bg-bg-page p-3">
-              <div class="text-xs text-text-muted">应收</div>
-              <div class="mt-1 font-medium text-text-primary">{{ formatMoney(detail.amount_due_cents) }}</div>
-            </div>
-            <div class="rounded-md bg-bg-page p-3">
-              <div class="text-xs text-text-muted">已收</div>
-              <div class="mt-1 font-medium text-text-primary">{{ formatMoney(detail.amount_paid_cents) }}</div>
+            <div class="flex items-center gap-2">
+              <el-tag v-if="detail.credit_granted" type="warning">信用开通</el-tag>
+              <el-tag :type="statusType(detail.status)">{{ statusLabel(detail.status) }}</el-tag>
             </div>
           </div>
 
-          <div class="text-xs text-text-muted">
-            起止：{{ formatDate(detail.starts_at) }} — {{ formatDate(detail.expires_at) }}
+          <div class="grid grid-cols-3 gap-3 text-sm">
+            <div class="rounded-lg bg-platform-bg p-3">
+              <div class="text-xs text-platform-textMuted">应收</div>
+              <div class="mt-1 font-medium text-platform-textPrimary">{{ formatMoney(detail.amount_due_cents) }}</div>
+            </div>
+            <div class="rounded-lg bg-platform-bg p-3">
+              <div class="text-xs text-platform-textMuted">已收</div>
+              <div class="mt-1 font-medium text-platform-textPrimary">{{ formatMoney(detail.amount_paid_cents) }}</div>
+            </div>
+            <div class="rounded-lg bg-platform-bg p-3">
+              <div class="text-xs text-platform-textMuted">未清</div>
+              <div class="mt-1 font-medium text-platform-textPrimary">
+                {{ formatMoney(Math.max(0, detail.amount_due_cents - detail.amount_paid_cents)) }}
+              </div>
+            </div>
+          </div>
+
+          <div class="text-xs text-platform-textMuted">
+            服务期：{{ formatDate(detail.starts_at) }} — {{ formatDate(detail.expires_at) }}
+            · 付款到期：<span :class="detail.status === 'expired' ? 'text-platform-dangerStrong' : ''">{{ formatDate(detail.pay_due_at) }}</span>
             <template v-if="detail.distributor">
               · 分销商 {{ detail.distributor.name }}（{{ detail.distributor.commission_rate }}%）
             </template>
           </div>
 
+          <div v-if="detail.credit_granted" class="rounded-lg bg-platform-bg p-3 text-sm">
+            <div class="text-xs text-platform-textMuted">信用开通理由</div>
+            <div class="mt-1 text-platform-textPrimary">{{ detail.credit_reason || '—' }}</div>
+          </div>
+
           <div class="flex flex-wrap gap-2">
-            <el-button v-if="!detail.status.startsWith('cancelled')" size="small" type="primary" @click="onConfirm">
+            <el-button v-if="canConfirm(detail.status)" size="small" type="primary" @click="onConfirm">
               确认订单
             </el-button>
             <el-button v-if="!detail.status.startsWith('cancelled')" size="small" type="success" @click="openPayment">
@@ -123,20 +194,20 @@
           </div>
 
           <div>
-            <div class="mb-2 text-sm font-medium text-text-primary">收款流水</div>
-            <el-table :data="detail.payments" size="small" border>
+            <div class="mb-2 text-sm font-medium text-platform-textPrimary">收款流水</div>
+            <el-table :data="detail.payments" size="small">
               <el-table-column label="金额" width="110" align="right">
                 <template #default="{ row }">
-                  <span :class="row.amount_cents < 0 ? 'text-semantic-danger' : ''">{{ formatMoney(row.amount_cents) }}</span>
+                  <span :class="row.amount_cents < 0 ? 'text-platform-dangerStrong' : ''">{{ formatMoney(row.amount_cents) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="method" label="方式" width="110" />
               <el-table-column label="关联" width="100">
                 <template #default="{ row }">
-                  <span v-if="row.refund_of_payment_id" class="text-xs text-text-muted">
+                  <span v-if="row.refund_of_payment_id" class="text-xs text-platform-textMuted">
                     退 #{{ row.refund_of_payment_id }}
                   </span>
-                  <span v-else class="text-text-hint">—</span>
+                  <span v-else class="text-platform-textHint">—</span>
                 </template>
               </el-table-column>
               <el-table-column prop="remark" label="备注" />
@@ -150,10 +221,10 @@
     </el-drawer>
 
     <el-dialog v-model="paymentVisible" title="登记收款" width="420px">
-      <el-form label-width="90px">
+      <el-form label-position="top">
         <el-form-item label="金额（元）">
           <el-input-number v-model="paymentYuan" :precision="2" :step="100" class="w-full" />
-          <div class="mt-1 text-xs text-text-muted">退款请填负数。</div>
+          <div class="mt-1 text-xs text-platform-textMuted">退款请填负数。</div>
         </el-form-item>
         <el-form-item v-if="paymentYuan < 0" label="被退收款" required>
           <el-select v-model="refundOfPaymentID" class="w-full" placeholder="选择被退的原收款">
@@ -164,7 +235,7 @@
               :value="p.id"
             />
           </el-select>
-          <div class="mt-1 text-xs text-text-muted">冲回该笔收款产生的佣金。</div>
+          <div class="mt-1 text-xs text-platform-textMuted">冲回该笔收款产生的佣金。</div>
         </el-form-item>
         <el-form-item label="方式">
           <el-select v-model="paymentMethod" class="w-full">
@@ -188,30 +259,24 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
-import {
-  addPayment,
-  cancelOrder,
-  confirmOrder,
-  createOrder,
-  getOrder,
-  listDistributors,
-  listKindergartens,
-  listOrders,
-  listPlans,
-  type DistributorRow,
-  type OrderDetail,
-  type OrderRow,
-  type PlanRow,
-  type PlatformKindergartenRow,
-} from '~/api/platform'
+import { addPayment, cancelOrder, confirmOrder, createOrder, getOrder, listOrders, type OrderDetail, type OrderRow } from '~/api/platform/orders'
+import { listDistributors, type DistributorRow } from '~/api/platform/distributors'
+import { listKindergartens, type PlatformKindergartenRow } from '~/api/platform/kindergartens'
+import { listPlans, type PlanRow } from '~/api/platform/plans'
+import { buildOrderListParams } from '~/utils/platformOrders'
+import { formatMoney } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
 
 const rows = ref<OrderRow[]>([])
 const page = ref(1)
-const pageSize = 20
+const pageSize = ref(20)
 const total = ref(0)
 const status = ref('')
+const orderNo = ref('')
+const kindergartenFilter = ref<number>()
+const dateRange = ref<[string, string] | null>(null)
+const outstandingOnly = ref(false)
 const loading = ref(false)
 const submitting = ref(false)
 
@@ -247,7 +312,17 @@ const refundablePayments = computed(() =>
 async function load() {
   loading.value = true
   try {
-    const data = await listOrders({ page: page.value, page_size: pageSize, status: status.value })
+    const data = await listOrders(
+      buildOrderListParams({
+        page: page.value,
+        pageSize: pageSize.value,
+        orderNo: orderNo.value,
+        dateRange: dateRange.value,
+        kindergartenId: kindergartenFilter.value,
+        status: status.value,
+        outstandingOnly: outstandingOnly.value,
+      }),
+    )
     rows.value = data.list || []
     total.value = data.total || 0
   } catch (e) {
@@ -255,6 +330,26 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+/** 筛选变化时回到第 1 页，避免落在不存在的页码上看到空列表。 */
+function search() {
+  page.value = 1
+  void load()
+}
+
+function onSizeChange() {
+  page.value = 1
+  void load()
+}
+
+function resetFilters() {
+  orderNo.value = ''
+  kindergartenFilter.value = undefined
+  dateRange.value = null
+  status.value = ''
+  outstandingOnly.value = false
+  search()
 }
 
 async function loadOptions() {
@@ -308,10 +403,37 @@ async function refreshDetail() {
   if (detail.value) await openDetail(detail.value.id)
 }
 
+/**
+ * 确认按钮只在「尚未收清且未结束」的订单上出现：
+ * 已收清（paid）与已过付款到期日（expired）不再提供确认，已取消的订单由调用处的
+ * cancelled 判断隐藏全部操作（design D2 / D9）。
+ */
+function canConfirm(status: string) {
+  return status !== 'paid' && status !== 'expired' && !status.startsWith('cancelled')
+}
+
 async function onConfirm() {
   if (!detail.value) return
+  // 净收款为零的确认即信用开通：理由由后端强制要求（422），
+  // 这里先收口，避免把一次必然失败的请求发出去。
+  let reason: string | undefined
+  if (detail.value.amount_paid_cents === 0) {
+    try {
+      const res = await ElMessageBox.prompt('零收款确认将标记为「信用开通」。请填写理由：', '确认订单', {
+        inputPlaceholder: '如：合同已签署，对公转账到账后补录',
+        inputValidator: (value: string) => (value?.trim() ? true : '必须填写信用开通理由'),
+      })
+      reason = res.value?.trim()
+    } catch {
+      return
+    }
+  }
   try {
-    await confirmOrder(detail.value.id)
+    if (reason) {
+      await confirmOrder(detail.value.id, reason)
+    } else {
+      await confirmOrder(detail.value.id)
+    }
     ElMessage.success('订单已确认，授权已发放')
     await Promise.all([refreshDetail(), load()])
   } catch (e) {
@@ -396,8 +518,8 @@ async function submitPayment() {
   }
 }
 
-function formatMoney(cents: number) {
-  return `¥${(cents / 100).toFixed(2)}`
+function outstandingCents(row: OrderRow) {
+  return Math.max(0, row.amount_due_cents - row.amount_paid_cents)
 }
 function formatDate(value?: string | null) {
   if (!value) return '—'
@@ -409,12 +531,13 @@ function statusLabel(value: string) {
   )[value] || value
 }
 function statusType(value: string) {
+  // 终态（已取消）用中性灰，避免和待收款共用同一个蓝。
   return (
-    { unpaid: 'info', partial: 'warning', paid: 'success', expired: 'danger', cancelled: 'info' } as Record<
+    { unpaid: 'info', partial: 'warning', paid: 'success', expired: 'danger', cancelled: '' } as Record<
       string,
-      'success' | 'warning' | 'danger' | 'info'
+      'success' | 'warning' | 'danger' | 'info' | ''
     >
-  )[value] || 'info'
+  )[value] ?? 'info'
 }
 
 onMounted(() => {

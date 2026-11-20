@@ -67,6 +67,7 @@ func TestBillingFlow_SnapshotPaymentsAndCancel(t *testing.T) {
 
 	order, err := orderSvc.Create(ctx, CreateOrderRequest{
 		KindergartenID: kg.ID, PlanID: plan.ID, DistributorID: &dist.ID,
+		PayDueAt: time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
 	}, "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.EqualValues(t, 100000, order.AmountDueCents)
@@ -82,7 +83,7 @@ func TestBillingFlow_SnapshotPaymentsAndCancel(t *testing.T) {
 	assert.EqualValues(t, 100000, again.AmountDueCents, "订单金额必须来自快照")
 	assert.Contains(t, again.PlanSnapshot.ModuleCodes, "growth", "模块清单必须来自快照")
 
-	confirmed, ents, err := orderSvc.Confirm(ctx, order.ID, "s1b_ops", "127.0.0.1")
+	confirmed, ents, err := orderSvc.Confirm(ctx, order.ID, "测试信用开通", "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 	assert.Len(t, ents, 2, "只给 premium 模块发授权，base 不重复发放")
 	assert.NotNil(t, confirmed.ConfirmedAt)
@@ -301,7 +302,7 @@ func TestSubscription_OverLimit(t *testing.T) {
 	var snap PlanSnapshot
 	require.NoError(t, json.Unmarshal([]byte(order.PlanSnapshot), &snap))
 	assert.Equal(t, 2, snap.TierMaxStudents, "快照必须记录档位上限")
-	_, _, err = orderSvc.Confirm(ctx, order.ID, "s1b_ops", "127.0.0.1")
+	_, _, err = orderSvc.Confirm(ctx, order.ID, "测试信用开通", "s1b_ops", "127.0.0.1")
 	require.NoError(t, err)
 
 	// 3 名在园幼儿，超过上限 2
