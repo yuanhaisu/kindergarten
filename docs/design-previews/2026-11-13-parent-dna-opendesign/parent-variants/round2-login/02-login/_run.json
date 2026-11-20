@@ -1,0 +1,23 @@
+{
+  "slug": "parent-login-no-art",
+  "surface": "parent",
+  "title": "家长登录（无插画重设计）",
+  "projectId": "7df6f948-1eae-4038-ab49-3c53fc47c833",
+  "conversationId": "fe477ae7-8730-4533-8193-35345f488dfc",
+  "runId": "1ffc82c3-39de-4f46-ae83-f095b1d02fa1",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 834,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "_shared/fonts/instrument-serif-regular.woff2",
+    "_shared/fonts/noto-serif-sc-subset.woff2",
+    "_shared/logo-dna.svg",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/7df6f948-1eae-4038-ab49-3c53fc47c833",
+  "previewRendered": true
+}

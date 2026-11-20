@@ -4,12 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light" />
-<title>亲子任务 · 积分提案 — 养成星球</title>
+<title>亲子任务 — 养成星球</title>
 <link rel="stylesheet" href="../../_shared/fonts.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<!-- 变体 V2 · 任务积分提案：提案，需 06-task 恢复 points/streak -->
 <div class="mp-app" id="app" data-variant="points" data-od-id="tasks-page">
 
   <div class="mp-statusbar" aria-hidden="true" data-od-id="status-bar">
@@ -29,132 +28,82 @@
     <span class="page-bar__spacer" aria-hidden="true"></span>
   </header>
 
-  <main class="mp-main" data-od-id="tasks-main">
+    <main class="mp-main" data-od-id="tasks-main">
     <div class="page-head">
       <h1 class="page-title" data-od-id="tasks-title">亲子任务</h1>
-      <span class="proposal-flag" data-od-id="proposal-flag">积分提案</span>
+      <p class="head-sub">老师发布后，会出现在<span class="hl">这里</span></p>
     </div>
 
-    <section class="view-default" id="view-default" aria-label="今日亲子任务">
-      <article class="today-card" data-od-id="today-card">
-        <p class="today-overline">今日任务</p>
-        <h2 class="today-title" data-od-id="today-task-title">给家人讲一件今天开心的事</h2>
-        <p class="today-desc">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。</p>
-
-        <div class="streak" id="streak" role="img" aria-label="本周已完成 2 天，还差 1 天">
-          <span class="streak-seg is-on"></span>
-          <span class="streak-seg is-on"></span>
-          <span class="streak-seg is-off" id="streak-third">
-            <svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><line x1="3" y1="3" x2="97" y2="3" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="6 12" /></svg>
-          </span>
-        </div>
-        <p class="today-meta" id="today-meta">本周 2 / 3 天 · 今天还没打卡</p>
-
-        <div class="today-divider" aria-hidden="true"></div>
-
-        <div class="today-foot">
-          <p class="today-points" data-od-id="today-points"><span class="today-points__num">+10</span><span class="today-points__unit">积分</span></p>
-          <button class="ghost-btn" id="checkin-btn" type="button" data-od-id="today-checkin">
-            <span id="ghost-idle">去打卡</span>
-            <span class="ghost-done" id="ghost-done" hidden>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
-              已打卡
-            </span>
-          </button>
-        </div>
-      </article>
-
-      <div class="filters" role="group" aria-label="筛选任务" data-od-id="task-filters">
-        <button class="chip is-active" type="button" data-filter="pending" aria-pressed="true" data-od-id="filter-pending">待完成</button>
-        <button class="chip" type="button" data-filter="done" aria-pressed="false" data-od-id="filter-done">已完成</button>
-        <button class="chip" type="button" data-filter="all" aria-pressed="false" data-od-id="filter-all">全部</button>
+    <section class="today-card" data-od-id="today-card">
+      <p class="today-overline">今天 · 11 月 20 日</p>
+      <h2 class="today-title" data-od-id="today-task-title">给家人讲一件今天开心的事</h2>
+      <p class="today-desc">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。</p>
+      <p class="today-meta">王老师 · 截止 11 月 22 日</p>
+      <div class="today-divider" aria-hidden="true"></div>
+      <div class="today-foot">
+        <span class="tag tag--done">已记录</span>
+        <a class="light-link" href="../22-tasks-detail/index.html" data-od-id="today-open">看看</a>
       </div>
-
-      <section class="task-section" aria-labelledby="task-section-title" data-od-id="task-section">
-        <div class="section-head">
-          <h2 class="section-title" id="task-section-title">任务清单</h2>
-          <span class="section-count" id="task-count" aria-live="polite">共 3 项</span>
-        </div>
-
-        <div class="task-card" id="task-card" data-od-id="task-list">
-          <div class="task-row" data-status="pending" data-od-id="task-bag">
-            <span class="task-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5V5.8a3 3 0 0 1 6 0v1.7"/><path d="M7.2 7.5h9.6a2.7 2.7 0 0 1 2.7 2.7v8.3a2.2 2.2 0 0 1-2.2 2.2H6.7a2.2 2.2 0 0 1-2.2-2.2v-8.3a2.7 2.7 0 0 1 2.7-2.7Z"/><rect x="9.7" y="13.3" width="4.6" height="3.5" rx="1.2"/></svg>
-            </span>
-            <div class="task-body">
-              <div class="task-line">
-                <span class="task-title">睡前整理书包</span>
-                <span class="tag tag--pending">待完成</span>
-              </div>
-              <div class="task-meta">
-                <span>每天 · 20:30 前完成</span>
-                <span class="task-points"><strong>+10</strong> 积分</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="task-row" data-status="pending" data-od-id="task-bowls">
-            <span class="task-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 11.6h15.6a7.8 7.8 0 0 1-15.6 0Z"/><path d="M3.4 20h17.2"/><path d="M16.1 3.2l-2.1 6.1"/><path d="M19.4 4.1l-2.2 5.3"/></svg>
-            </span>
-            <div class="task-body">
-              <div class="task-line">
-                <span class="task-title">帮忙摆碗筷</span>
-                <span class="tag tag--pending">待完成</span>
-              </div>
-              <div class="task-meta">
-                <span>每天 · 晚饭前完成</span>
-                <span class="task-points"><strong>+10</strong> 积分</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="task-row" data-status="pending" data-od-id="task-market">
-            <span class="task-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 9.8h15.6l-1.4 8.2a2.4 2.4 0 0 1-2.4 2H8a2.4 2.4 0 0 1-2.4-2L4.2 9.8Z"/><path d="M8.4 9.8 12 4.2l3.6 5.6"/><path d="M9.7 13.4v3M14.3 13.4v3"/></svg>
-            </span>
-            <div class="task-body">
-              <div class="task-line">
-                <span class="task-title">周末一起买菜</span>
-                <span class="tag tag--pending">待完成</span>
-              </div>
-              <div class="task-meta">
-                <span>本周六 · 和乐乐一起列清单</span>
-                <span class="task-points"><strong>+15</strong> 积分</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p class="filter-empty" id="filter-empty" hidden>还没有已完成的任务</p>
-      </section>
-
-      <button class="wall-row" type="button" data-wall data-od-id="class-wall-row">
-        <span class="wall-row__body">
-          <span class="wall-row__title">班级墙</span>
-          <span class="wall-row__sub">今天 <span class="hl">18 位小朋友</span>完成了任务</span>
-        </span>
-        <svg class="wall-row__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
-      </button>
     </section>
 
-    <section class="view-empty" id="view-empty" hidden aria-label="今日任务已完成" data-od-id="empty-state">
+    <section class="task-section" aria-labelledby="task-list-title" data-od-id="task-section">
+      <div class="section-head">
+        <h2 class="section-title" id="task-list-title">任务清单</h2>
+        <span class="section-count">3 项</span>
+      </div>
+
+      <div class="task-card" data-od-id="task-list">
+        <a class="task-row" href="../22-tasks-detail/index.html?state=view" data-od-id="task-view">
+          <span class="task-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/></svg>
+          </span>
+          <span class="task-body">
+            <span class="task-line"><span class="task-title">一起看秋天落叶</span><span class="tag tag--pending">待完成</span></span>
+            <span class="task-meta"><span>观看型 · 截止 11 月 24 日</span><span>约 2 分钟</span></span>
+          </span>
+          <svg class="task-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+
+        <a class="task-row" href="../22-tasks-detail/index.html?state=pending" data-od-id="task-action">
+          <span class="task-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M5 12h9M5 17h6"/><path d="m16 16 1.6 1.6L21 14"/></svg>
+          </span>
+          <span class="task-body">
+            <span class="task-line"><span class="task-title">睡前整理书包</span><span class="tag tag--pending">待完成</span></span>
+            <span class="task-meta"><span>完成型 · 截止 11 月 21 日</span><span>每天</span></span>
+          </span>
+          <svg class="task-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+
+        <a class="task-row task-row--ended" href="../22-tasks-detail/index.html?state=ended" data-od-id="task-ended">
+          <span class="task-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M5 12h9M5 17h6"/><path d="M16 16h5"/></svg>
+          </span>
+          <span class="task-body">
+            <span class="task-line"><span class="task-title">秋天的树叶拼贴</span><span class="tag tag--ended">已结束</span></span>
+            <span class="task-meta"><span>完成型 · 截止 11 月 18 日</span><span>未完成</span></span>
+          </span>
+          <svg class="task-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <p class="light-note">任务会通过班级群分享；也可以直接在这里打开。</p>
+
+    <section class="view-empty" id="view-empty" hidden aria-label="暂无亲子任务" data-od-id="empty-state">
       <div class="empty-art" aria-hidden="true">
         <svg viewBox="0 0 120 120" fill="none">
           <path d="M31 62.5 49.5 81 88.5 35" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M95 21v11M89.5 26.5h11" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".45"/>
         </svg>
       </div>
-      <h2 class="empty-title">今天的任务都完成啦</h2>
-      <p class="empty-desc">乐乐今天的<span class="hl">任务都提交了</span>，<br />去班级墙看看大家的分享。</p>
-      <button class="empty-cta" type="button" data-wall data-od-id="empty-cta">看看班级墙</button>
+      <h2 class="empty-title">还没有亲子任务</h2>
+      <p class="empty-desc">老师发布后，会出现在这里。</p>
     </section>
-
-    <p class="proposal-note" data-od-id="proposal-note">提案：需 06-task 恢复 points/streak</p>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 <script src="app.js"></script>
-</body>
+<script src="../../_shared/nav.js"></script></body>
 </html>

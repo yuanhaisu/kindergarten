@@ -442,6 +442,15 @@ button:focus-visible {
   text-overflow: ellipsis;
 }
 
+.card-time {
+  flex: none;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted-on-surface);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .likes {
   display: inline-flex;
   align-items: center;

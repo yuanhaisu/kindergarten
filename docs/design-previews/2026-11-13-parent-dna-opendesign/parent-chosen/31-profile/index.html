@@ -35,10 +35,6 @@
 
     <main class="mp-main" data-od-id="profile-main">
       <header class="page-head" data-od-id="profile-header">
-        <div class="page-head-top">
-          <p class="eyebrow">账号与家庭</p>
-          <img class="header-logo" src="../../_shared/logo-dna.svg" alt="养成星球" width="28" height="28" />
-        </div>
         <h1 class="page-title" data-od-id="page-title">我的</h1>
       </header>
 
@@ -52,12 +48,21 @@
           <a class="text-button" href="#" aria-label="编辑账号资料" data-od-id="account-edit">编辑</a>
         </div>
         <div class="child-row">
-          <div class="avatar avatar--child" aria-hidden="true">乐</div>
+          <div class="avatar avatar--child" id="child-avatar" aria-hidden="true">乐</div>
           <div class="child-id">
-            <p class="child-name">乐乐</p>
-            <p class="child-meta">小一班 · 阳光幼儿园</p>
+            <p class="child-name" id="child-name">乐乐</p>
+            <p class="child-meta" id="child-meta">小一班 · 阳光幼儿园</p>
           </div>
-          <a class="child-switch" href="#" aria-label="切换孩子" data-od-id="child-switch">切换</a>
+          <button
+            class="child-switch"
+            id="child-switch"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="child-sheet"
+            aria-expanded="false"
+            aria-label="切换孩子"
+            data-od-id="child-switch"
+          >切换</button>
         </div>
       </section>
 
@@ -65,21 +70,21 @@
         <p class="stats-title" id="stats-title">累计数据</p>
         <div class="stats-grid">
           <div class="stat">
-            <p class="stat-value">42</p>
+            <p class="stat-value" id="stat-pickup">42</p>
             <p class="stat-label">接送记录</p>
           </div>
           <div class="stat">
-            <p class="stat-value">32</p>
+            <p class="stat-value" id="stat-growth">32</p>
             <p class="stat-label">成长记录</p>
           </div>
           <div class="stat">
-            <p class="stat-value">1245</p>
+            <p class="stat-value" id="stat-points">1245</p>
             <p class="stat-label">累计积分</p>
           </div>
         </div>
       </section>
 
-      <section class="section" aria-labelledby="services-title" data-od-id="services-section">
+      <section class="section services-section" aria-labelledby="services-title" data-od-id="services-section">
         <h2 class="section-title" id="services-title">我的服务</h2>
         <div class="list-card">
           <a class="list-row service-row" href="#" data-od-id="service-child-file">
@@ -115,17 +120,18 @@
             </svg>
           </a>
 
-          <a class="list-row service-row" href="#" data-od-id="service-calendar">
-            <span class="icon-circle icon-circle--terracotta" aria-hidden="true">
+          <a class="list-row service-row" href="../14-growth-report/index.html" data-od-id="service-growth-report">
+            <span class="icon-circle icon-circle--sage" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                <rect x="3.5" y="5.5" width="17" height="15" rx="3"/>
-                <path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17"/>
-                <path d="M8 14h2.5M13.5 14h2.5M8 17h2.5"/>
+                <path d="M4.5 19.5h15"/>
+                <path d="M7 19.5V12h3v7.5"/>
+                <path d="M12.5 19.5V8h3v11.5"/>
+                <path d="M18 19.5V4.5"/>
               </svg>
             </span>
             <span class="row-copy">
-              <span class="row-title">班级日历</span>
-              <span class="row-sub">本月 <span class="hl">3 个活动</span>待参加</span>
+              <span class="row-title">成长报告</span>
+              <span class="row-sub">本学期记录与老师观察</span>
             </span>
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
               <path d="m9 6 6 6-6 6"/>
@@ -199,14 +205,14 @@
             </svg>
           </a>
 
-          <a class="list-row setting-row" href="#" data-od-id="setting-about">
+          <button class="list-row setting-row" type="button" id="setting-about" aria-haspopup="dialog" aria-controls="about-sheet" aria-expanded="false" data-od-id="setting-about">
             <span class="row-copy">
               <span class="row-title">关于养成星球</span>
             </span>
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
               <path d="m9 6 6 6-6 6"/>
             </svg>
-          </a>
+          </button>
         </div>
       </section>
 
@@ -229,9 +235,10 @@
       </a>
       <a class="tab" href="#" aria-label="接送" data-od-id="tab-pickup">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M13.5 4.5h4A2.5 2.5 0 0 1 20 7v10a2.5 2.5 0 0 1-2.5 2.5h-4"/>
-          <path d="M4 12h9.5"/>
-          <path d="m10.5 8.5 3.5 3.5-3.5 3.5"/>
+          <rect x="4.2" y="4.8" width="15.6" height="12" rx="3"/>
+          <path d="M4.4 10.6h15.2"/>
+          <circle cx="8" cy="17.3" r="1.3"/>
+          <circle cx="16" cy="17.3" r="1.3"/>
         </svg>
         <span>接送</span>
       </a>
@@ -243,8 +250,106 @@
         <span>我的</span>
       </a>
     </nav>
+
+    <div class="sheet-layer" id="child-sheet-layer" inert aria-hidden="true" data-od-id="child-sheet-layer">
+      <div class="sheet-scrim" data-close-sheet></div>
+      <section class="sheet" id="child-sheet" role="dialog" aria-modal="true" aria-labelledby="child-sheet-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-heading">
+          <h2 class="sheet-title" id="child-sheet-title">选择孩子</h2>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="关闭">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 6l12 12M18 6 6 18"/>
+            </svg>
+          </button>
+        </div>
+        <button
+          class="child-option"
+          type="button"
+          id="child-option-lele"
+          aria-pressed="true"
+          data-child-name="乐乐"
+          data-child-initial="乐"
+          data-child-row-meta="小一班 · 阳光幼儿园"
+          data-child-stats="42,32,1245"
+          data-od-id="child-option-lele"
+        >
+          <span class="avatar avatar--sheet" aria-hidden="true">乐</span>
+          <span class="child-option-copy">
+            <span class="child-option-name">乐乐</span>
+            <span class="child-option-meta">小一班 · 5 岁 2 个月</span>
+          </span>
+          <svg class="icon child-option-check" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 12 4.5 4.5L19 7"/>
+          </svg>
+        </button>
+        <button
+          class="child-option"
+          type="button"
+          id="child-option-duoduo"
+          aria-pressed="false"
+          data-child-name="朵朵"
+          data-child-initial="朵"
+          data-child-row-meta="中二班 · 阳光幼儿园"
+          data-child-stats="18,12,640"
+          data-od-id="child-option-duoduo"
+        >
+          <span class="avatar avatar--sheet" aria-hidden="true">朵</span>
+          <span class="child-option-copy">
+            <span class="child-option-name">朵朵</span>
+            <span class="child-option-meta">中二班 · 4 岁 6 个月</span>
+          </span>
+          <svg class="icon child-option-check" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 12 4.5 4.5L19 7"/>
+          </svg>
+        </button>
+        <button class="child-add" id="child-add" type="button" disabled data-od-id="child-add">
+          <span class="icon-circle icon-circle--add" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" focusable="false">
+              <path d="M12 5.5v13M5.5 12h13"/>
+            </svg>
+          </span>
+          <span class="row-copy">
+            <span class="row-title">添加孩子</span>
+            <span class="row-sub">即将支持</span>
+          </span>
+        </button>
+      </section>
+    </div>
+    <div class="sheet-layer" id="about-sheet-layer" inert aria-hidden="true" data-od-id="about-sheet-layer">
+      <div class="sheet-scrim" data-close-about></div>
+      <section class="sheet" id="about-sheet" role="dialog" aria-modal="true" aria-labelledby="about-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-heading">
+          <h2 class="sheet-title" id="about-title">关于养成星球</h2>
+          <button class="sheet-close" type="button" data-close-about aria-label="关闭">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 6l12 12M18 6 6 18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="about-brand">
+          <img class="about-logo" src="../../_shared/logo-dna.svg" alt="" width="44" height="44">
+          <div>
+            <p class="about-name">养成星球 · 家长端</p>
+            <p class="about-version">v1.0.0</p>
+          </div>
+        </div>
+        <p class="about-copy">让家园沟通、成长记录与接送，都在一个地方。</p>
+        <dl class="about-meta">
+          <div><dt>开发主体</dt><dd>湘潭市岳塘区稚序软件开发工作室</dd></div>
+          <div><dt>联系邮箱</dt><dd>contact@nurtureplanet.cn</dd></div>
+        </dl>
+        <div class="about-links">
+          <a href="../05-policy/index.html?doc=privacy">隐私政策</a>
+          <a href="../05-policy/index.html?doc=terms">用户协议</a>
+          <a href="../05-policy/index.html?doc=minor">儿童个人信息保护规则</a>
+        </div>
+      </section>
+    </div>
+
   </div>
 
   <script src="app.js" defer></script>
-</body>
+<script src="../../_shared/nav.js"></script></body>
 </html>

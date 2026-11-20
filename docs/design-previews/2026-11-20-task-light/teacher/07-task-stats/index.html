@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>养成星球 · 老师端 · 任务统计</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="../../_shared/teacher-dna.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app mp-app--light">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>10:20</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main" id="main">
+      <header class="page-head">
+        <button class="icon-btn back" id="back" type="button" aria-label="返回">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>
+        </button>
+        <div class="head-copy">
+          <h1 class="page-title">任务统计</h1>
+          <p class="head-sub">给家人讲一件今天开心的事 · 截止 11/22 18:00</p>
+        </div>
+      </header>
+
+      <section class="stat-row" aria-label="任务完成情况">
+        <div class="stat-cell">
+          <span class="stat-num" id="stat-done">3</span>
+          <span class="stat-label">已记录 / 8</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-num" id="stat-parent">3</span>
+          <span class="stat-label">家长完成</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-num" id="stat-chat">0</span>
+          <span class="stat-label">聊天记录</span>
+        </div>
+      </section>
+      <p class="stat-note">「已记录」= 家长自报或聊天记录，不等于老师确认。</p>
+
+      <section class="card import-card" aria-labelledby="import-title">
+        <div class="card-head">
+          <h2 class="card-title" id="import-title">从群聊记录标记</h2>
+          <span class="card-meta">粘贴即自动识别</span>
+        </div>
+        <p class="import-hint">复制群里的接龙或文字消息，粘贴到下面。只自动标记明确说「完成 / 做了 / 打卡」的消息；「收到 / 好的」需要你确认。</p>
+        <textarea class="import-area" id="chat-input" rows="6" aria-label="粘贴群聊记录">乐乐妈妈：已完成
+安然爸爸：收到
+果果妈妈：做了
+阳阳爸爸：完成
+辰辰妈妈：完成
+豆豆妈妈：豆豆今天请假，明天补</textarea>
+        <button class="import-btn" id="import-btn" type="button">识别并自动标记</button>
+        <p class="import-note">只读取文字，不保存原文；图片/语音请点孩子手动调整。</p>
+        <div class="import-result" id="import-result" hidden aria-live="polite">
+          <span class="result-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.2 4.2L19 7"/></svg>
+          </span>
+          <span class="result-copy" id="result-copy">已自动标记 4 人</span>
+          <button class="result-undo" id="undo-import" type="button">撤销本次</button>
+        </div>
+        <div class="review" id="import-review" hidden>
+          <p class="review-title">需要确认</p>
+          <div id="review-rows"></div>
+        </div>
+        <p class="import-unmatched" id="import-unmatched" hidden></p>
+      </section>
+
+      <section class="roster" aria-labelledby="roster-title">
+        <div class="section-head">
+          <h2 class="section-title" id="roster-title">参与名单</h2>
+          <span class="section-count">8 位孩子</span>
+        </div>
+        <div class="roster-card" id="roster">
+          <div class="student-row" data-student="乐乐" data-source="parent">
+            <span class="avatar">乐</span>
+            <span class="student-name">乐乐</span>
+            <span class="student-status">家长完成</span>
+          </div>
+          <div class="student-row" data-student="朵朵" data-source="parent">
+            <span class="avatar">朵</span>
+            <span class="student-name">朵朵</span>
+            <span class="student-status">家长完成</span>
+          </div>
+          <div class="student-row" data-student="小宇" data-source="parent">
+            <span class="avatar">宇</span>
+            <span class="student-name">小宇</span>
+            <span class="student-status">家长完成</span>
+          </div>
+          <div class="student-row" data-student="辰辰" data-source="none">
+            <span class="avatar">辰</span>
+            <span class="student-name">辰辰</span>
+            <span class="student-status">未完成</span>
+          </div>
+          <div class="student-row" data-student="安然" data-source="none">
+            <span class="avatar">安</span>
+            <span class="student-name">安然</span>
+            <span class="student-status">未完成</span>
+          </div>
+          <div class="student-row" data-student="果果" data-source="none">
+            <span class="avatar">果</span>
+            <span class="student-name">果果</span>
+            <span class="student-status">未完成</span>
+          </div>
+          <div class="student-row" data-student="阳阳" data-source="none">
+            <span class="avatar">阳</span>
+            <span class="student-name">阳阳</span>
+            <span class="student-status">未完成</span>
+          </div>
+          <div class="student-row" data-student="豆豆" data-source="none">
+            <span class="avatar">豆</span>
+            <span class="student-name">豆豆</span>
+            <span class="student-status">未完成</span>
+          </div>
+        </div>
+        <p class="roster-note">已记录：家长完成 3 · 聊天记录 0 · 手动 0 · 未完成 5。识别有误？点孩子可手动标记或取消。</p>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

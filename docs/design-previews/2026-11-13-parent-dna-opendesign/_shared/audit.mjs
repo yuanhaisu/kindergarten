@@ -2,7 +2,8 @@
 /**
  * OpenDesign DNA 批次静态审计。
  *
- *   node _shared/audit.mjs
+ *   node _shared/audit.mjs              # baseline 31 页（parent/）
+ *   node _shared/audit.mjs --chosen     # chosen 31 页（parent-chosen/）
  *
  * 只检查机械可判定的项；视觉与信息密度仍需人看。
  * 退出码 1 表示有 error。
@@ -12,7 +13,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PAGES_ROOT = path.join(root, "parent");
+const CHOSEN = process.argv.includes("--chosen");
+const PAGES_ROOT = path.join(root, CHOSEN ? "parent-chosen" : "parent");
 const TAB_DIRS = new Set(["01-home", "11-growth", "17-pickup", "31-profile"]);
 
 const dirs = fs.existsSync(PAGES_ROOT)
@@ -134,6 +136,25 @@ for (const dir of dirs) {
   if (/(?:class="[^"]*\bbtn[^"]*primary[^"]*"|\.btn--primary)[\s\S]{0,300}/.test(html)) {
     if (/#f97316|#F97316/i.test(css.slice(css.indexOf(".btn--primary"), css.indexOf(".btn--primary") + 400))) {
       problems.push("主按钮使用橙色");
+    }
+  }
+
+  if (dir === "29-settings") {
+    const groupTitle = css.match(/\.group-title\s*\{([^}]*)\}/);
+    const rule = groupTitle ? groupTitle[1] : "";
+    if (!/font-family\s*:\s*var\(--font-display\)/.test(rule)) {
+      problems.push("29 分组标题未使用 DNA 衬线字体");
+    }
+    if (!/font-size\s*:\s*21px/.test(rule) || !/font-weight\s*:\s*400/.test(rule)) {
+      problems.push("29 分组标题未使用 H2 21px/400");
+    }
+  }
+
+  if (dir === "11-growth") {
+    const footer = css.match(/\.feed-footer\s*\{([^}]*)\}/);
+    const rule = footer ? footer[1] : "";
+    if (/--muted-on-surface|#5E6B7A/i.test(rule) || !/--muted\b|#55616F/i.test(rule)) {
+      problems.push("11 页脚未使用 on-bone muted 色（#55616F）");
     }
   }
 

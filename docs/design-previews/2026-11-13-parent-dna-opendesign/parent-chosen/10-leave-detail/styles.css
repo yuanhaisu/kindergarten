@@ -607,6 +607,49 @@ time {
   line-height: 1.65;
 }
 
+/* ---------- resubmit (cancelled state) ---------- */
+.resubmit-section {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hair);
+}
+
+.resubmit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1.4;
+  transition: filter var(--motion-press) ease-out;
+}
+
+.resubmit-button:active {
+  filter: brightness(0.9);
+}
+
+.resubmit-button:focus-visible {
+  outline: 2px solid var(--fg-deep);
+  outline-offset: 3px;
+}
+
+.resubmit-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--weight-regular);
+  line-height: 1.65;
+  text-align: center;
+}
+
 /* ---------- bottom confirmation drawer ---------- */
 .sheet-layer {
   position: absolute;

@@ -1,0 +1,57 @@
+/**
+ * chosen 页集清单：31 页 × 4 个必需文件 + 13 个状态截图。
+ *
+ * 这是 chosen 页集的唯一页数契约。新增/删除页面时先改这里。
+ * 条目形状见同目录 README.md。
+ */
+export default {
+  expected: { pages: 31, states: 13 },
+  pages: [
+    "01-home",
+    "02-login",
+    "03-bind",
+    "04-consent",
+    "05-policy",
+    "06-notice-index",
+    "07-notice-detail",
+    "08-leave-index",
+    "09-leave-create",
+    "10-leave-detail",
+    "11-growth",
+    "12-growth-detail",
+    "13-growth-album",
+    "14-growth-report",
+    "15-album-index",
+    "16-album-detail",
+    "17-pickup",
+    "18-pickup-qrcode",
+    "19-pickup-authorized",
+    "20-pickup-authorized-create",
+    "21-tasks",
+    "22-tasks-detail",
+    "23-tasks-wall",
+    "24-points",
+    "25-class",
+    "26-calendar",
+    "27-student",
+    "28-feedback",
+    "29-settings",
+    "30-messages",
+    "31-profile",
+  ],
+  states: [
+    { slug: "06-notice-index", state: "empty", file: "preview-empty.png" },
+    { slug: "08-leave-index", state: "empty", file: "preview-empty.png" },
+    { slug: "09-leave-create", state: "error", file: "preview-error.png" },
+    { slug: "10-leave-detail", state: "cancelled", file: "preview-cancelled.png" },
+    { slug: "11-growth", state: "empty", file: "preview-empty.png" },
+    { slug: "15-album-index", state: "empty", file: "preview-empty.png" },
+    { slug: "17-pickup", state: "away", file: "preview-away.png" },
+    { slug: "17-pickup", state: "done", file: "preview-done.png" },
+    { slug: "19-pickup-authorized", state: "empty", file: "preview-empty.png" },
+    { slug: "19-pickup-authorized", state: "detail", file: "preview-detail.png" },
+    { slug: "21-tasks", state: "empty", file: "preview-empty.png" },
+    { slug: "30-messages", state: "empty", file: "preview-empty.png" },
+    { slug: "30-messages", state: "detail", file: "preview-detail.png" },
+  ],
+};

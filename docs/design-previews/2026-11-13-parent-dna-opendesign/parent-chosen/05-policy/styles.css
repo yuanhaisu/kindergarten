@@ -102,7 +102,7 @@
   --motion-sheet-out: 200ms;
 }
 
-/* ---------- this page: 隐私政策全文 ---------- */
+/* ---------- this page: 隐私与协议（三份文档） ---------- */
 
 *,
 *::before,
@@ -267,16 +267,74 @@ body {
   color: var(--fg);
 }
 
-.doc-meta {
-  margin: 8px 0 0;
+.doc-switch {
+  display: flex;
+  gap: 4px;
+  margin-top: 18px;
+  padding: 4px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+
+.doc-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted-on-surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-press) var(--ease-out),
+    color var(--motion-press) var(--ease-out);
+}
+
+.doc-tab.is-active {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.doc-tab:active {
+  opacity: 0.82;
+}
+
+.doc-tab:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.doc-version {
+  margin: 10px 0 0;
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
+.doc-panel {
+  margin-top: 22px;
+}
+
+.doc-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  line-height: var(--leading-h2);
+  font-weight: var(--weight-regular);
+  letter-spacing: 0;
+  color: var(--fg);
+}
+
 .doc-lede {
-  margin: 18px 0 0;
+  margin: 10px 0 0;
   font-family: var(--font-serif);
   font-size: var(--text-serif-body);
   line-height: var(--leading-serif-body);
@@ -323,8 +381,8 @@ body {
 .section-title {
   margin: 0 0 10px;
   font-family: var(--font-display);
-  font-size: var(--text-h2);
-  line-height: var(--leading-h2);
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
   font-weight: var(--weight-regular);
   letter-spacing: 0;
   color: var(--fg);

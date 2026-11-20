@@ -24,7 +24,6 @@
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
       </button>
       <span class="pagebar-title">幼儿信息</span>
-      <button class="pagebar-edit" type="button" data-action="edit" data-od-id="btn-edit">编辑</button>
     </header>
 
     <main class="mp-main">
@@ -32,8 +31,8 @@
         <div class="child-avatar" aria-hidden="true">乐</div>
         <div class="profile-copy">
           <h1 class="child-name" id="child-name" data-od-id="child-name">乐乐</h1>
-          <p class="child-line">小一班 · <span class="hl">5 岁 2 个月</span></p>
-          <p class="child-meta">2025 年 9 月入园</p>
+          <p class="child-line">小一班 · <span class="hl">4 岁 2 个月</span></p>
+          <p class="child-meta">2026 年 9 月入园</p>
         </div>
       </section>
 
@@ -47,19 +46,11 @@
             </div>
             <div class="fact" data-od-id="fact-gender">
               <dt class="fact-label">性别</dt>
-              <dd class="fact-value">女</dd>
+              <dd class="fact-value">男</dd>
             </div>
             <div class="fact" data-od-id="fact-birthday">
               <dt class="fact-label">生日</dt>
-              <dd class="fact-value">2021 年 9 月 8 日</dd>
-            </div>
-            <div class="fact" data-od-id="fact-ethnicity">
-              <dt class="fact-label">民族</dt>
-              <dd class="fact-value">汉族</dd>
-            </div>
-            <div class="fact fact--full" data-od-id="fact-household">
-              <dt class="fact-label">户籍</dt>
-              <dd class="fact-value">湖南 · 湘潭</dd>
+              <dd class="fact-value">2022 年 9 月 8 日</dd>
             </div>
           </dl>
         </div>
@@ -68,24 +59,13 @@
       <section class="section" aria-labelledby="health-heading" data-od-id="section-health">
         <h2 class="section-title" id="health-heading">健康信息</h2>
         <div class="card" data-od-id="health-card">
-          <dl class="fact-grid">
-            <div class="fact" data-od-id="fact-height">
-              <dt class="fact-label">身高</dt>
-              <dd class="fact-value fact-value--num">108<span class="fact-unit">cm</span></dd>
+          <div class="health-note">
+            <div class="health-note__copy">
+              <p class="fact-label">健康备注</p>
+              <p class="health-note__value" id="health-note-value">对花生过敏</p>
             </div>
-            <div class="fact" data-od-id="fact-weight">
-              <dt class="fact-label">体重</dt>
-              <dd class="fact-value fact-value--num">18<span class="fact-unit">kg</span></dd>
-            </div>
-            <div class="fact" data-od-id="fact-allergy">
-              <dt class="fact-label">过敏史</dt>
-              <dd class="fact-value">无</dd>
-            </div>
-            <div class="fact" data-od-id="fact-care">
-              <dt class="fact-label">特殊照护</dt>
-              <dd class="fact-value">无</dd>
-            </div>
-          </dl>
+            <button class="health-note__edit" id="edit-health-note" type="button" data-od-id="edit-health-note">修改</button>
+          </div>
         </div>
       </section>
 
@@ -99,11 +79,6 @@
                 <p class="contact-name">妈妈 · 李静</p>
                 <p class="contact-phone">138****6721</p>
               </div>
-              <button class="call-btn" type="button" aria-label="拨打妈妈李静的电话 138****6721" data-call="妈妈 · 李静" data-od-id="btn-call-mother">
-                <span class="call-face">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 3.5h3.1l1.5 3.8-2 1.4a12.8 12.8 0 0 0 6.1 6.1l1.4-2 3.8 1.5v3.1a2.4 2.4 0 0 1-2.6 2.4C10.2 19.2 4.8 13.8 4.2 6.1a2.4 2.4 0 0 1 2.4-2.6Z"/></svg>
-                </span>
-              </button>
             </li>
             <li class="contact" data-od-id="contact-father">
               <span class="contact-avatar contact-avatar--terra" aria-hidden="true">爸</span>
@@ -111,11 +86,6 @@
                 <p class="contact-name">爸爸</p>
                 <p class="contact-phone">138****9034</p>
               </div>
-              <button class="call-btn" type="button" aria-label="拨打爸爸的电话 138****9034" data-call="爸爸 · 138****9034" data-od-id="btn-call-father">
-                <span class="call-face">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 3.5h3.1l1.5 3.8-2 1.4a12.8 12.8 0 0 0 6.1 6.1l1.4-2 3.8 1.5v3.1a2.4 2.4 0 0 1-2.6 2.4C10.2 19.2 4.8 13.8 4.2 6.1a2.4 2.4 0 0 1 2.4-2.6Z"/></svg>
-                </span>
-              </button>
             </li>
           </ul>
         </div>
@@ -126,6 +96,21 @@
         <span>信息有误请联系班级老师修改</span>
       </p>
     </main>
+
+    <div class="sheet-layer" id="health-note-sheet" role="dialog" aria-modal="true" aria-labelledby="health-note-sheet-title" aria-describedby="health-note-sheet-desc" hidden>
+      <div class="sheet-scrim" id="health-note-scrim"></div>
+      <section class="sheet-panel">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="health-note-sheet-title">健康备注</h2>
+        <p class="sheet-desc" id="health-note-sheet-desc">仅可修改健康备注，其他信息请联系班级老师</p>
+        <label class="sheet-label" for="health-note-input">备注内容</label>
+        <textarea class="sheet-input" id="health-note-input" rows="3" maxlength="120">对花生过敏</textarea>
+        <div class="sheet-actions">
+          <button class="sheet-cancel" id="health-note-cancel" type="button">取消</button>
+          <button class="sheet-save" id="health-note-save" type="button">保存</button>
+        </div>
+      </section>
+    </div>
 
     <div class="toast" role="status" aria-live="polite" aria-atomic="true" data-toast></div>
   </div>

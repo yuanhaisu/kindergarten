@@ -67,7 +67,7 @@ const groups = [
     note: "门口场景与激励",
     pages: [
       { dir: "18-pickup-qrcode", title: "接送二维码" },
-      { dir: "19-pickup-authorized", title: "可接送人", variants: [{ file: "index.html?state=empty", img: "preview-empty.png", label: "空态" }] },
+      { dir: "19-pickup-authorized", title: "接送管理", variants: [{ file: "index.html?state=empty", img: "preview-empty.png", label: "空态" }] },
       { dir: "20-pickup-authorized-create", title: "新增授权人" },
       { dir: "24-points", title: "积分与成就" },
     ],
@@ -108,6 +108,10 @@ if (CHOSEN) {
   addVariant("10-leave-detail", { file: "index.html?state=cancelled", img: "preview-cancelled.png", label: "已取消" });
   addVariant("19-pickup-authorized", { file: "index.html?state=detail", img: "preview-detail.png", label: "授权详情" });
   addVariant("30-messages", { file: "index.html?state=detail", img: "preview-detail.png", label: "消息详情" });
+  // 评审补充态：不进入 13 个契约状态清单，只是便于并排看抽屉 / 回退态。
+  addVariant("01-home", { file: "index.html?state=meal-fallback", img: "preview-meal-fallback.png", label: "早餐回退" });
+  addVariant("11-growth", { file: "index.html?state=photo", img: "preview-photo.png", label: "照片查看" });
+  addVariant("31-profile", { file: "index.html?state=switch", img: "preview-switch.png", label: "切换孩子" });
 }
 
 const missing = [];

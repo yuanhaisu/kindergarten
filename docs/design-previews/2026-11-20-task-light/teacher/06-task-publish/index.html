@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>养成星球 · 老师端 · 发布亲子任务</title>
+  <link rel="stylesheet" href="../../_shared/fonts.css" />
+  <link rel="stylesheet" href="../../_shared/teacher-dna.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="mp-app mp-app--light">
+    <div class="mp-statusbar" aria-hidden="true">
+      <span>10:20</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <main class="mp-main" id="main">
+      <header class="page-head">
+        <button class="icon-btn back" id="back" type="button" aria-label="返回">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>
+        </button>
+        <div class="head-copy">
+          <h1 class="page-title">发布亲子任务</h1>
+          <p class="head-sub">小一班 · 8 位家长（示例）</p>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="content-title">
+        <h2 class="card-title" id="content-title">任务内容</h2>
+        <label class="field">
+          <span class="field-label">标题</span>
+          <input class="field-input" id="task-title" value="给家人讲一件今天开心的事" maxlength="40" />
+        </label>
+        <label class="field">
+          <span class="field-label">一句提示</span>
+          <textarea class="field-input field-area" id="task-prompt" rows="3">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。</textarea>
+        </label>
+      </section>
+
+      <section class="card" aria-labelledby="type-title">
+        <h2 class="card-title" id="type-title">任务类型</h2>
+        <div class="type-row" role="group" aria-label="任务类型">
+          <button class="type-btn is-on" type="button" data-type="action" aria-pressed="true">
+            <span class="type-name">完成型</span>
+            <span class="type-note">家长点一下完成</span>
+          </button>
+          <button class="type-btn" type="button" data-type="view" aria-pressed="false">
+            <span class="type-name">观看型</span>
+            <span class="type-note">看完资源自动记录</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="time-title">
+        <h2 class="card-title" id="time-title">截止与资源</h2>
+        <label class="field">
+          <span class="field-label">截止时间</span>
+          <input class="field-input" id="task-deadline" value="11 月 22 日 18:00" />
+        </label>
+        <label class="field" id="resource-field" hidden>
+          <span class="field-label">资源名称或链接</span>
+          <input class="field-input" id="task-resource" value="秋天为什么落叶" />
+          <span class="field-help">站内资源按观看进度记录；外部链接只记录打开。</span>
+        </label>
+      </section>
+
+      <p class="foot-note">发布后会生成分享卡片，直接转发到班级群即可。</p>
+    </main>
+
+    <div class="dock">
+      <button class="publish-btn" id="publish" type="button">发布并分享</button>
+    </div>
+
+    <section class="share-panel" id="share-panel" hidden aria-live="polite">
+      <header class="share-head">
+        <div>
+          <h2 class="share-heading">已发布</h2>
+          <p class="share-sub">分享卡片已生成</p>
+        </div>
+        <button class="share-close" id="share-close" type="button">返回修改</button>
+      </header>
+      <div class="share-card" aria-hidden="true">
+        <p class="share-overline">小一班 · 亲子任务</p>
+        <h2 class="share-title" id="share-title">给家人讲一件今天开心的事</h2>
+        <p class="share-note">点开卡片，完成后点一下即可。</p>
+      </div>
+      <div class="share-actions">
+        <button class="ghost-btn" id="save-poster" type="button">保存海报</button>
+        <button class="primary-btn" id="share-group" type="button">分享到群</button>
+      </div>
+      <button class="text-btn" id="view-stats" type="button">查看任务统计</button>
+    </section>
+
+    <section class="poster-panel" id="poster-panel" hidden aria-live="polite">
+      <header class="share-head">
+        <div>
+          <h2 class="share-heading">分享海报</h2>
+          <p class="share-sub">已包含任务小程序码</p>
+        </div>
+        <button class="share-close" id="poster-close" type="button">返回</button>
+      </header>
+      <div class="poster-card">
+        <p class="poster-overline">小一班 · 亲子任务</p>
+        <h2 class="poster-title" id="poster-title">给家人讲一件今天开心的事</h2>
+        <p class="poster-note">点开小程序，完成后点一下即可。</p>
+        <div class="poster-code" aria-label="任务小程序码示意">
+          <span class="code-corner code-corner--tl"></span>
+          <span class="code-corner code-corner--tr"></span>
+          <span class="code-corner code-corner--bl"></span>
+          <span class="poster-code__hint">小程序码</span>
+        </div>
+        <p class="poster-foot">养成星球 · 长按识别，打开任务</p>
+      </div>
+      <button class="primary-btn" id="poster-save" type="button">保存到相册</button>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

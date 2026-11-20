@@ -67,6 +67,8 @@
 
   function renderDay(dateKey) {
     var info = dayInfo[dateKey];
+    var deadlineCard = document.getElementById("deadline-card");
+    if (deadlineCard) deadlineCard.hidden = dateKey !== TODAY;
 
     agendaTitle.textContent = dateKey === TODAY ? "今天" : weekdayOf(dateKey);
     agendaMeta.textContent = metaFor(dateKey, info);
@@ -116,4 +118,32 @@
       selectDay(TODAY, true);
     });
   }
+
+  var monthKeys = ["2026-10", "2026-11", "2026-12"];
+  var monthIndex = 1;
+  var monthTitle = document.getElementById("calendar-month-title");
+  var monthPrev = document.getElementById("month-prev");
+  var monthNext = document.getElementById("month-next");
+  var monthCard = document.querySelector(".month-card");
+  var agendaSection = document.querySelector(".agenda");
+  var monthEmpty = document.getElementById("month-empty");
+  function setMonth(index) {
+    monthIndex = Math.max(0, Math.min(monthKeys.length - 1, index));
+    var key = monthKeys[monthIndex];
+    var parts = key.split("-");
+    if (monthTitle) monthTitle.innerHTML = '<time datetime="' + key + '">' + parts[0] + " 年 " + Number(parts[1]) + " 月</time>";
+    var current = key === "2026-11";
+    if (monthCard) monthCard.hidden = !current;
+    if (agendaSection) agendaSection.hidden = !current;
+    var deadline = document.getElementById("deadline-card");
+    if (deadline) deadline.hidden = !current;
+    if (monthEmpty) monthEmpty.hidden = current;
+    if (todayButton) { todayButton.disabled = !current; todayButton.setAttribute("aria-disabled", String(!current)); }
+    if (monthPrev) monthPrev.disabled = monthIndex === 0;
+    if (monthNext) monthNext.disabled = monthIndex === monthKeys.length - 1;
+    if (current) selectDay(TODAY, false);
+  }
+  if (monthPrev) monthPrev.addEventListener("click", function () { setMonth(monthIndex - 1); });
+  if (monthNext) monthNext.addEventListener("click", function () { setMonth(monthIndex + 1); });
+  setMonth(1);
 })();
