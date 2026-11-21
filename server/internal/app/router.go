@@ -46,8 +46,13 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/auth/login/sms", h.inner.SMSDisabled)
 		// 旧微信登录在 #164 关闭：openid 不再直接建账号，新登录见 #175。
 		// 保留路由以便旧客户端拿到明确的 403，而不是误以为路径写错。
-		v1.POST("/auth/login/wechat", h.inner.WeChatLoginClosed)
-		v1.POST("/auth/login/password", h.inner.PasswordLogin)
+		// 限流按 app_id + IP、高阈值且失败开放：code 一次性，不能因 Redis
+		// 抖动把整所幼儿园挡在登录外（#174）。
+		wechatLoginLimit := middleware.WeChatLoginRateLimit(h.rdb, middleware.WeChatLoginMaxPerMinute, time.Minute)
+		v1.POST("/auth/login/wechat", wechatLoginLimit, h.inner.WeChatLoginClosed)
+		// 密码登录只服务管理后台，按 IP + 手机号严格限流且失败关闭（#174）。
+		passwordLoginLimit := middleware.PasswordLoginRateLimit(h.rdb, middleware.PasswordLoginMaxPerMinute, time.Minute)
+		v1.POST("/auth/login/password", passwordLoginLimit, h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
 		// 园所公开品牌（#170）：未登录可访问，按 public_code（不可枚举）定位。
