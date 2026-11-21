@@ -14,7 +14,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
@@ -30,7 +29,7 @@ type TeacherService struct {
 	kg             *repository.KindergartenRepo
 	oplog          *repository.OperationLogRepo
 	invitationRepo *repository.TeacherInvitationRepo
-	wx             *auth.WeChatClient
+	wx             WeChatAPI
 }
 
 func NewTeacherService(
@@ -42,7 +41,7 @@ func NewTeacherService(
 	kg *repository.KindergartenRepo,
 	oplog *repository.OperationLogRepo,
 	invitationRepo *repository.TeacherInvitationRepo,
-	wx *auth.WeChatClient,
+	wx WeChatAPI,
 ) *TeacherService {
 	return &TeacherService{
 		db: db, teachers: teachers, classes: classes, users: users, roles: roles, kg: kg, oplog: oplog,

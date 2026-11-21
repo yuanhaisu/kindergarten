@@ -59,7 +59,7 @@ type AuthService struct {
 	kgStatus       KindergartenStatusChecker
 	rdb            *redis.Client
 	revoker        auth.TokenRevoker
-	wx             *auth.WeChatClient
+	wx             WeChatAPI
 	secret         []byte
 	atTTL          time.Duration
 	rtTTL          time.Duration
@@ -75,7 +75,7 @@ func NewAuthService(
 	adminPerms AdminPermissionResolver,
 	kgStatus KindergartenStatusChecker,
 	rdb *redis.Client,
-	wx *auth.WeChatClient,
+	wx WeChatAPI,
 	secret []byte,
 	atTTL time.Duration,
 	rtTTL time.Duration,
