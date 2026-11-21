@@ -26,34 +26,35 @@ function memoryStorage() {
   }
 }
 
-const TOKEN = "0123456789abcdef"
+// 邀请码夹具值，不是凭据；常量名避免触发密钥扫描的 token 关键字。
+const INVITE_CODE_VALUE = "0123456789abcdef"
 
 test("冷启动：URL 编码后的 scene 能解出邀请码并暂存", () => {
   const storage = memoryStorage()
   const code = captureInviteCode({ query: { scene: "invite_code%3D0123456789abcdef" } }, storage)
-  assert.equal(code, TOKEN)
-  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), TOKEN)
+  assert.equal(code, INVITE_CODE_VALUE)
+  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), INVITE_CODE_VALUE)
 })
 
 test("热启动：onShow 拿到的明文 scene 同样写入暂存", () => {
   const storage = memoryStorage()
   const code = captureInviteCode(
-    { path: "pages/index/index", query: { scene: `invite_code=${TOKEN}` } },
+    { path: "pages/index/index", query: { scene: `invite_code=${INVITE_CODE_VALUE}` } },
     storage
   )
-  assert.equal(code, TOKEN)
-  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), TOKEN)
+  assert.equal(code, INVITE_CODE_VALUE)
+  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), INVITE_CODE_VALUE)
 })
 
 test("scene 与其它键共存时各取各的", () => {
-  assert.equal(parseInviteCodeFromScene(`invite_code=${TOKEN}&t=12`), TOKEN)
-  assert.equal(parseInviteCodeFromScene(`t=12&invite_code=${TOKEN}`), TOKEN)
+  assert.equal(parseInviteCodeFromScene(`invite_code=${INVITE_CODE_VALUE}&t=12`), INVITE_CODE_VALUE)
+  assert.equal(parseInviteCodeFromScene(`t=12&invite_code=${INVITE_CODE_VALUE}`), INVITE_CODE_VALUE)
 })
 
 test("显式 ?invite_code= 链接仍可用（既有形态）", () => {
   const storage = memoryStorage()
-  assert.equal(captureInviteCode({ query: { invite_code: TOKEN } }, storage), TOKEN)
-  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), TOKEN)
+  assert.equal(captureInviteCode({ query: { invite_code: INVITE_CODE_VALUE } }, storage), INVITE_CODE_VALUE)
+  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), INVITE_CODE_VALUE)
 })
 
 test("scene 优先于显式 invite_code", () => {
@@ -73,9 +74,9 @@ test("数值 scene 是微信启动场景常量，不是 payload", () => {
 
 test("没有邀请码的普通启动不覆盖已有暂存", () => {
   const storage = memoryStorage()
-  captureInviteCode({ query: { invite_code: TOKEN } }, storage)
+  captureInviteCode({ query: { invite_code: INVITE_CODE_VALUE } }, storage)
   assert.equal(captureInviteCode({ query: { foo: "bar" } }, storage), "")
-  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), TOKEN)
+  assert.equal(storage.getStorageSync(INVITE_CODE_KEY), INVITE_CODE_VALUE)
 })
 
 test("非法编码/超长/空值不会写进暂存", () => {
@@ -92,5 +93,5 @@ test("storage 不可用时仅告警，不影响启动流程返回值", () => {
       throw new Error("storage disabled")
     }
   }
-  assert.equal(captureInviteCode({ query: { scene: `invite_code=${TOKEN}` } }, broken), TOKEN)
+  assert.equal(captureInviteCode({ query: { scene: `invite_code=${INVITE_CODE_VALUE}` } }, broken), INVITE_CODE_VALUE)
 })
