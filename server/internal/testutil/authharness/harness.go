@@ -186,7 +186,14 @@ func New(t testing.TB) *Harness {
 		repository.NewOperationLogRepo(setup.db),
 	)
 
-	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, settingsSvc, publicBrandSvc, bindInviteSvc)
+	// 家长端园所二维码（#176）：与生产同一套 service 装配，微信走假客户端。
+	parentEntryQRSvc := service.NewParentEntryQRService(
+		service.NewKindergartenEntryService(kindergartenRepo),
+		clientSvc,
+		fakeWx,
+	)
+
+	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, settingsSvc, publicBrandSvc, bindInviteSvc, parentEntryQRSvc)
 	if err != nil {
 		t.Fatalf("authharness: 装配 HTTP 引擎失败：%v", err)
 	}
@@ -220,7 +227,7 @@ func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
 //
 // 只注册这些分组，不拉整棵业务依赖树；后续票需要业务组时在 h.Handler 上追加，
 // 继续复用同一套中间件与同一个测试库。
-func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
+func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
 	enforcer, err := rbac.NewEnforcer(&config.CasbinConfig{
 		Enable:     true,
 		ModelPath:  filepath.Join(repoRoot, "configs", "rbac_model.conf"),
@@ -230,7 +237,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		return nil, nil, nil, fmt.Errorf("初始化 Casbin：%w", err)
 	}
 
-	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc)
+	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc, parentEntryQRSvc)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -286,6 +293,9 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		{
 			adminG.GET("/kindergarten/info", hnd.GetKindergartenInfo)
 			adminG.PUT("/kindergarten/info", hnd.UpdateKindergartenInfo)
+			// 家长端园所二维码（#176）：生产还叠 RequirePermission
+			// （system:kindergarten），这里与 #178 一样只保留 Casbin。
+			adminG.GET("/kindergarten/parent-qrcode", hnd.GetParentEntryQRCode)
 		}
 
 		// 业务接口探针（#175）：用于验证「已绑定可访问、未绑定 403」。
@@ -304,7 +314,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 // 这些路由只依赖上述服务，无需为了一条测试缝拉起整棵依赖树。
 // 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
 // 强制同步，避免测试缝悄悄错位。
-func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService) *handler.Handler {
+func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService) *handler.Handler {
 	return handler.NewHandler(
 		authSvc,
 		nil, // fileSvc
@@ -349,6 +359,7 @@ func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.Settings
 		nil, // entSvc
 		publicBrandSvc,
 		bindInviteSvc,
+		parentEntryQRSvc,
 	)
 }
 

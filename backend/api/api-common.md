@@ -356,11 +356,12 @@
 ```json
 // Response
 [
-  { "kindergarten_id": 4, "name": "阳光幼儿园", "role": "parent" },
-  { "kindergarten_id": 7, "name": "星光幼儿园", "role": "parent" }
+  { "kindergarten_id": 4, "name": "阳光幼儿园", "role": "parent", "public_code": "k3m9x2qa7t" },
+  { "kindergarten_id": 7, "name": "星光幼儿园", "role": "parent", "public_code": "p8w2n5re4c" }
 ]
 ```
 
+- `public_code` 是园所公开入口码（#176），家长端用它把扫码 scene `kg_<public_code>` 匹配到成员园；未分配时为空串。
 - 家长端客户端只返回本人的 `parent` 园；老师端只返回 `teacher` 园。
 - 共用（shared）客户端不返回 `app_channel=dedicated/group` 的园；专属客户端只返回自己 scope 的园。
 - 管理端凭证（无 `app_id`）→ `403`（`40300`）；`app_id` 指向的客户端未注册或已停用 → `403`。

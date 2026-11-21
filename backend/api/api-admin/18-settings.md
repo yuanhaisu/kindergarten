@@ -195,3 +195,30 @@
   "updated_at": "2026-03-19T10:00:00Z"
 }
 ```
+
+---
+
+## GET `/admin/kindergarten/parent-qrcode`
+
+> 家长端园所入口二维码（#176）：当前登录园所的对外物料。权限 `system:kindergarten`。
+>
+> 码属于园所，**不接受 `kindergarten_id` 参数**——目标园由 JWT 决定，避免越权为任意园生成入口。
+
+```json
+// Request（可选 query）
+// env_version=release | trial | develop（不传回落到服务端配置的 code_env_version）
+
+// Response
+{
+  "public_code": "k3m9x2qa7t",
+  "scene": "kg_k3m9x2qa7t",
+  "page": "pages/index/index",
+  "env_version": "release",
+  "image_base64": "iVBORw0KGgoAAAANSUhEUg..."
+}
+```
+
+- `scene` 固定为 `kg_<public_code>`，长度上限 32（微信 scene 限制）；`public_code` 为 10 位 Crockford base32。
+- 园所尚无 `public_code` 时首次生成自动分配并落库，重复生成复用同一码。
+- 微信调用走**家长端**小程序凭据（`GetParentWXACodeUnlimit`）；`page` 必须真实存在于 `parent/src/pages.json`。
+- 错误：园所不存在 `404`；`env_version` 非法 `422`；园所通道与家长端客户端作用域不匹配 `409`；家长端客户端未注册/停用 `503`。

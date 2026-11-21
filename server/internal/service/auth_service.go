@@ -49,7 +49,8 @@ type ClientResolver interface {
 // UserIdentityRepository 客户端身份仓储接口（由 *repository.UserIdentityRepo 实现）。
 type UserIdentityRepository interface {
 	FindOrCreatePendingUser(ctx context.Context, appID, openID, unionID string) (*domain.User, error)
-	// FindByUserAndApp 供续签/切换回填 token 里的 openid（#167）。
+	// FindByUserAndApp 用于续期/切换时回填 claims 里的 open_id：绑定手机号
+	// 依赖它定位客户端身份，不能因为刷新过 token 就丢掉。
 	FindByUserAndApp(ctx context.Context, userID uint64, appID string) (*domain.UserIdentity, error)
 }
 
@@ -346,8 +347,29 @@ func (s *AuthService) IssueClientLogin(ctx context.Context, userID uint64, clien
 	if err != nil {
 		return nil, err
 	}
-	// 绑定刚才把客户端身份挂到该账号，token 里要带上 open_id（#167 依赖它续签/再绑定）。
-	return s.issueClientTokens(ctx, user, filterRolesByFamily(roles, client.Role), client, s.openIDForUser(ctx, userID, client.AppID))
+	// 绑定把客户端身份挂到了这个账号，token 要带上 open_id（#167 续签/再绑定依赖）。
+	openID, err := s.clientOpenID(ctx, userID, client)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueClientTokens(ctx, user, filterRolesByFamily(roles, client.Role), client, openID)
+}
+
+// clientOpenID 取该账号在当前客户端的身份 open_id。续期与切换都要把它
+// 写回 claims；身份缺失不是刷新失败的理由（待绑定用户也有身份，缺失只
+// 会让后续绑定报 IDENTITY_MISSING），但仓储错误必须显式失败。
+func (s *AuthService) clientOpenID(ctx context.Context, userID uint64, client *domain.Client) (string, error) {
+	if s.identities == nil || client == nil || client.AppID == "" {
+		return "", nil
+	}
+	identity, err := s.identities.FindByUserAndApp(ctx, userID, client.AppID)
+	if err != nil {
+		return "", fmt.Errorf("load client identity: %w", err)
+	}
+	if identity == nil {
+		return "", nil
+	}
+	return identity.OpenID, nil
 }
 
 // issueTokensFor 是签发的唯一实现。client 为 nil 时是管理端/刷新路径（无 app_id），
@@ -687,11 +709,13 @@ func (s *AuthService) resolveClientMemberRoles(ctx context.Context, roles []doma
 	return filterClientRoles(roles, client, byID), byID, nil
 }
 
-// KindergartenMembership 是「我的园所」的一项：只暴露 id/名称/当前客户端角色。
+// KindergartenMembership 是「我的园所」的一项：暴露 id/名称/当前客户端角色/公开入口码。
+// public_code 让家长端能把扫到的 kg_<code> 匹配到成员园（#176）；公开码本就印在对外物料上。
 type KindergartenMembership struct {
 	KindergartenID uint64 `json:"kindergarten_id"`
 	Name           string `json:"name"`
 	Role           string `json:"role"`
+	PublicCode     string `json:"public_code"`
 }
 
 // ErrClientScopeRequired 表示端点只接受小程序客户端凭证（带 app_id）。
@@ -733,6 +757,7 @@ func (s *AuthService) ListMyKindergartens(ctx context.Context, userID uint64, cl
 			KindergartenID: kgID,
 			Name:           byID[kgID].Name,
 			Role:           r.Role,
+			PublicCode:     byID[kgID].PublicCode,
 		})
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -803,7 +828,11 @@ func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, cla
 	if len(scopedRoles) == 0 {
 		return nil, ErrKindergartenNotMember
 	}
-	return s.issueTokensFor(ctx, user, scopedRoles, client, s.openIDForUser(ctx, user.ID, client.AppID))
+	openID, err := s.clientOpenID(ctx, user.ID, client)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueTokensFor(ctx, user, scopedRoles, client, openID)
 }
 
 // hasAdminRole 密码登录只服务管理后台（#174）：家长/老师账号即使有密码
@@ -917,20 +946,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		return nil, fmt.Errorf("invalid refresh token: membership changed")
 	}
 
-	return s.issueTokensFor(ctx, user, scopedRoles, client, s.openIDForUser(ctx, user.ID, client.AppID))
-}
-
-// openIDForUser 取账号在当前客户端的身份，续签/切换时写回 token（#167）。
-// 身份缺失只影响后续绑定需要重新走小程序登录，不阻断续签。
-func (s *AuthService) openIDForUser(ctx context.Context, userID uint64, appID string) string {
-	if s.identities == nil {
-		return ""
+	openID, err := s.clientOpenID(ctx, user.ID, client)
+	if err != nil {
+		return nil, err
 	}
-	identity, err := s.identities.FindByUserAndApp(ctx, userID, appID)
-	if err != nil || identity == nil {
-		return ""
-	}
-	return identity.OpenID
+	return s.issueTokensFor(ctx, user, scopedRoles, client, openID)
 }
 
 // filterRolesByKindergarten 只保留目标园所的角色行；kgID=0 返回空

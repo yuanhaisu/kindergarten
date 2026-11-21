@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "supportHash": "bb1303a16f1325081caff0794892d98c7df036d6799f57120eb72e1669a27a63",
+  "supportHash": "cefc74a8136a8460944934dbb839e899228d3779e99b59c253e9fa7250a17b88",
   "supportReviewedAt": "2026-11-21",
-  "supportReason": "ticket #167：parent bindParentPhone 增加目标园所参数；合并 #169 成员切换与 #168 老师邀请绑定后复核共享 http/auth 会话层，无页面回归",
+  "supportReason": "merge #169/#168/#166 后：#176 新增 utils/scene.mjs + utils/entryScene.mjs，页面源码指纹与共享支撑代码一并复核，视觉无变化",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
-      "sha256": "218e04db6113ab87a3b771bd662af575b7c9831aa1a91d3475f6d7e9daa69cf0",
-      "depsSha": "f3407b81a9e244bacb65c9ce8c93deb97b11c0413db560eab4c52075f5bb0881",
+      "sha256": "e9edd1e00514d190bc5372bee651ab99b5638aec9ad00cfe86c09d452a9388b0",
+      "depsSha": "229e0206587f00246eef0bb1b9a805e9324ede9459f4038ab16d1fc65fd84cc5",
       "title": "养成星球",
       "tabbar": true,
       "reviewedAt": "2026-11-21",
-      "codeCommit": "dfcb18b-dirty",
-      "reason": "ticket #167 家长端首页绑定手机号：支持 public_code 园所入口、绑定成功后落盘新 token 并刷新首页"
+      "codeCommit": "e760325-dirty",
+      "reason": "#176 扫码入口：首页消费 kg_<public_code> 暂存，成员园自动切换/非成员展示绑定引导"
     },
     "parent/02-login": {
       "source": "parent/src/pages/auth/login.vue",
@@ -165,11 +165,12 @@
     "parent/18-tasks-detail": {
       "source": "parent/src/pages/tasks/detail.vue",
       "sha256": "aae1765bd305fc902a24f0bf099f00343172fe71a5a73ada7aff9600891f5626",
-      "depsSha": "295dff4b7cec8001944ce80f6d5d189e786534c3ee5ddd397c41e100bc754a3c",
+      "depsSha": "5485fd2be3bdf5e338545cb873332b13293be2f97ecf65d0b67be3f7a6b763ec",
       "title": "任务详情",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "dfcb18b",
+      "reason": "#176 统一 scene 解析到 utils/scene.mjs，taskScene.js 改为再导出，任务码行为不变"
     },
     "parent/19-tasks-wall": {
       "source": "parent/src/pages/tasks/wall.vue",

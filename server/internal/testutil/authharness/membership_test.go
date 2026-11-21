@@ -23,6 +23,7 @@ type membershipItem struct {
 	KindergartenID uint64 `json:"kindergarten_id"`
 	Name           string `json:"name"`
 	Role           string `json:"role"`
+	PublicCode     string `json:"public_code"`
 }
 
 // seedSharedClient 与 login_test.go 的 seedClient 相同，但单独命名避免
@@ -145,6 +146,24 @@ func TestMyKindergartensFilterByClientRoleAndChannel(t *testing.T) {
 	require.Len(t, teacherItems, 1, "老师端只应看到老师角色族的园")
 	assert.Equal(t, kgC.ID, teacherItems[0].KindergartenID)
 	assert.Equal(t, domain.ClientRoleTeacher, teacherItems[0].Role)
+}
+
+// #176：扫码落地要把 scene 里的 kg_<public_code> 匹配到成员园，
+// 所以「我的园所」必须带出 public_code（公开码本身不是敏感信息）。
+func TestMyKindergartensExposePublicCode(t *testing.T) {
+	h := authharness.New(t)
+	appID := uniqueAppID("kg-public-code")
+	seedSharedClient(t, h, appID, domain.ClientRoleParent)
+	kg := seedKindergartenWithChannel(t, h, "扫码园", domain.AppChannelShared)
+	require.NoError(t, h.DB.Model(&domain.Kindergarten{}).
+		Where("id = ?", kg.ID).Update("public_code", "scantest01").Error)
+	openID := uniqueOpenID("kg-public-code")
+	seedMember(t, h, appID, openID, memberRole{role: domain.ClientRoleParent, kg: kg})
+
+	result := loginWithClient(t, h, appID, openID)
+	items := listMemberships(t, h, result.Token)
+	require.Len(t, items, 1)
+	assert.Equal(t, "scantest01", items[0].PublicCode, "成员园必须带出公开码，否则扫码无法匹配到园")
 }
 
 // 待绑定 token 在未绑定白名单内：可以访问，但没有任何成员关系。

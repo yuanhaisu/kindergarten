@@ -415,6 +415,9 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 	{
 		kg.GET("/info", h.GetKindergartenInfo)
 		kg.PUT("/info", h.UpdateKindergartenInfo)
+		// 家长端园所入口二维码（#176）：码属于园所对外物料，
+		// 生成范围由当前登录园所决定，不接受任意 kindergarten_id 参数。
+		kg.GET("/parent-qrcode", h.GetParentEntryQRCode)
 	}
 
 	ag := adminG.Group("/admins")

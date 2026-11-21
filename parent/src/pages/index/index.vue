@@ -5,9 +5,16 @@ import { fetchParentHomeOverview, fetchHomeFeeds, switchStudent } from "@/api/pa
 import { fetchTasks } from "@/api/parent-task"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, setCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
-import { bindParentPhone } from "@/api/auth"
-import { setRefreshToken, setToken, setUser } from "@/utils/auth"
+import { bindParentPhone, fetchMyKindergartens, switchKindergarten } from "@/api/auth"
+import { fetchPublicKindergarten } from "@/api/public"
+import {
+  getCurrentKindergartenID,
+  setRefreshToken,
+  setToken,
+  setUser
+} from "@/utils/auth"
 import { clearEntitlementCache } from "@/utils/entitlement-cache.mjs"
+import { clearPendingEntry, readPendingEntry, resolveEntryAction } from "@/utils/entryScene.mjs"
 import { parseSceneTaskId } from "@/utils/taskScene"
 import { formatDateLabel, formatYmd } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
@@ -33,9 +40,14 @@ const ICON = {
 const needBindPhone = ref(false)
 const bindingPhone = ref(false)
 const bindPhoneErr = ref("")
-// 园所入口码（#167）：扫码/链接进入首页时带 ?public_code=xxx，绑定即落到该园。
+// 园所入口码（#167/#176）：扫码 scene 为 kg_<public_code>，暂存由 App.vue 在
+// 登录前完成；首页消费后：已是成员 → 自动切到该园，不是成员 → 绑定引导。
 // 没有入口码就走无 scene 绑定，由服务端按手机号在全部共用园所中匹配。
 const entryPublicCode = ref("")
+// 绑定引导针对的园所（扫码进入但还不是成员时）。与 needBindPhone 分开存，
+// 因为 loadHome 成功会把 needBindPhone 重置为 false，不能让它顺手抹掉入口引导。
+const entryBindCode = ref("")
+const entryBindName = ref("")
 
 const loading = ref(false)
 const retrying = ref(false)
@@ -53,6 +65,19 @@ const currentStudent = computed(() => overview.value.current_student || {})
 const students = computed(() => overview.value.students || [])
 const summary = computed(() => overview.value.today_summary || {})
 const heroInitial = computed(() => (currentStudent.value.name || "?").slice(0, 1))
+
+// 绑定卡出现条件：服务端判定未绑定，或扫码进入的园所还不是本人成员。
+const showBindGuide = computed(() => needBindPhone.value || Boolean(entryBindCode.value))
+const bindTitle = computed(() =>
+  entryBindName.value
+    ? `绑定手机号加入「${entryBindName.value}」`
+    : "绑定手机号以关联孩子信息"
+)
+const bindDesc = computed(() =>
+  entryBindName.value
+    ? `你扫码进入的是「${entryBindName.value}」，授权微信绑定的手机号后将按该园录入的家长账号为你开通`
+    : "请输入或授权微信绑定的手机号，系统将自动匹配管理员为您创建的家长账号"
+)
 
 // relation_label 由服务端映射（含 other 关系），页面不再维护本地 relation map。
 const relationLabel = computed(() => {
@@ -147,14 +172,14 @@ const showFeedSkeleton = computed(
 const isEmptyFeed = computed(
   () =>
     hasLoaded.value &&
-    !needBindPhone.value &&
+    !showBindGuide.value &&
     !loading.value &&
     !loadError.value &&
     feeds.value.length === 0
 )
 // 空态按 brief 决策隐藏「今晚一件事」；正常态只由今日任务是否存在决定。
 const showTonight = computed(
-  () => !needBindPhone.value && !loading.value && !loadError.value && !isEmptyFeed.value && Boolean(todayTask.value)
+  () => !showBindGuide.value && !loading.value && !loadError.value && !isEmptyFeed.value && Boolean(todayTask.value)
 )
 
 async function loadHome(options) {
@@ -232,6 +257,74 @@ async function handleRetry() {
   }
 }
 
+// 读取并消费扫码入口（#176）。
+// 只依据「我的园所」成员列表判断：是成员就自动切换（#169），不是成员就展示
+// 该园的绑定引导（#167）；家长端不提供、也不请求任何其它园所目录。
+async function consumeEntryScene() {
+  const pending = readPendingEntry(uni)
+  if (!pending) return false
+  const code = pending.public_code
+  entryPublicCode.value = code
+
+  try {
+    await ensureLogin()
+    const res = await fetchMyKindergartens()
+    const memberships = Array.isArray(res?.data) ? res.data : []
+    const plan = resolveEntryAction({
+      publicCode: code,
+      memberships,
+      currentKindergartenID: getCurrentKindergartenID()
+    })
+
+    if (plan.action === "none") {
+      clearPendingEntry(uni)
+      entryPublicCode.value = ""
+      return false
+    }
+    if (plan.action === "switch") {
+      // switchKindergarten 已换发并落盘双 token、清掉跟随园所的缓存；
+      // 入口到此消费完毕，后续 loadHome 会按目标园重新取数。
+      await switchKindergarten(plan.kindergartenID)
+      clearPendingEntry(uni)
+      entryPublicCode.value = ""
+      uni.showToast({ title: `已切换到${plan.name || "目标园所"}`, icon: "none" })
+      return true
+    }
+
+    // 不是成员：用公开品牌接口取园所名称（不存在则丢弃入口，避免死引导）。
+    const brand = await loadEntryKindergarten(code)
+    if (!brand) {
+      clearPendingEntry(uni)
+      entryPublicCode.value = ""
+      return false
+    }
+    entryBindCode.value = code
+    entryBindName.value = brand.name || ""
+    needBindPhone.value = true
+    return false
+  } catch (err) {
+    // 网络/服务异常不丢弃入口：下次 onShow 还能重试；也不静默，留排查线索。
+    console.warn("[parent-home] entry scene failed:", err?.message || err)
+    return false
+  }
+}
+
+// 返回 null 表示公开码不存在（调用方应丢弃入口）；其它失败返回空名称对象，
+// 让绑定引导仍可按 public_code 继续（绑定接口自己会校验该园是否录入了手机号）。
+async function loadEntryKindergarten(code) {
+  try {
+    const res = await fetchPublicKindergarten(code)
+    return res?.data || null
+  } catch (err) {
+    if (err?.code === 40400) {
+      uni.showToast({ title: "未找到该园所，请确认二维码是否正确", icon: "none" })
+      return null
+    }
+    console.warn("[parent-home] entry brand lookup failed:", err?.message || err)
+    return { name: "" }
+  }
+}
+
 async function handleGetPhoneNumber(e) {
   if (!e.detail.code) {
     bindPhoneErr.value = "获取手机号失败，请重试"
@@ -248,6 +341,11 @@ async function handleGetPhoneNumber(e) {
     if (data.token) setToken(data.token)
     if (data.refresh_token) setRefreshToken(data.refresh_token)
     if (data.user) setUser(data.user)
+    // 绑定成功即落到目标园，入口与绑定引导一起消费掉。
+    clearPendingEntry(uni)
+    entryPublicCode.value = ""
+    entryBindCode.value = ""
+    entryBindName.value = ""
     needBindPhone.value = false
     await loadHome()
   } catch (err) {
@@ -325,10 +423,15 @@ function formatTime(ts) {
 }
 
 // onShow：tabBar 页 switchTab 切回来不会重跑 onLoad，从详情返回也要刷新。
-onShow(() => loadHome())
+// 扫码入口也在这里消费：热启动由 App.onShow 写入暂存后，本页 onShow 紧随其后，
+// 因此「已在首页时被扫码唤起」同样能落园。
+onShow(async () => {
+  await consumeEntryScene()
+  await loadHome()
+})
 
 // 扫任务分享码落到首页时（码的 page 可能是首页），scene 里带 t=<task_id>。
-// public_code 只认显式 query：把 scene 解析成园所码属于 #176，这里不猜格式。
+// 园所码 kg_<public_code> 统一由 App.vue 在登录前捕获（#176），这里不再解析。
 onLoad((options) => {
   entryPublicCode.value = String(options?.public_code || "").trim()
   const taskId = parseSceneTaskId(options?.scene)
@@ -356,12 +459,12 @@ onPullDownRefresh(() => loadHome())
       </view>
     </view>
 
-    <!-- ===== 未绑定手机号：保留原有内联绑定流程，只做视觉适配 ===== -->
-    <view v-if="needBindPhone" class="bind-guide">
+    <!-- ===== 未绑定手机号 / 扫码进入非成员园：内联绑定引导 ===== -->
+    <view v-if="showBindGuide" class="bind-guide">
       <view class="bind-card">
         <text class="bind-icon">{{ ICON.user }}</text>
-        <text class="bind-title">绑定手机号以关联孩子信息</text>
-        <text class="bind-desc">请输入或授权微信绑定的手机号，系统将自动匹配管理员为您创建的家长账号</text>
+        <text class="bind-title">{{ bindTitle }}</text>
+        <text class="bind-desc">{{ bindDesc }}</text>
         <text class="bind-consent">授权手机号仅用于匹配园所为您创建的家长账号，不会对外公开</text>
         <button
           class="bind-phone-btn"
@@ -377,7 +480,7 @@ onPullDownRefresh(() => loadHome())
       </view>
     </view>
 
-    <template v-if="!needBindPhone">
+    <template v-if="!showBindGuide">
       <!-- ===== 错误态：替换今日区域，重试真实重新请求 ===== -->
       <view v-if="loadError" class="error-card">
         <view class="error-orb">

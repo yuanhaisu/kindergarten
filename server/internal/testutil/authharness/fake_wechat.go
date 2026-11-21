@@ -13,6 +13,10 @@ type WeChatCall struct {
 	Method string
 	Code   string
 	Role   string
+	// 小程序码参数（#176）：env_version 必须透传，page 必须指向真实页面。
+	// 只对 GetWXACodeUnlimit / GetParentWXACodeUnlimit 填写。
+	Page       string
+	EnvVersion string
 }
 
 // FakeWeChat 是 service.WeChatAPI 的进程内替身。
@@ -25,6 +29,9 @@ type FakeWeChat struct {
 	sessions   map[string]*auth.Code2SessionResp
 	phones     map[string]string
 	wxaCodes   map[string][]byte
+	// anyWXACode 只在测试显式 StubAnyWXACode 后生效，用于 scene 值由被测代码
+	// 生成（如存量园自动补 public_code）而无法预先登记的场景。
+	anyWXACode []byte
 	calls      []WeChatCall
 }
 
@@ -60,6 +67,14 @@ func (f *FakeWeChat) StubWXACode(scene string, png []byte) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.wxaCodes[scene] = append([]byte(nil), png...)
+}
+
+// StubAnyWXACode 让未逐个登记的 scene 也返回同一 PNG。
+// 只用于 scene 值由被测代码生成的用例；显式 StubWXACode 仍优先。
+func (f *FakeWeChat) StubAnyWXACode(png []byte) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.anyWXACode = append([]byte(nil), png...)
 }
 
 // SetCodeEnvVersion 设置 CodeEnvVersion 的返回值（默认 release）。
@@ -108,22 +123,25 @@ func (f *FakeWeChat) GetPhoneNumber(_ context.Context, code string) (*auth.Phone
 	return resp, nil
 }
 
-func (f *FakeWeChat) GetWXACodeUnlimit(_ context.Context, scene, _ string) ([]byte, error) {
-	return f.wxaCode("GetWXACodeUnlimit", scene)
+func (f *FakeWeChat) GetWXACodeUnlimit(_ context.Context, scene, page string) ([]byte, error) {
+	return f.wxaCode("GetWXACodeUnlimit", scene, page, "release")
 }
 
-func (f *FakeWeChat) GetParentWXACodeUnlimit(_ context.Context, scene, _, _ string) ([]byte, error) {
-	return f.wxaCode("GetParentWXACodeUnlimit", scene)
+func (f *FakeWeChat) GetParentWXACodeUnlimit(_ context.Context, scene, page, envVersion string) ([]byte, error) {
+	return f.wxaCode("GetParentWXACodeUnlimit", scene, page, envVersion)
 }
 
-func (f *FakeWeChat) wxaCode(method, scene string) ([]byte, error) {
+func (f *FakeWeChat) wxaCode(method, scene, page, envVersion string) ([]byte, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.record(WeChatCall{Method: method, Code: scene})
+	f.record(WeChatCall{Method: method, Code: scene, Page: page, EnvVersion: envVersion})
 
 	png, ok := f.wxaCodes[scene]
 	if !ok {
-		return nil, fmt.Errorf("fake wechat: wxacode scene %q 未登记（测试必须先 StubWXACode）", scene)
+		if f.anyWXACode == nil {
+			return nil, fmt.Errorf("fake wechat: wxacode scene %q 未登记（测试必须先 StubWXACode）", scene)
+		}
+		png = f.anyWXACode
 	}
 	return append([]byte(nil), png...), nil
 }

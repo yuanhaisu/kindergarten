@@ -52,6 +52,7 @@ type Handler struct {
 	entSvc             *service.EntitlementService
 	publicBrandSvc     *service.PublicBrandService
 	bindInviteSvc      *service.BindInviteService
+	parentEntryQRSvc   *service.ParentEntryQRService
 }
 
 func NewHandler(
@@ -98,6 +99,7 @@ func NewHandler(
 	entSvc *service.EntitlementService,
 	publicBrandSvc *service.PublicBrandService,
 	bindInviteSvc *service.BindInviteService,
+	parentEntryQRSvc *service.ParentEntryQRService,
 ) *Handler {
 	return &Handler{
 		authSvc:            authSvc,
@@ -143,5 +145,6 @@ func NewHandler(
 		entSvc:             entSvc,
 		publicBrandSvc:     publicBrandSvc,
 		bindInviteSvc:      bindInviteSvc,
+		parentEntryQRSvc:   parentEntryQRSvc,
 	}
 }
