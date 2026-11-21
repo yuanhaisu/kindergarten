@@ -127,6 +127,13 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			authed.PUT("/common/user/avatar", h.inner.UpdateAvatar)
 			authed.PUT("/common/user/password", h.inner.ChangePassword)
 
+			// 家长绑定手机号（#167）：待绑定账号把客户端身份并入园所预创建账号。
+			// 中间件按 app_id + IP 预限流；请求体只有一次性 wx_phone_code，
+			// 手机号维度由 service 换出手机号后再判定（同样的 20 次/分钟）。
+			authed.POST("/common/user/bind-parent-phone",
+				middleware.BindPhoneRateLimit(h.rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
+				h.inner.BindParentPhone)
+
 			// 隐私政策同意：不受 consent 门禁拦截，否则用户无法完成同意或退出。
 			authed.GET("/common/consent", h.inner.GetConsent)
 			authed.POST("/common/consent", h.inner.PostConsent)

@@ -6,6 +6,8 @@ import { fetchTasks } from "@/api/parent-task"
 import { ensureLogin } from "@/utils/login"
 import { getCurrentStudentId, setCurrentStudentId, syncCurrentStudentFromOverview } from "@/utils/currentStudent"
 import { bindParentPhone } from "@/api/auth"
+import { setRefreshToken, setToken, setUser } from "@/utils/auth"
+import { clearEntitlementCache } from "@/utils/entitlement-cache.mjs"
 import { parseSceneTaskId } from "@/utils/taskScene"
 import { formatDateLabel, formatYmd } from "@/utils/time"
 import PageShell from "@/components/PageShell.vue"
@@ -31,6 +33,9 @@ const ICON = {
 const needBindPhone = ref(false)
 const bindingPhone = ref(false)
 const bindPhoneErr = ref("")
+// 园所入口码（#167）：扫码/链接进入首页时带 ?public_code=xxx，绑定即落到该园。
+// 没有入口码就走无 scene 绑定，由服务端按手机号在全部共用园所中匹配。
+const entryPublicCode = ref("")
 
 const loading = ref(false)
 const retrying = ref(false)
@@ -235,7 +240,14 @@ async function handleGetPhoneNumber(e) {
   bindingPhone.value = true
   bindPhoneErr.value = ""
   try {
-    await bindParentPhone(e.detail.code)
+    const res = await bindParentPhone(e.detail.code, { publicCode: entryPublicCode.value })
+    // 绑定成功会换发新 token/refresh_token：必须先落盘再 loadHome，
+    // 否则首页仍拿待绑定 token 请求，只会再拿到一次 40302。
+    const data = res?.data || {}
+    clearEntitlementCache(uni)
+    if (data.token) setToken(data.token)
+    if (data.refresh_token) setRefreshToken(data.refresh_token)
+    if (data.user) setUser(data.user)
     needBindPhone.value = false
     await loadHome()
   } catch (err) {
@@ -316,7 +328,9 @@ function formatTime(ts) {
 onShow(() => loadHome())
 
 // 扫任务分享码落到首页时（码的 page 可能是首页），scene 里带 t=<task_id>。
+// public_code 只认显式 query：把 scene 解析成园所码属于 #176，这里不猜格式。
 onLoad((options) => {
+  entryPublicCode.value = String(options?.public_code || "").trim()
   const taskId = parseSceneTaskId(options?.scene)
   if (taskId) uni.navigateTo({ url: `/pages/tasks/detail?id=${taskId}` })
 })

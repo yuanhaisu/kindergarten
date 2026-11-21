@@ -107,7 +107,8 @@ func New(t testing.TB) *Harness {
 
 	userRepo := repository.NewUserRepo(setup.db)
 	userRoleRepo := repository.NewUserRoleRepo(setup.db)
-	kgStatus := service.NewKindergartenStatusService(repository.NewKindergartenRepo(setup.db), rdb)
+	kindergartenRepo := repository.NewKindergartenRepo(setup.db)
+	kgStatus := service.NewKindergartenStatusService(kindergartenRepo, rdb)
 	adminAuthz := service.NewAdminAuthzService(repository.NewAdminRepo(setup.db), userRoleRepo)
 
 	secret, atTTL, rtTTL := jwtConfig(setup.cfg)
@@ -125,6 +126,9 @@ func New(t testing.TB) *Harness {
 		rtTTL,
 		repository.NewConsentRepo(setup.db),
 		false,
+		kindergartenRepo,
+		service.NewIdentityMergeService(setup.db),
+		middleware.NewBindPhoneLimiter(rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
 	)
 
 	h := &Harness{
@@ -249,6 +253,12 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
+
+		// 家长绑定手机号（#167）：中间件与 router.go 同源装配（失败开放的
+		// app_id + IP 预限流；手机号维度在 service 内判定）。
+		authed.POST("/common/user/bind-parent-phone",
+			middleware.BindPhoneRateLimit(h.RedisClient, middleware.BindPhoneMaxPerMinute, time.Minute),
+			hnd.BindParentPhone)
 
 		// 业务接口探针：用于验证「已绑定可访问、未绑定 403」。
 		// 真实业务组由后续票在 h.Handler 上追加，这里只需要一条命中

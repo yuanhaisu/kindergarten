@@ -10,6 +10,7 @@ import (
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
+	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
 )
@@ -28,6 +29,8 @@ func ProvideAuthService(
 	rtTTL RefreshTTL,
 	consentRepo *repository.ConsentRepo,
 	cfg *config.Config,
+	kindergartenRepo *repository.KindergartenRepo,
+	mergeSvc *service.IdentityMergeService,
 ) *service.AuthService {
 	return service.NewAuthService(
 		userRepo,
@@ -43,6 +46,11 @@ func ProvideAuthService(
 		time.Duration(rtTTL),
 		consentRepo,
 		cfg.Consent.Enforce,
+		kindergartenRepo,
+		mergeSvc,
+		// 绑定限流的完整维度（手机号）只能在 service 换出手机号后判定，
+		// 中间件那层先按 app_id + IP 兜住洪峰（#174 / #167）。
+		middleware.NewBindPhoneLimiter(rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
 	)
 }
 

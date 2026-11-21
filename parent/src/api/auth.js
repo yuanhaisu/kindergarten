@@ -26,11 +26,16 @@ export function refreshToken(refreshToken) {
   })
 }
 
-export function bindParentPhone(wxPhoneCode) {
+export function bindParentPhone(wxPhoneCode, { publicCode = "", kindergartenId = 0 } = {}) {
+  const data = { wx_phone_code: wxPhoneCode }
+  // 目标园所只用于校验「该园已录入此手机号」和绑定后的初始落点（#167）。
+  // 不带时服务端按手机号在全部共用园所中查找，所以两者都可选。
+  if (publicCode) data.public_code = publicCode
+  if (kindergartenId) data.kindergarten_id = kindergartenId
   return requestWithAuth({
     url: "/common/user/bind-parent-phone",
     method: "POST",
-    data: { wx_phone_code: wxPhoneCode },
+    data,
     // 首页绑卡自己渲染 bind-err（含 40031 的恢复指引），不走全局 toast ——
     // 否则 http.js 弹一次、卡片再渲染一次，前者还会盖掉后者更准的文案。
     silent: true

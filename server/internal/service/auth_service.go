@@ -73,6 +73,12 @@ type AuthService struct {
 	rtTTL          time.Duration
 	consentRepo    ConsentRepository
 	consentEnforce bool
+
+	// 家长绑定手机号（#167）的依赖。三者任一缺失时端点报未装配，
+	// 而不是让绑定流程跑一半。
+	kindergartens KindergartenLookup
+	merger        IdentityMerger
+	bindLimiter   BindPhoneRateLimiter
 }
 
 func NewAuthService(
@@ -89,6 +95,9 @@ func NewAuthService(
 	rtTTL time.Duration,
 	consentRepo ConsentRepository,
 	consentEnforce bool,
+	kindergartens KindergartenLookup,
+	merger IdentityMerger,
+	bindLimiter BindPhoneRateLimiter,
 ) *AuthService {
 	return &AuthService{
 		userRepo:       userRepo,
@@ -105,6 +114,9 @@ func NewAuthService(
 		rtTTL:          rtTTL,
 		consentRepo:    consentRepo,
 		consentEnforce: consentEnforce,
+		kindergartens:  kindergartens,
+		merger:         merger,
+		bindLimiter:    bindLimiter,
 	}
 }
 
@@ -260,18 +272,19 @@ func (s *AuthService) issueTokens(ctx context.Context, user *domain.User) (*Logi
 }
 
 func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
-	return s.issueTokensFor(ctx, user, roles, nil)
+	return s.issueTokensFor(ctx, user, roles, nil, "")
 }
 
 // issueClientTokens 签发绑定小程序客户端的凭证：claims 带 app_id 与作用域，
-// 角色只来自当前客户端注册表（#175）。
-func (s *AuthService) issueClientTokens(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {
-	return s.issueTokensFor(ctx, user, roles, client)
+// 角色只来自当前客户端注册表（#175）。openID 一并写进 claims，绑定手机号（#167）
+// 需要用它在 pending 已被硬删的重试里定位身份。
+func (s *AuthService) issueClientTokens(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client, openID string) (*LoginResult, error) {
+	return s.issueTokensFor(ctx, user, roles, client, openID)
 }
 
 // issueTokensFor 是签发的唯一实现。client 为 nil 时是管理端/刷新路径（无 app_id），
 // 非 nil 时必须走 SignClientAccess，否则 token 无法回查客户端作用域。
-func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {
+func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client, openID string) (*LoginResult, error) {
 	roleNames := roleNamesFromUserRoles(roles)
 	kgID := kindergartenIDFromUserRoles(roles)
 
@@ -293,9 +306,10 @@ func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, rol
 	)
 	if client != nil {
 		accessToken, err = auth.SignClientAccess(s.secret, uid, roleNames, kgID, auth.ClientScope{
-			AppID: client.AppID,
-			Kind:  client.ScopeKind,
-			ID:    client.ScopeID,
+			AppID:  client.AppID,
+			Kind:   client.ScopeKind,
+			ID:     client.ScopeID,
+			OpenID: openID,
 		}, s.atTTL)
 	} else {
 		accessToken, err = auth.SignAccess(s.secret, uid, roleNames, kgID, s.atTTL)
@@ -510,7 +524,7 @@ func (s *AuthService) WeChatLogin(ctx context.Context, req WeChatLoginRequest) (
 	// 否则家长端会拿到老师权限，园所也会串到另一端（#175）。
 	roles = filterRolesByFamily(roles, client.Role)
 
-	return s.issueClientTokens(ctx, user, roles, client)
+	return s.issueClientTokens(ctx, user, roles, client, sess.OpenID)
 }
 
 // filterRolesByFamily 保留与当前客户端角色一致的授权行。

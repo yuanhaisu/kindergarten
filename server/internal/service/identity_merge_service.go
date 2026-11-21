@@ -83,6 +83,24 @@ func (s *IdentityMergeService) Merge(ctx context.Context, req IdentityMergeReque
 	return result, nil
 }
 
+// EnsureParentProfile 单独保证某账号在指定园所有一条家长档案（#167）。
+//
+// Merge 在「身份已属于 target」的幂等分支会提前返回，跳过档案创建；绑定流程
+// 因此无条件再调用一次。已有活跃档案不覆盖，软删档案按 ensureParentProfile
+// 的规则复活。
+func (s *IdentityMergeService) EnsureParentProfile(ctx context.Context, userID, kindergartenID uint64) error {
+	if userID == 0 || kindergartenID == 0 {
+		return nil
+	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		target, err := lockUser(tx, userID, ErrIdentityMergeTargetNotFound)
+		if err != nil {
+			return err
+		}
+		return ensureParentProfile(tx, target, kindergartenID, "")
+	})
+}
+
 // mergeIdentityInTx 返回 true 表示身份已属于 target（幂等重试）。
 func mergeIdentityInTx(tx *gorm.DB, req IdentityMergeRequest) (alreadyMerged bool, err error) {
 	// 锁住身份行，防止并发合并同一身份时两边都认为自己是第一个。

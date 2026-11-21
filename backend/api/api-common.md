@@ -149,7 +149,8 @@
   `kindergarten_id` 也由裁剪后的角色推导。
 - **待绑定限制**：待绑定 token（`app_id` 存在且角色为空）只能访问
   `GET|PUT /common/user/profile`、`PUT /common/user/avatar`、`GET|POST /common/consent`、
-  `POST /auth/logout`、`GET /common/user/kindergartens` 与绑定接口；其余业务接口返回
+  `POST /auth/logout`、`GET /common/user/kindergartens` 与
+  `POST /common/user/bind-parent-phone`（#167）；其余业务接口返回
   `403` + `code=40302`（客户端应跳转绑定页，而不是提示无权限）。
 - **错误**：缺 `app_id` / 角色与客户端不一致 / 家长端携带 `invite_code` → `422`（`42200`）；
   客户端未注册或已停用 → `403`（`40300`）；`code` 无效 → `400`（`40002`）。
@@ -157,10 +158,81 @@
 
 ---
 
-### POST `/common/user/bind-invite`、`POST /common/user/bind-parent-phone` — 已移除
+### POST `/common/user/bind-invite` — 已移除
 
-> ⛔ 两个旧绑定端点已在 v1 移除，路由不存在（`404`），无需登录态。教师邀请码绑定
-> 与家长手机号换绑分别由 #168 / #167 重写后重新登记。
+> ⛔ 教师邀请码绑定旧端点已在 v1 移除，路由不存在（`404`），无需登录态。
+> 由 #168 重写后重新登记。
+
+---
+
+### POST `/common/user/bind-parent-phone` — 家长绑定手机号（#167）
+
+> 家长端小程序专用。用微信手机号授权（`wx.getPhoneNumber` 的 `code`）换出手机号，
+> 把当前「待绑定账号」的客户端身份并入**园所预创建**的家长账号；**绝不新建家长账号**。
+> 目标园所只用于校验「该园已录入此手机号」和「绑定后的初始落点」，不是角色边界——
+> 该账号在其他共用园所已有的成员关系继续生效，并在响应 `kindergartens` 中一次返回
+> （不依赖成员切换接口 #169）。
+>
+> 待绑定 token 可访问本端点（见登录一节的白名单）；已绑定 token 重复调用用于幂等重试。
+
+```json
+// Request
+{
+  "wx_phone_code": "e31a2b...",        // 必填：wx.getPhoneNumber 返回的一次性 code
+  "public_code": "kg1001",             // 可选：园所入口码；不传则按手机号在全部共用园所中查找
+  "kindergarten_id": 4                 // 可选：public_code 的等价兜底；两者都传时 public_code 优先
+}
+
+// Response（200）
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",   // 新会话凭证，立即具备家长角色
+  "refresh_token": "…",
+  "expires_at": "2026-11-21T12:00:00Z",
+  "user": {
+    "id": 100,
+    "phone": "138****1234",             // 脱敏返回
+    "nickname": "张妈妈",
+    "avatar": "",
+    "gender": 0,
+    "must_change_password": false,
+    "roles": [
+      { "role": "parent", "kindergarten_id": 4, "kindergarten_name": "阳光幼儿园" },
+      { "role": "parent", "kindergarten_id": 7, "kindergarten_name": "月亮幼儿园" }
+    ]
+  },
+  "consent_required": true,
+  "current_policy_version": "v1",
+  "kindergartens": [
+    { "kindergarten_id": 4, "kindergarten_name": "阳光幼儿园" },
+    { "kindergarten_id": 7, "kindergarten_name": "月亮幼儿园" }
+  ]
+}
+```
+
+- **绑定方向**：`待绑定账号 → 预创建账号`。保留预创建账号的手机号、角色、孩子与家长档案，
+  只把客户端身份 `(app_id, open_id)` 挂过去；待绑定账号**硬删除**（不留软删行占用唯一键）。
+- **已录入校验**：手机号必须已由某园所录入（预创建家长账号存在），否则返回 `40031`，
+  不会创建账号。家长账号永远由园所先录入。
+- **无 scene**：不带 `public_code` / `kindergarten_id` 时，按手机号在全部共用园所中查找；
+  找到即绑定，`kindergarten_id` 取最小园所 ID，`kindergartens` 列出全部共用成员关系。
+- **目标园校验顺序**：入口码无效 → `404`；客户端与园所通道不匹配（见 #177 通道矩阵）→
+  `40033`；手机号未被该园录入 → `40031`。入口码与通道先于手机号判定，避免用伪造入口码
+  探测手机号是否已录入。
+- **家长档案**：绑定后保证预创建账号在落点园所有一条家长档案（缺则补，已有则不动）。
+- **幂等**：同一微信重复绑定返回 `200`，账号、档案、身份都不重复创建。
+- **限流**：按 `app_id + IP + 手机号`，20 次/分钟；Redis 故障失败开放并告警。
+- **错误**：
+
+| HTTP | code | 场景 |
+| --- | --- | --- |
+| 400 | 40030 | `wx_phone_code` 无效或已使用 |
+| 400 | 40031 | 园所尚未录入该家长手机号（目标园未录入，或无 scene 时全部共用园所都未命中） |
+| 400 | 40032 | 该手机号已绑定其他微信（同一客户端一个账号只允许一个微信） |
+| 400 | 40033 | 当前小程序不支持该园所（客户端通道与园所通道不匹配） |
+| 401 | — | token 缺失/无效，或 token 不含客户端身份（需重新走小程序登录） |
+| 403 | — | 客户端未注册/已停用，或当前小程序不是家长端 |
+| 404 | — | `public_code` / `kindergarten_id` 找不到园所 |
+| 429 | — | 绑定请求过于频繁 |
 
 ---
 

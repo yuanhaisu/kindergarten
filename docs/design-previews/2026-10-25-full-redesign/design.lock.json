@@ -1,17 +1,18 @@
 {
   "version": 1,
-  "supportHash": "c951ce616ea5103140f4bc20723639392de2c29391ea26cb8f869d9591d08695",
-  "supportReviewedAt": "2026-11-18",
-  "supportReason": "code review fix #102: 授权缓存清理与登录态接线测试，无 UI 变化",
+  "supportHash": "acf19734747f61d9c98394edbdd6515db9f3a7d4ac04ccad64becdce88250d8c",
+  "supportReviewedAt": "2026-11-21",
+  "supportReason": "ticket #167：parent/src/api/auth.js 的 bindParentPhone 增加 public_code / kindergarten_id 目标园所参数",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
-      "sha256": "df1c29d34e5095101d1376b9fe3e97b379407e985f5387504c6c4b2cda44598d",
-      "depsSha": "846f9ab4fe957fa22703b908f3857d16a0ca58219eced2d3dc68d3d94fd6bb1a",
+      "sha256": "218e04db6113ab87a3b771bd662af575b7c9831aa1a91d3475f6d7e9daa69cf0",
+      "depsSha": "f3407b81a9e244bacb65c9ce8c93deb97b11c0413db560eab4c52075f5bb0881",
       "title": "养成星球",
       "tabbar": true,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "dfcb18b-dirty",
+      "reason": "ticket #167 家长端首页绑定手机号：支持 public_code 园所入口、绑定成功后落盘新 token 并刷新首页"
     },
     "parent/02-login": {
       "source": "parent/src/pages/auth/login.vue",
