@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/repository"
 )
 
 // ErrInvalidOptions 参数不全（手机号/口令/园所 ID 缺失）。
@@ -85,7 +86,7 @@ func EnsureTenantAdmin(ctx context.Context, db *gorm.DB, opts Options) (Result, 
 
 	res := Result{Phone: opts.Phone, KindergartenID: opts.KindergartenID}
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		user, created, err := upsertUser(tx, opts.Phone, string(hash))
+		user, created, err := upsertUser(ctx, tx, opts.Phone, string(hash))
 		if err != nil {
 			return err
 		}
@@ -101,7 +102,9 @@ func EnsureTenantAdmin(ctx context.Context, db *gorm.DB, opts Options) (Result, 
 		if err := pruneDuplicateAdminRoles(tx, user.ID, role.ID); err != nil {
 			return err
 		}
-		return nil
+		// 只改绑 UserRole 不够：旧园的 UserAdminRole 关联仍在，鉴权按关联
+		// 给通配权限，同一手机号就成了两个园的管理员（#171）。
+		return pruneOtherKindergartenAdminLinks(tx, user.ID, kg.ID)
 	})
 	if err != nil {
 		return Result{}, err
@@ -122,24 +125,24 @@ func findKindergarten(ctx context.Context, db *gorm.DB, id uint64) (*domain.Kind
 }
 
 // upsertUser 按手机号找用户：不存在则建，存在则只重置口令。
-// 不改昵称等资料，避免覆盖已有账号的展示信息。
-func upsertUser(tx *gorm.DB, phone, passwordHash string) (*domain.User, bool, error) {
-	var user domain.User
-	err := tx.Where("phone = ?", phone).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		user = domain.User{Nickname: "admin", Phone: phone, PasswordHash: passwordHash}
-		if err := tx.Create(&user).Error; err != nil {
-			return nil, false, fmt.Errorf("创建用户失败: %w", err)
-		}
-		return &user, true, nil
-	}
+// 复用 #164 的统一解析入口（active 手机号唯一），避免 setadmin 与 Onboard
+// 出现两套建号口径；不改昵称等资料，避免覆盖已有账号的展示信息。
+func upsertUser(ctx context.Context, tx *gorm.DB, phone, passwordHash string) (*domain.User, bool, error) {
+	repo := repository.NewUserRepo(tx)
+	user, created, err := repo.FindOrCreateByPhone(ctx, phone, repository.UserProfileDefaults{
+		Nickname:     "admin",
+		PasswordHash: passwordHash,
+	})
 	if err != nil {
-		return nil, false, fmt.Errorf("查询用户失败: %w", err)
+		return nil, false, fmt.Errorf("解析用户失败: %w", err)
 	}
-	if err := tx.Model(&user).Update("password_hash", passwordHash).Error; err != nil {
+	if created {
+		return user, true, nil
+	}
+	if err := repo.UpdateFields(ctx, user.ID, map[string]any{"password_hash": passwordHash}); err != nil {
 		return nil, false, fmt.Errorf("更新口令失败: %w", err)
 	}
-	return &user, false, nil
+	return user, false, nil
 }
 
 // upsertAdminRole 按 user_id + role 找管理员角色，绑定到 kg。
@@ -183,6 +186,17 @@ func pruneDuplicateAdminRoles(tx *gorm.DB, userID, keepID uint64) error {
 	if err := tx.Where("user_id = ? AND role = ? AND id <> ?", userID, "admin", keepID).
 		Delete(&domain.UserRole{}).Error; err != nil {
 		return fmt.Errorf("清理重复管理员角色失败: %w", err)
+	}
+	return nil
+}
+
+// pruneOtherKindergartenAdminLinks 清掉该账号在其他园所的管理员角色关联。
+// setadmin 的语义是把管理员「移到」目标园；UserAdminRole 不带软删字段，
+// 这里直接物理删除，避免残留关联继续授予旧园的管理端权限。
+func pruneOtherKindergartenAdminLinks(tx *gorm.DB, userID, keepKindergartenID uint64) error {
+	if err := tx.Where("user_id = ? AND kindergarten_id <> ?", userID, keepKindergartenID).
+		Delete(&domain.UserAdminRole{}).Error; err != nil {
+		return fmt.Errorf("清理其他园所的管理员关联失败: %w", err)
 	}
 	return nil
 }

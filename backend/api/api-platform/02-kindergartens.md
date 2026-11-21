@@ -22,6 +22,7 @@
       "principal": "王园长",
       "status": "active",
       "student_count": 180,
+      "public_code": "ab12cd34ef",
       "active_plan_name": "旗舰版",
       "soonest_expire_at": "2027-06-30T23:59:59+08:00",
       "created_at": "2026-11-06T10:00:00+08:00",
@@ -37,6 +38,7 @@
 
 > `keyword` 匹配园所名称或园长姓名；`status` 取 `active` / `suspended`，省略表示全部。
 > `student_count` 为当前在园幼儿数，用于判断档位是否超限。
+> `public_code` 为园所公开入口码（10 位 Crockford base32 小写），可安全展示给家长端入口。
 > `soonest_expire_at` 取该园所有在期授权中最早的到期日；无授权时为 `null`。
 > `tier_max_students` 来自最近一张生效订单的快照（0 = 无上限）；`over_limit` 为
 > `student_count > tier_max_students`，只作升级线索，不阻断园所业务。
@@ -62,7 +64,8 @@
   "kindergarten_id": 7,
   "admin_phone": "13800001234",
   "must_change_password": true,
-  "trial_expires_at": "2026-12-06T10:00:00+08:00"
+  "trial_expires_at": "2026-12-06T10:00:00+08:00",
+  "public_code": "ab12cd34ef"
 }
 ```
 
@@ -70,7 +73,10 @@
 > 口令至少 8 位，且须同时包含大写字母、小写字母和数字；不合规返回 `422`。
 > 手机号须匹配 `^1[3-9]\d{9}$`，不合规返回 `422`。
 > 开通即发放 30 天全功能试用（来源 `trial`）。
-> 手机号已存在账号（全平台查重）时返回 `409`，园所不被创建。
+> 手机号已有家长/老师账号时**复用同一账号**（不新建 user，昵称/头像/性别与各端档案保持原样），
+> 只补 admin 角色、管理端口令并把 `must_change_password` 置为 `true`。
+> 同一手机号已在任一园所担任管理员时返回 `409`（v1 一手机号一 admin），园所不被创建。
+> `public_code` 为开通时生成的公开入口码，与园所同事务落库，创建后立即可用于家长端入口。
 > `admin_password` 必填，由平台运营在开通时设置：至少 8 位，且同时包含大写字母、小写字母和数字；
 > 强度不足返回 `422`。园长用该口令首次登录后必须改密（响应中 `must_change_password=true`）。
 
@@ -88,6 +94,7 @@
   "principal": "王园长",
   "status": "active",
   "student_count": 180,
+  "public_code": "ab12cd34ef",
   "entitlements": [
     {
       "module_code": "growth",

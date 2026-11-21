@@ -53,6 +53,7 @@ func newPlatformServiceWithAudit(t *testing.T, db *gorm.DB, audit PlatformAuditS
 		audit,
 		nil,
 		nil,
+		NewKindergartenEntryService(repository.NewKindergartenRepo(db)),
 		nil,
 		nil,
 		nil,
