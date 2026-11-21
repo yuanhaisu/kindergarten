@@ -131,6 +131,11 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			// 我的园所（#169）：按当前客户端角色族与园所通道过滤。
 			authed.GET("/common/user/kindergartens", h.inner.GetMyKindergartens)
 
+			// 老师邀请绑定（#168）：待绑定 token 可访问，限流 app_id+IP+邀请码。
+			authed.POST("/common/user/bind-invite",
+				middleware.BindInviteRateLimit(h.rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
+				h.inner.BindInvite)
+
 			// 隐私政策同意：不受 consent 门禁拦截，否则用户无法完成同意或退出。
 			authed.GET("/common/consent", h.inner.GetConsent)
 			authed.POST("/common/consent", h.inner.PostConsent)

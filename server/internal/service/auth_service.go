@@ -280,6 +280,28 @@ func (s *AuthService) issueClientTokens(ctx context.Context, user *domain.User, 
 	return s.issueTokensFor(ctx, user, roles, client)
 }
 
+// IssueClientLogin 为已完成绑定的账号按当前客户端签发凭证（#168）。
+//
+// 绑定把待绑定身份并入园所预创建账号后，必须立刻换发一枚属于预创建账号、
+// 只含该客户端角色族的 token；否则客户端仍会拿着空角色的待绑定凭证。
+func (s *AuthService) IssueClientLogin(ctx context.Context, userID uint64, client *domain.Client) (*LoginResult, error) {
+	if client == nil {
+		return nil, fmt.Errorf("issue client login: client is nil")
+	}
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("issue client login: user %d not found", userID)
+	}
+	roles, err := s.userRoleRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueClientTokens(ctx, user, filterRolesByFamily(roles, client.Role), client)
+}
+
 // issueTokensFor 是签发的唯一实现。client 为 nil 时是管理端/刷新路径（无 app_id），
 // 非 nil 时必须走 SignClientAccess，否则 token 无法回查客户端作用域。
 func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {

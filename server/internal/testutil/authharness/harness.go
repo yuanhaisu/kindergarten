@@ -109,14 +109,16 @@ func New(t testing.TB) *Harness {
 	userRoleRepo := repository.NewUserRoleRepo(setup.db)
 	kgStatus := service.NewKindergartenStatusService(repository.NewKindergartenRepo(setup.db), rdb)
 	adminAuthz := service.NewAdminAuthzService(repository.NewAdminRepo(setup.db), userRoleRepo)
+	clientSvc := service.NewClientService(repository.NewClientRepo(setup.db))
+	identityRepo := repository.NewUserIdentityRepo(setup.db)
 
 	secret, atTTL, rtTTL := jwtConfig(setup.cfg)
 	authSvc := service.NewAuthService(
 		userRepo,
 		userRoleRepo,
 		fakeWx,
-		service.NewClientService(repository.NewClientRepo(setup.db)),
-		repository.NewUserIdentityRepo(setup.db),
+		clientSvc,
+		identityRepo,
 		adminAuthz,
 		kgStatus,
 		repository.NewKindergartenRepo(setup.db),
@@ -126,6 +128,16 @@ func New(t testing.TB) *Harness {
 		rtTTL,
 		repository.NewConsentRepo(setup.db),
 		false,
+	)
+	// #168：邀请绑定与登录共用同一套客户端/身份/合并服务，测试缝里也不例外。
+	bindInviteSvc := service.NewBindInviteService(
+		repository.NewTeacherInvitationRepo(setup.db),
+		repository.NewKindergartenRepo(setup.db),
+		identityRepo,
+		userRepo,
+		clientSvc,
+		service.NewIdentityMergeService(setup.db),
+		authSvc,
 	)
 
 	h := &Harness{
@@ -170,7 +182,7 @@ func New(t testing.TB) *Harness {
 		repository.NewOperationLogRepo(setup.db),
 	)
 
-	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, settingsSvc, publicBrandSvc)
+	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, settingsSvc, publicBrandSvc, bindInviteSvc)
 	if err != nil {
 		t.Fatalf("authharness: 装配 HTTP 引擎失败：%v", err)
 	}
@@ -204,7 +216,7 @@ func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
 //
 // 只注册这些分组，不拉整棵业务依赖树；后续票需要业务组时在 h.Handler 上追加，
 // 继续复用同一套中间件与同一个测试库。
-func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
+func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
 	enforcer, err := rbac.NewEnforcer(&config.CasbinConfig{
 		Enable:     true,
 		ModelPath:  filepath.Join(repoRoot, "configs", "rbac_model.conf"),
@@ -214,7 +226,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		return nil, nil, nil, fmt.Errorf("初始化 Casbin：%w", err)
 	}
 
-	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc)
+	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -250,6 +262,11 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.GET("/common/user/profile", hnd.GetProfile)
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
 		authed.GET("/common/user/kindergartens", hnd.GetMyKindergartens)
+
+		// 老师邀请绑定（#168）：与 router.go 同源装配限流。
+		authed.POST("/common/user/bind-invite",
+			middleware.BindInviteRateLimit(h.RedisClient, middleware.BindPhoneMaxPerMinute, time.Minute),
+			hnd.BindInvite)
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
 
@@ -277,7 +294,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 // 这些路由只依赖上述服务，无需为了一条测试缝拉起整棵依赖树。
 // 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
 // 强制同步，避免测试缝悄悄错位。
-func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService) *handler.Handler {
+func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService) *handler.Handler {
 	return handler.NewHandler(
 		authSvc,
 		nil, // fileSvc
@@ -321,6 +338,7 @@ func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.Settings
 		nil, // distSvc
 		nil, // entSvc
 		publicBrandSvc,
+		bindInviteSvc,
 	)
 }
 

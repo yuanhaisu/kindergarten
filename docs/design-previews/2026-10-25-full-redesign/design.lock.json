@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "4cf042c64da91920c583fcc1c09b9839162f1b14e9f7a22b898719788af694fb",
+  "supportHash": "eb73652e422e75664ea1af099a977f250222672b2f32549f9608065a7e2e4536",
   "supportReviewedAt": "2026-11-21",
-  "supportReason": "ticket #169：http/auth 增加切换会话与缓存清理，页面表现无回归",
+  "supportReason": "merge #169/#168: teacher 登录/绑定与园所切换共用 http/auth 会话层，页面表现无回归",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -294,13 +294,13 @@
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
-      "sha256": "051c329e0748ed0a88bb6365117aaa91e4563fee62a0f18c9937693f108660de",
-      "depsSha": "146fd80faf45810977611e8c7fe786dd13b6246bee2ebeab63930f24bd8984ca",
+      "sha256": "ed957996cfae56e06d5e8c4e38b3b7658036233a4d610b34b914ddcb26ca473a",
+      "depsSha": "cea3e98e04c5b58ba450d63c8dc13e36c8b05dea931cdfdb87fc43f5a6f3803e",
       "title": "老师登录",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "0f0d09e",
+      "reason": "#168 登录页接入邀请码绑定：待绑定 token 不进工作台，绑定成功后进入园所"
     },
     "teacher/03-notice-create": {
       "source": "teacher/src/pages/notice/create.vue",
