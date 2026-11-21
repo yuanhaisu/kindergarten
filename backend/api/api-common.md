@@ -108,26 +108,52 @@
 
 ---
 
-### POST `/auth/login/wechat` — v1 关闭
+### POST `/auth/login/wechat` — 小程序登录（#175）
 
-> ⛔ 旧微信登录在 v1 关闭（#164）：`open_id` 不再直接建账号。服务端固定返回
-> `403`（`code=40300`），不调用微信 `code2session`。新登录（`app_id` + `code`
-> → 账号 + 客户端身份）由 #175 落定后再更新本节；在此之前旧客户端应引导用户升级。
+> 登录以 `app_id` 为入口：服务端先查客户端注册表，再用该客户端角色对应的
+> 微信凭据调用 `code2session`。授权角色只来自注册表，请求体里的 `role`
+> 仅用于一致性校验，不能改变授权范围。
 
 ```json
-// Request（v1 仍会被拒绝；旧格式仅作参考）
+// Request
 {
-  "code": "0b3Khv000aXCfR1xxx000",
-  "role": "teacher"                    // teacher | parent
+  "app_id": "wxdf989efff8796c53",      // 必填：小程序 AppID
+  "code": "0b3Khv000aXCfR1xxx000",     // 必填：wx.login 的 code
+  "role": "parent",                    // 可选：与客户端角色不一致时 422
+  "invite_code": "T8K2..."             // 可选：仅老师端客户端可携带（绑定属于 #168）
 }
 
-// Response（v1 固定为 403）
+// Response（登录响应）
 {
-  "code": 40300,
-  "message": "微信登录已升级，请更新小程序后重试",
-  "data": null
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "…",
+  "expires_at": "2026-11-21T12:00:00Z",
+  "consent_required": true,
+  "current_policy_version": "v1",
+  "user": {
+    "id": 100,
+    "phone": "",                       // 待绑定账号为空
+    "nickname": "",
+    "avatar": "",
+    "gender": 0,
+    "must_change_password": false,
+    "roles": []                        // 只含当前客户端角色族；待绑定账号为空
+  }
 }
 ```
+
+- **身份**：按 `(app_id, open_id)` 查 `user_identities`；没有身份时创建「待绑定账号 +
+  身份」（手机号为空、无角色、不加入任何园所）。同一身份再次登录复用同一账号。
+- **角色裁剪**：`user.roles` 与 token `roles` 都是「当前客户端角色族 ∩ 该账号实际角色」。
+  同一账号同时是家长与老师时，家长端只出 `parent`、老师端只出 `teacher`，
+  `kindergarten_id` 也由裁剪后的角色推导。
+- **待绑定限制**：待绑定 token（`app_id` 存在且角色为空）只能访问
+  `GET|PUT /common/user/profile`、`PUT /common/user/avatar`、`GET|POST /common/consent`、
+  `POST /auth/logout`、`GET /common/user/kindergartens` 与绑定接口；其余业务接口返回
+  `403` + `code=40302`（客户端应跳转绑定页，而不是提示无权限）。
+- **错误**：缺 `app_id` / 角色与客户端不一致 / 家长端携带 `invite_code` → `422`（`42200`）；
+  客户端未注册或已停用 → `403`（`40300`）；`code` 无效 → `400`（`40002`）。
+- `must_change_password` 只对管理端密码登录生效，小程序登录恒为 `false`。
 
 ---
 

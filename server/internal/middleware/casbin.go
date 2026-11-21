@@ -15,6 +15,13 @@ func CasbinRBAC(e *casbin.Enforcer) gin.HandlerFunc {
 			return
 		}
 
+		// 待绑定 token 命中白名单：角色为空，继续走 Casbin 必然 403。
+		// RequireBoundAccount 已确认该路由在白名单内。
+		if c.GetBool(CtxUnboundWhitelistedKey) {
+			c.Next()
+			return
+		}
+
 		claims := GetClaims(c)
 		if claims == nil {
 			c.Next()

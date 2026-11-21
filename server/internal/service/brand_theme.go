@@ -47,17 +47,28 @@ func NormalizeBrandColor(raw string) string {
 		return DefaultBrandColor
 	}
 	normalized := strings.ToUpper(trimmed)
-	if _, ok := presetBrandColorSet[normalized]; ok {
-		return normalized
-	}
-	rgb, ok := parseHexColor(normalized)
-	if !ok {
-		return DefaultBrandColor
-	}
-	if contrastRatio(rgb, rgbWhite) < minBrandContrast {
+	if !IsValidBrandColor(normalized) {
 		return DefaultBrandColor
 	}
 	return normalized
+}
+
+// IsValidBrandColor 报告非空取值是否为可下发的合法主题色（预设色板或
+// 通过对比度校验的 #RRGGBB）。写入路径用它拒绝非法值——读路径的
+// NormalizeBrandColor 仍会对历史脏值回落默认。
+func IsValidBrandColor(raw string) bool {
+	normalized := strings.ToUpper(strings.TrimSpace(raw))
+	if normalized == "" {
+		return false
+	}
+	if _, ok := presetBrandColorSet[normalized]; ok {
+		return true
+	}
+	rgb, ok := parseHexColor(normalized)
+	if !ok {
+		return false
+	}
+	return contrastRatio(rgb, rgbWhite) >= minBrandContrast
 }
 
 type rgb struct {

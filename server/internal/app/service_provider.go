@@ -17,6 +17,9 @@ import (
 func ProvideAuthService(
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
+	wx service.WeChatAPI,
+	clientSvc *service.ClientService,
+	identityRepo *repository.UserIdentityRepo,
 	adminAuthz *service.AdminAuthzService,
 	kgStatus *service.KindergartenStatusService,
 	rdb *redis.Client,
@@ -29,6 +32,9 @@ func ProvideAuthService(
 	return service.NewAuthService(
 		userRepo,
 		userRoleRepo,
+		wx,
+		clientSvc,
+		identityRepo,
 		adminAuthz,
 		kgStatus,
 		rdb,

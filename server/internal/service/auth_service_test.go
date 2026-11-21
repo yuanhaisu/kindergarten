@@ -76,10 +76,11 @@ func TestRoleNamesFromUserRoles(t *testing.T) {
 	assert.Contains(t, names, "admin")
 }
 
-func TestRoleNamesFromUserRoles_EmptyDefaultsToParent(t *testing.T) {
+// 待绑定账号没有角色时 token 必须为空：兜底 parent 会让未绑定用户直接拿到
+// 家长端业务权限，绕开绑定流程（#175）。
+func TestRoleNamesFromUserRoles_EmptyStaysEmpty(t *testing.T) {
 	names := roleNamesFromUserRoles([]domain.UserRole{})
-	assert.Len(t, names, 1)
-	assert.Equal(t, "parent", names[0])
+	assert.Empty(t, names)
 }
 
 func TestKindergartenIDFromUserRoles_AdminPreferred(t *testing.T) {

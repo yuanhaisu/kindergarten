@@ -347,18 +347,14 @@ func (s *TeacherService) CreateTeacher(
 	if err != nil {
 		return nil, err
 	}
-	hash, err := HashPassword("KindyTeacher#1")
-	if err != nil {
-		return nil, err
-	}
 	var teacherID uint64
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 统一账号解析（#164）：同一活跃手机号复用同一账号，且不改写
-		// 既有昵称/头像/性别——管理员新建老师不能覆盖该手机号已维护的资料。
+		// 既有昵称/头像/性别/密码——管理员新建老师不能覆盖该手机号已维护的资料。
+		// 预建账号不写密码（#174）：老师只能通过微信登录，默认口令即提权入口。
 		u, _, err := s.users.WithDB(tx).FindOrCreateByPhone(ctx, req.Phone, repository.UserProfileDefaults{
-			Nickname:     strings.TrimSpace(req.Nickname),
-			Gender:       req.Gender,
-			PasswordHash: hash,
+			Nickname: strings.TrimSpace(req.Nickname),
+			Gender:   req.Gender,
 		})
 		if err != nil {
 			return err
