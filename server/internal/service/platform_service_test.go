@@ -63,6 +63,11 @@ func openPlatformTestDB(t *testing.T) *gorm.DB {
 
 func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {
 	t.Helper()
+	return newPlatformTestServiceWithEntry(t, db, NewKindergartenEntryService(repository.NewKindergartenRepo(db)))
+}
+
+func newPlatformTestServiceWithEntry(t *testing.T, db *gorm.DB, entry *KindergartenEntryService) *PlatformService {
+	t.Helper()
 	f := fakeredis.New(t)
 	rdb := f.Client(t)
 	return NewPlatformService(
@@ -80,6 +85,7 @@ func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {
 		repository.NewPlatformLogRepo(db),
 		nil,
 		nil,
+		entry,
 		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(7*24*time.Hour, time.Hour)),
 		auth.NewTokenRevoker(rdb),
 		rdb,
@@ -157,7 +163,7 @@ func TestPlatformService_LoginAndOnboard(t *testing.T) {
 	_, err = svc.Onboard(ctx, OnboardRequest{
 		Name: "S1B平台测试园2", Principal: "李园长", Phone: phone, AdminPassword: "InitPass1",
 	}, "s1b_ops", "127.0.0.1")
-	assert.ErrorIs(t, err, ErrPhoneExists, "同手机号必须被拒绝")
+	assert.ErrorIs(t, err, ErrPhoneAlreadyAdmin, "同手机号已是管理员，不能再开第二所园")
 
 	require.NoError(t, svc.SetKindergartenStatus(ctx, onboarded.KindergartenID, domain.KindergartenStatusSuspended, "s1b_ops", "127.0.0.1"))
 	kg, err := repository.NewKindergartenRepo(db).FindByID(ctx, onboarded.KindergartenID)

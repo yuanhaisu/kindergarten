@@ -1,6 +1,18 @@
 <script setup>
 import { onLaunch } from "@dcloudio/uni-app"
-import { ensureConsent, ensureLogin } from "@/utils/login"
+import { ensureConsent, ensureLogin, hasTeacherRole } from "@/utils/login"
+import { getUser } from "@/utils/auth"
+
+// 待绑定账号（有会话、无 teacher 角色）不能停留在工作台：业务接口会统一 40302。
+// 登录页负责在持有邀请码时完成绑定。
+function redirectToBindIfNeeded() {
+  const user = getUser()
+  if (user && !hasTeacherRole(user)) {
+    uni.reLaunch({ url: "/pages/auth/login" })
+    return true
+  }
+  return false
+}
 
 onLaunch(() => {
   const options = uni.getLaunchOptionsSync()
@@ -8,9 +20,14 @@ onLaunch(() => {
     uni.setStorageSync('invite_code', options.query.invite_code)
   }
   ensureLogin()
-    .then(() => ensureConsent())
+    .then(() => {
+      if (redirectToBindIfNeeded()) return
+      return ensureConsent()
+    })
     .catch(() => {
-      // 启动阶段静默登录失败时，业务页会继续引导用户授权。
+      // 启动阶段静默登录失败时，业务页会继续引导用户授权；
+      // 但已拿到待绑定会话却绑定失败时，必须回登录页才能重试。
+      redirectToBindIfNeeded()
     })
 })
 </script>

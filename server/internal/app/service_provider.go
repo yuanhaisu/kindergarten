@@ -64,6 +64,7 @@ func ProvidePlatformService(
 	logRepo *repository.PlatformLogRepo,
 	dietSeed *service.DietSeedService,
 	kgStatus *service.KindergartenStatusService,
+	entrySvc *service.KindergartenEntryService,
 	rdb *redis.Client,
 	authSvc *service.AuthService,
 	secret JWTSecret,
@@ -79,7 +80,7 @@ func ProvidePlatformService(
 	}
 	return service.NewPlatformService(
 		db, adminRepo, kgRepo, entRepo, orderRepo, userRepo, userRoleRepo,
-		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus,
+		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus, entrySvc,
 		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(time.Duration(rtTTL), time.Duration(atTTL))),
 		revoker, rdb, []byte(secret),
 		time.Duration(atTTL), time.Duration(rtTTL),

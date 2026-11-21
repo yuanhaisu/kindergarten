@@ -157,6 +157,8 @@ func (h *Handler) PlatformOnboardKindergarten(c *gin.Context) {
 	res, err := h.platformSvc.Onboard(c.Request.Context(), req, operator, c.ClientIP())
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrPhoneAlreadyAdmin):
+			response.ErrConflict(c, "该手机号已是其他园所的管理员")
 		case errors.Is(err, service.ErrPhoneExists):
 			response.ErrConflict(c, "该手机号已有账号")
 		case strings.HasPrefix(err.Error(), "INVALID_PHONE:"):

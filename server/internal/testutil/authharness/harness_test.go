@@ -54,21 +54,21 @@ func TestUnknownRouteReturnsNotFound(t *testing.T) {
 // 旧微信登录的「已下线」断言由 #175 取代：端点重新开放为新式 app_id 登录，
 // 旧请求体（只有 code）由 login_test.go 的 TestWeChatLoginRequiresAppID 覆盖。
 
-// 旧绑定端点已下线（#164）：换绑/绑定由 #167、#168 重写。
-// 路由直接移除，未认证请求也应该是 404 而不是 401——401 说明端点还挂着。
-func TestOldBindEndpointsAreRemoved(t *testing.T) {
+// 旧绑定端点（#164）由 #167、#168 重写：
+// bind-invite 已重新上线（#168，需要待绑定 token，未认证应为 401）；
+// 家长手机号绑定仍归 #167，本分支未注册，未认证请求应为 404。
+func TestLegacyBindEndpointStatus(t *testing.T) {
 	h := authharness.New(t)
 
-	for _, path := range []string{
-		"/api/v1/common/user/bind-invite",
-		"/api/v1/common/user/bind-parent-phone",
-	} {
-		resp := h.PostJSON(t, path, map[string]string{
-			"invite_code":   "legacy-invite",
-			"wx_phone_code": "legacy-phone-code",
-		})
-		assert.Equal(t, http.StatusNotFound, resp.Status, "%s 必须已下线；body=%s", path, resp.Body)
-	}
+	resp := h.PostJSON(t, "/api/v1/common/user/bind-invite", map[string]string{
+		"invite_code": "legacy-invite",
+	})
+	assert.Equal(t, http.StatusUnauthorized, resp.Status, "bind-invite 已由 #168 上线；body=%s", resp.Body)
+
+	resp = h.PostJSON(t, "/api/v1/common/user/bind-parent-phone", map[string]string{
+		"wx_phone_code": "legacy-phone-code",
+	})
+	assert.Equal(t, http.StatusNotFound, resp.Status, "家长手机号绑定仍归 #167；body=%s", resp.Body)
 }
 
 // 软删行仍占用行位置（后续 phone_active 唯一索引的坑），清理必须硬删。
