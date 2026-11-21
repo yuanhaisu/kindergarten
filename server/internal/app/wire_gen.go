@@ -130,7 +130,12 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	entitlementService := ProvideEntitlementService(entitlementRepo, orderRepo, kindergartenRepo, entitlementCache, billingEnforceModules)
 	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService, faceRegistryService, gardenCalendarService, timetableService, dietGroupObjectService, dietFoodService, dietRecipeService, dietPlanService, dietAnalysisService, platformService, planService, orderService, distributorService, entitlementService)
 	noticeScheduler := ProvideNoticeScheduler(db)
-	appHandler := NewAppHandlerWithBackgroundWorkers(handlerHandler, noticeScheduler, cfg, db, client)
+	clientRepo := repository.NewClientRepo(db)
+	clientService := service.NewClientService(clientRepo)
+	appHandler, err := NewAppHandlerWithBackgroundWorkers(handlerHandler, noticeScheduler, clientService, cfg, db, client)
+	if err != nil {
+		return nil, err
+	}
 	casbinConfig := ProvideCasbinConfig(cfg)
 	enforcer, err := rbac.NewEnforcer(casbinConfig)
 	if err != nil {

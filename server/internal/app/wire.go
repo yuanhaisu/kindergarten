@@ -46,6 +46,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		// 平台审计写入接缝：订单/套餐/分销服务按接口收依赖，
 		// 生产实现就是 PlatformLogRepo（PlatformService 经 ProvidePlatformService 直取具体类型）。
 		wire.Bind(new(service.PlatformAuditWriter), new(*repository.PlatformLogRepo)),
+		// 客户端注册表（#163）按接口收仓储，生产实现是 *repository.ClientRepo
+		wire.Bind(new(service.ClientRepository), new(*repository.ClientRepo)),
 		ProvideTrustedProxies,
 		ProvideAuthService,
 		ProvidePlatformService,
