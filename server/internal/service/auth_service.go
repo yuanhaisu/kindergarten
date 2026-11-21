@@ -274,7 +274,9 @@ func kindergartenIDFromUserRoles(roles []domain.UserRole) uint64 {
 	return 0
 }
 
-// SendSMS 发送短信验证码（实际短信发送需对接第三方，此处仅存 Redis）
+// SendSMS 发送短信验证码（实际短信发送需对接第三方，此处仅存 Redis）。
+//
+// v1 未在 HTTP 层暴露（#162）；恢复前必须先补齐真实发送、频控与角色校验。
 func (s *AuthService) SendSMS(ctx context.Context, phone, scene string) (int, error) {
 	key := fmt.Sprintf("sms:%s:%s", scene, phone)
 
@@ -310,7 +312,10 @@ func (s *AuthService) verifySMSCode(ctx context.Context, phone, scene, code stri
 	return nil
 }
 
-// SMSLogin 手机号 + 验证码登录
+// SMSLogin 手机号 + 验证码登录。
+//
+// v1 关闭（#162）：当前实现忽略 role 且无频控，未在 HTTP 层暴露；
+// 恢复前必须补齐角色校验与限流。
 func (s *AuthService) SMSLogin(ctx context.Context, phone, code, role string) (*LoginResult, error) {
 	if err := s.verifySMSCode(ctx, phone, "login", code); err != nil {
 		return nil, err

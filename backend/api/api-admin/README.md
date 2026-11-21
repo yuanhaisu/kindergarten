@@ -82,8 +82,8 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | GET | `/health` | 健康检查 |
 | GET | `/api/v1/system/status` | 系统初始化状态 |
 | POST | `/api/v1/system/init` | 系统首次初始化 |
-| POST | `/api/v1/auth/sms/send` | 发送短信验证码 |
-| POST | `/api/v1/auth/login/sms` | 短信登录 |
+| POST | `/api/v1/auth/sms/send` | ⛔ v1 关闭（固定 403） |
+| POST | `/api/v1/auth/login/sms` | ⛔ v1 关闭（固定 403，不签发 token） |
 | POST | `/api/v1/auth/login/wechat` | 微信登录 |
 | POST | `/api/v1/auth/login/password` | 密码登录（admin 登录可用） |
 | POST | `/api/v1/auth/refresh` | 刷新 Token |

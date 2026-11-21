@@ -40,8 +40,10 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.GET("/system/status", h.inner.SystemStatus)
 		v1.POST("/system/init", h.inner.SystemInit)
 
-		v1.POST("/auth/sms/send", h.inner.SendSMS)
-		v1.POST("/auth/login/sms", h.inner.SMSLogin)
+		// SMS 登录/验证码发送在 v1 关闭（#162）：保留路由是为了让旧客户端收到
+		// 明确的 403，而不是误以为路径写错；两个端点都不签发 token。
+		v1.POST("/auth/sms/send", h.inner.SMSDisabled)
+		v1.POST("/auth/login/sms", h.inner.SMSDisabled)
 		v1.POST("/auth/login/wechat", h.inner.WeChatLogin)
 		v1.POST("/auth/login/password", h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)

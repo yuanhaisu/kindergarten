@@ -94,7 +94,7 @@
 | `POST /auth/login/wechat` | 微信 code 换 token | 全部 |
 | `POST /auth/refresh` | Token 续期 | 全部 |
 | `POST /auth/logout` | 退出登录 | 09-学生管理 |
-| `POST /auth/sms/send` | 发短信（scene: login / bind / authorization） | 03-请假、05-接送 |
+| `POST /auth/sms/send` | ⛔ v1 关闭（固定 403）；不要作为 03-请假、05-接送 的依赖 | — |
 | `GET /common/user/profile` | 用户信息 | 01-首页、09-学生管理 |
 | `PUT /common/user/profile` | 更新个人信息 | 09-学生管理 |
 | `GET /common/messages/unread-count` | 未读数（Tab 红点） | 01-首页 |
