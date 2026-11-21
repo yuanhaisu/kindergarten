@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	mysqldrv "github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
@@ -155,11 +154,6 @@ func (r *KindergartenRepo) SetPublicCodeIfEmpty(ctx context.Context, id uint64, 
 		return false, res.Error
 	}
 	return res.RowsAffected > 0, nil
-}
-
-func isDuplicateKeyError(err error) bool {
-	var mysqlErr *mysqldrv.MySQLError
-	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
 }
 
 // CountStudents 返回在园幼儿数，用于订单档位核定、超档提示与平台列表。
