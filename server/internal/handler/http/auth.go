@@ -15,59 +15,15 @@ import (
 	"kindergarten-server/pkg/response"
 )
 
-type sendSMSReq struct {
-	Phone string `json:"phone" binding:"required"`
-	Scene string `json:"scene" binding:"required,oneof=login bind"`
-}
-
-func (h *Handler) SendSMS(c *gin.Context) {
-	var req sendSMSReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ErrValidation(c, err.Error())
-		return
-	}
-
-	expire, err := h.authSvc.SendSMS(c.Request.Context(), req.Phone, req.Scene)
-	if err != nil {
-		if err.Error() == "SMS_TOO_FREQUENT" {
-			response.ErrBadRequest(c, 40010, "验证码发送过于频繁，请稍后再试")
-			return
-		}
-		response.ErrInternal(c, "验证码发送失败")
-		return
-	}
-
-	response.OK(c, gin.H{"expire_seconds": expire})
-}
-
-type smsLoginReq struct {
-	Phone string `json:"phone" binding:"required"`
-	Code  string `json:"code" binding:"required"`
-	Role  string `json:"role" binding:"required,oneof=teacher parent admin"`
-}
-
-func (h *Handler) SMSLogin(c *gin.Context) {
-	var req smsLoginReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ErrValidation(c, err.Error())
-		return
-	}
-
-	result, err := h.authSvc.SMSLogin(c.Request.Context(), req.Phone, req.Code, req.Role)
-	if err != nil {
-		msg := err.Error()
-		switch msg {
-		case "SMS_CODE_EXPIRED":
-			response.ErrBadRequest(c, 40001, "验证码错误或已过期")
-		case "SMS_CODE_INVALID":
-			response.ErrBadRequest(c, 40001, "验证码错误或已过期")
-		default:
-			response.ErrInternal(c, "登录失败")
-		}
-		return
-	}
-
-	response.OK(c, result)
+// SMSDisabled 是 /auth/sms/send 与 /auth/login/sms 在 v1 的统一响应。
+//
+// 短信通道在 v1 关闭（#162）：SMSLogin 不看 role、没有频控，验证码只写 Redis
+// 从不真正下发——留在公网就是一条绕过密码登录的后门。真实短信 + 频控 +
+// 角色校验落地前不得恢复这两个端点。这里不做请求体解析，避免把校验细节
+// 当成「还活着」的信号。
+func (h *Handler) SMSDisabled(c *gin.Context) {
+	log.L(c.Request.Context()).Warn("sms endpoint rejected: disabled in v1", "path", c.FullPath())
+	response.ErrForbidden(c, "短信功能在 v1 未开放")
 }
 
 type wechatLoginReq struct {

@@ -56,65 +56,53 @@
 
 ## 1. 认证
 
+> ⛔ **v1 关闭的端点**：`POST /auth/sms/send` 与 `POST /auth/login/sms` 在 v1 固定返回
+> `403`（`code=40300`），不发送验证码、不签发任何 token。真实短信 + 频控 + 角色校验
+> 落地前不要接入。
+
 > 登录与刷新响应包含 `consent_required` 与 `current_policy_version`（增量字段，旧客户端忽略）。
 > `consent_required=true` 时，客户端 MUST 先调用 `POST /common/consent` 完成同意，再访问业务接口；
 > 服务端在 `[consent] enforce=true` 时会对未同意的业务请求返回 `403` + `code=40301`。
 
-### POST `/auth/sms/send`
+### POST `/auth/sms/send` — v1 不可用
 
-> 发送短信验证码
+> ⛔ 短信通道在 v1 关闭，该端点固定返回 `403`，不会发送验证码；请求格式仅作将来恢复时的参考。
 
 ```json
-// Request
+// Request（v1 仍会被拒绝）
 {
   "phone": "13800001234",
   "scene": "login"            // login=登录 | bind=绑定手机号 | authorization=添加授权接送人
 }
 
-// Response
+// Response（v1 固定为 403）
 {
-  "expire_seconds": 300       // 验证码有效期（秒）
+  "code": 40300,
+  "message": "短信功能在 v1 未开放",
+  "data": null
 }
 ```
 
 ---
 
-### POST `/auth/login/sms`
+### POST `/auth/login/sms` — v1 不可用
 
-> 手机号 + 验证码登录（老师端 / 家长端 / 管理后台通用）
+> ⛔ 手机号 + 验证码登录在 v1 关闭，该端点固定返回 `403`，**不签发 `token` / `refresh_token`**；
+> 任何 `role`（teacher / parent / admin）结果相同。恢复前必须先补齐真实短信、频控与角色校验。
 
 ```json
-// Request
+// Request（v1 仍会被拒绝）
 {
   "phone": "13800001234",
   "code": "123456",
-  "role": "teacher"           // teacher | parent | admin（用于确定登录端）
+  "role": "teacher"           // teacher | parent | admin
 }
 
-// Response
+// Response（v1 固定为 403）
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-  "expires_at": "2026-03-20T12:00:00Z",
-  "consent_required": true,
-  "current_policy_version": "v1",
-  "user": {
-    "id": 1,
-    "phone": "138****1234",
-    "nickname": "李老师",
-    "avatar": "https://cdn.example.com/avatar/1.jpg",
-    "gender": 1,
-    "roles": [
-      {
-        "role": "teacher",
-        "kindergarten_id": 1,
-        "kindergarten_name": "阳光幼儿园",
-        "class_id": 1,
-        "class_name": "小一班",
-        "title": "head"
-      }
-    ]
-  }
+  "code": 40300,
+  "message": "短信功能在 v1 未开放",
+  "data": null
 }
 ```
 
@@ -133,7 +121,7 @@
   "iv": "..."                          // 可选
 }
 
-// Response（同 sms 登录格式）
+// Response（登录响应）
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
@@ -173,7 +161,7 @@
   "password": "Abc123456"
 }
 
-// Response（同 sms 登录格式）
+// Response（登录响应）
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
