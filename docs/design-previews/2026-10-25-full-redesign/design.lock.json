@@ -289,7 +289,7 @@
       "title": "老师登录",
       "tabbar": false,
       "reviewedAt": "2026-11-21",
-      "codeCommit": "837320b",
+      "codeCommit": "0f0d09e",
       "reason": "#168 登录页接入邀请码绑定：待绑定 token 不进工作台，绑定成功后进入园所"
     },
     "teacher/03-notice-create": {
