@@ -8,6 +8,7 @@ import (
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
 )
 
@@ -34,6 +35,10 @@ func (h *Handler) GetParentEntryQRCode(c *gin.Context) {
 		case errors.Is(err, service.ErrEntryClientUnavailable):
 			response.ErrUnavailable(c, "家长端小程序未就绪，请稍后重试或联系平台")
 		default:
+			// 未归类的错误（微信侧失败、base64/存储异常）必须留痕，
+			// 否则前端只看到 500，排查时没有任何线索。
+			log.L(c.Request.Context()).Error("generate parent entry qr code failed",
+				"kindergarten_id", kgID, "err", err)
 			response.ErrInternal(c, "生成园所二维码失败")
 		}
 		return
