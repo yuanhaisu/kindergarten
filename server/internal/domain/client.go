@@ -41,3 +41,30 @@ type Client struct {
 func (Client) TableName() string { return "clients" }
 
 func (c Client) IsEnabled() bool { return c.Status == ClientStatusEnabled }
+
+// ServesKindergarten 是「客户端作用域 ↔ 园所通道」匹配矩阵的唯一实现（#177），
+// 供 #169（切换/会话作用域）与 #176（二维码按客户端作用域生成）复用：
+//
+//	shared       → 只服务 app_channel=shared 的园
+//	kindergarten → 只服务 scope_id 对应、且 app_channel=dedicated 的园
+//	group        → 需要集团实体与成员表；v1 不建，永不匹配
+//
+// 任何未知作用域、空通道或 nil 园所一律不匹配——宁可拒绝，也不跨通道放行。
+func (c Client) ServesKindergarten(kg *Kindergarten) bool {
+	if kg == nil {
+		return false
+	}
+	switch c.ScopeKind {
+	case ClientScopeShared:
+		return kg.AppChannel == AppChannelShared
+	case ClientScopeKindergarten:
+		// scope_id=0 在专属作用域里是无效值，不能与 id=0 的未落库园所匹配。
+		return c.ScopeID != 0 && kg.ID != 0 && c.ScopeID == kg.ID && kg.AppChannel == AppChannelDedicated
+	case ClientScopeGroup:
+		// 集团 App 需要 group 实体与成员表才能判断「该集团有哪些园」。
+		// v1 没有这些结构，group 客户端不服务任何园所（取值保留给未来）。
+		return false
+	default:
+		return false
+	}
+}
