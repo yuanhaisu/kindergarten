@@ -163,8 +163,9 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	r.Use(middleware.RequestID())
 
 	v1 := r.Group("/api/v1")
-	v1.POST("/auth/sms/send", hnd.SendSMS)
-	v1.POST("/auth/login/sms", hnd.SMSLogin)
+	// v1 短信通道已关闭（#162），路由保留但统一走拒绝处理，与 router.go 保持一致。
+	v1.POST("/auth/sms/send", hnd.SMSDisabled)
+	v1.POST("/auth/login/sms", hnd.SMSDisabled)
 	v1.POST("/auth/login/wechat", hnd.WeChatLogin)
 	v1.POST("/auth/login/password", hnd.PasswordLogin)
 	v1.POST("/auth/refresh", hnd.Refresh)
