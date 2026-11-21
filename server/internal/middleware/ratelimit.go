@@ -217,8 +217,46 @@ func claimsAppID(c *gin.Context) string {
 	return ""
 }
 
-const rateLimitBodyKey = "middleware.ratelimit.json_body"
+// BindPhoneLimiter 在拿到手机号之后按 app_id + IP + 手机号做固定窗口限流（#167）。
+//
+// BindPhoneRateLimit 中间件只能看到一次性 wx_phone_code，拿不到手机号；
+// 完整维度必须等 service 用微信凭据换出手机号后再判定。Redis 故障失败开放
+// 并告警：绑定失败会把家长卡在登录流程里，而每次绑定都要持有微信侧凭据，
+// 滥用面远小于密码登录。
+type BindPhoneLimiter struct {
+	rdb    *redis.Client
+	max    int
+	window time.Duration
+}
 
+// NewBindPhoneLimiter 构造手机号维度限流器；rdb 为 nil 时永远放行并告警。
+func NewBindPhoneLimiter(rdb *redis.Client, maxRequests int, window time.Duration) *BindPhoneLimiter {
+	return &BindPhoneLimiter{rdb: rdb, max: maxRequests, window: window}
+}
+
+// Allow 报告本次绑定是否仍在配额内。手机号只以 sha256 前缀进入键空间。
+func (l *BindPhoneLimiter) Allow(ctx context.Context, ip, appID, phone string) bool {
+	if l == nil || l.rdb == nil {
+		log.L(ctx).Warn("bind phone limiter not configured; allowing request")
+		return true
+	}
+	key := rateLimitKey("bind_phone", ip, joinRateLimitParts("app_id", appID, "phone", phone))
+	count, err := l.rdb.Incr(ctx, key).Result()
+	if err != nil {
+		log.L(ctx).Warn("bind phone rate limit increment failed; allowing request", "err", err)
+		return true
+	}
+	if count == 1 {
+		if err := l.rdb.Expire(ctx, key, l.window).Err(); err != nil {
+			log.L(ctx).Warn("bind phone rate limit expire failed; allowing request", "err", err)
+			_ = l.rdb.Del(ctx, key).Err()
+			return true
+		}
+	}
+	return count <= int64(l.max)
+}
+
+const rateLimitBodyKey = "middleware.ratelimit.json_body"
 // jsonBodyString 读取请求体里的字符串字段。读取后还原请求体，handler 仍能绑定。
 // 结果按请求缓存，多个限流中间件不会重复读取。
 func jsonBodyString(c *gin.Context, keys ...string) string {

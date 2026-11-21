@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/auth"
+	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
 	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
@@ -181,6 +182,78 @@ func (h *Handler) AuthService() *service.AuthService {
 		return nil
 	}
 	return h.authSvc
+}
+
+type bindParentPhoneReq struct {
+	WxPhoneCode string `json:"wx_phone_code" binding:"required"`
+	// PublicCode 是园所入口码（#177）。绑定页从 scene/入口带入；没有时走无 scene 绑定。
+	PublicCode string `json:"public_code"`
+	// KindergartenID 是 public_code 之外的显式目标，二者只用于定位校验。
+	KindergartenID uint64 `json:"kindergarten_id"`
+}
+
+// BindParentPhone 家长绑定手机号（#167）。
+//
+// 只服务家长端客户端：手机号来自家长小程序凭据的 GetPhoneNumber，openid 来自
+// 当前 token（不接受请求体自称）。目标园所只做校验与初始落点，账号在其他
+// shared 园所的既有成员关系不受影响。
+func (h *Handler) BindParentPhone(c *gin.Context) {
+	claims := middleware.GetClaims(c)
+	if claims == nil {
+		response.ErrUnauthorized(c, "登录状态已失效，请重新登录")
+		return
+	}
+
+	var req bindParentPhoneReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+
+	result, err := h.authSvc.BindParentPhone(c.Request.Context(), service.ParentBindPhoneInput{
+		AppID:          claims.AppID,
+		OpenID:         claims.OpenID,
+		ClientIP:       c.ClientIP(),
+		WxPhoneCode:    req.WxPhoneCode,
+		PublicCode:     req.PublicCode,
+		KindergartenID: req.KindergartenID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrClientUnavailable):
+			log.L(c.Request.Context()).Warn("bind parent phone rejected: client unavailable", "app_id", claims.AppID)
+			response.ErrForbidden(c, "小程序客户端未注册或已停用，请更新小程序后重试")
+		case errors.Is(err, service.ErrBindClientNotParent):
+			log.L(c.Request.Context()).Warn("bind parent phone rejected: not a parent client", "app_id", claims.AppID)
+			response.ErrForbidden(c, "当前小程序不是家长端")
+		case errors.Is(err, service.ErrBindPhoneIdentityMissing):
+			response.ErrUnauthorized(c, "登录状态已失效，请重新登录")
+		case errors.Is(err, service.ErrBindPhoneCodeInvalid):
+			log.L(c.Request.Context()).Warn("bind parent phone: wechat phone code invalid", "app_id", claims.AppID, "err", err)
+			response.ErrBadRequest(c, 40030, "微信手机号授权失败，请重试")
+		case errors.Is(err, service.ErrBindKindergartenNotFound):
+			response.ErrNotFound(c, "园所不存在或已停用")
+		case errors.Is(err, service.ErrBindPhoneChannelMismatch):
+			log.L(c.Request.Context()).Warn("bind parent phone rejected: channel mismatch", "app_id", claims.AppID, "err", err)
+			response.ErrBadRequest(c, 40033, "当前小程序不支持该园所，请更新小程序或联系园所")
+		case errors.Is(err, service.ErrBindPhoneNotEnrolled):
+			// 无 scene 绑定的提示要引导家长「让园所录入 / 扫园所码」，两种情况文案一致可用。
+			response.ErrBadRequest(c, 40031, "园所尚未录入该家长手机号，请先让园所录入或扫描园所二维码")
+		case errors.Is(err, service.ErrBindPhoneAlreadyBound):
+			log.L(c.Request.Context()).Warn("bind parent phone rejected: phone already bound", "app_id", claims.AppID, "err", err)
+			response.ErrBadRequest(c, 40032, "该手机号已绑定其他微信")
+		case errors.Is(err, service.ErrBindPhoneRateLimited):
+			response.ErrRateLimited(c)
+		case errors.Is(err, service.ErrKindergartenSuspended):
+			response.ErrForbidden(c, "园所已停用，请联系平台方")
+		default:
+			log.L(c.Request.Context()).Error("bind parent phone failed", "app_id", claims.AppID, "err", err)
+			response.ErrInternal(c, "绑定失败，请稍后再试")
+		}
+		return
+	}
+
+	response.OK(c, result)
 }
 
 func (h *Handler) HealthCheck(c *gin.Context) {

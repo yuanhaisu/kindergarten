@@ -18,10 +18,14 @@ const ClientScopeAdminWeb = "admin_web"
 
 // ClientScope 描述一枚 access token 来自哪个小程序客户端（#163）。
 // Kind/ID 对应 clients.scope_kind / clients.scope_id：shared 的 ID 恒为 0。
+//
+// OpenID 是 (app_id, open_id) 这枚客户端身份的另一半：绑定手机号（#167）需要
+// 在「待绑定账号已被硬删」的重试里仍能定位身份，只有 JWT 能携带它。
 type ClientScope struct {
-	AppID string
-	Kind  string
-	ID    uint64
+	AppID  string
+	Kind   string
+	ID     uint64
+	OpenID string
 }
 
 type AccessClaims struct {
@@ -35,6 +39,9 @@ type AccessClaims struct {
 	AppID           string `json:"app_id,omitempty"`
 	ClientScopeKind string `json:"client_scope_kind,omitempty"`
 	ClientScopeID   uint64 `json:"client_scope_id,omitempty"`
+	// OpenID 是当前客户端身份（app_id + open_id）。绑定/换绑时据此定位
+	// user_identities，服务端不从请求体采信 openid（#167）。
+	OpenID string `json:"open_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -82,6 +89,7 @@ func SignClientAccess(secret []byte, userID string, roles []string, kindergarten
 		AppID:            scope.AppID,
 		ClientScopeKind:  scope.Kind,
 		ClientScopeID:    scope.ID,
+		OpenID:           scope.OpenID,
 		RegisteredClaims: newRegisteredClaims(userID, ttl),
 	}
 	return signClaims(secret, claims)

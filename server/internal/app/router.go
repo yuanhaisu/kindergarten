@@ -131,6 +131,13 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			// 我的园所（#169）：按当前客户端角色族与园所通道过滤。
 			authed.GET("/common/user/kindergartens", h.inner.GetMyKindergartens)
 
+			// 家长绑定手机号（#167）：待绑定账号把客户端身份并入园所预创建账号。
+			// 中间件按 app_id + IP 预限流；请求体只有一次性 wx_phone_code，
+			// 手机号维度由 service 换出手机号后再判定（同样的 20 次/分钟）。
+			authed.POST("/common/user/bind-parent-phone",
+				middleware.BindPhoneRateLimit(h.rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
+				h.inner.BindParentPhone)
+
 			// 老师邀请绑定（#168）：待绑定 token 可访问，限流 app_id+IP+邀请码。
 			authed.POST("/common/user/bind-invite",
 				middleware.BindInviteRateLimit(h.rdb, middleware.BindPhoneMaxPerMinute, time.Minute),

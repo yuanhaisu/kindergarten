@@ -37,7 +37,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	accessTTL := ProvideAccessTTL(cfg)
 	refreshTTL := ProvideRefreshTTL(cfg)
 	consentRepo := repository.NewConsentRepo(db)
-	authService := ProvideAuthService(userRepo, userRoleRepo, weChatClient, clientService, userIdentityRepo, adminAuthzService, kindergartenStatusService, kindergartenRepo, client, jwtSecret, accessTTL, refreshTTL, consentRepo, cfg)
+	identityMergeService := service.NewIdentityMergeService(db)
+	authService := ProvideAuthService(userRepo, userRoleRepo, weChatClient, clientService, userIdentityRepo, adminAuthzService, kindergartenStatusService, kindergartenRepo, client, jwtSecret, accessTTL, refreshTTL, consentRepo, cfg, identityMergeService)
 	fileRepo := repository.NewFileRepo(db)
 	storage, err := ProvideOSSStorage(cfg)
 	if err != nil {
@@ -134,7 +135,6 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	entitlementService := ProvideEntitlementService(entitlementRepo, orderRepo, kindergartenRepo, entitlementCache, billingEnforceModules)
 	logoSigner := ProvideLogoSigner(storage)
 	publicBrandService := service.NewPublicBrandService(kindergartenRepo, logoSigner)
-	identityMergeService := service.NewIdentityMergeService(db)
 	bindInviteService := service.NewBindInviteService(teacherInvitationRepo, kindergartenRepo, userIdentityRepo, userRepo, clientService, identityMergeService, authService)
 	handlerHandler := handler.NewHandler(authService, fileService, messageService, systemService, dashboardService, classService, studentService, teacherService, parentService, settingsService, adminService, roleService, attendanceService, leaveService, pickupService, growthService, taskService, pointService, achievementService, noticeService, announcementService, auditService, operationLogService, exportService, teacherPortalService, parentPortalService, dictService, healthCheckService, faceRegistryService, gardenCalendarService, timetableService, dietGroupObjectService, dietFoodService, dietRecipeService, dietPlanService, dietAnalysisService, platformService, planService, orderService, distributorService, entitlementService, publicBrandService, bindInviteService)
 	noticeScheduler := ProvideNoticeScheduler(db)

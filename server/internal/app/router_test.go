@@ -414,7 +414,7 @@ func newTestEngineWithRoleRepo(t *testing.T, rdb *redis.Client, roles fakeRoleRe
 		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002", PasswordHash: "fake-hash-b"},
 	}}
 	svc := service.NewAuthService(users, roles, nil, nil, nil, nil, nil, nil, rdb,
-		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour, nil, false)
+		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour, nil, false, nil, nil, nil)
 
 	// NewHandler 只接位置参数；本测试只需要 authSvc，其余服务传 nil。
 	h := handler.NewHandler(svc,

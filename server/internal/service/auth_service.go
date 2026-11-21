@@ -49,6 +49,8 @@ type ClientResolver interface {
 // UserIdentityRepository 客户端身份仓储接口（由 *repository.UserIdentityRepo 实现）。
 type UserIdentityRepository interface {
 	FindOrCreatePendingUser(ctx context.Context, appID, openID, unionID string) (*domain.User, error)
+	// FindByUserAndApp 供续签/切换回填 token 里的 openid（#167）。
+	FindByUserAndApp(ctx context.Context, userID uint64, appID string) (*domain.UserIdentity, error)
 }
 
 // KindergartenMembershipRepository 读取成员园所的名称与通道（#169）。
@@ -78,6 +80,12 @@ type AuthService struct {
 	rtTTL          time.Duration
 	consentRepo    ConsentRepository
 	consentEnforce bool
+
+	// 家长绑定手机号（#167）的依赖。三者任一缺失时端点报未装配，
+	// 而不是让绑定流程跑一半。
+	bindKindergartens KindergartenLookup
+	merger            IdentityMerger
+	bindLimiter       BindPhoneRateLimiter
 }
 
 func NewAuthService(
@@ -95,23 +103,29 @@ func NewAuthService(
 	rtTTL time.Duration,
 	consentRepo ConsentRepository,
 	consentEnforce bool,
+	bindKindergartens KindergartenLookup,
+	merger IdentityMerger,
+	bindLimiter BindPhoneRateLimiter,
 ) *AuthService {
 	return &AuthService{
-		userRepo:       userRepo,
-		userRoleRepo:   userRoleRepo,
-		wx:             wx,
-		clients:        clients,
-		identities:     identities,
-		adminPerms:     adminPerms,
-		kgStatus:       kgStatus,
-		kindergartens:  kindergartens,
-		rdb:            rdb,
-		revoker:        auth.NewTokenRevoker(rdb),
-		secret:         secret,
-		atTTL:          atTTL,
-		rtTTL:          rtTTL,
-		consentRepo:    consentRepo,
-		consentEnforce: consentEnforce,
+		userRepo:          userRepo,
+		userRoleRepo:      userRoleRepo,
+		wx:                wx,
+		clients:           clients,
+		identities:        identities,
+		adminPerms:        adminPerms,
+		kgStatus:          kgStatus,
+		kindergartens:     kindergartens,
+		rdb:               rdb,
+		revoker:           auth.NewTokenRevoker(rdb),
+		secret:            secret,
+		atTTL:             atTTL,
+		rtTTL:             rtTTL,
+		consentRepo:       consentRepo,
+		consentEnforce:    consentEnforce,
+		bindKindergartens: bindKindergartens,
+		merger:            merger,
+		bindLimiter:       bindLimiter,
 	}
 }
 
@@ -267,7 +281,7 @@ func (s *AuthService) issueTokens(ctx context.Context, user *domain.User) (*Logi
 }
 
 func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
-	return s.issueTokensFor(ctx, user, roles, nil)
+	return s.issueTokensFor(ctx, user, roles, nil, "")
 }
 
 // issueAdminTokens 签发管理端会话（#166）：先收敛出唯一园所的管理员角色，
@@ -277,7 +291,7 @@ func (s *AuthService) issueAdminTokens(ctx context.Context, user *domain.User, r
 	if err != nil {
 		return nil, err
 	}
-	return s.issueTokensFor(ctx, user, adminRoles, nil)
+	return s.issueTokensFor(ctx, user, adminRoles, nil, "")
 }
 
 // adminSessionRoles 返回管理端会话可用的角色行：必须恰好属于一个园所。
@@ -307,9 +321,10 @@ func adminSessionRoles(roles []domain.UserRole) ([]domain.UserRole, uint64, erro
 }
 
 // issueClientTokens 签发绑定小程序客户端的凭证：claims 带 app_id 与作用域，
-// 角色只来自当前客户端注册表（#175）。
-func (s *AuthService) issueClientTokens(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {
-	return s.issueTokensFor(ctx, user, roles, client)
+// 角色只来自当前客户端注册表（#175）。openID 一并写进 claims，绑定手机号（#167）
+// 需要用它在 pending 已被硬删的重试里定位身份。
+func (s *AuthService) issueClientTokens(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client, openID string) (*LoginResult, error) {
+	return s.issueTokensFor(ctx, user, roles, client, openID)
 }
 
 // IssueClientLogin 为已完成绑定的账号按当前客户端签发凭证（#168）。
@@ -331,12 +346,13 @@ func (s *AuthService) IssueClientLogin(ctx context.Context, userID uint64, clien
 	if err != nil {
 		return nil, err
 	}
-	return s.issueClientTokens(ctx, user, filterRolesByFamily(roles, client.Role), client)
+	// 绑定刚才把客户端身份挂到该账号，token 里要带上 open_id（#167 依赖它续签/再绑定）。
+	return s.issueClientTokens(ctx, user, filterRolesByFamily(roles, client.Role), client, s.openIDForUser(ctx, userID, client.AppID))
 }
 
 // issueTokensFor 是签发的唯一实现。client 为 nil 时是管理端/刷新路径（无 app_id），
 // 非 nil 时必须走 SignClientAccess，否则 token 无法回查客户端作用域。
-func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {
+func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client, openID string) (*LoginResult, error) {
 	roleNames := roleNamesFromUserRoles(roles)
 	kgID := kindergartenIDFromUserRoles(roles)
 
@@ -359,9 +375,10 @@ func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, rol
 	switch {
 	case client != nil:
 		accessToken, err = auth.SignClientAccess(s.secret, uid, roleNames, kgID, auth.ClientScope{
-			AppID: client.AppID,
-			Kind:  client.ScopeKind,
-			ID:    client.ScopeID,
+			AppID:  client.AppID,
+			Kind:   client.ScopeKind,
+			ID:     client.ScopeID,
+			OpenID: openID,
 		}, s.atTTL)
 	case hasAdminRole(roles):
 		// 管理端内建作用域：无 app_id，必须恰好一个园所（#166）。
@@ -600,7 +617,7 @@ func (s *AuthService) WeChatLogin(ctx context.Context, req WeChatLoginRequest) (
 		return nil, err
 	}
 
-	return s.issueClientTokens(ctx, user, roles, client)
+	return s.issueClientTokens(ctx, user, roles, client, sess.OpenID)
 }
 
 // filterRolesByFamily 保留与当前客户端角色一致的授权行。
@@ -786,7 +803,7 @@ func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, cla
 	if len(scopedRoles) == 0 {
 		return nil, ErrKindergartenNotMember
 	}
-	return s.issueTokensFor(ctx, user, scopedRoles, client)
+	return s.issueTokensFor(ctx, user, scopedRoles, client, s.openIDForUser(ctx, user.ID, client.AppID))
 }
 
 // hasAdminRole 密码登录只服务管理后台（#174）：家长/老师账号即使有密码
@@ -875,7 +892,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		if scope.KindergartenID != kgID {
 			return nil, fmt.Errorf("invalid refresh token: kindergarten changed")
 		}
-		return s.issueTokensFor(ctx, user, adminRoles, nil)
+		return s.issueTokensFor(ctx, user, adminRoles, nil, "")
 	}
 
 	if s.clients == nil {
@@ -900,7 +917,20 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		return nil, fmt.Errorf("invalid refresh token: membership changed")
 	}
 
-	return s.issueTokensFor(ctx, user, scopedRoles, client)
+	return s.issueTokensFor(ctx, user, scopedRoles, client, s.openIDForUser(ctx, user.ID, client.AppID))
+}
+
+// openIDForUser 取账号在当前客户端的身份，续签/切换时写回 token（#167）。
+// 身份缺失只影响后续绑定需要重新走小程序登录，不阻断续签。
+func (s *AuthService) openIDForUser(ctx context.Context, userID uint64, appID string) string {
+	if s.identities == nil {
+		return ""
+	}
+	identity, err := s.identities.FindByUserAndApp(ctx, userID, appID)
+	if err != nil || identity == nil {
+		return ""
+	}
+	return identity.OpenID
 }
 
 // filterRolesByKindergarten 只保留目标园所的角色行；kgID=0 返回空
