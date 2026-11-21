@@ -53,6 +53,8 @@ type ClientResolver interface {
 // UserIdentityRepository 客户端身份仓储接口（由 *repository.UserIdentityRepo 实现）。
 type UserIdentityRepository interface {
 	FindOrCreatePendingUser(ctx context.Context, appID, openID, unionID string) (*domain.User, error)
+	// FindByAppAndOpenID 用于续期时复核身份仍然存在且属于该账号（#172 解绑）。
+	FindByAppAndOpenID(ctx context.Context, appID, openID string) (*domain.UserIdentity, error)
 }
 
 // KindergartenMembershipRepository 读取成员园所的名称与通道（#169）。
@@ -725,6 +727,9 @@ func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, cla
 	if user == nil {
 		return nil, fmt.Errorf("user not found")
 	}
+	if err := s.ensureSessionIdentityActive(ctx, user.ID, scope.AppID, scope.OpenID); err != nil {
+		return nil, err
+	}
 
 	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
 	if err != nil {
@@ -738,7 +743,7 @@ func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, cla
 	if len(scopedRoles) == 0 {
 		return nil, ErrKindergartenNotMember
 	}
-	return s.issueTokensFor(ctx, user, scopedRoles, client, "")
+	return s.issueTokensFor(ctx, user, scopedRoles, client, scope.OpenID)
 }
 
 // hasAdminRole 密码登录只服务管理后台（#174）：家长/老师账号即使有密码
@@ -767,6 +772,9 @@ var (
 	ErrInviteCodeNotAllowed = errors.New("INVITE_CODE_NOT_ALLOWED")
 	// ErrWeChatLoginFailed 微信 code2session 失败或未返回 openid。
 	ErrWeChatLoginFailed = errors.New("WECHAT_LOGIN_FAILED")
+	// ErrIdentityUnbound 续期凭证对应的客户端身份已被解绑（#172）。
+	// 解绑后旧会话不能再续期，否则「换微信」形同虚设。
+	ErrIdentityUnbound = errors.New("IDENTITY_UNBOUND")
 )
 
 // RefreshToken 刷新令牌。
@@ -821,6 +829,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 	if client.ScopeKind != scope.ScopeKind || client.ScopeID != scope.ScopeID {
 		return nil, fmt.Errorf("invalid refresh token: client scope changed")
 	}
+	// 身份只有在仍然存在且属于该账号时才能续期（#172）。解绑删的是
+	// user_identities 行，若这里不复核，被解绑的微信还能拿旧 refresh 续出新 access。
+	if err := s.ensureSessionIdentityActive(ctx, user.ID, scope.AppID, scope.OpenID); err != nil {
+		return nil, err
+	}
 
 	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
 	if err != nil {
@@ -837,6 +850,25 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 	}
 
 	return s.issueTokensFor(ctx, user, scopedRoles, client, scope.OpenID)
+}
+
+// ensureSessionIdentityActive 复核会话绑定的客户端身份仍存在且属于该账号。
+// 续期与切换园所都会调用：解绑后旧 refresh 不能再换出新凭证（#172）。
+func (s *AuthService) ensureSessionIdentityActive(ctx context.Context, userID uint64, appID, openID string) error {
+	if openID == "" {
+		return nil
+	}
+	if s.identities == nil {
+		return fmt.Errorf("identity store not configured")
+	}
+	identity, err := s.identities.FindByAppAndOpenID(ctx, appID, openID)
+	if err != nil {
+		return err
+	}
+	if identity == nil || identity.UserID != userID {
+		return ErrIdentityUnbound
+	}
+	return nil
 }
 
 // filterRolesByKindergarten 只保留目标园所的角色行；kgID=0 返回空

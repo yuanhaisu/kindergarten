@@ -44,7 +44,7 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 02 | [`02-classes.md`](./02-classes.md) | 班级管理 | `admin/pages/classes/index.vue` | 6 | ✅ 已实现 |
 | 03 | [`03-students.md`](./03-students.md) | 学生管理 | `admin/pages/students/index.vue` | 8 | ✅ 已实现 |
 | 04 | [`04-teachers.md`](./04-teachers.md) | 老师管理 | `admin/pages/teachers/index.vue` | 6 | ✅ 已实现 |
-| 05 | [`05-parents.md`](./05-parents.md) | 家长管理 | `admin/pages/parents/index.vue` | 5 | ✅ 已实现 |
+| 05 | [`05-parents.md`](./05-parents.md) | 家长管理 | `admin/pages/parents/index.vue` | 8 | ✅ 已实现 |
 | 06 | [`06-attendance.md`](./06-attendance.md) | 出勤管理 | `admin/pages/attendance/index.vue` | 3 | ✅ |
 | 07 | [`07-leaves.md`](./07-leaves.md) | 请假管理 | `admin/pages/leaves/index.vue` | 3 | ✅ |
 | 08 | [`08-pickup.md`](./08-pickup.md) | 接送管理 | `admin/pages/pickup/index.vue` | 4 | ✅ |
@@ -65,7 +65,7 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 23 | [`23-diet.md`](./23-diet.md) | 膳食管理（带量食谱） | `admin/pages/diet/*` | 31 | ✅ 已实现（变更 `add-diet-group-objects`） |
 | 24 | [`24-billing.md`](./24-billing.md) | 我的套餐（只读） | `admin/pages/billing/index.vue` | 1 | 🔲 未实现（变更 `add-saas-commercial-layer`） |
 
-**合计：** `PROGRESS.md` 表内共 **95** 行 Admin API；完成数以该文件顶部「总体进度」为准。
+**合计：** `PROGRESS.md` 表内共 **98** 行 Admin API；完成数以该文件顶部「总体进度」为准。
 变更 `add-saas-commercial-layer` 新增的 `24-billing` 端点尚未计入 `PROGRESS.md`，实施时需补登并同步顶部计数。
 
 > **后端缺失对照（最新）**：[`admin/tests/playwright-reports/20260422/BACKEND_MISSING_APIS.md`](../../../admin/tests/playwright-reports/20260422/BACKEND_MISSING_APIS.md)（结案：**0** 缺失，以 `PROGRESS.md` 为准）  

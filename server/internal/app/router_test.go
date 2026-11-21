@@ -427,6 +427,7 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 		nil, // distributor
 		nil, // entitlement
 		nil, // publicBrand
+		nil, // support
 	)
 
 	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil, nil, nil, nil)

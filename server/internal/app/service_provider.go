@@ -30,7 +30,6 @@ func ProvideAuthService(
 	rtTTL RefreshTTL,
 	consentRepo *repository.ConsentRepo,
 	cfg *config.Config,
-	kgLookup *repository.KindergartenRepo,
 	mergeSvc *service.IdentityMergeService,
 ) *service.AuthService {
 	return service.NewAuthService(
@@ -48,7 +47,9 @@ func ProvideAuthService(
 		time.Duration(rtTTL),
 		consentRepo,
 		cfg.Consent.Enforce,
-		kgLookup,
+		// 绑定流程的园所解析与登录共用同一个仓储。拆成两个同类型参数会让
+		// Wire 无法区分（provider 不允许两个同类型入参），且它们本就是同一实例。
+		kgRepo,
 		mergeSvc,
 		// 绑定限流的完整维度（手机号）只能在 service 换出手机号后判定，
 		// 中间件那层先按 app_id + IP 兜住洪峰（#174 / #167）。
