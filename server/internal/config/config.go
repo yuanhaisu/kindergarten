@@ -17,6 +17,7 @@ type Config struct {
 	Redis   RedisConfig   `ini:"redis"`
 	JWT     JWTConfig     `ini:"jwt"`
 	WeChat  WeChatConfig  `ini:"wechat"`
+	Clients ClientConfig  `ini:"clients"`
 	Casbin  CasbinConfig  `ini:"casbin"`
 	OSS     OSSConfig     `ini:"oss"`
 	Face    FaceConfig    `ini:"face"`
@@ -164,6 +165,15 @@ func (c *WeChatConfig) normalize() {
 	if c.CodeEnvVersion == "" {
 		c.CodeEnvVersion = "release"
 	}
+}
+
+// ClientConfig 小程序客户端注册表（#163）的配置项。
+//
+// AppID 仍来自 [wechat]（登录凭据与注册表必须同源）；这里只放启动同步
+// 首次插入时使用的发版版本，之后 release_version 由数据库维护。
+type ClientConfig struct {
+	TeacherReleaseVersion string `ini:"teacher_release_version"`
+	ParentReleaseVersion  string `ini:"parent_release_version"`
 }
 
 type CasbinConfig struct {

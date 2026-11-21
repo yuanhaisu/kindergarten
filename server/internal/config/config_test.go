@@ -231,6 +231,37 @@ func TestLoadCORSOrigins(t *testing.T) {
 	}
 }
 
+// [clients] 提供客户端注册表同步用的发版版本；缺节时保持空串（不猜版本）。
+func TestLoadClientsReleaseVersions(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "app.ini")
+	content := "[clients]\nteacher_release_version = 0.1.0\nparent_release_version = 0.2.0\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write temp ini: %v", err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Clients.TeacherReleaseVersion != "0.1.0" {
+		t.Errorf("teacher_release_version = %q, want 0.1.0", cfg.Clients.TeacherReleaseVersion)
+	}
+	if cfg.Clients.ParentReleaseVersion != "0.2.0" {
+		t.Errorf("parent_release_version = %q, want 0.2.0", cfg.Clients.ParentReleaseVersion)
+	}
+
+	emptyPath := filepath.Join(t.TempDir(), "app.ini")
+	if err := os.WriteFile(emptyPath, []byte("[app]\nhttp_addr = :8080\n"), 0o600); err != nil {
+		t.Fatalf("write temp ini: %v", err)
+	}
+	cfg, err = Load(emptyPath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Clients.TeacherReleaseVersion != "" || cfg.Clients.ParentReleaseVersion != "" {
+		t.Errorf("missing [clients] must keep versions empty, got %#v", cfg.Clients)
+	}
+}
+
 // release 模式下误配通配符只告警、不阻断启动；其他模式或非通配配置不应产生告警。
 func TestAppConfigCORSConfigWarning(t *testing.T) {
 	cases := []struct {

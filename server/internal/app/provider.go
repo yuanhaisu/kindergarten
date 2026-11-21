@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -170,9 +172,36 @@ func ProvideNoticeScheduler(db *gorm.DB) *service.NoticeScheduler {
 // NewAppHandlerWithBackgroundWorkers 装配 AppHandler 时启动进程内后台 worker。
 // InjectEngine 的返回类型固定为 *gin.Engine，后台任务没有别的可挂点；做成显式依赖
 // （而不是手工往 wire_gen.go 里加一行）可以保证 make wire 重新生成后启动仍然存在。
-func NewAppHandlerWithBackgroundWorkers(h *handler.Handler, scheduler *service.NoticeScheduler, cfg *config.Config, db *gorm.DB, rdb *redis.Client) *AppHandler {
+func NewAppHandlerWithBackgroundWorkers(h *handler.Handler, scheduler *service.NoticeScheduler, clients *service.ClientService, cfg *config.Config, db *gorm.DB, rdb *redis.Client) (*AppHandler, error) {
+	// 客户端注册表先于后台 worker 同步：失败即拒绝启动，避免带病服务登录请求。
+	if err := syncClientRegistry(clients, cfg); err != nil {
+		return nil, err
+	}
 	scheduler.Start()
 	return NewAppHandler(h).
 		WithCORS(cfg.App.AllowedCORSOrigins()).
-		WithInfra(db, rdb)
+		WithInfra(db, rdb), nil
+}
+
+// syncClientRegistry 把配置里的两端 AppID 幂等同步到 clients 表（#163）。
+// 失败阻断启动：配置与启用中的客户端不一致时，登录会出现「有入口无凭据」
+// 或「同角色两条 enabled 无法确定用哪条」。
+func syncClientRegistry(clients *service.ClientService, cfg *config.Config) error {
+	specs := service.SharedClientSpecs(
+		cfg.WeChat.TeacherAppID, cfg.WeChat.ParentAppID,
+		cfg.Clients.TeacherReleaseVersion, cfg.Clients.ParentReleaseVersion,
+	)
+	result, err := clients.SyncFromConfig(context.Background(), specs)
+	if err != nil {
+		return fmt.Errorf("sync client registry: %w", err)
+	}
+	slog.Info("client registry synced",
+		"created", result.Created,
+		"disabled", result.Disabled,
+		"unchanged", result.Unchanged,
+	)
+	for _, warning := range result.Warnings {
+		slog.Warn("client registry warning", "detail", warning)
+	}
+	return nil
 }
