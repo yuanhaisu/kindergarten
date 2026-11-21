@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 	"time"
 
@@ -54,6 +55,13 @@ type UserIdentityRepository interface {
 	FindOrCreatePendingUser(ctx context.Context, appID, openID, unionID string) (*domain.User, error)
 }
 
+// KindergartenMembershipRepository 读取成员园所的名称与通道（#169）。
+// 「我的园所」与切换都必须按真实园所行过滤，user_roles 里冗余的名称不可信。
+type KindergartenMembershipRepository interface {
+	FindByID(ctx context.Context, id uint64) (*domain.Kindergarten, error)
+	FindByIDs(ctx context.Context, ids []uint64) ([]domain.Kindergarten, error)
+}
+
 // AuthService v1 认证服务。
 //
 // 小程序登录（#175）持有微信 API 与客户端注册表：app_id → 客户端角色/作用域，
@@ -66,6 +74,7 @@ type AuthService struct {
 	identities     UserIdentityRepository
 	adminPerms     AdminPermissionResolver
 	kgStatus       KindergartenStatusChecker
+	kindergartens  KindergartenMembershipRepository
 	rdb            *redis.Client
 	revoker        auth.TokenRevoker
 	secret         []byte
@@ -83,6 +92,7 @@ func NewAuthService(
 	identities UserIdentityRepository,
 	adminPerms AdminPermissionResolver,
 	kgStatus KindergartenStatusChecker,
+	kindergartens KindergartenMembershipRepository,
 	rdb *redis.Client,
 	secret []byte,
 	atTTL time.Duration,
@@ -98,6 +108,7 @@ func NewAuthService(
 		identities:     identities,
 		adminPerms:     adminPerms,
 		kgStatus:       kgStatus,
+		kindergartens:  kindergartens,
 		rdb:            rdb,
 		revoker:        auth.NewTokenRevoker(rdb),
 		secret:         secret,
@@ -304,8 +315,21 @@ func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, rol
 		return nil, err
 	}
 
+	// refresh 存储带上完整作用域（#169）：刷新/切换时按同一客户端与园所续签。
+	refreshScope := auth.RefreshScope{UID: user.ID, KindergartenID: kgID}
+	if client != nil {
+		refreshScope.AppID = client.AppID
+		refreshScope.ScopeKind = client.ScopeKind
+		refreshScope.ScopeID = client.ScopeID
+	} else {
+		refreshScope.ScopeKind = auth.RefreshScopeAdminWeb
+	}
+	payload, err := auth.EncodeRefreshScope(refreshScope)
+	if err != nil {
+		return nil, err
+	}
 	jti := uuid.NewString()
-	if err := auth.SaveRefresh(ctx, s.rdb, jti, uid, s.rtTTL); err != nil {
+	if err := auth.SaveRefresh(ctx, s.rdb, jti, payload, s.rtTTL); err != nil {
 		return nil, err
 	}
 
@@ -508,7 +532,11 @@ func (s *AuthService) WeChatLogin(ctx context.Context, req WeChatLoginRequest) (
 	}
 	// 同一账号可同时是家长和老师：token 只能携带当前客户端角色族的角色，
 	// 否则家长端会拿到老师权限，园所也会串到另一端（#175）。
-	roles = filterRolesByFamily(roles, client.Role)
+	// 通道同样参与过滤：共用客户端不把用户挂进 dedicated/group 的园（#169）。
+	roles, _, err = s.resolveClientMemberRoles(ctx, roles, client)
+	if err != nil {
+		return nil, err
+	}
 
 	return s.issueClientTokens(ctx, user, roles, client)
 }
@@ -522,6 +550,181 @@ func filterRolesByFamily(roles []domain.UserRole, role string) []domain.UserRole
 		}
 	}
 	return filtered
+}
+
+// loadKindergartenMap 批量取角色关联的园所（名称与通道）并按 id 建表。
+// 没有任何园所关联时返回空表，不触发仓储调用。
+func (s *AuthService) loadKindergartenMap(ctx context.Context, roles []domain.UserRole) (map[uint64]*domain.Kindergarten, error) {
+	ids := make([]uint64, 0, len(roles))
+	seen := make(map[uint64]bool, len(roles))
+	for _, r := range roles {
+		if r.KindergartenID == nil || seen[*r.KindergartenID] {
+			continue
+		}
+		seen[*r.KindergartenID] = true
+		ids = append(ids, *r.KindergartenID)
+	}
+	if len(ids) == 0 {
+		return map[uint64]*domain.Kindergarten{}, nil
+	}
+	if s.kindergartens == nil {
+		return nil, errors.New("kindergarten membership repository not configured")
+	}
+	rows, err := s.kindergartens.FindByIDs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("查询成员园所失败：%w", err)
+	}
+	byID := make(map[uint64]*domain.Kindergarten, len(rows))
+	for i := range rows {
+		kg := rows[i]
+		byID[kg.ID] = &kg
+	}
+	return byID, nil
+}
+
+// filterClientRoles 是「客户端角色族 + 园所通道」过滤的唯一实现（#169）：
+// 没有园所关联、园所不存在/已删除、通道不匹配的角色一律不进入小程序会话。
+func filterClientRoles(roles []domain.UserRole, client *domain.Client, byID map[uint64]*domain.Kindergarten) []domain.UserRole {
+	filtered := make([]domain.UserRole, 0, len(roles))
+	for _, r := range roles {
+		if r.KindergartenID == nil {
+			continue
+		}
+		if !client.ServesKindergarten(byID[*r.KindergartenID]) {
+			continue
+		}
+		filtered = append(filtered, r)
+	}
+	return filtered
+}
+
+// resolveClientMemberRoles 先按角色族裁剪，再按客户端作用域过滤通道。
+func (s *AuthService) resolveClientMemberRoles(ctx context.Context, roles []domain.UserRole, client *domain.Client) ([]domain.UserRole, map[uint64]*domain.Kindergarten, error) {
+	roles = filterRolesByFamily(roles, client.Role)
+	byID, err := s.loadKindergartenMap(ctx, roles)
+	if err != nil {
+		return nil, nil, err
+	}
+	return filterClientRoles(roles, client, byID), byID, nil
+}
+
+// KindergartenMembership 是「我的园所」的一项：只暴露 id/名称/当前客户端角色。
+type KindergartenMembership struct {
+	KindergartenID uint64 `json:"kindergarten_id"`
+	Name           string `json:"name"`
+	Role           string `json:"role"`
+}
+
+// ErrClientScopeRequired 表示端点只接受小程序客户端凭证（带 app_id）。
+// 管理端密码登录不进入 clients 表，不能调用园所列表或切换。
+var ErrClientScopeRequired = errors.New("CLIENT_SCOPE_REQUIRED")
+
+// ErrKindergartenNotMember 目标园不在「当前客户端角色族 ∩ 园所通道」过滤后的
+// 成员列表里（含角色族不匹配、通道不匹配、无成员关系三种情况）。
+var ErrKindergartenNotMember = errors.New("KINDERGARTEN_NOT_MEMBER")
+
+// ListMyKindergartens 返回当前客户端可见的成员园所（#169）。
+// 过滤依据是真实园所行：角色族取当前客户端，通道走 ServesKindergarten。
+func (s *AuthService) ListMyKindergartens(ctx context.Context, userID uint64, claims *auth.AccessClaims) ([]KindergartenMembership, error) {
+	if claims == nil || claims.AppID == "" {
+		return nil, ErrClientScopeRequired
+	}
+	client, err := s.clients.ResolveEnabledByAppID(ctx, claims.AppID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrClientUnavailable, err)
+	}
+	roles, err := s.userRoleRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	roles, byID, err := s.resolveClientMemberRoles(ctx, roles, client)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]KindergartenMembership, 0, len(roles))
+	seen := make(map[uint64]bool, len(roles))
+	for _, r := range roles {
+		kgID := *r.KindergartenID
+		if seen[kgID] {
+			continue
+		}
+		seen[kgID] = true
+		items = append(items, KindergartenMembership{
+			KindergartenID: kgID,
+			Name:           byID[kgID].Name,
+			Role:           r.Role,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].KindergartenID < items[j].KindergartenID
+	})
+	return items, nil
+}
+
+// SwitchKindergarten 切换当前客户端的单园会话（#169）。
+//
+// 目标园必须仍在过滤后的成员列表里；旧 refresh 通过 GETDEL 原子消费，
+// 成功后才换发绑定目标园的 access + refresh，避免切换与续期并发时各换一套凭证。
+func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, claims *auth.AccessClaims, targetKindergartenID uint64, refreshToken string) (*LoginResult, error) {
+	if claims == nil || claims.AppID == "" {
+		return nil, ErrClientScopeRequired
+	}
+	if s.revoker == nil || s.clients == nil {
+		return nil, fmt.Errorf("%w: auth dependencies not configured", ErrAuthStorageUnavailable)
+	}
+	revoked, err := s.revoker.Revoked(ctx, refreshToken)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
+	}
+	if revoked {
+		return nil, ErrTokenRevoked
+	}
+
+	// 先消费再校验：旧 refresh 一次性使用，校验失败也不允许重放。
+	value, err := auth.ConsumeRefresh(ctx, s.rdb, refreshToken)
+	if err != nil {
+		return nil, fmt.Errorf("invalid refresh token")
+	}
+	scope, err := auth.DecodeRefreshScope(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
+	}
+	// 凭证必须属于同一个账号、同一个客户端，不能拿别人的 refresh 切自己的会话。
+	if scope.UID != userID || scope.AppID != claims.AppID {
+		return nil, fmt.Errorf("invalid refresh token: scope mismatch")
+	}
+
+	client, err := s.clients.ResolveEnabledByAppID(ctx, scope.AppID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
+	}
+	if client.ScopeKind != scope.ScopeKind || client.ScopeID != scope.ScopeID ||
+		client.ScopeKind != claims.ClientScopeKind || client.ScopeID != claims.ClientScopeID {
+		return nil, fmt.Errorf("invalid refresh token: client scope changed")
+	}
+
+	user, err := s.userRepo.FindByID(ctx, scope.UID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	roles, _, err = s.resolveClientMemberRoles(ctx, roles, client)
+	if err != nil {
+		return nil, err
+	}
+	scopedRoles := filterRolesByKindergarten(roles, targetKindergartenID)
+	if len(scopedRoles) == 0 {
+		return nil, ErrKindergartenNotMember
+	}
+	return s.issueTokensFor(ctx, user, scopedRoles, client)
 }
 
 // hasAdminRole 密码登录只服务管理后台（#174）：家长/老师账号即使有密码
@@ -552,7 +755,10 @@ var (
 	ErrWeChatLoginFailed = errors.New("WECHAT_LOGIN_FAILED")
 )
 
-// RefreshToken 刷新令牌
+// RefreshToken 刷新令牌。
+//
+// 刷新不是「重新登录」：必须沿用签发时的客户端与园所，只换新 access + refresh。
+// 旧版本存的裸 userID 会在这里被拒绝（#169）。
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*LoginResult, error) {
 	if s.revoker == nil {
 		return nil, fmt.Errorf("%w: token revoker not configured", ErrAuthStorageUnavailable)
@@ -565,17 +771,16 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		return nil, ErrTokenRevoked
 	}
 
-	userIDStr, err := auth.ConsumeRefresh(ctx, s.rdb, refreshToken)
+	value, err := auth.ConsumeRefresh(ctx, s.rdb, refreshToken)
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh token")
 	}
-
-	var userID uint64
-	if _, err := fmt.Sscanf(userIDStr, "%d", &userID); err != nil {
-		return nil, fmt.Errorf("invalid user id in refresh token")
+	scope, err := auth.DecodeRefreshScope(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
 	}
 
-	user, err := s.userRepo.FindByID(ctx, userID)
+	user, err := s.userRepo.FindByID(ctx, scope.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +788,56 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		return nil, fmt.Errorf("user not found")
 	}
 
-	return s.issueTokens(ctx, user)
+	// 管理端密码登录（admin_web）保持现状，#166 再接管其会话策略。
+	if scope.AppID == "" {
+		if scope.ScopeKind != auth.RefreshScopeAdminWeb {
+			return nil, fmt.Errorf("invalid refresh scope")
+		}
+		return s.issueTokens(ctx, user)
+	}
+
+	if s.clients == nil {
+		return nil, fmt.Errorf("invalid refresh token: client resolver not configured")
+	}
+	client, err := s.clients.ResolveEnabledByAppID(ctx, scope.AppID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
+	}
+	// 客户端作用域变了（如 AppID 行被另一条替换），旧 refresh 不能滑过去。
+	if client.ScopeKind != scope.ScopeKind || client.ScopeID != scope.ScopeID {
+		return nil, fmt.Errorf("invalid refresh token: client scope changed")
+	}
+
+	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	roles, _, err = s.resolveClientMemberRoles(ctx, roles, client)
+	if err != nil {
+		return nil, err
+	}
+	scopedRoles := filterRolesByKindergarten(roles, scope.KindergartenID)
+	// 已绑定用户必须有且只续签签发时的那个园；待绑定用户必须仍然没有成员关系。
+	if (scope.KindergartenID == 0 && len(roles) > 0) || (scope.KindergartenID != 0 && len(scopedRoles) == 0) {
+		return nil, fmt.Errorf("invalid refresh token: membership changed")
+	}
+
+	return s.issueTokensFor(ctx, user, scopedRoles, client)
+}
+
+// filterRolesByKindergarten 只保留目标园所的角色行；kgID=0 返回空
+// （待绑定会话没有园所，也不允许凭空获得角色）。
+func filterRolesByKindergarten(roles []domain.UserRole, kgID uint64) []domain.UserRole {
+	if kgID == 0 {
+		return nil
+	}
+	filtered := make([]domain.UserRole, 0, len(roles))
+	for _, r := range roles {
+		if r.KindergartenID != nil && *r.KindergartenID == kgID {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
 }
 
 // Logout 退出登录：吊销当前 access token；请求带 refresh token 时一并吊销。

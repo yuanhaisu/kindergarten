@@ -119,6 +119,7 @@ func New(t testing.TB) *Harness {
 		repository.NewUserIdentityRepo(setup.db),
 		adminAuthz,
 		kgStatus,
+		repository.NewKindergartenRepo(setup.db),
 		rdb,
 		secret,
 		atTTL,
@@ -245,8 +246,10 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	authed.Use(middleware.ModuleGate(nil))
 	{
 		authed.POST("/auth/logout", hnd.Logout)
+		authed.POST("/auth/switch-kindergarten", hnd.SwitchKindergarten)
 		authed.GET("/common/user/profile", hnd.GetProfile)
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
+		authed.GET("/common/user/kindergartens", hnd.GetMyKindergartens)
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
 

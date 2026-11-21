@@ -224,6 +224,55 @@
 
 ---
 
+### GET `/common/user/kindergartens`
+
+> 我的园所（#169）：只返回「当前客户端角色族 ∩ 园所通道」过滤后的成员园，供客户端展示与切换；不提供跨租户园所目录。
+
+```json
+// Response
+[
+  { "kindergarten_id": 4, "name": "阳光幼儿园", "role": "parent" },
+  { "kindergarten_id": 7, "name": "星光幼儿园", "role": "parent" }
+]
+```
+
+- 家长端客户端只返回本人的 `parent` 园；老师端只返回 `teacher` 园。
+- 共用（shared）客户端不返回 `app_channel=dedicated/group` 的园；专属客户端只返回自己 scope 的园。
+- 管理端凭证（无 `app_id`）→ `403`（`40300`）；`app_id` 指向的客户端未注册或已停用 → `403`。
+- 待绑定 token 在白名单内：返回空数组，不报错。
+
+---
+
+### POST `/auth/switch-kindergarten`
+
+> 切换园所（#169）：仅 `parent` / `teacher` 小程序客户端。校验目标园在过滤后的成员列表内，重新签发绑定目标园的 access + refresh，并原子消费旧 refresh。
+
+```json
+// Request（Authorization: Bearer <当前 access token>）
+{
+  "kindergarten_id": 7,
+  "refresh_token": "<当前 refresh token>"
+}
+
+// Response：与登录响应同形
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...(new)",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...(new)",
+  "expires_at": "2026-11-21T12:00:00Z",
+  "consent_required": false,
+  "current_policy_version": "v1",
+  "user": { "id": 100, "roles": [{ "role": "parent", "kindergarten_id": 7 }] }
+}
+```
+
+- `refresh_token` 必须属于同一账号、同一客户端；跨客户端 → `401`（`40100`）。
+- 目标园不在成员过滤结果内（角色族/通道不匹配或非成员）→ `403`（`40300`）。
+- 管理端 token（无 `app_id`）→ `403`；待绑定 token → `403` + `code=40302`。
+- 旧 refresh 一次性消费（GETDEL）：并发「切换 + 续期」只有一个成功，另一个 `401`；成功后旧 refresh 不能重放。
+- 响应中的 `roles` 与 token 一致，只含目标园所在客户端的角色族。
+
+---
+
 ### POST `/auth/logout`
 
 > 退出登录：吊销当前 access token；`refresh_token` 可选，携带时一并吊销该 refresh 会话。

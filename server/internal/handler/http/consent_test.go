@@ -44,7 +44,7 @@ func (f *fakeConsentRepoForHandler) ListByUser(_ context.Context, _ uint64) ([]d
 
 func newConsentHandlerEngine(t *testing.T, repo service.ConsentRepository, roles []string) *gin.Engine {
 	t.Helper()
-	svc := service.NewAuthService(nil, nil, nil, nil, nil, nil, nil, nil, nil, 0, 0, repo, true)
+	svc := service.NewAuthService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0, 0, repo, true)
 	h := &Handler{authSvc: svc}
 
 	gin.SetMode(gin.TestMode)
