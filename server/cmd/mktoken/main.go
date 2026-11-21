@@ -6,7 +6,8 @@
 //
 // 家长/老师角色必须绑定小程序客户端（#163）：省略 -client 时按角色从
 // clients 注册表取唯一启用中的客户端；也可以用 -client 指定 AppID。
-// 非小程序角色（如 admin）仍签发不带客户端作用域的旧式凭证。
+// admin 使用内建 admin_web 作用域（#166），必须能确定唯一园所；其余角色
+// （如 doctor）签发不带客户端作用域的旧式凭证。
 //
 // 仅限本机验证使用；不进入 HTTP 服务，且产物是短期 token。
 // 用法：go run ./cmd/mktoken [-client <app_id>] <phone> <role>
@@ -62,9 +63,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	var user domain.User
-	if err := db.Where("phone = ?", phone).First(&user).Error; err != nil {
-		fmt.Fprintf(os.Stderr, "user %s not found: %v\n", phone, err)
+	// 与密码登录同一口径：按活跃手机号（phone_active）找账号，软删账号不命中。
+	user, err := repository.NewUserRepo(db).FindByPhone(context.Background(), phone)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "find user %s: %v\n", phone, err)
+		os.Exit(1)
+	}
+	if user == nil {
+		fmt.Fprintf(os.Stderr, "user %s not found\n", phone)
 		os.Exit(1)
 	}
 
@@ -77,10 +83,20 @@ func main() {
 	roleNames := make([]string, 0, len(roles))
 	var kgID uint64
 	for _, r := range roles {
-		if r.KindergartenID != nil {
+		// 优先取本次请求角色绑定的园所；否则回退到任意一个园所（parent/teacher
+		// 可能只挂了角色而没有园所，token 允许 kg=0）。
+		if r.Role == role && r.KindergartenID != nil {
 			kgID = *r.KindergartenID
 		}
 		roleNames = append(roleNames, r.Role)
+	}
+	if kgID == 0 {
+		for _, r := range roles {
+			if r.KindergartenID != nil {
+				kgID = *r.KindergartenID
+				break
+			}
+		}
 	}
 
 	target := role
@@ -107,10 +123,14 @@ func main() {
 		ttl = time.Hour
 	}
 	var token string
-	if scope.AppID != "" {
+	switch {
+	case scope.AppID != "":
 		fmt.Fprintf(os.Stderr, "client: %s (scope=%s/%d)\n", scope.AppID, scope.Kind, scope.ID)
 		token, err = auth.SignClientAccess([]byte(cfg.JWT.Secret), fmt.Sprint(user.ID), []string{target}, kgID, scope, ttl)
-	} else {
+	case target == "admin":
+		// 管理端凭证必须带内建 admin_web 作用域且恰好绑定一个园所（#166）。
+		token, err = auth.SignAdminAccess([]byte(cfg.JWT.Secret), fmt.Sprint(user.ID), []string{target}, kgID, ttl)
+	default:
 		token, err = auth.SignAccess([]byte(cfg.JWT.Secret), fmt.Sprint(user.ID), []string{target}, kgID, ttl)
 	}
 	if err != nil {

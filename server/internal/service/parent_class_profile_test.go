@@ -115,7 +115,8 @@ func newPCPFixture(t *testing.T) *pcpFixture {
 		avatar      string
 	}{
 		{testPCPHead, "13800001001", "测试主班老师", "https://cdn.example.com/avatar/head.jpg"},
-		{testPCPAssist, "13900001002", "测试副班老师", "https://cdn.example.com/avatar/assist.jpg"},
+		// 9950xx 合成段：避免与开发库演示账号（13900001002）在 phone_active 唯一索引上撞键。
+		{testPCPAssist, "13999501002", "测试副班老师", "https://cdn.example.com/avatar/assist.jpg"},
 		{testPCPNursery, "13700001003", "测试生活老师", ""},
 		{testPCPUnknown, "13600001004", "测试未知职务老师", ""},
 		{testPCPNoPhone, "", "测试无手机老师", ""},

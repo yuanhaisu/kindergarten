@@ -259,3 +259,41 @@ func TestCreateAdminRejectsPhoneAdminInAnotherKindergarten(t *testing.T) {
 		Where("user_id = ? AND role = ?", user.ID, "admin").Count(&count).Error)
 	assert.Equal(t, int64(1), count, "不得在第二个园所再建 admin 角色")
 }
+
+// 建管理员也必须走统一的手机号账号解析（#164/#173）：不能直接 Create 一条 User，
+// 否则带空格的手机号会自成一个活跃账号（phone_active 保留原样），
+// 紧接着的密码登录按规范化手机号查不到人。
+func TestCreateAdminNormalizesPhoneThroughAccountResolver(t *testing.T) {
+	h := authharness.New(t)
+	kg := seedKindergarten(t, h, "创建管理员规范化园")
+	phone := uniquePhone()
+	padded := "  " + phone + "  "
+
+	svc := service.NewAdminService(
+		h.DB,
+		repository.NewUserRepo(h.DB),
+		repository.NewUserRoleRepo(h.DB),
+		repository.NewAdminRepo(h.DB),
+		repository.NewKindergartenRepo(h.DB),
+		repository.NewOperationLogRepo(h.DB),
+	)
+	created, err := svc.CreateAdmin(context.Background(), kg.ID, 1, service.CreateAdminReq{
+		Phone:    padded,
+		Nickname: "规范化管理员",
+		Password: "Password@123",
+	}, "", "")
+	require.NoError(t, err)
+	require.NotZero(t, created.ID)
+	t.Cleanup(func() {
+		h.HardDelete(t, &domain.UserRole{}, "user_id = ?", created.ID)
+		h.HardDelete(t, &domain.UserAdminRole{}, "user_id = ?", created.ID)
+		h.HardDelete(t, &domain.User{}, "id = ?", created.ID)
+	})
+
+	var user domain.User
+	require.NoError(t, h.DB.First(&user, created.ID).Error)
+	assert.Equal(t, phone, user.Phone, "手机号必须规范化后落库")
+
+	res := loginWithPassword(t, h, phone, "Password@123")
+	assert.Equal(t, 200, res.Status, "建号后按规范化手机号必须能登录：%s", res.Body)
+}

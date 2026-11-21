@@ -33,6 +33,17 @@ func TestHarnessUsesDedicatedTestDatabase(t *testing.T) {
 	}
 }
 
+// #173：旧跨端身份列必须由迁移删除。留着它们就会与 user_identities 形成
+// 「一个身份两处存」的双源；测试库跑的是真实 goose 迁移，因此这里能验证到最终 schema。
+func TestTestDatabaseHasNoLegacyUserIdentityColumns(t *testing.T) {
+	h := authharness.New(t)
+
+	for _, column := range []string{"open_id", "union_id"} {
+		assert.Falsef(t, h.DB.Migrator().HasColumn(&domain.User{}, column),
+			"users.%s 应已由 #173 迁移删除，身份只存 user_identities", column)
+	}
+}
+
 // 缺 token 必须在 AuthJWT 被拦下，返回统一包络的 401，而不是落到 handler 或 500。
 func TestAuthedRouteWithoutTokenReturnsUnauthorized(t *testing.T) {
 	h := authharness.New(t)
@@ -74,8 +85,7 @@ func TestLegacyBindEndpointStatus(t *testing.T) {
 // 软删行仍占用行位置（后续 phone_active 唯一索引的坑），清理必须硬删。
 func TestHardDeleteRemovesSoftDeletedRows(t *testing.T) {
 	h := authharness.New(t)
-	openID := fmt.Sprintf("openid-161-cleanup-%d", time.Now().UnixNano())
-	user := &domain.User{OpenID: openID}
+	user := &domain.User{Nickname: fmt.Sprintf("cleanup-161-%d", time.Now().UnixNano())}
 	require.NoError(t, h.DB.Create(user).Error)
 	require.NoError(t, h.DB.Delete(user).Error, "gorm Delete 只写 deleted_at")
 
