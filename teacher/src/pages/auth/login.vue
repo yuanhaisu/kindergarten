@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref } from "vue"
 import { onLoad } from "@dcloudio/uni-app"
-import { bindPhoneLogin, toLoginError } from "@/utils/login"
-import { getToken } from "@/utils/auth"
+import { bindPhoneLogin, hasTeacherRole, toLoginError, UNBOUND_LOGIN_ERROR } from "@/utils/login"
+import { getUser } from "@/utils/auth"
 import config from "@/config/env"
 import BrandBlock from "@/components/BrandBlock.vue"
 
@@ -52,6 +52,11 @@ async function handleWxLogin() {
 
   try {
     const data = await bindPhoneLogin()
+    // #168：登录只拿到待绑定 token；没有邀请码就没有教师角色，不能进工作台。
+    if (!hasTeacherRole(data?.user)) {
+      loginError.value = UNBOUND_LOGIN_ERROR
+      return
+    }
     // 已登录但未同意当前政策：先完成同意，不进入工作台。
     if (data && data.consent_required) {
       uni.reLaunch({ url: "/pages/auth/consent" })
@@ -69,8 +74,8 @@ async function handleWxLogin() {
 }
 
 onLoad(() => {
-  // 已登录则直接进入工作台，不在登录页停留（与家长端一致）
-  if (getToken()) {
+  // 已绑定才直接进工作台；待绑定 token 要留在登录页完成邀请码绑定（#168）。
+  if (hasTeacherRole(getUser())) {
     uni.reLaunch({ url: "/pages/index/index" })
   }
 })

@@ -556,6 +556,10 @@ func TestAdminAlbumRoutesHaveNoEditEndpoint(t *testing.T) {
 		nil, // order
 		nil, // distributor
 		nil, // entitlement
+		nil, // publicBrand
+		nil, // bindInvite
+		nil, // parentEntryQR
+		nil, // support
 	)
 	engine, err := app.NewRouter(app.NewAppHandler(h), nil, app.JWTSecret("test-secret"), nil, nil, nil, nil)
 	require.NoError(t, err, "admin 路由权限登记缺口会让 NewRouter 启动失败")

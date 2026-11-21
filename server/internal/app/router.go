@@ -40,11 +40,26 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.GET("/system/status", h.inner.SystemStatus)
 		v1.POST("/system/init", h.inner.SystemInit)
 
-		v1.POST("/auth/sms/send", h.inner.SendSMS)
-		v1.POST("/auth/login/sms", h.inner.SMSLogin)
-		v1.POST("/auth/login/wechat", h.inner.WeChatLogin)
-		v1.POST("/auth/login/password", h.inner.PasswordLogin)
+		// SMS 登录/验证码发送在 v1 关闭（#162）：保留路由是为了让旧客户端收到
+		// 明确的 403，而不是误以为路径写错；两个端点都不签发 token。
+		v1.POST("/auth/sms/send", h.inner.SMSDisabled)
+		v1.POST("/auth/login/sms", h.inner.SMSDisabled)
+		// 小程序登录（#175）：app_id → 客户端注册表 → 该角色凭据换 openid；
+		// 没有身份时创建待绑定账号，不自动成为任何园所成员。
+		// 限流按 app_id + IP、高阈值且失败开放：code 一次性，不能因 Redis
+		// 抖动把整所幼儿园挡在登录外（#174）。
+		wechatLoginLimit := middleware.WeChatLoginRateLimit(h.rdb, middleware.WeChatLoginMaxPerMinute, time.Minute)
+		v1.POST("/auth/login/wechat", wechatLoginLimit, h.inner.WeChatLogin)
+		// 密码登录只服务管理后台，按 IP + 手机号严格限流且失败关闭（#174）。
+		passwordLoginLimit := middleware.PasswordLoginRateLimit(h.rdb, middleware.PasswordLoginMaxPerMinute, time.Minute)
+		v1.POST("/auth/login/password", passwordLoginLimit, h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)
+
+		// 园所公开品牌（#170）：未登录可访问，按 public_code（不可枚举）定位。
+		// 限流失败开放——公开品牌是家长端启动页的数据源，Redis 抖动不能把
+		// 启动打成 503；公开只读数据没有暴力破解面（见 RateLimitFailOpen）。
+		publicBrandLimit := middleware.RateLimitFailOpen(h.rdb, "public_brand", 300, time.Minute)
+		v1.GET("/public/kindergartens/:public_code", publicBrandLimit, h.inner.GetPublicKindergartenBrand)
 
 		// 平台方：独立信任域，凭证 scope=platform（ADR-0014）。
 		// 登录与续期是唯一不需要平台凭证的两个端点；登录额外挂
@@ -86,6 +101,11 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			platformG.PATCH("/distributors/:id", h.inner.PlatformUpdateDistributor)
 			platformG.GET("/commissions", h.inner.PlatformListCommissions)
 			platformG.GET("/commissions/:id", h.inner.PlatformGetCommission)
+			// 身份支持（#172）：平台支持查看目标用户的园所成员关系，解绑客户端身份
+			// 与更正手机号。与园所管理端同一套 service、不同的信任域与审计表。
+			platformG.GET("/users/:id/support", h.inner.PlatformGetUserSupport)
+			platformG.DELETE("/users/:id/identities/:identity_id", h.inner.PlatformUnbindUserIdentity)
+			platformG.PUT("/users/:id/phone", h.inner.PlatformCorrectUserPhone)
 		}
 
 		// 需要认证的接口
@@ -93,12 +113,16 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker))
 		// 停用园所：凭证有效也一律拒绝（PLT-0005/0006）。
 		authed.Use(middleware.RequireActiveKindergarten(kgStatus))
+		// 未绑定账号白名单（#175）：必须在 Casbin 之前，空角色无法匹配任何策略。
+		authed.Use(middleware.RequireBoundAccount())
 		authed.Use(middleware.CasbinRBAC(e))
 		// 功能授权裁剪：只对 premium 模块生效，base 路由直接放行（ADR-0012）。
 		authed.Use(middleware.ModuleGate(moduleAuthz))
 		{
 			// 退出登录
 			authed.POST("/auth/logout", h.inner.Logout)
+			// 切换园所（#169）：仅 parent/teacher 客户端，admin_web 在 handler 拒绝。
+			authed.POST("/auth/switch-kindergarten", h.inner.SwitchKindergarten)
 
 			// 文件上传
 			authed.POST("/common/upload", h.inner.Upload)
@@ -109,8 +133,20 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			authed.PUT("/common/user/profile", h.inner.UpdateProfile)
 			authed.PUT("/common/user/avatar", h.inner.UpdateAvatar)
 			authed.PUT("/common/user/password", h.inner.ChangePassword)
-			authed.POST("/common/user/bind-invite", h.inner.BindInvite)
-			authed.POST("/common/user/bind-parent-phone", h.inner.BindParentPhone)
+			// 我的园所（#169）：按当前客户端角色族与园所通道过滤。
+			authed.GET("/common/user/kindergartens", h.inner.GetMyKindergartens)
+
+			// 家长绑定手机号（#167）：待绑定账号把客户端身份并入园所预创建账号。
+			// 中间件按 app_id + IP 预限流；请求体只有一次性 wx_phone_code，
+			// 手机号维度由 service 换出手机号后再判定（同样的 20 次/分钟）。
+			authed.POST("/common/user/bind-parent-phone",
+				middleware.BindPhoneRateLimit(h.rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
+				h.inner.BindParentPhone)
+
+			// 老师邀请绑定（#168）：待绑定 token 可访问，限流 app_id+IP+邀请码。
+			authed.POST("/common/user/bind-invite",
+				middleware.BindInviteRateLimit(h.rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
+				h.inner.BindInvite)
 
 			// 隐私政策同意：不受 consent 门禁拦截，否则用户无法完成同意或退出。
 			authed.GET("/common/consent", h.inner.GetConsent)
@@ -370,6 +406,12 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		pg.GET("/:id", h.GetParent)
 		pg.PUT("/:id", h.UpdateParent)
 		pg.PUT("/:id/status", h.UpdateParentStatus)
+		// 身份支持（#172）：解绑客户端身份（换微信）。账号、角色与孩子关系不动。
+		pg.DELETE("/:id/identities/:identity_id", h.AdminUnbindParentIdentity)
+		// 身份支持（#172）：支持视图（身份 + 园所成员关系）与手机号更正。
+		// 更正前必须先解绑错误身份，见 service.CorrectPhone。
+		pg.GET("/:id/support", h.AdminGetParentSupport)
+		pg.PUT("/:id/phone", h.AdminCorrectParentPhone)
 	}
 
 	set := adminG.Group("/settings")
@@ -384,6 +426,9 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 	{
 		kg.GET("/info", h.GetKindergartenInfo)
 		kg.PUT("/info", h.UpdateKindergartenInfo)
+		// 家长端园所入口二维码（#176）：码属于园所对外物料，
+		// 生成范围由当前登录园所决定，不接受任意 kindergarten_id 参数。
+		kg.GET("/parent-qrcode", h.GetParentEntryQRCode)
 	}
 
 	ag := adminG.Group("/admins")

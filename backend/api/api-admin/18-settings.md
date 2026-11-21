@@ -156,6 +156,7 @@
   "phone": "010-12345678",
   "principal": "张园长",
   "logo_url": "https://cdn.example.com/logo/1.png",
+  "brand_color": "#F97316",
   "license_no": "教办字[2020]001号",
   "capacity": 350,
   "current_count": 300,
@@ -171,6 +172,10 @@
 ## PUT `/admin/kindergarten/info`
 
 > 更新园所信息（对应前端 `updateKindergartenInfo`）
+>
+> 字段均为可选：不传表示不修改；传空串表示清空。
+> `brand_color` 只接受预设色板或对比度足够的 `#RRGGBB`，非法值返回 422（`code=42200`）；
+> 空串表示清空，家长端/老师端回落默认主题。保存后公开品牌接口立即返回新值。
 
 ```json
 // Request
@@ -180,6 +185,7 @@
   "phone": "010-12345678",
   "principal": "张园长",
   "logo_url": "https://cdn.example.com/logo/1.png",
+  "brand_color": "#F97316",
   "description": "阳光幼儿园创办于2010年..."
 }
 
@@ -189,3 +195,30 @@
   "updated_at": "2026-03-19T10:00:00Z"
 }
 ```
+
+---
+
+## GET `/admin/kindergarten/parent-qrcode`
+
+> 家长端园所入口二维码（#176）：当前登录园所的对外物料。权限 `system:kindergarten`。
+>
+> 码属于园所，**不接受 `kindergarten_id` 参数**——目标园由 JWT 决定，避免越权为任意园生成入口。
+
+```json
+// Request（可选 query）
+// env_version=release | trial | develop（不传回落到服务端配置的 code_env_version）
+
+// Response
+{
+  "public_code": "k3m9x2qa7t",
+  "scene": "kg_k3m9x2qa7t",
+  "page": "pages/index/index",
+  "env_version": "release",
+  "image_base64": "iVBORw0KGgoAAAANSUhEUg..."
+}
+```
+
+- `scene` 固定为 `kg_<public_code>`，长度上限 32（微信 scene 限制）；`public_code` 为 10 位 Crockford base32。
+- 园所尚无 `public_code` 时首次生成自动分配并落库，重复生成复用同一码。
+- 微信调用走**家长端**小程序凭据（`GetParentWXACodeUnlimit`）；`page` 必须真实存在于 `parent/src/pages.json`。
+- 错误：园所不存在 `404`；`env_version` 非法 `422`；园所通道与家长端客户端作用域不匹配 `409`；家长端客户端未注册/停用 `503`。

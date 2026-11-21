@@ -63,7 +63,7 @@ UPDATE platform_admins SET status = 0 WHERE username = 'stg_verify_ops';
 
 | 端 | 账号 | 口令 | 说明 |
 |---|---|---|---|
-| 家长端 / 园所后台 | `13900010001`、`13900010002` | 见 CLAUDE.md「辅助命令 → `fixpwd`」 | 仅演示库；`go run ./cmd/fixpwd` 可重置为文档中的演示口令 |
+| 家长端 | `13900010001`、`13900010002` | 无 | 仅演示库；家长端只支持微信登录（#174 起密码登录仅管理端），原 `cmd/fixpwd` 已随 #173 删除 |
 
 园所租户管理员由 `setadmin` 供给（口令从 `-password` 或 `SETADMIN_PASSWORD` 读取，无默认口令）：
 

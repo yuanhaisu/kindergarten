@@ -1,9 +1,18 @@
 package domain
 
+// User 平台账号。v1 起「一人一账号」：同一自然人在各客户端只有这一条 User，
+// 客户端身份（app_id + open_id）存在 user_identities 表（#164）。
+//
+// 手机号唯一性由数据库保证：users.phone_active 是 STORED 生成列
+// IF(deleted_at IS NULL AND phone <> "", phone, NULL)，其上建唯一索引。
+// 空手机号与软删账号的 phone_active 为 NULL，不参与唯一比较——因此它们可以
+// 有多条，而一个活跃非空手机号只能对应一条 User。这里刻意不声明 PhoneActive
+// 字段：生成列不可写，且未迁移的库上 SELECT 它会直接报错。
+//
+// 微信身份不在本表：#173 已删除 users.open_id/union_id，客户端身份只存
+// user_identities(app_id, open_id)；账号解析统一走 FindOrCreateByPhone。
 type User struct {
 	BaseModel
-	OpenID       string `gorm:"index;size:128" json:"-"`
-	UnionID      string `gorm:"index;size:128" json:"-"`
 	Nickname     string `gorm:"size:64" json:"nickname"`
 	Avatar       string `gorm:"size:512" json:"avatar"`
 	Phone        string `gorm:"size:20;index" json:"phone"`
@@ -18,10 +27,9 @@ func (User) TableName() string { return "users" }
 
 // UserRole 用户角色关联。
 //
-// 同一端内一个用户可挂多个角色（如老师兼管理员）。
-// 但「同时是老师和家长」不再由本表聚合：两端 AppID 不同、openid 不同，
-// 同一自然人在家长端与老师端是**两条独立的 User**，靠 unionid / 手机号关联
-// （见 specs/cross-end-identity）。不要假设一条 User 能同时承载两端身份。
+// 一条 User 可挂多个角色，且可跨园所、跨端：老师兼家长不再是两条账号，
+// 而是同一条 User 同时持有 teacher 与 parent 角色（客户端身份见 UserIdentity）。
+// 角色本身不承载登录身份——登录认的是 (app_id, open_id)，角色只决定授权范围。
 type UserRole struct {
 	BaseModel
 	UserID           uint64  `gorm:"index;not null" json:"user_id"`

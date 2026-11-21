@@ -27,6 +27,46 @@ func TestSignAccessAssignsFreshJTI(t *testing.T) {
 	assert.NotEqual(t, ca.ID, cb.ID, "每次签发都必须换新 jti，否则登出会误伤其他会话")
 }
 
+// 客户端作用域 token 必须带上 app_id 与客户端作用域，登录/中间件据此裁剪角色。
+func TestSignClientAccessCarriesClientScope(t *testing.T) {
+	cases := []struct {
+		name  string
+		scope ClientScope
+	}{
+		{name: "shared", scope: ClientScope{AppID: "wx_teacher_163", Kind: "shared"}},
+		{name: "kindergarten", scope: ClientScope{AppID: "wx_dedicated_163", Kind: "kindergarten", ID: 9}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			token, err := SignClientAccess([]byte(jwtTestSecret), "42", []string{"teacher"}, 7, tc.scope, time.Minute)
+			require.NoError(t, err)
+
+			parsed, err := ParseAccess([]byte(jwtTestSecret), token)
+			require.NoError(t, err)
+			assert.Equal(t, "42", parsed.UserID)
+			assert.Equal(t, []string{"teacher"}, parsed.Roles)
+			assert.Equal(t, uint64(7), parsed.KindergartenID)
+			assert.Equal(t, tc.scope.AppID, parsed.AppID)
+			assert.Equal(t, tc.scope.Kind, parsed.ClientScopeKind)
+			assert.Equal(t, tc.scope.ID, parsed.ClientScopeID)
+			assert.Empty(t, parsed.Scope, "客户端凭证不是平台凭证")
+			assert.NotEmpty(t, parsed.ID, "客户端凭证同样需要 jti")
+		})
+	}
+}
+
+// 缺 app_id / scope_kind 的「客户端 token」会退化成无客户端的旧凭证，
+// 必须在签发处就拒绝，而不是留给中间件猜。
+func TestSignClientAccessRequiresClientScope(t *testing.T) {
+	_, err := SignClientAccess([]byte(jwtTestSecret), "1", []string{"parent"}, 4,
+		ClientScope{Kind: "shared"}, time.Minute)
+	require.Error(t, err, "缺少 app_id")
+
+	_, err = SignClientAccess([]byte(jwtTestSecret), "1", []string{"parent"}, 4,
+		ClientScope{AppID: "wx_parent_163"}, time.Minute)
+	require.Error(t, err, "缺少 scope_kind")
+}
+
 func TestParseAccessAcceptsLegacyTokenWithoutJTI(t *testing.T) {
 	now := time.Now()
 	claims := AccessClaims{

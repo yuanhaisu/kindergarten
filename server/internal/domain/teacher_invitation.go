@@ -2,7 +2,8 @@ package domain
 
 import "time"
 
-// TeacherInvitation 老师邀请码，用于微信登录时将 OpenID 绑定到预创建的教师账号。
+// TeacherInvitation 老师邀请码，用于微信登录时把 (app_id, open_id) 身份
+// 绑定到预创建的教师账号（身份只存 user_identities）。
 type TeacherInvitation struct {
 	BaseModel
 	Token          string    `gorm:"uniqueIndex;size:64;not null" json:"token"`

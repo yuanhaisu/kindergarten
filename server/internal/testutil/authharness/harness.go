@@ -1,0 +1,515 @@
+// Package authharness 提供认证/身份测试的**单一 HTTP 缝**：
+// 真实 Gin 引擎 + 真实测试库 + 假微信 + 假 Redis。
+//
+// 为什么只有这一条缝：后续身份票要验证「登录 → token → 中间件 → 业务接口」的
+// 完整链路。如果分别对 service 和中间件做替身测试，两边都通过但拼起来仍可能
+// 不通（角色裁剪、园所门禁、Casbin 都是装配层行为）。这里只拼真实组件，
+// 替身仅限外部依赖（微信、Redis、数据库实例）。
+package authharness
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/casbin/casbin/v2"
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
+
+	"kindergarten-server/internal/auth"
+	"kindergarten-server/internal/config"
+	handler "kindergarten-server/internal/handler/http"
+	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/rbac"
+	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/service"
+	"kindergarten-server/internal/storage/oss"
+	"kindergarten-server/internal/testutil/fakeredis"
+)
+
+// 公开品牌 logo 签名用伪造凭据构造真实 *oss.Storage：SignURL 是本地 HMAC
+// 计算，不发网络请求；测试断言的是实际签名逻辑，而不是替身。
+const (
+	testOSSEndpoint   = "oss-cn-hangzhou.aliyuncs.com"
+	testOSSAccessKey  = "test-access-key"
+	testOSSSecret     = "test-secret"
+	testOSSBucketName = "test-bucket"
+
+	// publicBrandRateLimit 与 router.go 的公开品牌限流阈值一致。
+	publicBrandRateLimit = 300
+)
+
+// Harness 是一次测试的完整运行环境。
+type Harness struct {
+	Config *config.Config
+	DB     *gorm.DB
+
+	Redis       *fakeredis.Server
+	RedisClient *redis.Client
+
+	WeChat *FakeWeChat
+	Auth   *service.AuthService
+	// Handler 暴露给后续票在 Engine 上追加路由（如 teacher/parent 业务组）。
+	Handler *handler.Handler
+	Engine  *gin.Engine
+	// Enforcer 供需要验证角色裁剪的测试直接检查策略。
+	Enforcer *casbin.Enforcer
+
+	Secret []byte
+
+	DevDatabase  string
+	TestDatabase string
+	TestDSN      string
+	// TestDSNFromEnv 为 true 表示测试库由 KDG_TEST_MYSQL_DSN 显式指定。
+	TestDSNFromEnv bool
+}
+
+// NewDB 返回本分支独立的测试库（真实 goose 迁移已执行）。
+//
+// 仓储层行为（生成列、唯一索引、软删与唯一键的相互作用）只能在真实 MySQL 上
+// 验证；AutoMigrate 造不出 phone_active 这类生成列，也不能复用开发库。
+// 库是包级共享的，测试必须用唯一键并在 Cleanup 里硬删自己写入的行。
+func NewDB(t testing.TB) *gorm.DB {
+	t.Helper()
+	setup := sharedTestDB()
+	if setup.skipReason != "" {
+		t.Skipf("authharness: %s", setup.skipReason)
+	}
+	if setup.err != nil {
+		t.Fatalf("authharness: %v", setup.err)
+	}
+	return setup.db
+}
+
+// New 装配测试环境。测试库不可用时 t.Skip，配置/迁移错误时 t.Fatal：
+// 「跳过」只用于环境缺失，不允许把真实故障伪装成跳过。
+func New(t testing.TB) *Harness {
+	t.Helper()
+
+	setup := sharedTestDB()
+	if setup.skipReason != "" {
+		t.Skipf("authharness: %s", setup.skipReason)
+	}
+	if setup.err != nil {
+		t.Fatalf("authharness: %v", setup.err)
+	}
+
+	redisServer := fakeredis.New(t)
+	rdb := redisServer.Client(t)
+	fakeWx := NewFakeWeChat()
+
+	userRepo := repository.NewUserRepo(setup.db)
+	userRoleRepo := repository.NewUserRoleRepo(setup.db)
+	kindergartenRepo := repository.NewKindergartenRepo(setup.db)
+	kgStatus := service.NewKindergartenStatusService(kindergartenRepo, rdb)
+	adminAuthz := service.NewAdminAuthzService(repository.NewAdminRepo(setup.db), userRoleRepo)
+	clientSvc := service.NewClientService(repository.NewClientRepo(setup.db))
+	identityRepo := repository.NewUserIdentityRepo(setup.db)
+
+	secret, atTTL, rtTTL := jwtConfig(setup.cfg)
+	authSvc := service.NewAuthService(
+		userRepo,
+		userRoleRepo,
+		fakeWx,
+		clientSvc,
+		identityRepo,
+		adminAuthz,
+		kgStatus,
+		repository.NewKindergartenRepo(setup.db),
+		rdb,
+		secret,
+		atTTL,
+		rtTTL,
+		repository.NewConsentRepo(setup.db),
+		false,
+		kindergartenRepo,
+		service.NewIdentityMergeService(setup.db),
+		middleware.NewBindPhoneLimiter(rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
+	)
+	// #168：邀请绑定与登录共用同一套客户端/身份/合并服务，测试缝里也不例外。
+	bindInviteSvc := service.NewBindInviteService(
+		repository.NewTeacherInvitationRepo(setup.db),
+		repository.NewKindergartenRepo(setup.db),
+		identityRepo,
+		userRepo,
+		clientSvc,
+		service.NewIdentityMergeService(setup.db),
+		authSvc,
+	)
+
+	h := &Harness{
+		Config:         setup.cfg,
+		DB:             setup.db,
+		Redis:          redisServer,
+		RedisClient:    rdb,
+		WeChat:         fakeWx,
+		Auth:           authSvc,
+		Secret:         secret,
+		DevDatabase:    setup.devDatabase,
+		TestDatabase:   setup.testDatabase,
+		TestDSN:        setup.testDSN,
+		TestDSNFromEnv: setup.dsnFromEnv,
+	}
+
+	brandStorage, err := oss.NewStorage(oss.Config{
+		Endpoint:        testOSSEndpoint,
+		AccessKeyID:     testOSSAccessKey,
+		AccessKeySecret: testOSSSecret,
+		BucketName:      testOSSBucketName,
+	})
+	if err != nil {
+		t.Fatalf("authharness: 构造 logo 签名 Storage 失败：%v", err)
+	}
+	publicBrandSvc := service.NewPublicBrandService(
+		repository.NewKindergartenRepo(setup.db),
+		service.LogoSignerFunc(func(ref string) (string, error) {
+			return brandStorage.SignRef(ref, service.PublicBrandLogoTTL, false)
+		}),
+	)
+	// 园所品牌设置（#178）走与生产相同的 SettingsService + 真实仓储，
+	// 这样「管理端保存 → 公开品牌立即可见」在测试里是同一份 DB 行为。
+	settingsSvc := service.NewSettingsService(
+		setup.db,
+		repository.NewKindergartenRepo(setup.db),
+		repository.NewAcademicYearRepo(setup.db),
+		repository.NewKindergartenAppSettingRepo(setup.db),
+		repository.NewClassRepo(setup.db),
+		repository.NewStudentRepo(setup.db),
+		userRoleRepo,
+		repository.NewOperationLogRepo(setup.db),
+	)
+
+	// 家长端园所二维码（#176）：与生产同一套 service 装配，微信走假客户端。
+	parentEntryQRSvc := service.NewParentEntryQRService(
+		service.NewKindergartenEntryService(kindergartenRepo),
+		clientSvc,
+		fakeWx,
+	)
+
+	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, settingsSvc, publicBrandSvc, bindInviteSvc, parentEntryQRSvc)
+	if err != nil {
+		t.Fatalf("authharness: 装配 HTTP 引擎失败：%v", err)
+	}
+	h.Engine = engine
+	h.Handler = hnd
+	h.Enforcer = enforcer
+	return h
+}
+
+func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
+	secret = []byte("authharness-test-jwt-secret")
+	atTTL = 15 * time.Minute
+	rtTTL = 7 * 24 * time.Hour
+	if cfg == nil {
+		return secret, atTTL, rtTTL
+	}
+	if cfg.JWT.Secret != "" {
+		secret = []byte(cfg.JWT.Secret)
+	}
+	if cfg.JWT.AccessTTLMin > 0 {
+		atTTL = time.Duration(cfg.JWT.AccessTTLMin) * time.Minute
+	}
+	if cfg.JWT.RefreshTTLDay > 0 {
+		rtTTL = time.Duration(cfg.JWT.RefreshTTLDay) * 24 * time.Hour
+	}
+	return secret, atTTL, rtTTL
+}
+
+// buildEngine 复刻 router.go 中认证与 common 分组的装配：
+// AuthJWT → RequireActiveKindergarten → CasbinRBAC → ModuleGate。
+//
+// 只注册这些分组，不拉整棵业务依赖树；后续票需要业务组时在 h.Handler 上追加，
+// 继续复用同一套中间件与同一个测试库。
+func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
+	enforcer, err := rbac.NewEnforcer(&config.CasbinConfig{
+		Enable:     true,
+		ModelPath:  filepath.Join(repoRoot, "configs", "rbac_model.conf"),
+		PolicyPath: filepath.Join(repoRoot, "configs", "rbac_policy.csv"),
+	})
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("初始化 Casbin：%w", err)
+	}
+
+	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc,
+		parentEntryQRSvc, buildSupportService(h), buildParentPortalService(h),
+		// 会话建立审计（#160 L205）落在 HTTP 边界，必须给 handler 真实的
+		// oplog 服务，否则登录/绑定/切换的审计在测试里无处可查。
+		service.NewOperationLogService(repository.NewOperationLogRepo(h.DB)))
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(middleware.RequestID())
+
+	v1 := r.Group("/api/v1")
+	// 公开园所品牌（#170）：未登录可访问，限流与 router.go 保持一致（失败开放）。
+	v1.GET("/public/kindergartens/:public_code",
+		middleware.RateLimitFailOpen(h.RedisClient, "public_brand", publicBrandRateLimit, time.Minute),
+		hnd.GetPublicKindergartenBrand)
+	// v1 短信通道已关闭（#162），路由保留但统一走拒绝处理，与 router.go 保持一致。
+	v1.POST("/auth/sms/send", hnd.SMSDisabled)
+	v1.POST("/auth/login/sms", hnd.SMSDisabled)
+	// 小程序登录（#175）：角色与凭据来自客户端注册表，与 router.go 保持一致。
+	// 限流（#174）也按 router.go 同源装配：app_id + IP、高阈值、失败开放。
+	wechatLoginLimit := middleware.WeChatLoginRateLimit(h.RedisClient, middleware.WeChatLoginMaxPerMinute, time.Minute)
+	v1.POST("/auth/login/wechat", wechatLoginLimit, hnd.WeChatLogin)
+	passwordLoginLimit := middleware.PasswordLoginRateLimit(h.RedisClient, middleware.PasswordLoginMaxPerMinute, time.Minute)
+	v1.POST("/auth/login/password", passwordLoginLimit, hnd.PasswordLogin)
+	v1.POST("/auth/refresh", hnd.Refresh)
+
+	// 平台方信任域（#172 平台支持）：与 router.go 同源装配 PlatformAuth +
+	// CasbinRBAC，验证平台凭证与园所 JWT 互不通用。
+	platformG := v1.Group("/platform")
+	platformG.Use(middleware.PlatformAuth(h.Secret, h.Auth.TokenRevoker(),
+		auth.NewPlatformEpochStore(h.RedisClient, auth.PlatformEpochTTLFor(24*time.Hour, time.Hour))))
+	platformG.Use(middleware.CasbinRBAC(enforcer))
+	{
+		platformG.GET("/users/:id/support", hnd.PlatformGetUserSupport)
+		platformG.DELETE("/users/:id/identities/:identity_id", hnd.PlatformUnbindUserIdentity)
+		platformG.PUT("/users/:id/phone", hnd.PlatformCorrectUserPhone)
+	}
+
+	authed := v1.Group("")
+	authed.Use(middleware.AuthJWT(h.Secret, h.Auth.TokenRevoker()))
+	authed.Use(middleware.RequireActiveKindergarten(kgStatus))
+	// 未绑定 token 白名单（#175）必须在 Casbin 之前：空角色过不了任何策略。
+	authed.Use(middleware.RequireBoundAccount())
+	authed.Use(middleware.CasbinRBAC(enforcer))
+	authed.Use(middleware.ModuleGate(nil))
+	{
+		authed.POST("/auth/logout", hnd.Logout)
+		authed.POST("/auth/switch-kindergarten", hnd.SwitchKindergarten)
+		authed.GET("/common/user/profile", hnd.GetProfile)
+		authed.PUT("/common/user/profile", hnd.UpdateProfile)
+		authed.GET("/common/user/kindergartens", hnd.GetMyKindergartens)
+
+		// 老师邀请绑定（#168）：与 router.go 同源装配限流。
+		authed.POST("/common/user/bind-invite",
+			middleware.BindInviteRateLimit(h.RedisClient, middleware.BindPhoneMaxPerMinute, time.Minute),
+			hnd.BindInvite)
+		authed.GET("/common/consent", hnd.GetConsent)
+		authed.POST("/common/consent", hnd.PostConsent)
+
+		// 家长绑定手机号（#167）：中间件与 router.go 同源装配（失败开放的
+		// app_id + IP 预限流；手机号维度在 service 内判定）。
+		authed.POST("/common/user/bind-parent-phone",
+			middleware.BindPhoneRateLimit(h.RedisClient, middleware.BindPhoneMaxPerMinute, time.Minute),
+			hnd.BindParentPhone)
+
+		// 园所品牌设置（#178）：权限码 system:kindergarten 在生产由
+		// RequirePermission 兜底，这里保留 Casbin（admin → /api/v1/*）即可。
+		adminG := authed.Group("/admin")
+		{
+			adminG.GET("/kindergarten/info", hnd.GetKindergartenInfo)
+			adminG.PUT("/kindergarten/info", hnd.UpdateKindergartenInfo)
+			// 家长端园所二维码（#176）：生产还叠 RequirePermission
+			// （system:kindergarten），这里与 #178 一样只保留 Casbin。
+			adminG.GET("/kindergarten/parent-qrcode", hnd.GetParentEntryQRCode)
+			// 身份支持（#172）：解绑客户端身份、支持视图与手机号更正。
+			adminG.DELETE("/parents/:id/identities/:identity_id", hnd.AdminUnbindParentIdentity)
+			adminG.GET("/parents/:id/support", hnd.AdminGetParentSupport)
+			adminG.PUT("/parents/:id/phone", hnd.AdminCorrectParentPhone)
+		}
+
+		// 业务接口探针（#175）：用于验证「已绑定可访问、未绑定 403」。
+		// 真实业务组由后续票在 h.Handler 上追加，这里只需要一条命中
+		// Casbin parent 策略的路径。
+		authed.GET("/parent/home/ping", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{}})
+		})
+		// 家长首页（#172）：真实服务，用来验证「正确家长重新绑定后能看到孩子」。
+		authed.GET("/parent/home/overview", hnd.ParentHomeOverview)
+	}
+
+	return r, hnd, enforcer, nil
+}
+
+// authOnlyHandler 只装配认证/公开品牌/园所设置服务，其余服务保持 nil。
+//
+// 这些路由只依赖上述服务，无需为了一条测试缝拉起整棵依赖树。
+// 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
+// 强制同步，避免测试缝悄悄错位。
+func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService, supportSvc *service.IdentitySupportService, parentPortalSvc *service.ParentPortalService, oplogSvc *service.OperationLogService) *handler.Handler {
+	return handler.NewHandler(
+		authSvc,
+		nil, // fileSvc
+		nil, // msgSvc
+		nil, // systemSvc
+		nil, // dashSvc
+		nil, // classSvc
+		nil, // studentSvc
+		nil, // teacherSvc
+		nil, // parentSvc
+		settingsSvc,
+		nil, // adminSvc
+		nil, // roleSvc
+		nil, // attendanceSvc
+		nil, // leaveSvc
+		nil, // pickupSvc
+		nil, // growthSvc
+		nil, // taskSvc
+		nil, // pointSvc
+		nil, // achievementSvc
+		nil, // noticeSvc
+		nil, // announcementSvc
+		nil, // auditSvc
+		oplogSvc,
+		nil, // exportSvc
+		nil, // teacherPortalSvc
+		parentPortalSvc,
+		nil, // dictSvc
+		nil, // healthCheckSvc
+		nil, // faceSvc
+		nil, // gardenCalendarSvc
+		nil, // timetableSvc
+		nil, // dietGroupObjectSvc
+		nil, // dietFoodSvc
+		nil, // dietRecipeSvc
+		nil, // dietPlanSvc
+		nil, // dietAnalysisSvc
+		nil, // platformSvc
+		nil, // planSvc
+		nil, // orderSvc
+		nil, // distSvc
+		nil, // entSvc
+		publicBrandSvc,
+		bindInviteSvc,
+		parentEntryQRSvc,
+		supportSvc,
+	)
+}
+
+// buildSupportService 装配真实的身份支持服务（#172）：审计与业务写入共用
+// 同一个测试库，才能验证「解绑 → 审计」确实是同一次操作。
+func buildSupportService(h *Harness) *service.IdentitySupportService {
+	return service.NewIdentitySupportService(
+		h.DB,
+		repository.NewUserRepo(h.DB),
+		repository.NewUserIdentityRepo(h.DB),
+		repository.NewUserRoleRepo(h.DB),
+		repository.NewKindergartenRepo(h.DB),
+		repository.NewOperationLogRepo(h.DB),
+		repository.NewPlatformLogRepo(h.DB),
+	)
+}
+
+// buildParentPortalService 装配真实家长门户（#172）：验证正确家长重新绑定后
+// 首页能看到孩子，而不是只验证一条探针。
+func buildParentPortalService(h *Harness) *service.ParentPortalService {
+	return service.NewParentPortalService(
+		h.DB,
+		repository.NewParentRepo(h.DB),
+		repository.NewUserRoleRepo(h.DB),
+		repository.NewStudentRepo(h.DB),
+		repository.NewClassRepo(h.DB),
+		repository.NewPickupRepo(h.DB),
+		repository.NewCalendarRepo(h.DB),
+		repository.NewNoticeRepo(h.DB),
+	)
+}
+
+// Response 是 HTTP 单缝的响应快照。
+type Response struct {
+	Status int
+	Body   []byte
+}
+
+type envelope struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+// EnvelopeCode 返回统一响应包络里的业务码（成功为 0）。
+func (r *Response) EnvelopeCode(t testing.TB) int {
+	t.Helper()
+	var env envelope
+	if err := json.Unmarshal(r.Body, &env); err != nil {
+		t.Fatalf("authharness: 解析响应包络失败：%v；body=%s", err, r.Body)
+	}
+	return env.Code
+}
+
+// DecodeData 把包络 data 解到 dst。
+func (r *Response) DecodeData(t testing.TB, dst any) {
+	t.Helper()
+	var env envelope
+	if err := json.Unmarshal(r.Body, &env); err != nil {
+		t.Fatalf("authharness: 解析响应包络失败：%v；body=%s", err, r.Body)
+	}
+	if len(env.Data) == 0 || string(env.Data) == "null" {
+		t.Fatalf("authharness: 响应没有 data；code=%d message=%q body=%s", env.Code, env.Message, r.Body)
+	}
+	if err := json.Unmarshal(env.Data, dst); err != nil {
+		t.Fatalf("authharness: 解析 data 失败：%v；data=%s", err, env.Data)
+	}
+}
+
+// Do 直接通过进程内 Gin 引擎发请求，不经过网络端口。
+func (h *Harness) Do(t testing.TB, method, path, token string, body []byte) *Response {
+	t.Helper()
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req := httptest.NewRequest(method, path, reader)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	w := httptest.NewRecorder()
+	h.Engine.ServeHTTP(w, req)
+	return &Response{Status: w.Code, Body: w.Body.Bytes()}
+}
+
+func (h *Harness) Get(t testing.TB, path, token string) *Response {
+	t.Helper()
+	return h.Do(t, http.MethodGet, path, token, nil)
+}
+
+func (h *Harness) PostJSON(t testing.TB, path string, payload any) *Response {
+	t.Helper()
+	return h.PostJSONWithToken(t, path, "", payload)
+}
+
+func (h *Harness) PostJSONWithToken(t testing.TB, path, token string, payload any) *Response {
+	t.Helper()
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("authharness: 序列化请求体失败：%v", err)
+	}
+	return h.Do(t, http.MethodPost, path, token, body)
+}
+
+func (h *Harness) PutJSONWithToken(t testing.TB, path, token string, payload any) *Response {
+	t.Helper()
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("authharness: 序列化请求体失败：%v", err)
+	}
+	return h.Do(t, http.MethodPut, path, token, body)
+}
+
+// HardDelete 绕过软删真正删除行。
+//
+// 必须硬删：软删行仍占用唯一索引（后续 users.phone_active 是 STORED 生成列 +
+// 唯一索引），残留会让下一个用例撞键。空 WHERE 直接拒绝，防止误清全表。
+func (h *Harness) HardDelete(t testing.TB, model any, where string, args ...any) {
+	t.Helper()
+	if strings.TrimSpace(where) == "" {
+		t.Fatalf("authharness: HardDelete 必须带 WHERE 条件，禁止清空整表")
+	}
+	if err := h.DB.Unscoped().Where(where, args...).Delete(model).Error; err != nil {
+		t.Fatalf("authharness: 硬删失败（where=%s）：%v", where, err)
+	}
+}

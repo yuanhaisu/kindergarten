@@ -49,6 +49,13 @@ parent_secret   = CHANGE_ME
 ;app_id  =
 ;secret  =
 
+[clients]
+; 小程序客户端注册表（#163）启动同步用：首次插入时写入 release_version。
+; AppID 不在本节配置——它来自上面 [wechat] 的 teacher/parent_app_id，
+; 保证登录凭据与注册表同源。同步不会覆盖数据库里已有的 status / release_version。
+teacher_release_version = 0.1.0
+parent_release_version  = 0.1.0
+
 [casbin]
 enable      = true
 model_path  = configs/rbac_model.conf

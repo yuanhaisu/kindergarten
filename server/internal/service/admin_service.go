@@ -229,25 +229,34 @@ func (s *AdminService) CreateAdmin(ctx context.Context, kindergartenID, operator
 		if ur != nil {
 			return nil, fmt.Errorf("DUPLICATE_ADMIN_PHONE")
 		}
+		// 同一手机号在别的园所已有管理员身份时也要拒绝（#166）：管理端会话
+		// 必须恰好绑定一个园所，跨园重复会建出一个永远登录不进来的账号。
+		other, err := s.roles.FindAdminRoleOutsideKindergarten(ctx, existing.ID, kindergartenID)
+		if err != nil {
+			return nil, err
+		}
+		if other != nil {
+			return nil, fmt.Errorf("DUPLICATE_ADMIN_PHONE")
+		}
 	}
 	var newUserID uint64
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var u *domain.User
-		if existing != nil {
-			u = existing
+		// 建管理员也必须走统一的手机号账号解析（#164/#173）：直接在事务里 Create
+		// 一条 User 会把未规范化的手机号原样写进 phone_active，和密码登录的
+		// FindByPhone 口径不一致，也绕开了「一人一账号」的唯一入口。
+		u, created, err := s.users.WithDB(tx).FindOrCreateByPhone(ctx, req.Phone, repository.UserProfileDefaults{
+			Nickname:     strings.TrimSpace(req.Nickname),
+			PasswordHash: hash,
+		})
+		if err != nil {
+			return err
+		}
+		if !created {
+			// 解析器复用已有账号时不改资料；管理员创建语义仍以本次提交的昵称/口令为准。
 			if err := tx.Model(u).Updates(map[string]any{
 				"nickname":      strings.TrimSpace(req.Nickname),
 				"password_hash": hash,
 			}).Error; err != nil {
-				return err
-			}
-		} else {
-			u = &domain.User{
-				Phone:        req.Phone,
-				Nickname:     strings.TrimSpace(req.Nickname),
-				PasswordHash: hash,
-			}
-			if err := tx.Create(u).Error; err != nil {
 				return err
 			}
 		}

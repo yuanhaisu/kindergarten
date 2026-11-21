@@ -67,15 +67,64 @@
         <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
       </template>
     </el-dialog>
-    <el-drawer v-model="drawer" title="家长详情" size="400px">
-      <pre v-if="detailJson" class="text-xs bg-slate-50 p-3 rounded overflow-auto">{{ detailJson }}</pre>
+    <el-drawer v-model="drawer" title="家长详情" size="440px">
+      <div v-if="support" class="space-y-4">
+        <div>
+          <div class="text-sm font-semibold text-text-primary">账号</div>
+          <div class="mt-1 text-xs text-text-muted">
+            {{ support.nickname || '-' }} · {{ support.phone || '未填手机号' }}
+          </div>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-text-primary">客户端身份</div>
+          <div v-if="!support.identities.length" class="mt-1 text-xs text-text-muted">未绑定微信</div>
+          <div
+            v-for="it in support.identities"
+            :key="it.id"
+            class="mt-2 flex items-center justify-between rounded bg-slate-50 px-3 py-2"
+          >
+            <div class="text-xs text-text-muted">
+              <div>{{ it.app_id }}</div>
+              <div>{{ it.open_id_masked }}</div>
+            </div>
+            <el-button link type="danger" size="small" @click="unbindIdentity(it)">解绑</el-button>
+          </div>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-text-primary">园所成员关系</div>
+          <div v-if="!support.memberships.length" class="mt-1 text-xs text-text-muted">无</div>
+          <div v-for="m in support.memberships" :key="m.kindergarten_id" class="mt-1 text-xs text-text-muted">
+            {{ m.kindergarten_name || `园所 ${m.kindergarten_id}` }} · {{ m.role }}<span v-if="m.class_name"> · {{ m.class_name }}</span>
+          </div>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-text-primary">更正手机号</div>
+          <div class="mt-1 text-xs text-text-muted">
+            先解绑错误微信，再改号；新号已被其他账号占用时会拒绝。
+          </div>
+          <div class="mt-2 flex gap-2">
+            <el-input v-model="newPhone" placeholder="正确手机号" maxlength="11" />
+            <el-button type="primary" :loading="savingPhone" @click="savePhone">保存</el-button>
+          </div>
+        </div>
+      </div>
+      <pre v-if="detailJson" class="mt-4 overflow-auto rounded bg-slate-50 p-3 text-xs">{{ detailJson }}</pre>
     </el-drawer>
   </el-card>
 </template>
 
 <script setup lang="ts">
 import type { ParentItem } from '~/types/api'
-import { createParent, getParent, getParents } from '~/api/parents'
+import {
+  correctParentPhone,
+  createParent,
+  getParent,
+  getParentSupport,
+  getParents,
+  unbindParentIdentity,
+  type ParentSupportView,
+  type SupportIdentity,
+} from '~/api/parents'
 import { getClasses } from '~/api/classes'
 import { getStudents } from '~/api/students'
 
@@ -177,13 +226,59 @@ async function submit() {
 
 const drawer = ref(false)
 const detailJson = ref('')
+const support = ref<ParentSupportView | null>(null)
+const newPhone = ref('')
+const savingPhone = ref(false)
+let currentId = 0
+
 async function detail(id: number) {
+  currentId = id
+  support.value = null
+  newPhone.value = ''
   try {
-    const d = await getParent(id)
+    // 详情与支持视图一起取：抽屉里的解绑/改号需要身份与成员关系。
+    const [d, s] = await Promise.all([getParent(id), getParentSupport(id)])
     detailJson.value = JSON.stringify(d, null, 2)
+    support.value = s
     drawer.value = true
   } catch (e: unknown) {
     ElMessage.error(e instanceof Error ? e.message : '加载失败')
+  }
+}
+
+async function unbindIdentity(it: SupportIdentity) {
+  try {
+    await ElMessageBox.confirm(
+      `解绑后该微信将无法继续访问此账号；账号、孩子与积分不受影响。确定解绑 ${it.open_id_masked}？`,
+      '解绑客户端身份',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  try {
+    const res = await unbindParentIdentity(currentId, it.id)
+    if (support.value) support.value = { ...support.value, identities: res.identities }
+    ElMessage.success('已解绑')
+  } catch (e: unknown) {
+    ElMessage.error(e instanceof Error ? e.message : '解绑失败')
+  }
+}
+
+async function savePhone() {
+  if (!/^1[3-9]\d{9}$/.test(newPhone.value)) {
+    ElMessage.warning('请输入正确的 11 位手机号')
+    return
+  }
+  savingPhone.value = true
+  try {
+    support.value = await correctParentPhone(currentId, newPhone.value)
+    newPhone.value = ''
+    ElMessage.success('手机号已更正')
+  } catch (e: unknown) {
+    ElMessage.error(e instanceof Error ? e.message : '更正失败')
+  } finally {
+    savingPhone.value = false
   }
 }
 

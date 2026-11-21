@@ -1,5 +1,13 @@
 import config from "@/config/env"
-import { clearAuth, getRefreshToken, getToken, setRefreshToken, setToken } from "@/utils/auth"
+import {
+  clearAuth,
+  clearScopedCaches,
+  getRefreshToken,
+  getToken,
+  setRefreshToken,
+  setToken,
+  setUser
+} from "@/utils/auth"
 
 const SUCCESS_CODE = 0
 const LOGIN_URL = "/pages/auth/login"
@@ -10,6 +18,10 @@ const AUTH_EXPIRED_MESSAGE = "登录状态已失效，请重新登录"
 // 后到的那次必然失败，还会把刚续上的会话清掉。所以同一时刻只允许一次刷新，
 // 其余请求共享这个 Promise，成功后各自重放一次。
 let refreshPromise = null
+// 切换园所（#169）同样换发 access + refresh，且与续期共用同一枚一次性 refresh。
+// 两个写操作必须串行：切换等待在飞的刷新落盘，续期等待在飞的切换落盘，
+// 否则同一旧 refresh 可能被双方各消费一次（一个成功一个被踢）。
+let switchPromise = null
 // 同一批失败只跳一次登录页：多个 reLaunch 会互相打断。
 let redirecting = false
 // 同意门禁同样只跳一次，避免并发业务请求叠多个 reLaunch。
@@ -124,14 +136,87 @@ function recoverSession(tokenUsed) {
   const current = getToken()
   if (current && current !== tokenUsed) return Promise.resolve()
 
-  return refreshSession()
-    .then((data) => {
-      setToken(data.token)
-      setRefreshToken(data.refresh_token)
+  // 切换在飞：等它结束再判断。切换成功时 storage 已是新 token，直接重放；
+  // 切换失败（网络/403）才补一次刷新兜底，不能拿同一枚旧 refresh 和它抢。
+  const gate = switchPromise ? switchPromise.catch(() => null) : Promise.resolve()
+  return gate
+    .then(() => {
+      const now = getToken()
+      if (now && now !== tokenUsed) return
+      return refreshSession().then((data) => {
+        setToken(data.token)
+        setRefreshToken(data.refresh_token)
+      })
     })
     .catch((err) => {
       throw failToLogin(err, tokenUsed)
     })
+}
+
+// 切换园所（#169）：用目标园重新签发 access + refresh，旧 refresh 由服务端原子消费。
+// 成功后清掉跟随园所的本地缓存并落盘新会话；返回的错误码 401 才代表会话失效。
+export function switchKindergartenSession(kindergartenID) {
+  if (switchPromise) return switchPromise
+
+  // 刷新在飞时先等它落盘：随后读到的 refresh 才是最新一枚。
+  const gate = refreshPromise ? refreshPromise.catch(() => null) : Promise.resolve()
+  switchPromise = gate
+    .then(() => sendSwitch(kindergartenID))
+    .finally(() => {
+      switchPromise = null
+    })
+  return switchPromise
+}
+
+function sendSwitch(kindergartenID) {
+  return new Promise((resolve, reject) => {
+    const access = getToken()
+    const refresh = getRefreshToken()
+    if (!access || !refresh) {
+      reject({ code: 40100, message: AUTH_EXPIRED_MESSAGE, data: null })
+      return
+    }
+
+    uni.request({
+      url: `${config.baseURL}/auth/switch-kindergarten`,
+      method: "POST",
+      data: { kindergarten_id: kindergartenID, refresh_token: refresh },
+      header: {
+        "Content-Type": "application/json",
+        platform: "mp-weixin",
+        terminal_from: "teacher",
+        Authorization: `Bearer ${access}`
+      },
+      success(res) {
+        const body = normalizeResponse(res.data)
+        // 两枚 token 缺一不可，且必须同一 tick 落盘：切换后迟到的 401
+        // 会因 getToken() 已变而被 failToLogin 的 guard 忽略，不会把用户踢出。
+        if (
+          res.statusCode >= 200 &&
+          res.statusCode < 300 &&
+          body.code === SUCCESS_CODE &&
+          body.data?.token &&
+          body.data?.refresh_token
+        ) {
+          setToken(body.data.token)
+          setRefreshToken(body.data.refresh_token)
+          if (body.data.user) setUser(body.data.user)
+          clearScopedCaches()
+          resolve(body.data)
+          return
+        }
+        // 只有仍带着同一枚 access 时才算真失效：切换期间别处已换过会话则返回普通鉴权错误。
+        if (res.statusCode === 401) {
+          reject(failToLogin(body, access))
+          return
+        }
+        reject(body)
+      },
+      fail(err) {
+        reject({ ...err, message: err?.message || "网络异常" })
+      }
+    })
+  })
 }
 
 // silent: true 时不弹全局 toast，由调用方自己渲染错误（登录页用内联错误态）。

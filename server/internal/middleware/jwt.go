@@ -61,6 +61,7 @@ func AuthJWT(secret []byte, revoker auth.TokenRevoker) gin.HandlerFunc {
 
 		ctx := log.With(c.Request.Context(),
 			"user_id", claims.UserID,
+			"app_id", claims.AppID,
 		)
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()

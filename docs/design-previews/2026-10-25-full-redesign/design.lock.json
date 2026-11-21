@@ -1,17 +1,18 @@
 {
   "version": 1,
-  "supportHash": "c951ce616ea5103140f4bc20723639392de2c29391ea26cb8f869d9591d08695",
-  "supportReviewedAt": "2026-11-18",
-  "supportReason": "code review fix #102: 授权缓存清理与登录态接线测试，无 UI 变化",
+  "supportHash": "ec1314d4fec0c1ca309ff12bdf40fa9bb9e6ffa252089ee2a9bfbb178611e36e",
+  "supportReviewedAt": "2026-11-21",
+  "supportReason": "#160 L235 两端新增 utils/brand.js、utils/kindergartenBrand.mjs 与 teacher api/public.js（园所品牌）",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
-      "sha256": "df1c29d34e5095101d1376b9fe3e97b379407e985f5387504c6c4b2cda44598d",
-      "depsSha": "846f9ab4fe957fa22703b908f3857d16a0ca58219eced2d3dc68d3d94fd6bb1a",
+      "sha256": "e9edd1e00514d190bc5372bee651ab99b5638aec9ad00cfe86c09d452a9388b0",
+      "depsSha": "229e0206587f00246eef0bb1b9a805e9324ede9459f4038ab16d1fc65fd84cc5",
       "title": "养成星球",
       "tabbar": true,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "e760325-dirty",
+      "reason": "#176 扫码入口：首页消费 kg_<public_code> 暂存，成员园自动切换/非成员展示绑定引导"
     },
     "parent/02-login": {
       "source": "parent/src/pages/auth/login.vue",
@@ -164,11 +165,12 @@
     "parent/18-tasks-detail": {
       "source": "parent/src/pages/tasks/detail.vue",
       "sha256": "aae1765bd305fc902a24f0bf099f00343172fe71a5a73ada7aff9600891f5626",
-      "depsSha": "295dff4b7cec8001944ce80f6d5d189e786534c3ee5ddd397c41e100bc754a3c",
+      "depsSha": "5485fd2be3bdf5e338545cb873332b13293be2f97ecf65d0b67be3f7a6b763ec",
       "title": "任务详情",
       "tabbar": false,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "dfcb18b",
+      "reason": "#176 统一 scene 解析到 utils/scene.mjs，taskScene.js 改为再导出，任务码行为不变"
     },
     "parent/19-tasks-wall": {
       "source": "parent/src/pages/tasks/wall.vue",
@@ -245,13 +247,13 @@
     },
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
-      "sha256": "082dbe8feb8af43f781f8287e7e000b6ecb117151f8ce093e35bf963e771c6bf",
-      "depsSha": "2a2b1d7072f891206d85c947b0d86781c0ad738adba5e805ba5465d954d8cee9",
+      "sha256": "df3eac496afa256ca228b221daab60e17989d84961d1c6606b196c7ff2bbc7fa",
+      "depsSha": "ff39513970b11b9951ad79b4338303d123a954fae027c805ae35ae3ba0e790ac",
       "title": "我的",
       "tabbar": true,
-      "reviewedAt": "2026-11-18",
-      "codeCommit": "0f3f799",
-      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "0f3f799-dirty",
+      "reason": "ticket #169：新增我的园所/切换原型；我的与更多页新增入口"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
@@ -272,6 +274,16 @@
       "reviewedAt": "2026-11-06",
       "codeCommit": "dfcb18b"
     },
+    "parent/30-kindergartens": {
+      "source": "parent/src/pages/kindergartens/index.vue",
+      "sha256": "90be4e30e8f9c9145eef1c2fbe7b6c254fd86221fdd0d6a5c86a136c95ea4318",
+      "depsSha": "ff4db2ca74479561eb9b6ed832c90c9131764d555b4030455f5382bdc97cef4e",
+      "title": "我的园所",
+      "tabbar": false,
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "3e55e1a-dirty",
+      "reason": "#160 L235 当前园品牌：hero 展示 logo 与品牌色，其余 token 兜底"
+    },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
       "sha256": "62196020642dcbb709e74519f8119e4d367b28f6c4d53198504e225be441355a",
@@ -284,13 +296,13 @@
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
-      "sha256": "051c329e0748ed0a88bb6365117aaa91e4563fee62a0f18c9937693f108660de",
-      "depsSha": "146fd80faf45810977611e8c7fe786dd13b6246bee2ebeab63930f24bd8984ca",
+      "sha256": "ed957996cfae56e06d5e8c4e38b3b7658036233a4d610b34b914ddcb26ca473a",
+      "depsSha": "cea3e98e04c5b58ba450d63c8dc13e36c8b05dea931cdfdb87fc43f5a6f3803e",
       "title": "老师登录",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "0f0d09e",
+      "reason": "#168 登录页接入邀请码绑定：待绑定 token 不进工作台，绑定成功后进入园所"
     },
     "teacher/03-notice-create": {
       "source": "teacher/src/pages/notice/create.vue",
@@ -420,13 +432,13 @@
     },
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
-      "sha256": "4c625a2acaf8c1940747dd9e1b5fceaf744ebe416f571b1113ea9b33710f17a4",
-      "depsSha": "356199337f543b2462e6c5f38d21c720486fc3ccf7486efa0d1701d4831bd5cd",
+      "sha256": "7bf0fb9ac7f639274e268b86dbd128ea83323b38d21e8ead3d0cd8bfab5e508e",
+      "depsSha": "cb2ba3038d16349ff75aa42ba7792dada346ad039edfd05336a0a83b7c66a949",
       "title": "更多功能",
       "tabbar": false,
-      "reviewedAt": "2026-11-18",
-      "codeCommit": "7d71f06",
-      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "7d71f06-dirty",
+      "reason": "ticket #169：新增我的园所/切换原型；我的与更多页新增入口"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",
@@ -463,6 +475,16 @@
       "tabbar": false,
       "reviewedAt": "2026-11-06",
       "codeCommit": "decf16b"
+    },
+    "teacher/22-kindergartens": {
+      "source": "teacher/src/pages/kindergartens/index.vue",
+      "sha256": "b122cbb18f624ce7227045fc03db2d50ff5db08396f1bf3716818ccf36458e5a",
+      "depsSha": "362df15c4a010831fc8e03b2bb9ec820f62eb1748f87a3788d8a7af373b92275",
+      "title": "我的园所",
+      "tabbar": false,
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "3e55e1a-dirty",
+      "reason": "#160 L235 当前园品牌：hero 展示 logo 与品牌色，其余 token 兜底"
     },
     "teacher/23-notice-index": {
       "source": "teacher/src/pages/notice/index.vue",

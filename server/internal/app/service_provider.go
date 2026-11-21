@@ -10,39 +10,48 @@ import (
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
+	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
 )
 
 func ProvideAuthService(
-	db *gorm.DB,
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
-	invitationRepo *repository.TeacherInvitationRepo,
+	wx service.WeChatAPI,
+	clientSvc *service.ClientService,
+	identityRepo *repository.UserIdentityRepo,
 	adminAuthz *service.AdminAuthzService,
 	kgStatus *service.KindergartenStatusService,
+	kgRepo *repository.KindergartenRepo,
 	rdb *redis.Client,
-	wx *auth.WeChatClient,
 	secret JWTSecret,
 	atTTL AccessTTL,
 	rtTTL RefreshTTL,
 	consentRepo *repository.ConsentRepo,
 	cfg *config.Config,
+	mergeSvc *service.IdentityMergeService,
 ) *service.AuthService {
 	return service.NewAuthService(
-		db,
 		userRepo,
 		userRoleRepo,
-		invitationRepo,
+		wx,
+		clientSvc,
+		identityRepo,
 		adminAuthz,
 		kgStatus,
+		kgRepo,
 		rdb,
-		wx,
 		[]byte(secret),
 		time.Duration(atTTL),
 		time.Duration(rtTTL),
 		consentRepo,
 		cfg.Consent.Enforce,
+		kgRepo, // 成员园所与绑定目标解析共用同一仓储（#169 / #167）
+		mergeSvc,
+		// 绑定限流的完整维度（手机号）只能在 service 换出手机号后判定，
+		// 中间件那层先按 app_id + IP 兜住洪峰（#174 / #167）。
+		middleware.NewBindPhoneLimiter(rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
 	)
 }
 
@@ -62,6 +71,7 @@ func ProvidePlatformService(
 	logRepo *repository.PlatformLogRepo,
 	dietSeed *service.DietSeedService,
 	kgStatus *service.KindergartenStatusService,
+	entrySvc *service.KindergartenEntryService,
 	rdb *redis.Client,
 	authSvc *service.AuthService,
 	secret JWTSecret,
@@ -77,7 +87,7 @@ func ProvidePlatformService(
 	}
 	return service.NewPlatformService(
 		db, adminRepo, kgRepo, entRepo, orderRepo, userRepo, userRoleRepo,
-		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus,
+		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus, entrySvc,
 		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(time.Duration(rtTTL), time.Duration(atTTL))),
 		revoker, rdb, []byte(secret),
 		time.Duration(atTTL), time.Duration(rtTTL),

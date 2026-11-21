@@ -44,7 +44,7 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 02 | [`02-classes.md`](./02-classes.md) | 班级管理 | `admin/pages/classes/index.vue` | 6 | ✅ 已实现 |
 | 03 | [`03-students.md`](./03-students.md) | 学生管理 | `admin/pages/students/index.vue` | 8 | ✅ 已实现 |
 | 04 | [`04-teachers.md`](./04-teachers.md) | 老师管理 | `admin/pages/teachers/index.vue` | 6 | ✅ 已实现 |
-| 05 | [`05-parents.md`](./05-parents.md) | 家长管理 | `admin/pages/parents/index.vue` | 5 | ✅ 已实现 |
+| 05 | [`05-parents.md`](./05-parents.md) | 家长管理 | `admin/pages/parents/index.vue` | 8 | ✅ 已实现 |
 | 06 | [`06-attendance.md`](./06-attendance.md) | 出勤管理 | `admin/pages/attendance/index.vue` | 3 | ✅ |
 | 07 | [`07-leaves.md`](./07-leaves.md) | 请假管理 | `admin/pages/leaves/index.vue` | 3 | ✅ |
 | 08 | [`08-pickup.md`](./08-pickup.md) | 接送管理 | `admin/pages/pickup/index.vue` | 4 | ✅ |
@@ -65,7 +65,7 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | 23 | [`23-diet.md`](./23-diet.md) | 膳食管理（带量食谱） | `admin/pages/diet/*` | 31 | ✅ 已实现（变更 `add-diet-group-objects`） |
 | 24 | [`24-billing.md`](./24-billing.md) | 我的套餐（只读） | `admin/pages/billing/index.vue` | 1 | 🔲 未实现（变更 `add-saas-commercial-layer`） |
 
-**合计：** `PROGRESS.md` 表内共 **95** 行 Admin API；完成数以该文件顶部「总体进度」为准。
+**合计：** `PROGRESS.md` 表内共 **98** 行 Admin API；完成数以该文件顶部「总体进度」为准。
 变更 `add-saas-commercial-layer` 新增的 `24-billing` 端点尚未计入 `PROGRESS.md`，实施时需补登并同步顶部计数。
 
 > **后端缺失对照（最新）**：[`admin/tests/playwright-reports/20260422/BACKEND_MISSING_APIS.md`](../../../admin/tests/playwright-reports/20260422/BACKEND_MISSING_APIS.md)（结案：**0** 缺失，以 `PROGRESS.md` 为准）  
@@ -82,9 +82,9 @@ AI 会自动读文档、确认状态、开工、结账。不需要每次重新�
 | GET | `/health` | 健康检查 |
 | GET | `/api/v1/system/status` | 系统初始化状态 |
 | POST | `/api/v1/system/init` | 系统首次初始化 |
-| POST | `/api/v1/auth/sms/send` | 发送短信验证码 |
-| POST | `/api/v1/auth/login/sms` | 短信登录 |
-| POST | `/api/v1/auth/login/wechat` | 微信登录 |
+| POST | `/api/v1/auth/sms/send` | ⛔ v1 关闭（固定 403） |
+| POST | `/api/v1/auth/login/sms` | ⛔ v1 关闭（固定 403，不签发 token） |
+| POST | `/api/v1/auth/login/wechat` | ⛔ v1 关闭（固定 403；新登录见 #175） |
 | POST | `/api/v1/auth/login/password` | 密码登录（admin 登录可用） |
 | POST | `/api/v1/auth/refresh` | 刷新 Token |
 | POST | `/api/v1/auth/logout` | 退出登录 |

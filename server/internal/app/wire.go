@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/middleware"
@@ -25,6 +26,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		ProvideRefreshTTL,
 		ProvideCasbinConfig,
 		ProvideOSSStorage,
+		ProvideLogoSigner,
 		ProvideFaceConfig,
 		ProvideFaceProvider,
 		rbac.NewEnforcer,
@@ -40,9 +42,13 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		wire.Bind(new(middleware.PermissionResolver), new(*service.AdminAuthzService)),
 		wire.Bind(new(service.ModuleAuthorizer), new(*service.EntitlementService)),
 		wire.Bind(new(service.KindergartenStatusChecker), new(*service.KindergartenStatusService)),
+		// 微信开放能力接缝：生产实现是 *auth.WeChatClient，测试注入替身。
+		wire.Bind(new(service.WeChatAPI), new(*auth.WeChatClient)),
 		// 平台审计写入接缝：订单/套餐/分销服务按接口收依赖，
 		// 生产实现就是 PlatformLogRepo（PlatformService 经 ProvidePlatformService 直取具体类型）。
 		wire.Bind(new(service.PlatformAuditWriter), new(*repository.PlatformLogRepo)),
+		// 客户端注册表（#163）按接口收仓储，生产实现是 *repository.ClientRepo
+		wire.Bind(new(service.ClientRepository), new(*repository.ClientRepo)),
 		ProvideTrustedProxies,
 		ProvideAuthService,
 		ProvidePlatformService,

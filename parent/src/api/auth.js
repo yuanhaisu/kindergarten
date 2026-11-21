@@ -1,10 +1,13 @@
-import { rawRequest, requestWithAuth } from "@/api/http"
+import config from "@/config/env"
+import { rawRequest, requestWithAuth, switchKindergartenSession } from "@/api/http"
 
 export function wxCodeLogin({ code, encryptedData, iv }) {
   return rawRequest({
     url: "/auth/login/wechat",
     method: "POST",
     data: {
+      // 客户端身份（#163/#175）：后端按 app_id 查客户端注册表决定角色与作用域。
+      app_id: config.appId,
       code,
       role: "parent",
       encrypted_data: encryptedData,
@@ -26,11 +29,16 @@ export function refreshToken(refreshToken) {
   })
 }
 
-export function bindParentPhone(wxPhoneCode) {
+export function bindParentPhone(wxPhoneCode, { publicCode = "", kindergartenId = 0 } = {}) {
+  const data = { wx_phone_code: wxPhoneCode }
+  // 目标园所只用于校验「该园已录入此手机号」和绑定后的初始落点（#167）。
+  // 不带时服务端按手机号在全部共用园所中查找，所以两者都可选。
+  if (publicCode) data.public_code = publicCode
+  if (kindergartenId) data.kindergarten_id = kindergartenId
   return requestWithAuth({
     url: "/common/user/bind-parent-phone",
     method: "POST",
-    data: { wx_phone_code: wxPhoneCode },
+    data,
     // 首页绑卡自己渲染 bind-err（含 40031 的恢复指引），不走全局 toast ——
     // 否则 http.js 弹一次、卡片再渲染一次，前者还会盖掉后者更准的文案。
     silent: true
@@ -42,5 +50,17 @@ export function fetchCurrentUser() {
     url: "/common/user/profile",
     method: "GET"
   })
+}
+
+// 我的园所（#169）：后端已按当前客户端角色族与园所通道过滤，前端不再做二次筛选。
+export function fetchMyKindergartens() {
+  return requestWithAuth({
+    url: "/common/user/kindergartens",
+    method: "GET"
+  })
+}
+
+export function switchKindergarten(kindergartenID) {
+  return switchKindergartenSession(kindergartenID)
 }
 

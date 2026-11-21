@@ -447,31 +447,21 @@ func (s *StudentService) persistStudentWithParentsInTx(
 	kg *domain.Kindergarten,
 	st *domain.Student,
 	parents []createParentItem,
-	hash string,
 ) error {
 	if err := tx.Create(st).Error; err != nil {
 		return err
 	}
 	for _, p := range parents {
-		u, err := s.users.FindByPhone(ctx, p.Phone)
+		// 统一账号解析（#164）：同一活跃手机号始终落到同一账号；
+		// 已存在账号的昵称/头像/性别/身份证号/密码一律不改写——这里只是把新学生
+		// 挂到既有家长账号上，不能借导入覆盖别人已维护的资料。
+		// 预建账号不写密码（#174）：家长只能通过微信登录，默认口令即提权入口。
+		u, _, err := s.users.WithDB(tx).FindOrCreateByPhone(ctx, p.Phone, repository.UserProfileDefaults{
+			Nickname:     p.Name,
+			IDCardNumber: strings.TrimSpace(p.IDCardNumber),
+		})
 		if err != nil {
 			return err
-		}
-		if u == nil {
-			u = &domain.User{
-				Phone:        p.Phone,
-				Nickname:     p.Name,
-				PasswordHash: hash,
-				IDCardNumber: strings.TrimSpace(p.IDCardNumber),
-			}
-			if err := tx.Create(u).Error; err != nil {
-				return err
-			}
-		} else if p.IDCardNumber != "" {
-			if err := tx.Model(&domain.User{}).Where("id = ?", u.ID).
-				Update("id_card_number", strings.TrimSpace(p.IDCardNumber)).Error; err != nil {
-				return err
-			}
 		}
 		ur, err := s.roles.FindParentInKindergarten(ctx, u.ID, kindergartenID)
 		if err != nil {
@@ -553,12 +543,8 @@ func (s *StudentService) CreateStudent(
 		EnrollDate:     ed,
 		Status:         1,
 	}
-	hash, err := HashPassword("KindyParent#1")
-	if err != nil {
-		return nil, err
-	}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return s.persistStudentWithParentsInTx(ctx, tx, kindergartenID, kg, st, req.Parents, hash)
+		return s.persistStudentWithParentsInTx(ctx, tx, kindergartenID, kg, st, req.Parents)
 	})
 	if err != nil {
 		return nil, err
@@ -837,10 +823,6 @@ func (s *StudentService) ImportStudentsExcel(
 	if len(rows) > 0 && len(rows[0]) > 0 && strings.Contains(strings.TrimSpace(rows[0][0]), "姓名") {
 		start = 1
 	}
-	hash, err := HashPassword("KindyParent#1")
-	if err != nil {
-		return nil, err
-	}
 	out := &ImportStudentsResult{FailDetails: []ImportFailDetail{}}
 	defaultBD, _ := time.ParseInLocation("2006-01-02", "2018-01-01", time.Local)
 	enrollStr := time.Now().Format("2006-01-02")
@@ -925,7 +907,7 @@ func (s *StudentService) ImportStudentsExcel(
 			IsPrimary: true,
 		}}
 		err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-			return s.persistStudentWithParentsInTx(ctx, tx, kindergartenID, kg, st, parents, hash)
+			return s.persistStudentWithParentsInTx(ctx, tx, kindergartenID, kg, st, parents)
 		})
 		if err != nil {
 			fail("保存失败")

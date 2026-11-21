@@ -29,6 +29,14 @@ export function getUser() {
   return uni.getStorageSync(USER_KEY) || null
 }
 
+// 当前会话的园所 id：登录/切换返回的 roles 已裁剪到当前园（#169），
+// 取首个带 kindergarten_id 的角色即可。0 表示尚无园所（待绑定）。
+export function getCurrentKindergartenID() {
+  const roles = Array.isArray(getUser()?.roles) ? getUser().roles : []
+  const role = roles.find((item) => item && Number(item.kindergarten_id) > 0)
+  return role ? Number(role.kindergarten_id) : 0
+}
+
 export function clearAuth() {
   uni.removeStorageSync(TOKEN_KEY)
   uni.removeStorageSync(REFRESH_TOKEN_KEY)
@@ -37,5 +45,13 @@ export function clearAuth() {
   // 留着会让 ResolveContext 静默回退，排查起来很费劲。
   clearCurrentStudentId()
   // 授权缓存属于上一个会话：共享设备换账号后不能继续按上一园所展示入口与到期日。
+  clearEntitlementCache(uni)
+}
+
+// 切换园所（#169）后清「跟随园所」的本地缓存，但保留刚换发的 token 与用户资料。
+// 与 clearAuth 的区别是登录态仍然有效；当前孩子 id 属于上一个园，
+// 授权缓存也按园所解析，两者都必须作废。
+export function clearScopedCaches() {
+  clearCurrentStudentId()
   clearEntitlementCache(uni)
 }

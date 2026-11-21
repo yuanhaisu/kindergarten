@@ -3,11 +3,16 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
 )
+
+// ErrDuplicatePublicCode 表示园所公开码已被占用（MySQL 1062）。
+// 入口服务据此换一个候选码重试。
+var ErrDuplicatePublicCode = errors.New("园所公开码已存在")
 
 type KindergartenRepo struct {
 	db *gorm.DB
@@ -92,6 +97,63 @@ func (r *KindergartenRepo) ListByStatus(ctx context.Context, status string) ([]d
 	var list []domain.Kindergarten
 	err := r.db.WithContext(ctx).Where("status = ?", status).Find(&list).Error
 	return list, err
+}
+
+// FindByPublicCode 按园所公开入口码查找未删除的园所。
+// 软删园所由 GORM 的软删作用域排除；空码直接返回 nil，避免匹配到未生成码的行。
+func (r *KindergartenRepo) FindByPublicCode(ctx context.Context, code string) (*domain.Kindergarten, error) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return nil, nil
+	}
+	var k domain.Kindergarten
+	err := r.db.WithContext(ctx).Where("public_code = ?", code).First(&k).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &k, nil
+}
+
+// PublicCodeExists 报告公开码是否已被任何园所占用（含软删）。
+// 唯一索引覆盖软删行（码不复用），生成候选时用本方法而不是 FindByPublicCode，
+// 否则会拿到一个「查不到但插不进去」的码。
+func (r *KindergartenRepo) PublicCodeExists(ctx context.Context, code string) (bool, error) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return false, nil
+	}
+	var n int64
+	err := r.db.WithContext(ctx).Unscoped().Model(&domain.Kindergarten{}).
+		Where("public_code = ?", code).Count(&n).Error
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+// ListMissingPublicCode 返回尚未分配公开码的未删除园所（存量回填用）。
+func (r *KindergartenRepo) ListMissingPublicCode(ctx context.Context) ([]domain.Kindergarten, error) {
+	var list []domain.Kindergarten
+	err := r.db.WithContext(ctx).Where("public_code = ?", "").Order("id").Find(&list).Error
+	return list, err
+}
+
+// SetPublicCodeIfEmpty 仅在园所尚未有码时写入，返回是否真的写入。
+// 并发回填时后到者得到 false，不会覆盖先到的码；撞唯一键返回 ErrDuplicatePublicCode。
+func (r *KindergartenRepo) SetPublicCodeIfEmpty(ctx context.Context, id uint64, code string) (bool, error) {
+	res := r.db.WithContext(ctx).Model(&domain.Kindergarten{}).
+		Where("id = ? AND public_code = ?", id, "").
+		Update("public_code", code)
+	if res.Error != nil {
+		if IsDuplicateKey(res.Error) {
+			return false, ErrDuplicatePublicCode
+		}
+		return false, res.Error
+	}
+	return res.RowsAffected > 0, nil
 }
 
 // CountStudents 返回在园幼儿数，用于订单档位核定、超档提示与平台列表。

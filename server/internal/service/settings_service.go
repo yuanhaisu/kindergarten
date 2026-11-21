@@ -13,11 +13,15 @@ import (
 
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/storage/oss"
 )
 
 var (
 	ErrDuplicateAcademicYear = errors.New("DUPLICATE_ACADEMIC_YEAR")
 	ErrInvalidFeverThreshold = errors.New("INVALID_FEVER_THRESHOLD")
+	// ErrInvalidBrandColor 管理端提交的主题色不在预设色板内，或对比度不足。
+	// 写入路径拒绝而不是静默回落：管理员需要知道保存的值没生效。
+	ErrInvalidBrandColor = errors.New("INVALID_BRAND_COLOR")
 )
 
 type SettingsService struct {
@@ -467,12 +471,14 @@ func (s *SettingsService) CreateAcademicYear(ctx context.Context, kindergartenID
 }
 
 type KindergartenInfoResp struct {
-	ID            uint64 `json:"id"`
-	Name          string `json:"name"`
-	Address       string `json:"address"`
-	Phone         string `json:"phone"`
-	Principal     string `json:"principal"`
-	LogoURL       string `json:"logo_url"`
+	ID        uint64 `json:"id"`
+	Name      string `json:"name"`
+	Address   string `json:"address"`
+	Phone     string `json:"phone"`
+	Principal string `json:"principal"`
+	LogoURL   string `json:"logo_url"`
+	// BrandColor 已保存的园所主题色（大写 #RRGGBB），空串表示用默认主题。
+	BrandColor    string `json:"brand_color"`
 	LicenseNo     string `json:"license_no"`
 	Capacity      int    `json:"capacity"`
 	CurrentCount  int64  `json:"current_count"`
@@ -513,6 +519,7 @@ func (s *SettingsService) GetKindergartenInfo(ctx context.Context, kindergartenI
 		Phone:         k.Phone,
 		Principal:     k.Principal,
 		LogoURL:       k.LogoURL,
+		BrandColor:    k.BrandColor,
 		LicenseNo:     k.LicenseNo,
 		Capacity:      k.Capacity,
 		CurrentCount:  stu,
@@ -524,11 +531,14 @@ func (s *SettingsService) GetKindergartenInfo(ctx context.Context, kindergartenI
 }
 
 type UpdateKindergartenInfoReq struct {
-	Name          *string `json:"name"`
-	Address       *string `json:"address"`
-	Phone         *string `json:"phone"`
-	Principal     *string `json:"principal"`
-	LogoURL       *string `json:"logo_url"`
+	Name      *string `json:"name"`
+	Address   *string `json:"address"`
+	Phone     *string `json:"phone"`
+	Principal *string `json:"principal"`
+	LogoURL   *string `json:"logo_url"`
+	// BrandColor 园所主题色：nil 表示不改，空串表示清空（回到默认主题），
+	// 非空必须通过 IsValidBrandColor（预设色板或对比度足够的 #RRGGBB）。
+	BrandColor    *string `json:"brand_color"`
 	LicenseNo     *string `json:"license_no"`
 	Capacity      *int    `json:"capacity"`
 	EstablishedAt *string `json:"established_at"`
@@ -565,7 +575,19 @@ func (s *SettingsService) UpdateKindergartenInfo(ctx context.Context, kindergart
 		cols["principal"] = strings.TrimSpace(*req.Principal)
 	}
 	if req.LogoURL != nil {
-		cols["logo_url"] = strings.TrimSpace(*req.LogoURL)
+		// 上传接口返回的是签名 URL，库与公开接口都只认 object key：
+		// 归一化能剥掉过期签名，也能接纳管理员粘贴的完整 OSS URL。
+		cols["logo_url"] = oss.NormalizeRef(strings.TrimSpace(*req.LogoURL))
+	}
+	if req.BrandColor != nil {
+		v := strings.TrimSpace(*req.BrandColor)
+		if v != "" {
+			if !IsValidBrandColor(v) {
+				return nil, ErrInvalidBrandColor
+			}
+			v = strings.ToUpper(v)
+		}
+		cols["brand_color"] = v
 	}
 	if req.LicenseNo != nil {
 		cols["license_no"] = strings.TrimSpace(*req.LicenseNo)
@@ -614,7 +636,7 @@ func IsSettingsClientErr(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, ErrDuplicateAcademicYear) || errors.Is(err, ErrInvalidFeverThreshold) {
+	if errors.Is(err, ErrDuplicateAcademicYear) || errors.Is(err, ErrInvalidFeverThreshold) || errors.Is(err, ErrInvalidBrandColor) {
 		return true
 	}
 	switch err.Error() {

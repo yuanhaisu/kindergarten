@@ -77,14 +77,20 @@ var adminRoutePermission = map[string]string{
 	"GET /api/v1/admin/parents/:id":        "parent:view",
 	"PUT /api/v1/admin/parents/:id":        "parent:manage",
 	"PUT /api/v1/admin/parents/:id/status": "parent:manage",
+	// 身份支持（#172）：解绑客户端身份属于账号管理写操作。
+	"DELETE /api/v1/admin/parents/:id/identities/:identity_id": "parent:manage",
+	// 身份支持（#172）：支持视图读取与手机号更正同属家长账号管理。
+	"GET /api/v1/admin/parents/:id/support": "parent:manage",
+	"PUT /api/v1/admin/parents/:id/phone":   "parent:manage",
 
 	// settings / kindergarten —— 园所配置
-	"GET /api/v1/admin/settings":                 "system:kindergarten",
-	"PUT /api/v1/admin/settings":                 "system:kindergarten",
-	"GET /api/v1/admin/settings/academic-years":  "system:kindergarten",
-	"POST /api/v1/admin/settings/academic-years": "system:kindergarten",
-	"GET /api/v1/admin/kindergarten/info":        "system:kindergarten",
-	"PUT /api/v1/admin/kindergarten/info":        "system:kindergarten",
+	"GET /api/v1/admin/settings":                   "system:kindergarten",
+	"PUT /api/v1/admin/settings":                   "system:kindergarten",
+	"GET /api/v1/admin/settings/academic-years":    "system:kindergarten",
+	"POST /api/v1/admin/settings/academic-years":   "system:kindergarten",
+	"GET /api/v1/admin/kindergarten/info":          "system:kindergarten",
+	"PUT /api/v1/admin/kindergarten/info":          "system:kindergarten",
+	"GET /api/v1/admin/kindergarten/parent-qrcode": "system:kindergarten",
 
 	// admins
 	"GET /api/v1/admin/admins":                    "admin:view",

@@ -17,6 +17,7 @@ type Config struct {
 	Redis   RedisConfig   `ini:"redis"`
 	JWT     JWTConfig     `ini:"jwt"`
 	WeChat  WeChatConfig  `ini:"wechat"`
+	Clients ClientConfig  `ini:"clients"`
 	Casbin  CasbinConfig  `ini:"casbin"`
 	OSS     OSSConfig     `ini:"oss"`
 	Face    FaceConfig    `ini:"face"`
@@ -116,8 +117,9 @@ type JWTConfig struct {
 
 // WeChatConfig 微信小程序凭据，按端各一对。
 //
-// 两端 AppID 必须分开：openid 是「用户×小程序」二元的，共用 AppID 会让同一个人
-// 在两端拿到同一个 openid，FindByOpenID 只命中一条 User，另一端角色丢失、接口全 403。
+// 两端 AppID 必须分开：openid 是「用户×小程序」二元的，身份表以 (app_id, open_id)
+// 唯一定位客户端身份；共用 AppID 会让同一自然人在两端的身份无法区分。
+// 另外家长端需要非个人主体才能使用 getPhoneNumber。
 type WeChatConfig struct {
 	TeacherAppID  string `ini:"teacher_app_id"`
 	TeacherSecret string `ini:"teacher_secret"`
@@ -164,6 +166,15 @@ func (c *WeChatConfig) normalize() {
 	if c.CodeEnvVersion == "" {
 		c.CodeEnvVersion = "release"
 	}
+}
+
+// ClientConfig 小程序客户端注册表（#163）的配置项。
+//
+// AppID 仍来自 [wechat]（登录凭据与注册表必须同源）；这里只放启动同步
+// 首次插入时使用的发版版本，之后 release_version 由数据库维护。
+type ClientConfig struct {
+	TeacherReleaseVersion string `ini:"teacher_release_version"`
+	ParentReleaseVersion  string `ini:"parent_release_version"`
 }
 
 type CasbinConfig struct {

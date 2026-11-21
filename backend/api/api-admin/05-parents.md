@@ -4,7 +4,7 @@
 >
 > 基础路径：`/api/v1/admin`，需 `Authorization: Bearer <token>`，角色 `admin`。
 >
-> 状态：✅ 5 个接口已实现（2026-04-21）。
+> 状态：✅ 5 个接口已实现（2026-04-21）；#172 增补身份支持 3 个接口（2026-11-21）。
 
 ---
 
@@ -146,3 +146,118 @@
   "updated_at": "2026-03-19T10:00:00Z"
 }
 ```
+
+---
+
+## GET `/admin/parents/:id/support`
+
+> 家长账号支持视图（#172）。用于「家长绑错了微信 / 手机号录错了」的排障入口：
+> 展示手机号、客户端身份（open_id 只回掩码）与本园成员关系。
+>
+> 只能看到**本园**的成员关系；目标账号不属于本园时与不存在同样返回 `404`。
+> 权限码：`parent:manage`。
+
+```json
+// Response
+{
+  "user_id": 10,
+  "nickname": "王小明爸爸",
+  "phone": "13888888888",
+  "identities": [
+    {
+      "id": 51,
+      "app_id": "wxdf989efff8796c53",
+      "open_id_masked": "oAbc****wxyz",
+      "created_at": "2026-09-01T08:00:00Z"
+    }
+  ],
+  "memberships": [
+    {
+      "kindergarten_id": 4,
+      "kindergarten_name": "阳光幼儿园",
+      "role": "parent",
+      "class_id": 1,
+      "class_name": "小一班",
+      "title": "",
+      "title_label": ""
+    }
+  ]
+}
+```
+
+---
+
+## DELETE `/admin/parents/:id/identities/:identity_id`
+
+> 解绑客户端身份（#172）。只**物理删除**这一条 `user_identities`（释放
+> `(app_id, open_id)` 唯一键），账号、角色、孩子关联、积分与档案全部保留。
+> 解绑后该微信的**续期**立即失效；已签发的访问凭证在剩余 TTL（默认 ≤15 分钟）内仍可用。
+>
+> 审计与解绑同事务：`operation_logs`，`module=parents`、`action=unbind_identity`、
+> `target_type=user_identity`，detail 中的 openid 只留掩码。
+> 权限码：`parent:manage`。
+
+```json
+// Response
+{
+  "user_id": 10,
+  "unbound_identity_id": 51,
+  "identities": []
+}
+```
+
+错误：
+
+| HTTP | 场景 |
+|---|---|
+| 404 | 账号不存在、不属于本园，或身份不存在 / 不属于该账号 |
+| 422 | 路径参数非法 |
+
+---
+
+## PUT `/admin/parents/:id/phone`
+
+> 更正预创建账号的手机号（#172）。顺序是硬性的：
+>
+> 1. 先解绑错误身份（`DELETE /admin/parents/:id/identities/:identity_id`）
+> 2. 再改手机号
+> 3. 由正确家长用新手机号重新绑定
+>
+> 账号上仍有客户端身份时拒绝（`409`）——否则录错号对应的微信会随着新号继续拥有访问权。
+> 新号不得被其他活跃账号占用（`users.phone_active` 唯一索引，软删账号不占号）；
+> 并发冲突由唯一索引最终裁决，同样返回 `409`。**不会静默删号或合并账号。**
+> 手机号更新与审计同事务：`operation_logs`，`module=parents`、`action=correct_phone`、
+> `target_type=user`。权限码：`parent:manage`。
+
+```json
+// Request
+{
+  "phone": "13900001111"
+}
+
+// Response（与支持视图同构，phone 已更新）
+{
+  "user_id": 10,
+  "nickname": "王小明爸爸",
+  "phone": "13900001111",
+  "identities": [],
+  "memberships": [
+    {
+      "kindergarten_id": 4,
+      "kindergarten_name": "阳光幼儿园",
+      "role": "parent",
+      "class_id": 1,
+      "class_name": "小一班"
+    }
+  ]
+}
+```
+
+错误：
+
+| HTTP | 场景 |
+|---|---|
+| 409 | 账号上仍有微信身份，需先解绑（`SUPPORT_IDENTITY_REMAINS`） |
+| 409 | 新手机号已被其他活跃账号占用（`SUPPORT_PHONE_CONFLICT`） |
+| 422 | 手机号格式不正确 |
+| 404 | 账号不存在或不属于本园 |

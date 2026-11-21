@@ -14,7 +14,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
@@ -30,7 +29,7 @@ type TeacherService struct {
 	kg             *repository.KindergartenRepo
 	oplog          *repository.OperationLogRepo
 	invitationRepo *repository.TeacherInvitationRepo
-	wx             *auth.WeChatClient
+	wx             WeChatAPI
 }
 
 func NewTeacherService(
@@ -42,7 +41,7 @@ func NewTeacherService(
 	kg *repository.KindergartenRepo,
 	oplog *repository.OperationLogRepo,
 	invitationRepo *repository.TeacherInvitationRepo,
-	wx *auth.WeChatClient,
+	wx WeChatAPI,
 ) *TeacherService {
 	return &TeacherService{
 		db: db, teachers: teachers, classes: classes, users: users, roles: roles, kg: kg, oplog: oplog,
@@ -348,29 +347,17 @@ func (s *TeacherService) CreateTeacher(
 	if err != nil {
 		return nil, err
 	}
-	hash, err := HashPassword("KindyTeacher#1")
-	if err != nil {
-		return nil, err
-	}
 	var teacherID uint64
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var u *domain.User
-		if existing != nil {
-			u = existing
-			if err := tx.Model(u).Updates(map[string]any{
-				"nickname": strings.TrimSpace(req.Nickname),
-				"gender":   req.Gender,
-			}).Error; err != nil {
-				return err
-			}
-		} else {
-			u = &domain.User{
-				Phone: req.Phone, Nickname: strings.TrimSpace(req.Nickname), Gender: req.Gender,
-				PasswordHash: hash,
-			}
-			if err := tx.Create(u).Error; err != nil {
-				return err
-			}
+		// 统一账号解析（#164）：同一活跃手机号复用同一账号，且不改写
+		// 既有昵称/头像/性别/密码——管理员新建老师不能覆盖该手机号已维护的资料。
+		// 预建账号不写密码（#174）：老师只能通过微信登录，默认口令即提权入口。
+		u, _, err := s.users.WithDB(tx).FindOrCreateByPhone(ctx, req.Phone, repository.UserProfileDefaults{
+			Nickname: strings.TrimSpace(req.Nickname),
+			Gender:   req.Gender,
+		})
+		if err != nil {
+			return err
 		}
 		teacherID = u.ID
 		kid := kindergartenID

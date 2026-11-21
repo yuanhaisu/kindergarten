@@ -12,6 +12,7 @@ import PageShell from "@/components/PageShell.vue"
 //
 // 设计稿用内联 SVG，小程序 WXML 不允许，改用 remixicon 字形（App.vue 已加载字体）。
 const ICONS = {
+  building: "\u{eb0f}", // building-line
   megaphone: "", // megaphone-line
   noticeList: "", // file-list-3-line
   message: "", // message-3-line
@@ -60,7 +61,8 @@ const GROUPS = [
     items: [
       { title: "班级日历", desc: "班级活动与安排", icon: ICONS.calendar, path: "/pages/calendar/index" },
       { title: "请假审批", desc: "处理家长请假申请", icon: ICONS.approval, path: "/pages/leave/index" },
-      { title: "亲子任务", desc: "发布与查看亲子任务", icon: ICONS.family, path: "/pages/tasks/index" }
+      { title: "亲子任务", desc: "发布与查看亲子任务", icon: ICONS.family, path: "/pages/tasks/index" },
+      { title: "我的园所", desc: "查看并切换当前园所", icon: ICONS.building, path: "/pages/kindergartens/index" }
     ]
   },
   {
