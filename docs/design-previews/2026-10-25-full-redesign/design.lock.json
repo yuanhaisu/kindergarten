@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "acf19734747f61d9c98394edbdd6515db9f3a7d4ac04ccad64becdce88250d8c",
+  "supportHash": "4cf042c64da91920c583fcc1c09b9839162f1b14e9f7a22b898719788af694fb",
   "supportReviewedAt": "2026-11-21",
-  "supportReason": "ticket #167：parent/src/api/auth.js 的 bindParentPhone 增加 public_code / kindergarten_id 目标园所参数",
+  "supportReason": "ticket #169：http/auth 增加切换会话与缓存清理，页面表现无回归",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -246,13 +246,13 @@
     },
     "parent/27-profile": {
       "source": "parent/src/pages/profile/index.vue",
-      "sha256": "082dbe8feb8af43f781f8287e7e000b6ecb117151f8ce093e35bf963e771c6bf",
-      "depsSha": "2a2b1d7072f891206d85c947b0d86781c0ad738adba5e805ba5465d954d8cee9",
+      "sha256": "df3eac496afa256ca228b221daab60e17989d84961d1c6606b196c7ff2bbc7fa",
+      "depsSha": "ff39513970b11b9951ad79b4338303d123a954fae027c805ae35ae3ba0e790ac",
       "title": "我的",
       "tabbar": true,
-      "reviewedAt": "2026-11-18",
-      "codeCommit": "0f3f799",
-      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "0f3f799-dirty",
+      "reason": "ticket #169：新增我的园所/切换原型；我的与更多页新增入口"
     },
     "parent/28-album-list": {
       "source": "parent/src/pages/album/index.vue",
@@ -272,6 +272,16 @@
       "tabbar": false,
       "reviewedAt": "2026-11-06",
       "codeCommit": "dfcb18b"
+    },
+    "parent/30-kindergartens": {
+      "source": "parent/src/pages/kindergartens/index.vue",
+      "sha256": "900c14c4e0dabadb0b2035eadcbac3ec927c2a1a36b99cc80db0cd38c23e7880",
+      "depsSha": "fae2e3eefe88d989e04d783adf45df0bdad6062e4503798c0584ba49ab21ea94",
+      "title": "我的园所",
+      "tabbar": false,
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "",
+      "reason": "ticket #169：新增我的园所/切换原型；我的与更多页新增入口"
     },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
@@ -421,13 +431,13 @@
     },
     "teacher/17-more-index": {
       "source": "teacher/src/pages/more/index.vue",
-      "sha256": "4c625a2acaf8c1940747dd9e1b5fceaf744ebe416f571b1113ea9b33710f17a4",
-      "depsSha": "356199337f543b2462e6c5f38d21c720486fc3ccf7486efa0d1701d4831bd5cd",
+      "sha256": "7bf0fb9ac7f639274e268b86dbd128ea83323b38d21e8ead3d0cd8bfab5e508e",
+      "depsSha": "cb2ba3038d16349ff75aa42ba7792dada346ad039edfd05336a0a83b7c66a949",
       "title": "更多功能",
       "tabbar": false,
-      "reviewedAt": "2026-11-18",
-      "codeCommit": "7d71f06",
-      "reason": "code review fix #102: entitlements.js 增加在途响应 epoch 校验与清理告警，页面表现不变"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "7d71f06-dirty",
+      "reason": "ticket #169：新增我的园所/切换原型；我的与更多页新增入口"
     },
     "teacher/18-messages-index": {
       "source": "teacher/src/pages/messages/index.vue",
@@ -464,6 +474,16 @@
       "tabbar": false,
       "reviewedAt": "2026-11-06",
       "codeCommit": "decf16b"
+    },
+    "teacher/22-kindergartens": {
+      "source": "teacher/src/pages/kindergartens/index.vue",
+      "sha256": "b43ceb37afa4c3ce95bfe97a56341cf3897c5fbc793b62c56f935ab0bd302633",
+      "depsSha": "4be7b930874b5a260e723bbb49444679cbff9852cf0948a8f42c61428b453195",
+      "title": "我的园所",
+      "tabbar": false,
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "",
+      "reason": "ticket #169：老师端新页面，改用老师端现有字号 token 后与原型一致"
     },
     "teacher/23-notice-index": {
       "source": "teacher/src/pages/notice/index.vue",

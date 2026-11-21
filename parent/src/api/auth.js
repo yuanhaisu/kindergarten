@@ -1,10 +1,13 @@
-import { rawRequest, requestWithAuth } from "@/api/http"
+import config from "@/config/env"
+import { rawRequest, requestWithAuth, switchKindergartenSession } from "@/api/http"
 
 export function wxCodeLogin({ code, encryptedData, iv }) {
   return rawRequest({
     url: "/auth/login/wechat",
     method: "POST",
     data: {
+      // 客户端身份（#163/#175）：后端按 app_id 查客户端注册表决定角色与作用域。
+      app_id: config.appId,
       code,
       role: "parent",
       encrypted_data: encryptedData,
@@ -47,5 +50,17 @@ export function fetchCurrentUser() {
     url: "/common/user/profile",
     method: "GET"
   })
+}
+
+// 我的园所（#169）：后端已按当前客户端角色族与园所通道过滤，前端不再做二次筛选。
+export function fetchMyKindergartens() {
+  return requestWithAuth({
+    url: "/common/user/kindergartens",
+    method: "GET"
+  })
+}
+
+export function switchKindergarten(kindergartenID) {
+  return switchKindergartenSession(kindergartenID)
 }
 

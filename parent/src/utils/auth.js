@@ -39,3 +39,11 @@ export function clearAuth() {
   // 授权缓存属于上一个会话：共享设备换账号后不能继续按上一园所展示入口与到期日。
   clearEntitlementCache(uni)
 }
+
+// 切换园所（#169）后清「跟随园所」的本地缓存，但保留刚换发的 token 与用户资料。
+// 与 clearAuth 的区别是登录态仍然有效；当前孩子 id 属于上一个园，
+// 授权缓存也按园所解析，两者都必须作废。
+export function clearScopedCaches() {
+  clearCurrentStudentId()
+  clearEntitlementCache(uni)
+}

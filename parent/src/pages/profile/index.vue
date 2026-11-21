@@ -16,6 +16,7 @@ import PageShell from "@/components/PageShell.vue"
 
 // remixicon 字形（App.vue 已全局注册字体）；小程序 WXML 不允许内联 SVG。
 const ICON = {
+  building: "\u{eb0f}", // building-line
   user: "", // user-line
   alert: "", // error-warning-line
   chevron: "", // arrow-right-s-line
@@ -61,7 +62,8 @@ const menuGroups = [
     title: "孩子与班级",
     items: [
       { title: "我的孩子", glyph: ICON.child, path: "/pages/student/index" },
-      { title: "班级信息", glyph: ICON.klass, path: "/pages/class/index" }
+      { title: "班级信息", glyph: ICON.klass, path: "/pages/class/index" },
+      { title: "我的园所", glyph: ICON.building, path: "/pages/kindergartens/index" }
     ]
   },
   {

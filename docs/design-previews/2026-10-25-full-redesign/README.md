@@ -2,12 +2,12 @@
 
 老师端 + 家长端所有页面，每页一份独立 HTML 原型。先看 [index.html](index.html) 画廊。
 
-- 页面总数：51
+- 页面总数：53
 - 已出稿：51
 - 共享约束：[_shared/brief.md](_shared/brief.md)
 - 设计系统：`user:nurture-planet-local`
 
-### 老师端（22）
+### 老师端（23）
 
 | # | 页面 | slug | 原型 | 说明 |
 |---|---|---|---|---|
@@ -32,9 +32,10 @@
 | 19 | 我的 | `19-profile-index` | [打开](teacher/19-profile-index/index.html) | [notes](teacher/19-profile-index/notes.md) |
 | 20 | 入园晨检 | `20-doctor-checkin` | [打开](teacher/20-doctor-checkin/index.html) | [notes](teacher/20-doctor-checkin/notes.md) |
 | 21 | 园级事件 | `21-doctor-calendar` | [打开](teacher/21-doctor-calendar/index.html) | [notes](teacher/21-doctor-calendar/notes.md) |
-| 22 | 通知列表 | `23-notice-index` | [打开](teacher/23-notice-index/index.html) | [notes](teacher/23-notice-index/notes.md) |
+| 22 | kindergartens | `22-kindergartens` | [打开](teacher/22-kindergartens/index.html) | — |
+| 23 | 通知列表 | `23-notice-index` | [打开](teacher/23-notice-index/index.html) | [notes](teacher/23-notice-index/notes.md) |
 
-### 家长端（29）
+### 家长端（30）
 
 | # | 页面 | slug | 原型 | 说明 |
 |---|---|---|---|---|
@@ -67,3 +68,4 @@
 | 27 | 我的 | `27-profile` | [打开](parent/27-profile/index.html) | [notes](parent/27-profile/notes.md) |
 | 28 | album-list | `28-album-list` | [打开](parent/28-album-list/index.html) | [notes](parent/28-album-list/notes.md) |
 | 29 | album-detail | `29-album-detail` | [打开](parent/29-album-detail/index.html) | [notes](parent/29-album-detail/notes.md) |
+| 30 | kindergartens | `30-kindergartens` | [打开](parent/30-kindergartens/index.html) | — |

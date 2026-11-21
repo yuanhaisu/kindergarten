@@ -116,6 +116,8 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		{
 			// 退出登录
 			authed.POST("/auth/logout", h.inner.Logout)
+			// 切换园所（#169）：仅 parent/teacher 客户端，admin_web 在 handler 拒绝。
+			authed.POST("/auth/switch-kindergarten", h.inner.SwitchKindergarten)
 
 			// 文件上传
 			authed.POST("/common/upload", h.inner.Upload)
@@ -126,6 +128,8 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			authed.PUT("/common/user/profile", h.inner.UpdateProfile)
 			authed.PUT("/common/user/avatar", h.inner.UpdateAvatar)
 			authed.PUT("/common/user/password", h.inner.ChangePassword)
+			// 我的园所（#169）：按当前客户端角色族与园所通道过滤。
+			authed.GET("/common/user/kindergartens", h.inner.GetMyKindergartens)
 
 			// 家长绑定手机号（#167）：待绑定账号把客户端身份并入园所预创建账号。
 			// 中间件按 app_id + IP 预限流；请求体只有一次性 wx_phone_code，

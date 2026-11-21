@@ -194,6 +194,12 @@
       "style": {
         "navigationBarTitleText": "我的"
       }
+    },
+    {
+      "path": "pages/kindergartens/index",
+      "style": {
+        "navigationBarTitleText": "我的园所"
+      }
     }
   ],
   "globalStyle": {

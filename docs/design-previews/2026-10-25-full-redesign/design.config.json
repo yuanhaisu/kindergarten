@@ -110,6 +110,11 @@
       "slug": "23-notice-index",
       "tabbar": false
     },
+    "pages/kindergartens/index": {
+      "n": 22,
+      "slug": "22-kindergartens",
+      "tabbar": false
+    },
     "pages/auth/consent": {
       "prototype": false,
       "why": "法律文本页；不扩进 2026-10-25 设计批次，改动由 docs/design-changes 记录"
@@ -259,6 +264,11 @@
     "pages/album/detail": {
       "n": 29,
       "slug": "29-album-detail",
+      "tabbar": false
+    },
+    "pages/kindergartens/index": {
+      "n": 30,
+      "slug": "30-kindergartens",
       "tabbar": false
     },
     "pages/auth/consent": {
