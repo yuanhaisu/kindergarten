@@ -22,3 +22,44 @@ export function updateParentStatus(id: number, body: { status: number; reason?: 
     body,
   )
 }
+
+// ---- 身份支持（#172）：解绑绑错的微信、更正录入错误的手机号 ----
+
+export interface SupportIdentity {
+  id: number
+  app_id: string
+  open_id_masked: string
+  created_at: string
+}
+
+export interface SupportMembership {
+  kindergarten_id: number
+  kindergarten_name: string
+  role: string
+  class_id?: number
+  class_name?: string
+  title?: string
+  title_label?: string
+}
+
+export interface ParentSupportView {
+  user_id: number
+  nickname: string
+  phone: string
+  identities: SupportIdentity[]
+  memberships: SupportMembership[]
+}
+
+export function getParentSupport(id: number) {
+  return useHttp().get<ParentSupportView>(`/admin/parents/${id}/support`)
+}
+
+export function unbindParentIdentity(id: number, identityId: number) {
+  return useHttp().delete<{ user_id: number; unbound_identity_id: number; identities: SupportIdentity[] }>(
+    `/admin/parents/${id}/identities/${identityId}`,
+  )
+}
+
+export function correctParentPhone(id: number, phone: string) {
+  return useHttp().put<ParentSupportView>(`/admin/parents/${id}/phone`, { phone })
+}

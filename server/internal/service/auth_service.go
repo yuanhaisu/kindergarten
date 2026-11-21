@@ -815,6 +815,10 @@ func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, cla
 	if user == nil {
 		return nil, fmt.Errorf("user not found")
 	}
+	// 解绑（#172）后旧 refresh 不能再换出新凭证。
+	if err := s.ensureSessionIdentityActive(ctx, user.ID, client.AppID); err != nil {
+		return nil, err
+	}
 
 	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
 	if err != nil {
@@ -865,6 +869,9 @@ var (
 	ErrAdminKindergartenRequired = errors.New("ADMIN_KINDERGARTEN_REQUIRED")
 	// ErrAdminKindergartenConflict 同一手机号在多个园所拥有管理员身份。
 	ErrAdminKindergartenConflict = errors.New("ADMIN_KINDERGARTEN_CONFLICT")
+	// ErrIdentityUnbound 续期凭证对应的客户端身份已被解绑（#172）。
+	// 解绑后旧会话不能再续期，否则「换微信」形同虚设。
+	ErrIdentityUnbound = errors.New("IDENTITY_UNBOUND")
 )
 
 // RefreshToken 刷新令牌。
@@ -935,6 +942,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 	if client.ScopeKind != scope.ScopeKind || client.ScopeID != scope.ScopeID {
 		return nil, fmt.Errorf("invalid refresh token: client scope changed")
 	}
+	// 身份只有在仍然存在且属于该账号时才能续期（#172）。解绑删的是
+	// user_identities 行，若这里不复核，被解绑的微信还能拿旧 refresh 续出新 access。
+	if err := s.ensureSessionIdentityActive(ctx, user.ID, client.AppID); err != nil {
+		return nil, err
+	}
 
 	roles, _, err = s.resolveClientMemberRoles(ctx, roles, client)
 	if err != nil {
@@ -951,6 +963,23 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		return nil, err
 	}
 	return s.issueTokensFor(ctx, user, scopedRoles, client, openID)
+}
+
+// ensureSessionIdentityActive 复核会话对应的客户端身份仍存在（#172）。
+// 解绑后身份行已被物理删除，旧 refresh / 切换不能再换出新凭证；
+// 否则「换微信」只对新登录生效，被解绑的微信仍可无限续期。
+func (s *AuthService) ensureSessionIdentityActive(ctx context.Context, userID uint64, appID string) error {
+	if s.identities == nil {
+		return fmt.Errorf("identity store not configured")
+	}
+	identity, err := s.identities.FindByUserAndApp(ctx, userID, appID)
+	if err != nil {
+		return err
+	}
+	if identity == nil {
+		return ErrIdentityUnbound
+	}
+	return nil
 }
 
 // filterRolesByKindergarten 只保留目标园所的角色行；kgID=0 返回空

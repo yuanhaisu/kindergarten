@@ -53,6 +53,8 @@ type Handler struct {
 	publicBrandSvc     *service.PublicBrandService
 	bindInviteSvc      *service.BindInviteService
 	parentEntryQRSvc   *service.ParentEntryQRService
+	// supportSvc 是 #172 的客户端身份支持操作（解绑 / 更正手机号）。
+	supportSvc *service.IdentitySupportService
 }
 
 func NewHandler(
@@ -100,6 +102,7 @@ func NewHandler(
 	publicBrandSvc *service.PublicBrandService,
 	bindInviteSvc *service.BindInviteService,
 	parentEntryQRSvc *service.ParentEntryQRService,
+	supportSvc *service.IdentitySupportService,
 ) *Handler {
 	return &Handler{
 		authSvc:            authSvc,
@@ -146,5 +149,6 @@ func NewHandler(
 		publicBrandSvc:     publicBrandSvc,
 		bindInviteSvc:      bindInviteSvc,
 		parentEntryQRSvc:   parentEntryQRSvc,
+		supportSvc:         supportSvc,
 	}
 }

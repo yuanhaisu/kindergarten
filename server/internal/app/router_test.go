@@ -428,6 +428,7 @@ func newTestEngineWithRoleRepo(t *testing.T, rdb *redis.Client, roles fakeRoleRe
 		nil, // publicBrand
 		nil, // bindInvite
 		nil, // parentEntryQR
+		nil, // support
 	)
 
 	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil, nil, nil, nil)

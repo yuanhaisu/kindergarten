@@ -20,12 +20,14 @@
 | 06 | [`06-audit.md`](./06-audit.md) | 平台操作审计 | 1 |
 | 07 | [`07-accounts.md`](./07-accounts.md) | 平台账号管理 | 5 |
 | 08 | [`08-dashboard.md`](./08-dashboard.md) | 平台运营看板 | 1 |
+| 09 | [`09-support.md`](./09-support.md) | 账号支持（解绑与手机号更正，#172） | 3 |
 
-**合计：32 个接口。**
+**合计：35 个接口。**
 
 模块索引与 `server/internal/app/router.go` 中 `/api/v1/platform` 的路由逐条对应：
 `auth/login`、`auth/refresh`、`auth/logout`、`dashboard`、5 个 `admins`、4 个 `kindergartens`、
-`logs`、`modules`、6 个 `plans`/`tiers`、7 个 `orders`/`payments`、5 个 `distributors`/`commissions`。
+`logs`、`modules`、6 个 `plans`/`tiers`、7 个 `orders`/`payments`、5 个 `distributors`/`commissions`、
+3 个 `users`（支持视图 / 解绑身份 / 更正手机号）。
 
 ---
 

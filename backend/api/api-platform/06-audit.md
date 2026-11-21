@@ -44,7 +44,7 @@
 | `page` / `page_size` | int | 分页，默认 `1` / `20`，`page_size` 上限 100 |
 | `from` / `to` | RFC 3339 | 时间区间，**左闭右开** `[from, to)`；格式不合法返回 `422` |
 | `operator` | string | 平台账号用户名，精确匹配 |
-| `module` | string | 模块，精确匹配：`kindergarten` / `order` / `payment` / `plan` / `distributor` / `account` |
+| `module` | string | 模块，精确匹配：`kindergarten` / `order` / `payment` / `plan` / `distributor` / `account` / `support` |
 | `kindergarten_id` | uint64 | 目标园所 ID，精确匹配 |
 
 > 过滤条件之间是「且」关系，省略即不限制。`kindergarten_id` 只能过滤出记录本身
@@ -57,7 +57,7 @@
 |---|---|---|
 | `operator` | string | 操作账号用户名 |
 | `module` | string | 操作模块 |
-| `action` | string | 操作动作，如 `onboard` / `update_status` / `confirm` / `cancel` / `record` |
+| `action` | string | 操作动作，如 `onboard` / `update_status` / `confirm` / `cancel` / `record` / `unbind_identity` / `correct_phone` |
 | `target_type` / `target_id` | string / uint64 | 操作对象类型与 ID |
 | `kindergarten_id` | uint64 | 目标园所；非园所类操作为 `0` |
 | `detail` | string | 可读摘要（订单号、变更前后状态、金额等） |

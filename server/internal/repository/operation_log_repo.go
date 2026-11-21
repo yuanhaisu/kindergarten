@@ -26,6 +26,13 @@ func (r *OperationLogRepo) Create(ctx context.Context, log *domain.OperationLog)
 	return r.db.WithContext(ctx).Create(log).Error
 }
 
+// CreateTx 与业务写入共用事务：审计失败时让整个操作回滚（#172 解绑/更正）。
+// 掩码规则必须与 Create 一致，因此复用同一条写入路径。
+func (r *OperationLogRepo) CreateTx(ctx context.Context, tx *gorm.DB, log *domain.OperationLog) error {
+	log.Detail = redact.Text(log.Detail)
+	return tx.WithContext(ctx).Create(log).Error
+}
+
 // OperationLogListRow 列表查询（LEFT JOIN users 取操作人昵称）
 type OperationLogListRow struct {
 	domain.OperationLog `gorm:"embedded"`

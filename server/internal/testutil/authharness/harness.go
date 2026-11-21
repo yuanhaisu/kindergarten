@@ -24,6 +24,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
 	handler "kindergarten-server/internal/handler/http"
 	"kindergarten-server/internal/middleware"
@@ -237,7 +238,8 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		return nil, nil, nil, fmt.Errorf("初始化 Casbin：%w", err)
 	}
 
-	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc, parentEntryQRSvc)
+	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc,
+		parentEntryQRSvc, buildSupportService(h), buildParentPortalService(h))
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -259,6 +261,18 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	passwordLoginLimit := middleware.PasswordLoginRateLimit(h.RedisClient, middleware.PasswordLoginMaxPerMinute, time.Minute)
 	v1.POST("/auth/login/password", passwordLoginLimit, hnd.PasswordLogin)
 	v1.POST("/auth/refresh", hnd.Refresh)
+
+	// 平台方信任域（#172 平台支持）：与 router.go 同源装配 PlatformAuth +
+	// CasbinRBAC，验证平台凭证与园所 JWT 互不通用。
+	platformG := v1.Group("/platform")
+	platformG.Use(middleware.PlatformAuth(h.Secret, h.Auth.TokenRevoker(),
+		auth.NewPlatformEpochStore(h.RedisClient, auth.PlatformEpochTTLFor(24*time.Hour, time.Hour))))
+	platformG.Use(middleware.CasbinRBAC(enforcer))
+	{
+		platformG.GET("/users/:id/support", hnd.PlatformGetUserSupport)
+		platformG.DELETE("/users/:id/identities/:identity_id", hnd.PlatformUnbindUserIdentity)
+		platformG.PUT("/users/:id/phone", hnd.PlatformCorrectUserPhone)
+	}
 
 	authed := v1.Group("")
 	authed.Use(middleware.AuthJWT(h.Secret, h.Auth.TokenRevoker()))
@@ -296,6 +310,10 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 			// 家长端园所二维码（#176）：生产还叠 RequirePermission
 			// （system:kindergarten），这里与 #178 一样只保留 Casbin。
 			adminG.GET("/kindergarten/parent-qrcode", hnd.GetParentEntryQRCode)
+			// 身份支持（#172）：解绑客户端身份、支持视图与手机号更正。
+			adminG.DELETE("/parents/:id/identities/:identity_id", hnd.AdminUnbindParentIdentity)
+			adminG.GET("/parents/:id/support", hnd.AdminGetParentSupport)
+			adminG.PUT("/parents/:id/phone", hnd.AdminCorrectParentPhone)
 		}
 
 		// 业务接口探针（#175）：用于验证「已绑定可访问、未绑定 403」。
@@ -304,6 +322,8 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.GET("/parent/home/ping", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{}})
 		})
+		// 家长首页（#172）：真实服务，用来验证「正确家长重新绑定后能看到孩子」。
+		authed.GET("/parent/home/overview", hnd.ParentHomeOverview)
 	}
 
 	return r, hnd, enforcer, nil
@@ -314,7 +334,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 // 这些路由只依赖上述服务，无需为了一条测试缝拉起整棵依赖树。
 // 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
 // 强制同步，避免测试缝悄悄错位。
-func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService) *handler.Handler {
+func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService, supportSvc *service.IdentitySupportService, parentPortalSvc *service.ParentPortalService) *handler.Handler {
 	return handler.NewHandler(
 		authSvc,
 		nil, // fileSvc
@@ -341,7 +361,7 @@ func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.Settings
 		nil, // oplogSvc
 		nil, // exportSvc
 		nil, // teacherPortalSvc
-		nil, // parentPortalSvc
+		parentPortalSvc,
 		nil, // dictSvc
 		nil, // healthCheckSvc
 		nil, // faceSvc
@@ -360,6 +380,36 @@ func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.Settings
 		publicBrandSvc,
 		bindInviteSvc,
 		parentEntryQRSvc,
+		supportSvc,
+	)
+}
+
+// buildSupportService 装配真实的身份支持服务（#172）：审计与业务写入共用
+// 同一个测试库，才能验证「解绑 → 审计」确实是同一次操作。
+func buildSupportService(h *Harness) *service.IdentitySupportService {
+	return service.NewIdentitySupportService(
+		h.DB,
+		repository.NewUserRepo(h.DB),
+		repository.NewUserIdentityRepo(h.DB),
+		repository.NewUserRoleRepo(h.DB),
+		repository.NewKindergartenRepo(h.DB),
+		repository.NewOperationLogRepo(h.DB),
+		repository.NewPlatformLogRepo(h.DB),
+	)
+}
+
+// buildParentPortalService 装配真实家长门户（#172）：验证正确家长重新绑定后
+// 首页能看到孩子，而不是只验证一条探针。
+func buildParentPortalService(h *Harness) *service.ParentPortalService {
+	return service.NewParentPortalService(
+		h.DB,
+		repository.NewParentRepo(h.DB),
+		repository.NewUserRoleRepo(h.DB),
+		repository.NewStudentRepo(h.DB),
+		repository.NewClassRepo(h.DB),
+		repository.NewPickupRepo(h.DB),
+		repository.NewCalendarRepo(h.DB),
+		repository.NewNoticeRepo(h.DB),
 	)
 }
 

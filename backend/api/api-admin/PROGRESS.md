@@ -4,7 +4,7 @@
 >
 > **模块状态**：🚫 未开始 / 🔄 进行中 / ✅ 已完成（模块所有接口都勾完 + 前端联调通过）
 >
-> **总体进度**：`95 / 95`
+> **总体进度**：`98 / 98`
 
 ---
 
@@ -14,7 +14,7 @@
 |---|---|---:|---|
 | **S0** | 脚手架 | 7 / 8 | 🔄 |
 | **S1** | P0：Dashboard + Classes + Students | 18 / 18 | 🔄 |
-| **S2** | P1：Teachers + Parents + Settings + Admins + Roles | 27 / 27 | ✅ |
+| **S2** | P1：Teachers + Parents + Settings + Admins + Roles | 30 / 30 | ✅ |
 | **S3** | P2a：Attendance + Leaves + Pickup | 9 / 9 | ✅ |
 | **S4** | P2b：Growth + Tasks + Points + Achievements | 18 / 18 | ✅ |
 | **S5** | P3：Notices + Announcements + Audit + Logs + Export | 20 / 20 | ✅ |
@@ -95,7 +95,7 @@
 | 5 | DELETE | `/admin/teachers/:id` | `deleteTeacher` | [x] | 2026-04-20 | |
 | 6 | PUT | `/admin/teachers/:id/status` | `updateTeacherStatus` | [x] | 2026-04-20 | |
 
-### 05. Parents `/admin/parents/*`（5 个）
+### 05. Parents `/admin/parents/*`（8 个）
 
 对应文档：[`05-parents.md`](./05-parents.md)　前端 API：`admin/api/parents.ts`　页面：`admin/pages/parents/index.vue`　状态：✅
 
@@ -106,6 +106,9 @@
 | 3 | POST | `/admin/parents` | `createParent` | [x] | 2026-04-21 | 新用户默认密码 `KindyParent#1` |
 | 4 | PUT | `/admin/parents/:id` | `updateParent` | [x] | 2026-04-21 | |
 | 5 | PUT | `/admin/parents/:id/status` | `updateParentStatus` | [x] | 2026-04-21 | |
+| 6 | GET | `/admin/parents/:id/support` | `getParentSupport` | [x] | 2026-11-21 | #172 身份支持视图 |
+| 7 | DELETE | `/admin/parents/:id/identities/:identity_id` | `unbindParentIdentity` | [x] | 2026-11-21 | #172 只硬删客户端身份 |
+| 8 | PUT | `/admin/parents/:id/phone` | `correctParentPhone` | [x] | 2026-11-21 | #172 需先解绑 |
 
 ### 18. Settings `/admin/settings/*` + `/admin/kindergarten/info`（6 个）
 

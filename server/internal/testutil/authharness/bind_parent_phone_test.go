@@ -87,6 +87,9 @@ func cleanupBindUsers(t *testing.T, h *authharness.Harness, appID, openID string
 			ids[identity.UserID] = true
 		}
 		for id := range ids {
+			// 幼儿关联也是 FK RESTRICT，且可能由别处先建（如支持视图用例），
+			// 清理时统一先断开，避免清理顺序依赖播种顺序。
+			h.HardDelete(t, &domain.StudentParent{}, "user_id = ?", id)
 			h.HardDelete(t, &domain.ParentProfile{}, "user_id = ?", id)
 			h.HardDelete(t, &domain.UserRole{}, "user_id = ?", id)
 			h.HardDelete(t, &domain.UserIdentity{}, "user_id = ?", id)
@@ -526,4 +529,3 @@ func TestBindParentPhoneIsRateLimited(t *testing.T) {
 	resp := h.PostJSONWithToken(t, "/api/v1/common/user/bind-parent-phone", pending.Token, payload)
 	assert.Equal(t, http.StatusTooManyRequests, resp.Status, string(resp.Body))
 }
-

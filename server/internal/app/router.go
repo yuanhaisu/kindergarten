@@ -101,6 +101,11 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			platformG.PATCH("/distributors/:id", h.inner.PlatformUpdateDistributor)
 			platformG.GET("/commissions", h.inner.PlatformListCommissions)
 			platformG.GET("/commissions/:id", h.inner.PlatformGetCommission)
+			// 身份支持（#172）：平台支持查看目标用户的园所成员关系，解绑客户端身份
+			// 与更正手机号。与园所管理端同一套 service、不同的信任域与审计表。
+			platformG.GET("/users/:id/support", h.inner.PlatformGetUserSupport)
+			platformG.DELETE("/users/:id/identities/:identity_id", h.inner.PlatformUnbindUserIdentity)
+			platformG.PUT("/users/:id/phone", h.inner.PlatformCorrectUserPhone)
 		}
 
 		// 需要认证的接口
@@ -401,6 +406,12 @@ func registerAdminRoutes(adminG *gin.RouterGroup, h *handler.Handler) {
 		pg.GET("/:id", h.GetParent)
 		pg.PUT("/:id", h.UpdateParent)
 		pg.PUT("/:id/status", h.UpdateParentStatus)
+		// 身份支持（#172）：解绑客户端身份（换微信）。账号、角色与孩子关系不动。
+		pg.DELETE("/:id/identities/:identity_id", h.AdminUnbindParentIdentity)
+		// 身份支持（#172）：支持视图（身份 + 园所成员关系）与手机号更正。
+		// 更正前必须先解绑错误身份，见 service.CorrectPhone。
+		pg.GET("/:id/support", h.AdminGetParentSupport)
+		pg.PUT("/:id/phone", h.AdminCorrectParentPhone)
 	}
 
 	set := adminG.Group("/settings")
