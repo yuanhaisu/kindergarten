@@ -158,6 +158,10 @@ func (h *Handler) UpdateKindergartenInfo(c *gin.Context) {
 			response.ErrValidation(c, err.Error())
 			return
 		}
+		if errors.Is(err, service.ErrInvalidBrandColor) {
+			response.ErrValidation(c, "主题色不合法：请选择预设色或使用对比度足够的 #RRGGBB")
+			return
+		}
 		response.ErrInternal(c, "更新园所信息失败")
 		return
 	}

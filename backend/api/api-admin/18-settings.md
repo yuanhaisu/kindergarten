@@ -156,6 +156,7 @@
   "phone": "010-12345678",
   "principal": "张园长",
   "logo_url": "https://cdn.example.com/logo/1.png",
+  "brand_color": "#F97316",
   "license_no": "教办字[2020]001号",
   "capacity": 350,
   "current_count": 300,
@@ -171,6 +172,10 @@
 ## PUT `/admin/kindergarten/info`
 
 > 更新园所信息（对应前端 `updateKindergartenInfo`）
+>
+> 字段均为可选：不传表示不修改；传空串表示清空。
+> `brand_color` 只接受预设色板或对比度足够的 `#RRGGBB`，非法值返回 422（`code=42200`）；
+> 空串表示清空，家长端/老师端回落默认主题。保存后公开品牌接口立即返回新值。
 
 ```json
 // Request
@@ -180,6 +185,7 @@
   "phone": "010-12345678",
   "principal": "张园长",
   "logo_url": "https://cdn.example.com/logo/1.png",
+  "brand_color": "#F97316",
   "description": "阳光幼儿园创办于2010年..."
 }
 
