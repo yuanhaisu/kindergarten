@@ -1,7 +1,8 @@
 <script setup>
-import { onLaunch } from "@dcloudio/uni-app"
+import { onLaunch, onShow } from "@dcloudio/uni-app"
 import { ensureConsent, ensureLogin, hasTeacherRole } from "@/utils/login"
 import { getUser } from "@/utils/auth"
+import { captureInviteCode } from "@/utils/inviteScene.mjs"
 
 // 待绑定账号（有会话、无 teacher 角色）不能停留在工作台：业务接口会统一 40302。
 // 登录页负责在持有邀请码时完成绑定。
@@ -14,11 +15,19 @@ function redirectToBindIfNeeded() {
   return false
 }
 
-onLaunch(() => {
-  const options = uni.getLaunchOptionsSync()
-  if (options?.query?.invite_code) {
-    uni.setStorageSync('invite_code', options.query.invite_code)
-  }
+// 邀请码只在启动/唤醒时可见，必须早于 ensureLogin 写入暂存：
+// silentLogin 会立刻读取它完成绑定。冷启动走 onLaunch(options)，
+// 热启动（后台被扫码唤起）只走 onShow(options)。
+// 已绑定教师扫描邀请码不产生副作用，否则旧码会留在设备上被下次换号登录误用。
+function captureInvite(options) {
+  if (hasTeacherRole(getUser())) return
+  const code = captureInviteCode(options, uni)
+  if (code) console.info("[invite] captured from entry")
+}
+
+onLaunch((options) => {
+  // 部分基础库在 onLaunch 不给 options，回退 getLaunchOptionsSync。
+  captureInvite(options || uni.getLaunchOptionsSync())
   ensureLogin()
     .then(() => {
       if (redirectToBindIfNeeded()) return
@@ -29,6 +38,10 @@ onLaunch(() => {
       // 但已拿到待绑定会话却绑定失败时，必须回登录页才能重试。
       redirectToBindIfNeeded()
     })
+})
+
+onShow((options) => {
+  captureInvite(options)
 })
 </script>
 

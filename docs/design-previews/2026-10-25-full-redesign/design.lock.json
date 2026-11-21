@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "cefc74a8136a8460944934dbb839e899228d3779e99b59c253e9fa7250a17b88",
+  "supportHash": "ec1314d4fec0c1ca309ff12bdf40fa9bb9e6ffa252089ee2a9bfbb178611e36e",
   "supportReviewedAt": "2026-11-21",
-  "supportReason": "merge #169/#168/#166 后：#176 新增 utils/scene.mjs + utils/entryScene.mjs，页面源码指纹与共享支撑代码一并复核，视觉无变化",
+  "supportReason": "#160 L235 两端新增 utils/brand.js、utils/kindergartenBrand.mjs 与 teacher api/public.js（园所品牌）",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -276,13 +276,13 @@
     },
     "parent/30-kindergartens": {
       "source": "parent/src/pages/kindergartens/index.vue",
-      "sha256": "900c14c4e0dabadb0b2035eadcbac3ec927c2a1a36b99cc80db0cd38c23e7880",
-      "depsSha": "fae2e3eefe88d989e04d783adf45df0bdad6062e4503798c0584ba49ab21ea94",
+      "sha256": "90be4e30e8f9c9145eef1c2fbe7b6c254fd86221fdd0d6a5c86a136c95ea4318",
+      "depsSha": "ff4db2ca74479561eb9b6ed832c90c9131764d555b4030455f5382bdc97cef4e",
       "title": "我的园所",
       "tabbar": false,
       "reviewedAt": "2026-11-21",
-      "codeCommit": "",
-      "reason": "ticket #169：新增我的园所/切换原型；我的与更多页新增入口"
+      "codeCommit": "3e55e1a-dirty",
+      "reason": "#160 L235 当前园品牌：hero 展示 logo 与品牌色，其余 token 兜底"
     },
     "teacher/01-workbench": {
       "source": "teacher/src/pages/index/index.vue",
@@ -478,13 +478,13 @@
     },
     "teacher/22-kindergartens": {
       "source": "teacher/src/pages/kindergartens/index.vue",
-      "sha256": "b43ceb37afa4c3ce95bfe97a56341cf3897c5fbc793b62c56f935ab0bd302633",
-      "depsSha": "4be7b930874b5a260e723bbb49444679cbff9852cf0948a8f42c61428b453195",
+      "sha256": "b122cbb18f624ce7227045fc03db2d50ff5db08396f1bf3716818ccf36458e5a",
+      "depsSha": "362df15c4a010831fc8e03b2bb9ec820f62eb1748f87a3788d8a7af373b92275",
       "title": "我的园所",
       "tabbar": false,
       "reviewedAt": "2026-11-21",
-      "codeCommit": "",
-      "reason": "ticket #169：老师端新页面，改用老师端现有字号 token 后与原型一致"
+      "codeCommit": "3e55e1a-dirty",
+      "reason": "#160 L235 当前园品牌：hero 展示 logo 与品牌色，其余 token 兜底"
     },
     "teacher/23-notice-index": {
       "source": "teacher/src/pages/notice/index.vue",

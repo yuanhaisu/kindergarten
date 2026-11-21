@@ -77,6 +77,7 @@ func (h *Handler) SwitchKindergarten(c *gin.Context) {
 		return
 	}
 
+	h.recordAuthAudit(c, "switch_kindergarten", claims.AppID, result)
 	response.OK(c, result)
 }
 

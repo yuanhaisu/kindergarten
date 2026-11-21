@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	mysqldrv "github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 
 	"kindergarten-server/internal/domain"
@@ -35,7 +34,7 @@ func (r *UserIdentityRepo) WithDB(db *gorm.DB) *UserIdentityRepo {
 
 func (r *UserIdentityRepo) Create(ctx context.Context, identity *domain.UserIdentity) error {
 	if err := r.db.WithContext(ctx).Create(identity).Error; err != nil {
-		if isDuplicateKeyError(err) {
+		if IsDuplicateKey(err) {
 			return fmt.Errorf("%w: app_id=%s", ErrUserIdentityExists, identity.AppID)
 		}
 		return err
@@ -156,11 +155,4 @@ func (r *UserIdentityRepo) Delete(ctx context.Context, id uint64) error {
 		return errors.New("userIdentity id is required")
 	}
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.UserIdentity{}).Error
-}
-
-// isDuplicateKeyError MySQL 1062（ER_DUP_ENTRY）。唯一索引是并发安全性的最终依据：
-// 解析器靠它判断「另一个人刚抢先建好了」。
-func isDuplicateKeyError(err error) bool {
-	var me *mysqldrv.MySQLError
-	return errors.As(err, &me) && me.Number == 1062
 }

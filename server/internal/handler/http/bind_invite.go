@@ -72,5 +72,6 @@ func (h *Handler) BindInvite(c *gin.Context) {
 		return
 	}
 
+	h.recordAuthAudit(c, "bind_invite", claims.AppID, result)
 	response.OK(c, result)
 }

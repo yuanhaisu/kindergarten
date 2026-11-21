@@ -12,8 +12,9 @@ import (
 	"kindergarten-server/internal/domain"
 )
 
-// IsDuplicateKey 判断错误是否为唯一键冲突（MySQL 1062）。
-// 收款幂等依赖「订单 + 幂等键」唯一约束兜底并发重复提交。
+// IsDuplicateKey 判断错误是否为唯一键冲突（MySQL 1062 / gorm.ErrDuplicatedKey）。
+// 仓储与合并流程共用这一处判断：并发下唯一索引才是最终裁决，
+// 收款幂等、身份抢占、公开码重试都靠它映射成业务错误而不是 500。
 func IsDuplicateKey(err error) bool {
 	var me *mysqldriver.MySQLError
 	if errors.As(err, &me) {

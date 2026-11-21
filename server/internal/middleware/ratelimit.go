@@ -136,37 +136,21 @@ func rateLimitBy(
 
 		key := rateLimitKey(prefix, c.ClientIP(), rateLimitPart(c, part))
 
-		ctx := context.Background()
-		count, err := rdb.Incr(ctx, key).Result()
+		// 跟随请求上下文：客户端断开或超时后不再继续占用 Redis 连接。
+		count, err := incrementWindow(c.Request.Context(), rdb, key, window)
 		if err != nil {
+			// 计数没有窗口会永久累积：严格模式宁可本次拒绝，也不留下永不释放的配额；
+			// 开放模式放行并清掉脏键，避免下一次正常请求被误伤（清理在 incrementWindow 内）。
 			if failOpen {
-				log.L(c.Request.Context()).Warn("rate limit increment failed; allowing request",
+				log.L(c.Request.Context()).Warn("rate limit store unavailable; allowing request",
 					"prefix", prefix, "err", err)
 				c.Next()
 				return
 			}
-			log.L(c.Request.Context()).Error("rate limit increment failed", "prefix", prefix, "err", err)
+			log.L(c.Request.Context()).Error("rate limit store unavailable", "prefix", prefix, "err", err)
 			response.ErrUnavailable(c, "限流服务暂不可用，请稍后再试")
 			c.Abort()
 			return
-		}
-		if count == 1 {
-			if err := rdb.Expire(ctx, key, window).Err(); err != nil {
-				// 计数没有窗口会永久累积：严格模式宁可本次拒绝，也不留下永不释放的配额；
-				// 开放模式放行并清掉脏键，避免下一次正常请求被误伤。
-				if failOpen {
-					log.L(c.Request.Context()).Warn("rate limit expire failed; allowing request",
-						"prefix", prefix, "err", err)
-					_ = rdb.Del(ctx, key).Err()
-					c.Next()
-					return
-				}
-				log.L(c.Request.Context()).Error("rate limit expire failed", "prefix", prefix, "err", err)
-				_ = rdb.Del(ctx, key).Err()
-				response.ErrUnavailable(c, "限流服务暂不可用，请稍后再试")
-				c.Abort()
-				return
-			}
 		}
 
 		if count > int64(maxRequests) {
@@ -176,6 +160,24 @@ func rateLimitBy(
 		}
 		c.Next()
 	}
+}
+
+// incrementWindow 固定窗口计数：首次自增时补过期时间。
+//
+// Expire 失败说明计数会永久累积，此时删掉脏键并返回错误——严格模式据此拒绝，
+// 开放模式据此放行；两种模式都不能留下永不释放的配额。
+func incrementWindow(ctx context.Context, rdb *redis.Client, key string, window time.Duration) (int64, error) {
+	count, err := rdb.Incr(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	if count == 1 {
+		if err := rdb.Expire(ctx, key, window).Err(); err != nil {
+			_ = rdb.Del(ctx, key).Err()
+			return 0, err
+		}
+	}
+	return count, nil
 }
 
 func rateLimitPart(c *gin.Context, part RateLimitPart) string {
@@ -241,22 +243,16 @@ func (l *BindPhoneLimiter) Allow(ctx context.Context, ip, appID, phone string) b
 		return true
 	}
 	key := rateLimitKey("bind_phone", ip, joinRateLimitParts("app_id", appID, "phone", phone))
-	count, err := l.rdb.Incr(ctx, key).Result()
+	count, err := incrementWindow(ctx, l.rdb, key, l.window)
 	if err != nil {
-		log.L(ctx).Warn("bind phone rate limit increment failed; allowing request", "err", err)
+		log.L(ctx).Warn("bind phone rate limit store unavailable; allowing request", "err", err)
 		return true
-	}
-	if count == 1 {
-		if err := l.rdb.Expire(ctx, key, l.window).Err(); err != nil {
-			log.L(ctx).Warn("bind phone rate limit expire failed; allowing request", "err", err)
-			_ = l.rdb.Del(ctx, key).Err()
-			return true
-		}
 	}
 	return count <= int64(l.max)
 }
 
 const rateLimitBodyKey = "middleware.ratelimit.json_body"
+
 // jsonBodyString 读取请求体里的字符串字段。读取后还原请求体，handler 仍能绑定。
 // 结果按请求缓存，多个限流中间件不会重复读取。
 func jsonBodyString(c *gin.Context, keys ...string) string {

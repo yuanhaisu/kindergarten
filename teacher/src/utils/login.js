@@ -2,9 +2,9 @@ import { bindInvite, wxCodeLogin } from "@/api/auth"
 import { getConsentStatus } from "@/api/consent"
 import { getToken, setRefreshToken, setToken, setUser } from "@/utils/auth"
 import { clearEntitlementCache } from "./entitlement-cache.mjs"
-
-// #168：邀请码由启动参数写入，绑定成功后立即消费，避免下次启动拿旧码重试。
-const INVITE_CODE_KEY = "invite_code"
+// #168：邀请码由启动参数写入（含小程序码 scene），绑定成功后立即消费，
+// 避免下次启动拿旧码重试。键名与写入方共用同一常量。
+import { INVITE_CODE_KEY } from "./inviteScene.mjs"
 
 let loginPromise = null
 

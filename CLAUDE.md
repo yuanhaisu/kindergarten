@@ -336,7 +336,7 @@ internal/
   app/                   # Wire injector, providers, router registration, wire_gen.go
   config/                # INI loader with env var override
   auth/                  # JWT issue/parse, WeChat code2session, refresh token
-  middleware/             # Recovery/CORS/RequestID/Logger → AuthJWT → 园所状态 → CasbinRBAC → ModuleGate → consent（按端）→ RequirePermission（admin）
+  middleware/             # Recovery/CORS/RequestID/Logger → AuthJWT → 园所状态 → RequireBoundAccount → CasbinRBAC → ModuleGate → consent（按端）→ RequirePermission（admin）
   rbac/                  # Casbin enforcer init
   domain/                # GORM entity models (108 structs / 42 files)
   repository/            # Data access layer (one repo file per domain)
@@ -376,6 +376,10 @@ pkg/
 
 > `migrate` / `seedbase` / `schemadump` 见上方「数据库迁移」一节，此处不重复。
 
+> 🗑️ `openid` / `linkwx` / `fixpwd` / `setpwd` 已随 #173（旧跨端身份模型退役）删除：它们全部围绕
+> 「两条 User + openid 绑定」的旧模型写死，新模型下已无意义。`mktoken` / `initcheck` / `setadmin`
+> 已适配新模型并保留。不要把上述已删命令按旧文档补回来。
+
 > ✅ **三个 `seed*` 命令的由来**：出勤 / 请假 / 接送的演示数据原先由 service 层的
 > `ensureBootstrap*` 函数在**读取路径**上按需生成。那意味着打开一次后台看板或列表页
 > 就会往生产表写入编造数据。现已全部移出，只能由这些命令显式触发。
@@ -406,7 +410,7 @@ pkg/
 >
 > 会打印该表的全部索引（标注唯一/普通、列出列序）与行数。跑完 `make migrate` 或手工 SQL 后，用它确认线上库真的变了，而不是假设迁移会按预期执行。
 
-**Middleware chain**: `gin.Recovery → CORS → RequestID → RequestContextLogger`；authed 组：`AuthJWT → RequireActiveKindergarten → CasbinRBAC → ModuleGate`，再按端叠加 `RequireConsent`（admin/teacher/parent）与 `RequirePermission`（仅 admin）；`/platform` 走 `PlatformAuth → CasbinRBAC`
+**Middleware chain**: `gin.Recovery → CORS → RequestID → RequestContextLogger`；authed 组：`AuthJWT → RequireActiveKindergarten → RequireBoundAccount → CasbinRBAC → ModuleGate`，再按端叠加 `RequireConsent`（admin/teacher/parent）与 `RequirePermission`（仅 admin）；`/platform` 走 `PlatformAuth → CasbinRBAC`
 
 **Auth flow (mini-program)**: Client calls `wx.login()` → gets code → `POST /api/v1/auth/login/wechat` with code + role → backend calls WeChat code2session → issues JWT access + refresh tokens.
 

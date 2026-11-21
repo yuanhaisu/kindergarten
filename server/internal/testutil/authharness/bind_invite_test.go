@@ -282,7 +282,9 @@ type teacherBindOptions struct {
 func setupTeacherBind(t *testing.T, h *authharness.Harness, opts teacherBindOptions) *teacherBindFixture {
 	t.Helper()
 
-	appID := uniqueAppID("bind-invite")
+	// 用真实的 app_id 形状：审计自由文本会把 ≥18 位数字串按身份证掩码，
+	// uniqueAppID 末尾的纳秒会让「审计含 app_id」的断言失真。
+	appID := uniqueWxAppID()
 	openID := uniqueOpenID("bind-invite")
 	code := uniqueCode("bind-invite")
 	h.WeChat.StubCode2Session(code, openID, "")

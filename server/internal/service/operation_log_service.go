@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/pagination"
 )
@@ -18,6 +19,16 @@ type OperationLogService struct {
 
 func NewOperationLogService(oplog *repository.OperationLogRepo) *OperationLogService {
 	return &OperationLogService{oplog: oplog}
+}
+
+// Record 写一条操作日志。登录/绑定/切换这类「会话建立」审计由 HTTP 边界调用
+// （#160 L205）：只有那一层同时握有请求 IP/UA 与签发结果。写失败由调用方
+// 决定是否致命——认证链路按 best-effort 处理，不因审计故障拒绝登录。
+func (s *OperationLogService) Record(ctx context.Context, entry *domain.OperationLog) error {
+	if s == nil || s.oplog == nil {
+		return errors.New("operation log repo not configured")
+	}
+	return s.oplog.Create(ctx, entry)
 }
 
 type operationLogOperator struct {
@@ -191,6 +202,9 @@ func moduleLabelForAPI(apiModule string) string {
 		return "请假管理"
 	case "audit":
 		return "内容审核"
+	// #160 L205：登录/绑定/切换属于会话建立审计，不属于任何业务模块。
+	case "auth":
+		return "登录与绑定"
 	default:
 		return apiModule
 	}
@@ -226,6 +240,15 @@ func actionLabelFor(action string) string {
 		return "家长取消公开"
 	case "revoke_public_task":
 		return "关闭任务公开"
+	// 会话建立审计（module=auth，#160 L205）。
+	case "login":
+		return "登录"
+	case "bind_parent_phone":
+		return "家长绑定手机号"
+	case "bind_invite":
+		return "老师扫码绑定"
+	case "switch_kindergarten":
+		return "切换园所"
 	default:
 		return action
 	}

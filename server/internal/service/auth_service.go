@@ -2,10 +2,8 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 	"strings"
 	"time"
@@ -17,7 +15,6 @@ import (
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/storage/oss"
-	"kindergarten-server/pkg/log"
 )
 
 // AuthUserRepository AuthService 依赖的用户仓库接口（由 *repository.UserRepo 隐式实现）
@@ -162,29 +159,32 @@ type RoleInfo struct {
 	Permissions      []string `json:"permissions,omitempty"`
 }
 
-// RoleScope 限定一次请求可见的角色族（#175）。
+// RoleScope 限定一次请求可见的角色族（#175 / #160 会话单园）。
 //
-// 小程序凭证（带 app_id）只允许看到当前客户端角色族的角色，且
-// must_change_password 只属于管理端密码登录，对小程序凭证不生效。
+// 小程序凭证（带 app_id）只允许看到「当前客户端角色族 ∩ 当前会话园所」的角色，
+// 且 must_change_password 只属于管理端密码登录，对小程序凭证不生效。
+// 完整成员关系走「我的园所」，不混在 roles 里。
 // zero value 表示不限制：管理端、平台方与旧凭证行为不变。
 type RoleScope struct {
-	clientScoped bool
-	allowed      []string
+	clientScoped   bool
+	allowed        []string
+	kindergartenID uint64
 }
 
 // RoleScopeFromClaims 由访问凭证推导角色可见范围。
-// app_id 存在即视为小程序客户端凭证；允许集合取凭证里的角色，
-// 因为签发时已经做过角色族裁剪。
+// app_id 存在即视为小程序客户端凭证；允许集合取凭证里的角色（签发时已按
+// 角色族裁剪），园所取凭证里的会话园所——token 始终只代表一个园。
 func RoleScopeFromClaims(claims *auth.AccessClaims) RoleScope {
 	if claims == nil || claims.AppID == "" {
 		return RoleScope{}
 	}
-	return RoleScope{clientScoped: true, allowed: claims.Roles}
+	return RoleScope{clientScoped: true, allowed: claims.Roles, kindergartenID: claims.KindergartenID}
 }
 
-// clientRoleScope 是登录路径的作用域：roles 已按客户端角色族裁剪过。
-func clientRoleScope(roleNames []string) RoleScope {
-	return RoleScope{clientScoped: true, allowed: roleNames}
+// clientRoleScope 是登录路径的作用域：roles 已按客户端角色族裁剪过，
+// kindergartenID 是本次签发 token 的会话园所。
+func clientRoleScope(roleNames []string, kindergartenID uint64) RoleScope {
+	return RoleScope{clientScoped: true, allowed: roleNames, kindergartenID: kindergartenID}
 }
 
 func (s RoleScope) Allows(role string) bool {
@@ -205,9 +205,15 @@ func (s RoleScope) filter(roles []domain.UserRole) []domain.UserRole {
 	}
 	filtered := make([]domain.UserRole, 0, len(roles))
 	for _, r := range roles {
-		if s.Allows(r.Role) {
-			filtered = append(filtered, r)
+		if !s.Allows(r.Role) {
+			continue
 		}
+		// 会话单园：响应里的 roles 必须与 token 的 kindergarten_id 一致，
+		// 否则两端多园账号会拿到 token 之外的园所角色（#160）。
+		if r.KindergartenID == nil || *r.KindergartenID != s.kindergartenID {
+			continue
+		}
+		filtered = append(filtered, r)
 	}
 	return filtered
 }
@@ -270,19 +276,6 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uint64, oldPass
 		"password_hash":        hash,
 		"must_change_password": false,
 	})
-}
-
-// issueTokens 签发 access + refresh；access claims 含 kindergarten_id（由 user_roles 推导）
-func (s *AuthService) issueTokens(ctx context.Context, user *domain.User) (*LoginResult, error) {
-	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
-	if err != nil {
-		return nil, err
-	}
-	return s.issueTokensFromRoles(ctx, user, roles)
-}
-
-func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
-	return s.issueTokensFor(ctx, user, roles, nil, "")
 }
 
 // issueAdminTokens 签发管理端会话（#166）：先收敛出唯一园所的管理员角色，
@@ -438,7 +431,7 @@ func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, rol
 	// 其余路径保持全量（#175）。
 	scope := RoleScope{}
 	if client != nil {
-		scope = clientRoleScope(roleNames)
+		scope = clientRoleScope(roleNames, kgID)
 	}
 	userInfo, err := s.buildUserInfo(ctx, user, scope)
 	if err != nil {
@@ -490,67 +483,9 @@ func kindergartenIDFromUserRoles(roles []domain.UserRole) uint64 {
 	return 0
 }
 
-// SendSMS 发送短信验证码（实际短信发送需对接第三方，此处仅存 Redis）。
-//
-// v1 未在 HTTP 层暴露（#162）；恢复前必须先补齐真实发送、频控与角色校验。
-func (s *AuthService) SendSMS(ctx context.Context, phone, scene string) (int, error) {
-	key := fmt.Sprintf("sms:%s:%s", scene, phone)
-
-	ttl, err := s.rdb.TTL(ctx, key).Result()
-	if err == nil && ttl > 4*time.Minute {
-		return 0, fmt.Errorf("SMS_TOO_FREQUENT")
-	}
-
-	code := generateSMSCode()
-	expire := 5 * time.Minute
-	if err := s.rdb.Set(ctx, key, code, expire).Err(); err != nil {
-		return 0, err
-	}
-
-	log.L(ctx).Info("sms code generated", "phone", maskPhone(phone), "scene", scene)
-	// TODO: 对接实际短信服务商发送验证码
-	return int(expire.Seconds()), nil
-}
-
-func (s *AuthService) verifySMSCode(ctx context.Context, phone, scene, code string) error {
-	key := fmt.Sprintf("sms:%s:%s", scene, phone)
-	stored, err := s.rdb.Get(ctx, key).Result()
-	if err == redis.Nil {
-		return fmt.Errorf("SMS_CODE_EXPIRED")
-	}
-	if err != nil {
-		return err
-	}
-	if stored != code {
-		return fmt.Errorf("SMS_CODE_INVALID")
-	}
-	s.rdb.Del(ctx, key)
-	return nil
-}
-
-// SMSLogin 手机号 + 验证码登录。
-//
-// v1 关闭（#162）：当前实现忽略 role 且无频控，未在 HTTP 层暴露；
-// 恢复前必须补齐角色校验与限流。
-func (s *AuthService) SMSLogin(ctx context.Context, phone, code, role string) (*LoginResult, error) {
-	if err := s.verifySMSCode(ctx, phone, "login", code); err != nil {
-		return nil, err
-	}
-
-	user, err := s.userRepo.FindByPhone(ctx, phone)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		user = &domain.User{Phone: phone}
-		if err := s.userRepo.Create(ctx, user); err != nil {
-			return nil, err
-		}
-		log.L(ctx).Info("new user registered via sms", "user_id", user.ID)
-	}
-
-	return s.issueTokens(ctx, user)
-}
+// 短信登录（SendSMS / verifySMSCode / SMSLogin）已在 #162 关闭并删除：
+// handler 固定返回 403，保留一套没人调用、却忽略 role 且无频控的实现只会
+// 让「恢复短信」看起来比实际更近。恢复时必须重写发送、频控与角色校验。
 
 // PasswordLogin 密码登录（仅管理后台）。
 //
@@ -1043,11 +978,6 @@ func maskPhone(phone string) string {
 		return phone
 	}
 	return phone[:3] + "****" + phone[len(phone)-4:]
-}
-
-func generateSMSCode() string {
-	n, _ := rand.Int(rand.Reader, big.NewInt(1000000))
-	return fmt.Sprintf("%06d", n.Int64())
 }
 
 func HashPassword(password string) (string, error) {

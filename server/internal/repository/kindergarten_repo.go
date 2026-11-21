@@ -148,7 +148,7 @@ func (r *KindergartenRepo) SetPublicCodeIfEmpty(ctx context.Context, id uint64, 
 		Where("id = ? AND public_code = ?", id, "").
 		Update("public_code", code)
 	if res.Error != nil {
-		if isDuplicateKeyError(res.Error) {
+		if IsDuplicateKey(res.Error) {
 			return false, ErrDuplicatePublicCode
 		}
 		return false, res.Error

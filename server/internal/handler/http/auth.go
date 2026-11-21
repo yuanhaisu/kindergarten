@@ -70,6 +70,7 @@ func (h *Handler) WeChatLogin(c *gin.Context) {
 		return
 	}
 
+	h.recordAuthAudit(c, "login", req.AppID, result)
 	response.OK(c, result)
 }
 
@@ -253,6 +254,7 @@ func (h *Handler) BindParentPhone(c *gin.Context) {
 		return
 	}
 
+	h.recordAuthAudit(c, "bind_parent_phone", claims.AppID, result.LoginResult)
 	response.OK(c, result)
 }
 

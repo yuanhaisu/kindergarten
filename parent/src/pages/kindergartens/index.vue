@@ -13,6 +13,8 @@ import { onLoad } from "@dcloudio/uni-app"
 import { getUser } from "@/utils/auth"
 import { ensureLogin } from "@/utils/login"
 import { fetchMyKindergartens, switchKindergarten } from "@/api/auth"
+import { loadCurrentKindergartenBrand } from "@/utils/brand"
+import { normalizeBrandColor, tintBrandColor } from "@/utils/kindergartenBrand.mjs"
 import PageShell from "@/components/PageShell.vue"
 
 // remixicon 字形（App.vue 已全局注册字体）；小程序 WXML 不允许内联 SVG。
@@ -37,6 +39,8 @@ const items = ref([])
 const user = ref(getUser())
 const switchingID = ref(0)
 const loadError = ref("")
+const brand = ref(null)
+const logoFailed = ref(false)
 
 const switching = computed(() => switchingID.value > 0)
 
@@ -56,6 +60,20 @@ const currentKindergarten = computed(() => {
 const currentName = computed(
   () => currentKindergarten.value?.name || "未读取到当前园所"
 )
+
+// 品牌色只驱动本页「当前园」这一面：顶部色条 + 同色柔底，其余样式仍走 token。
+// 全站换肤要求页面样式改为消费 CSS 变量（目前两端还没有消费方），属独立设计变更。
+const currentBrandColor = computed(() => normalizeBrandColor(brand.value?.brand_color))
+const heroTint = computed(() => tintBrandColor(currentBrandColor.value))
+// logo 是 10 分钟签名 URL，加载失败就退回字形，不留破图。
+const currentLogo = computed(() => {
+  if (logoFailed.value) return ""
+  return String(brand.value?.logo_url || "").trim()
+})
+
+function onLogoError() {
+  logoFailed.value = true
+}
 
 function roleLabel(item) {
   const role = String(item?.role || "").trim()
@@ -80,6 +98,12 @@ async function load() {
     const res = await fetchMyKindergartens()
     items.value = Array.isArray(res?.data) ? res.data : []
     state.value = items.value.length ? "ok" : "empty"
+    brand.value = null
+    logoFailed.value = false
+    // 品牌是装饰层：loader 内部已兜底，失败只会退回 token 样式，不影响列表。
+    if (items.value.length) {
+      brand.value = await loadCurrentKindergartenBrand(items.value, currentKindergartenID.value)
+    }
   } catch (err) {
     // 失败不静默：整页错误态 + 重试；列表接口 403 时文案由服务端给出。
     console.warn("[kindergartens] load failed:", err?.message || err)
@@ -132,9 +156,17 @@ onLoad(load)
   <PageShell max-width="430px">
     <view class="kg-page">
       <!-- 当前园所 -->
-      <view class="kg-hero">
+      <view class="kg-hero" :style="heroTint ? { background: heroTint } : {}">
+        <view v-if="currentBrandColor" class="hero-accent" :style="{ background: currentBrandColor }" />
         <view class="hero-icon">
-          <text class="hero-glyph">{{ ICON.building }}</text>
+          <image
+            v-if="currentLogo"
+            class="hero-logo"
+            :src="currentLogo"
+            mode="aspectFill"
+            @error="onLogoError"
+          />
+          <text v-else class="hero-glyph">{{ ICON.building }}</text>
         </view>
         <view class="hero-copy">
           <text class="hero-label">当前园所</text>
@@ -219,15 +251,26 @@ onLoad(load)
   gap: $spacing-lg;
 }
 
-/* 当前园所：暖色柔光定位「我现在在哪」 */
+/* 当前园所：暖色柔光定位「我现在在哪」；有品牌色时由 inline style 覆盖底色 */
 .kg-hero {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $spacing-lg;
+  overflow: hidden;
   padding: $spacing-xl;
   border-radius: $component-card-radius;
   background: $gradient-brand-soft;
   box-shadow: $shadow-sm;
+}
+
+/* 品牌色条：颜色来自公开品牌接口，宽度固定，不改变布局高度 */
+.hero-accent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 6rpx;
 }
 
 .hero-icon {
@@ -245,6 +288,12 @@ onLoad(load)
   font-family: remixicon;
   font-size: $typography-font-size-2xl;
   color: $color-brand-primary-dark;
+}
+
+.hero-logo {
+  width: 100%;
+  height: 100%;
+  border-radius: $border-radius-full;
 }
 
 .hero-copy {

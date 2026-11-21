@@ -23,14 +23,14 @@ const CtxUnboundWhitelistedKey = "unbound_whitelisted"
 
 // unboundAllowedRoutes 待绑定 token 唯一可达的路由（method + gin 路由模式）。
 //
-// 绑定接口（#167/#168）尚未注册，先登记路径：路由上线后无需再改这里，
-// 也不会因为漏加白名单让绑定流程自己 403。公开品牌路由不在 authed 组内，
-// /auth/refresh 也不在（它们不经过本中间件）。
+// 与规格 #160「未绑定 token 的强制白名单」一一对应：登出、隐私同意、用户资料、
+// 园所列表、绑定接口。`PUT /common/user/avatar` 不在其中——待绑定账号还不需要
+// 改头像，多放一条就多一条未绑定状态的写入口。
+// 公开品牌路由不在 authed 组内，/auth/refresh 也不在（它们不经过本中间件）。
 var unboundAllowedRoutes = map[string]struct{}{
 	"POST /api/v1/auth/logout":                   {},
 	"GET /api/v1/common/user/profile":            {},
 	"PUT /api/v1/common/user/profile":            {},
-	"PUT /api/v1/common/user/avatar":             {},
 	"GET /api/v1/common/consent":                 {},
 	"POST /api/v1/common/consent":                {},
 	"GET /api/v1/common/user/kindergartens":      {},

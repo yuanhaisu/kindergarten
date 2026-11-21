@@ -166,6 +166,76 @@ func TestMyKindergartensExposePublicCode(t *testing.T) {
 	assert.Equal(t, "scantest01", items[0].PublicCode, "成员园必须带出公开码，否则扫码无法匹配到园")
 }
 
+// #160 L131：登录与资料响应的 roles 只含「当前客户端角色族 ∩ 会话园所」。
+// 会话始终单园（token 的 kindergarten_id）；完整成员关系走「我的园所」。
+func TestLoginAndProfileRolesNarrowedToSessionKindergarten(t *testing.T) {
+	h := authharness.New(t)
+	appID := uniqueAppID("kg-session-roles")
+	seedSharedClient(t, h, appID, domain.ClientRoleParent)
+
+	kgA := seedKindergartenWithChannel(t, h, "会话甲园", domain.AppChannelShared)
+	kgB := seedKindergartenWithChannel(t, h, "会话乙园", domain.AppChannelShared)
+	openID := uniqueOpenID("kg-session-roles")
+	seedMember(t, h, appID, openID,
+		memberRole{role: domain.ClientRoleParent, kg: kgA},
+		memberRole{role: domain.ClientRoleParent, kg: kgB},
+	)
+
+	result := loginWithClient(t, h, appID, openID)
+	claims, err := auth.ParseAccess(h.Secret, result.Token)
+	require.NoError(t, err)
+	require.NotZero(t, claims.KindergartenID, "登录必须落到一个会话园")
+
+	require.Len(t, result.User.Roles, 1, "两园家长登录响应只能带会话园的角色")
+	assert.Equal(t, domain.ClientRoleParent, result.User.Roles[0].Role)
+	require.NotNil(t, result.User.Roles[0].KindergartenID)
+	assert.Equal(t, claims.KindergartenID, *result.User.Roles[0].KindergartenID,
+		"roles 必须与 token 的 kindergarten_id 一致")
+
+	profileResp := h.Get(t, "/api/v1/common/user/profile", result.Token)
+	require.Equal(t, 200, profileResp.Status, string(profileResp.Body))
+	var profile service.ProfileInfo
+	profileResp.DecodeData(t, &profile)
+	require.Len(t, profile.Roles, 1, "资料响应同样只带会话园角色")
+	require.NotNil(t, profile.Roles[0].KindergartenID)
+	assert.Equal(t, claims.KindergartenID, *profile.Roles[0].KindergartenID)
+
+	items := listMemberships(t, h, result.Token)
+	require.Len(t, items, 2, "完整成员关系仍应出现在「我的园所」")
+
+	// 切换后 roles 必须跟着会话一起换到目标园。
+	otherKg := kgA.ID
+	if claims.KindergartenID == kgA.ID {
+		otherKg = kgB.ID
+	}
+	switched := switchOK(t, h, result.Token, otherKg, result.RefreshToken)
+	require.Len(t, switched.User.Roles, 1)
+	require.NotNil(t, switched.User.Roles[0].KindergartenID)
+	assert.Equal(t, otherKg, *switched.User.Roles[0].KindergartenID)
+}
+
+// 老师端同一账号带两个园的老师角色时，登录响应同样只出一个园。
+func TestTeacherLoginRolesNarrowedToSessionKindergarten(t *testing.T) {
+	h := authharness.New(t)
+	appID := uniqueAppID("kg-session-teacher")
+	seedSharedClient(t, h, appID, domain.ClientRoleTeacher)
+
+	kgA := seedKindergartenWithChannel(t, h, "老师甲园", domain.AppChannelShared)
+	kgB := seedKindergartenWithChannel(t, h, "老师乙园", domain.AppChannelShared)
+	openID := uniqueOpenID("kg-session-teacher")
+	seedMember(t, h, appID, openID,
+		memberRole{role: domain.ClientRoleTeacher, kg: kgA},
+		memberRole{role: domain.ClientRoleTeacher, kg: kgB},
+	)
+
+	result := loginWithClient(t, h, appID, openID)
+	claims, err := auth.ParseAccess(h.Secret, result.Token)
+	require.NoError(t, err)
+	require.Len(t, result.User.Roles, 1)
+	require.NotNil(t, result.User.Roles[0].KindergartenID)
+	assert.Equal(t, claims.KindergartenID, *result.User.Roles[0].KindergartenID)
+}
+
 // 待绑定 token 在未绑定白名单内：可以访问，但没有任何成员关系。
 func TestMyKindergartensEmptyForUnboundToken(t *testing.T) {
 	h := authharness.New(t)

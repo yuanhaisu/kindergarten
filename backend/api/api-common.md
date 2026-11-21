@@ -144,14 +144,15 @@
 
 - **身份**：按 `(app_id, open_id)` 查 `user_identities`；没有身份时创建「待绑定账号 +
   身份」（手机号为空、无角色、不加入任何园所）。同一身份再次登录复用同一账号。
-- **角色裁剪**：`user.roles` 与 token `roles` 都是「当前客户端角色族 ∩ 该账号实际角色」。
-  同一账号同时是家长与老师时，家长端只出 `parent`、老师端只出 `teacher`，
-  `kindergarten_id` 也由裁剪后的角色推导。
+- **角色裁剪**：`user.roles` 与 token `roles` 都是「当前客户端角色族 ∩ 当前会话园所」
+  的角色，且 `user.roles[].kindergarten_id` 与 token 的 `kindergarten_id` 一致（会话始终单园）。
+  同一账号同时是家长与老师时，家长端只出 `parent`、老师端只出 `teacher`；
+  多园账号的完整成员关系走 `GET /common/user/kindergartens`，不混在 `roles` 里。
 - **待绑定限制**：待绑定 token（`app_id` 存在且角色为空）只能访问
-  `GET|PUT /common/user/profile`、`PUT /common/user/avatar`、`GET|POST /common/consent`、
+  `GET|PUT /common/user/profile`、`GET|POST /common/consent`、
   `POST /auth/logout`、`GET /common/user/kindergartens`、
   `POST /common/user/bind-parent-phone`（#167）与 `POST /common/user/bind-invite`（#168）；
-  其余业务接口返回
+  其余业务接口（含 `PUT /common/user/avatar`）返回
   `403` + `code=40302`（客户端应跳转绑定页，而不是提示无权限）。
 - **错误**：缺 `app_id` / 角色与客户端不一致 / 家长端携带 `invite_code` → `422`（`42200`）；
   客户端未注册或已停用 → `403`（`40300`）；`code` 无效 → `400`（`40002`）。
@@ -524,7 +525,8 @@ Content-Type: multipart/form-data
 
 **字段说明**：
 
-- `roles[]` 为当前用户全部角色条目；字段随 `role` 取值不同。
+- `roles[]` 只含当前会话园所（token 的 `kindergarten_id`）的角色条目；字段随 `role` 取值不同。
+  多园账号想拿全部成员关系，调 `GET /common/user/kindergartens`，不要期望 `roles` 里有多园。
 - `role: "admin"` 的条目承载管理端角色信息：
   - `admin_role`：管理端角色标记/名称（超管账号为 `super_admin` 标记）。
   - `permissions`：该账号在对应园所的权限码集合，供管理端渲染菜单与拦截路由使用；**超管为通配时返回 `["*"]`**。权限码目录见 `api-admin/17-roles.md` 的 `GET /admin/permissions`。
@@ -729,6 +731,48 @@ Content-Type: multipart/form-data
 
 > 当前政策版本为 `v1`，与官网 `website/content/site.ts` 的 `policyVersion` 保持一致；
 > 备案通过、文本定稿后两处一起改为生效日期。
+
+---
+
+## 6. 园所公开品牌（无需登录）
+
+> 家长端/老师端在未登录的启动页（扫码落地）按 `public_code` 取园所品牌。
+> **鉴权：无**（不经过 `AuthJWT` / 园所门禁 / Casbin），也不需要 `Authorization` 头。
+> 响应只含公开字段，地址、电话、园长、证照、容量、简介等一律不下发。
+> 限流：IP 维度固定窗口 300 次/分钟；Redis 不可用时**失败开放**（公开只读数据，
+> 不能让缓存抖动放大成启动页 503），超限仍返回 `429`（`code=42900`）。
+
+### GET `/public/kindergartens/:public_code`
+
+```json
+// Request（仅路径参数）
+// GET /api/v1/public/kindergartens/scantest01
+
+// Response
+{
+  "public_code": "scantest01",
+  "name": "阳光幼儿园",
+  "logo_url": "https://bucket.oss-cn-hangzhou.aliyuncs.com/logo/kg-1.png?Expires=...&Signature=...",
+  "brand_color": "#F97316"
+}
+```
+
+**字段说明**：
+
+- `public_code`：园所公开码（`kindergartens.public_code`），扫码落地用它定位园所；不是连续 id。
+- `name`：园所对外名称。
+- `logo_url`：logo 的可访问 URL。存私有 OSS 时是**短期签名 URL**（有效期 10 分钟），
+  客户端不要长期缓存；非 OSS 引用原样返回。
+- `brand_color`：园所主题色，已在服务端归一化：命中预置色板或与白色对比度 ≥ 3:1 的
+  合法十六进制色；否则回退默认值 `#F97316`。客户端可直接用于运行时品牌变量。
+
+**响应头**：`Cache-Control: public, max-age=60`（显著短于 logo 签名有效期）。
+
+| code | HTTP | 含义 |
+| --- | --- | --- |
+| 40400 | 404 | 园所不存在或已软删（两者返回一致，避免探测园所是否存在） |
+| 50000 | 500 | 查询园所失败 |
+| 42900 | 429 | 触发 IP 限流 |
 
 ---
 

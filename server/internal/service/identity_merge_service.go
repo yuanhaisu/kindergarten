@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	mysqldrv "github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/repository"
 )
 
 // 账号合并（#165）：把「登录时新建的待绑定账号」并入「园所预创建账号」。
@@ -370,8 +370,7 @@ func movePendingIdentities(tx *gorm.DB, pendingID, targetID uint64) error {
 	if err == nil {
 		return nil
 	}
-	var me *mysqldrv.MySQLError
-	if errors.As(err, &me) && me.Number == 1062 {
+	if repository.IsDuplicateKey(err) {
 		return ErrIdentityMergePhoneAlreadyBound
 	}
 	return fmt.Errorf("move identities %d -> %d: %w", pendingID, targetID, err)

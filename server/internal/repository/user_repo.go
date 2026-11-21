@@ -106,7 +106,7 @@ func (r *UserRepo) FindOrCreateByPhone(
 		IDCardNumber: defaults.IDCardNumber,
 	}
 	if err := r.db.WithContext(ctx).Create(u).Error; err != nil {
-		if isDuplicateKeyError(err) {
+		if IsDuplicateKey(err) {
 			// 并发解析：另一个调用已插入同一手机号。唯一索引保证只有一行，
 			// 重新读取即可；仍读不到说明不是手机号冲突，原样上抛。
 			existing, findErr := r.findByActivePhone(ctx, phone)

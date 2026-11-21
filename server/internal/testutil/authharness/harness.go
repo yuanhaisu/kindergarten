@@ -239,7 +239,10 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	}
 
 	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc,
-		parentEntryQRSvc, buildSupportService(h), buildParentPortalService(h))
+		parentEntryQRSvc, buildSupportService(h), buildParentPortalService(h),
+		// 会话建立审计（#160 L205）落在 HTTP 边界，必须给 handler 真实的
+		// oplog 服务，否则登录/绑定/切换的审计在测试里无处可查。
+		service.NewOperationLogService(repository.NewOperationLogRepo(h.DB)))
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -334,7 +337,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 // 这些路由只依赖上述服务，无需为了一条测试缝拉起整棵依赖树。
 // 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
 // 强制同步，避免测试缝悄悄错位。
-func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService, supportSvc *service.IdentitySupportService, parentPortalSvc *service.ParentPortalService) *handler.Handler {
+func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService, supportSvc *service.IdentitySupportService, parentPortalSvc *service.ParentPortalService, oplogSvc *service.OperationLogService) *handler.Handler {
 	return handler.NewHandler(
 		authSvc,
 		nil, // fileSvc
@@ -358,7 +361,7 @@ func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.Settings
 		nil, // noticeSvc
 		nil, // announcementSvc
 		nil, // auditSvc
-		nil, // oplogSvc
+		oplogSvc,
 		nil, // exportSvc
 		nil, // teacherPortalSvc
 		parentPortalSvc,
