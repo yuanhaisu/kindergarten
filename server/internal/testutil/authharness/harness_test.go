@@ -54,9 +54,10 @@ func TestUnknownRouteReturnsNotFound(t *testing.T) {
 // 旧微信登录的「已下线」断言由 #175 取代：端点重新开放为新式 app_id 登录，
 // 旧请求体（只有 code）由 login_test.go 的 TestWeChatLoginRequiresAppID 覆盖。
 
-// 旧绑定端点（#164）已由 #167、#168 重写并重新上线：
-// 未认证请求必须是 401（端点存在且有鉴权），而不是 404（已下线）。
-func TestLegacyBindEndpointsRequireAuth(t *testing.T) {
+// 旧绑定端点（#164）由 #167、#168 重写后都已重新上线；
+// 未认证请求应在 AuthJWT 被拦下（401），而不是落到 handler。
+// 具体绑定行为见 bind_parent_phone_test.go 与 #168 的邀请绑定测试。
+func TestLegacyBindEndpointsRewritten(t *testing.T) {
 	h := authharness.New(t)
 
 	resp := h.PostJSON(t, "/api/v1/common/user/bind-invite", map[string]string{

@@ -286,6 +286,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.POST("/common/user/bind-parent-phone",
 			middleware.BindPhoneRateLimit(h.RedisClient, middleware.BindPhoneMaxPerMinute, time.Minute),
 			hnd.BindParentPhone)
+
 		// 园所品牌设置（#178）：权限码 system:kindergarten 在生产由
 		// RequirePermission 兜底，这里保留 Casbin（admin → /api/v1/*）即可。
 		adminG := authed.Group("/admin")

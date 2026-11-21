@@ -77,7 +77,7 @@ type AuthService struct {
 	identities     UserIdentityRepository
 	adminPerms     AdminPermissionResolver
 	kgStatus       KindergartenStatusChecker
-	kgMembership   KindergartenMembershipRepository
+	kindergartens  KindergartenMembershipRepository
 	rdb            *redis.Client
 	revoker        auth.TokenRevoker
 	secret         []byte
@@ -88,9 +88,9 @@ type AuthService struct {
 
 	// 家长绑定手机号（#167）的依赖。三者任一缺失时端点报未装配，
 	// 而不是让绑定流程跑一半。
-	kindergartens KindergartenLookup
-	merger        IdentityMerger
-	bindLimiter   BindPhoneRateLimiter
+	bindKindergartens KindergartenLookup
+	merger            IdentityMerger
+	bindLimiter       BindPhoneRateLimiter
 }
 
 func NewAuthService(
@@ -101,36 +101,36 @@ func NewAuthService(
 	identities UserIdentityRepository,
 	adminPerms AdminPermissionResolver,
 	kgStatus KindergartenStatusChecker,
-	kgMembership KindergartenMembershipRepository,
+	kindergartens KindergartenMembershipRepository,
 	rdb *redis.Client,
 	secret []byte,
 	atTTL time.Duration,
 	rtTTL time.Duration,
 	consentRepo ConsentRepository,
 	consentEnforce bool,
-	kindergartens KindergartenLookup,
+	bindKindergartens KindergartenLookup,
 	merger IdentityMerger,
 	bindLimiter BindPhoneRateLimiter,
 ) *AuthService {
 	return &AuthService{
-		userRepo:       userRepo,
-		userRoleRepo:   userRoleRepo,
-		wx:             wx,
-		clients:        clients,
-		identities:     identities,
-		adminPerms:     adminPerms,
-		kgStatus:       kgStatus,
-		kgMembership:   kgMembership,
-		rdb:            rdb,
-		revoker:        auth.NewTokenRevoker(rdb),
-		secret:         secret,
-		atTTL:          atTTL,
-		rtTTL:          rtTTL,
-		consentRepo:    consentRepo,
-		consentEnforce: consentEnforce,
-		kindergartens:  kindergartens,
-		merger:         merger,
-		bindLimiter:    bindLimiter,
+		userRepo:          userRepo,
+		userRoleRepo:      userRoleRepo,
+		wx:                wx,
+		clients:           clients,
+		identities:        identities,
+		adminPerms:        adminPerms,
+		kgStatus:          kgStatus,
+		kindergartens:     kindergartens,
+		rdb:               rdb,
+		revoker:           auth.NewTokenRevoker(rdb),
+		secret:            secret,
+		atTTL:             atTTL,
+		rtTTL:             rtTTL,
+		consentRepo:       consentRepo,
+		consentEnforce:    consentEnforce,
+		bindKindergartens: bindKindergartens,
+		merger:            merger,
+		bindLimiter:       bindLimiter,
 	}
 }
 
@@ -359,8 +359,6 @@ func (s *AuthService) IssueClientLogin(ctx context.Context, userID uint64, clien
 	return s.issueClientTokens(ctx, user, filterRolesByFamily(roles, client.Role), client, openID)
 }
 
-// issueTokensFor 是签发的唯一实现。client 为 nil 时是管理端/刷新路径（无 app_id），
-// 非 nil 时必须走 SignClientAccess，否则 token 无法回查客户端作用域。
 // clientOpenID 取该账号在当前客户端的身份 open_id。续期与切换都要把它
 // 写回 claims；身份缺失不是刷新失败的理由（待绑定用户也有身份，缺失只
 // 会让后续绑定报 IDENTITY_MISSING），但仓储错误必须显式失败。
@@ -378,6 +376,8 @@ func (s *AuthService) clientOpenID(ctx context.Context, userID uint64, client *d
 	return identity.OpenID, nil
 }
 
+// issueTokensFor 是签发的唯一实现。client 为 nil 时是管理端/刷新路径（无 app_id），
+// 非 nil 时必须走 SignClientAccess，否则 token 无法回查客户端作用域。
 func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client, openID string) (*LoginResult, error) {
 	roleNames := roleNamesFromUserRoles(roles)
 	kgID := kindergartenIDFromUserRoles(roles)
@@ -672,10 +672,10 @@ func (s *AuthService) loadKindergartenMap(ctx context.Context, roles []domain.Us
 	if len(ids) == 0 {
 		return map[uint64]*domain.Kindergarten{}, nil
 	}
-	if s.kgMembership == nil {
+	if s.kindergartens == nil {
 		return nil, errors.New("kindergarten membership repository not configured")
 	}
-	rows, err := s.kgMembership.FindByIDs(ctx, ids)
+	rows, err := s.kindergartens.FindByIDs(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("查询成员园所失败：%w", err)
 	}
