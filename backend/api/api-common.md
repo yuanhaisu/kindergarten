@@ -108,45 +108,33 @@
 
 ---
 
-### POST `/auth/login/wechat`
+### POST `/auth/login/wechat` — v1 关闭
 
-> 微信小程序登录（老师端 / 家长端）
+> ⛔ 旧微信登录在 v1 关闭（#164）：`open_id` 不再直接建账号。服务端固定返回
+> `403`（`code=40300`），不调用微信 `code2session`。新登录（`app_id` + `code`
+> → 账号 + 客户端身份）由 #175 落定后再更新本节；在此之前旧客户端应引导用户升级。
 
 ```json
-// Request
+// Request（v1 仍会被拒绝；旧格式仅作参考）
 {
-  "code": "0b3Khv000aXCfR1xxx000",   // wx.login() 获取的 code
-  "role": "teacher",                   // teacher | parent
-  "encrypted_data": "...",             // 可选，获取手机号时传入
-  "iv": "..."                          // 可选
+  "code": "0b3Khv000aXCfR1xxx000",
+  "role": "teacher"                    // teacher | parent
 }
 
-// Response（登录响应）
+// Response（v1 固定为 403）
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-  "expires_at": "2026-03-20T12:00:00Z",
-  "consent_required": true,
-  "current_policy_version": "v1",
-  "user": {
-    "id": 1,
-    "phone": "138****1234",
-    "nickname": "李老师",
-    "avatar": "https://cdn.example.com/avatar/1.jpg",
-    "gender": 1,
-    "roles": [
-      {
-        "role": "teacher",
-        "kindergarten_id": 1,
-        "kindergarten_name": "阳光幼儿园",
-        "class_id": 1,
-        "class_name": "小一班",
-        "title": "head"
-      }
-    ]
-  }
+  "code": 40300,
+  "message": "微信登录已升级，请更新小程序后重试",
+  "data": null
 }
 ```
+
+---
+
+### POST `/common/user/bind-invite`、`POST /common/user/bind-parent-phone` — 已移除
+
+> ⛔ 两个旧绑定端点已在 v1 移除，路由不存在（`404`），无需登录态。教师邀请码绑定
+> 与家长手机号换绑分别由 #168 / #167 重写后重新登记。
 
 ---
 

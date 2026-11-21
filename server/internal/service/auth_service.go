@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
@@ -38,28 +37,23 @@ type AuthRoleRepository interface {
 	FindByUserID(ctx context.Context, userID uint64) ([]domain.UserRole, error)
 }
 
-// InvitationRepository AuthService 依赖的邀请仓库接口（由 *repository.TeacherInvitationRepo 隐式实现）
-type InvitationRepository interface {
-	FindByToken(ctx context.Context, token string) (*domain.TeacherInvitation, error)
-	MarkUsed(ctx context.Context, id, userID uint64, openID, unionID string) error
-}
-
 // AdminPermissionResolver 解析管理端账号权限码（由 *AdminAuthzService 实现）。
 // 声明在消费方，便于 AuthService 单测注入桩。
 type AdminPermissionResolver interface {
 	ResolveAdminCodes(ctx context.Context, kindergartenID, userID uint64) ([]string, bool, error)
 }
 
+// AuthService v1 认证服务。
+//
+// #164 之后不再持有微信 API 与邀请仓库：openid 直接建号/绑定邀请码的旧路径已关闭，
+// 新登录（app_id + code → 账号 + 身份）与微信换绑由 #175 / #167 / #168 接管。
 type AuthService struct {
-	db             *gorm.DB
 	userRepo       AuthUserRepository
 	userRoleRepo   AuthRoleRepository
-	invitationRepo InvitationRepository
 	adminPerms     AdminPermissionResolver
 	kgStatus       KindergartenStatusChecker
 	rdb            *redis.Client
 	revoker        auth.TokenRevoker
-	wx             WeChatAPI
 	secret         []byte
 	atTTL          time.Duration
 	rtTTL          time.Duration
@@ -68,14 +62,11 @@ type AuthService struct {
 }
 
 func NewAuthService(
-	db *gorm.DB,
 	userRepo AuthUserRepository,
 	userRoleRepo AuthRoleRepository,
-	invitationRepo InvitationRepository,
 	adminPerms AdminPermissionResolver,
 	kgStatus KindergartenStatusChecker,
 	rdb *redis.Client,
-	wx WeChatAPI,
 	secret []byte,
 	atTTL time.Duration,
 	rtTTL time.Duration,
@@ -83,15 +74,12 @@ func NewAuthService(
 	consentEnforce bool,
 ) *AuthService {
 	return &AuthService{
-		db:             db,
 		userRepo:       userRepo,
 		userRoleRepo:   userRoleRepo,
-		invitationRepo: invitationRepo,
 		adminPerms:     adminPerms,
 		kgStatus:       kgStatus,
 		rdb:            rdb,
 		revoker:        auth.NewTokenRevoker(rdb),
-		wx:             wx,
 		secret:         secret,
 		atTTL:          atTTL,
 		rtTTL:          rtTTL,
@@ -336,145 +324,6 @@ func (s *AuthService) SMSLogin(ctx context.Context, phone, code, role string) (*
 	return s.issueTokens(ctx, user)
 }
 
-// WeChatLogin 微信小程序登录。inviteCode 非空时通过邀请码绑定预创建的教师账号。
-//
-// role 决定用哪端的微信凭据换取会话——两端 AppID 不同，openid 也不同，
-// 同一个人在两端会落两条 User（见 specs/wechat-login）。
-// role 未配置凭据或未知时返回明确错误，绝不回退到另一端凭据。
-func (s *AuthService) WeChatLogin(ctx context.Context, wxCode, role, inviteCode string) (*LoginResult, error) {
-	sess, err := s.wx.Code2Session(ctx, wxCode, role)
-	if err != nil {
-		return nil, fmt.Errorf("wechat code2session: %w", err)
-	}
-
-	if inviteCode != "" {
-		return s.weChatLoginWithInvite(ctx, sess, inviteCode)
-	}
-
-	user, err := s.resolveWeChatUser(ctx, sess)
-	if err != nil {
-		return nil, err
-	}
-	return s.issueTokens(ctx, user)
-}
-
-// resolveWeChatUser 按本端 openid 解析出 User，没有就新建一条。
-//
-// 两端 AppID 不同 ⇒ 同一自然人在两端的 openid 也不同 ⇒ 必然落两条 User，
-// 彼此独立（见 specs/wechat-login）。跨端「是不是同一个人」由 unionid / 手机号
-// 关联判定负责，这里绝不合并账号。
-func (s *AuthService) resolveWeChatUser(ctx context.Context, sess *auth.Code2SessionResp) (*domain.User, error) {
-	user, err := s.userRepo.FindByOpenID(ctx, sess.OpenID)
-	if err != nil {
-		return nil, err
-	}
-	if user != nil {
-		return user, nil
-	}
-
-	user = &domain.User{
-		OpenID:  sess.OpenID,
-		UnionID: sess.UnionID,
-	}
-	if err := s.userRepo.Create(ctx, user); err != nil {
-		return nil, err
-	}
-	log.L(ctx).Info("new user registered via wechat", "user_id", user.ID)
-	return user, nil
-}
-
-func (s *AuthService) weChatLoginWithInvite(ctx context.Context, sess *auth.Code2SessionResp, inviteCode string) (*LoginResult, error) {
-	inv, err := s.invitationRepo.FindByToken(ctx, inviteCode)
-	if err != nil {
-		return nil, err
-	}
-	if inv == nil {
-		return nil, fmt.Errorf("INVITE_CODE_INVALID")
-	}
-
-	user, err := s.userRepo.FindByID(ctx, inv.UserID)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, fmt.Errorf("INVITE_USER_NOT_FOUND")
-	}
-
-	user.OpenID = sess.OpenID
-	if sess.UnionID != "" {
-		user.UnionID = sess.UnionID
-	}
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		return nil, err
-	}
-
-	if err := s.invitationRepo.MarkUsed(ctx, inv.ID, user.ID, sess.OpenID, sess.UnionID); err != nil {
-		return nil, err
-	}
-
-	log.L(ctx).Info("teacher bound via invite", "user_id", user.ID, "kindergarten_id", inv.KindergartenID)
-	return s.issueTokens(ctx, user)
-}
-
-// BindInvite 已登录用户通过邀请码绑定预创建的教师账号。
-// currentUserID 是微信登录自动创建的空白用户，inviteCode 对应的 User B 是管理员预创建的教师。
-// 事务：将 User B 的所有角色/档案/带班关系迁移到 currentUser，删除 User B，签发新 JWT。
-func (s *AuthService) BindInvite(ctx context.Context, currentUserID uint64, inviteCode string) (*LoginResult, error) {
-	inv, err := s.invitationRepo.FindByToken(ctx, inviteCode)
-	if err != nil {
-		return nil, err
-	}
-	if inv == nil {
-		return nil, fmt.Errorf("INVITE_CODE_INVALID")
-	}
-
-	targetUser, err := s.userRepo.FindByID(ctx, inv.UserID)
-	if err != nil {
-		return nil, err
-	}
-	if targetUser == nil {
-		return nil, fmt.Errorf("INVITE_USER_NOT_FOUND")
-	}
-
-	if targetUser.ID == currentUserID {
-		return nil, fmt.Errorf("INVITE_SELF_BIND")
-	}
-
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 迁移 user_roles
-		if err := tx.Model(&domain.UserRole{}).Where("user_id = ?", targetUser.ID).
-			Update("user_id", currentUserID).Error; err != nil {
-			return err
-		}
-		// 迁移 teacher_profiles
-		if err := tx.Model(&domain.TeacherProfile{}).Where("user_id = ?", targetUser.ID).
-			Update("user_id", currentUserID).Error; err != nil {
-			return err
-		}
-		// 迁移 class_teachers
-		if err := tx.Model(&domain.ClassTeacher{}).Where("user_id = ?", targetUser.ID).
-			Update("user_id", currentUserID).Error; err != nil {
-			return err
-		}
-		// 更新邀请记录
-		if err := tx.Model(&domain.TeacherInvitation{}).Where("id = ?", inv.ID).
-			Updates(map[string]any{"user_id": currentUserID, "status": domain.TeacherInvitationUsed}).Error; err != nil {
-			return err
-		}
-		// 软删除原目标用户
-		if err := tx.Where("id = ?", targetUser.ID).Delete(&domain.User{}).Error; err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	log.L(ctx).Info("user bound via invite", "user_id", currentUserID, "target_user_id", targetUser.ID)
-	return s.issueTokens(ctx, &domain.User{BaseModel: domain.BaseModel{ID: currentUserID}})
-}
-
 // PasswordLogin 密码登录（管理后台 + 家长端共用）
 func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string) (*LoginResult, error) {
 	user, err := s.userRepo.FindByPhone(ctx, phone)
@@ -700,93 +549,6 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID uint64, nickname
 		}
 	}
 	return s.GetUserInfo(ctx, userID)
-}
-
-// BindParentPhone 家长微信登录后绑定手机号，匹配管理员预创建的家长账号。
-// currentUserID: 微信登录自动创建的空白 User（仅有 OpenID）。
-// 通过微信手机号 code 获取手机号 → 查找预创建的家长 User → 合并两个账号。
-func (s *AuthService) BindParentPhone(ctx context.Context, currentUserID uint64, wxPhoneCode string) (*LoginResult, error) {
-	phoneResp, err := s.wx.GetPhoneNumber(ctx, wxPhoneCode)
-	if err != nil {
-		return nil, fmt.Errorf("wechat getPhoneNumber: %w", err)
-	}
-
-	phone := phoneResp.PhoneInfo.PurePhoneNumber
-	if phone == "" {
-		return nil, fmt.Errorf("PHONE_NOT_FOUND")
-	}
-
-	existing, err := s.userRepo.FindByPhone(ctx, phone)
-	if err != nil {
-		return nil, err
-	}
-	if existing == nil {
-		return nil, fmt.Errorf("PARENT_RECORD_NOT_FOUND")
-	}
-
-	// 如果预创建的 User 没有 OpenID，将当前微信用户的 OpenID 回填
-	currentUser, err := s.userRepo.FindByID(ctx, currentUserID)
-	if err != nil {
-		return nil, err
-	}
-	if currentUser == nil {
-		return nil, fmt.Errorf("USER_NOT_FOUND")
-	}
-
-	if existing.ID == currentUserID {
-		// 同一个用户，直接签发 token
-		log.L(ctx).Info("parent phone already bound", "user_id", currentUserID)
-		return s.issueTokens(ctx, currentUser)
-	}
-
-	// 事务：将预创建 User 的 Role/Profile/Student 迁移到微信 User，更新预创建 User 的 OpenID
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 合并策略：将预创建 User(手机号) 的关联迁移到微信 User(OpenID)
-		if err := tx.Model(&domain.UserRole{}).Where("user_id = ?", existing.ID).
-			Update("user_id", currentUserID).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(&domain.ParentProfile{}).Where("user_id = ?", existing.ID).
-			Update("user_id", currentUserID).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(&domain.StudentParent{}).Where("user_id = ?", existing.ID).
-			Update("user_id", currentUserID).Error; err != nil {
-			return err
-		}
-		// 将预创建 User 的 Phone 和密码迁移到微信 User
-		fields := map[string]any{}
-		if existing.Phone != "" {
-			fields["phone"] = existing.Phone
-		}
-		if existing.PasswordHash != "" {
-			fields["password_hash"] = existing.PasswordHash
-		}
-		if existing.Nickname != "" && currentUser.Nickname == "" {
-			fields["nickname"] = existing.Nickname
-		}
-		if len(fields) > 0 {
-			if err := tx.Model(&domain.User{}).Where("id = ?", currentUserID).Updates(fields).Error; err != nil {
-				return err
-			}
-		}
-		// 软删除预创建 User
-		if err := tx.Where("id = ?", existing.ID).Delete(&domain.User{}).Error; err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	log.L(ctx).Info("parent bound via phone",
-		"current_user_id", currentUserID,
-		"merged_user_id", existing.ID,
-		"phone", maskPhone(phone),
-	)
-
-	return s.issueTokens(ctx, &domain.User{BaseModel: domain.BaseModel{ID: currentUserID}})
 }
 
 func (s *AuthService) UpdateAvatar(ctx context.Context, userID uint64, avatar string) (string, error) {

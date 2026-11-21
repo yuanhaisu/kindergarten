@@ -453,25 +453,16 @@ func (s *StudentService) persistStudentWithParentsInTx(
 		return err
 	}
 	for _, p := range parents {
-		u, err := s.users.FindByPhone(ctx, p.Phone)
+		// 统一账号解析（#164）：同一活跃手机号始终落到同一账号；
+		// 已存在账号的昵称/头像/性别/身份证号一律不改写——这里只是把新学生
+		// 挂到既有家长账号上，不能借导入覆盖别人已维护的资料。
+		u, _, err := s.users.WithDB(tx).FindOrCreateByPhone(ctx, p.Phone, repository.UserProfileDefaults{
+			Nickname:     p.Name,
+			PasswordHash: hash,
+			IDCardNumber: strings.TrimSpace(p.IDCardNumber),
+		})
 		if err != nil {
 			return err
-		}
-		if u == nil {
-			u = &domain.User{
-				Phone:        p.Phone,
-				Nickname:     p.Name,
-				PasswordHash: hash,
-				IDCardNumber: strings.TrimSpace(p.IDCardNumber),
-			}
-			if err := tx.Create(u).Error; err != nil {
-				return err
-			}
-		} else if p.IDCardNumber != "" {
-			if err := tx.Model(&domain.User{}).Where("id = ?", u.ID).
-				Update("id_card_number", strings.TrimSpace(p.IDCardNumber)).Error; err != nil {
-				return err
-			}
 		}
 		ur, err := s.roles.FindParentInKindergarten(ctx, u.ID, kindergartenID)
 		if err != nil {

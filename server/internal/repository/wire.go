@@ -49,4 +49,5 @@ var Set = wire.NewSet(
 	NewCommissionRepo,
 	NewConsentRepo,
 	NewClientRepo,
+	NewUserIdentityRepo,
 )

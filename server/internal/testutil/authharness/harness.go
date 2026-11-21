@@ -58,6 +58,23 @@ type Harness struct {
 	TestDSNFromEnv bool
 }
 
+// NewDB 返回本分支独立的测试库（真实 goose 迁移已执行）。
+//
+// 仓储层行为（生成列、唯一索引、软删与唯一键的相互作用）只能在真实 MySQL 上
+// 验证；AutoMigrate 造不出 phone_active 这类生成列，也不能复用开发库。
+// 库是包级共享的，测试必须用唯一键并在 Cleanup 里硬删自己写入的行。
+func NewDB(t testing.TB) *gorm.DB {
+	t.Helper()
+	setup := sharedTestDB()
+	if setup.skipReason != "" {
+		t.Skipf("authharness: %s", setup.skipReason)
+	}
+	if setup.err != nil {
+		t.Fatalf("authharness: %v", setup.err)
+	}
+	return setup.db
+}
+
 // New 装配测试环境。测试库不可用时 t.Skip，配置/迁移错误时 t.Fatal：
 // 「跳过」只用于环境缺失，不允许把真实故障伪装成跳过。
 func New(t testing.TB) *Harness {
@@ -82,14 +99,11 @@ func New(t testing.TB) *Harness {
 
 	secret, atTTL, rtTTL := jwtConfig(setup.cfg)
 	authSvc := service.NewAuthService(
-		setup.db,
 		userRepo,
 		userRoleRepo,
-		repository.NewTeacherInvitationRepo(setup.db),
 		adminAuthz,
 		kgStatus,
 		rdb,
-		fakeWx,
 		secret,
 		atTTL,
 		rtTTL,
@@ -166,7 +180,8 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	// v1 短信通道已关闭（#162），路由保留但统一走拒绝处理，与 router.go 保持一致。
 	v1.POST("/auth/sms/send", hnd.SMSDisabled)
 	v1.POST("/auth/login/sms", hnd.SMSDisabled)
-	v1.POST("/auth/login/wechat", hnd.WeChatLogin)
+	// 旧微信登录在 #164 关闭，与 router.go 保持一致。
+	v1.POST("/auth/login/wechat", hnd.WeChatLoginClosed)
 	v1.POST("/auth/login/password", hnd.PasswordLogin)
 	v1.POST("/auth/refresh", hnd.Refresh)
 
@@ -179,8 +194,6 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.POST("/auth/logout", hnd.Logout)
 		authed.GET("/common/user/profile", hnd.GetProfile)
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
-		authed.POST("/common/user/bind-invite", hnd.BindInvite)
-		authed.POST("/common/user/bind-parent-phone", hnd.BindParentPhone)
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
 	}

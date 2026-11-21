@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/auth"
-	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
 	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
@@ -26,41 +25,14 @@ func (h *Handler) SMSDisabled(c *gin.Context) {
 	response.ErrForbidden(c, "短信功能在 v1 未开放")
 }
 
-type wechatLoginReq struct {
-	Code          string `json:"code" binding:"required"`
-	Role          string `json:"role" binding:"required,oneof=teacher parent"`
-	EncryptedData string `json:"encrypted_data"`
-	IV            string `json:"iv"`
-	InviteCode    string `json:"invite_code"`
-}
-
-func (h *Handler) WeChatLogin(c *gin.Context) {
-	var req wechatLoginReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ErrValidation(c, err.Error())
-		return
-	}
-
-	result, err := h.authSvc.WeChatLogin(c.Request.Context(), req.Code, req.Role, req.InviteCode)
-	if err != nil {
-		msg := err.Error()
-		switch msg {
-		case "INVITE_CODE_INVALID":
-			response.ErrBadRequest(c, 40020, "邀请码无效或已过期")
-		case "INVITE_USER_NOT_FOUND":
-			response.ErrBadRequest(c, 40021, "邀请码关联的教师账号不存在")
-		case "KINDERGARTEN_SUSPENDED":
-			response.ErrForbidden(c, "园所已停用，请联系平台方")
-		default:
-			// 微信侧/凭据/网络的原因绝不能只回一句「登录失败」：排障时必须能看到
-			// code2session 的 errcode；对外文案仍保持模糊，避免泄漏配置细节。
-			log.L(c.Request.Context()).Error("wechat login failed", "role", req.Role, "err", err)
-			response.ErrBadRequest(c, 40002, "微信登录失败")
-		}
-		return
-	}
-
-	response.OK(c, result)
+// WeChatLoginClosed 旧微信登录在 #164 关闭。
+//
+// 原因不是「暂时不可用」，而是身份模型换了：openid 只能定位到「某账号在某客户端
+// 的身份」，不能再直接建账号（见 user_identities）。新登录（app_id + code →
+// 账号 + 身份）由 #175 接管；在此之前保留端点并明确拒绝，让旧客户端拿到可读提示。
+func (h *Handler) WeChatLoginClosed(c *gin.Context) {
+	log.L(c.Request.Context()).Warn("legacy wechat login rejected: closed in v1", "path", c.FullPath())
+	response.ErrForbidden(c, "微信登录已升级，请更新小程序后重试")
 }
 
 type passwordLoginReq struct {
@@ -168,70 +140,6 @@ func (h *Handler) AuthService() *service.AuthService {
 		return nil
 	}
 	return h.authSvc
-}
-
-type bindInviteReq struct {
-	InviteCode string `json:"invite_code" binding:"required"`
-}
-
-func (h *Handler) BindInvite(c *gin.Context) {
-	uid := middleware.GetUserID(c)
-	if uid == 0 {
-		response.ErrUnauthorized(c, "请先登录")
-		return
-	}
-	var req bindInviteReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ErrValidation(c, err.Error())
-		return
-	}
-	result, err := h.authSvc.BindInvite(c.Request.Context(), uid, req.InviteCode)
-	if err != nil {
-		msg := err.Error()
-		switch msg {
-		case "INVITE_CODE_INVALID":
-			response.ErrBadRequest(c, 40020, "邀请码无效或已过期")
-		case "INVITE_USER_NOT_FOUND":
-			response.ErrBadRequest(c, 40021, "邀请码关联的教师账号不存在")
-		case "INVITE_SELF_BIND":
-			response.ErrBadRequest(c, 40022, "不能绑定自己")
-		default:
-			response.ErrInternal(c, "绑定失败")
-		}
-		return
-	}
-	response.OK(c, result)
-}
-
-type bindParentPhoneReq struct {
-	WxPhoneCode string `json:"wx_phone_code" binding:"required"`
-}
-
-func (h *Handler) BindParentPhone(c *gin.Context) {
-	uid := middleware.GetUserID(c)
-	if uid == 0 {
-		response.ErrUnauthorized(c, "请先登录")
-		return
-	}
-	var req bindParentPhoneReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ErrValidation(c, err.Error())
-		return
-	}
-	result, err := h.authSvc.BindParentPhone(c.Request.Context(), uid, req.WxPhoneCode)
-	if err != nil {
-		msg := err.Error()
-		switch msg {
-		case "PHONE_NOT_FOUND":
-			response.ErrBadRequest(c, 40030, "未获取到手机号，请重新授权")
-		case "PARENT_RECORD_NOT_FOUND":
-			response.ErrBadRequest(c, 40031, "未找到匹配的家长信息，请联系管理员先创建家长账号")
-		default:
-			response.ErrInternal(c, "手机号绑定失败")
-		}
-		return
-	}
-	response.OK(c, result)
 }
 
 func (h *Handler) HealthCheck(c *gin.Context) {

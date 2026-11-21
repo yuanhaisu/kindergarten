@@ -51,9 +51,9 @@ func TestUnknownRouteReturnsNotFound(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.Status, string(resp.Body))
 }
 
-// 假微信必须真的替换掉真实微信客户端：code 在替身里登记过才可能成功，
-// 成功后又必须能在真实测试库里查到落库用户。
-func TestFakeWeChatLoginCreatesSessionOverHTTP(t *testing.T) {
+// 旧微信登录已下线（#164）：openid 不再作为身份源，新登录由 #175 接管。
+// 端点必须明确拒绝，且不得再调用微信 code2session 或创建账号。
+func TestOldWeChatLoginEndpointIsClosed(t *testing.T) {
 	h := authharness.New(t)
 	openID := fmt.Sprintf("openid-161-login-%d", time.Now().UnixNano())
 	code := "wx-code-161-" + openID
@@ -64,36 +64,31 @@ func TestFakeWeChatLoginCreatesSessionOverHTTP(t *testing.T) {
 		"code": code,
 		"role": "parent",
 	})
-	require.Equal(t, http.StatusOK, resp.Status, string(resp.Body))
+	require.Equal(t, http.StatusForbidden, resp.Status, string(resp.Body))
 
-	var login struct {
-		Token        string `json:"token"`
-		RefreshToken string `json:"refresh_token"`
-	}
-	resp.DecodeData(t, &login)
-	require.NotEmpty(t, login.Token)
-	require.NotEmpty(t, login.RefreshToken)
-
-	// 登录签发的 token 能穿过同一套 AuthJWT + 园所状态 + Casbin 中间件。
-	profile := h.Get(t, "/api/v1/common/user/profile", login.Token)
-	require.Equal(t, http.StatusOK, profile.Status, string(profile.Body))
+	assert.Empty(t, h.WeChat.Calls(), "关闭的登录不得再调用微信 code2session")
 
 	var count int64
 	require.NoError(t, h.DB.Unscoped().Model(&domain.User{}).
 		Where("open_id = ?", openID).Count(&count).Error)
-	require.EqualValues(t, 1, count, "登录应落一条真实用户行；数量为 0 说明打到了真实微信或没连测试库")
+	assert.Zero(t, count, "关闭的登录不得创建账号")
+}
 
-	calls := h.WeChat.Calls()
-	require.Len(t, calls, 1)
-	assert.Equal(t, "Code2Session", calls[0].Method)
-	assert.Equal(t, "parent", calls[0].Role, "假微信应收到客户端角色，而不是被写死的端")
+// 旧绑定端点已下线（#164）：换绑/绑定由 #167、#168 重写。
+// 路由直接移除，未认证请求也应该是 404 而不是 401——401 说明端点还挂着。
+func TestOldBindEndpointsAreRemoved(t *testing.T) {
+	h := authharness.New(t)
 
-	// 未登记的 code 必须失败——替身不会回退到真实网络请求。
-	bad := h.PostJSON(t, "/api/v1/auth/login/wechat", map[string]string{
-		"code": "code-not-stubbed",
-		"role": "parent",
-	})
-	assert.Equal(t, http.StatusBadRequest, bad.Status, string(bad.Body))
+	for _, path := range []string{
+		"/api/v1/common/user/bind-invite",
+		"/api/v1/common/user/bind-parent-phone",
+	} {
+		resp := h.PostJSON(t, path, map[string]string{
+			"invite_code":   "legacy-invite",
+			"wx_phone_code": "legacy-phone-code",
+		})
+		assert.Equal(t, http.StatusNotFound, resp.Status, "%s 必须已下线；body=%s", path, resp.Body)
+	}
 }
 
 // 软删行仍占用行位置（后续 phone_active 唯一索引的坑），清理必须硬删。

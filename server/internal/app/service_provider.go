@@ -15,14 +15,11 @@ import (
 )
 
 func ProvideAuthService(
-	db *gorm.DB,
 	userRepo *repository.UserRepo,
 	userRoleRepo *repository.UserRoleRepo,
-	invitationRepo *repository.TeacherInvitationRepo,
 	adminAuthz *service.AdminAuthzService,
 	kgStatus *service.KindergartenStatusService,
 	rdb *redis.Client,
-	wx *auth.WeChatClient,
 	secret JWTSecret,
 	atTTL AccessTTL,
 	rtTTL RefreshTTL,
@@ -30,14 +27,11 @@ func ProvideAuthService(
 	cfg *config.Config,
 ) *service.AuthService {
 	return service.NewAuthService(
-		db,
 		userRepo,
 		userRoleRepo,
-		invitationRepo,
 		adminAuthz,
 		kgStatus,
 		rdb,
-		wx,
 		[]byte(secret),
 		time.Duration(atTTL),
 		time.Duration(rtTTL),
