@@ -217,8 +217,11 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	v1.POST("/auth/sms/send", hnd.SMSDisabled)
 	v1.POST("/auth/login/sms", hnd.SMSDisabled)
 	// 小程序登录（#175）：角色与凭据来自客户端注册表，与 router.go 保持一致。
-	v1.POST("/auth/login/wechat", hnd.WeChatLogin)
-	v1.POST("/auth/login/password", hnd.PasswordLogin)
+	// 限流（#174）也按 router.go 同源装配：app_id + IP、高阈值、失败开放。
+	wechatLoginLimit := middleware.WeChatLoginRateLimit(h.RedisClient, middleware.WeChatLoginMaxPerMinute, time.Minute)
+	v1.POST("/auth/login/wechat", wechatLoginLimit, hnd.WeChatLogin)
+	passwordLoginLimit := middleware.PasswordLoginRateLimit(h.RedisClient, middleware.PasswordLoginMaxPerMinute, time.Minute)
+	v1.POST("/auth/login/password", passwordLoginLimit, hnd.PasswordLogin)
 	v1.POST("/auth/refresh", hnd.Refresh)
 
 	authed := v1.Group("")

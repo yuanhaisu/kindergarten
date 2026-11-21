@@ -46,8 +46,13 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/auth/login/sms", h.inner.SMSDisabled)
 		// 小程序登录（#175）：app_id → 客户端注册表 → 该角色凭据换 openid；
 		// 没有身份时创建待绑定账号，不自动成为任何园所成员。
-		v1.POST("/auth/login/wechat", h.inner.WeChatLogin)
-		v1.POST("/auth/login/password", h.inner.PasswordLogin)
+		// 限流按 app_id + IP、高阈值且失败开放：code 一次性，不能因 Redis
+		// 抖动把整所幼儿园挡在登录外（#174）。
+		wechatLoginLimit := middleware.WeChatLoginRateLimit(h.rdb, middleware.WeChatLoginMaxPerMinute, time.Minute)
+		v1.POST("/auth/login/wechat", wechatLoginLimit, h.inner.WeChatLogin)
+		// 密码登录只服务管理后台，按 IP + 手机号严格限流且失败关闭（#174）。
+		passwordLoginLimit := middleware.PasswordLoginRateLimit(h.rdb, middleware.PasswordLoginMaxPerMinute, time.Minute)
+		v1.POST("/auth/login/password", passwordLoginLimit, h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
 		// 园所公开品牌（#170）：未登录可访问，按 public_code（不可枚举）定位。
