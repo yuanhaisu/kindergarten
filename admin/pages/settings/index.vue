@@ -63,6 +63,40 @@
         <el-form-item label="简介">
           <el-input v-model="kgForm.description" type="textarea" :rows="3" />
         </el-form-item>
+        <el-form-item label="园所 Logo">
+          <div class="flex items-center gap-4">
+            <img
+              v-if="kgForm.logo_url"
+              :src="kgForm.logo_url"
+              alt="园所 Logo"
+              class="h-16 w-16 rounded-lg border border-border-subtle object-contain"
+              @error="onLogoError"
+            />
+            <div
+              v-else
+              class="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-border-subtle text-xs text-text-muted"
+            >
+              未上传
+            </div>
+            <el-upload :auto-upload="false" :show-file-list="false" accept="image/*" :on-change="onLogoPicked">
+              <el-button :loading="logoUploading">上传 Logo</el-button>
+            </el-upload>
+            <el-button v-if="kgForm.logo_url" link type="danger" @click="kgForm.logo_url = ''">移除</el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="品牌主题色">
+          <div class="flex flex-wrap items-center gap-3">
+            <el-color-picker v-model="brandColor" :predefine="[...BRAND_COLOR_PRESETS]" />
+            <el-input v-model="brandColor" placeholder="留空使用默认主题，如 #F97316" class="!w-64" />
+            <span
+              class="h-6 w-6 rounded-full border border-border-subtle"
+              :style="{ backgroundColor: brandColor || BRAND_COLOR_PRESETS[0] }"
+            />
+          </div>
+          <div class="mt-1 text-xs text-text-muted">
+            家长端/老师端登录后按此颜色展示园所品牌；留空使用默认主题
+          </div>
+        </el-form-item>
         <el-form-item v-if="kgForm.id" label="统计">
           <span class="text-slate-600 text-sm">
             在园 {{ kgForm.current_count }} / 容量 {{ kgForm.capacity }} · 班级 {{ kgForm.class_count }} · 教师
@@ -123,6 +157,8 @@
 import type { KindergartenInfo } from '~/types/api'
 import { getSettings, updateSettings, getAcademicYears, createAcademicYear } from '~/api/settings'
 import { getKindergartenInfo, updateKindergartenInfo } from '~/api/kindergarten'
+import { uploadFile } from '~/api/common'
+import { BRAND_COLOR_PRESETS, normalizeBrandColorInput } from '~/utils/brandColor'
 import type { CreateAcademicYearBody, SystemSettingsWithAlbum } from '~/api/settings'
 
 const loading = ref(true)
@@ -136,6 +172,18 @@ const canEditAlbum = computed(() => perm.can('system:kindergarten'))
 const kgLoading = ref(true)
 const kgSaving = ref(false)
 const kgForm = ref<KindergartenInfo | null>(null)
+const logoUploading = ref(false)
+
+// el-color-picker 清空时回传 null；表单里统一用空串表示「回落默认主题」
+const brandColor = computed<string>({
+  get: () => kgForm.value?.brand_color || '',
+  set: (value) => {
+    if (kgForm.value) kgForm.value.brand_color = value || ''
+  },
+})
+
+// Logo 预览是 1 小时签名 URL，过期会加载失败；沿用列表页的刷新策略
+const onLogoError = useMediaRefresh(loadKg)
 
 const yearsLoading = ref(true)
 const yearList = ref<{ year: string; is_current: boolean }[]>([])
@@ -210,12 +258,42 @@ async function save() {
   }
 }
 
+/** 上传后先回填签名 URL 做预览；保存时后端会归一化回 object key，避免签名过期 */
+async function onLogoPicked(file: { raw?: File }) {
+  const picked = file.raw
+  if (!picked || !kgForm.value) return
+  logoUploading.value = true
+  try {
+    const uploaded = await uploadFile(picked, 'logo')
+    kgForm.value.logo_url = uploaded.file_url
+    ElMessage.success('Logo 已上传，保存园所信息后生效')
+  } catch (e: unknown) {
+    ElMessage.error(e instanceof Error ? e.message : 'Logo 上传失败')
+  } finally {
+    logoUploading.value = false
+  }
+}
+
 async function saveKg() {
   if (!kgForm.value) return
+  const { name, address, phone, principal, description, logo_url, brand_color } = kgForm.value
+  const normalizedColor = normalizeBrandColorInput(brand_color)
+  if (normalizedColor === null) {
+    // 服务端会以 422 拒绝；提前提示，避免一次失败的保存请求
+    ElMessage.warning('主题色需为 #RRGGBB 格式，或留空使用默认主题')
+    return
+  }
   kgSaving.value = true
   try {
-    const { name, address, phone, principal, description, logo_url } = kgForm.value
-    await updateKindergartenInfo({ name, address, phone, principal, description, logo_url })
+    await updateKindergartenInfo({
+      name,
+      address,
+      phone,
+      principal,
+      description,
+      logo_url,
+      brand_color: normalizedColor,
+    })
     ElMessage.success('园所信息已保存')
     await loadKg()
   } catch (e: unknown) {
