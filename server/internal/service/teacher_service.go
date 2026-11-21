@@ -353,23 +353,15 @@ func (s *TeacherService) CreateTeacher(
 	}
 	var teacherID uint64
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var u *domain.User
-		if existing != nil {
-			u = existing
-			if err := tx.Model(u).Updates(map[string]any{
-				"nickname": strings.TrimSpace(req.Nickname),
-				"gender":   req.Gender,
-			}).Error; err != nil {
-				return err
-			}
-		} else {
-			u = &domain.User{
-				Phone: req.Phone, Nickname: strings.TrimSpace(req.Nickname), Gender: req.Gender,
-				PasswordHash: hash,
-			}
-			if err := tx.Create(u).Error; err != nil {
-				return err
-			}
+		// 统一账号解析（#164）：同一活跃手机号复用同一账号，且不改写
+		// 既有昵称/头像/性别——管理员新建老师不能覆盖该手机号已维护的资料。
+		u, _, err := s.users.WithDB(tx).FindOrCreateByPhone(ctx, req.Phone, repository.UserProfileDefaults{
+			Nickname:     strings.TrimSpace(req.Nickname),
+			Gender:       req.Gender,
+			PasswordHash: hash,
+		})
+		if err != nil {
+			return err
 		}
 		teacherID = u.ID
 		kid := kindergartenID

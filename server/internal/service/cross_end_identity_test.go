@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 )
 
@@ -107,10 +106,13 @@ func TestSamePerson_DoesNotMutateAccounts(t *testing.T) {
 	assert.Equal(t, bCopy, *b, "判定不得修改任一侧记录")
 }
 
-// 关联建立后两端登录仍各自命中本端 User，角色/孩子绑定不变。
-func TestFindLinkedUser_DoesNotChangeLoginHit(t *testing.T) {
+// 关联建立后两条账号的归属不变：查找只读，openid 仍各归各的账号。
+//
+// #164 之后旧微信登录已关闭，「再登录仍命中本端」不再由本用例覆盖；
+// 这里验证记录未被关联查询改写，账号归属不被迁移。
+func TestFindLinkedUser_DoesNotChangeAccountOwnership(t *testing.T) {
 	repo := newFakeUserRepo()
-	s := newAuthServiceForLogin(repo, &fakeInviteRepo{})
+	s := newAuthServiceWithRepo(repo)
 	ctx := context.Background()
 
 	teacher := user(1, "o_teacher_1", "u_same", "13800001111")
@@ -127,21 +129,23 @@ func TestFindLinkedUser_DoesNotChangeLoginHit(t *testing.T) {
 	assert.Equal(t, "o_teacher_1", repo.byOpenID["o_teacher_1"].OpenID)
 	assert.Equal(t, "o_parent_1", repo.byOpenID["o_parent_1"].OpenID)
 
-	// 各自再登录仍命中本端
-	got, err := s.resolveWeChatUser(ctx, &auth.Code2SessionResp{OpenID: "o_teacher_1"})
+	// 归属不变：同一 openid 仍解析到原来那条账号
+	got, err := repo.FindByOpenID(ctx, "o_teacher_1")
 	require.NoError(t, err)
-	assert.Equal(t, teacher.ID, got.ID, "老师端登录仍命中老师端那条")
+	require.NotNil(t, got)
+	assert.Equal(t, teacher.ID, got.ID, "老师端 openid 仍归属老师端账号")
 
-	got, err = s.resolveWeChatUser(ctx, &auth.Code2SessionResp{OpenID: "o_parent_1"})
+	got, err = repo.FindByOpenID(ctx, "o_parent_1")
 	require.NoError(t, err)
-	assert.Equal(t, parent.ID, got.ID, "家长端登录仍命中家长端那条")
+	require.NotNil(t, got)
+	assert.Equal(t, parent.ID, got.ID, "家长端 openid 仍归属家长端账号")
 }
 
 // --- FindLinkedUser 查找 ---
 
 func TestFindLinkedUser_ByUnionID(t *testing.T) {
 	repo := newFakeUserRepo()
-	s := newAuthServiceForLogin(repo, &fakeInviteRepo{})
+	s := newAuthServiceWithRepo(repo)
 	ctx := context.Background()
 
 	teacher := user(1, "o_teacher_1", "u_same", "")
@@ -163,7 +167,7 @@ func TestFindLinkedUser_ByUnionID(t *testing.T) {
 
 func TestFindLinkedUser_ByPhoneWhenNoUnionID(t *testing.T) {
 	repo := newFakeUserRepo()
-	s := newAuthServiceForLogin(repo, &fakeInviteRepo{})
+	s := newAuthServiceWithRepo(repo)
 	ctx := context.Background()
 
 	teacher := user(1, "o_teacher_1", "", "13800001111") // 个人主体，无 unionid
@@ -179,7 +183,7 @@ func TestFindLinkedUser_ByPhoneWhenNoUnionID(t *testing.T) {
 
 func TestFindLinkedUser_NoMatch(t *testing.T) {
 	repo := newFakeUserRepo()
-	s := newAuthServiceForLogin(repo, &fakeInviteRepo{})
+	s := newAuthServiceWithRepo(repo)
 	ctx := context.Background()
 
 	alone := user(1, "o_alone", "", "")
@@ -193,7 +197,7 @@ func TestFindLinkedUser_NoMatch(t *testing.T) {
 // 查到自己不算关联——那是同一条记录，不是「另一端的账号」。
 func TestFindLinkedUser_SelfIsNotLinked(t *testing.T) {
 	repo := newFakeUserRepo()
-	s := newAuthServiceForLogin(repo, &fakeInviteRepo{})
+	s := newAuthServiceWithRepo(repo)
 	ctx := context.Background()
 
 	only := user(1, "o_only", "u_only", "13800001111")
@@ -207,7 +211,7 @@ func TestFindLinkedUser_SelfIsNotLinked(t *testing.T) {
 // unionid 优先于手机号：能用 unionid 查到就不再看手机号。
 func TestFindLinkedUser_UnionIDPreferred(t *testing.T) {
 	repo := newFakeUserRepo()
-	s := newAuthServiceForLogin(repo, &fakeInviteRepo{})
+	s := newAuthServiceWithRepo(repo)
 	ctx := context.Background()
 
 	// 同手机号但不同 unionid：unionid 不同就是不同人，不得按手机号误关联

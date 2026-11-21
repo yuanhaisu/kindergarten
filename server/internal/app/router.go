@@ -44,7 +44,9 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		// 明确的 403，而不是误以为路径写错；两个端点都不签发 token。
 		v1.POST("/auth/sms/send", h.inner.SMSDisabled)
 		v1.POST("/auth/login/sms", h.inner.SMSDisabled)
-		v1.POST("/auth/login/wechat", h.inner.WeChatLogin)
+		// 旧微信登录在 #164 关闭：openid 不再直接建账号，新登录见 #175。
+		// 保留路由以便旧客户端拿到明确的 403，而不是误以为路径写错。
+		v1.POST("/auth/login/wechat", h.inner.WeChatLoginClosed)
 		v1.POST("/auth/login/password", h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
@@ -111,8 +113,6 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 			authed.PUT("/common/user/profile", h.inner.UpdateProfile)
 			authed.PUT("/common/user/avatar", h.inner.UpdateAvatar)
 			authed.PUT("/common/user/password", h.inner.ChangePassword)
-			authed.POST("/common/user/bind-invite", h.inner.BindInvite)
-			authed.POST("/common/user/bind-parent-phone", h.inner.BindParentPhone)
 
 			// 隐私政策同意：不受 consent 门禁拦截，否则用户无法完成同意或退出。
 			authed.GET("/common/consent", h.inner.GetConsent)
