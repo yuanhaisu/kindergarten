@@ -89,6 +89,67 @@ func (r *UserIdentityRepo) ListByUserID(ctx context.Context, userID uint64) ([]d
 	return rows, err
 }
 
+// FindOrCreatePendingUser 按 (app_id, open_id) 返回账号；没有身份时在同一个事务里
+// 创建「待绑定账号 + 身份」（#175）。待绑定账号手机号为空、无角色、不属于任何园所。
+//
+// 并发首登由 uk_user_identities_app_open 兜底：输掉竞争的事务整体回滚（连同它建的
+// 空账号），再按唯一键读回赢家的账号，因此不会留下两条账号或两条身份。
+func (r *UserIdentityRepo) FindOrCreatePendingUser(ctx context.Context, appID, openID, unionID string) (*domain.User, error) {
+	if appID == "" || openID == "" {
+		return nil, errors.New("userIdentity app_id/open_id is required")
+	}
+
+	if existing, err := r.FindByAppAndOpenID(ctx, appID, openID); err != nil {
+		return nil, err
+	} else if existing != nil {
+		return r.loadUser(ctx, existing.UserID)
+	}
+
+	var user domain.User
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var identity domain.UserIdentity
+		lookup := tx.Where("app_id = ? AND open_id = ?", appID, openID).First(&identity).Error
+		switch {
+		case lookup == nil:
+			return tx.First(&user, identity.UserID).Error
+		case !errors.Is(lookup, gorm.ErrRecordNotFound):
+			return lookup
+		}
+
+		user = domain.User{}
+		if err := tx.Create(&user).Error; err != nil {
+			return err
+		}
+		return tx.Create(&domain.UserIdentity{
+			UserID:  user.ID,
+			AppID:   appID,
+			OpenID:  openID,
+			UnionID: unionID,
+		}).Error
+	})
+	if err == nil {
+		return &user, nil
+	}
+
+	// 唯一键冲突说明另一个并发首登已建好身份；读回它的账号，不覆盖、不重试建号。
+	existing, findErr := r.FindByAppAndOpenID(ctx, appID, openID)
+	if findErr == nil && existing != nil {
+		return r.loadUser(ctx, existing.UserID)
+	}
+	return nil, err
+}
+
+func (r *UserIdentityRepo) loadUser(ctx context.Context, userID uint64) (*domain.User, error) {
+	var user domain.User
+	if err := r.db.WithContext(ctx).First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("身份指向的账号 %d 不存在或已删除", userID)
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 // Delete 物理删除一条身份。没有软删除，删除后唯一键立即释放。
 func (r *UserIdentityRepo) Delete(ctx context.Context, id uint64) error {
 	if id == 0 {

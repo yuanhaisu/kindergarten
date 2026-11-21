@@ -303,6 +303,9 @@ func captureLogs(t *testing.T) *logCapture {
 
 // 微信登录限流按 app_id + IP、阈值取数百/分钟：整所幼儿园共用出口 IP
 // 的正常登录不能被误伤；只有同一 app_id 的洪峰才 429（#174）。
+//
+// 这里用未注册的 app_id：请求最终会被 #175 的新登录 handler 以 403 拒绝
+// （客户端未注册），但限流配额仍按 app_id + IP 累计，断言的是限流层行为。
 func TestWeChatLoginRateLimitIsHighAndScopedByApp(t *testing.T) {
 	h := authharness.New(t)
 
@@ -310,7 +313,7 @@ func TestWeChatLoginRateLimitIsHighAndScopedByApp(t *testing.T) {
 	for i := 0; i < middleware.WeChatLoginMaxPerMinute; i++ {
 		res := h.PostJSON(t, "/api/v1/auth/login/wechat", payload)
 		if res.Status != http.StatusForbidden {
-			t.Fatalf("第 %d 次请求期望 403（端点已关闭），实际 %d，body=%s", i+1, res.Status, res.Body)
+			t.Fatalf("第 %d 次请求期望 403（客户端未注册），实际 %d，body=%s", i+1, res.Status, res.Body)
 		}
 	}
 
@@ -319,14 +322,15 @@ func TestWeChatLoginRateLimitIsHighAndScopedByApp(t *testing.T) {
 		t.Fatalf("超过高阈值期望 429，实际 %d，body=%s", res.Status, res.Body)
 	}
 
-	// 同一 IP、不同 app_id 仍有独立配额。
+	// 同一 IP、不同 app_id 仍有独立配额（放行到 handler 后仍是未注册的 403）。
 	res = h.PostJSON(t, "/api/v1/auth/login/wechat", map[string]string{"app_id": "wx-parent", "code": "one-time-code"})
 	if res.Status != http.StatusForbidden {
-		t.Fatalf("不同 app_id 不应被连带限流，实际 %d，body=%s", res.Status, res.Body)
+		t.Fatalf("不同 app_id 不应被连带限流（仍应是客户端未注册的 403），实际 %d，body=%s", res.Status, res.Body)
 	}
 }
 
-// 微信登录限流失败开放：存储故障时必须放行并告警，不能把登录打成 503。
+// 微信登录限流失败开放：存储故障时必须放行到 handler（未注册客户端 → 403）
+// 并告警，不能把登录打成 503。
 func TestWeChatLoginRateLimitFailsOpenWithWarning(t *testing.T) {
 	h := authharness.New(t)
 	logs := captureLogs(t)

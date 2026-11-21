@@ -43,13 +43,27 @@ type AdminPermissionResolver interface {
 	ResolveAdminCodes(ctx context.Context, kindergartenID, userID uint64) ([]string, bool, error)
 }
 
+// ClientResolver 按 app_id 解析启用中的小程序客户端（由 *ClientService 实现）。
+// 登录的角色与微信凭据都来自这里，不信任请求 body（#175）。
+type ClientResolver interface {
+	ResolveEnabledByAppID(ctx context.Context, appID string) (*domain.Client, error)
+}
+
+// UserIdentityRepository 客户端身份仓储接口（由 *repository.UserIdentityRepo 实现）。
+type UserIdentityRepository interface {
+	FindOrCreatePendingUser(ctx context.Context, appID, openID, unionID string) (*domain.User, error)
+}
+
 // AuthService v1 认证服务。
 //
-// #164 之后不再持有微信 API 与邀请仓库：openid 直接建号/绑定邀请码的旧路径已关闭，
-// 新登录（app_id + code → 账号 + 身份）与微信换绑由 #175 / #167 / #168 接管。
+// 小程序登录（#175）持有微信 API 与客户端注册表：app_id → 客户端角色/作用域，
+// 再用该角色对应的微信凭据换 openid。邀请码绑定仍由 #168 接管。
 type AuthService struct {
 	userRepo       AuthUserRepository
 	userRoleRepo   AuthRoleRepository
+	wx             WeChatAPI
+	clients        ClientResolver
+	identities     UserIdentityRepository
 	adminPerms     AdminPermissionResolver
 	kgStatus       KindergartenStatusChecker
 	rdb            *redis.Client
@@ -64,6 +78,9 @@ type AuthService struct {
 func NewAuthService(
 	userRepo AuthUserRepository,
 	userRoleRepo AuthRoleRepository,
+	wx WeChatAPI,
+	clients ClientResolver,
+	identities UserIdentityRepository,
 	adminPerms AdminPermissionResolver,
 	kgStatus KindergartenStatusChecker,
 	rdb *redis.Client,
@@ -76,6 +93,9 @@ func NewAuthService(
 	return &AuthService{
 		userRepo:       userRepo,
 		userRoleRepo:   userRoleRepo,
+		wx:             wx,
+		clients:        clients,
+		identities:     identities,
 		adminPerms:     adminPerms,
 		kgStatus:       kgStatus,
 		rdb:            rdb,
@@ -120,11 +140,62 @@ type RoleInfo struct {
 	Permissions      []string `json:"permissions,omitempty"`
 }
 
-func (s *AuthService) buildUserInfo(ctx context.Context, user *domain.User) (*UserInfo, error) {
+// RoleScope 限定一次请求可见的角色族（#175）。
+//
+// 小程序凭证（带 app_id）只允许看到当前客户端角色族的角色，且
+// must_change_password 只属于管理端密码登录，对小程序凭证不生效。
+// zero value 表示不限制：管理端、平台方与旧凭证行为不变。
+type RoleScope struct {
+	clientScoped bool
+	allowed      []string
+}
+
+// RoleScopeFromClaims 由访问凭证推导角色可见范围。
+// app_id 存在即视为小程序客户端凭证；允许集合取凭证里的角色，
+// 因为签发时已经做过角色族裁剪。
+func RoleScopeFromClaims(claims *auth.AccessClaims) RoleScope {
+	if claims == nil || claims.AppID == "" {
+		return RoleScope{}
+	}
+	return RoleScope{clientScoped: true, allowed: claims.Roles}
+}
+
+// clientRoleScope 是登录路径的作用域：roles 已按客户端角色族裁剪过。
+func clientRoleScope(roleNames []string) RoleScope {
+	return RoleScope{clientScoped: true, allowed: roleNames}
+}
+
+func (s RoleScope) Allows(role string) bool {
+	if !s.clientScoped {
+		return true
+	}
+	for _, allowed := range s.allowed {
+		if allowed == role {
+			return true
+		}
+	}
+	return false
+}
+
+func (s RoleScope) filter(roles []domain.UserRole) []domain.UserRole {
+	if !s.clientScoped {
+		return roles
+	}
+	filtered := make([]domain.UserRole, 0, len(roles))
+	for _, r := range roles {
+		if s.Allows(r.Role) {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
+func (s *AuthService) buildUserInfo(ctx context.Context, user *domain.User, scope RoleScope) (*UserInfo, error) {
 	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
+	roles = scope.filter(roles)
 
 	roleInfos := make([]RoleInfo, 0, len(roles))
 	for _, r := range roles {
@@ -141,12 +212,14 @@ func (s *AuthService) buildUserInfo(ctx context.Context, user *domain.User) (*Us
 	}
 
 	return &UserInfo{
-		ID:                 user.ID,
-		Phone:              maskPhone(user.Phone),
-		Nickname:           user.Nickname,
-		Avatar:             user.Avatar,
-		Gender:             user.Gender,
-		MustChangePassword: user.MustChangePassword,
+		ID:       user.ID,
+		Phone:    maskPhone(user.Phone),
+		Nickname: user.Nickname,
+		Avatar:   user.Avatar,
+		Gender:   user.Gender,
+		// 改密流程只存在于管理端（#166）；小程序客户端登录必须忽略该标记，
+		// 否则家长/老师会被卡在一个小程序里无法完成的流程上。
+		MustChangePassword: user.MustChangePassword && !scope.clientScoped,
 		Roles:              roleInfos,
 	}, nil
 }
@@ -187,6 +260,18 @@ func (s *AuthService) issueTokens(ctx context.Context, user *domain.User) (*Logi
 }
 
 func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
+	return s.issueTokensFor(ctx, user, roles, nil)
+}
+
+// issueClientTokens 签发绑定小程序客户端的凭证：claims 带 app_id 与作用域，
+// 角色只来自当前客户端注册表（#175）。
+func (s *AuthService) issueClientTokens(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {
+	return s.issueTokensFor(ctx, user, roles, client)
+}
+
+// issueTokensFor 是签发的唯一实现。client 为 nil 时是管理端/刷新路径（无 app_id），
+// 非 nil 时必须走 SignClientAccess，否则 token 无法回查客户端作用域。
+func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {
 	roleNames := roleNamesFromUserRoles(roles)
 	kgID := kindergartenIDFromUserRoles(roles)
 
@@ -202,7 +287,19 @@ func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.Use
 	}
 
 	uid := fmt.Sprintf("%d", user.ID)
-	accessToken, err := auth.SignAccess(s.secret, uid, roleNames, kgID, s.atTTL)
+	var (
+		accessToken string
+		err         error
+	)
+	if client != nil {
+		accessToken, err = auth.SignClientAccess(s.secret, uid, roleNames, kgID, auth.ClientScope{
+			AppID: client.AppID,
+			Kind:  client.ScopeKind,
+			ID:    client.ScopeID,
+		}, s.atTTL)
+	} else {
+		accessToken, err = auth.SignAccess(s.secret, uid, roleNames, kgID, s.atTTL)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +309,13 @@ func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.Use
 		return nil, err
 	}
 
-	userInfo, err := s.buildUserInfo(ctx, user)
+	// 响应里的角色必须与 token 一致：小程序路径用裁剪后的角色族，
+	// 其余路径保持全量（#175）。
+	scope := RoleScope{}
+	if client != nil {
+		scope = clientRoleScope(roleNames)
+	}
+	userInfo, err := s.buildUserInfo(ctx, user, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +335,9 @@ func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.Use
 	}, nil
 }
 
+// roleNamesFromUserRoles 去重后返回角色名。
+// 空角色就是空：待绑定账号没有角色，兜底 "parent" 会让未绑定用户直接拿到
+// 家长端权限，绕过绑定流程（#175）。
 func roleNamesFromUserRoles(roles []domain.UserRole) []string {
 	var names []string
 	seen := make(map[string]bool)
@@ -240,9 +346,6 @@ func roleNamesFromUserRoles(roles []domain.UserRole) []string {
 			seen[r.Role] = true
 			names = append(names, r.Role)
 		}
-	}
-	if len(names) == 0 {
-		names = append(names, "parent")
 	}
 	return names
 }
@@ -353,6 +456,76 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 	return s.issueTokensFromRoles(ctx, user, roles)
 }
 
+// WeChatLoginRequest 是 POST /auth/login/wechat 的输入。
+//
+// Role 仅用于客户端一致性校验：角色与凭据一律取自 app_id 对应的客户端注册表，
+// 请求体里的 role 不能改变授权范围。
+type WeChatLoginRequest struct {
+	AppID      string
+	Code       string
+	InviteCode string
+	Role       string
+}
+
+// WeChatLogin 小程序登录（#175）：app_id → 客户端 → 用该角色凭据换 openid。
+func (s *AuthService) WeChatLogin(ctx context.Context, req WeChatLoginRequest) (*LoginResult, error) {
+	if s.clients == nil || s.wx == nil || s.identities == nil {
+		return nil, fmt.Errorf("wechat login not configured")
+	}
+
+	client, err := s.clients.ResolveEnabledByAppID(ctx, req.AppID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrClientUnavailable, err)
+	}
+
+	// body 里的 role 只做一致性校验：授权角色永远来自客户端注册表。
+	if req.Role != "" && req.Role != client.Role {
+		return nil, fmt.Errorf("%w: body role=%q client role=%q", ErrClientRoleMismatch, req.Role, client.Role)
+	}
+	// 邀请码是老师端绑定通道；家长端携带视为客户端行为异常。
+	if req.InviteCode != "" && client.Role != domain.ClientRoleTeacher {
+		return nil, fmt.Errorf("%w: role=%q", ErrInviteCodeNotAllowed, client.Role)
+	}
+
+	sess, err := s.wx.Code2Session(ctx, req.Code, client.Role)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrWeChatLoginFailed, err)
+	}
+	if sess == nil || sess.OpenID == "" {
+		return nil, fmt.Errorf("%w: empty openid", ErrWeChatLoginFailed)
+	}
+
+	// (app_id, open_id) 是身份的唯一来源；没有身份就建「待绑定账号 + 身份」，
+	// 但不自动授予任何角色，也不把账号挂进任何园所。
+	user, err := s.identities.FindOrCreatePendingUser(ctx, client.AppID, sess.OpenID, sess.UnionID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve client identity: %w", err)
+	}
+
+	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	// 同一账号可同时是家长和老师：token 只能携带当前客户端角色族的角色，
+	// 否则家长端会拿到老师权限，园所也会串到另一端（#175）。
+	roles = filterRolesByFamily(roles, client.Role)
+
+	return s.issueClientTokens(ctx, user, roles, client)
+}
+
+// filterRolesByFamily 保留与当前客户端角色一致的授权行。
+func filterRolesByFamily(roles []domain.UserRole, role string) []domain.UserRole {
+	filtered := make([]domain.UserRole, 0, len(roles))
+	for _, r := range roles {
+		if r.Role == role {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
+// hasAdminRole 密码登录只服务管理后台（#174）：家长/老师账号即使有密码
+// 也不能走密码通道换取管理端 token。
 func hasAdminRole(roles []domain.UserRole) bool {
 	for _, r := range roles {
 		if r.Role == "admin" {
@@ -369,6 +542,14 @@ var (
 	ErrAuthStorageUnavailable = errors.New("AUTH_STORAGE_UNAVAILABLE")
 	// ErrKindergartenSuspended 园所被平台方停用，不签发凭证。
 	ErrKindergartenSuspended = errors.New("KINDERGARTEN_SUSPENDED")
+	// ErrClientUnavailable 客户端未注册或已停用：不得换取 token，也不得建号。
+	ErrClientUnavailable = errors.New("CLIENT_UNAVAILABLE")
+	// ErrClientRoleMismatch 请求体自报角色与客户端注册的角色不一致。
+	ErrClientRoleMismatch = errors.New("CLIENT_ROLE_MISMATCH")
+	// ErrInviteCodeNotAllowed 非老师端客户端携带 invite_code。
+	ErrInviteCodeNotAllowed = errors.New("INVITE_CODE_NOT_ALLOWED")
+	// ErrWeChatLoginFailed 微信 code2session 失败或未返回 openid。
+	ErrWeChatLoginFailed = errors.New("WECHAT_LOGIN_FAILED")
 )
 
 // RefreshToken 刷新令牌
@@ -463,7 +644,7 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func (s *AuthService) GetUserInfo(ctx context.Context, userID uint64) (*UserInfo, error) {
+func (s *AuthService) GetUserInfo(ctx context.Context, userID uint64, scope RoleScope) (*UserInfo, error) {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -471,7 +652,7 @@ func (s *AuthService) GetUserInfo(ctx context.Context, userID uint64) (*UserInfo
 	if user == nil {
 		return nil, fmt.Errorf("user not found")
 	}
-	info, err := s.buildUserInfo(ctx, user)
+	info, err := s.buildUserInfo(ctx, user, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -489,7 +670,7 @@ type ProfileInfo struct {
 	CreatedAt time.Time  `json:"created_at"`
 }
 
-func (s *AuthService) GetProfile(ctx context.Context, userID uint64) (*ProfileInfo, error) {
+func (s *AuthService) GetProfile(ctx context.Context, userID uint64, scope RoleScope) (*ProfileInfo, error) {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -502,6 +683,8 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uint64) (*ProfileIn
 	if err != nil {
 		return nil, err
 	}
+	// 资料与登录响应同源：小程序凭证只能看到当前客户端角色族（#175）。
+	roles = scope.filter(roles)
 
 	roleInfos := make([]RoleInfo, 0, len(roles))
 	for _, r := range roles {
@@ -551,7 +734,7 @@ func (s *AuthService) fillAdminPermissions(ctx context.Context, userID uint64, i
 	return nil
 }
 
-func (s *AuthService) UpdateProfile(ctx context.Context, userID uint64, nickname string, gender int) (*UserInfo, error) {
+func (s *AuthService) UpdateProfile(ctx context.Context, userID uint64, nickname string, gender int, scope RoleScope) (*UserInfo, error) {
 	fields := map[string]any{}
 	if nickname != "" {
 		fields["nickname"] = nickname
@@ -564,7 +747,7 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID uint64, nickname
 			return nil, err
 		}
 	}
-	return s.GetUserInfo(ctx, userID)
+	return s.GetUserInfo(ctx, userID, scope)
 }
 
 func (s *AuthService) UpdateAvatar(ctx context.Context, userID uint64, avatar string) (string, error) {

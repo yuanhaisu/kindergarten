@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/service"
 	"kindergarten-server/pkg/response"
 )
 
@@ -17,7 +18,8 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	}
 	uid, _ := strconv.ParseUint(claims.UserID, 10, 64)
 
-	profile, err := h.authSvc.GetProfile(c.Request.Context(), uid)
+	// 小程序凭证只返回当前客户端角色族的角色（#175）；管理端为空作用域，行为不变。
+	profile, err := h.authSvc.GetProfile(c.Request.Context(), uid, service.RoleScopeFromClaims(claims))
 	if err != nil {
 		if err.Error() == "user not found" {
 			response.ErrNotFound(c, "用户不存在")
@@ -49,7 +51,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	result, err := h.authSvc.UpdateProfile(c.Request.Context(), uid, req.Nickname, req.Gender)
+	result, err := h.authSvc.UpdateProfile(c.Request.Context(), uid, req.Nickname, req.Gender, service.RoleScopeFromClaims(claims))
 	if err != nil {
 		response.ErrInternal(c, "更新个人信息失败")
 		return

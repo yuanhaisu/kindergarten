@@ -51,28 +51,8 @@ func TestUnknownRouteReturnsNotFound(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.Status, string(resp.Body))
 }
 
-// 旧微信登录已下线（#164）：openid 不再作为身份源，新登录由 #175 接管。
-// 端点必须明确拒绝，且不得再调用微信 code2session 或创建账号。
-func TestOldWeChatLoginEndpointIsClosed(t *testing.T) {
-	h := authharness.New(t)
-	openID := fmt.Sprintf("openid-161-login-%d", time.Now().UnixNano())
-	code := "wx-code-161-" + openID
-	h.WeChat.StubCode2Session(code, openID, "")
-	t.Cleanup(func() { h.HardDelete(t, &domain.User{}, "open_id = ?", openID) })
-
-	resp := h.PostJSON(t, "/api/v1/auth/login/wechat", map[string]string{
-		"code": code,
-		"role": "parent",
-	})
-	require.Equal(t, http.StatusForbidden, resp.Status, string(resp.Body))
-
-	assert.Empty(t, h.WeChat.Calls(), "关闭的登录不得再调用微信 code2session")
-
-	var count int64
-	require.NoError(t, h.DB.Unscoped().Model(&domain.User{}).
-		Where("open_id = ?", openID).Count(&count).Error)
-	assert.Zero(t, count, "关闭的登录不得创建账号")
-}
+// 旧微信登录的「已下线」断言由 #175 取代：端点重新开放为新式 app_id 登录，
+// 旧请求体（只有 code）由 login_test.go 的 TestWeChatLoginRequiresAppID 覆盖。
 
 // 旧绑定端点已下线（#164）：换绑/绑定由 #167、#168 重写。
 // 路由直接移除，未认证请求也应该是 404 而不是 401——401 说明端点还挂着。
