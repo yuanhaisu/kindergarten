@@ -23,10 +23,6 @@ import (
 // AuthUserRepository AuthService 依赖的用户仓库接口（由 *repository.UserRepo 隐式实现）
 type AuthUserRepository interface {
 	FindByPhone(ctx context.Context, phone string) (*domain.User, error)
-	FindByUnionID(ctx context.Context, unionID string) (*domain.User, error)
-	FindOtherByUnionID(ctx context.Context, unionID string, excludeID uint64) (*domain.User, error)
-	FindOtherByPhone(ctx context.Context, phone string, excludeID uint64) (*domain.User, error)
-	FindByOpenID(ctx context.Context, openID string) (*domain.User, error)
 	FindByID(ctx context.Context, id uint64) (*domain.User, error)
 	Create(ctx context.Context, user *domain.User) error
 	Update(ctx context.Context, user *domain.User) error

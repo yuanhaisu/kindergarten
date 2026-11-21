@@ -9,14 +9,10 @@ package domain
 // 有多条，而一个活跃非空手机号只能对应一条 User。这里刻意不声明 PhoneActive
 // 字段：生成列不可写，且未迁移的库上 SELECT 它会直接报错。
 //
-// OpenID / UnionID 是共用 AppID 时代的遗留列，**不再是身份来源**，仅为 cmd 与
-// 旧视图兼容保留，由 #173 删除。新代码一律走 user_identities / FindOrCreateByPhone。
+// 微信身份不在本表：#173 已删除 users.open_id/union_id，客户端身份只存
+// user_identities(app_id, open_id)；账号解析统一走 FindOrCreateByPhone。
 type User struct {
 	BaseModel
-	// Deprecated: 使用 user_identities(app_id, open_id) 定位客户端身份；#173 删除本列。
-	OpenID string `gorm:"index;size:128" json:"-"`
-	// Deprecated: 仅供旧跨端关联判定（cross_end_identity）；#173 删除本列。
-	UnionID      string `gorm:"index;size:128" json:"-"`
 	Nickname     string `gorm:"size:64" json:"nickname"`
 	Avatar       string `gorm:"size:512" json:"avatar"`
 	Phone        string `gorm:"size:20;index" json:"phone"`
