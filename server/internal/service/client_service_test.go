@@ -340,3 +340,42 @@ func TestClientServiceFindEnabledForRole(t *testing.T) {
 	_, err = svc.FindEnabledForRole(ctx, "admin")
 	require.Error(t, err, "admin 不是小程序客户端角色")
 }
+
+// v1 的 dedicated/group 拒绝只发生在启动同步/注册入口，不在通用仓储读路径：
+// #169 需要一个测试专用 dedicated 行来验证 scope 锁定，仓储必须能把它读出来。
+func TestClientRepositoryReadsDirectlyInsertedDedicatedRow(t *testing.T) {
+	h := authharness.New(t)
+	h.HardDelete(t, &domain.Client{}, "1 = 1")
+	repo := repository.NewClientRepo(h.DB)
+
+	require.NoError(t, h.DB.Create(&domain.Client{
+		AppID:     "wx_dedicated_177_test",
+		Role:      domain.ClientRoleParent,
+		ScopeKind: domain.ClientScopeKindergarten,
+		ScopeID:   9,
+		Status:    domain.ClientStatusEnabled,
+	}).Error)
+
+	got, err := repo.FindByAppID(context.Background(), "wx_dedicated_177_test")
+	require.NoError(t, err, "通用仓储读取不得因 scope_kind 报错")
+	require.NotNil(t, got, "直接插入的 dedicated 行必须能读出来")
+	assert.Equal(t, domain.ClientScopeKindergarten, got.ScopeKind)
+	assert.Equal(t, uint64(9), got.ScopeID)
+}
+
+// 历史 disabled 的非 shared 行保留但不阻断启动：它们只给旧身份引用，
+// 不参与登录；v1 拒绝的是 enabled 行（见 TestClientSyncRejectsEnabledNonSharedClientRow）。
+func TestClientSyncAllowsDisabledNonSharedClientRow(t *testing.T) {
+	h, svc := newClientService(t)
+	require.NoError(t, h.DB.Create(&domain.Client{
+		AppID:     "wx_dedicated_177_disabled",
+		Role:      domain.ClientRoleParent,
+		ScopeKind: domain.ClientScopeKindergarten,
+		ScopeID:   9,
+		Status:    domain.ClientStatusDisabled,
+	}).Error)
+
+	_, err := svc.SyncFromConfig(context.Background(), sharedSpecs(teacherAppID163, parentAppID163))
+	require.NoError(t, err, "disabled 的历史 dedicated 行不应阻断启动")
+	assert.Len(t, listClients(t, h), 3)
+}
