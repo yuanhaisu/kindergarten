@@ -3,9 +3,11 @@
 // 为什么不用真实 Redis：这些测试验证的是「键怎么写、TTL 是否带上、存储故障
 // 时是否失败关闭」，不需要外部依赖，也不应污染开发库里真实的会话与黑名单。
 //
-// 只实现测试用到的命令：PING / SET(EX|PX) / GET / DEL / EXISTS / TTL /
-// INCR / EXPIRE。未知命令统一回 +OK，让 go-redis 的连接握手（CLIENT SETINFO
-// 等）不至于失败。
+// 只实现测试用到的命令：PING / SET(EX|PX) / GET / GETDEL / DEL / EXISTS /
+// TTL / INCR / EXPIRE。未知命令统一回 +OK，让 go-redis 的连接握手
+// （CLIENT SETINFO 等）不至于失败。
+//
+// 未知命令回 +OK 意味着「忘记实现」会静默变成错误语义——新增命令必须补这里。
 package fakeredis
 
 import (
@@ -157,6 +159,8 @@ func (s *Server) dispatch(conn net.Conn, cmd []string) {
 		s.cmdSet(conn, cmd)
 	case "GET":
 		s.cmdGet(conn, cmd)
+	case "GETDEL":
+		s.cmdGetDel(conn, cmd)
 	case "DEL":
 		s.cmdDel(conn, cmd)
 	case "EXISTS":
@@ -218,6 +222,30 @@ func (s *Server) cmdGet(conn net.Conn, cmd []string) {
 	s.mu.Unlock()
 	if fail {
 		_, _ = conn.Write([]byte("-ERR simulated read failure\r\n"))
+		return
+	}
+	if !ok {
+		_, _ = conn.Write([]byte("$-1\r\n"))
+		return
+	}
+	_, _ = fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(v.data), v.data)
+}
+
+// cmdGetDel 在同一把锁里取值并删除，模拟 Redis GETDEL 的原子性（#169）。
+func (s *Server) cmdGetDel(conn net.Conn, cmd []string) {
+	if len(cmd) < 2 {
+		_, _ = conn.Write([]byte("-ERR wrong number of arguments for 'getdel'\r\n"))
+		return
+	}
+	s.mu.Lock()
+	fail := s.failReads || s.failWrites
+	v, ok := s.lookupLocked(cmd[1])
+	if ok && !fail {
+		delete(s.data, cmd[1])
+	}
+	s.mu.Unlock()
+	if fail {
+		_, _ = conn.Write([]byte("-ERR simulated getdel failure\r\n"))
 		return
 	}
 	if !ok {

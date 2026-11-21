@@ -137,6 +137,12 @@
       }
     },
     {
+      "path": "pages/kindergartens/index",
+      "style": {
+        "navigationBarTitleText": "我的园所"
+      }
+    },
+    {
       "path": "pages/doctor/checkin",
       "style": {
         "navigationBarTitleText": "入园晨检"

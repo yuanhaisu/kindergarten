@@ -117,6 +117,10 @@
       "assetsSha": "92465d9726b63676fd23c20ec91b7e02ab6c9852de6409c2499132ce63391bd3",
       "previewSha": "a0725666f7215a2307e48b75ff2f66cc9de747dc8a6ea125e23c052c85252df4"
     },
+    "parent/30-kindergartens": {
+      "assetsSha": "f6f4bfa46d568c662b9c2763c10063fc45a7ad4a16741ba7df0c7d8c7c760389",
+      "previewSha": "ae95f6a1e073ca8d56eb4ed8c217de9a8f2670fc9980f2322afbedb310782156"
+    },
     "teacher/01-workbench": {
       "assetsSha": "08dbefc5bdc2b4d13c1800f4d056ce5aec0820f552483ee4eeb38ec387e72f46",
       "previewSha": "827e531b5af1a6a84846644835d26d1b21f6006029822815979c28b6017fe837"
@@ -200,6 +204,10 @@
     "teacher/21-doctor-calendar": {
       "assetsSha": "578c5e62207bad243f68f77ed4cecbfcb92a5e0b7631e36a5559918b46b353bc",
       "previewSha": "6fd0e5874f2ac605f8778f63efc7768781bb92f40fb04ae2a2b2bbc83f18fade"
+    },
+    "teacher/22-kindergartens": {
+      "assetsSha": "8c0d2e21983dc587135bba41175ba61cbfa42c909dc8c234e8dc536111249c5a",
+      "previewSha": "5032772b384281c4d12e3d4743bb152f914b05a3e02361de92e1f25f93a265ca"
     },
     "teacher/23-notice-index": {
       "assetsSha": "b73d2b44137dfb363e620195e1e391a4c4d11cbc8b6039485e1327e07727a6de",

@@ -38,7 +38,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	refreshTTL := ProvideRefreshTTL(cfg)
 	consentRepo := repository.NewConsentRepo(db)
 	identityMergeService := service.NewIdentityMergeService(db)
-	authService := ProvideAuthService(userRepo, userRoleRepo, weChatClient, clientService, userIdentityRepo, adminAuthzService, kindergartenStatusService, client, jwtSecret, accessTTL, refreshTTL, consentRepo, cfg, kindergartenRepo, identityMergeService)
+	authService := ProvideAuthService(userRepo, userRoleRepo, weChatClient, clientService, userIdentityRepo, adminAuthzService, kindergartenStatusService, kindergartenRepo, client, jwtSecret, accessTTL, refreshTTL, consentRepo, cfg, kindergartenRepo, identityMergeService)
 	fileRepo := repository.NewFileRepo(db)
 	storage, err := ProvideOSSStorage(cfg)
 	if err != nil {
@@ -124,7 +124,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	commissionRepo := repository.NewCommissionRepo(db)
 	distributorRepo := repository.NewDistributorRepo(db)
 	platformLogRepo := repository.NewPlatformLogRepo(db)
-	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, paymentRepo, commissionRepo, distributorRepo, platformLogRepo, dietSeedService, kindergartenStatusService, client, authService, jwtSecret, accessTTL, refreshTTL)
+	kindergartenEntryService := service.NewKindergartenEntryService(kindergartenRepo)
+	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, paymentRepo, commissionRepo, distributorRepo, platformLogRepo, dietSeedService, kindergartenStatusService, kindergartenEntryService, client, authService, jwtSecret, accessTTL, refreshTTL)
 	planRepo := repository.NewPlanRepo(db)
 	planService := service.NewPlanService(planRepo, platformLogRepo)
 	entitlementCache := service.NewEntitlementCache(client)

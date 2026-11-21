@@ -77,6 +77,8 @@ func purgeData(db *gorm.DB, onErr func(string, error)) {
 			onErr(sql, err)
 		}
 	}
+	del("DELETE FROM user_admin_roles WHERE user_id IN (SELECT id FROM users WHERE phone = ?)", testPhone)
+	del("DELETE FROM admin_roles WHERE kindergarten_id IN (?, ?, ?)", testKGID, testKG2ID, testKGDeletedID)
 	del("DELETE FROM user_roles WHERE user_id IN (SELECT id FROM users WHERE phone = ?)", testPhone)
 	del("DELETE FROM users WHERE phone = ?", testPhone)
 	del("DELETE FROM kindergartens WHERE id IN (?, ?, ?)", testKGID, testKG2ID, testKGDeletedID)
@@ -313,4 +315,85 @@ func TestEnsureTenantAdminRejectsIncompleteOptions(t *testing.T) {
 			assert.ErrorIs(t, err, adminprovision.ErrInvalidOptions)
 		})
 	}
+}
+
+// #171：setadmin 的语义是「把管理员移到目标园」，不是「在同一手机号上叠加
+// 第二个园的管理员」。只改 UserRole 会留下旧园的 UserAdminRole —— 鉴权按关联
+// 给通配权限，于是同一手机号在两个园都保留管理端访问。
+func TestEnsureTenantAdminMovesAdminAndDropsOldKindergartenAccess(t *testing.T) {
+	db := openTestDB(t)
+	resetData(t, db)
+	t.Cleanup(func() { cleanupAfterTest(t, db) })
+	ensureKindergarten(t, db, testKGID, "测试园所-移动前")
+	ensureKindergarten(t, db, testKG2ID, "测试园所-移动后")
+
+	ctx := context.Background()
+	// 既有家长账号：昵称等资料属于用户本人，供给管理员时不能覆盖。
+	user := domain.User{Phone: testPhone, Nickname: "豆豆妈妈", Gender: 2, PasswordHash: "old-hash"}
+	require.NoError(t, db.Create(&user).Error)
+
+	oldKGID := testKGID
+	adminRole := domain.AdminRole{KindergartenID: testKGID, Name: "超级管理员", IsSystem: true}
+	require.NoError(t, db.Create(&adminRole).Error)
+	require.NoError(t, db.Create(&domain.UserRole{
+		UserID: user.ID, Role: "admin", KindergartenID: &oldKGID,
+		KindergartenName: "测试园所-移动前", AdminRole: "super_admin",
+	}).Error)
+	require.NoError(t, db.Create(&domain.UserAdminRole{
+		UserID: user.ID, AdminRoleID: adminRole.ID, KindergartenID: testKGID,
+	}).Error)
+
+	res, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKG2ID,
+	})
+	require.NoError(t, err)
+	assert.False(t, res.UserCreated, "既有账号必须复用，不能新建第二个 user")
+	assert.Equal(t, user.ID, res.UserID)
+
+	// 资料保持原样；口令按 setadmin 的既有语义重置。
+	var got domain.User
+	require.NoError(t, db.First(&got, user.ID).Error)
+	assert.Equal(t, "豆豆妈妈", got.Nickname)
+	assert.Equal(t, 2, got.Gender)
+	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(got.PasswordHash), []byte(testPasswd)))
+
+	// admin 角色只有一条，且已移到目标园。
+	var roles []domain.UserRole
+	require.NoError(t, db.Where("user_id = ? AND role = ?", user.ID, "admin").Find(&roles).Error)
+	require.Len(t, roles, 1)
+	require.NotNil(t, roles[0].KindergartenID)
+	assert.Equal(t, testKG2ID, *roles[0].KindergartenID)
+
+	// 旧园的管理员关联必须消失，否则「移动」实际上留下了第二个园的管理权限。
+	var oldLinks int64
+	require.NoError(t, db.Model(&domain.UserAdminRole{}).
+		Where("user_id = ? AND kindergarten_id = ?", user.ID, testKGID).Count(&oldLinks).Error)
+	assert.Zero(t, oldLinks, "移走后不得保留旧园的管理员关联")
+}
+
+// #171：既有家长账号被供给为租户管理员时，复用同一 user，不新建账号。
+func TestEnsureTenantAdminReusesExistingParentAccount(t *testing.T) {
+	db := openTestDB(t)
+	resetData(t, db)
+	t.Cleanup(func() { cleanupAfterTest(t, db) })
+	ensureKindergarten(t, db, testKGID, "测试园所-复用家长")
+
+	user := domain.User{Phone: testPhone, Nickname: "豆豆妈妈", Avatar: "https://cdn.example.com/a.png", Gender: 2}
+	require.NoError(t, db.Create(&user).Error)
+
+	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
+	})
+	require.NoError(t, err)
+	assert.False(t, res.UserCreated)
+	assert.Equal(t, user.ID, res.UserID)
+
+	var count int64
+	require.NoError(t, db.Model(&domain.User{}).Where("phone = ?", testPhone).Count(&count).Error)
+	assert.Equal(t, int64(1), count, "一手机号一账号")
+
+	var got domain.User
+	require.NoError(t, db.First(&got, user.ID).Error)
+	assert.Equal(t, "豆豆妈妈", got.Nickname)
+	assert.Equal(t, "https://cdn.example.com/a.png", got.Avatar)
 }

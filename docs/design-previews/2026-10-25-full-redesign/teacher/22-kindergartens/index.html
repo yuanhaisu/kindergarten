@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN" data-surface="teacher">
+<head>
+  <script src="../../_shared/theme.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#F7F3EA">
+  <title>我的园所 · 养成星球</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="../../_shared/shell.css">
+  <link rel="stylesheet" href="../../_shared/themes.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-state="normal" data-od-id="teacher-kindergartens-page">
+
+    <div class="mp-statusbar" aria-hidden="true">
+      <span class="mp-time">9:41</span>
+      <span class="mp-status-icons">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6C2.8 2 5.3 1 7.5 1s4.7 1 6.5 2.6"/><path d="M3.5 6.1c1.1-1 2.4-1.5 4-1.5s2.9.5 4 1.5"/><path d="M6 8.6c.5-.4 1-.6 1.5-.6s1 .2 1.5.6"/><circle cx="7.5" cy="10" r=".7" fill="currentColor"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="20" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="2" width="15" height="7" rx="1.8" fill="currentColor"/><path d="M22 3.5v4c.9-.3 1.4-1 1.4-2s-.5-1.7-1.4-2Z" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="mp-navbar">
+      <button class="mp-back" id="backBtn" type="button" aria-label="返回更多功能">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+      </button>
+      <h1 class="mp-title" data-od-id="kindergartens-title">我的园所</h1>
+      <div class="mp-capsule" aria-hidden="true">
+        <span class="mp-capsule-dots">···</span>
+        <span class="mp-capsule-divider"></span>
+        <span class="mp-capsule-ring">◎</span>
+      </div>
+    </header>
+
+    <main class="mp-main">
+      <div class="kg-page">
+
+        <section class="kg-hero" aria-label="当前园所">
+          <span class="hero-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+          </span>
+          <span class="hero-copy">
+            <span class="hero-label">当前园所</span>
+            <strong class="hero-name" id="currentName" data-od-id="current-kindergarten-name">阳光幼儿园</strong>
+          </span>
+        </section>
+
+        <p class="kg-tip">仅展示你在本小程序中已加入的园所。切换后，工作台、班级与接送都会按目标园重新加载。</p>
+
+        <section class="kg-list" aria-labelledby="listTitle" data-od-id="kindergarten-list">
+          <h2 class="list-title" id="listTitle">我在的园所</h2>
+
+          <button class="kg-card is-current" id="cardSun" type="button" data-kindergarten="sun" aria-current="true" data-od-id="kindergarten-sun">
+            <span class="kg-avatar" aria-hidden="true">阳</span>
+            <span class="kg-copy">
+              <span class="kg-name">阳光幼儿园</span>
+              <span class="kg-meta">
+                <span class="role-pill">老师</span>
+                <span class="current-hint">当前使用中</span>
+              </span>
+            </span>
+            <span class="current-mark" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 7.2 3 3 6-6.4"/></svg>
+            </span>
+          </button>
+
+          <button class="kg-card" id="cardForest" type="button" data-kindergarten="forest" data-od-id="kindergarten-forest">
+            <span class="kg-avatar is-alt" aria-hidden="true">森</span>
+            <span class="kg-copy">
+              <span class="kg-name">森林幼儿园</span>
+              <span class="kg-meta">
+                <span class="role-pill">配班老师</span>
+              </span>
+            </span>
+            <span class="switch-tail">
+              <span class="switch-text">切换</span>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 2.5 4.5 4.5L5 11.5"/></svg>
+            </span>
+          </button>
+
+          <p class="list-foot" id="listFoot" hidden>你目前只在一个园所。如需加入其它园所，请联系园长开通。</p>
+        </section>
+
+        <section class="state-view state-loading" aria-label="正在加载园所列表">
+          <div class="skeleton-card">
+            <span class="skeleton-avatar"></span>
+            <span class="skeleton-copy">
+              <span class="skeleton-line skeleton-line--name"></span>
+              <span class="skeleton-line skeleton-line--meta"></span>
+            </span>
+          </div>
+          <div class="skeleton-card">
+            <span class="skeleton-avatar"></span>
+            <span class="skeleton-copy">
+              <span class="skeleton-line skeleton-line--name"></span>
+              <span class="skeleton-line skeleton-line--meta"></span>
+            </span>
+          </div>
+        </section>
+
+        <section class="state-view state-empty" aria-labelledby="emptyTitle" data-od-id="kindergartens-empty">
+          <span class="state-badge" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16"/><path d="M5 10V7l2-2h10l2 2v3"/><path d="M6 10v8h12v-8"/><path d="M10 14h4"/></svg>
+          </span>
+          <h2 class="state-title" id="emptyTitle">还没有加入任何园所</h2>
+          <p class="state-desc">园所由园方邀请加入，开通后重新进入本页即可看到。</p>
+        </section>
+
+        <section class="state-view state-error" aria-labelledby="errorTitle" data-od-id="kindergartens-error">
+          <span class="state-badge is-danger" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v11"/><circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <h2 class="state-title" id="errorTitle">园所列表加载失败</h2>
+          <p class="state-desc">网络开小差了，请稍后再试</p>
+          <button class="state-btn" id="retryBtn" type="button" data-od-id="kindergartens-retry">重试</button>
+        </section>
+
+      </div>
+    </main>
+
+    <div class="mp-demo" data-open="false">
+      <div class="mp-demo-chips" role="group" aria-label="原型状态">
+        <button class="mp-demo-chip" type="button" data-mp-state="normal" aria-pressed="true">正常</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="loading" aria-pressed="false">加载</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="empty" aria-pressed="false">空</button>
+        <button class="mp-demo-chip" type="button" data-mp-state="error" aria-pressed="false">失败</button>
+      </div>
+      <button class="mp-demo-toggle" type="button" aria-expanded="false">原型演示</button>
+    </div>
+
+    <div class="dialog-layer" id="switchDialog" hidden>
+      <div class="dialog-scrim" data-dialog-close aria-hidden="true"></div>
+      <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="switchDialogTitle" aria-describedby="switchDialogDesc" tabindex="-1" data-od-id="switch-dialog">
+        <div class="dialog-content">
+          <h2 class="dialog-title" id="switchDialogTitle">切换园所</h2>
+          <p class="dialog-desc" id="switchDialogDesc">切换后将只显示「森林幼儿园」的数据，未保存的操作会失效。</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="dialog-button" id="switchCancel" type="button">取消</button>
+          <button class="dialog-button dialog-button--confirm" id="switchConfirm" type="button" data-od-id="switch-confirm">切换</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script src="../../_shared/shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

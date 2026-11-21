@@ -23,13 +23,14 @@ func ProvideAuthService(
 	identityRepo *repository.UserIdentityRepo,
 	adminAuthz *service.AdminAuthzService,
 	kgStatus *service.KindergartenStatusService,
+	kgRepo *repository.KindergartenRepo,
 	rdb *redis.Client,
 	secret JWTSecret,
 	atTTL AccessTTL,
 	rtTTL RefreshTTL,
 	consentRepo *repository.ConsentRepo,
 	cfg *config.Config,
-	kindergartenRepo *repository.KindergartenRepo,
+	kgLookup *repository.KindergartenRepo,
 	mergeSvc *service.IdentityMergeService,
 ) *service.AuthService {
 	return service.NewAuthService(
@@ -40,13 +41,14 @@ func ProvideAuthService(
 		identityRepo,
 		adminAuthz,
 		kgStatus,
+		kgRepo,
 		rdb,
 		[]byte(secret),
 		time.Duration(atTTL),
 		time.Duration(rtTTL),
 		consentRepo,
 		cfg.Consent.Enforce,
-		kindergartenRepo,
+		kgLookup,
 		mergeSvc,
 		// 绑定限流的完整维度（手机号）只能在 service 换出手机号后判定，
 		// 中间件那层先按 app_id + IP 兜住洪峰（#174 / #167）。
@@ -70,6 +72,7 @@ func ProvidePlatformService(
 	logRepo *repository.PlatformLogRepo,
 	dietSeed *service.DietSeedService,
 	kgStatus *service.KindergartenStatusService,
+	entrySvc *service.KindergartenEntryService,
 	rdb *redis.Client,
 	authSvc *service.AuthService,
 	secret JWTSecret,
@@ -85,7 +88,7 @@ func ProvidePlatformService(
 	}
 	return service.NewPlatformService(
 		db, adminRepo, kgRepo, entRepo, orderRepo, userRepo, userRoleRepo,
-		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus,
+		adminRoleRepo, paymentRepo, commRepo, distRepo, logRepo, dietSeed, kgStatus, entrySvc,
 		auth.NewPlatformEpochStore(rdb, auth.PlatformEpochTTLFor(time.Duration(rtTTL), time.Duration(atTTL))),
 		revoker, rdb, []byte(secret),
 		time.Duration(atTTL), time.Duration(rtTTL),

@@ -76,6 +76,7 @@ func newPlatformAccountService(t *testing.T, db *gorm.DB, audit PlatformAuditSto
 		audit,
 		nil,
 		nil,
+		nil,
 		epochs,
 		auth.NewTokenRevoker(rdb),
 		rdb,

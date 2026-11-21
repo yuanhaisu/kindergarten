@@ -159,6 +159,8 @@ func (f *fakeRedisServer) dispatch(conn net.Conn, cmd []string) {
 		f.cmdSet(conn, cmd)
 	case "GET":
 		f.cmdGet(conn, cmd)
+	case "GETDEL":
+		f.cmdGetDel(conn, cmd)
 	case "DEL":
 		f.cmdDel(conn, cmd)
 	case "EXISTS":
@@ -216,6 +218,30 @@ func (f *fakeRedisServer) cmdGet(conn net.Conn, cmd []string) {
 	f.mu.Unlock()
 	if fail {
 		_, _ = conn.Write([]byte("-ERR simulated read failure\r\n"))
+		return
+	}
+	if !ok {
+		_, _ = conn.Write([]byte("$-1\r\n"))
+		return
+	}
+	_, _ = fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(v.value), v.value)
+}
+
+// cmdGetDel 在同一把锁里取值并删除，模拟 Redis GETDEL 的原子性（#169）。
+func (f *fakeRedisServer) cmdGetDel(conn net.Conn, cmd []string) {
+	if len(cmd) < 2 {
+		_, _ = conn.Write([]byte("-ERR wrong number of arguments for 'getdel'\r\n"))
+		return
+	}
+	f.mu.Lock()
+	fail := f.failReads || f.failWrites
+	v, ok := f.lookupLocked(cmd[1])
+	if ok && !fail {
+		delete(f.data, cmd[1])
+	}
+	f.mu.Unlock()
+	if fail {
+		_, _ = conn.Write([]byte("-ERR simulated getdel failure\r\n"))
 		return
 	}
 	if !ok {
@@ -388,7 +414,7 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 		1: {BaseModel: domain.BaseModel{ID: 1}, Nickname: "家长A", Phone: "13800000001"},
 		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002"},
 	}}
-	svc := service.NewAuthService(users, fakeRoleRepo{}, nil, nil, nil, nil, nil, rdb,
+	svc := service.NewAuthService(users, fakeRoleRepo{}, nil, nil, nil, nil, nil, nil, rdb,
 		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour, nil, false, nil, nil, nil)
 
 	// NewHandler 只接位置参数；本测试只需要 authSvc，其余服务传 nil。
@@ -472,8 +498,13 @@ func TestLogoutRevokesOnlyItsOwnTokens(t *testing.T) {
 	accessA := signAccess(t, "1", 15*time.Minute)
 	accessB := signAccess(t, "2", 15*time.Minute)
 	refreshA, refreshB := "refresh-token-a", "refresh-token-b"
-	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshA, "1", 7*24*time.Hour))
-	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshB, "2", 7*24*time.Hour))
+	// 管理端 refresh 存 JSON 作用域（#169），app_id 为空 + admin_web。
+	scopeA, err := auth.EncodeRefreshScope(auth.RefreshScope{UID: 1, ScopeKind: auth.RefreshScopeAdminWeb})
+	require.NoError(t, err)
+	scopeB, err := auth.EncodeRefreshScope(auth.RefreshScope{UID: 2, ScopeKind: auth.RefreshScopeAdminWeb})
+	require.NoError(t, err)
+	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshA, scopeA, 7*24*time.Hour))
+	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshB, scopeB, 7*24*time.Hour))
 
 	const profilePath = "/api/v1/common/user/profile"
 	require.Equal(t, http.StatusOK, doRequest(t, engine, http.MethodGet, profilePath, accessB, "").Code,
