@@ -79,12 +79,13 @@ var adminRoutePermission = map[string]string{
 	"PUT /api/v1/admin/parents/:id/status": "parent:manage",
 
 	// settings / kindergarten —— 园所配置
-	"GET /api/v1/admin/settings":                 "system:kindergarten",
-	"PUT /api/v1/admin/settings":                 "system:kindergarten",
-	"GET /api/v1/admin/settings/academic-years":  "system:kindergarten",
-	"POST /api/v1/admin/settings/academic-years": "system:kindergarten",
-	"GET /api/v1/admin/kindergarten/info":        "system:kindergarten",
-	"PUT /api/v1/admin/kindergarten/info":        "system:kindergarten",
+	"GET /api/v1/admin/settings":                   "system:kindergarten",
+	"PUT /api/v1/admin/settings":                   "system:kindergarten",
+	"GET /api/v1/admin/settings/academic-years":    "system:kindergarten",
+	"POST /api/v1/admin/settings/academic-years":   "system:kindergarten",
+	"GET /api/v1/admin/kindergarten/info":          "system:kindergarten",
+	"PUT /api/v1/admin/kindergarten/info":          "system:kindergarten",
+	"GET /api/v1/admin/kindergarten/parent-qrcode": "system:kindergarten",
 
 	// admins
 	"GET /api/v1/admin/admins":                    "admin:view",

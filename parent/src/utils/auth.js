@@ -29,6 +29,14 @@ export function getUser() {
   return uni.getStorageSync(USER_KEY) || null
 }
 
+// 当前会话的园所 id：登录/切换返回的 roles 已裁剪到当前园（#169），
+// 取首个带 kindergarten_id 的角色即可。0 表示尚无园所（待绑定）。
+export function getCurrentKindergartenID() {
+  const roles = Array.isArray(getUser()?.roles) ? getUser().roles : []
+  const role = roles.find((item) => item && Number(item.kindergarten_id) > 0)
+  return role ? Number(role.kindergarten_id) : 0
+}
+
 export function clearAuth() {
   uni.removeStorageSync(TOKEN_KEY)
   uni.removeStorageSync(REFRESH_TOKEN_KEY)

@@ -642,11 +642,13 @@ func (s *AuthService) resolveClientMemberRoles(ctx context.Context, roles []doma
 	return filterClientRoles(roles, client, byID), byID, nil
 }
 
-// KindergartenMembership 是「我的园所」的一项：只暴露 id/名称/当前客户端角色。
+// KindergartenMembership 是「我的园所」的一项：暴露 id/名称/当前客户端角色/公开入口码。
+// public_code 让家长端能把扫到的 kg_<code> 匹配到成员园（#176）；公开码本就印在对外物料上。
 type KindergartenMembership struct {
 	KindergartenID uint64 `json:"kindergarten_id"`
 	Name           string `json:"name"`
 	Role           string `json:"role"`
+	PublicCode     string `json:"public_code"`
 }
 
 // ErrClientScopeRequired 表示端点只接受小程序客户端凭证（带 app_id）。
@@ -688,6 +690,7 @@ func (s *AuthService) ListMyKindergartens(ctx context.Context, userID uint64, cl
 			KindergartenID: kgID,
 			Name:           byID[kgID].Name,
 			Role:           r.Role,
+			PublicCode:     byID[kgID].PublicCode,
 		})
 	}
 	sort.Slice(items, func(i, j int) bool {

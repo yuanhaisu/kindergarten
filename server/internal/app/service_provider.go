@@ -30,9 +30,10 @@ func ProvideAuthService(
 	rtTTL RefreshTTL,
 	consentRepo *repository.ConsentRepo,
 	cfg *config.Config,
-	kindergartenRepo *repository.KindergartenRepo,
 	mergeSvc *service.IdentityMergeService,
 ) *service.AuthService {
+	// #169 的成员列表与 #167 的绑定查园是同一个仓储的两个接口视图；
+	// wire 不接受同一 provider 出现两个同类型参数，这里只取一次、复用两次。
 	return service.NewAuthService(
 		userRepo,
 		userRoleRepo,
@@ -48,7 +49,7 @@ func ProvideAuthService(
 		time.Duration(rtTTL),
 		consentRepo,
 		cfg.Consent.Enforce,
-		kindergartenRepo,
+		kgRepo,
 		mergeSvc,
 		// 绑定限流的完整维度（手机号）只能在 service 换出手机号后判定，
 		// 中间件那层先按 app_id + IP 兜住洪峰（#174 / #167）。

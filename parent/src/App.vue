@@ -9,8 +9,9 @@ export default {
 </script>
 
 <script setup>
-import { onLaunch } from "@dcloudio/uni-app"
+import { onLaunch, onShow } from "@dcloudio/uni-app"
 import { ensureConsent, ensureLogin } from "@/utils/login"
+import { captureEntryScene } from "@/utils/entryScene.mjs"
 import serifFontBase64 from "@/assets/fonts/noto-serif-sc-subset.js"
 import latinSerifFontBase64 from "@/assets/fonts/instrument-serif-subset.js"
 
@@ -46,13 +47,27 @@ function loadDnaFonts() {
   // #endif
 }
 
-onLaunch(() => {
+// 园所入口（#176）：scene 只在启动/唤醒时可见，必须早于登录写进暂存。
+// 冷启动走 onLaunch(options)，热启动（后台被扫码唤起）只走 onShow(options)；
+// 两处都在 ensureLogin 之前执行，登录/绑定流程跑完时入口仍可读。
+function captureEntry(options) {
+  const code = captureEntryScene(options, uni)
+  if (code) console.info("[entry] pending kindergarten:", code)
+}
+
+onLaunch((options) => {
+  // 部分基础库在 onLaunch 不给 options，回退 getLaunchOptionsSync（同老师端 invite_code）。
+  captureEntry(options || uni.getLaunchOptionsSync())
   loadDnaFonts()
   ensureLogin()
     .then(() => ensureConsent())
     .catch(() => {
       // 启动阶段静默登录失败时，业务页会继续引导用户授权。
     })
+})
+
+onShow((options) => {
+  captureEntry(options)
 })
 </script>
 

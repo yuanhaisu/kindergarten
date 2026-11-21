@@ -48,9 +48,13 @@ var Set = wire.NewSet(
 	NewDistributorService,
 	NewClientService,
 	NewKindergartenEntryService,
+	NewParentEntryQRService,
 	NewPublicBrandService,
 	NewIdentityMergeService,
 
 	// 晨检服务依赖策略读取接口，而不是整个 SettingsService。
 	wire.Bind(new(HealthPolicyProvider), new(*SettingsService)),
+
+	// 家长端入口二维码（#176）只依赖「按角色取启用客户端」这一条能力。
+	wire.Bind(new(ParentClientResolver), new(*ClientService)),
 )
