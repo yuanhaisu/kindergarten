@@ -44,9 +44,9 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		// 明确的 403，而不是误以为路径写错；两个端点都不签发 token。
 		v1.POST("/auth/sms/send", h.inner.SMSDisabled)
 		v1.POST("/auth/login/sms", h.inner.SMSDisabled)
-		// 旧微信登录在 #164 关闭：openid 不再直接建账号，新登录见 #175。
-		// 保留路由以便旧客户端拿到明确的 403，而不是误以为路径写错。
-		v1.POST("/auth/login/wechat", h.inner.WeChatLoginClosed)
+		// 小程序登录（#175）：app_id → 客户端注册表 → 该角色凭据换 openid；
+		// 没有身份时创建待绑定账号，不自动成为任何园所成员。
+		v1.POST("/auth/login/wechat", h.inner.WeChatLogin)
 		v1.POST("/auth/login/password", h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
@@ -103,6 +103,8 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker))
 		// 停用园所：凭证有效也一律拒绝（PLT-0005/0006）。
 		authed.Use(middleware.RequireActiveKindergarten(kgStatus))
+		// 未绑定账号白名单（#175）：必须在 Casbin 之前，空角色无法匹配任何策略。
+		authed.Use(middleware.RequireBoundAccount())
 		authed.Use(middleware.CasbinRBAC(e))
 		// 功能授权裁剪：只对 premium 模块生效，base 路由直接放行（ADR-0012）。
 		authed.Use(middleware.ModuleGate(moduleAuthz))

@@ -114,6 +114,9 @@ func New(t testing.TB) *Harness {
 	authSvc := service.NewAuthService(
 		userRepo,
 		userRoleRepo,
+		fakeWx,
+		service.NewClientService(repository.NewClientRepo(setup.db)),
+		repository.NewUserIdentityRepo(setup.db),
 		adminAuthz,
 		kgStatus,
 		rdb,
@@ -213,14 +216,16 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	// v1 短信通道已关闭（#162），路由保留但统一走拒绝处理，与 router.go 保持一致。
 	v1.POST("/auth/sms/send", hnd.SMSDisabled)
 	v1.POST("/auth/login/sms", hnd.SMSDisabled)
-	// 旧微信登录在 #164 关闭，与 router.go 保持一致。
-	v1.POST("/auth/login/wechat", hnd.WeChatLoginClosed)
+	// 小程序登录（#175）：角色与凭据来自客户端注册表，与 router.go 保持一致。
+	v1.POST("/auth/login/wechat", hnd.WeChatLogin)
 	v1.POST("/auth/login/password", hnd.PasswordLogin)
 	v1.POST("/auth/refresh", hnd.Refresh)
 
 	authed := v1.Group("")
 	authed.Use(middleware.AuthJWT(h.Secret, h.Auth.TokenRevoker()))
 	authed.Use(middleware.RequireActiveKindergarten(kgStatus))
+	// 未绑定 token 白名单（#175）必须在 Casbin 之前：空角色过不了任何策略。
+	authed.Use(middleware.RequireBoundAccount())
 	authed.Use(middleware.CasbinRBAC(enforcer))
 	authed.Use(middleware.ModuleGate(nil))
 	{
@@ -229,6 +234,13 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
+
+		// 业务接口探针：用于验证「已绑定可访问、未绑定 403」。
+		// 真实业务组由后续票在 h.Handler 上追加，这里只需要一条命中
+		// Casbin parent 策略的路径。
+		authed.GET("/parent/home/ping", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{}})
+		})
 	}
 
 	return r, hnd, enforcer, nil

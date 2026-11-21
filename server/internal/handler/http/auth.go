@@ -25,14 +25,51 @@ func (h *Handler) SMSDisabled(c *gin.Context) {
 	response.ErrForbidden(c, "短信功能在 v1 未开放")
 }
 
-// WeChatLoginClosed 旧微信登录在 #164 关闭。
-//
-// 原因不是「暂时不可用」，而是身份模型换了：openid 只能定位到「某账号在某客户端
-// 的身份」，不能再直接建账号（见 user_identities）。新登录（app_id + code →
-// 账号 + 身份）由 #175 接管；在此之前保留端点并明确拒绝，让旧客户端拿到可读提示。
-func (h *Handler) WeChatLoginClosed(c *gin.Context) {
-	log.L(c.Request.Context()).Warn("legacy wechat login rejected: closed in v1", "path", c.FullPath())
-	response.ErrForbidden(c, "微信登录已升级，请更新小程序后重试")
+type wechatLoginReq struct {
+	AppID string `json:"app_id" binding:"required"`
+	Code  string `json:"code" binding:"required"`
+	// InviteCode 只对老师端有效；家长端携带会被拒绝（见 #175 / #168）。
+	InviteCode string `json:"invite_code"`
+	// Role 是客户端自报角色，仅用于一致性校验；授权角色以 app_id 对应客户端为准。
+	Role string `json:"role"`
+}
+
+// WeChatLogin 小程序登录（#175）：角色与微信凭据都取自客户端注册表。
+func (h *Handler) WeChatLogin(c *gin.Context) {
+	var req wechatLoginReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrValidation(c, err.Error())
+		return
+	}
+
+	result, err := h.authSvc.WeChatLogin(c.Request.Context(), service.WeChatLoginRequest{
+		AppID:      req.AppID,
+		Code:       req.Code,
+		InviteCode: req.InviteCode,
+		Role:       req.Role,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrClientUnavailable):
+			log.L(c.Request.Context()).Warn("wechat login rejected: client unavailable", "app_id", req.AppID)
+			response.ErrForbidden(c, "小程序客户端未注册或已停用，请更新小程序后重试")
+		case errors.Is(err, service.ErrClientRoleMismatch):
+			log.L(c.Request.Context()).Warn("wechat login rejected: body role mismatch", "app_id", req.AppID, "role", req.Role)
+			response.ErrValidation(c, "请求角色与小程序客户端不一致")
+		case errors.Is(err, service.ErrInviteCodeNotAllowed):
+			log.L(c.Request.Context()).Warn("wechat login rejected: invite_code not allowed", "app_id", req.AppID)
+			response.ErrValidation(c, "当前小程序不支持邀请码")
+		case errors.Is(err, service.ErrWeChatLoginFailed):
+			log.L(c.Request.Context()).Warn("wechat login code2session failed", "app_id", req.AppID, "err", err)
+			response.ErrBadRequest(c, 40002, "微信登录凭证无效，请重试")
+		default:
+			log.L(c.Request.Context()).Error("wechat login failed", "app_id", req.AppID, "err", err)
+			response.ErrInternal(c, "登录失败")
+		}
+		return
+	}
+
+	response.OK(c, result)
 }
 
 type passwordLoginReq struct {
