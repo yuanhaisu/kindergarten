@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -102,4 +103,50 @@ func TestPublicBrandRateLimitFailsOpenWithoutRedis(t *testing.T) {
 	engine := newPublicBrandRateLimitedEngine(nil)
 
 	assert.Equal(t, http.StatusNoContent, callPublicBrandRateLimited(engine))
+}
+
+// ---------- 家长绑定手机号：app_id + IP + 手机号（#167） ----------
+
+// 绑定换出手机号后按 app_id + IP + 手机号限流：同一三元组 20 次/分钟，第 21 次拒绝。
+func TestBindPhoneLimiterRejectsBurstForSameTriple(t *testing.T) {
+	f := fakeredis.New(t)
+	limiter := NewBindPhoneLimiter(f.Client(t), BindPhoneMaxPerMinute, time.Minute)
+	ctx := context.Background()
+
+	for i := 1; i <= BindPhoneMaxPerMinute; i++ {
+		require.True(t, limiter.Allow(ctx, "203.0.113.7", "wx-bind-app", "13800000000"), "第 %d 次应在配额内", i)
+	}
+	assert.False(t, limiter.Allow(ctx, "203.0.113.7", "wx-bind-app", "13800000000"), "第 21 次必须拒绝")
+}
+
+// 任一维度不同都应是独立配额：同 IP 不同手机号、同手机号不同 app_id 都不能互相挤占。
+func TestBindPhoneLimiterSeparatesDimensions(t *testing.T) {
+	f := fakeredis.New(t)
+	limiter := NewBindPhoneLimiter(f.Client(t), 2, time.Minute)
+	ctx := context.Background()
+
+	require.True(t, limiter.Allow(ctx, "203.0.113.7", "wx-bind-app", "13800000001"))
+	require.True(t, limiter.Allow(ctx, "203.0.113.7", "wx-bind-app", "13800000001"))
+	require.False(t, limiter.Allow(ctx, "203.0.113.7", "wx-bind-app", "13800000001"))
+
+	assert.True(t, limiter.Allow(ctx, "203.0.113.7", "wx-bind-app", "13800000002"), "换手机号是新配额")
+	assert.True(t, limiter.Allow(ctx, "203.0.113.7", "wx-other-app", "13800000001"), "换 app_id 是新配额")
+	assert.True(t, limiter.Allow(ctx, "198.51.100.9", "wx-bind-app", "13800000001"), "换 IP 是新配额")
+}
+
+// 绑定限流失败开放：Redis 故障不能把家长卡死在绑定页。
+func TestBindPhoneLimiterFailsOpenOnRedisError(t *testing.T) {
+	f := fakeredis.New(t)
+	f.SetFailWrites(true)
+	limiter := NewBindPhoneLimiter(f.Client(t), 1, time.Minute)
+
+	require.True(t, limiter.Allow(context.Background(), "203.0.113.7", "wx-bind-app", "13800000003"))
+	require.True(t, limiter.Allow(context.Background(), "203.0.113.7", "wx-bind-app", "13800000003"))
+}
+
+// 未装配 Redis 时同样放行（失败开放）。
+func TestBindPhoneLimiterFailsOpenWithoutRedis(t *testing.T) {
+	limiter := NewBindPhoneLimiter(nil, 1, time.Minute)
+
+	assert.True(t, limiter.Allow(context.Background(), "203.0.113.7", "wx-bind-app", "13800000004"))
 }

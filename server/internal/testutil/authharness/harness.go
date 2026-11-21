@@ -107,7 +107,8 @@ func New(t testing.TB) *Harness {
 
 	userRepo := repository.NewUserRepo(setup.db)
 	userRoleRepo := repository.NewUserRoleRepo(setup.db)
-	kgStatus := service.NewKindergartenStatusService(repository.NewKindergartenRepo(setup.db), rdb)
+	kindergartenRepo := repository.NewKindergartenRepo(setup.db)
+	kgStatus := service.NewKindergartenStatusService(kindergartenRepo, rdb)
 	adminAuthz := service.NewAdminAuthzService(repository.NewAdminRepo(setup.db), userRoleRepo)
 	clientSvc := service.NewClientService(repository.NewClientRepo(setup.db))
 	identityRepo := repository.NewUserIdentityRepo(setup.db)
@@ -128,6 +129,9 @@ func New(t testing.TB) *Harness {
 		rtTTL,
 		repository.NewConsentRepo(setup.db),
 		false,
+		kindergartenRepo,
+		service.NewIdentityMergeService(setup.db),
+		middleware.NewBindPhoneLimiter(rdb, middleware.BindPhoneMaxPerMinute, time.Minute),
 	)
 	// #168：邀请绑定与登录共用同一套客户端/身份/合并服务，测试缝里也不例外。
 	bindInviteSvc := service.NewBindInviteService(
@@ -269,6 +273,12 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 			hnd.BindInvite)
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
+
+		// 家长绑定手机号（#167）：中间件与 router.go 同源装配（失败开放的
+		// app_id + IP 预限流；手机号维度在 service 内判定）。
+		authed.POST("/common/user/bind-parent-phone",
+			middleware.BindPhoneRateLimit(h.RedisClient, middleware.BindPhoneMaxPerMinute, time.Minute),
+			hnd.BindParentPhone)
 
 		// 园所品牌设置（#178）：权限码 system:kindergarten 在生产由
 		// RequirePermission 兜底，这里保留 Casbin（admin → /api/v1/*）即可。

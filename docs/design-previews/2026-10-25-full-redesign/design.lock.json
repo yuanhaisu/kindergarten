@@ -1,17 +1,18 @@
 {
   "version": 1,
-  "supportHash": "eb73652e422e75664ea1af099a977f250222672b2f32549f9608065a7e2e4536",
+  "supportHash": "bb1303a16f1325081caff0794892d98c7df036d6799f57120eb72e1669a27a63",
   "supportReviewedAt": "2026-11-21",
-  "supportReason": "merge #169/#168: teacher 登录/绑定与园所切换共用 http/auth 会话层，页面表现无回归",
+  "supportReason": "ticket #167：parent bindParentPhone 增加目标园所参数；合并 #169 成员切换与 #168 老师邀请绑定后复核共享 http/auth 会话层，无页面回归",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
-      "sha256": "df1c29d34e5095101d1376b9fe3e97b379407e985f5387504c6c4b2cda44598d",
-      "depsSha": "846f9ab4fe957fa22703b908f3857d16a0ca58219eced2d3dc68d3d94fd6bb1a",
+      "sha256": "218e04db6113ab87a3b771bd662af575b7c9831aa1a91d3475f6d7e9daa69cf0",
+      "depsSha": "f3407b81a9e244bacb65c9ce8c93deb97b11c0413db560eab4c52075f5bb0881",
       "title": "养成星球",
       "tabbar": true,
-      "reviewedAt": "2026-11-06",
-      "codeCommit": "dfcb18b"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "dfcb18b-dirty",
+      "reason": "ticket #167 家长端首页绑定手机号：支持 public_code 园所入口、绑定成功后落盘新 token 并刷新首页"
     },
     "parent/02-login": {
       "source": "parent/src/pages/auth/login.vue",

@@ -415,7 +415,7 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002"},
 	}}
 	svc := service.NewAuthService(users, fakeRoleRepo{}, nil, nil, nil, nil, nil, nil, rdb,
-		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour, nil, false)
+		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour, nil, false, nil, nil, nil)
 
 	// NewHandler 只接位置参数；本测试只需要 authSvc，其余服务传 nil。
 	h := handler.NewHandler(svc,
