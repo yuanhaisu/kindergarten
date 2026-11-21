@@ -19,16 +19,6 @@ import (
 // 这一组只锁「看得到哪些园」：家长端不能看到自己当老师的园，共用客户端
 // 不能看到专属通道的园，同一账号在两端各自只看到对应的一侧。
 
-type membershipFixture struct {
-	appID        string
-	openID       string
-	code         string
-	token        string
-	userID       uint64
-	parentAppID  string
-	teacherAppID string
-}
-
 type membershipItem struct {
 	KindergartenID uint64 `json:"kindergarten_id"`
 	Name           string `json:"name"`

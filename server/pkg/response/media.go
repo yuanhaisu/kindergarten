@@ -206,8 +206,8 @@ func jsonFieldName(field reflect.StructField) string {
 
 func isMediaKey(key string) bool {
 	switch strings.ToLower(key) {
-	case "file_url", "thumb_url", "cover_url", "avatar", "media_url", "face_url",
-		"fileurl", "thumburl", "coverurl", "mediaurl", "faceurl":
+	case "file_url", "thumb_url", "cover_url", "avatar", "media_url", "face_url", "logo_url",
+		"fileurl", "thumburl", "coverurl", "mediaurl", "faceurl", "logourl":
 		return true
 	default:
 		return false

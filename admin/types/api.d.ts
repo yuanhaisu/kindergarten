@@ -169,6 +169,8 @@ export interface KindergartenInfo {
   phone: string
   principal: string
   logo_url: string
+  /** 园所主题色（大写 #RRGGBB）；空串表示使用默认主题 */
+  brand_color: string
   license_no: string
   capacity: number
   current_count: number

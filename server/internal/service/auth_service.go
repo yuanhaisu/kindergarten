@@ -451,7 +451,11 @@ func (s *AuthService) SMSLogin(ctx context.Context, phone, code, role string) (*
 	return s.issueTokens(ctx, user)
 }
 
-// PasswordLogin 密码登录（管理后台 + 家长端共用）
+// PasswordLogin 密码登录（仅管理后台）。
+//
+// v1 密码登录只允许 admin 角色：家长/老师走各自小程序的微信登录，预建账号
+// 不持有可用密码（#174）。先校验密码再判角色，避免把「这个手机号是不是
+// 管理后台账号」变成无需密码即可探测的信息。
 func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string) (*LoginResult, error) {
 	user, err := s.userRepo.FindByPhone(ctx, phone)
 	if err != nil {
@@ -468,6 +472,9 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
 	if err != nil {
 		return nil, err
+	}
+	if !hasAdminRole(roles) {
+		return nil, fmt.Errorf("NOT_ADMIN")
 	}
 
 	return s.issueTokensFromRoles(ctx, user, roles)
@@ -718,6 +725,17 @@ func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, cla
 		return nil, ErrKindergartenNotMember
 	}
 	return s.issueTokensFor(ctx, user, scopedRoles, client)
+}
+
+// hasAdminRole 密码登录只服务管理后台（#174）：家长/老师账号即使有密码
+// 也不能走密码通道换取管理端 token。
+func hasAdminRole(roles []domain.UserRole) bool {
+	for _, r := range roles {
+		if r.Role == "admin" {
+			return true
+		}
+	}
+	return false
 }
 
 // ErrTokenRevoked 表示 token 已被登出吊销；ErrAuthStorageUnavailable 表示吊销存储
