@@ -163,6 +163,20 @@ func ProvideOSSStorage(cfg *config.Config) (*ossx.Storage, error) {
 	return storage, nil
 }
 
+// ProvideLogoSigner 给公开品牌接口（#170）注入短期 logo 签名。
+//
+// 不复用 response.SetMediaSigner：它固定 1 小时 TTL，且媒体白名单不含
+// logo_url，公开接口不该借道内部响应序列化。OSS 未配置（本地开发）时
+// 原样返回引用，不做必然失败的签名。
+func ProvideLogoSigner(storage *ossx.Storage) service.LogoSigner {
+	return service.LogoSignerFunc(func(ref string) (string, error) {
+		if !storage.Configured() {
+			return ref, nil
+		}
+		return storage.SignRef(ref, service.PublicBrandLogoTTL, false)
+	})
+}
+
 // ProvideNoticeScheduler 定时通知发布 worker（openspec: notice-scheduled-publish）。
 // 只构造不启动：启动挂在 AppHandler 装配处，见 NewAppHandlerWithBackgroundWorkers。
 func ProvideNoticeScheduler(db *gorm.DB) *service.NoticeScheduler {
