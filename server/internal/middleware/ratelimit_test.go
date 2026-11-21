@@ -56,3 +56,50 @@ func TestPlatformAuthLoginRateLimitFailsClosedWithoutRedis(t *testing.T) {
 
 	assert.Equal(t, http.StatusServiceUnavailable, callRateLimited(engine))
 }
+
+// ---------- 公开只读端点：失败开放（#170） ----------
+
+// newPublicBrandRateLimitedEngine 挂上公开品牌接口的失败开放限流（测试用 3 次/分钟）。
+func newPublicBrandRateLimitedEngine(rdb *redis.Client) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.GET("/api/v1/public/kindergartens/:public_code",
+		RateLimitFailOpen(rdb, "public_brand", 3, time.Minute),
+		func(c *gin.Context) { c.Status(http.StatusNoContent) })
+	return engine
+}
+
+func callPublicBrandRateLimited(engine *gin.Engine) int {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/public/kindergartens/abc", nil)
+	w := httptest.NewRecorder()
+	engine.ServeHTTP(w, req)
+	return w.Code
+}
+
+// 配额内正常放行，超出后 429——限流本身仍然生效。
+func TestPublicBrandRateLimitRejectsBurst(t *testing.T) {
+	f := fakeredis.New(t)
+	engine := newPublicBrandRateLimitedEngine(f.Client(t))
+
+	for i := 1; i <= 3; i++ {
+		require.Equal(t, http.StatusNoContent, callPublicBrandRateLimited(engine), "第 %d 次应在配额内", i)
+	}
+	assert.Equal(t, http.StatusTooManyRequests, callPublicBrandRateLimited(engine), "第 4 次必须 429")
+}
+
+// 公开品牌是未登录启动页的数据源：Redis 故障必须放行（失败开放），
+// 不能因为限流存储抖动把家长端启动打成 503。
+func TestPublicBrandRateLimitFailsOpenOnRedisError(t *testing.T) {
+	f := fakeredis.New(t)
+	f.SetFailWrites(true)
+	engine := newPublicBrandRateLimitedEngine(f.Client(t))
+
+	assert.Equal(t, http.StatusNoContent, callPublicBrandRateLimited(engine))
+}
+
+// 未装配 Redis 时同样失败开放：公开数据没有暴力破解面，可用性优先。
+func TestPublicBrandRateLimitFailsOpenWithoutRedis(t *testing.T) {
+	engine := newPublicBrandRateLimitedEngine(nil)
+
+	assert.Equal(t, http.StatusNoContent, callPublicBrandRateLimited(engine))
+}

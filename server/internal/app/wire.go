@@ -26,6 +26,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		ProvideRefreshTTL,
 		ProvideCasbinConfig,
 		ProvideOSSStorage,
+		ProvideLogoSigner,
 		ProvideFaceConfig,
 		ProvideFaceProvider,
 		rbac.NewEnforcer,

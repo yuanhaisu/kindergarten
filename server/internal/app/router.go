@@ -50,6 +50,12 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/auth/login/password", h.inner.PasswordLogin)
 		v1.POST("/auth/refresh", h.inner.Refresh)
 
+		// 园所公开品牌（#170）：未登录可访问，按 public_code（不可枚举）定位。
+		// 限流失败开放——公开品牌是家长端启动页的数据源，Redis 抖动不能把
+		// 启动打成 503；公开只读数据没有暴力破解面（见 RateLimitFailOpen）。
+		publicBrandLimit := middleware.RateLimitFailOpen(h.rdb, "public_brand", 300, time.Minute)
+		v1.GET("/public/kindergartens/:public_code", publicBrandLimit, h.inner.GetPublicKindergartenBrand)
+
 		// 平台方：独立信任域，凭证 scope=platform（ADR-0014）。
 		// 登录与续期是唯一不需要平台凭证的两个端点；登录额外挂
 		// 10 次/分钟/IP 的严格限流，Redis 故障时失败关闭（design D5）。

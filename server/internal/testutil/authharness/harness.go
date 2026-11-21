@@ -30,7 +30,20 @@ import (
 	"kindergarten-server/internal/rbac"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/internal/storage/oss"
 	"kindergarten-server/internal/testutil/fakeredis"
+)
+
+// 公开品牌 logo 签名用伪造凭据构造真实 *oss.Storage：SignURL 是本地 HMAC
+// 计算，不发网络请求；测试断言的是实际签名逻辑，而不是替身。
+const (
+	testOSSEndpoint   = "oss-cn-hangzhou.aliyuncs.com"
+	testOSSAccessKey  = "test-access-key"
+	testOSSSecret     = "test-secret"
+	testOSSBucketName = "test-bucket"
+
+	// publicBrandRateLimit 与 router.go 的公开品牌限流阈值一致。
+	publicBrandRateLimit = 300
 )
 
 // Harness 是一次测试的完整运行环境。
@@ -125,7 +138,23 @@ func New(t testing.TB) *Harness {
 		TestDSNFromEnv: setup.dsnFromEnv,
 	}
 
-	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus)
+	brandStorage, err := oss.NewStorage(oss.Config{
+		Endpoint:        testOSSEndpoint,
+		AccessKeyID:     testOSSAccessKey,
+		AccessKeySecret: testOSSSecret,
+		BucketName:      testOSSBucketName,
+	})
+	if err != nil {
+		t.Fatalf("authharness: 构造 logo 签名 Storage 失败：%v", err)
+	}
+	publicBrandSvc := service.NewPublicBrandService(
+		repository.NewKindergartenRepo(setup.db),
+		service.LogoSignerFunc(func(ref string) (string, error) {
+			return brandStorage.SignRef(ref, service.PublicBrandLogoTTL, false)
+		}),
+	)
+
+	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, publicBrandSvc)
 	if err != nil {
 		t.Fatalf("authharness: 装配 HTTP 引擎失败：%v", err)
 	}
@@ -159,7 +188,7 @@ func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
 //
 // 只注册这些分组，不拉整棵业务依赖树；后续票需要业务组时在 h.Handler 上追加，
 // 继续复用同一套中间件与同一个测试库。
-func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
+func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, publicBrandSvc *service.PublicBrandService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
 	enforcer, err := rbac.NewEnforcer(&config.CasbinConfig{
 		Enable:     true,
 		ModelPath:  filepath.Join(repoRoot, "configs", "rbac_model.conf"),
@@ -169,7 +198,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		return nil, nil, nil, fmt.Errorf("初始化 Casbin：%w", err)
 	}
 
-	hnd := authOnlyHandler(h.Auth)
+	hnd := authOnlyHandler(h.Auth, publicBrandSvc)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -177,6 +206,10 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	r.Use(middleware.RequestID())
 
 	v1 := r.Group("/api/v1")
+	// 公开园所品牌（#170）：未登录可访问，限流与 router.go 保持一致（失败开放）。
+	v1.GET("/public/kindergartens/:public_code",
+		middleware.RateLimitFailOpen(h.RedisClient, "public_brand", publicBrandRateLimit, time.Minute),
+		hnd.GetPublicKindergartenBrand)
 	// v1 短信通道已关闭（#162），路由保留但统一走拒绝处理，与 router.go 保持一致。
 	v1.POST("/auth/sms/send", hnd.SMSDisabled)
 	v1.POST("/auth/login/sms", hnd.SMSDisabled)
@@ -206,7 +239,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 // 认证/common 路由只依赖 authSvc，无需为了一条测试缝拉起整棵依赖树。
 // 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
 // 强制同步，避免测试缝悄悄错位。
-func authOnlyHandler(authSvc *service.AuthService) *handler.Handler {
+func authOnlyHandler(authSvc *service.AuthService, publicBrandSvc *service.PublicBrandService) *handler.Handler {
 	return handler.NewHandler(
 		authSvc,
 		nil, // fileSvc
@@ -249,6 +282,7 @@ func authOnlyHandler(authSvc *service.AuthService) *handler.Handler {
 		nil, // orderSvc
 		nil, // distSvc
 		nil, // entSvc
+		publicBrandSvc,
 	)
 }
 

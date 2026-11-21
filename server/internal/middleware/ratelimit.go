@@ -26,7 +26,7 @@ func RateLimit(rdb *redis.Client, prefix string, maxRequests int, window time.Du
 		}
 
 		ip := c.ClientIP()
-		key := fmt.Sprintf("ratelimit:%s:%s", prefix, ip)
+		key := rateLimitKey(prefix, ip)
 
 		ctx := context.Background()
 		count, err := rdb.Incr(ctx, key).Result()
@@ -54,4 +54,52 @@ func RateLimit(rdb *redis.Client, prefix string, maxRequests int, window time.Du
 		}
 		c.Next()
 	}
+}
+
+// RateLimitFailOpen 与 RateLimit 的差别只在存储不可用时**放行**。
+//
+// 用于公开只读数据（园所品牌）：它没有暴力破解面，却是未登录启动页的数据源。
+// 失败关闭会把 Redis 抖动放大成「家长端启动 503」，失败开放最多是短时失去
+// 滥用保护。配额判定本身仍然严格，Redis 正常时超限照常 429。
+func RateLimitFailOpen(rdb *redis.Client, prefix string, maxRequests int, window time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if rdb == nil {
+			log.L(c.Request.Context()).Warn("rate limit store not configured; allowing public request", "prefix", prefix)
+			c.Next()
+			return
+		}
+
+		ip := c.ClientIP()
+		key := rateLimitKey(prefix, ip)
+
+		ctx := context.Background()
+		count, err := rdb.Incr(ctx, key).Result()
+		if err != nil {
+			log.L(c.Request.Context()).Warn("rate limit increment failed; allowing public request",
+				"prefix", prefix, "err", err)
+			c.Next()
+			return
+		}
+		if count == 1 {
+			if err := rdb.Expire(ctx, key, window).Err(); err != nil {
+				// 没有窗口的计数会永久累积；放行的同时清掉脏键，避免下一次正常请求被误伤。
+				log.L(c.Request.Context()).Warn("rate limit expire failed; allowing public request",
+					"prefix", prefix, "err", err)
+				_ = rdb.Del(ctx, key).Err()
+				c.Next()
+				return
+			}
+		}
+
+		if count > int64(maxRequests) {
+			response.ErrRateLimited(c)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func rateLimitKey(prefix, ip string) string {
+	return fmt.Sprintf("ratelimit:%s:%s", prefix, ip)
 }
