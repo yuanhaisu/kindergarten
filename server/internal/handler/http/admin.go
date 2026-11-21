@@ -65,7 +65,7 @@ func (h *Handler) CreateAdmin(c *gin.Context) {
 				return
 			}
 			if err.Error() == "DUPLICATE_ADMIN_PHONE" {
-				response.ErrBadRequest(c, 40042, "该手机号已是本园管理员")
+				response.ErrBadRequest(c, 40042, "该手机号已是管理员，一个手机号只能管理一个园所")
 				return
 			}
 			if err.Error() == "ROLE_NOT_FOUND" || err.Error() == "KINDERGARTEN_NOT_FOUND" {

@@ -92,6 +92,10 @@ func (h *Handler) PasswordLogin(c *gin.Context) {
 			response.ErrBadRequest(c, 40003, "账号或密码错误")
 		case "NOT_ADMIN":
 			response.ErrForbidden(c, "该账号无管理后台权限")
+		case "ADMIN_KINDERGARTEN_REQUIRED":
+			response.ErrForbidden(c, "该账号未绑定园所，请联系平台方")
+		case "ADMIN_KINDERGARTEN_CONFLICT":
+			response.ErrForbidden(c, "该账号是多个园所的管理员，请联系平台方处理")
 		case "KINDERGARTEN_SUSPENDED":
 			response.ErrForbidden(c, "园所已停用，请联系平台方")
 		default:
