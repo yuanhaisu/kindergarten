@@ -266,13 +266,6 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
 
-		// 业务接口探针：用于验证「已绑定可访问、未绑定 403」。
-		// 真实业务组由后续票在 h.Handler 上追加，这里只需要一条命中
-		// Casbin parent 策略的路径。
-		authed.GET("/parent/home/ping", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-		})
-
 		// 园所品牌设置（#178）：权限码 system:kindergarten 在生产由
 		// RequirePermission 兜底，这里保留 Casbin（admin → /api/v1/*）即可。
 		adminG := authed.Group("/admin")
@@ -280,6 +273,13 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 			adminG.GET("/kindergarten/info", hnd.GetKindergartenInfo)
 			adminG.PUT("/kindergarten/info", hnd.UpdateKindergartenInfo)
 		}
+
+		// 业务接口探针（#175）：用于验证「已绑定可访问、未绑定 403」。
+		// 真实业务组由后续票在 h.Handler 上追加，这里只需要一条命中
+		// Casbin parent 策略的路径。
+		authed.GET("/parent/home/ping", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{}})
+		})
 	}
 
 	return r, hnd, enforcer, nil
