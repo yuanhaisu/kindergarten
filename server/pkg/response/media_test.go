@@ -12,7 +12,9 @@ type mediaDTO struct {
 	FileURL  string `json:"file_url"`
 	ThumbURL string `json:"thumb_url,omitempty"`
 	Avatar   string `json:"avatar"`
-	Other    string `json:"other"`
+	// 园所 logo（#178）也是 OSS object key，管理端/公开品牌都靠响应层签名预览
+	LogoURL string `json:"logo_url"`
+	Other   string `json:"other"`
 }
 
 func TestSignMediaMap(t *testing.T) {
@@ -45,12 +47,13 @@ func TestSignMediaStruct(t *testing.T) {
 	SetMediaSigner(func(ref string, thumb bool) string { return "signed:" + ref })
 	defer SetMediaSigner(nil)
 
-	in := mediaDTO{FileURL: "file.jpg", ThumbURL: "thumb.jpg", Avatar: "avatar.jpg", Other: "other.jpg"}
+	in := mediaDTO{FileURL: "file.jpg", ThumbURL: "thumb.jpg", Avatar: "avatar.jpg", LogoURL: "logo.png", Other: "other.jpg"}
 	out := signMedia(in).(mediaDTO)
 
 	assert.Equal(t, "signed:file.jpg", out.FileURL)
 	assert.Equal(t, "signed:thumb.jpg", out.ThumbURL)
 	assert.Equal(t, "signed:avatar.jpg", out.Avatar)
+	assert.Equal(t, "signed:logo.png", out.LogoURL)
 	assert.Equal(t, "other.jpg", out.Other)
 	assert.Equal(t, "file.jpg", in.FileURL, "原始数据不应被修改")
 }

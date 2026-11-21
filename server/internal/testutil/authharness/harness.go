@@ -153,8 +153,20 @@ func New(t testing.TB) *Harness {
 			return brandStorage.SignRef(ref, service.PublicBrandLogoTTL, false)
 		}),
 	)
+	// 园所品牌设置（#178）走与生产相同的 SettingsService + 真实仓储，
+	// 这样「管理端保存 → 公开品牌立即可见」在测试里是同一份 DB 行为。
+	settingsSvc := service.NewSettingsService(
+		setup.db,
+		repository.NewKindergartenRepo(setup.db),
+		repository.NewAcademicYearRepo(setup.db),
+		repository.NewKindergartenAppSettingRepo(setup.db),
+		repository.NewClassRepo(setup.db),
+		repository.NewStudentRepo(setup.db),
+		userRoleRepo,
+		repository.NewOperationLogRepo(setup.db),
+	)
 
-	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, publicBrandSvc)
+	engine, hnd, enforcer, err := buildEngine(h, setup.repoRoot, kgStatus, settingsSvc, publicBrandSvc)
 	if err != nil {
 		t.Fatalf("authharness: 装配 HTTP 引擎失败：%v", err)
 	}
@@ -188,7 +200,7 @@ func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
 //
 // 只注册这些分组，不拉整棵业务依赖树；后续票需要业务组时在 h.Handler 上追加，
 // 继续复用同一套中间件与同一个测试库。
-func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, publicBrandSvc *service.PublicBrandService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
+func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatusChecker, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService) (*gin.Engine, *handler.Handler, *casbin.Enforcer, error) {
 	enforcer, err := rbac.NewEnforcer(&config.CasbinConfig{
 		Enable:     true,
 		ModelPath:  filepath.Join(repoRoot, "configs", "rbac_model.conf"),
@@ -198,7 +210,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		return nil, nil, nil, fmt.Errorf("初始化 Casbin：%w", err)
 	}
 
-	hnd := authOnlyHandler(h.Auth, publicBrandSvc)
+	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -231,17 +243,25 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
 		authed.GET("/common/consent", hnd.GetConsent)
 		authed.POST("/common/consent", hnd.PostConsent)
+
+		// 园所品牌设置（#178）：权限码 system:kindergarten 在生产由
+		// RequirePermission 兜底，这里保留 Casbin（admin → /api/v1/*）即可。
+		adminG := authed.Group("/admin")
+		{
+			adminG.GET("/kindergarten/info", hnd.GetKindergartenInfo)
+			adminG.PUT("/kindergarten/info", hnd.UpdateKindergartenInfo)
+		}
 	}
 
 	return r, hnd, enforcer, nil
 }
 
-// authOnlyHandler 只装配 AuthService，其余服务保持 nil。
+// authOnlyHandler 只装配认证/公开品牌/园所设置服务，其余服务保持 nil。
 //
-// 认证/common 路由只依赖 authSvc，无需为了一条测试缝拉起整棵依赖树。
+// 这些路由只依赖上述服务，无需为了一条测试缝拉起整棵依赖树。
 // 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
 // 强制同步，避免测试缝悄悄错位。
-func authOnlyHandler(authSvc *service.AuthService, publicBrandSvc *service.PublicBrandService) *handler.Handler {
+func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService) *handler.Handler {
 	return handler.NewHandler(
 		authSvc,
 		nil, // fileSvc
@@ -252,7 +272,7 @@ func authOnlyHandler(authSvc *service.AuthService, publicBrandSvc *service.Publi
 		nil, // studentSvc
 		nil, // teacherSvc
 		nil, // parentSvc
-		nil, // settingsSvc
+		settingsSvc,
 		nil, // adminSvc
 		nil, // roleSvc
 		nil, // attendanceSvc
@@ -361,6 +381,15 @@ func (h *Harness) PostJSONWithToken(t testing.TB, path, token string, payload an
 		t.Fatalf("authharness: 序列化请求体失败：%v", err)
 	}
 	return h.Do(t, http.MethodPost, path, token, body)
+}
+
+func (h *Harness) PutJSONWithToken(t testing.TB, path, token string, payload any) *Response {
+	t.Helper()
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("authharness: 序列化请求体失败：%v", err)
+	}
+	return h.Do(t, http.MethodPut, path, token, body)
 }
 
 // HardDelete 绕过软删真正删除行。
