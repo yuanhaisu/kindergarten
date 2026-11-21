@@ -3,7 +3,7 @@
 老师端 + 家长端所有页面，每页一份独立 HTML 原型。先看 [index.html](index.html) 画廊。
 
 - 页面总数：53
-- 已出稿：51
+- 已出稿：53
 - 共享约束：[_shared/brief.md](_shared/brief.md)
 - 设计系统：`user:nurture-planet-local`
 

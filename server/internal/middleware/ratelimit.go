@@ -99,6 +99,20 @@ func BindPhoneRateLimit(rdb *redis.Client, maxRequests int, window time.Duration
 	})
 }
 
+// BindInviteRateLimit 老师邀请绑定：app_id + IP + 邀请码，失败开放并告警（#168）。
+//
+// #160 的原话是「app_id + IP + 手机号」；邀请绑定请求里没有手机号（待绑定账号
+// 手机号为空，预创建账号手机号在服务端），以邀请码作为第三维度等价地限制
+// 「同一客户端反复试同一/不同邀请码」的暴力枚举。配额沿用绑定入口的 20/分钟。
+func BindInviteRateLimit(rdb *redis.Client, maxRequests int, window time.Duration) gin.HandlerFunc {
+	return rateLimitBy(rdb, "bind_invite", maxRequests, window, true, func(c *gin.Context) string {
+		return joinRateLimitParts(
+			"app_id", claimsAppID(c),
+			"invite", jsonBodyString(c, "invite_code"),
+		)
+	})
+}
+
 func rateLimitBy(
 	rdb *redis.Client,
 	prefix string,

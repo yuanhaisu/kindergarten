@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "acf19734747f61d9c98394edbdd6515db9f3a7d4ac04ccad64becdce88250d8c",
+  "supportHash": "bb1303a16f1325081caff0794892d98c7df036d6799f57120eb72e1669a27a63",
   "supportReviewedAt": "2026-11-21",
-  "supportReason": "ticket #167：parent/src/api/auth.js 的 bindParentPhone 增加 public_code / kindergarten_id 目标园所参数",
+  "supportReason": "ticket #167：parent bindParentPhone 增加目标园所参数；合并 #169 成员切换与 #168 老师邀请绑定后复核共享 http/auth 会话层，无页面回归",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -295,13 +295,13 @@
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
-      "sha256": "051c329e0748ed0a88bb6365117aaa91e4563fee62a0f18c9937693f108660de",
-      "depsSha": "146fd80faf45810977611e8c7fe786dd13b6246bee2ebeab63930f24bd8984ca",
+      "sha256": "ed957996cfae56e06d5e8c4e38b3b7658036233a4d610b34b914ddcb26ca473a",
+      "depsSha": "cea3e98e04c5b58ba450d63c8dc13e36c8b05dea931cdfdb87fc43f5a6f3803e",
       "title": "老师登录",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "0f0d09e",
+      "reason": "#168 登录页接入邀请码绑定：待绑定 token 不进工作台，绑定成功后进入园所"
     },
     "teacher/03-notice-create": {
       "source": "teacher/src/pages/notice/create.vue",

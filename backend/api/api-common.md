@@ -149,8 +149,9 @@
   `kindergarten_id` 也由裁剪后的角色推导。
 - **待绑定限制**：待绑定 token（`app_id` 存在且角色为空）只能访问
   `GET|PUT /common/user/profile`、`PUT /common/user/avatar`、`GET|POST /common/consent`、
-  `POST /auth/logout`、`GET /common/user/kindergartens` 与
-  `POST /common/user/bind-parent-phone`（#167）；其余业务接口返回
+  `POST /auth/logout`、`GET /common/user/kindergartens`、
+  `POST /common/user/bind-parent-phone`（#167）与 `POST /common/user/bind-invite`（#168）；
+  其余业务接口返回
   `403` + `code=40302`（客户端应跳转绑定页，而不是提示无权限）。
 - **错误**：缺 `app_id` / 角色与客户端不一致 / 家长端携带 `invite_code` → `422`（`42200`）；
   客户端未注册或已停用 → `403`（`40300`）；`code` 无效 → `400`（`40002`）。
@@ -158,10 +159,62 @@
 
 ---
 
-### POST `/common/user/bind-invite` — 已移除
+### POST `/common/user/bind-invite` — 老师邀请码绑定（#168）
 
-> ⛔ 教师邀请码绑定旧端点已在 v1 移除，路由不存在（`404`），无需登录态。
-> 由 #168 重写后重新登记。
+> 调用方必须持有老师端「待绑定 token」（`/auth/login/wechat` 返回、`roles` 为空）。
+> 绑定后待绑定账号并入园所预创建的教师账号，响应是**该教师账号**的新登录结果，
+> 客户端直接替换本地 token / refresh_token / user。
+
+```json
+// Request
+{
+  "invite_code": "T8K2..."                  // 必填：园所发放的老师邀请码
+}
+
+// Response（与 /auth/login/wechat 相同的登录响应）
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "…",
+  "expires_at": "2026-11-21T12:00:00Z",
+  "consent_required": true,
+  "current_policy_version": "v1",
+  "user": {
+    "id": 88,                               // 园所预创建教师账号
+    "phone": "138****1234",
+    "nickname": "李老师",
+    "avatar": "",
+    "gender": 0,
+    "must_change_password": false,
+    "roles": [
+      {
+        "role": "teacher",
+        "kindergarten_id": 4,
+        "kindergarten_name": "示例幼儿园",
+        "class_id": 12,
+        "class_name": "小一班",
+        "title": "主班"
+      }
+    ]
+  }
+}
+```
+
+- **身份与账号**：客户端身份 `(app_id, open_id)` 移到邀请记录指向的预创建账号；
+  待绑定账号硬删除。预创建账号的角色、带班、教师档案、幼儿关系原样保留。
+- **一人一账号**：同一自然人（同手机号）此前已是家长时，绑定落在同一个 `users` 行上，
+  家长角色/家长档案/家长端身份全部保留；响应与 token 只携带 `teacher` 角色族。
+- **邀请码**：必须处于 `pending` 且未过期；园所通道必须与客户端作用域匹配
+  （共用老师端不能绑定专属园所）。成功后邀请记录 `status=used`、`user_id` 指向预创建账号。
+- **租户隔离**：邀请码所属园所即绑定后的园所；请求体不能指定园所。
+- **限流**：`app_id` + IP + 邀请码，20 次/分钟；Redis 不可用时失败开放并告警。
+- **错误**：
+  - 邀请码不存在 / 过期 / 非 `pending` → `400`（`40020`）
+  - 邀请码已被使用 → `400`（`40021`）
+  - 客户端不是老师端 → `403`（`40300`）
+  - 客户端作用域与园所通道不匹配 → `403`（`40300`）
+  - 预创建账号在同一老师端已绑定其他微信 → `409`（`40900`）
+  - 缺少/无效待绑定 token → `401`（`40100`）
+  - 超过限流 → `429`（`42900`）
 
 ---
 

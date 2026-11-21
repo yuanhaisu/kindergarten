@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"time"
@@ -14,8 +16,9 @@ import (
 const PlatformRefreshScope = "platform"
 
 // RefreshScopeAdminWeb 是管理端密码登录的续期作用域。管理端不进入 clients
-// 表，#166 用它把 admin_web 与小程序客户端区分开；app_id 为空。
-const RefreshScopeAdminWeb = "admin_web"
+// 表，用它与小程序客户端区分开；app_id 为空。与 access claims 的
+// client_scope_kind 共用同一个值（#166）。
+const RefreshScopeAdminWeb = ClientScopeAdminWeb
 
 // RefreshScope 是园所续期凭证的载荷（#169）。
 //
@@ -28,9 +31,19 @@ type RefreshScope struct {
 	ScopeKind      string `json:"scope_kind"`
 	ScopeID        uint64 `json:"scope_id"`
 	KindergartenID uint64 `json:"kindergarten_id"`
-	// OpenID 让续期后的 token 仍能定位客户端身份。绑定手机号（#167）依赖
-	// claims 里的 open_id；待绑定用户可能在绑定前经历一次续期。
-	OpenID string `json:"open_id,omitempty"`
+	// PasswordVersion 是管理端口令哈希的短指纹（#166）。改密后旧 refresh
+	// 必须失效；小程序没有口令登录，不需要该字段。
+	PasswordVersion string `json:"pwv,omitempty"`
+}
+
+// PasswordFingerprint 把口令哈希收敛成可放进续期载荷的短指纹。
+// 只用于判断「签发后口令是否变过」，不泄露哈希本身。
+func PasswordFingerprint(passwordHash string) string {
+	if passwordHash == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(passwordHash))
+	return hex.EncodeToString(sum[:16])
 }
 
 func EncodeRefreshScope(scope RefreshScope) (string, error) {

@@ -12,6 +12,10 @@ import (
 // 两类凭证互不通用（ADR-0014）。
 const ScopePlatform = "platform"
 
+// ClientScopeAdminWeb 是管理端内建作用域（#166）。它不是 clients 表的一行：
+// app_id 恒为空，scope_id 恒为 0，只绑定一个园所。
+const ClientScopeAdminWeb = "admin_web"
+
 // ClientScope 描述一枚 access token 来自哪个小程序客户端（#163）。
 // Kind/ID 对应 clients.scope_kind / clients.scope_id：shared 的 ID 恒为 0。
 //
@@ -29,8 +33,9 @@ type AccessClaims struct {
 	Roles          []string `json:"roles"`
 	KindergartenID uint64   `json:"kindergarten_id,omitempty"`
 	Scope          string   `json:"scope,omitempty"`
-	// AppID + ClientScopeKind/ID 标记签发该 token 的小程序客户端。
-	// 管理端与平台凭证不带这些字段（#166 另行设计管理端会话）。
+	// AppID + ClientScopeKind/ID 标记签发该 token 的客户端作用域。
+	// 小程序客户端带 app_id；管理端是内建 admin_web（app_id 为空、scope_id=0）；
+	// 平台凭证不带这些字段。
 	AppID           string `json:"app_id,omitempty"`
 	ClientScopeKind string `json:"client_scope_kind,omitempty"`
 	ClientScopeID   uint64 `json:"client_scope_id,omitempty"`
@@ -85,6 +90,23 @@ func SignClientAccess(secret []byte, userID string, roles []string, kindergarten
 		ClientScopeKind:  scope.Kind,
 		ClientScopeID:    scope.ID,
 		OpenID:           scope.OpenID,
+		RegisteredClaims: newRegisteredClaims(userID, ttl),
+	}
+	return signClaims(secret, claims)
+}
+
+// SignAdminAccess 签发管理端凭证（#166）：内建 admin_web 作用域、无 app_id，
+// 必须且只能绑定一个园所。管理端不走 clients 表，因此不能复用 SignClientAccess。
+func SignAdminAccess(secret []byte, userID string, roles []string, kindergartenID uint64, ttl time.Duration) (string, error) {
+	if kindergartenID == 0 {
+		return "", errors.New("管理端凭证必须绑定一个园所")
+	}
+	claims := AccessClaims{
+		UserID:           userID,
+		Roles:            roles,
+		KindergartenID:   kindergartenID,
+		ClientScopeKind:  ClientScopeAdminWeb,
+		ClientScopeID:    0,
 		RegisteredClaims: newRegisteredClaims(userID, ttl),
 	}
 	return signClaims(secret, claims)

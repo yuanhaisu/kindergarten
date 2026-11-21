@@ -89,7 +89,7 @@ type ParentBindPhoneResult struct {
 
 // BindParentPhone 把当前客户端身份绑定到「该手机号在园所预创建的家长账号」。
 func (s *AuthService) BindParentPhone(ctx context.Context, in ParentBindPhoneInput) (*ParentBindPhoneResult, error) {
-	if s.clients == nil || s.wx == nil || s.identities == nil || s.kgLookup == nil || s.merger == nil {
+	if s.clients == nil || s.wx == nil || s.identities == nil || s.bindKindergartens == nil || s.merger == nil {
 		return nil, fmt.Errorf("bind parent phone not configured")
 	}
 
@@ -236,7 +236,7 @@ func (s *AuthService) resolveBindTarget(
 // 两者都没带时返回 ok=false，走无 scene 绑定。
 func (s *AuthService) explicitTarget(ctx context.Context, in ParentBindPhoneInput) (*domain.Kindergarten, bool, error) {
 	if code := strings.TrimSpace(in.PublicCode); code != "" {
-		kg, err := s.kgLookup.FindByPublicCode(ctx, code)
+		kg, err := s.bindKindergartens.FindByPublicCode(ctx, code)
 		if err != nil {
 			return nil, false, err
 		}
@@ -246,7 +246,7 @@ func (s *AuthService) explicitTarget(ctx context.Context, in ParentBindPhoneInpu
 		return kg, true, nil
 	}
 	if in.KindergartenID != 0 {
-		kg, err := s.kgLookup.FindByID(ctx, in.KindergartenID)
+		kg, err := s.bindKindergartens.FindByID(ctx, in.KindergartenID)
 		if err != nil {
 			return nil, false, err
 		}
@@ -273,7 +273,7 @@ func (s *AuthService) servedParentRoles(
 		seen[*r.KindergartenID] = true
 		ids = append(ids, *r.KindergartenID)
 	}
-	kgs, err := s.kgLookup.FindByIDs(ctx, ids)
+	kgs, err := s.bindKindergartens.FindByIDs(ctx, ids)
 	if err != nil {
 		return nil, nil, err
 	}
