@@ -324,7 +324,11 @@ func (s *AuthService) SMSLogin(ctx context.Context, phone, code, role string) (*
 	return s.issueTokens(ctx, user)
 }
 
-// PasswordLogin 密码登录（管理后台 + 家长端共用）
+// PasswordLogin 密码登录（仅管理后台）。
+//
+// v1 密码登录只允许 admin 角色：家长/老师走各自小程序的微信登录，预建账号
+// 不持有可用密码（#174）。先校验密码再判角色，避免把「这个手机号是不是
+// 管理后台账号」变成无需密码即可探测的信息。
 func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string) (*LoginResult, error) {
 	user, err := s.userRepo.FindByPhone(ctx, phone)
 	if err != nil {
@@ -342,8 +346,20 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 	if err != nil {
 		return nil, err
 	}
+	if !hasAdminRole(roles) {
+		return nil, fmt.Errorf("NOT_ADMIN")
+	}
 
 	return s.issueTokensFromRoles(ctx, user, roles)
+}
+
+func hasAdminRole(roles []domain.UserRole) bool {
+	for _, r := range roles {
+		if r.Role == "admin" {
+			return true
+		}
+	}
+	return false
 }
 
 // ErrTokenRevoked 表示 token 已被登出吊销；ErrAuthStorageUnavailable 表示吊销存储
