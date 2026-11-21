@@ -229,6 +229,15 @@ func (s *AdminService) CreateAdmin(ctx context.Context, kindergartenID, operator
 		if ur != nil {
 			return nil, fmt.Errorf("DUPLICATE_ADMIN_PHONE")
 		}
+		// 同一手机号在别的园所已有管理员身份时也要拒绝（#166）：管理端会话
+		// 必须恰好绑定一个园所，跨园重复会建出一个永远登录不进来的账号。
+		other, err := s.roles.FindAdminRoleOutsideKindergarten(ctx, existing.ID, kindergartenID)
+		if err != nil {
+			return nil, err
+		}
+		if other != nil {
+			return nil, fmt.Errorf("DUPLICATE_ADMIN_PHONE")
+		}
 	}
 	var newUserID uint64
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

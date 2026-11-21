@@ -274,6 +274,42 @@ func (s *AuthService) issueTokensFromRoles(ctx context.Context, user *domain.Use
 	return s.issueTokensFor(ctx, user, roles, nil)
 }
 
+// issueAdminTokens 签发管理端会话（#166）：先收敛出唯一园所的管理员角色，
+// 再走统一签发。access/refresh 都落在 admin_web 作用域。
+func (s *AuthService) issueAdminTokens(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
+	adminRoles, _, err := adminSessionRoles(roles)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueTokensFor(ctx, user, adminRoles, nil)
+}
+
+// adminSessionRoles 返回管理端会话可用的角色行：必须恰好属于一个园所。
+//
+// 「一个手机号只能是一个园所的管理员」是 #160 的身份约束。0 个园所无法确定
+// 租户；多个园所会让 token 的 kindergarten_id 变成一个任意选择，必须拒绝。
+func adminSessionRoles(roles []domain.UserRole) ([]domain.UserRole, uint64, error) {
+	var (
+		adminRoles []domain.UserRole
+		kgID       uint64
+	)
+	for _, r := range roles {
+		if r.Role != "admin" || r.KindergartenID == nil {
+			continue
+		}
+		if kgID == 0 {
+			kgID = *r.KindergartenID
+		} else if kgID != *r.KindergartenID {
+			return nil, 0, ErrAdminKindergartenConflict
+		}
+		adminRoles = append(adminRoles, r)
+	}
+	if kgID == 0 {
+		return nil, 0, ErrAdminKindergartenRequired
+	}
+	return adminRoles, kgID, nil
+}
+
 // issueClientTokens 签发绑定小程序客户端的凭证：claims 带 app_id 与作用域，
 // 角色只来自当前客户端注册表（#175）。
 func (s *AuthService) issueClientTokens(ctx context.Context, user *domain.User, roles []domain.UserRole, client *domain.Client) (*LoginResult, error) {
@@ -324,13 +360,17 @@ func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, rol
 		accessToken string
 		err         error
 	)
-	if client != nil {
+	switch {
+	case client != nil:
 		accessToken, err = auth.SignClientAccess(s.secret, uid, roleNames, kgID, auth.ClientScope{
 			AppID: client.AppID,
 			Kind:  client.ScopeKind,
 			ID:    client.ScopeID,
 		}, s.atTTL)
-	} else {
+	case hasAdminRole(roles):
+		// 管理端内建作用域：无 app_id，必须恰好一个园所（#166）。
+		accessToken, err = auth.SignAdminAccess(s.secret, uid, roleNames, kgID, s.atTTL)
+	default:
 		accessToken, err = auth.SignAccess(s.secret, uid, roleNames, kgID, s.atTTL)
 	}
 	if err != nil {
@@ -345,6 +385,10 @@ func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, rol
 		refreshScope.ScopeID = client.ScopeID
 	} else {
 		refreshScope.ScopeKind = auth.RefreshScopeAdminWeb
+		if hasAdminRole(roles) {
+			// 改密后旧 refresh 失效；指纹随每次签发刷新（#166）。
+			refreshScope.PasswordVersion = auth.PasswordFingerprint(user.PasswordHash)
+		}
 	}
 	payload, err := auth.EncodeRefreshScope(refreshScope)
 	if err != nil {
@@ -499,7 +543,7 @@ func (s *AuthService) PasswordLogin(ctx context.Context, phone, password string)
 		return nil, fmt.Errorf("NOT_ADMIN")
 	}
 
-	return s.issueTokensFromRoles(ctx, user, roles)
+	return s.issueAdminTokens(ctx, user, roles)
 }
 
 // WeChatLoginRequest 是 POST /auth/login/wechat 的输入。
@@ -775,6 +819,10 @@ var (
 	ErrInviteCodeNotAllowed = errors.New("INVITE_CODE_NOT_ALLOWED")
 	// ErrWeChatLoginFailed 微信 code2session 失败或未返回 openid。
 	ErrWeChatLoginFailed = errors.New("WECHAT_LOGIN_FAILED")
+	// ErrAdminKindergartenRequired 管理端账号必须绑定一个园所。
+	ErrAdminKindergartenRequired = errors.New("ADMIN_KINDERGARTEN_REQUIRED")
+	// ErrAdminKindergartenConflict 同一手机号在多个园所拥有管理员身份。
+	ErrAdminKindergartenConflict = errors.New("ADMIN_KINDERGARTEN_CONFLICT")
 )
 
 // RefreshToken 刷新令牌。
@@ -810,12 +858,28 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		return nil, fmt.Errorf("user not found")
 	}
 
-	// 管理端密码登录（admin_web）保持现状，#166 再接管其会话策略。
+	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 管理端（admin_web）：沿用 #169 的 JSON 作用域，但续期时必须复核
+	// 「恰好一个园所」与「口令未变」——改密即吊销旧 refresh（#166）。
 	if scope.AppID == "" {
 		if scope.ScopeKind != auth.RefreshScopeAdminWeb {
 			return nil, fmt.Errorf("invalid refresh scope")
 		}
-		return s.issueTokens(ctx, user)
+		if scope.PasswordVersion == "" || scope.PasswordVersion != auth.PasswordFingerprint(user.PasswordHash) {
+			return nil, fmt.Errorf("invalid refresh token: password changed")
+		}
+		adminRoles, kgID, err := adminSessionRoles(roles)
+		if err != nil {
+			return nil, err
+		}
+		if scope.KindergartenID != kgID {
+			return nil, fmt.Errorf("invalid refresh token: kindergarten changed")
+		}
+		return s.issueTokensFor(ctx, user, adminRoles, nil)
 	}
 
 	if s.clients == nil {
@@ -830,10 +894,6 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		return nil, fmt.Errorf("invalid refresh token: client scope changed")
 	}
 
-	roles, err := s.userRoleRepo.FindByUserID(ctx, user.ID)
-	if err != nil {
-		return nil, err
-	}
 	roles, _, err = s.resolveClientMemberRoles(ctx, roles, client)
 	if err != nil {
 		return nil, err
