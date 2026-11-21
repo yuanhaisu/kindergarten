@@ -335,18 +335,14 @@ func (s *ParentService) CreateParent(
 			return nil, fmt.Errorf("DUPLICATE_PARENT_PHONE")
 		}
 	}
-	hash, err := HashPassword("KindyParent#1")
-	if err != nil {
-		return nil, err
-	}
 	var parentID uint64
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 统一账号解析（#164）：同一活跃手机号复用同一账号，且不改写
-		// 既有昵称/头像/性别——管理员新建家长不能覆盖该手机号已维护的资料。
+		// 既有昵称/头像/性别/密码——管理员新建家长不能覆盖该手机号已维护的资料。
+		// 预建账号不写密码（#174）：家长只能通过微信登录，默认口令即提权入口。
 		u, _, err := s.users.WithDB(tx).FindOrCreateByPhone(ctx, req.Phone, repository.UserProfileDefaults{
-			Nickname:     strings.TrimSpace(req.Nickname),
-			Gender:       req.Gender,
-			PasswordHash: hash,
+			Nickname: strings.TrimSpace(req.Nickname),
+			Gender:   req.Gender,
 		})
 		if err != nil {
 			return err

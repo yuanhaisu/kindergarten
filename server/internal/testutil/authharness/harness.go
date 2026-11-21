@@ -214,8 +214,10 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	v1.POST("/auth/sms/send", hnd.SMSDisabled)
 	v1.POST("/auth/login/sms", hnd.SMSDisabled)
 	// 旧微信登录在 #164 关闭，与 router.go 保持一致。
-	v1.POST("/auth/login/wechat", hnd.WeChatLoginClosed)
-	v1.POST("/auth/login/password", hnd.PasswordLogin)
+	wechatLoginLimit := middleware.WeChatLoginRateLimit(h.RedisClient, middleware.WeChatLoginMaxPerMinute, time.Minute)
+	v1.POST("/auth/login/wechat", wechatLoginLimit, hnd.WeChatLoginClosed)
+	passwordLoginLimit := middleware.PasswordLoginRateLimit(h.RedisClient, middleware.PasswordLoginMaxPerMinute, time.Minute)
+	v1.POST("/auth/login/password", passwordLoginLimit, hnd.PasswordLogin)
 	v1.POST("/auth/refresh", hnd.Refresh)
 
 	authed := v1.Group("")
