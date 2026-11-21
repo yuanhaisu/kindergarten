@@ -72,6 +72,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
+    // 续期拦截器与登出需要直接读取/清理 refresh Cookie
+    refreshTokenValue,
     consentRequired,
     currentPolicyVersion,
     setSession,
