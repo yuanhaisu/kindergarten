@@ -1,7 +1,7 @@
 # 测试用例目录
 
 > 测试用例 ID 体系: `TC-{MODULE}-{NNNN}`
-> 状态: 🔲 未实现 | 🚧 进行中 | ✅ 已通过 | ❌ 失败
+> 状态: 🔲 未实现 | 🚧 进行中 | ✅ 已通过 | ❌ 失败 | ⛔ 已退役（用例随功能删除）
 > 优先级: P0 (必须) | P1 (应该) | P2 (可以)
 
 ## 模块缩写
@@ -45,12 +45,12 @@
 | TC-NEW-ATH-0006 | 微信登录-换取会话被拒透传 errcode | P0 | Unit | ✅ |
 | TC-NEW-ATH-0007 | 微信登录-邀请码绑定预创建教师 | P0 | Unit / E2E | 🚧 |
 | TC-NEW-ATH-0008 | 微信登录-邀请码无效或已使用 | P0 | Unit / E2E | 🚧 |
-| TC-NEW-ATH-0009 | 跨端关联-两端均有 unionid | P1 | Unit | ✅ |
-| TC-NEW-ATH-0010 | 跨端关联-两端 unionid 不同判非同人 | P1 | Unit | ✅ |
-| TC-NEW-ATH-0011 | 跨端关联-无 unionid 按手机号兜底 | P1 | Unit | ✅ |
-| TC-NEW-ATH-0012 | 跨端关联-无 unionid 且手机号不符不关联 | P1 | Unit | ✅ |
+| TC-NEW-ATH-0009 | 跨端关联-两端均有 unionid | P1 | Unit | ⛔ 已退役（#173） |
+| TC-NEW-ATH-0010 | 跨端关联-两端 unionid 不同判非同人 | P1 | Unit | ⛔ 已退役（#173） |
+| TC-NEW-ATH-0011 | 跨端关联-无 unionid 按手机号兜底 | P1 | Unit | ⛔ 已退役（#173） |
+| TC-NEW-ATH-0012 | 跨端关联-无 unionid 且手机号不符不关联 | P1 | Unit | ⛔ 已退役（#173） |
 | TC-NEW-ATH-0013 | 登录契约-响应结构保持稳定 | P0 | Contract | ✅ |
-| TC-NEW-ATH-0014 | 跨端关联-关联不修改账号归属 | P0 | Unit | ✅ |
+| TC-NEW-ATH-0014 | 跨端关联-关联不修改账号归属 | P0 | Unit | ⛔ 已退役（#173） |
 
 ## 班级 (CLS)
 
@@ -1102,7 +1102,7 @@
  - **这道闸偏软**：`slog.Warn` 受日志级别约束，`[log] level = error` 时检查静默消失；也从不阻断启动。当前 `app.ini` 是 `debug`，无影响，但别把它当成硬保证。
  - **`ListTasks` 的三条错误路径没有测试覆盖**：全量 `go test ./internal/service/` 通过只说明没碰坏别的，不说明这三条分支被测过（`grep ListTasks *_test.go` 为空）。改动前的 500 只有响应体、没有服务端日志，现在三条 COUNT 失败都会先 `log.L(ctx).Error(...)` 再返回，排障时能从日志看出是超时、连接池还是哪个任务。
  - 若某次部署曾以 `TZ=UTC` + `loc=Local` 运行，`created_at` 等 **DATETIME** 列存的是 UTC 墙钟；对齐到 +08 后这些历史行会被按 +08 解析，显示偏移 8 小时。**DATE 列只取日期部分，不受影响**。当前部署本来就是 +08，无影响。
- - `cmd/*` 下的独立二进制多数不导入 `service`，不会继承这次对齐（`fixpwd` / `initcheck` / `setpwd` 导入，会继承）。非 +08 机器上 seed/refreshtasks 与 API 的日期口径会分叉。
+ - `cmd/*` 下的独立二进制多数不导入 `service`，不会继承这次对齐（`initcheck` 导入，会继承）。非 +08 机器上 seed/refreshtasks 与 API 的日期口径会分叉。
 - 实测：并发批量 → 赢家 `responded_count=2`、输家 `0`，DB 仅一条 `period` 回应；并发单条 → 一次 **201**、一次 **409**「该提交已被其他回应关闭，请刷新后重试」，无重复回应。
 - 周期边界实测用的是**直插库的探针行**（task 36，date=2026-10-11，非真实家长提交）：批量后该行保持 `response_id=0`；随后单条并发用例把它作为目标关闭为 `response_id=12`，所以现在查库看到的是 12，不是回归。
 

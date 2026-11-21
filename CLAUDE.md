@@ -357,17 +357,14 @@ pkg/
 | `chkgrowth`  | 打印 kindergarten 4 的成长记录总数与最近 3 条 | 只读 |
 | `clientdiag` | 打印小程序客户端注册表（app_id/角色/作用域/状态/发版版本），`-json` 供脚本消费 | 只读 |
 | `dbcheck`    | 打印指定表的索引定义与行数，用于核对迁移是否生效 | 只读 |
-| `fixpwd`     | 把两个硬编码演示手机号（13900010001/10002）的密码重置为 `Parent@123` | 写入 |
-| `linkwx`     | 打印上述两个硬编码手机号的 openid 绑定情况 | 只读 |
-| `openid`     | 打印最近 5 个用户 openid，并把最新 openid 绑给上述两个演示家长账号 | 写入 |
 | `seedgrowth` | 灌入成长记录种子数据 | 写入 |
 | `seedattendance` | 灌入出勤演示数据（3 个工作日 × 全体在读学生） | 写入 |
 | `seedleaves` | 灌入 6 条请假演示数据 | 写入 |
 | `seedpickup` | 灌入当日接送记录 + 待审核授权人 | 写入 |
 | `refreshtasks` | **删除** kindergarten 4 的全部 `ParentTask` / `TaskCheckIn` 后重建种子任务 | ⚠️ **破坏性** |
-| `initcheck`  | 创建测试园所+管理员并打印计数，随后 **`Unscoped().Where("1=1")` 清空 `users` / `user_roles` / `kindergartens`** | ⚠️ **破坏性** |
+| `initcheck`  | 创建测试园所+管理员并打印计数，随后 **`Unscoped().Where("1=1")` 清空 `user_identities` / `users` / `user_roles` / `kindergartens`** | ⚠️ **破坏性** |
 | `mktoken`    | 为指定手机号+角色签发本地 JWT（验证辅助） | 只读/测试 |
-| `setadmin` / `setpwd` | `setadmin` 按 `-phone/-kg` 供给租户管理员（园所须已存在），口令从 `-password` 或 `SETADMIN_PASSWORD` 读取，**无默认口令**；`setpwd` 重置硬编码用户 id 61/65 | 写入 |
+| `setadmin` | 按 `-phone/-kg` 供给租户管理员（园所须已存在），口令从 `-password` 或 `SETADMIN_PASSWORD` 读取，**无默认口令**；同一手机号只保留目标园所的管理员绑定（移园不复制） | 写入 |
 | `platformadmin` | 创建或重置首个平台方账号 | 写入 |
 | `redactlogs` | 回填脱敏 `operation_logs.detail` 中的手机号/身份证 | 写入 |
 | `albumretention` | **硬删**软删已满 180 天的相册及关联（支持 `-dry-run`） | ⚠️ **破坏性** |
@@ -393,11 +390,11 @@ pkg/
 > `extendtrials` 的 `-apply` / `-revert` 需要 `EXTENDTRIALS_ALLOW=1` 且必须带 `-operator`；不传 `-apply` / `-revert` 时默认 dry-run。
 > 拒绝时打印脱敏后的目标库 `host:port/db`。所有 `cmd` 命令统一按 `CONFIG_PATH`（未设置回落 `configs/app.ini`）解析配置。
 
-> ⚠️ 表中 `chkgrowth` / `fixpwd` / `linkwx` / `openid` / `refreshtasks` 及多数 `seed*` 是**针对特定 kindergarten（id=4）或硬编码手机号的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、手机号、任务文案全部写死。**不要在生产库上执行。**
+> ⚠️ 表中 `chkgrowth` / `refreshtasks` 及多数 `seed*` 是**针对特定 kindergarten（id=4）或硬编码数据的一次性调试脚本**，不是通用工具：幼儿园 ID、班级 ID、任务文案全部写死。**不要在生产库上执行。**
 >
 > `migrate` / `seedbase` / `schemadump` / `setadmin` / `platformadmin` / `albumretention` / `extendtrials` / `mktoken` 是环境级工具，可按需复用；仍需遵守各自的权限与备份要求。
 >
-> ⚠️ 破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部用户、角色与园所**；`albumretention` 会**硬删**到期相册及关联。前两者只适用于一次性测试库自检。
+> ⚠️ 破坏性命令：`refreshtasks` 清空该园全部任务；`initcheck` 更彻底——`Unscoped().Where("1=1")` 会**无视软删除、跨租户清空全部客户端身份、用户、角色与园所**；`albumretention` 会**硬删**到期相册及关联。前两者只适用于一次性测试库自检。
 >
 > `initcheck` 的连接串已改为读 `CONFIG_PATH`（默认 `configs/app.ini`，可用 `MYSQL_DSN` 覆盖），管理员口令改为读环境变量 `INIT_ADMIN_PASSWORD`（未设置则直接退出）。**不要再把凭据写回源码**——即使后续删除，git 历史仍可追溯。
 
@@ -420,11 +417,11 @@ pkg/
 > | 家长端 `parent/` | `wxdf989efff8796c53` | 非个人（`getPhoneNumber` 只在家长端用，个人号不支持） |
 > | 老师端 `teacher/` | `wxbfb5f81a87f73a61` | **个人号** |
 >
-> **为什么必须拆开**：openid 是「用户×小程序」二元的。共用 AppID 会让同一人在两端拿到同一个 openid，`FindByOpenID` 只命中一条 User → 另一端角色丢失 → 接口全 403。
+> **为什么必须拆开**：openid 是「用户×小程序」二元的。共用 AppID 会让同一人在两端拿到同一个 openid，`user_identities` 的 `(app_id, open_id)` 唯一键就分不出来源端，同一账号无法同时持有两条客户端身份。
 >
 > **老师端是个人号的两个后果**：个人号不支持 `<web-view>`（原 `webview/index` 占位页已删除，老师端不再保留内嵌网页入口）；`code2session` 不返回 `unionid`，跨端同人只能靠手机号关联。
 >
-> **跨端同人是两条 User + 关联**（不是一条 User 多角色）：unionid 优先、手机号兜底，见 `server/internal/service/cross_end_identity.go`。
+> **一人一账号 + 多条客户端身份**（#160/#164/#173）：`users` 一行代表一个人（活跃手机号 `phone_active` 唯一），微信身份按 `(app_id, open_id)` 存在 `user_identities`，同一个人可以在家长端/老师端各有一条身份。账号解析唯一入口是 `FindOrCreateByPhone`；旧的 `SamePerson` / `FindLinkedUser` / `FindByOpenID` 与 `users.open_id` / `users.union_id` 已在 #173 删除（迁移 `server/migrations/00015_drop_user_legacy_identity_columns.sql`）。
 >
 > 微信侧调用各自选端：`GetPhoneNumber`（家长绑定手机号）走家长端、`GetWXACodeUnlimit`（教师邀请码二维码）走老师端、`GetAccessToken` 的 Redis 缓存键带 appid。改 AppID 后**必须 `npm run dev:mp-weixin` 重建**（IDE 读 `dist/dev/mp-weixin/project.config.json`，不是 `src/manifest.json`）。
 

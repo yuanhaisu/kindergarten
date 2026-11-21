@@ -62,7 +62,8 @@ func (r *TeacherInvitationRepo) Create(ctx context.Context, inv *domain.TeacherI
 //
 // 绑定后的身份由 #165 的合并服务从待绑定账号迁移而来；这里再做一次
 // OnConflict DoNothing 的补写，覆盖「账号已绑定、邀请仍待使用」的修复场景。
-// 不再写 users.open_id / union_id：那是已废弃的单身份字段，多客户端下会互相覆盖。
+// 身份只写 user_identities；users 表已不再有 open_id/union_id（#173），
+// 单列身份在多个客户端下会互相覆盖。
 // 只更新仍处于待使用状态的邀请；并发消费时返回 ErrTeacherInvitationNotPending。
 func (r *TeacherInvitationRepo) MarkUsed(ctx context.Context, id, userID uint64, appID, openID string) error {
 	if id == 0 || userID == 0 || appID == "" || openID == "" {

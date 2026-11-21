@@ -12,7 +12,7 @@ import (
 
 // 这些测试覆盖 pickup_rules.go 的纯判定逻辑（design D5）。
 // DB 侧的 upsert 覆盖语义与联查命中/未命中不由单测覆盖——项目测试惯例是
-// 纯函数单测 + DB 行为走集成验证（见 cross_end_identity_test.go），
+// 纯函数单测 + DB 行为走集成验证（如 authharness 下的用例），
 // 对应仓库层事实由 `go run ./cmd/dbcheck` 与 spec 逐条验收承担。
 
 func dayTime(hhmm string) time.Time {

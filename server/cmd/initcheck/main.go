@@ -18,8 +18,8 @@ import (
 	"kindergarten-server/internal/service"
 )
 
-// 注意：本命令会 Unscoped 清空 users / user_roles / kindergartens 三张表，
-// 只能在确认过目标的测试库上运行。运行前必须设置
+// 注意：本命令会 Unscoped 清空 user_identities / user_roles / users /
+// kindergartens，只能在确认过目标的测试库上运行。运行前必须设置
 // SEED_ALLOW_DESTRUCTIVE=1 与 SEED_ALLOW_DEMO=1。
 func main() {
 	seedutil.RequireDestructiveOptIn("initcheck")
@@ -70,13 +70,15 @@ func main() {
 	}
 	fmt.Println("OK - init success")
 
-	var userCount, roleCount, kgCount int64
+	var userCount, roleCount, identityCount, kgCount int64
 	db.Model(&domain.User{}).Count(&userCount)
 	db.Model(&domain.UserRole{}).Count(&roleCount)
+	db.Model(&domain.UserIdentity{}).Count(&identityCount)
 	db.Model(&domain.Kindergarten{}).Count(&kgCount)
-	fmt.Printf("users=%d roles=%d kgs=%d\n", userCount, roleCount, kgCount)
+	fmt.Printf("users=%d roles=%d identities=%d kgs=%d\n", userCount, roleCount, identityCount, kgCount)
 
-	// 清理测试数据
+	// 清理测试数据：身份表先删，否则清空 users 后会留下指向不存在账号的身份。
+	db.Unscoped().Where("1=1").Delete(&domain.UserIdentity{})
 	db.Unscoped().Where("1=1").Delete(&domain.UserRole{})
 	db.Unscoped().Where("1=1").Delete(&domain.User{})
 	db.Unscoped().Where("1=1").Delete(&domain.Kindergarten{})

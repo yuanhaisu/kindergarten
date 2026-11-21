@@ -382,39 +382,38 @@ func (f *fakeUserRepo) FindByID(_ context.Context, id uint64) (*domain.User, err
 	return f.users[id], nil
 }
 func (f *fakeUserRepo) FindByPhone(context.Context, string) (*domain.User, error) { return nil, nil }
-func (f *fakeUserRepo) FindByUnionID(context.Context, string) (*domain.User, error) {
-	return nil, nil
-}
-func (f *fakeUserRepo) FindOtherByUnionID(context.Context, string, uint64) (*domain.User, error) {
-	return nil, nil
-}
-func (f *fakeUserRepo) FindOtherByPhone(context.Context, string, uint64) (*domain.User, error) {
-	return nil, nil
-}
-func (f *fakeUserRepo) FindByOpenID(context.Context, string) (*domain.User, error) {
-	return nil, nil
-}
-func (f *fakeUserRepo) Create(context.Context, *domain.User) error { return nil }
-func (f *fakeUserRepo) Update(context.Context, *domain.User) error { return nil }
+func (f *fakeUserRepo) Create(context.Context, *domain.User) error                { return nil }
+func (f *fakeUserRepo) Update(context.Context, *domain.User) error                { return nil }
 func (f *fakeUserRepo) UpdateFields(context.Context, uint64, map[string]any) error {
 	return nil
 }
 
-type fakeRoleRepo struct{}
+// fakeRoleRepo 按 kgID 决定是否附带管理员角色：管理端 refresh 续期要求
+// 「恰好一个园所的管理员」（#166），只给 parent 角色会被判成成员关系变化。
+type fakeRoleRepo struct{ kgID uint64 }
 
-func (fakeRoleRepo) FindByUserID(_ context.Context, userID uint64) ([]domain.UserRole, error) {
-	return []domain.UserRole{{UserID: userID, Role: "parent"}}, nil
+func (f fakeRoleRepo) FindByUserID(_ context.Context, userID uint64) ([]domain.UserRole, error) {
+	roles := []domain.UserRole{{UserID: userID, Role: "parent"}}
+	if f.kgID != 0 {
+		kg := f.kgID
+		roles = append(roles, domain.UserRole{UserID: userID, Role: "admin", KindergartenID: &kg})
+	}
+	return roles, nil
 }
 
 func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
+	return newTestEngineWithRoleRepo(t, rdb, fakeRoleRepo{})
+}
+
+func newTestEngineWithRoleRepo(t *testing.T, rdb *redis.Client, roles fakeRoleRepo) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
 	users := &fakeUserRepo{users: map[uint64]*domain.User{
-		1: {BaseModel: domain.BaseModel{ID: 1}, Nickname: "家长A", Phone: "13800000001"},
-		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002"},
+		1: {BaseModel: domain.BaseModel{ID: 1}, Nickname: "家长A", Phone: "13800000001", PasswordHash: "fake-hash-a"},
+		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002", PasswordHash: "fake-hash-b"},
 	}}
-	svc := service.NewAuthService(users, fakeRoleRepo{}, nil, nil, nil, nil, nil, nil, rdb,
+	svc := service.NewAuthService(users, roles, nil, nil, nil, nil, nil, nil, rdb,
 		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour, nil, false, nil, nil, nil)
 
 	// NewHandler 只接位置参数；本测试只需要 authSvc，其余服务传 nil。
@@ -493,16 +492,24 @@ func jtiOf(t *testing.T, token string) string {
 // 登出 A 后：A 的 access 401、refresh 401；B 的 access/refresh 都不受影响。
 func TestLogoutRevokesOnlyItsOwnTokens(t *testing.T) {
 	rdb, f := newFakeRedisClient(t)
-	engine := newTestEngine(t, rdb)
+	const adminKGID = 4
+	engine := newTestEngineWithRoleRepo(t, rdb, fakeRoleRepo{kgID: adminKGID})
 	ctx := context.Background()
 
 	accessA := signAccess(t, "1", 15*time.Minute)
 	accessB := signAccess(t, "2", 15*time.Minute)
 	refreshA, refreshB := "refresh-token-a", "refresh-token-b"
-	// 管理端 refresh 存 JSON 作用域（#169），app_id 为空 + admin_web。
-	scopeA, err := auth.EncodeRefreshScope(auth.RefreshScope{UID: 1, ScopeKind: auth.RefreshScopeAdminWeb})
+	// 管理端 refresh 存 JSON 作用域（#169），app_id 为空 + admin_web；
+	// #166 续期还要复核口令指纹与唯一园所。
+	scopeA, err := auth.EncodeRefreshScope(auth.RefreshScope{
+		UID: 1, ScopeKind: auth.RefreshScopeAdminWeb,
+		KindergartenID: adminKGID, PasswordVersion: auth.PasswordFingerprint("fake-hash-a"),
+	})
 	require.NoError(t, err)
-	scopeB, err := auth.EncodeRefreshScope(auth.RefreshScope{UID: 2, ScopeKind: auth.RefreshScopeAdminWeb})
+	scopeB, err := auth.EncodeRefreshScope(auth.RefreshScope{
+		UID: 2, ScopeKind: auth.RefreshScopeAdminWeb,
+		KindergartenID: adminKGID, PasswordVersion: auth.PasswordFingerprint("fake-hash-b"),
+	})
 	require.NoError(t, err)
 	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshA, scopeA, 7*24*time.Hour))
 	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshB, scopeB, 7*24*time.Hour))

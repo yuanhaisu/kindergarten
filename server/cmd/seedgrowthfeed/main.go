@@ -351,7 +351,7 @@ func printVisibility(db *gorm.DB, s2ID uint64) {
 	fmt.Printf("\n=== 家长 uid=%d 登录后可见的成长时光（按 ListGrowthFeed 规则） ===\n", parentUserID)
 	for label, sid := range map[string]uint64{
 		fmt.Sprintf("已有孩子 %d", existingStudent): existingStudent,
-		"王小花（新造）": s2ID,
+		"王小花（新造）":                               s2ID,
 	} {
 		var rows []domain.GrowthDailyLog
 		db.Where("growth_daily_logs.kindergarten_id = ? AND growth_daily_logs.class_id = ? AND growth_daily_logs.deleted_at IS NULL",
@@ -378,7 +378,7 @@ func printVisibility(db *gorm.DB, s2ID uint64) {
 	fmt.Println("  有图/无图 ← R1,R3 有 / R2,R4 无     点赞两态 ← R1,R3 已赞 / R2,R4 未赞")
 	fmt.Println("  评论两态 ← R1=2,R4=1 / R2,R3=0     全班/个体 ← R1,R2 / R3,R4")
 	fmt.Println("  详情相关孩子 ← R3→[4] R4→[4,王小花]  切换孩子 ← uid11 有两个孩子")
-	fmt.Println("\n⚠️  登录前置仍未解决：uid=11 目前没有 openid。")
-	fmt.Println("    需先用家长微信登录一次产生 openid，再跑 go run ./cmd/openid 绑定，")
-	fmt.Println("    并用 go run ./cmd/linkwx 核对（一个 openid 只能属一个 user，否则 403）。")
+	fmt.Println("\n⚠️  登录前置仍未解决：uid=11 需要一条家长端客户端身份（user_identities）。")
+	fmt.Println("    身份只由客户端登录流程写入；旧的手工绑定命令 cmd/openid、cmd/linkwx 已随 #173 删除。")
+	fmt.Println("    请用该家长的微信登录一次，再核对页面数据。")
 }

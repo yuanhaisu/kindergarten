@@ -114,7 +114,7 @@ func initTestDB() *dbSetup {
 		s.testDSN = explicitDSN
 		s.dsnFromEnv = true
 	} else {
-		devDatabase, testDatabase, testDSN, err := deriveTestTarget(s.cfg.MySQL.DSN, repoRoot)
+		devDatabase, testDatabase, testDSN, err := deriveTestTarget(s.cfg.MySQL.DSN, repoRoot, testPackageScope())
 		if err != nil {
 			s.err = err
 			return s
@@ -142,9 +142,13 @@ func initTestDB() *dbSetup {
 	return s
 }
 
-// deriveTestTarget 从开发库 DSN 派生一个按分支隔离的测试库名。
-// 按分支隔离是为了让多个 worktree / 分支并行跑测试时互不干扰。
-func deriveTestTarget(devDSN, repoRoot string) (devDatabase, testDatabase, testDSN string, err error) {
+// deriveTestTarget 从开发库 DSN 派生一个按「分支 + 测试包」隔离的测试库名。
+//
+// 分支隔离让多个 worktree / 分支并行跑测试时互不干扰；测试包隔离是因为
+// go test ./... 会并行运行不同包的测试进程，而有些用例会整表清空
+// （如 service 包的 client_service_test 硬删 clients），与 authharness 的
+// 登录用例共用同一个派生库时会偶发 403 CLIENT_UNAVAILABLE。
+func deriveTestTarget(devDSN, repoRoot, testScope string) (devDatabase, testDatabase, testDSN string, err error) {
 	dsnCfg, err := mysqldrv.ParseDSN(devDSN)
 	if err != nil {
 		return "", "", "", fmt.Errorf("解析 MySQL DSN 失败：%w", err)
@@ -159,7 +163,7 @@ func deriveTestTarget(devDSN, repoRoot string) (devDatabase, testDatabase, testD
 	if len(base) > maxBaseLen {
 		base = base[:maxBaseLen]
 	}
-	testDatabase = base + "_test_" + branchScopedSuffix(repoRoot)
+	testDatabase = base + "_test_" + branchScopedSuffix(repoRoot, testScope)
 
 	dsnCfg.DBName = testDatabase
 	return devDatabase, testDatabase, dsnCfg.FormatDSN(), nil
@@ -282,9 +286,9 @@ func findConfigPath(repoRoot string) string {
 	return ""
 }
 
-// branchScopedSuffix 用当前 git 分支名派生 8 位后缀。
-// 分支名不可读时退化为固定后缀，仍然保证名字以 _test_ 标记。
-func branchScopedSuffix(repoRoot string) string {
+// branchScopedSuffix 用「当前 git 分支名 + 测试包作用域」派生 8 位后缀。
+// 分支名不可读时退化为固定分支部分，仍然保证名字以 _test_ 标记。
+func branchScopedSuffix(repoRoot, testScope string) string {
 	ref := "unknown"
 	if headPath, err := findGitHEAD(repoRoot); err == nil {
 		if b, err := os.ReadFile(headPath); err == nil {
@@ -295,7 +299,17 @@ func branchScopedSuffix(repoRoot string) string {
 			}
 		}
 	}
-	return shortHash(ref)
+	return shortHash(ref + "|" + testScope)
+}
+
+// testPackageScope 返回当前测试二进制对应的包名。go test 每个包编译出独立的
+// <pkg>.test[.exe]，因此同一进程内恒定、不同测试包必然不同，可用来把整表清空
+// 类用例（client_service_test）与 authharness 的会话用例隔到不同测试库。
+func testPackageScope() string {
+	name := filepath.Base(os.Args[0])
+	name = strings.TrimSuffix(name, ".exe")
+	name = strings.TrimSuffix(name, ".test")
+	return sanitizeDBName(name)
 }
 
 // findGitHEAD 兼容普通仓库（.git 目录）与 worktree（.git 文件指向 gitdir）。
