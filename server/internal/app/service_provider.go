@@ -23,13 +23,13 @@ func ProvideAuthService(
 	identityRepo *repository.UserIdentityRepo,
 	adminAuthz *service.AdminAuthzService,
 	kgStatus *service.KindergartenStatusService,
+	kgRepo *repository.KindergartenRepo,
 	rdb *redis.Client,
 	secret JWTSecret,
 	atTTL AccessTTL,
 	rtTTL RefreshTTL,
 	consentRepo *repository.ConsentRepo,
 	cfg *config.Config,
-	kindergartenRepo *repository.KindergartenRepo,
 	mergeSvc *service.IdentityMergeService,
 ) *service.AuthService {
 	return service.NewAuthService(
@@ -40,13 +40,14 @@ func ProvideAuthService(
 		identityRepo,
 		adminAuthz,
 		kgStatus,
+		kgRepo,
 		rdb,
 		[]byte(secret),
 		time.Duration(atTTL),
 		time.Duration(rtTTL),
 		consentRepo,
 		cfg.Consent.Enforce,
-		kindergartenRepo,
+		kgRepo, // 成员园所与绑定目标解析共用同一仓储（#169 / #167）
 		mergeSvc,
 		// 绑定限流的完整维度（手机号）只能在 service 换出手机号后判定，
 		// 中间件那层先按 app_id + IP 兜住洪峰（#174 / #167）。
