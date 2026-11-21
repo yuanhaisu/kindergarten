@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
@@ -17,7 +18,14 @@ import (
 )
 
 // ErrPhoneExists 平台开通园所时手机号已被占用。
+//
+// Deprecated: 开通不再拒绝既有家长/老师账号（#171 改为复用）。保留常量是为了
+// 兼容仍然映射它的调用方；新代码使用 ErrPhoneAlreadyAdmin。
 var ErrPhoneExists = errors.New("PHONE_EXISTS")
+
+// ErrPhoneAlreadyAdmin 手机号已在任一园所担任管理员。v1 约束「一手机号一 admin」，
+// 开通与 setadmin 都不得为同一手机号造出第二个园所管理员。
+var ErrPhoneAlreadyAdmin = errors.New("PHONE_ALREADY_ADMIN")
 
 // PlatformService 平台方运营：登录、园所开通与状态、操作留痕。
 // 平台账号与园所账号完全独立（ADR-0014）。
@@ -36,6 +44,7 @@ type PlatformService struct {
 	logRepo       PlatformAuditStore
 	dietSeed      *DietSeedService
 	kgStatus      *KindergartenStatusService
+	entry         *KindergartenEntryService
 	epochs        auth.PlatformEpochStore
 	revoker       auth.TokenRevoker
 	rdb           *redis.Client
@@ -59,6 +68,7 @@ func NewPlatformService(
 	logRepo PlatformAuditStore,
 	dietSeed *DietSeedService,
 	kgStatus *KindergartenStatusService,
+	entry *KindergartenEntryService,
 	epochs auth.PlatformEpochStore,
 	revoker auth.TokenRevoker,
 	rdb *redis.Client,
@@ -70,7 +80,7 @@ func NewPlatformService(
 		db: db, adminRepo: adminRepo, kgRepo: kgRepo, entRepo: entRepo, orderRepo: orderRepo,
 		userRepo: userRepo, userRoleRepo: userRoleRepo, adminRoleRepo: adminRoleRepo,
 		paymentRepo: paymentRepo, commRepo: commRepo, distRepo: distRepo,
-		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, epochs: epochs,
+		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, entry: entry, epochs: epochs,
 		revoker: revoker, rdb: rdb, secret: secret, atTTL: atTTL, rtTTL: rtTTL,
 	}
 }
@@ -118,6 +128,8 @@ type PlatformKindergartenRow struct {
 	// 超档提示：只展示，不阻断（ENT-0013）。
 	TierMaxStudents int  `json:"tier_max_students"`
 	OverLimit       bool `json:"over_limit"`
+	// PublicCode 园所公开入口码；公开信息，不含内部敏感字段。
+	PublicCode string `json:"public_code"`
 }
 
 func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize int, keyword, status string) ([]PlatformKindergartenRow, int64, error) {
@@ -138,7 +150,7 @@ func (s *PlatformService) ListKindergartens(ctx context.Context, page, pageSize 
 	for _, kg := range kgs {
 		row := PlatformKindergartenRow{
 			ID: kg.ID, Name: kg.Name, Principal: kg.Principal,
-			Status: kg.Status, CreatedAt: kg.CreatedAt,
+			Status: kg.Status, CreatedAt: kg.CreatedAt, PublicCode: kg.PublicCode,
 		}
 		if row.Status == "" {
 			row.Status = domain.KindergartenStatusActive
@@ -207,6 +219,7 @@ type PlatformKindergartenDetail struct {
 	Principal    string                   `json:"principal"`
 	Status       string                   `json:"status"`
 	StudentCount int64                    `json:"student_count"`
+	PublicCode   string                   `json:"public_code"`
 	Entitlements []PlatformEntitlementRow `json:"entitlements"`
 	RecentOrders []PlatformOrderBrief     `json:"recent_orders"`
 }
@@ -254,7 +267,8 @@ func (s *PlatformService) GetKindergarten(ctx context.Context, id uint64) (*Plat
 	}
 	return &PlatformKindergartenDetail{
 		ID: kg.ID, Name: kg.Name, Principal: kg.Principal, Status: status,
-		StudentCount: count, Entitlements: ents, RecentOrders: briefs,
+		StudentCount: count, PublicCode: kg.PublicCode,
+		Entitlements: ents, RecentOrders: briefs,
 	}, nil
 }
 
@@ -271,22 +285,21 @@ type OnboardResult struct {
 	AdminPhone         string    `json:"admin_phone"`
 	MustChangePassword bool      `json:"must_change_password"`
 	TrialExpiresAt     time.Time `json:"trial_expires_at"`
+	// PublicCode 园所公开入口码（#177），平台控制台据此下发家长端入口。
+	PublicCode string `json:"public_code"`
 }
 
 // Onboard 开通园所：创建园所、园长账号、超级管理员角色与试用授权。
+//
+// 园长账号按手机号解析（FindOrCreateByPhone）：既有家长/老师账号直接复用，
+// 只补 admin 角色与管理端口令，昵称/头像/性别与各端档案保持原样。
+// 已在任一园所担任 admin 的手机号会被拒绝（一手机号一 admin，v1）。
 func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, operator, ip string) (*OnboardResult, error) {
 	if err := validatePhone(req.Phone); err != nil {
 		return nil, fmt.Errorf("INVALID_PHONE: %w", err)
 	}
 	if err := validatePassword(req.AdminPassword); err != nil {
 		return nil, fmt.Errorf("WEAK_PASSWORD: %w", err)
-	}
-	existing, err := s.userRepo.FindByPhone(ctx, req.Phone)
-	if err != nil {
-		return nil, err
-	}
-	if existing != nil {
-		return nil, ErrPhoneExists
 	}
 
 	hash, err := HashPassword(req.AdminPassword)
@@ -296,18 +309,53 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 
 	now := time.Now()
 	trialEnd := now.AddDate(0, 0, trialDays)
-	var kgID uint64
+	var (
+		kgID       uint64
+		publicCode string
+	)
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		userRepo := s.userRepo.WithDB(tx)
+		user, created, err := userRepo.FindOrCreateByPhone(ctx, req.Phone, repository.UserProfileDefaults{
+			Nickname:     req.Principal,
+			PasswordHash: hash,
+		})
+		if err != nil {
+			return err
+		}
+
+		// 同一手机号的开通必须串行：先锁账号行，再用当前读检查 admin 身份。
+		// 否则两个并发开通都看不到对方未提交的角色，各自建出一个管理员。
+		if err := lockUserForOnboard(ctx, tx, user.ID); err != nil {
+			return err
+		}
+		alreadyAdmin, err := hasAdminRoleForUpdate(ctx, tx, user.ID)
+		if err != nil {
+			return err
+		}
+		if alreadyAdmin {
+			return ErrPhoneAlreadyAdmin
+		}
+
+		// 复用路径只重置管理端口令并打首登改密标记；其余资料字段一个都不碰。
+		fields := map[string]any{"must_change_password": true}
+		if !created {
+			fields["password_hash"] = hash
+		}
+		if err := userRepo.UpdateFields(ctx, user.ID, fields); err != nil {
+			return err
+		}
+
 		kg := &domain.Kindergarten{Name: req.Name, Principal: req.Principal, Address: req.Address, Status: domain.KindergartenStatusActive}
 		if err := tx.Create(kg).Error; err != nil {
 			return err
 		}
 		kgID = kg.ID
-
-		user := &domain.User{Phone: req.Phone, Nickname: req.Principal, PasswordHash: hash, MustChangePassword: true}
-		if err := tx.Create(user).Error; err != nil {
+		// 公开码与园所同事务：开出来的园所必须立刻可被家长端入口解析（#177）。
+		publicCode, err = s.assignPublicCodeTx(ctx, tx, kg.ID)
+		if err != nil {
 			return err
 		}
+
 		if err := tx.Create(&domain.UserRole{
 			UserID: user.ID, Role: "admin", KindergartenID: &kg.ID,
 			KindergartenName: kg.Name, AdminRole: "super_admin",
@@ -370,7 +418,71 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 	return &OnboardResult{
 		KindergartenID: kgID, AdminPhone: req.Phone,
 		MustChangePassword: true, TrialExpiresAt: trialEnd,
+		PublicCode: publicCode,
 	}, nil
+}
+
+// assignPublicCodeTx 为新园分配公开入口码。
+//
+// GeneratePublicCode 已规避当前已占用的候选；这里再兜住「检查后、写入前」被并发
+// 插入占用的窗口：撞唯一键就换码重试，绝不能把园所留在无公开码的状态。
+func (s *PlatformService) assignPublicCodeTx(ctx context.Context, tx *gorm.DB, kindergartenID uint64) (string, error) {
+	if s.entry == nil {
+		return "", errors.New("园所入口服务未配置，无法生成公开码")
+	}
+	kgRepo := repository.NewKindergartenRepo(tx)
+	for attempt := 1; attempt <= publicCodeMaxAttempts; attempt++ {
+		code, err := s.entry.GeneratePublicCode(ctx)
+		if err != nil {
+			return "", err
+		}
+		wrote, err := kgRepo.SetPublicCodeIfEmpty(ctx, kindergartenID, code)
+		if errors.Is(err, repository.ErrDuplicatePublicCode) {
+			continue
+		}
+		if err != nil {
+			return "", fmt.Errorf("写入园所公开码失败: %w", err)
+		}
+		if !wrote {
+			return "", errors.New("写入园所公开码失败：园所已有公开码")
+		}
+		return code, nil
+	}
+	return "", fmt.Errorf("生成园所公开码失败：连续 %d 次候选码写入冲突", publicCodeMaxAttempts)
+}
+
+// lockUserForOnboard 用 SELECT ... FOR UPDATE 锁住账号行，把同一手机号的并发开通串行化。
+func lockUserForOnboard(ctx context.Context, tx *gorm.DB, userID uint64) error {
+	var u domain.User
+	if err := tx.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Select("id").First(&u, userID).Error; err != nil {
+		return fmt.Errorf("锁定开通账号失败: %w", err)
+	}
+	return nil
+}
+
+// hasAdminRoleForUpdate 判断账号是否已在任一园所担任管理员。
+//
+// 必须用锁定读（当前读）：REPEATABLE READ 下普通 SELECT 走事务开始时的快照，
+// 会漏掉并发事务刚提交的 admin 角色。UserAdminRole 一并检查，避免只残留
+// 角色关联（鉴权按关联给通配权限）却被当成「不是管理员」。
+func hasAdminRoleForUpdate(ctx context.Context, tx *gorm.DB, userID uint64) (bool, error) {
+	var roles []domain.UserRole
+	if err := tx.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Select("id").Where("user_id = ? AND role = ?", userID, "admin").
+		Limit(1).Find(&roles).Error; err != nil {
+		return false, fmt.Errorf("检查管理员身份失败: %w", err)
+	}
+	if len(roles) > 0 {
+		return true, nil
+	}
+	var links []domain.UserAdminRole
+	if err := tx.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Select("id").Where("user_id = ?", userID).
+		Limit(1).Find(&links).Error; err != nil {
+		return false, fmt.Errorf("检查管理员角色关联失败: %w", err)
+	}
+	return len(links) > 0, nil
 }
 
 func (s *PlatformService) SetKindergartenStatus(ctx context.Context, id uint64, status, operator, ip string) error {
