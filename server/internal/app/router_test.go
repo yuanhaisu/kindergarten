@@ -402,8 +402,15 @@ func (f *fakeUserRepo) UpdateFields(context.Context, uint64, map[string]any) err
 
 type fakeRoleRepo struct{}
 
+// testAdminKindergartenID/testPasswordHash 让测试里的 refresh 作用域与
+// issueTokensFor 真正签发的管理端作用域一致：#166 起续期要复核「恰好一个
+// 园所」与「口令未变」，只写 UID + ScopeKind 的旧夹具会被判为无效。
+var testAdminKindergartenID uint64 = 4
+
+const testPasswordHash = "$2a$10$abcdefghijklmnopqrstuv"
+
 func (fakeRoleRepo) FindByUserID(_ context.Context, userID uint64) ([]domain.UserRole, error) {
-	return []domain.UserRole{{UserID: userID, Role: "parent"}}, nil
+	return []domain.UserRole{{UserID: userID, Role: "admin", KindergartenID: &testAdminKindergartenID}}, nil
 }
 
 func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
@@ -411,8 +418,8 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 
 	users := &fakeUserRepo{users: map[uint64]*domain.User{
-		1: {BaseModel: domain.BaseModel{ID: 1}, Nickname: "家长A", Phone: "13800000001"},
-		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002"},
+		1: {BaseModel: domain.BaseModel{ID: 1}, Nickname: "家长A", Phone: "13800000001", PasswordHash: testPasswordHash},
+		2: {BaseModel: domain.BaseModel{ID: 2}, Nickname: "家长B", Phone: "13800000002", PasswordHash: testPasswordHash},
 	}}
 	svc := service.NewAuthService(users, fakeRoleRepo{}, nil, nil, nil, nil, nil, nil, rdb,
 		[]byte(testJWTSecret), 15*time.Minute, 7*24*time.Hour, nil, false, nil, nil, nil)
@@ -500,10 +507,19 @@ func TestLogoutRevokesOnlyItsOwnTokens(t *testing.T) {
 	accessA := signAccess(t, "1", 15*time.Minute)
 	accessB := signAccess(t, "2", 15*time.Minute)
 	refreshA, refreshB := "refresh-token-a", "refresh-token-b"
-	// 管理端 refresh 存 JSON 作用域（#169），app_id 为空 + admin_web。
-	scopeA, err := auth.EncodeRefreshScope(auth.RefreshScope{UID: 1, ScopeKind: auth.RefreshScopeAdminWeb})
+	// 管理端 refresh 存 JSON 作用域（#169）：app_id 为空 + admin_web；#166 起
+	// 还必须带口令指纹与园所，才能续签。
+	scopeOf := func(uid uint64) auth.RefreshScope {
+		return auth.RefreshScope{
+			UID:             uid,
+			ScopeKind:       auth.RefreshScopeAdminWeb,
+			KindergartenID:  testAdminKindergartenID,
+			PasswordVersion: auth.PasswordFingerprint(testPasswordHash),
+		}
+	}
+	scopeA, err := auth.EncodeRefreshScope(scopeOf(1))
 	require.NoError(t, err)
-	scopeB, err := auth.EncodeRefreshScope(auth.RefreshScope{UID: 2, ScopeKind: auth.RefreshScopeAdminWeb})
+	scopeB, err := auth.EncodeRefreshScope(scopeOf(2))
 	require.NoError(t, err)
 	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshA, scopeA, 7*24*time.Hour))
 	require.NoError(t, auth.SaveRefresh(ctx, rdb, refreshB, scopeB, 7*24*time.Hour))
