@@ -427,6 +427,7 @@ func newTestEngine(t *testing.T, rdb *redis.Client) *gin.Engine {
 		nil, // distributor
 		nil, // entitlement
 		nil, // publicBrand
+		nil, // bindInvite
 		nil, // parentEntryQR
 	)
 

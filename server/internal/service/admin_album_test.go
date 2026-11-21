@@ -557,6 +557,7 @@ func TestAdminAlbumRoutesHaveNoEditEndpoint(t *testing.T) {
 		nil, // distributor
 		nil, // entitlement
 		nil, // publicBrand
+		nil, // bindInvite
 		nil, // parentEntryQR
 	)
 	engine, err := app.NewRouter(app.NewAppHandler(h), nil, app.JWTSecret("test-secret"), nil, nil, nil, nil)

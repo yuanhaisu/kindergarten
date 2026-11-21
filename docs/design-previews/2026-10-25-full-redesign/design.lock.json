@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "supportHash": "6cc98c76f62da7867a564211fb923ff371abfe219f9e1ec2b668144241f5110a",
+  "supportHash": "cefc74a8136a8460944934dbb839e899228d3779e99b59c253e9fa7250a17b88",
   "supportReviewedAt": "2026-11-21",
-  "supportReason": "#176 新增 utils/scene.mjs + utils/entryScene.mjs（scene 解析与入口暂存），页面源码指纹已复核，视觉无变化",
+  "supportReason": "merge #169/#168/#166 后：#176 新增 utils/scene.mjs + utils/entryScene.mjs，页面源码指纹与共享支撑代码一并复核，视觉无变化",
   "pages": {
     "parent/01-home": {
       "source": "parent/src/pages/index/index.vue",
@@ -296,13 +296,13 @@
     },
     "teacher/02-login": {
       "source": "teacher/src/pages/auth/login.vue",
-      "sha256": "051c329e0748ed0a88bb6365117aaa91e4563fee62a0f18c9937693f108660de",
-      "depsSha": "146fd80faf45810977611e8c7fe786dd13b6246bee2ebeab63930f24bd8984ca",
+      "sha256": "ed957996cfae56e06d5e8c4e38b3b7658036233a4d610b34b914ddcb26ca473a",
+      "depsSha": "cea3e98e04c5b58ba450d63c8dc13e36c8b05dea931cdfdb87fc43f5a6f3803e",
       "title": "老师登录",
       "tabbar": false,
-      "reviewedAt": "2026-11-09",
-      "codeCommit": "d6733c7",
-      "reason": "2026-11-09-entitlement-ui：7d71f06 与 consent 改动的锁定态/到期横幅/入口过滤/协议链接已同步到原型"
+      "reviewedAt": "2026-11-21",
+      "codeCommit": "0f0d09e",
+      "reason": "#168 登录页接入邀请码绑定：待绑定 token 不进工作台，绑定成功后进入园所"
     },
     "teacher/03-notice-create": {
       "source": "teacher/src/pages/notice/create.vue",

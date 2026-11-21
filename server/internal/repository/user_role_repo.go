@@ -97,6 +97,21 @@ func (r *UserRoleRepo) FindAdminInKindergarten(ctx context.Context, userID, kind
 	return &ur, err
 }
 
+// FindAdminRoleOutsideKindergarten 查找该用户在其他园所的管理员身份（#166）。
+// 一个手机号只能是一个园所的管理员：跨园重复会让管理端会话无法确定唯一租户。
+// kindergarten_id 为空的遗留 admin 角色不算「某个园所」，不在本查询范围内。
+func (r *UserRoleRepo) FindAdminRoleOutsideKindergarten(ctx context.Context, userID, kindergartenID uint64) (*domain.UserRole, error) {
+	var ur domain.UserRole
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND role = ? AND kindergarten_id IS NOT NULL AND kindergarten_id <> ?",
+			userID, "admin", kindergartenID).
+		First(&ur).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &ur, err
+}
+
 func (r *UserRoleRepo) CountAdminsInKindergarten(ctx context.Context, kindergartenID uint64) (int64, error) {
 	var n int64
 	err := r.db.WithContext(ctx).Model(&domain.UserRole{}).

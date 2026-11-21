@@ -97,8 +97,9 @@ func TestPasswordLoginRejectsNonAdminAccounts(t *testing.T) {
 func TestPasswordLoginAllowsAdminAccounts(t *testing.T) {
 	h := authharness.New(t)
 
+	kg := seedKindergarten(t, h, "管理员登录园")
 	phone := uniquePhone()
-	createUser(t, h, phone, "Password@123", "admin")
+	createAdminUser(t, h, phone, "Password@123", kg)
 
 	res := loginWithPassword(t, h, phone, "Password@123")
 	if res.Status != http.StatusOK {
@@ -199,10 +200,11 @@ func decodeReq[T any](t *testing.T, raw string) T {
 func TestPasswordLoginRateLimitIsScopedByPhone(t *testing.T) {
 	h := authharness.New(t)
 
+	kg := seedKindergarten(t, h, "登录限流园")
 	phoneA := uniquePhone()
-	createUser(t, h, phoneA, "Right@123", "admin")
+	createAdminUser(t, h, phoneA, "Right@123", kg)
 	phoneB := uniquePhone()
-	createUser(t, h, phoneB, "Right@123", "admin")
+	createAdminUser(t, h, phoneB, "Right@123", kg)
 
 	for i := 0; i < 10; i++ {
 		res := loginWithPassword(t, h, phoneA, "Wrong@123")
@@ -234,8 +236,9 @@ func TestPasswordLoginRateLimitIsScopedByPhone(t *testing.T) {
 func TestPasswordLoginRateLimitFailsClosedWhenStoreUnavailable(t *testing.T) {
 	h := authharness.New(t)
 
+	kg := seedKindergarten(t, h, "限流故障园")
 	phone := uniquePhone()
-	createUser(t, h, phone, "Right@123", "admin")
+	createAdminUser(t, h, phone, "Right@123", kg)
 
 	h.Redis.SetFailWrites(true)
 	res := loginWithPassword(t, h, phone, "Right@123")
