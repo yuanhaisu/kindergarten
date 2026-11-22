@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>登录 · 养成星球</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mp-app" data-od-id="login-screen">
+    <header class="mp-statusbar" aria-label="状态栏" data-od-id="status-bar">
+      <span class="status-time">9:41</span>
+      <svg class="status-icons" width="66" height="13" viewBox="0 0 66 13" fill="none" aria-hidden="true" focusable="false">
+        <g fill="currentColor">
+          <rect x="0" y="8.5" width="3" height="4" rx="1"/>
+          <rect x="4.5" y="6.5" width="3" height="6" rx="1"/>
+          <rect x="9" y="4.5" width="3" height="8" rx="1"/>
+          <rect x="13.5" y="2" width="3" height="10.5" rx="1"/>
+        </g>
+        <path d="M24.1 5.2a8.1 8.1 0 0 1 10.8 0M26.4 8.1a5 5 0 0 1 6.2 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="29.5" cy="10.9" r="1.15" fill="currentColor"/>
+        <rect x="43" y="1.5" width="20" height="10" rx="3" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="45.2" y="3.7" width="15.6" height="5.6" rx="1.7" fill="currentColor"/>
+        <path d="M64.5 4.6v3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>
+      </svg>
+    </header>
+
+    <main class="login-main" id="login-main">
+      <div class="brand-stage">
+        <header class="masthead" data-od-id="brand-header">
+          <img class="brand-mark" src="_shared/logo-dna.svg" width="56" height="56" alt="养成星球" data-od-id="brand-logo">
+          <p class="eyebrow" data-od-id="brand-eyebrow">养成星球 · NURTURE PLANET</p>
+        </header>
+        <div class="masthead-rule" aria-hidden="true"></div>
+
+        <section class="intro" aria-labelledby="login-title">
+          <h1 class="login-title" id="login-title" data-od-id="login-title">
+            <span class="title-line">孩子的每一天</span>
+            <span class="title-line title-line--inset">都值得被看见</span>
+          </h1>
+          <p class="login-lead" data-od-id="brand-lead">家园沟通、成长记录与接送，<br>都在这一个地方。</p>
+        </section>
+      </div>
+
+      <section class="login-sheet" aria-labelledby="login-actions-title" data-od-id="login-actions">
+        <div class="sheet-label">
+          <h2 class="sheet-label-text" id="login-actions-title" data-od-id="login-actions-title">登录方式</h2>
+          <span class="sheet-label-rule" aria-hidden="true"></span>
+        </div>
+
+        <button class="btn btn-primary" type="button" id="wechat-login" data-od-id="wechat-login-button">
+          <svg class="wechat-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M9.17 3.5C5.05 3.5 1.7 6.22 1.7 9.6c0 1.92 1.13 3.63 2.9 4.75l-.7 2.17 2.4-1.13c.78.22 1.6.34 2.45.34.43 0 .86-.03 1.28-.09a5.52 5.52 0 0 1-.63-2.5c0-3.18 2.93-5.74 6.55-5.74.43 0 .86.04 1.27.11-.8-2.88-3.98-5.02-7.8-5.02Z"/>
+            <path fill="currentColor" d="M17.2 8.6c-3.22 0-5.83 2.22-5.83 4.95 0 2.74 2.61 4.95 5.83 4.95.68 0 1.34-.1 1.96-.3l2.04.96-.56-1.83c1.37-.9 2.23-2.29 2.23-3.78 0-2.73-2.6-4.95-5.83-4.95Z"/>
+            <circle class="wechat-eye" cx="6.6" cy="8.1" r=".95" fill="var(--fg)"/>
+            <circle class="wechat-eye" cx="11.5" cy="8.1" r=".95" fill="var(--fg)"/>
+            <circle class="wechat-eye" cx="15.2" cy="13.7" r=".82" fill="var(--fg)"/>
+            <circle class="wechat-eye" cx="19.1" cy="13.7" r=".82" fill="var(--fg)"/>
+          </svg>
+          <span id="wechat-login-label" aria-live="polite">微信一键登录</span>
+        </button>
+
+        <button class="btn btn-secondary" type="button" id="phone-login" data-od-id="phone-login-button">手机号验证码登录</button>
+
+        <div class="consent-row" id="consent-row" data-od-id="consent-row">
+          <input class="consent-input" type="checkbox" id="consent-checkbox" aria-labelledby="consent-copy" aria-describedby="consent-error" aria-invalid="false" data-od-id="consent-checkbox">
+          <span class="consent-box" aria-hidden="true">
+            <svg viewBox="0 0 12 10" width="12" height="10" fill="none" focusable="false">
+              <path d="M1.5 5.2 4.4 8.1 10.5 1.7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="consent-copy" id="consent-copy">我已阅读并同意<a class="legal-link" href="#terms" data-legal="terms" aria-haspopup="dialog" aria-controls="legal-layer" data-od-id="terms-link">《用户协议》</a>与<a class="legal-link" href="#privacy" data-legal="privacy" aria-haspopup="dialog" aria-controls="legal-layer" data-od-id="privacy-link">《隐私政策》</a></span>
+        </div>
+        <div class="consent-message">
+          <p class="consent-error" id="consent-error" role="alert" hidden>请先阅读并同意《用户协议》与《隐私政策》</p>
+        </div>
+
+        <p class="support-note" data-od-id="support-note">遇到问题？请联系园所老师协助绑定</p>
+      </section>
+    </main>
+
+    <div class="layer" id="legal-layer" hidden aria-hidden="true">
+      <div class="scrim" data-close></div>
+      <section class="sheet legal-sheet" role="dialog" aria-modal="true" aria-labelledby="legal-title" tabindex="-1" data-od-id="legal-sheet">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <header class="sheet-heading">
+          <div>
+            <p class="sheet-kicker">协议摘要</p>
+            <h2 class="sheet-title" id="legal-title">用户协议</h2>
+          </div>
+          <button class="sheet-close" type="button" aria-label="关闭" data-close>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+        <div class="legal-body" id="legal-body">
+          <p>使用养成星球家长端，即表示你同意：仅在已绑定的孩子范围内使用家园沟通、成长记录与接送服务；不将账号转借他人；遵守孩子所在园所发布的具体规定。</p>
+          <p>本页为协议要点摘要，完整协议以园所正式发布版本为准。</p>
+        </div>
+        <button class="sheet-done" type="button" data-close>我知道了</button>
+      </section>
+    </div>
+
+    <div class="layer" id="phone-layer" hidden aria-hidden="true">
+      <div class="scrim" data-close></div>
+      <section class="sheet phone-sheet" role="dialog" aria-modal="true" aria-labelledby="phone-title" tabindex="-1" data-od-id="phone-sheet">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <header class="sheet-heading">
+          <div>
+            <p class="sheet-kicker">账号绑定</p>
+            <h2 class="sheet-title" id="phone-title">手机号登录</h2>
+          </div>
+          <button class="sheet-close" type="button" aria-label="关闭" data-close>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+        <p class="sheet-lede" id="phone-lede">验证码将发送至该手机号。</p>
+        <form class="phone-form" id="phone-form" novalidate>
+          <label class="field-label" for="phone-input">手机号</label>
+          <div class="field phone-field" id="phone-field">
+            <span class="field-prefix" aria-hidden="true">+86</span>
+            <input id="phone-input" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="11" placeholder="请输入手机号" aria-describedby="phone-error">
+          </div>
+          <label class="field-label" for="code-input">验证码</label>
+          <div class="code-row">
+            <div class="field code-field" id="code-field">
+              <input id="code-input" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码" aria-describedby="phone-error">
+            </div>
+            <button class="code-button" type="button" id="send-code">获取验证码</button>
+          </div>
+          <div class="form-message">
+            <p class="form-error" id="phone-error" role="alert" hidden></p>
+          </div>
+          <button class="btn btn-primary sheet-submit" type="submit">登录</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>

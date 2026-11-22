@@ -661,6 +661,185 @@ svg {
   cursor: default;
 }
 
+/* ---------- success state ---------- */
+
+.feedback-success {
+  padding: 34px 24px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.success-badge {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--sage-pale);
+  color: var(--sage-deep);
+}
+
+.success-badge svg {
+  width: 26px;
+  height: 26px;
+}
+
+.success-title {
+  margin: 16px 0 0;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h2);
+  letter-spacing: 0;
+  font-synthesis: none;
+}
+
+.success-desc {
+  margin: 8px 0 0;
+  max-width: 268px;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.7;
+}
+
+/* ---------- my feedback history ---------- */
+
+.history {
+  margin-top: 32px;
+}
+
+.history-head {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-title {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h3);
+  letter-spacing: 0;
+  font-synthesis: none;
+}
+
+.history-count {
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+}
+
+.history-card {
+  padding: 16px 18px 18px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.history-card + .history-card {
+  margin-top: 10px;
+}
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-type {
+  color: var(--muted-on-surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+}
+
+.history-status {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--text-overline);
+  font-weight: var(--weight-medium);
+  line-height: 1.6;
+}
+
+.history-status--replied {
+  background: var(--sage-pale);
+  color: var(--sage-deep);
+}
+
+.history-status--pending {
+  background: var(--surface-muted);
+  color: var(--muted-on-surface);
+}
+
+.history-text {
+  margin: 10px 0 0;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: 1.65;
+}
+
+.history-date {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+}
+
+.history-reply {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.history-reply__label {
+  margin: 0;
+  color: var(--sage-deep);
+  font-family: var(--font-sans);
+  font-size: var(--text-overline);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  letter-spacing: var(--tracking-overline);
+}
+
+.history-reply__text {
+  margin: 6px 0 0;
+  color: var(--fg-soft);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.7;
+}
+
+.history-reply__date {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+}
+
 /* ---------- common questions ---------- */
 
 .faq {

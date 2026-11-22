@@ -7,6 +7,8 @@
   const sheet = layer ? layer.querySelector(".sheet") : null;
   const safeButton = layer ? layer.querySelector(".sheet-safe") : null;
   const confirmButton = document.getElementById("withdraw-confirm");
+  const resubmitSection = document.getElementById("resubmit-section");
+  const resubmitButton = document.getElementById("resubmit-leave");
   const toast = document.getElementById("toast");
 
   if (!main || !trigger || !layer || !sheet || !safeButton || !confirmButton || !toast) {
@@ -139,6 +141,22 @@
     if (approval) approval.style.display = "none";
     const withdraw = document.querySelector(".withdraw-section");
     if (withdraw) withdraw.style.display = "none";
+    if (resubmitSection) resubmitSection.hidden = false;
+  }
+
+  if (resubmitButton) {
+    resubmitButton.addEventListener("click", () => {
+      const reasonCopy = document.querySelector(".reason-copy");
+      const reasonText = reasonCopy ? reasonCopy.innerText.replace(/\s+/g, " ").trim() : "";
+      const query = new URLSearchParams({
+        from: "10",
+        type: "sick",
+        start: "2026-11-13",
+        end: "2026-11-13",
+        reason: reasonText,
+      });
+      window.location.href = "../09-leave-create/index.html?" + query.toString();
+    });
   }
 
   window.addEventListener(

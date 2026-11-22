@@ -477,62 +477,6 @@ ul {
 
 /* ---------- class notice ---------- */
 
-.notice-section {
-  margin-top: var(--section-gap);
-}
-
-.notice-card {
-  padding: var(--card-pad-y) var(--card-pad-x);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius-card);
-  background: var(--surface-soft);
-}
-
-.notice__eyebrow {
-  font-size: var(--text-overline);
-  font-weight: var(--weight-semibold);
-  line-height: var(--leading-caption);
-  letter-spacing: var(--tracking-overline);
-  color: var(--muted-on-surface);
-}
-
-.notice__title {
-  margin-top: 5px;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: var(--weight-regular);
-  line-height: 1.45;
-  letter-spacing: 0;
-  color: var(--fg);
-  font-synthesis: none;
-}
-
-.notice__body {
-  margin-top: 8px;
-  font-size: var(--text-body);
-  font-weight: var(--weight-regular);
-  line-height: var(--leading-body);
-  color: var(--fg-soft);
-}
-
-.hl {
-  padding: 0 3px;
-  background: rgba(221, 177, 74, 0.32);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
-.notice__sign {
-  margin-top: 14px;
-  font-size: 12.5px;
-  font-weight: var(--weight-regular);
-  line-height: 1.5;
-  letter-spacing: 0.01em;
-  color: var(--muted-on-surface);
-}
-
-/* ---------- footer ---------- */
-
 .page-foot {
   margin-top: 24px;
   padding: 0 2px;

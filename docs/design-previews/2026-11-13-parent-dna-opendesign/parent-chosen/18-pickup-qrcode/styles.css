@@ -285,33 +285,6 @@ button {
   letter-spacing: 0.01em;
 }
 
-.verify {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin-top: 12px;
-}
-
-.verify__label {
-  color: var(--muted-on-surface);
-  font-size: 11px;
-  font-weight: var(--weight-medium);
-  line-height: 1.5;
-  letter-spacing: 0.12em;
-}
-
-.verify__code {
-  color: var(--fg);
-  font-family: var(--font-serif);
-  font-size: 26px;
-  font-weight: var(--weight-regular);
-  line-height: 1.25;
-  letter-spacing: 0.08em;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 .refresh-row {
   display: flex;
   flex-wrap: wrap;
@@ -478,6 +451,76 @@ button {
   line-height: var(--leading-caption);
   letter-spacing: 0.02em;
   text-align: center;
+}
+
+.hl {
+  padding: 0 3px;
+  background: rgba(141, 163, 134, 0.28);
+  white-space: nowrap;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ---------- 评审态：未指定 / 加载中 / 已过期 / 网络不可用 ---------- */
+.state-panel {
+  padding: 40px var(--card-pad-x);
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.state-kicker {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: var(--text-overline);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  letter-spacing: var(--tracking-overline);
+}
+
+.state-title {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-h2);
+}
+
+.state-copy {
+  margin: 8px auto 0;
+  max-width: 264px;
+  color: var(--muted-on-surface);
+  font-size: var(--text-small);
+  line-height: 1.6;
+}
+
+.state-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 20px;
+  padding: 0 22px;
+  background: var(--fg);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--accent-contrast);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.skeleton-qr {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 18px;
+  background: var(--skeleton);
+  border-radius: var(--radius-md);
 }
 
 .sr-only {

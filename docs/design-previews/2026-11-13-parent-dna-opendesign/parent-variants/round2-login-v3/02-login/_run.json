@@ -1,0 +1,23 @@
+{
+  "slug": "parent-login-v3",
+  "surface": "parent",
+  "title": "家长登录",
+  "projectId": "e74e9e02-021f-49ea-9fa1-915fdb656656",
+  "conversationId": "26bbede3-f2a9-4b59-b991-b6b043f9b336",
+  "runId": "237996bc-75c4-4501-a139-79cf7fa099c3",
+  "status": "succeeded",
+  "error": null,
+  "elapsedSec": 437,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "_shared/fonts/instrument-serif-regular.woff2",
+    "_shared/fonts/noto-serif-sc-subset.woff2",
+    "_shared/logo-dna.svg",
+    "tokens.css"
+  ],
+  "hasHtml": true,
+  "daemonUrl": "http://127.0.0.1:7456/projects/e74e9e02-021f-49ea-9fa1-915fdb656656",
+  "previewRendered": true
+}

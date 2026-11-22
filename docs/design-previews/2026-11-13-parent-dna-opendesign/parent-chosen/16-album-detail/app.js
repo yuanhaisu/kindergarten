@@ -22,6 +22,5 @@
     });
   }
 
-  bindAction('btn-save-all', '32 张照片已保存到相册');
   bindAction('btn-share', '分享卡片已生成');
 })();

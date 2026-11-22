@@ -18,7 +18,7 @@
   var charCountEl = document.getElementById('char-count');
   var toast = document.getElementById('toast');
 
-  var liked = false;
+  var liked = true;
   var likes = 8;
   var commentTotal = 2;
   var lastFocused = null;

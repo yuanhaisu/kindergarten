@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
-  <title>可接送人 · 接送</title>
+  <title>接送管理 · 接送</title>
   <link rel="stylesheet" href="../../_shared/fonts.css" />
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -39,14 +39,19 @@
       </div>
 
       <header class="page-header" data-od-id="authorized-pickup-header">
-        <h1>可接送人</h1>
-        <p class="page-subtitle">只有<span class="hl">名单内</span>的家人可以接走孩子</p>
+        <h1>接送管理</h1>
+        <p class="page-subtitle">可接送人与<span class="hl">历史记录</span>，都在这里</p>
       </header>
 
-      <div class="page-view" data-view="default">
+      <div class="manage-tabs" role="tablist" aria-label="接送管理">
+        <button class="manage-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="pickup-panel-people" data-tab="people" data-od-id="pickup-tab-people">可接送人</button>
+        <button class="manage-tab" type="button" role="tab" aria-selected="false" aria-controls="pickup-panel-history" data-tab="history" data-od-id="pickup-tab-history">历史记录</button>
+      </div>
+
+      <div class="page-view" id="pickup-panel-people" data-view="default" data-panel="people">
         <section class="person-card" aria-label="可接送人名单" data-od-id="authorized-pickup-list">
           <button class="person-row" type="button" data-od-id="authorized-person-li-jing"
-            data-name="李静" data-relation="妈妈" data-phone="138****6721" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
+            data-auth-id="1" data-name="李静" data-relation="妈妈" data-phone="138****6721" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
             <span class="avatar avatar--default" aria-hidden="true">李</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -61,7 +66,7 @@
           </button>
 
           <button class="person-row" type="button" data-od-id="authorized-person-wang-lei"
-            data-name="王磊" data-relation="爸爸" data-phone="139****2035" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
+            data-auth-id="2" data-name="王磊" data-relation="爸爸" data-phone="139****2035" data-status="approved" data-status-label="已通过" data-auth-type="长期授权">
             <span class="avatar avatar--sage" aria-hidden="true">王</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -76,7 +81,7 @@
           </button>
 
           <button class="person-row" type="button" data-od-id="authorized-person-chen-xiulan"
-            data-name="陈秀兰" data-relation="外婆" data-phone="137****4418" data-status="pending" data-status-label="待审核" data-auth-type="长期授权">
+            data-auth-id="3" data-name="陈秀兰" data-relation="外婆" data-phone="137****4418" data-status="pending" data-status-label="待审核" data-auth-type="长期授权">
             <span class="avatar avatar--clay" aria-hidden="true">陈</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -91,7 +96,7 @@
           </button>
 
           <button class="person-row" type="button" data-od-id="authorized-person-zhao-guoqiang"
-            data-name="赵国强" data-relation="叔叔" data-phone="135****8890" data-status="rejected" data-status-label="已拒绝" data-auth-type="长期授权">
+            data-auth-id="4" data-name="赵国强" data-relation="叔叔" data-phone="135****8890" data-status="rejected" data-status-label="已拒绝" data-auth-type="长期授权">
             <span class="avatar avatar--plain" aria-hidden="true">赵</span>
             <span class="person-row__body">
               <span class="person-row__head">
@@ -123,7 +128,7 @@
         </aside>
       </div>
 
-      <section class="page-view empty-state" data-view="empty" aria-labelledby="empty-state-title" data-od-id="authorized-pickup-empty" hidden>
+      <section class="page-view empty-state" data-view="empty" data-panel="people" aria-labelledby="empty-state-title" data-od-id="authorized-pickup-empty" hidden>
         <div class="empty-state__illustration" aria-hidden="true">
           <svg viewBox="0 0 120 120" width="128" height="128" focusable="false">
             <g fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -150,6 +155,63 @@
         <h2 class="empty-state__title" id="empty-state-title">还没有添加其他接送人</h2>
         <p class="empty-state__copy">添加后，家人可在园门口凭码接走乐乐。</p>
         <button class="primary-button empty-state__cta" type="button" data-od-id="add-authorizer-empty">添加授权人</button>
+      </section>
+
+<section class="page-view history-view" id="pickup-panel-history" data-panel="history" hidden aria-labelledby="history-title" data-od-id="history-section">
+        <div class="section-head"><h2 class="section-title" id="history-title">历史记录</h2><span class="section-meta">近 30 天</span></div>
+
+        <div class="history-card">
+          <article class="day" data-od-id="history-day-1111">
+            <div class="day-head">
+              <span class="day-date">11 月 11 日</span>
+              <span class="day-week">周三</span>
+            </div>
+            <div class="record-row">
+              <span class="rec-type rec-in">送入</span>
+              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
+              <span class="rec-time">07:55</span>
+            </div>
+            <div class="record-row">
+              <span class="rec-type rec-out">接走</span>
+              <span class="rec-person"><span class="rec-name">爸爸</span><span class="rec-rel">（父亲）</span></span>
+              <span class="rec-time">17:32</span>
+            </div>
+          </article>
+
+          <article class="day" data-od-id="history-day-1110">
+            <div class="day-head">
+              <span class="day-date">11 月 10 日</span>
+              <span class="day-week">周二</span>
+            </div>
+            <div class="record-row">
+              <span class="rec-type rec-in">送入</span>
+              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
+              <span class="rec-time">08:01</span>
+            </div>
+            <div class="record-row">
+              <span class="rec-type rec-out">接走</span>
+              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
+              <span class="rec-time">16:48</span>
+            </div>
+          </article>
+
+          <article class="day" data-od-id="history-day-1107">
+            <div class="day-head">
+              <span class="day-date">11 月 7 日</span>
+              <span class="day-week">周六</span>
+            </div>
+            <div class="record-row">
+              <span class="rec-type rec-in">送入</span>
+              <span class="rec-person"><span class="rec-name">爸爸</span><span class="rec-rel">（父亲）</span></span>
+              <span class="rec-time">07:47</span>
+            </div>
+            <div class="record-row">
+              <span class="rec-type rec-out">接走</span>
+              <span class="rec-person"><span class="rec-name">妈妈</span><span class="rec-rel">（母亲）</span></span>
+              <span class="rec-time">17:10</span>
+            </div>
+          </article>
+        </div>
       </section>
     </main>
 
@@ -187,8 +249,6 @@
 
         <div class="detail-actions" id="detail-actions">
           <button class="sheet-action sheet-action--primary" type="button" data-detail-action="edit" hidden>编辑资料</button>
-          <button class="sheet-action sheet-action--ghost" type="button" data-detail-action="pause" hidden>暂停接送</button>
-          <button class="sheet-action sheet-action--ghost" type="button" data-detail-action="withdraw" hidden>撤回申请</button>
           <button class="sheet-action sheet-action--primary" type="button" data-detail-action="resubmit" hidden>重新提交</button>
           <button class="sheet-action sheet-action--danger" type="button" data-detail-action="delete">删除</button>
         </div>
@@ -212,5 +272,5 @@
   </div>
 
   <script src="app.js" defer></script>
-</body>
+<script src="../../_shared/nav.js"></script></body>
 </html>

@@ -6,6 +6,7 @@
 <title>任务详情 · 养成星球</title>
 <link rel="stylesheet" href="../../_shared/fonts.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="states.css" />
 </head>
 <body>
 <div class="mp-app" data-od-id="parent-task-detail">
@@ -34,144 +35,114 @@
   </div>
 
   <header class="page-bar" data-od-id="page-bar">
-    <button class="back-btn" type="button" aria-label="返回亲子任务" data-od-id="back-btn">
+    <button class="back-btn" type="button" id="back-btn" aria-label="返回亲子任务" data-od-id="back-btn">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14.5 5.5 8 12l6.5 6.5" />
       </svg>
     </button>
-    <span class="page-bar__title">乐乐 · 小一班</span>
+    <span class="page-bar__title" id="page-child">乐乐 · 小一班</span>
   </header>
 
   <main class="mp-main" data-od-id="task-detail">
-
     <header class="task-head" data-od-id="task-header">
       <p class="kicker">
         <span class="kicker__label">亲子任务</span>
-        <span class="kicker__dot" aria-hidden="true">·</span>
-        <span class="points">+10 积分</span>
+        <span class="task-type" id="task-type">完成型</span>
       </p>
-      <h1 class="task-head__title" data-od-id="task-title">给家人讲一件<br />今天开心的事</h1>
-      <p class="task-lead">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。<br /><span class="hl">不用引导答案</span>，他愿意讲就好。</p>
+      <h1 class="task-head__title" id="task-title" data-od-id="task-title">给家人讲一件<br />今天开心的事</h1>
+      <p class="task-lead" id="task-lead">晚饭后问问乐乐今天在幼儿园最开心的事，听他讲完，再请他说说当时的心情。<br /><span class="hl">不用引导答案</span>，他愿意讲就好。</p>
       <p class="task-meta">
-        <span>每天</span>
+        <span id="task-deadline">截止 11 月 22 日</span>
         <span class="task-meta__dot" aria-hidden="true"></span>
-        <span class="task-meta__now">今天 21:00 前</span>
-        <span class="task-meta__dot" aria-hidden="true"></span>
-        <span>王老师布置</span>
+        <span id="task-teacher">王老师</span>
       </p>
     </header>
 
-    <section class="card" aria-labelledby="steps-title" data-od-id="steps-card">
-      <div class="card-head">
-        <h2 class="card-title" id="steps-title">打卡步骤</h2>
-        <span class="card-meta">已完成 <strong id="step-count">1</strong> / 3</span>
-      </div>
-      <div class="steps-progress" aria-hidden="true">
-        <span class="steps-progress__seg is-done"></span>
-        <span class="steps-progress__seg"></span>
-        <span class="steps-progress__seg"></span>
-      </div>
-      <ul class="checklist" data-od-id="steps-list">
-        <li class="check-row is-done" data-od-id="step-1">
-          <label class="check-item">
-            <span class="check-box">
-              <input class="check-input" type="checkbox" checked />
-              <span class="check-visual" aria-hidden="true">
-                <svg class="check-tick" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-                </svg>
-              </span>
-            </span>
-            <span class="check-label">先问问孩子今天在幼儿园最开心的一件事</span>
-          </label>
-        </li>
-        <li class="check-row" data-od-id="step-2">
-          <label class="check-item">
-            <span class="check-box">
-              <input class="check-input" type="checkbox" />
-              <span class="check-visual" aria-hidden="true">
-                <svg class="check-tick" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-                </svg>
-              </span>
-            </span>
-            <span class="check-label">听孩子讲完，不打断，也不急着评价</span>
-          </label>
-        </li>
-        <li class="check-row" data-od-id="step-3">
-          <label class="check-item">
-            <span class="check-box">
-              <input class="check-input" type="checkbox" />
-              <span class="check-visual" aria-hidden="true">
-                <svg class="check-tick" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-                </svg>
-              </span>
-            </span>
-            <span class="check-label">拍一张他讲故事时的照片<span class="check-optional">（选填）</span></span>
-          </label>
-        </li>
-      </ul>
-    </section>
-
-    <section class="card checkin" id="checkin-card" aria-labelledby="checkin-title" data-od-id="checkin-card">
-      <div class="card-head">
-        <h2 class="card-title" id="checkin-title">今日打卡</h2>
-        <span class="time-left">
-          <span class="time-left__live" id="time-left-live"><span class="attention-dot" aria-hidden="true"></span>还剩 11 小时</span>
-          <span class="time-left__done" id="time-left-done" hidden>
-            <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2.2 6.3 4.8 8.9 9.9 3.2" />
-            </svg>已打卡
-          </span>
+    <section class="card light-state-card" id="state-card" data-od-id="task-state-card">
+      <div class="light-state" id="state-done">
+        <span class="state-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
         </span>
+        <h2 class="state-title">已记录</h2>
+        <p class="state-copy" id="done-copy">今天 19:20 · 老师会在群里看到</p>
+        <p class="state-note">不需要上传照片或视频 · 5 分钟内可撤销。</p>
+        <button class="state-undo" type="button" id="undo-complete">记录错了？撤销</button>
       </div>
-      <p class="checkin-hint">照片和一句话都可以，交过之后老师晚上统一回应。</p>
-      <div class="photo-grid" data-od-id="photo-grid">
-        <span class="photo photo--sage" role="img" aria-label="已添加的照片"></span>
-        <span class="photo photo--gold" role="img" aria-label="已添加的照片"></span>
-        <button class="photo-add" id="add-photo" type="button" data-od-id="add-photo">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          <span>加照片</span>
-        </button>
+
+      <div class="light-state" id="state-pending" hidden>
+        <h2 class="state-title">今天完成了吗？</h2>
+        <p class="state-copy">完成后点一下即可，不需要上传照片。</p>
+        <button class="btn-primary" type="button" id="complete-btn" data-od-id="complete-btn">完成了</button>
+        <p class="state-note">也可以直接在群里回复老师。</p>
       </div>
-      <div class="compose">
-        <textarea id="checkin-note" maxlength="200" placeholder="写一句今天的记录，老师会看到" aria-label="今天的记录" data-od-id="checkin-note"></textarea>
-        <span class="counter" id="note-counter">0 / 200</span>
+
+      <div class="light-state" id="state-unbound" hidden>
+        <h2 class="state-title" id="unbound-title">先绑定孩子</h2>
+        <p class="state-copy" id="unbound-copy">绑定后才能记录任务完成情况。</p>
+        <button class="btn-primary" type="button" id="bind-child" data-od-id="bind-child">绑定孩子</button>
+        <p class="state-note" id="unbound-note">绑定手机号后，选择这次任务记录给哪个孩子。</p>
+        <p class="state-note" id="enroll-note">不是本园家长？<a href="#" id="enroll-link">了解入园</a></p>
+      </div>
+
+      <div class="light-state" id="state-ended" hidden>
+        <h2 class="state-title">任务已结束</h2>
+        <p class="state-copy">截止 11 月 22 日 18:00，未完成不再记录。</p>
+        <p class="state-note">统计已锁定，可以看看其他任务。</p>
       </div>
     </section>
 
-    <div class="submit-block">
-      <button class="btn-primary" id="submit-btn" type="button" data-od-id="submit-checkin">提交打卡</button>
-      <p class="submit-note">每日任务每天可提交一次</p>
-    </div>
-
-    <section class="history" aria-labelledby="history-title" data-od-id="submission-history">
-      <div class="section-head">
-        <h2 class="section-title" id="history-title">我的提交记录</h2>
-        <span class="section-count">共 1 条</span>
+    <section class="resource-card" id="resource-card" data-od-id="task-resource-card" hidden>
+      <div class="resource-cover" aria-hidden="true">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5v9l8-4.5-8-4.5Z"/><circle cx="12" cy="12" r="9"/></svg>
       </div>
-      <article class="submission" data-od-id="submission-nov-11">
-        <div class="submission-head">
-          <span class="submission-date">11 月 11 日 · 周三</span>
-          <span class="tag tag--sage">老师已回应</span>
-        </div>
-        <p class="submission-note">晚上讲了在滑梯上帮小朋友捡帽子的事，他说下次还要帮忙。</p>
-        <div class="reply" data-od-id="teacher-reply">
-          <span class="avatar" aria-hidden="true">王</span>
-          <div class="reply-body">
-            <span class="reply-name">王老师</span>
-            <p class="reply-text">讲得很完整。明天可以问问他当时的心情，他大概会说得更多。</p>
-          </div>
-        </div>
-      </article>
+      <p class="resource-overline">观看型任务</p>
+      <h2 class="resource-title">秋天为什么落叶</h2>
+      <p class="resource-meta">02:30 · 看完后自动记录</p>
+      <button class="btn-primary" type="button" id="resource-btn" data-od-id="resource-btn">查看资源</button>
+      <div class="resource-progress" aria-hidden="true"><span class="resource-progress-fill" id="resource-progress"></span></div>
     </section>
 
+    <p class="light-footnote" id="light-footnote">完成记录只用于班级统计。</p>
   </main>
 
+  <section class="viewer-layer" id="viewer-layer" hidden aria-label="查看资源">
+    <header class="viewer-bar">
+      <button class="viewer-back" type="button" id="viewer-close" aria-label="返回任务">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="viewer-title">秋天为什么落叶</span>
+    </header>
+    <div class="viewer-stage">
+      <div class="viewer-screen" aria-hidden="true">
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 7.8v8.4l7-4.2-7-4.2Z"/></svg>
+      </div>
+      <p class="viewer-time"><span id="viewer-elapsed">0:00</span> / 2:30</p>
+      <div class="viewer-track" aria-hidden="true"><span class="viewer-fill" id="viewer-fill"></span></div>
+      <p class="viewer-status" id="viewer-status" hidden>已记录</p>
+      <button class="viewer-play" type="button" id="viewer-play">播放</button>
+      <p class="viewer-note">看到 90% 后自动记录；中途退出会从上次位置继续。</p>
+    </div>
+  </section>
+
+  <div class="sheet-layer" id="child-sheet" hidden>
+    <button class="sheet-scrim" type="button" id="child-close" aria-label="关闭"></button>
+    <section class="child-sheet" role="dialog" aria-modal="true" aria-labelledby="child-title">
+      <p class="sheet-overline">已绑定手机号</p>
+      <h2 class="sheet-title" id="child-title">这次任务记录给谁？</h2>
+      <button class="child-option" type="button" data-child="乐乐" data-class="小一班">
+        <span><strong>乐乐</strong><small>小一班</small></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+      <button class="child-option" type="button" data-child="朵朵" data-class="小二班">
+        <span><strong>朵朵</strong><small>小二班</small></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+      <p class="sheet-note">只影响本次任务；默认孩子可以在「我的」里切换。</p>
+    </section>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 </div>
 <script src="app.js"></script>
 </body>
