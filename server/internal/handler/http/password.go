@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/middleware"
+	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/response"
 )
 
@@ -32,10 +35,16 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 			response.ErrValidation(c, "原密码不正确")
 		case strings.HasPrefix(err.Error(), "WEAK_PASSWORD:"):
 			response.ErrValidation(c, "新密码强度不足")
+		case errors.Is(err, service.ErrAuthStorageUnavailable):
+			// #182：epoch 写失败时口令未改动，必须让客户端知道稍后重试，
+			// 而不是报成功或当成普通失败。
+			log.L(c.Request.Context()).Error("change password: tenant epoch unavailable", "user_id", userID, "err", err)
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
 		default:
 			response.ErrInternal(c, "修改密码失败")
 		}
 		return
 	}
+	h.recordPasswordChangeAudit(c, userID)
 	response.OK(c, gin.H{"must_change_password": false})
 }

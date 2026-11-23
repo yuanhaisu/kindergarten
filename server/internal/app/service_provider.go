@@ -55,6 +55,16 @@ func ProvideAuthService(
 	)
 }
 
+// ProvideTenantEpochStore 暴露园所账号级失效存储（#182）。AuthJWT 与
+// AdminService（重置/删除管理员）共用同一份存储；Wire 不会把具体类型隐式
+// 匹配到接口，必须显式提供。
+func ProvideTenantEpochStore(authSvc *service.AuthService) auth.TenantEpochStore {
+	if authSvc == nil {
+		return nil
+	}
+	return authSvc.TenantEpochStore()
+}
+
 // ProvidePlatformService 平台方服务：账号与园所运营独立于园所信任域（ADR-0014）。
 func ProvidePlatformService(
 	db *gorm.DB,

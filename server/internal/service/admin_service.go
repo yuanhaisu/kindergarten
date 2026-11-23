@@ -12,6 +12,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/pkg/log"
@@ -26,6 +27,8 @@ type AdminService struct {
 	admins *repository.AdminRepo
 	kg     *repository.KindergartenRepo
 	oplog  *repository.OperationLogRepo
+	// epochs 是园所账号级失效存储（#182）：重置密码 / 删除管理员必须先推进它。
+	epochs auth.TenantEpochStore
 }
 
 func NewAdminService(
@@ -35,8 +38,19 @@ func NewAdminService(
 	admins *repository.AdminRepo,
 	kg *repository.KindergartenRepo,
 	oplog *repository.OperationLogRepo,
+	epochs auth.TenantEpochStore,
 ) *AdminService {
-	return &AdminService{db: db, users: users, roles: roles, admins: admins, kg: kg, oplog: oplog}
+	return &AdminService{db: db, users: users, roles: roles, admins: admins, kg: kg, oplog: oplog, epochs: epochs}
+}
+
+// bumpTenantEpoch 推进目标账号的失效水位（#182）。必须先于 DB 变更成功：
+// Redis 不可用时宁可整个操作失败（handler 映射 503），也不能改了口令/删了
+// 身份却让旧 access / refresh 继续可用。
+func (s *AdminService) bumpTenantEpoch(ctx context.Context, userID uint64) error {
+	if s.epochs == nil {
+		return fmt.Errorf("tenant epoch store not configured")
+	}
+	return s.epochs.BumpTenantEpoch(ctx, fmt.Sprintf("%d", userID), time.Now())
 }
 
 func (s *AdminService) logOp(ctx context.Context, kindergartenID, userID uint64, module, action, targetType string, targetID uint64, detail, ip, ua string) {
@@ -240,6 +254,9 @@ func (s *AdminService) CreateAdmin(ctx context.Context, kindergartenID, operator
 		}
 	}
 	var newUserID uint64
+	// resetExisting 记录本次创建是否复用了既有账号并覆盖其口令：那是凭据重置，
+	// 不是建新账号，必须单独审计。
+	var resetExisting bool
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 建管理员也必须走统一的手机号账号解析（#164/#173）：直接在事务里 Create
 		// 一条 User 会把未规范化的手机号原样写进 phone_active，和密码登录的
@@ -252,7 +269,15 @@ func (s *AdminService) CreateAdmin(ctx context.Context, kindergartenID, operator
 			return err
 		}
 		if !created {
-			// 解析器复用已有账号时不改资料；管理员创建语义仍以本次提交的昵称/口令为准。
+			// 解析器复用已有账号时，本次提交的口令会覆盖该账号的 password_hash：
+			// 这是对既有账号的凭据重置（#182）。必须先推进账号级失效水位再改库；
+			// Redis 不可用时整体失败（handler 映射 503），绝不能改了口令却让旧
+			// access / refresh 继续可用。created 取自事务内解析，也覆盖了预检查
+			// 与事务之间账号被并发创建的竞态。
+			resetExisting = true
+			if err := s.bumpTenantEpoch(ctx, u.ID); err != nil {
+				return fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
+			}
 			if err := tx.Model(u).Updates(map[string]any{
 				"nickname":      strings.TrimSpace(req.Nickname),
 				"password_hash": hash,
@@ -287,6 +312,12 @@ func (s *AdminService) CreateAdmin(ctx context.Context, kindergartenID, operator
 	}
 	s.logOp(ctx, kindergartenID, operatorID, "admins", "create", "admin", newUserID,
 		fmt.Sprintf(`{"phone":%q,"nickname":%q,"role_id":%d}`, redact.Phone(req.Phone), redact.Name(req.Nickname), roleID), ip, ua)
+	if resetExisting {
+		// 既有账号的口令被创建流程覆盖，单独记一条重置审计：只留 "create"
+		// 会让这次凭据变更看起来像建了个新账号。
+		s.logOp(ctx, kindergartenID, operatorID, "admins", "reset_password", "admin", newUserID,
+			`{"via":"create_admin"}`, ip, ua)
+	}
 	u2, err := s.users.FindByID(ctx, newUserID)
 	if err != nil || u2 == nil {
 		return &createAdminResp{ID: newUserID, CreatedAt: time.Now().UTC().Format(time.RFC3339)}, nil
@@ -390,6 +421,11 @@ func (s *AdminService) DeleteAdmin(ctx context.Context, kindergartenID, operator
 	if n <= 1 {
 		return fmt.Errorf("LAST_ADMIN")
 	}
+	// 先推进账号级失效再删身份（#182）：否则被删管理员手里的旧 access 仍能
+	// 用到过期。写失败直接上抛，事务不执行。
+	if err := s.bumpTenantEpoch(ctx, targetUserID); err != nil {
+		return fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
+	}
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("user_id = ? AND kindergarten_id = ?", targetUserID, kindergartenID).
 			Delete(&domain.UserAdminRole{}).Error; err != nil {
@@ -432,6 +468,11 @@ func (s *AdminService) ResetAdminPassword(ctx context.Context, kindergartenID, o
 	hash, err := HashPassword(req.NewPassword)
 	if err != nil {
 		return nil, err
+	}
+	// 先推进账号级失效再改库（#182）：写失败必须整体失败，不能留下
+	// 「口令已重置、旧会话仍可用」的窗口。
+	if err := s.bumpTenantEpoch(ctx, targetUserID); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
 	}
 	if err := s.users.UpdateFields(ctx, targetUserID, map[string]any{"password_hash": hash}); err != nil {
 		return nil, err

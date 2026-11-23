@@ -69,7 +69,7 @@ func TestPlatformAuthRejectsTenantToken(t *testing.T) {
 
 // 反方向：平台凭证进不了园所接口。
 func TestAuthJWTRejectsPlatformToken(t *testing.T) {
-	engine := newGuardedEngine(&stubRevoker{})
+	engine := newGuardedEngine(&stubRevoker{}, &stubTenantEpochs{})
 	code := callProtected(engine, signedPlatformToken(t))
 	assert.Equal(t, http.StatusForbidden, code)
 }

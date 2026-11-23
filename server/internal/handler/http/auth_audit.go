@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/domain"
+	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
 	"kindergarten-server/pkg/log"
 )
@@ -45,6 +46,35 @@ func (h *Handler) recordAuthAudit(c *gin.Context, action, appID string, result *
 	if err := h.oplogSvc.Record(c.Request.Context(), entry); err != nil {
 		log.L(c.Request.Context()).Warn("write auth audit failed",
 			"action", action, "app_id", appID, "user_id", result.User.ID, "err", err)
+	}
+}
+
+// recordPasswordChangeAudit 记录自助改密（#182）。
+//
+// 改密会推进账号级 epoch 并让全部旧会话失效，属于安全敏感动作，必须可追溯。
+// Detail 不写任何口令、哈希或 token；写失败只告警，不改变「已改密」的事实。
+func (h *Handler) recordPasswordChangeAudit(c *gin.Context, userID uint64) {
+	if h == nil || h.oplogSvc == nil || userID == 0 {
+		return
+	}
+	kindergartenID := middleware.GetKindergartenID(c)
+	if kindergartenID == 0 {
+		return
+	}
+	entry := &domain.OperationLog{
+		KindergartenID: kindergartenID,
+		UserID:         userID,
+		Module:         "auth",
+		Action:         "change_password",
+		TargetType:     "user",
+		TargetID:       userID,
+		Detail:         "{}",
+		IP:             c.ClientIP(),
+		UserAgent:      truncateAuditUA(c.GetHeader("User-Agent")),
+	}
+	if err := h.oplogSvc.Record(c.Request.Context(), entry); err != nil {
+		log.L(c.Request.Context()).Warn("write password change audit failed",
+			"user_id", userID, "err", err)
 	}
 }
 

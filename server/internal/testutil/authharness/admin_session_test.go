@@ -245,6 +245,7 @@ func TestCreateAdminRejectsPhoneAdminInAnotherKindergarten(t *testing.T) {
 		repository.NewAdminRepo(h.DB),
 		repository.NewKindergartenRepo(h.DB),
 		repository.NewOperationLogRepo(h.DB),
+		h.Auth.TenantEpochStore(),
 	)
 	_, err := svc.CreateAdmin(context.Background(), kgB.ID, 1, service.CreateAdminReq{
 		Phone:    phone,
@@ -276,6 +277,7 @@ func TestCreateAdminNormalizesPhoneThroughAccountResolver(t *testing.T) {
 		repository.NewAdminRepo(h.DB),
 		repository.NewKindergartenRepo(h.DB),
 		repository.NewOperationLogRepo(h.DB),
+		h.Auth.TenantEpochStore(),
 	)
 	created, err := svc.CreateAdmin(context.Background(), kg.ID, 1, service.CreateAdminReq{
 		Phone:    padded,
