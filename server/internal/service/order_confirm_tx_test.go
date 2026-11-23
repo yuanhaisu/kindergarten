@@ -285,6 +285,59 @@ func TestOrderConfirm_ConcurrentWithCancelKeepsInvariants(t *testing.T) {
 	}
 }
 
+// 确认与退款并发：两者锁同一订单行串行化。退款不回收授权（现有策略），
+// 但确认不得用锁外旧净额把状态写回已收清——退款后订单应为未收清。
+func TestOrderConfirm_ConcurrentWithRefundKeepsInvariants(t *testing.T) {
+	db := openPlatformTestDB(t)
+	ctx := context.Background()
+	cleanupConfirmTx(t, db)
+	t.Cleanup(func() { cleanupConfirmTx(t, db) })
+
+	f := newConfirmTxFixture(t, db, "-退款")
+	const rounds = 10
+	for round := 0; round < rounds; round++ {
+		order := f.createOrder(t, db)
+		pay, err := f.svc.AddPayment(ctx, order.ID, PaymentRequest{
+			AmountCents: order.AmountDueCents, IdempotencyKey: fmt.Sprintf("cn4-refund-seed-%d", round),
+		}, confirmTxOperator, "127.0.0.1")
+		require.NoError(t, err)
+
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		var confirmErr, refundErr error
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, _, confirmErr = f.svc.Confirm(ctx, order.ID, "并发退款确认信用开通", confirmTxOperator, "127.0.0.1")
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			_, refundErr = f.svc.AddPayment(ctx, order.ID, PaymentRequest{
+				AmountCents: -order.AmountDueCents, RefundOfPaymentID: &pay.PaymentID,
+			}, confirmTxOperator, "127.0.0.1")
+		}()
+		close(start)
+		wg.Wait()
+
+		require.NoError(t, confirmErr, "round %d: 确认与退款并发时确认必须成功（退款后走信用开通）", round)
+		require.NoError(t, refundErr, "round %d: 退款必须成功", round)
+
+		fresh, err := repository.NewOrderRepo(db).FindByID(ctx, order.ID)
+		require.NoError(t, err)
+		assert.Equal(t, domain.OrderStatusUnpaid, fresh.Status,
+			"round %d: 退款后净收款为零，确认不得把状态留成已收清", round)
+		assert.EqualValues(t, f.premiumCount, countEntitlementsOfOrder(t, db, order.ID),
+			"round %d: 授权只发一套", round)
+		assert.EqualValues(t, 1, countConfirmAudits(t, db, order.ID), "round %d: 确认审计只留一条", round)
+
+		detail, err := f.svc.Detail(ctx, order.ID)
+		require.NoError(t, err)
+		assert.Zero(t, detail.AmountPaidCents, "round %d: 退款后已收净额归零", round)
+	}
+}
+
 // 并发取消：锁单后恰好一个成功，另一个 409，审计只留一条。
 func TestOrderCancel_ConcurrentCancelSingleWinner(t *testing.T) {
 	db := openPlatformTestDB(t)
