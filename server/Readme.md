@@ -131,6 +131,45 @@ go test ./internal/testutil/authharness -count=1 -timeout 600s
   MySQL service 启动，整体约 4 分钟（超时上限 15 分钟）。明显变慢时按测试文件拆
   job，不降低覆盖。
 
+#### 首批 service 测试（#208，需要 MySQL 8）
+
+`backend` job 只跑无数据库依赖的包，`internal/service` 此前整体缺席 CI。这里先接入
+**一小批命名测试**，按三个业务域分组（CI 用显式测试名，不用通配扩大批次）：
+
+| 域 | 测试（CI 选择器） | 依赖 |
+| --- | --- | --- |
+| 认证 / 园所 | `TestKindergartenStatusService_*`、`TestKindergartenEntryFieldsDefaultToSharedChannel`、`TestKindergartenFindByPublicCodeReturnsActiveOnly`、`TestGeneratePublicCode*`、`TestBackfillPublicCodesFillsMissingOnly`、`TestSetPublicCodeIfEmpty*`、`TestEntryServiceFindByPublicCode` | authharness / testdb |
+| 家长档案 | `TestParentClassInfo_*`、`TestParentStudentProfile_*`、`TestParentClassProfile_*` | testdb |
+| 平台服务 | `TestPlatformService_*`、`TestPlatformOnboard_*` | testdb + fakeredis |
+
+- CI 复用 `authharness` job 的 MySQL 8 service 与 `migrate`/`seedbase` bootstrap；
+  testdb 在测试内派生 `kindergarten_test_<分支|包哈希>` 库，与 `kindergarten_test`
+  相互隔离。**不新增 Redis service**：平台服务测试用 `fakeredis`，园所状态测试不碰 Redis。
+- 本地等价命令（Git Bash / Linux）：
+
+  ```bash
+  cd server
+  export CONFIG_PATH=configs/app.ini
+  export KDG_TEST_REQUIRE_MYSQL=1
+  export KDG_TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local'
+  # 与 CI 步骤的 -run 选择器逐字一致；改批次时两处同步，避免本地多跑/少跑。
+  go test ./internal/service -count=1 -timeout 300s -p 1 \
+    -run '^(TestKindergartenStatusService_SuspendedReadsDB|TestKindergartenEntryFieldsDefaultToSharedChannel|TestKindergartenFindByPublicCodeReturnsActiveOnly|TestGeneratePublicCode\w*|TestBackfillPublicCodesFillsMissingOnly|TestSetPublicCodeIfEmpty\w*|TestEntryServiceFindByPublicCode|TestParentClassInfo_\w+|TestParentStudentProfile_\w+|TestParentClassProfile_\w+|TestPlatformService_\w+|TestPlatformOnboard_\w+)$'
+  ```
+
+- 门禁：步骤以 `-json` 采集，出现任何 `"Action":"skip"` 即失败（缺库/漏配不允许静默
+  跳过）；没有任何 `"Action":"pass".*"Test":` 也失败（防止选择器与测试名漂移后空跑）。
+- 串行与清理：`-p 1` 串行；测试只硬删自己写入的行（`Unscoped`/按固定夹具 ID），
+  不整表清空、不 DROP 库。
+- 超时与 flake：`-timeout 300s`（本地基线 ~10 倍余量），**不重试**。出现偶发失败按
+  真实缺陷处理（修复或显式隔离并记录 ticket），禁止加 retry 掩盖抖动。
+- 运行时长基线（2026-11-23，Windows + 本机 MySQL 8.4，26 个测试全绿）：
+  `ok kindergarten-server/internal/service 25.5s`；含冷编译 wall time 约 44s，
+  其中首个 testdb 用例 19.6s 含派生库 goose 迁移。CI 在同 job 已有镜像与迁移缓存，
+  预期增量 < 1 分钟；批次变慢时优先拆 job，而不是删除测试。
+- 本批次刻意封顶：其余 service 测试仍留在本地/后续 ticket，**不要**用
+  `go test ./internal/service` 无选择器地整体搬进 CI。
+
 ### Wire 代码生成
 
 ```bash

@@ -211,6 +211,29 @@ jobs:
             echo "::error::authharness 没有执行任何测试（覆盖不允许降低）"
             exit 1
           fi
+      # #208 首批 service 数据库测试：认证/园所入口、家长档案、平台服务三个域。
+      # 复用本 job 的 MySQL service 与 bootstrap；testdb 在测试内再派生
+      # kindergarten_test_<branch|pkg 哈希> 库并执行 goose 迁移，与上面的
+      # kindergarten_test 隔离。串行（-p 1）、不重试；skip 与零测试都判失败。
+      # 运行时基线见 server/Readme.md「#208 首批 service 测试」。
+      - name: Run first service batch (fail closed, no skips)
+        working-directory: server
+        env:
+          KDG_TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: |
+          set -o pipefail
+          go test -json ./internal/service -count=1 -timeout 300s -p 1 \
+            -run '^(TestKindergartenStatusService_SuspendedReadsDB|TestKindergartenEntryFieldsDefaultToSharedChannel|TestKindergartenFindByPublicCodeReturnsActiveOnly|TestGeneratePublicCode\w*|TestBackfillPublicCodesFillsMissingOnly|TestSetPublicCodeIfEmpty\w*|TestEntryServiceFindByPublicCode|TestParentClassInfo_\w+|TestParentStudentProfile_\w+|TestParentClassProfile_\w+|TestPlatformService_\w+|TestPlatformOnboard_\w+)$' \
+            | tee /tmp/service-batch.json
+          if grep -q '"Action":"skip"' /tmp/service-batch.json; then
+            echo "::error::service 首批出现 skip：CI 不允许静默跳过（检查 KDG_TEST_MYSQL_DSN 与 MySQL service）"
+            grep -E '"Action":"skip"' /tmp/service-batch.json | tail -20
+            exit 1
+          fi
+          if ! grep -q '"Action":"pass".*"Test":' /tmp/service-batch.json; then
+            echo "::error::service 首批没有执行任何测试（-run 选择器与测试名漂移？）"
+            exit 1
+          fi
 
   admin:
     name: 管理端静态构建
