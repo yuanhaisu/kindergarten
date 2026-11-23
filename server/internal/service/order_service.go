@@ -31,7 +31,18 @@ var (
 	ErrCreditReasonRequired = errors.New("CREDIT_REASON_REQUIRED")
 	// ErrCreditReasonTooLong 表示信用开通理由超出 credit_reason 列宽。
 	ErrCreditReasonTooLong = errors.New("CREDIT_REASON_TOO_LONG")
+	// ErrOrderUnderpaid 表示确认时净收款不足且不为零：部分收款一律不可确认。
+	ErrOrderUnderpaid = errors.New("ORDER_UNDERPAID")
 )
+
+// OrderUnderpaidError 携带尚欠金额，供管理端直接展示给运营。
+type OrderUnderpaidError struct {
+	RemainingCents int64
+}
+
+func (e *OrderUnderpaidError) Error() string { return ErrOrderUnderpaid.Error() }
+
+func (e *OrderUnderpaidError) Unwrap() error { return ErrOrderUnderpaid }
 
 // PaymentExceedsAmountDueError 携带超出金额与剩余应收，供管理端与园所核对。
 type PaymentExceedsAmountDueError struct {
@@ -270,8 +281,13 @@ func (s *OrderService) Confirm(ctx context.Context, id uint64, reason, operator,
 		}
 		status = deriveOrderStatus(locked, paid, now)
 
+		// 部分收款一律不可确认：理由不能替代收清（#201）。零收款仍可信用开通，
+		// 收清（含超收）直接放行；校验必须在任何写入之前，被拒请求不留痕迹。
+		if paid > 0 && paid < locked.AmountDueCents {
+			return &OrderUnderpaidError{RemainingCents: locked.AmountDueCents - paid}
+		}
+
 		// 零收款确认 = 信用开通：必须留理由，否则拒绝（design D2）。
-		// 校验在任何写入之前完成，被拒绝的请求不留确认痕迹。
 		creditGranted = paid == 0
 		if creditGranted {
 			if reason == "" {
@@ -797,22 +813,25 @@ type PaymentRow struct {
 }
 
 type OrderDetail struct {
-	ID               uint64          `json:"id"`
-	OrderNo          string          `json:"order_no"`
-	KindergartenID   uint64          `json:"kindergarten_id"`
-	KindergartenName string          `json:"kindergarten_name"`
-	Status           string          `json:"status"`
-	AmountDueCents   int64           `json:"amount_due_cents"`
-	AmountPaidCents  int64           `json:"amount_paid_cents"`
-	StartsAt         time.Time       `json:"starts_at"`
-	ExpiresAt        time.Time       `json:"expires_at"`
-	PayDueAt         time.Time       `json:"pay_due_at"`
-	CreditGranted    bool            `json:"credit_granted"`
-	CreditReason     string          `json:"credit_reason"`
-	PlanSnapshot     PlanSnapshot    `json:"plan_snapshot"`
-	Distributor      *DistributorRef `json:"distributor"`
-	InvoiceInfo      json.RawMessage `json:"invoice_info"`
-	Payments         []PaymentRow    `json:"payments"`
+	ID               uint64    `json:"id"`
+	OrderNo          string    `json:"order_no"`
+	KindergartenID   uint64    `json:"kindergarten_id"`
+	KindergartenName string    `json:"kindergarten_name"`
+	Status           string    `json:"status"`
+	AmountDueCents   int64     `json:"amount_due_cents"`
+	AmountPaidCents  int64     `json:"amount_paid_cents"`
+	StartsAt         time.Time `json:"starts_at"`
+	ExpiresAt        time.Time `json:"expires_at"`
+	PayDueAt         time.Time `json:"pay_due_at"`
+	// ConfirmedAt 为 nil 表示尚未确认；管理端据此隐藏「确认订单」。
+	// 状态由收付款金额派生，不含确认状态，二者需要分开读。
+	ConfirmedAt   *time.Time      `json:"confirmed_at"`
+	CreditGranted bool            `json:"credit_granted"`
+	CreditReason  string          `json:"credit_reason"`
+	PlanSnapshot  PlanSnapshot    `json:"plan_snapshot"`
+	Distributor   *DistributorRef `json:"distributor"`
+	InvoiceInfo   json.RawMessage `json:"invoice_info"`
+	Payments      []PaymentRow    `json:"payments"`
 }
 
 type DistributorRef struct {
@@ -862,6 +881,7 @@ func (s *OrderService) Detail(ctx context.Context, id uint64) (*OrderDetail, err
 		// 详情与列表一致：状态按付款到期日读时派生。
 		Status: deriveOrderStatus(o, paid, time.Now()), AmountDueCents: o.AmountDueCents, AmountPaidCents: paid,
 		StartsAt: o.StartsAt, ExpiresAt: o.ExpiresAt, PayDueAt: o.PayDueAt,
+		ConfirmedAt:   o.ConfirmedAt,
 		CreditGranted: o.CreditGranted, CreditReason: o.CreditReason, PlanSnapshot: snap,
 		Distributor: distRef, Payments: paymentRows,
 	}
