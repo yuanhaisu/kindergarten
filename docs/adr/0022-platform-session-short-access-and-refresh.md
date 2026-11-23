@@ -41,6 +41,7 @@
 - 旧续期凭证、停用账号的旧凭证、登出后的旧凭证都必须被拒绝，需要服务、中间件与 handler 三层测试覆盖。
 - `[jwt] access_ttl_min` 现在是平台与园所共用的会话参数；部署说明必须写明 15 分钟是平台的行为变更，不是「维持现状」。
 - 平台续期凭证存在非 HttpOnly Cookie（沿用现有架构），15 分钟 access TTL 限制泄露窗口。
+- Redis 淘汰/清空会连带抹掉续期凭证与 `platform:auth_epoch:` / `tenant:auth_epoch:` 失效记录。若只淘汰了 epoch 而续期键仍在，已吊销的 access（剩余 TTL 内）与 refresh 会重新可用（refresh 仍受口令指纹、角色复核约束）；`FLUSH` 或换用空实例等同于全部账号的 epoch 归零。会话 Redis 必须按完整会话生命周期（refresh + access + 1 天）预留内存，禁用 `allkeys-lru` 一类逐出策略。
 
 ## Alternatives considered
 

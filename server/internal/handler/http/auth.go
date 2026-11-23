@@ -185,6 +185,15 @@ func (h *Handler) AuthService() *service.AuthService {
 	return h.authSvc
 }
 
+// TenantEpochStore 暴露园所账号级凭证失效存储给 AuthJWT 装配（#182）。
+// 与 TokenRevoker 同理，走 Handler 以避免改 NewRouter 签名。
+func (h *Handler) TenantEpochStore() auth.TenantEpochStore {
+	if h == nil || h.authSvc == nil {
+		return nil
+	}
+	return h.authSvc.TenantEpochStore()
+}
+
 type bindParentPhoneReq struct {
 	WxPhoneCode string `json:"wx_phone_code" binding:"required"`
 	// PublicCode 是园所入口码（#177）。绑定页从 scene/入口带入；没有时走无 scene 绑定。

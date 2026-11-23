@@ -258,6 +258,7 @@ func newAdminAlbumFixture(t *testing.T) (*gorm.DB, *service.AdminService) {
 		repository.NewAdminRepo(db),
 		repository.NewKindergartenRepo(db),
 		repository.NewOperationLogRepo(db),
+		nil, // epochs：相册用例不涉及账号级失效
 	)
 }
 

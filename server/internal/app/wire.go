@@ -51,6 +51,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		wire.Bind(new(service.ClientRepository), new(*repository.ClientRepo)),
 		ProvideTrustedProxies,
 		ProvideAuthService,
+		ProvideTenantEpochStore,
 		ProvidePlatformService,
 		ProvideBillingEnforceModules,
 		ProvideEntitlementService,
