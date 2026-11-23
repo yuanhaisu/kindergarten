@@ -83,7 +83,7 @@
   "list": [
     {
       "id": 41,
-      "order_no": "ORD20261106001",
+      "order_no": "ORD202611061000001234567891234",
       "kindergarten_name": "阳光幼儿园",
       "distributor_name": "华东渠道",
       "payment_id": 21,
@@ -134,7 +134,7 @@
 // Response
 {
   "id": 41,
-  "order_no": "ORD20261106001",
+  "order_no": "ORD202611061000001234567891234",
   "kindergarten_name": "阳光幼儿园",
   "distributor_name": "华东渠道",
   "payment_id": 21,

@@ -20,7 +20,7 @@
   "list": [
     {
       "id": 12,
-      "order_no": "ORD20261106001",
+      "order_no": "ORD202611061000001234567891234",
       "kindergarten_id": 7,
       "kindergarten_name": "阳光幼儿园",
       "plan_name": "旗舰版",
@@ -79,7 +79,7 @@
 // Response
 {
   "id": 12,
-  "order_no": "ORD20261106001",
+  "order_no": "ORD202611061000001234567891234",
   "status": "unpaid",
   "amount_due_cents": 195000,
   "student_tier": 2,
@@ -95,6 +95,9 @@
 > `pay_due_at` 可选，`YYYY-MM-DD`；缺省等于服务起始日，服务端保证非空。
 > `invoice_info` 可缺省，缺失不阻断确认。
 > `pay_due_at` 格式不合法返回 422。
+> `order_no` 由服务端生成、全局唯一，客户端不可传入：格式为
+> `ORD` + `yyyyMMddHHmmss`（建单时刻）+ 9 位纳秒 + 4 位随机数，定长 30 字符（列宽 32）。
+> 并发建单若撞上唯一索引，服务端自动换号重试，调用方无需处理。
 >
 > **档位无法匹配（422）**：套餐配置了档位，但按当前在园幼儿数落不到任何一档（通常是历史遗留的
 > 不完整配置，例如区间有缺口或最高档有界）。此时不生成订单，返回：
@@ -119,7 +122,7 @@
 // Response
 {
   "id": 12,
-  "order_no": "ORD20261106001",
+  "order_no": "ORD202611061000001234567891234",
   "kindergarten_id": 7,
   "kindergarten_name": "阳光幼儿园",
   "status": "partial",
