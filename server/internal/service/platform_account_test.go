@@ -120,6 +120,9 @@ func TestPlatformAccount_CreateThenLoginAndList(t *testing.T) {
 	t.Cleanup(func() { cleanupPlatformAccounts(t, db) })
 
 	svc := newPlatformAccountService(t, db, nil, &spyEpochStore{})
+	// clean DB 没有 audit_ops 之类的既有平台账号；停用 target 前需要一个可用的
+	// keepalive，否则会先被 LAST_AVAILABLE_ACCOUNT 拦住。
+	createPlatformAccount(t, svc, "t6_ops_keepalive", "Abc12345")
 	row := createPlatformAccount(t, svc, "t6_ops_create", "Abc12345")
 	assert.Equal(t, "t6_ops_create", row.Username)
 	assert.Equal(t, PlatformAccountEnabled, row.Status)
@@ -324,6 +327,8 @@ func TestPlatformAccount_AuditFailureRollsBack(t *testing.T) {
 
 	audit := repository.NewPlatformLogRepo(db)
 	okSvc := newPlatformAccountService(t, db, audit, &spyEpochStore{})
+	// 停用 target 需要另一个可用账号，否则 clean DB 上会先触发 LAST_AVAILABLE_ACCOUNT。
+	createPlatformAccount(t, okSvc, "t6_ops_keepalive", "Abc12345")
 	row := createPlatformAccount(t, okSvc, "t6_ops_audit", "Abc12345")
 
 	failing := failingAuditWriter{err: errAuditDown}
@@ -359,6 +364,8 @@ func TestPlatformAccount_EpochWriteFailureLeavesDBUnchanged(t *testing.T) {
 
 	// 新建不需要 epoch：Redis 故障不能挡住账号创建。
 	createSvc := newPlatformAccountService(t, db, nil, &spyEpochStore{err: errors.New("redis down")})
+	// 停用 target 需要另一个可用账号；创建本身不需要 epoch，keepalive 可以建。
+	createPlatformAccount(t, createSvc, "t6_ops_keepalive", "Abc12345")
 	row := createPlatformAccount(t, createSvc, "t6_ops_epoch", "Abc12345")
 
 	svc := newPlatformAccountService(t, db, nil, &spyEpochStore{err: errors.New("redis down")})
