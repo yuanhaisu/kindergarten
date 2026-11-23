@@ -80,24 +80,21 @@ type Harness struct {
 func NewDB(t testing.TB) *gorm.DB {
 	t.Helper()
 	setup := sharedTestDB()
-	if setup.skipReason != "" {
-		t.Skipf("authharness: %s", setup.skipReason)
-	}
+	setup.failOrSkip(t)
 	if setup.err != nil {
 		t.Fatalf("authharness: %v", setup.err)
 	}
 	return setup.db
 }
 
-// New 装配测试环境。测试库不可用时 t.Skip，配置/迁移错误时 t.Fatal：
-// 「跳过」只用于环境缺失，不允许把真实故障伪装成跳过。
+// New 装配测试环境。测试库不可用时默认 t.Skip（本地无 MySQL 仍能开发），
+// 设置 KDG_TEST_REQUIRE_MYSQL 后改为 t.Fatal（CI 不允许静默跳过）；
+// 配置/迁移错误始终 t.Fatal，不允许把真实故障伪装成跳过。
 func New(t testing.TB) *Harness {
 	t.Helper()
 
 	setup := sharedTestDB()
-	if setup.skipReason != "" {
-		t.Skipf("authharness: %s", setup.skipReason)
-	}
+	setup.failOrSkip(t)
 	if setup.err != nil {
 		t.Fatalf("authharness: %v", setup.err)
 	}

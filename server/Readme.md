@@ -80,6 +80,57 @@ go run cmd/api/main.go
 CONFIG_PATH=configs/app.local.ini go run cmd/api/main.go
 ```
 
+### 测试
+
+无数据库依赖的包（CI 每次 PR 同样会跑）：
+
+```bash
+go test ./internal/app ./internal/config ./internal/middleware ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
+```
+
+#### 认证测试（authharness，需要 MySQL 8）
+
+`internal/testutil/authharness` 是登录/刷新/切换/绑定/身份支持的单一 HTTP 缝：
+真实 Gin + 真实 MySQL 迁移 + 假微信 + 假 Redis，**不需要 Redis 服务**。
+
+CI 的 `authharness` job 会起 MySQL 8 service，先跑 `migrate` 与 `seedbase`，
+再跑测试。本地等价命令（Git Bash / Linux）：
+
+```bash
+# 仓库根目录：准备配置模板（已有 configs/app.ini 时跳过这行）
+cp server/configs/app.ini.example server/configs/app.ini
+
+# 可选：没有现成 MySQL 8 时，用与 CI 相同的镜像起一个（自动创建测试库）
+docker run --rm -d --name kdg-authharness-mysql \
+  -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=kindergarten_test \
+  -p 3306:3306 mysql:8.0
+# 已有 MySQL 但库不存在时，先执行：CREATE DATABASE kindergarten_test;
+
+cd server
+export CONFIG_PATH=configs/app.ini
+export KDG_TEST_REQUIRE_MYSQL=1   # 缺库/漏配直接失败；CI 必须设置
+export MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local'
+go run ./cmd/migrate up
+go run ./cmd/seedbase
+
+# 测试步骤不要设置 MYSQL_DSN：harness 把配置里的 DSN 视为「开发库」，
+# 显式测试库与它同名会被拒绝（防止误跑开发库）。
+unset MYSQL_DSN
+export KDG_TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local'
+go test ./internal/testutil/authharness -count=1 -timeout 600s
+```
+
+- CI 显式测试库名为 `kindergarten_test`：库名须带 `test` 标记且不同于开发库（#207
+  的测试库守卫），测试内建库需要 CREATE DATABASE 权限（CI 使用 root 账号，已具备）。
+- 未设置 `KDG_TEST_MYSQL_DSN` 时，harness 会从 `CONFIG_PATH` 的 DSN 派生
+  `<库名>_test_<分支+测试包>` 临时库并自动跑 goose 迁移；与开发库同名会被拒绝。
+- 未设置 `KDG_TEST_REQUIRE_MYSQL` 且 MySQL 不可达时测试会 skip（本地无 DB 也能开发）；
+  CI 一律设置该变量，任何 skip 都视为失败。
+- 运行时长基线：本地（Windows + 本机 MySQL）冷启动含 goose 迁移约 255s；按 CI 顺序
+  （migrate + seedbase 完成后）测试约 185s，新建并迁移空测试库另约 21s。CI job 另含
+  MySQL service 启动，整体约 4 分钟（超时上限 15 分钟）。明显变慢时按测试文件拆
+  job，不降低覆盖。
+
 ### Wire 代码生成
 
 ```bash

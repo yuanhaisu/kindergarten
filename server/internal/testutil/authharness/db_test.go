@@ -5,6 +5,31 @@ import (
 	"testing"
 )
 
+// CI 用 KDG_TEST_REQUIRE_MYSQL=1 把「测试库不可用」从跳过改成失败。
+// 值写错时按「要求」处理：宁可门禁变红，也不能静默跳过。
+func TestRequireMySQLEnv(t *testing.T) {
+	cases := []struct {
+		name  string
+		value string
+		want  bool
+	}{
+		{name: "unset", value: "", want: false},
+		{name: "one", value: "1", want: true},
+		{name: "true", value: "true", want: true},
+		{name: "zero", value: "0", want: false},
+		{name: "false", value: "false", want: false},
+		{name: "invalid-fails-closed", value: "yes-please", want: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(RequireDBEnv, tc.value)
+			if got := requireMySQL(); got != tc.want {
+				t.Fatalf("requireMySQL() = %v, want %v（值 %q）", got, tc.want, tc.value)
+			}
+		})
+	}
+}
+
 // 派生测试库必须按测试包隔离：service 包的 client_service_test 会硬删整张
 // clients 表并重新 SyncFromConfig，与 authharness 的登录用例共用同一个派生库
 // 时会偶发 403 CLIENT_UNAVAILABLE。同一测试包内则必须稳定复用同一个库名。
