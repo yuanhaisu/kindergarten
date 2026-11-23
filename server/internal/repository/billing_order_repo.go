@@ -158,6 +158,19 @@ func (r *OrderRepo) UpdateTx(ctx context.Context, tx *gorm.DB, id uint64, cols m
 	return tx.WithContext(ctx).Model(&domain.Order{}).Where("id = ?", id).Updates(cols).Error
 }
 
+// ConfirmTx 条件更新订单：仅当订单仍未确认、未取消时写入，返回实际影响行数。
+// 这是确认幂等的最终裁决——调用方已持有该行的 FOR UPDATE 锁并复核过状态，
+// 条件更新仍是防止「解锁后状态被并发改掉」的兜底；影响行数为 0 即视为重复确认。
+func (r *OrderRepo) ConfirmTx(ctx context.Context, tx *gorm.DB, id uint64, cols map[string]any) (int64, error) {
+	if len(cols) == 0 {
+		return 0, nil
+	}
+	res := tx.WithContext(ctx).Model(&domain.Order{}).
+		Where("id = ? AND confirmed_at IS NULL AND cancelled_at IS NULL", id).
+		Updates(cols)
+	return res.RowsAffected, res.Error
+}
+
 // FindLatestActiveByKindergarten 返回园所最近一张已确认且未取消的订单，
 // 用于园所列表展示当前套餐名。
 func (r *OrderRepo) FindLatestActiveByKindergarten(ctx context.Context, kindergartenID uint64) (*domain.Order, error) {

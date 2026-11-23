@@ -232,76 +232,100 @@ func (s *OrderService) resolveTier(ctx context.Context, planID uint64, studentCo
 	return 0, 0, 0, ErrTierCoverageUnresolved
 }
 
+// Confirm 确认订单并授发订阅授权。
+//
+// 整个判定与写入在同一个事务内完成（#200）：先锁订单行，再在锁内复核状态、
+// 重算净收款、派生状态，用条件更新兜底并检查影响行数，最后授权与审计同事务落库。
+// 锁外的读会提前建立 RR 快照，读不到并发收款/取消的结果，因此这一步不能省。
 func (s *OrderService) Confirm(ctx context.Context, id uint64, reason, operator, ip string) (*domain.Order, []domain.Entitlement, error) {
-	order, err := s.orders.FindByID(ctx, id)
-	if err != nil {
-		return nil, nil, err
-	}
-	if order == nil {
-		return nil, nil, fmt.Errorf("ORDER_NOT_FOUND")
-	}
-	if order.ConfirmedAt != nil {
-		return nil, nil, fmt.Errorf("ORDER_ALREADY_CONFIRMED")
-	}
-	if order.CancelledAt != nil {
-		return nil, nil, fmt.Errorf("ORDER_CANCELLED")
-	}
-	now := time.Now()
-	paid, err := s.payments.SumByOrder(ctx, order.ID)
-	if err != nil {
-		return nil, nil, err
-	}
-	status := deriveOrderStatus(order, paid, now)
-
-	// 零收款确认 = 信用开通：必须留理由，否则拒绝（design D2）。
-	// 校验在任何写入之前完成，被拒绝的请求不留确认痕迹。
 	reason = strings.TrimSpace(reason)
-	creditGranted := paid == 0
-	if creditGranted {
-		if reason == "" {
-			return nil, nil, ErrCreditReasonRequired
-		}
-		if utf8.RuneCountInString(reason) > 255 {
-			return nil, nil, ErrCreditReasonTooLong
-		}
-	}
 
-	var ents []domain.Entitlement
-	var snap PlanSnapshot
-	if err := json.Unmarshal([]byte(order.PlanSnapshot), &snap); err != nil {
-		return nil, nil, fmt.Errorf("invalid plan snapshot: %w", err)
-	}
-	for _, code := range snap.ModuleCodes {
-		if ModuleCategory(code) != domain.ModuleCategoryPremium {
-			continue
-		}
-		ents = append(ents, domain.Entitlement{
-			KindergartenID: order.KindergartenID, ModuleCode: code,
-			Source: domain.EntitlementSourceSubscription, OrderID: &order.ID,
-			StartsAt: order.StartsAt, ExpiresAt: order.ExpiresAt,
-		})
-	}
-
-	fields := map[string]any{"confirmed_at": now, "status": status}
-	auditDetail := order.OrderNo
-	if creditGranted {
-		fields["credit_granted"] = true
-		fields["credit_reason"] = reason
-		auditDetail = fmt.Sprintf("%s / 信用开通：%s", order.OrderNo, reason)
-	}
+	var (
+		order         *domain.Order
+		ents          []domain.Entitlement
+		now           time.Time
+		status        string
+		creditGranted bool
+	)
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := s.orders.UpdateTx(ctx, tx, order.ID, fields); err != nil {
+		locked, err := s.orders.FindByIDForUpdate(ctx, tx, id)
+		if err != nil {
 			return err
+		}
+		if locked == nil {
+			return fmt.Errorf("ORDER_NOT_FOUND")
+		}
+		// 行锁到手后复核：并发确认/取消里先提交的那个决定结果，
+		// 后来者必须看到已确认/已取消而不是继续发授权。
+		if locked.ConfirmedAt != nil {
+			return fmt.Errorf("ORDER_ALREADY_CONFIRMED")
+		}
+		if locked.CancelledAt != nil {
+			return fmt.Errorf("ORDER_CANCELLED")
+		}
+		now = time.Now()
+		paid, err := s.payments.SumByOrderTx(ctx, tx, locked.ID)
+		if err != nil {
+			return err
+		}
+		status = deriveOrderStatus(locked, paid, now)
+
+		// 零收款确认 = 信用开通：必须留理由，否则拒绝（design D2）。
+		// 校验在任何写入之前完成，被拒绝的请求不留确认痕迹。
+		creditGranted = paid == 0
+		if creditGranted {
+			if reason == "" {
+				return ErrCreditReasonRequired
+			}
+			if utf8.RuneCountInString(reason) > 255 {
+				return ErrCreditReasonTooLong
+			}
+		}
+
+		var snap PlanSnapshot
+		if err := json.Unmarshal([]byte(locked.PlanSnapshot), &snap); err != nil {
+			return fmt.Errorf("invalid plan snapshot: %w", err)
+		}
+		for _, code := range snap.ModuleCodes {
+			if ModuleCategory(code) != domain.ModuleCategoryPremium {
+				continue
+			}
+			orderID := locked.ID
+			ents = append(ents, domain.Entitlement{
+				KindergartenID: locked.KindergartenID, ModuleCode: code,
+				Source: domain.EntitlementSourceSubscription, OrderID: &orderID,
+				StartsAt: locked.StartsAt, ExpiresAt: locked.ExpiresAt,
+			})
+		}
+
+		fields := map[string]any{"confirmed_at": now, "status": status}
+		auditDetail := locked.OrderNo
+		if creditGranted {
+			fields["credit_granted"] = true
+			fields["credit_reason"] = reason
+			auditDetail = fmt.Sprintf("%s / 信用开通：%s", locked.OrderNo, reason)
+		}
+		// 条件更新是幂等的最终裁决：影响行数不是 1 说明订单已被并发确认/取消。
+		affected, err := s.orders.ConfirmTx(ctx, tx, locked.ID, fields)
+		if err != nil {
+			return err
+		}
+		if affected != 1 {
+			return fmt.Errorf("ORDER_ALREADY_CONFIRMED")
 		}
 		if err := s.ents.CreateBatchTx(ctx, tx, ents); err != nil {
 			return err
 		}
 		// 确认订单（含信用开通）属于强一致清单（design D6）：审计与授权同事务，
 		// 审计失败即整体回滚，不允许「授权发了、痕迹没留」。
-		return s.logs.CreateTx(ctx, tx, &domain.PlatformOperationLog{
-			Operator: operator, Module: "order", Action: "confirm", TargetType: "order", TargetID: order.ID,
-			KindergartenID: order.KindergartenID, Detail: auditDetail, IP: ip,
-		})
+		if err := s.logs.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "order", Action: "confirm", TargetType: "order", TargetID: locked.ID,
+			KindergartenID: locked.KindergartenID, Detail: auditDetail, IP: ip,
+		}); err != nil {
+			return err
+		}
+		order = locked
+		return nil
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -315,41 +339,51 @@ func (s *OrderService) Confirm(ctx context.Context, id uint64, reason, operator,
 	return order, ents, nil
 }
 
+// Cancel 取消订单。与 Confirm 一样锁订单行：净收款复核与状态写入必须在锁内完成，
+// 否则并发确认可能在取消判定之后插入授权，留下「已取消但授权还在」的失配。
 func (s *OrderService) Cancel(ctx context.Context, id uint64, reason, operator, ip string) (*domain.Order, error) {
-	order, err := s.orders.FindByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if order == nil {
-		return nil, fmt.Errorf("ORDER_NOT_FOUND")
-	}
-	if order.CancelledAt != nil {
-		return nil, fmt.Errorf("ORDER_ALREADY_CANCELLED")
-	}
-	now := time.Now()
+	var (
+		order *domain.Order
+		now   time.Time
+	)
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		locked, err := s.orders.FindByIDForUpdate(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if locked == nil {
+			return fmt.Errorf("ORDER_NOT_FOUND")
+		}
+		if locked.CancelledAt != nil {
+			return fmt.Errorf("ORDER_ALREADY_CANCELLED")
+		}
+		now = time.Now()
 		// 取消前先看已收净额（正数收款 − 负数退款）。钱未退清就取消，
 		// 会留下「款收了、授权没了」的失配，因此必须拒绝并回传待退金额。
-		netPaid, err := s.payments.SumByOrderTx(ctx, tx, order.ID)
+		netPaid, err := s.payments.SumByOrderTx(ctx, tx, locked.ID)
 		if err != nil {
 			return err
 		}
 		if netPaid > 0 {
 			return &UnrefundedPaymentError{AmountCents: netPaid}
 		}
-		if err := s.orders.UpdateTx(ctx, tx, order.ID, map[string]any{
+		if err := s.orders.UpdateTx(ctx, tx, locked.ID, map[string]any{
 			"cancelled_at": now, "cancel_reason": reason, "status": domain.OrderStatusCancelled,
 		}); err != nil {
 			return err
 		}
-		if err := s.ents.DeleteByOrderID(ctx, tx, order.ID); err != nil {
+		if err := s.ents.DeleteByOrderID(ctx, tx, locked.ID); err != nil {
 			return err
 		}
 		// 取消订单属于强一致清单：审计失败时状态与授权回收一并回滚。
-		return s.logs.CreateTx(ctx, tx, &domain.PlatformOperationLog{
-			Operator: operator, Module: "order", Action: "cancel", TargetType: "order", TargetID: order.ID,
-			KindergartenID: order.KindergartenID, Detail: reason, IP: ip,
-		})
+		if err := s.logs.CreateTx(ctx, tx, &domain.PlatformOperationLog{
+			Operator: operator, Module: "order", Action: "cancel", TargetType: "order", TargetID: locked.ID,
+			KindergartenID: locked.KindergartenID, Detail: reason, IP: ip,
+		}); err != nil {
+			return err
+		}
+		order = locked
+		return nil
 	}); err != nil {
 		return nil, err
 	}
