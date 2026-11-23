@@ -32,6 +32,8 @@ export interface OrderDetail {
   starts_at: string
   expires_at: string
   pay_due_at: string
+  // null 表示尚未确认；status 只由收付款金额派生，不含确认状态。
+  confirmed_at: string | null
   credit_granted: boolean
   credit_reason: string
   plan_snapshot: { plan_name: string; module_codes: string[]; price_cents: number }
@@ -64,7 +66,8 @@ export function getOrder(id: number) {
   return usePlatformHttp().get<OrderDetail>(`/platform/orders/${id}`)
 }
 
-// 净收款为零时后端要求 reason（信用开通理由），缺省返回 422。
+// 净收款为零时后端要求 reason（信用开通理由），缺省返回 422；
+// 部分收款（0 < 已收 < 应收）一律 422，理由不能替代收清。
 export function confirmOrder(id: number, reason?: string) {
   return usePlatformHttp().post(`/platform/orders/${id}/confirm`, reason ? { reason } : {})
 }
