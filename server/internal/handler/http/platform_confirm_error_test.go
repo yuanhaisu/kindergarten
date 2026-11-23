@@ -33,6 +33,8 @@ func TestWriteConfirmOrderErrorMapsCreditReason(t *testing.T) {
 			422, 42200, "尚欠",
 			map[string]int64{"remaining_cents": 99999},
 		},
+		{"order expired", service.ErrOrderExpired, 422, 42200, "付款到期日", nil},
+		{"service ended", service.ErrOrderServiceEnded, 409, 40900, "服务期", nil},
 		{"not found", errors.New("ORDER_NOT_FOUND"), 404, 40400, "订单不存在", nil},
 		{"already confirmed", errors.New("ORDER_ALREADY_CONFIRMED"), 409, 40900, "订单状态不允许确认", nil},
 		{"cancelled", errors.New("ORDER_CANCELLED"), 409, 40900, "订单状态不允许确认", nil},

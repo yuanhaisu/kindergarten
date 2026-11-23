@@ -287,6 +287,57 @@ describe('订单页面', () => {
     expect(labels).not.toContain('登记收款')
     expect(labels).not.toContain('取消订单')
   })
+
+  // #203：服务期已结束的订单即使已全额收款也不可确认，UI 直接隐藏并说明原因。
+  it('服务期已结束隐藏确认并提示，即使已全额收款', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await openDetail(wrapper, {
+      status: 'paid',
+      amount_paid_cents: 200000,
+      confirmed_at: null,
+      expires_at: '2020-01-01',
+    })
+
+    expect(buttonLabels(wrapper)).not.toContain('确认订单')
+    const text = `${wrapper.text()}\n${document.body.textContent || ''}`
+    expect(text).toContain('服务期已结束')
+    expect(confirmOrder).not.toHaveBeenCalled()
+  })
+
+  // #203：全额晚付的派生状态是 paid，不因付款到期日已过而隐藏确认。
+  it('全额晚付（status paid、未确认）仍可确认', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await openDetail(wrapper, {
+      status: 'paid',
+      amount_paid_cents: 200000,
+      confirmed_at: null,
+      pay_due_at: '2026-01-01',
+      expires_at: '2027-05-05',
+    })
+
+    clickButton(wrapper, '确认订单')
+    await flushPromises()
+
+    expect(confirmOrder).toHaveBeenCalledWith(12)
+  })
+
+  // #203：过期且未收清时展示过期提示，不再展示「尚欠」的部分收款提示。
+  it('过期且未收清展示过期提示，不展示尚欠提示', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await openDetail(wrapper, {
+      status: 'expired',
+      amount_paid_cents: 100000,
+      confirmed_at: null,
+    })
+
+    expect(buttonLabels(wrapper)).not.toContain('确认订单')
+    const text = `${wrapper.text()}\n${document.body.textContent || ''}`
+    expect(text).toContain('已过付款到期日')
+    expect(text).not.toContain('尚欠')
+  })
 })
 
 /**
