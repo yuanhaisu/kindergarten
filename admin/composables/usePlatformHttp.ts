@@ -53,6 +53,7 @@ export interface CreatePlatformHttpOptions {
 }
 
 export interface PlatformHttp {
+  raw: AxiosInstance
   get<T = unknown>(url: string, axiosConfig?: AxiosRequestConfig): Promise<T>
   post<T = unknown>(url: string, body?: unknown, axiosConfig?: AxiosRequestConfig): Promise<T>
   put<T = unknown>(url: string, body?: unknown, axiosConfig?: AxiosRequestConfig): Promise<T>
@@ -196,7 +197,7 @@ export function createPlatformHttpClient(options: CreatePlatformHttpOptions): Ax
   return client
 }
 
-function createNuxtPlatformSession(): PlatformSessionAdapter {
+export function createNuxtPlatformSession(): PlatformSessionAdapter {
   const accessCookie = () =>
     useCookie<string | null>(
       PLATFORM_TOKEN_COOKIE,
@@ -231,6 +232,7 @@ function createNuxtPlatformSession(): PlatformSessionAdapter {
 
 function createHttpMethods(client: AxiosInstance): PlatformHttp {
   return {
+    raw: client,
     async get<T = unknown>(url: string, axiosConfig?: AxiosRequestConfig) {
       const res = await client.get<T>(url, axiosConfig)
       return res.data

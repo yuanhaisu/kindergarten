@@ -98,6 +98,15 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
     env:
       CONFIG_PATH: configs/app.ini
       MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_migrate_test?charset=utf8mb4&parseTime=True&loc=Local"
@@ -107,7 +116,11 @@ jobs:
         with:
           go-version: '1.25'
       - name: Prepare config
-        run: cp server/configs/app.ini.example server/configs/app.ini
+        run: |
+          cp server/configs/app.ini.example server/configs/app.ini
+          # 模板的 redis 密码是占位符；CI 的 redis service 无鉴权，
+          # 不置空会因 AUTH CHANGE_ME 被拒。REDIS_PASSWORD 空值不会覆盖文件，所以改文件。
+          sed -i '/^\[redis\]/,/^\[/ s/^password = CHANGE_ME$/password = /' server/configs/app.ini
       - name: goose up (clean DB)
         working-directory: server
         run: go run ./cmd/migrate up
@@ -159,17 +172,29 @@ jobs:
           go test ./internal/repository ./internal/service -race -p 1 -count=1 -timeout 15m -v \
             -run '^(TestBilling|TestPayment|TestOrder|TestEntitlement|TestCommission|TestPlan_|TestPlanTier|TestPlatform|TestSubscription|TestCommercial|TestActiveStudentCount|TestDeriveOrderStatus|TestCancelGuard)' \
             2>&1 | tee "$RUNNER_TEMP/db-tests.log"
-      # 这些测试在缺少 configs/app.ini、DSN 或独立测试库时会 t.Skip。跳过等于没有门禁，
-      # 所以只要出现「跳过：」或 authharness 的环境跳过就判定失败
-      # （不要放宽成任何 SKIP：recognition 等用例有合法的数据依赖跳过）。
+      # 这些测试在缺少 configs/app.ini、DSN 或独立测试库时会 t.Skip。跳过等于没有门禁。
+      # 只匹配「缺库/缺配置」的具体原因（数据依赖的合法跳过不在此列），
+      # 再断言关键商业用例确实执行并通过，防止 -run 选空或改名后门禁静默失效。
       - name: DB-backed tests must not skip
         working-directory: server
         run: |
-          if grep -Eq '跳过：|authharness:' "$RUNNER_TEMP/db-tests.log"; then
+          if grep -Eq '跳过：找不到 .*configs/app\.ini|跳过：MySQL DSN 为空|跳过：本地无可用 DB 配置|跳过：MySQL 未配置|authharness:' "$RUNNER_TEMP/db-tests.log"; then
             echo "::error::DB-backed 测试因缺少数据库配置被跳过；CI 必须连到 MySQL service。"
             grep -En '跳过：|authharness:' "$RUNNER_TEMP/db-tests.log" || true
             exit 1
           fi
+          for name in \
+            TestBillingFlow_SnapshotPaymentsAndCancel \
+            TestPaymentIntegrity_PositivePaymentCannotExceedAmountDue \
+            TestBillingCreditGrant_ZeroPaidConfirmRequiresReason \
+            TestDeriveOrderStatus_PayDueAt \
+            TestOrderCreate_PastDueReturnsDerivedStatus \
+            TestPlatformOnboard_ReusesExistingParentAccount; do
+            if ! grep -q "^--- PASS: $name " "$RUNNER_TEMP/db-tests.log"; then
+              echo "::error::关键 DB 用例 $name 未执行或未通过"
+              exit 1
+            fi
+          done
           echo "DB-backed tests ran without config skips."
 
   admin:

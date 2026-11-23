@@ -155,8 +155,6 @@ import {
   Tickets,
   User,
 } from '@element-plus/icons-vue'
-import { platformLogout } from '~/api/platform/auth'
-import { PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions } from '~/utils/authCookie'
 
 // 侧栏与弹层由 EP 生成，样式统一挂在 body 上，避免 teleport 逃出页面作用域。
 useHead({ bodyAttrs: { class: 'platform-surface' } })
@@ -176,6 +174,8 @@ const route = useRoute()
 const mobileOpen = ref(false)
 const collapsed = ref(false)
 const displayName = ref('平台运营')
+// 中心化退出：与园所端同一套双凭证吊销；access 过期时用轮换后的 refresh。
+const logout = usePlatformLogout()
 
 // 登录页写入显示名；没有时退回角色名，不把账号信息塞进 token 或 JWT。
 onMounted(() => {
@@ -211,16 +211,5 @@ function openMobileNav() {
 
 async function onCommand(command: string) {
   if (command === 'logout') await logout()
-}
-
-async function logout() {
-  try {
-    await platformLogout()
-  } catch {
-    // 网络失败也要清本地登录态
-  }
-  localStorage.removeItem('platform_user_name')
-  useCookie<string | null>(PLATFORM_TOKEN_COOKIE, buildAuthCookieOptions()).value = null
-  await navigateTo('/platform/login')
 }
 </script>
