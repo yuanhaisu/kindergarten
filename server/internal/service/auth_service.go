@@ -278,6 +278,22 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uint64, oldPass
 	})
 }
 
+// MustChangePassword 是首登强制改密门禁的每请求检查器（#198）。
+//
+// 直接读 users.must_change_password，不缓存：改密成功后同一 access 的下一个
+// 请求必须立即放行。账号不存在也返回 error——门禁必须失败关闭，不能把
+// 「查不到用户」解释成「无需改密」。
+func (s *AuthService) MustChangePassword(ctx context.Context, userID uint64) (bool, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return false, fmt.Errorf("USER_NOT_FOUND")
+	}
+	return user.MustChangePassword, nil
+}
+
 // issueAdminTokens 签发管理端会话（#166）：先收敛出唯一园所的管理员角色，
 // 再走统一签发。access/refresh 都落在 admin_web 作用域。
 func (s *AuthService) issueAdminTokens(ctx context.Context, user *domain.User, roles []domain.UserRole) (*LoginResult, error) {
