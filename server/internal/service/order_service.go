@@ -234,6 +234,11 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 		if !repository.IsDuplicateKeyFor(createErr, "order_no") {
 			return nil, createErr
 		}
+		// 失败的一次插入可能已被 GORM 回填主键与时间戳；重试前清零，
+		// 让下一次插入重新走自增与时间回调，避免带着脏主键再插一行。
+		order.ID = 0
+		order.CreatedAt = time.Time{}
+		order.UpdatedAt = time.Time{}
 	}
 	if createErr != nil {
 		return nil, createErr
@@ -762,11 +767,15 @@ func (s *OrderService) invalidate(ctx context.Context, kgID uint64) {
 // 正常路径一次成功，只有并发极端撞号才换号重试。
 const orderNoMaxAttempts = 3
 
-// newOrderNo 生成订单号：ORD + yyyyMMddHHmmss + 9 位纳秒 + 4 位随机数（共 30 字符，
+// newOrderNo 当前订单号生成器；测试通过替换它精确构造撞号场景，
+// 生产路径永远使用 defaultNewOrderNo。
+var newOrderNo = defaultNewOrderNo
+
+// defaultNewOrderNo 生成订单号：ORD + yyyyMMddHHmmss + 9 位纳秒 + 4 位随机数（共 30 字符，
 // order_no 列宽 32）。旧格式「秒级时间戳 + 3 位随机数」在同一秒并发建单时会撞
 // order_no 唯一索引（#200 CI），现在的组合把这个概率压到可忽略，再由 Create
 // 的撞号重试兜底。
-func newOrderNo(now time.Time) string {
+func defaultNewOrderNo(now time.Time) string {
 	return fmt.Sprintf("ORD%s%09d%04d", now.Format("20060102150405"), now.Nanosecond(), rand.Intn(10000))
 }
 

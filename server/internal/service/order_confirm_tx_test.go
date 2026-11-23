@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -390,6 +391,59 @@ func TestOrderCreate_ConcurrentOrderNumbersStayUnique(t *testing.T) {
 	var stored int64
 	require.NoError(t, db.Model(&domain.Order{}).Where("kindergarten_id = ?", f.kg.ID).Count(&stored).Error)
 	assert.EqualValues(t, workers, stored, "并发建单必须全部落库")
+}
+
+// 撞号重试：第一次插入撞上真实 order_no 唯一索引，第二次必须换新号成功落库。
+// 失败的一次可能被 GORM 回填主键/时间戳，重试行必须用新号、拿自己的自增主键，
+// 且不得留下半行或覆盖占号订单。
+func TestOrderCreate_RetriesOnceOnDuplicateOrderNo(t *testing.T) {
+	db := openPlatformTestDB(t)
+	ctx := context.Background()
+	cleanupConfirmTx(t, db)
+	t.Cleanup(func() { cleanupConfirmTx(t, db) })
+
+	f := newConfirmTxFixture(t, db, "-撞号重试")
+	plan, err := repository.NewPlanRepo(db).FindByCode(ctx, confirmTxPlanCode)
+	require.NoError(t, err)
+	require.NotNil(t, plan)
+
+	// 先建一张订单，占用一个真实订单号。
+	seeded, err := f.svc.Create(ctx, CreateOrderRequest{KindergartenID: f.kg.ID, PlanID: plan.ID}, confirmTxOperator, "127.0.0.1")
+	require.NoError(t, err)
+
+	// 第一次强制复用已占用的号（真实 MySQL 1062），第二次返回新号。
+	const freshNo = "ORDTEST-RETRY-0000000000000001"
+	calls := 0
+	prev := newOrderNo
+	newOrderNo = func(time.Time) string {
+		calls++
+		if calls == 1 {
+			return seeded.OrderNo
+		}
+		return freshNo
+	}
+	t.Cleanup(func() { newOrderNo = prev })
+
+	retried, err := f.svc.Create(ctx, CreateOrderRequest{KindergartenID: f.kg.ID, PlanID: plan.ID}, confirmTxOperator, "127.0.0.1")
+	require.NoError(t, err, "撞号后必须换号重试成功")
+	assert.Equal(t, 2, calls, "第二次尝试即应成功")
+	assert.Equal(t, freshNo, retried.OrderNo, "重试必须使用新订单号")
+	require.Greater(t, retried.ID, seeded.ID, "重试行必须拿到自己的自增主键")
+	assert.False(t, retried.CreatedAt.IsZero(), "重试行时间戳必须重新生成")
+
+	stored, err := repository.NewOrderRepo(db).FindByID(ctx, retried.ID)
+	require.NoError(t, err)
+	require.NotNil(t, stored)
+	assert.Equal(t, freshNo, stored.OrderNo, "重试行按新号落库")
+
+	var count int64
+	require.NoError(t, db.Model(&domain.Order{}).Where("kindergarten_id = ?", f.kg.ID).Count(&count).Error)
+	assert.EqualValues(t, 2, count, "撞号失败的一次不得留下半行")
+
+	original, err := repository.NewOrderRepo(db).FindByID(ctx, seeded.ID)
+	require.NoError(t, err)
+	require.NotNil(t, original)
+	assert.Equal(t, seeded.OrderNo, original.OrderNo, "占号订单不得被重试覆盖")
 }
 
 // 并发取消：锁单后恰好一个成功，另一个 409，审计只留一条。
