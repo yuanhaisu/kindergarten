@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { stubNuxtPageMeta, stubResizeObserver } from '../helpers/stubs'
 import { flushPromises, mount } from '@vue/test-utils'
 import { reactive, ref } from 'vue'
 
@@ -25,15 +26,10 @@ let Page: any
 let ElementPlus: any
 
 beforeAll(async () => {
-  class ResizeObserverStub {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+  stubResizeObserver()
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('reactive', reactive)
-  vi.stubGlobal('definePageMeta', vi.fn())
+  stubNuxtPageMeta()
   vi.stubGlobal(
     'useAuthStore',
     () => ({

@@ -24,6 +24,11 @@ func IsDuplicateKey(err error) bool {
 	return errors.Is(err, gorm.ErrDuplicatedKey)
 }
 
+// OrderNoUniqueKey 是订单号唯一约束在 MySQL 错误信息里的片段。goose 迁移建的是
+// uk_order_no，AutoMigrate 建的是 idx_orders_order_no，两者都包含列名，
+// 因此按它匹配而不是写死索引名。调用方应使用本常量，不要重复裸字面量。
+const OrderNoUniqueKey = "order_no"
+
 // IsDuplicateKeyFor 判断唯一键冲突（MySQL 1062）是否命中指定键名片段。
 // 订单号的唯一索引在 goose 迁移里叫 uk_order_no，AutoMigrate 建的是
 // idx_orders_order_no，两者都包含列名，所以按列名匹配而不是写死索引名。

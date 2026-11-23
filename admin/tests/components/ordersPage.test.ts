@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { stubNuxtPageMeta, stubResizeObserver } from '../helpers/stubs'
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, onMounted, reactive, ref } from 'vue'
 
@@ -47,7 +48,7 @@ const baseDetail = {
   amount_due_cents: 200000,
   amount_paid_cents: 0,
   starts_at: '2026-11-06',
-  expires_at: '2027-05-05',
+  expires_at: '2027-05-05T00:00:00+08:00',
   pay_due_at: '2026-11-06',
   confirmed_at: null,
   credit_granted: false,
@@ -69,7 +70,7 @@ const listRow = {
   amount_paid_cents: 0,
   status: 'unpaid',
   starts_at: '2026-11-06',
-  expires_at: '2027-05-05',
+  expires_at: '2027-05-05T00:00:00+08:00',
   pay_due_at: '2026-11-06',
   credit_granted: false,
   distributor_name: '',
@@ -81,17 +82,12 @@ let ElementPlus: any
 let MessageBox: any
 
 beforeAll(async () => {
-  class ResizeObserverStub {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+  stubResizeObserver()
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('reactive', reactive)
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('onMounted', onMounted)
-  vi.stubGlobal('definePageMeta', vi.fn())
+  stubNuxtPageMeta()
   vi.stubGlobal('ElMessage', { error: vi.fn(), success: vi.fn(), warning: vi.fn() })
   MessageBox = {
     prompt: vi.fn(),
@@ -164,7 +160,7 @@ describe('订单页面', () => {
           amount_paid_cents: 0,
           status: 'unpaid',
           starts_at: '2026-11-06',
-          expires_at: '2027-05-05',
+          expires_at: '2027-05-05T00:00:00+08:00',
           pay_due_at: '2026-11-06',
           credit_granted: true,
           distributor_name: '',
@@ -296,13 +292,39 @@ describe('订单页面', () => {
       status: 'paid',
       amount_paid_cents: 200000,
       confirmed_at: null,
-      expires_at: '2020-01-01',
+      expires_at: '2020-01-01T00:00:00+08:00',
     })
 
     expect(buttonLabels(wrapper)).not.toContain('确认订单')
     const text = `${wrapper.text()}\n${document.body.textContent || ''}`
     expect(text).toContain('服务期已结束')
     expect(confirmOrder).not.toHaveBeenCalled()
+  })
+
+  // #209 回归：详情接口返回 RFC3339，旧实现拼出 Invalid Date 导致守卫恒为 false。
+  // 这条用真实格式构造过去/未来服务期，修复前「过去」一例会错误地显示确认按钮。
+  it('RFC3339 服务期已结束隐藏确认，未结束仍可确认', async () => {
+    const past = mountPage()
+    await flushPromises()
+    await openDetail(past, {
+      status: 'paid',
+      amount_paid_cents: 200000,
+      confirmed_at: null,
+      expires_at: '2020-01-01T00:00:00+08:00',
+    })
+    expect(buttonLabels(past)).not.toContain('确认订单')
+    expect(`${past.text()}\n${document.body.textContent || ''}`).toContain('服务期已结束')
+
+    document.body.innerHTML = ''
+    const future = mountPage()
+    await flushPromises()
+    await openDetail(future, {
+      status: 'paid',
+      amount_paid_cents: 200000,
+      confirmed_at: null,
+      expires_at: '2099-01-01T00:00:00+08:00',
+    })
+    expect(buttonLabels(future)).toContain('确认订单')
   })
 
   // #203：全额晚付的派生状态是 paid，不因付款到期日已过而隐藏确认。
@@ -314,7 +336,7 @@ describe('订单页面', () => {
       amount_paid_cents: 200000,
       confirmed_at: null,
       pay_due_at: '2026-01-01',
-      expires_at: '2027-05-05',
+      expires_at: '2027-05-05T00:00:00+08:00',
     })
 
     clickButton(wrapper, '确认订单')

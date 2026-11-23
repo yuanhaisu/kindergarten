@@ -295,7 +295,7 @@ import { addPayment, cancelOrder, confirmOrder, createOrder, getOrder, listOrder
 import { listDistributors, type DistributorRow } from '~/api/platform/distributors'
 import { listKindergartens, type PlatformKindergartenRow } from '~/api/platform/kindergartens'
 import { listPlans, type PlanRow } from '~/api/platform/plans'
-import { buildOrderListParams, defaultPayDueAt, formatLocalDate, isPastPayDueAt } from '~/utils/platformOrders'
+import { buildOrderListParams, canConfirm, defaultPayDueAt, formatLocalDate, isPastPayDueAt, isServiceEnded, isUnderpaid } from '~/utils/platformOrders'
 import { formatMoney } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
@@ -462,45 +462,8 @@ async function refreshDetail() {
   if (detail.value) await openDetail(detail.value.id)
 }
 
-/**
- * 确认按钮的显示规则（#201 / #203）：
- * - 已确认（confirmed_at 非空）不再提供确认；
- * - 服务期已结束（expires_at 已过）的订单不提供确认，即使已全额收款；
- * - 已过付款到期日（expired）与已取消的订单不提供确认；
- * - 部分收款（0 < 已收 < 应收）一律不可确认，理由不能替代收清；
- * - 零收款（信用开通）与已收清（含超收、全额晚付）可确认。
- */
-function canConfirm(order: OrderDetail) {
-  if (order.confirmed_at) return false
-  if (order.status.startsWith('cancelled')) return false
-  if (isServiceEnded(order)) return false
-  if (order.status === 'expired') return false
-  return order.amount_paid_cents === 0 || order.amount_paid_cents >= order.amount_due_cents
-}
-
-/**
- * 服务期结束判断（#203）。后端按 expires_at <= now 裁决；详情只返回日期，
- * 这里按日历日比较：服务期最后一天仍显示确认入口，真正越界时由服务端 409 兜底。
- */
-function isServiceEnded(order: OrderDetail) {
-  if (!order.expires_at) return false
-  const end = new Date(`${order.expires_at}T00:00:00`)
-  if (Number.isNaN(end.getTime())) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return end < today
-}
-
-function isUnderpaid(order: OrderDetail) {
-  return (
-    !order.confirmed_at &&
-    !order.status.startsWith('cancelled') &&
-    order.status !== 'expired' &&
-    !isServiceEnded(order) &&
-    order.amount_paid_cents > 0 &&
-    order.amount_paid_cents < order.amount_due_cents
-  )
-}
+// 确认与提示的判定统一收敛到 utils/platformOrders 的纯谓词（#209），页面只负责渲染。
+// 服务端仍是最终裁决：越界或状态漂移由 409/422 兜底。
 
 async function onConfirm() {
   if (!detail.value) return

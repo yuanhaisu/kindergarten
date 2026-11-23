@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { stubNuxtPageMeta, stubResizeObserver } from '../helpers/stubs'
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, onMounted, reactive, ref } from 'vue'
 
@@ -40,17 +41,12 @@ let ElementPlus: any
 let message: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> }
 
 beforeAll(async () => {
-  class ResizeObserverStub {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+  stubResizeObserver()
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('reactive', reactive)
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('onMounted', onMounted)
-  vi.stubGlobal('definePageMeta', vi.fn())
+  stubNuxtPageMeta()
   message = { error: vi.fn(), success: vi.fn() }
   vi.stubGlobal('ElMessage', message)
   ElementPlus = (await import('element-plus')).default
