@@ -92,6 +92,20 @@ cd internal/app && wire
 go generate ./internal/app
 ```
 
+### 测试数据库
+
+需要真实 MySQL 的测试统一调用 `testdb.Open(t)`，不要各自读配置连库：
+
+```bash
+# 指向一台独立测试 MySQL；库名必须含 test，账号需要 CREATE 权限
+KDG_TEST_MYSQL_DSN='user:pass@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True' \
+  go test ./internal/service/ -run TestParentGrowthLike
+```
+
+- 设置 `KDG_TEST_MYSQL_DSN` 时，helper 会派生「分支 + 测试包」隔离的测试库并自动执行 goose 迁移，不改动开发库；
+- 不设置时保持原有本地行为（读 `configs/app.ini`），无配置则跳过；
+- 源码、行为矩阵与护栏规则见 [`internal/testutil/testdb/README.md`](internal/testutil/testdb/README.md)。
+
 ## API 概览
 
 | 方法 | 路径 | 说明 | 认证 |
