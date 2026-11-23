@@ -16,7 +16,7 @@ import (
 	"kindergarten-server/internal/service"
 )
 
-func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker, trustedProxies TrustedProxies) (*gin.Engine, error) {
+func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, platformSecret PlatformJWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker, trustedProxies TrustedProxies) (*gin.Engine, error) {
 	r := gin.New()
 	// 只采信配置里的反向代理来源的 X-Forwarded-For（[server] trusted_proxies，
 	// 默认本机回环）；直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
@@ -68,7 +68,7 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/platform/auth/login", platformLoginLimit, h.inner.PlatformLogin)
 		v1.POST("/platform/auth/refresh", h.inner.PlatformRefresh)
 		platformG := v1.Group("/platform")
-		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker, h.platformEpochs))
+		platformG.Use(middleware.PlatformAuth([]byte(platformSecret), h.tokenRevoker, h.platformEpochs))
 		platformG.Use(middleware.CasbinRBAC(e))
 		{
 			platformG.POST("/auth/logout", h.inner.PlatformLogout)

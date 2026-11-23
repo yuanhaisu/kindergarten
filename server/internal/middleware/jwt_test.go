@@ -18,6 +18,9 @@ import (
 
 const middlewareTestSecret = "middleware-test-secret"
 
+// 平台信任域使用独立密钥（#183）。两个值必须不同，否则跨域凭证会在验签阶段通过。
+const middlewarePlatformTestSecret = "middleware-platform-test-secret"
+
 type stubRevoker struct {
 	revoked bool
 	err     error
@@ -59,6 +62,21 @@ func signedToken(t *testing.T) string {
 	token, err := auth.SignAccess([]byte(middlewareTestSecret), "1", []string{"parent"}, 0, time.Minute)
 	require.NoError(t, err)
 	return token
+}
+
+// signedTokenWith 用指定密钥签发园所 scope 的 token，用于跨信任域验签测试。
+func signedTokenWith(t *testing.T, secret string) string {
+	t.Helper()
+	token, err := auth.SignAccess([]byte(secret), "1", []string{"parent"}, 0, time.Minute)
+	require.NoError(t, err)
+	return token
+}
+
+// #183：AuthJWT 只信任园所密钥。用平台密钥签发的园所 scope token 必须在验签
+// 阶段被拒绝（401），而不是先通过验签再靠 scope claim 判 403。
+func TestAuthJWTRejectsTokenSignedWithPlatformKey(t *testing.T) {
+	engine := newGuardedEngine(&stubRevoker{}, &stubTenantEpochs{})
+	assert.Equal(t, http.StatusUnauthorized, callProtected(engine, signedTokenWith(t, middlewarePlatformTestSecret)))
 }
 
 func signedLegacyToken(t *testing.T) string {

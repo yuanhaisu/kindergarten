@@ -14,7 +14,7 @@ import (
 // 反复要求重新登录（design D5，TC-NEW-PLT-0011）。
 func TestPlatformRefreshRouteRegistered(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), nil, nil, nil, nil)
+	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), PlatformJWTSecret("test-platform-secret"), nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	for _, r := range engine.Routes() {

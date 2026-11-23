@@ -262,6 +262,129 @@ func TestLoadClientsReleaseVersions(t *testing.T) {
 	}
 }
 
+// 园所与平台是两个信任域（ADR-0014），签名密钥必须各自独立：
+// 缺失任一密钥或两者相同，都必须在启动装配阶段失败，而不是静默共用一个密钥。
+func TestJWTConfigValidateAuthSecrets(t *testing.T) {
+	cases := []struct {
+		name    string
+		cfg     JWTConfig
+		wantErr string
+	}{
+		{
+			name:    "tenant secret missing",
+			cfg:     JWTConfig{PlatformSecret: "platform-secret"},
+			wantErr: "secret",
+		},
+		{
+			name:    "platform secret missing",
+			cfg:     JWTConfig{Secret: "tenant-secret"},
+			wantErr: "platform_secret",
+		},
+		{
+			name:    "both missing",
+			cfg:     JWTConfig{},
+			wantErr: "secret",
+		},
+		{
+			name:    "same secret",
+			cfg:     JWTConfig{Secret: "same-secret", PlatformSecret: "same-secret"},
+			wantErr: "same",
+		},
+		{
+			name: "distinct secrets",
+			cfg:  JWTConfig{Secret: "tenant-secret", PlatformSecret: "platform-secret"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.cfg.ValidateAuthSecrets()
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("ValidateAuthSecrets() = %v, want nil", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("ValidateAuthSecrets() = nil, want an error mentioning %q", tc.wantErr)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Errorf("ValidateAuthSecrets() = %q, want it to mention %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+// Load 必须读出 [jwt] platform_secret；缺键时保持空串（由启动校验决定是否可用），
+// 不能在加载阶段自行编造或回填成园所密钥。
+func TestLoadPlatformJWTSecret(t *testing.T) {
+	t.Setenv("JWT_SECRET", "")          // 避免宿主机环境变量覆盖测试输入
+	t.Setenv("JWT_PLATFORM_SECRET", "")
+	path := filepath.Join(t.TempDir(), "app.ini")
+	content := "[jwt]\nsecret = tenant-secret\nplatform_secret = platform-secret\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write temp ini: %v", err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.JWT.Secret != "tenant-secret" {
+		t.Errorf("secret = %q, want tenant-secret", cfg.JWT.Secret)
+	}
+	if cfg.JWT.PlatformSecret != "platform-secret" {
+		t.Errorf("platform_secret = %q, want platform-secret", cfg.JWT.PlatformSecret)
+	}
+
+	missingPath := filepath.Join(t.TempDir(), "app.ini")
+	if err := os.WriteFile(missingPath, []byte("[jwt]\nsecret = tenant-secret\n"), 0o600); err != nil {
+		t.Fatalf("write temp ini: %v", err)
+	}
+	cfg, err = Load(missingPath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.JWT.PlatformSecret != "" {
+		t.Errorf("missing platform_secret must stay empty, got %q", cfg.JWT.PlatformSecret)
+	}
+}
+
+// 环境变量 JWT_PLATFORM_SECRET 必须覆盖 ini 值，与 JWT_SECRET 的行为一致。
+func TestLoadPlatformJWTSecretEnvOverride(t *testing.T) {
+	t.Setenv("JWT_PLATFORM_SECRET", "env-platform-secret")
+	path := filepath.Join(t.TempDir(), "app.ini")
+	content := "[jwt]\nplatform_secret = ini-platform-secret\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write temp ini: %v", err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.JWT.PlatformSecret != "env-platform-secret" {
+		t.Errorf("platform_secret = %q, want env override env-platform-secret", cfg.JWT.PlatformSecret)
+	}
+}
+
+// CI 会把 configs/app.ini.example 复制成真实配置再跑认证测试，因此模板本身
+// 必须能通过启动校验：两把密钥都存在且不同。占位符相同会让 CI 的跨域测试
+// 退化成共用密钥而误报。
+func TestExampleConfigPassesAuthSecretValidation(t *testing.T) {
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("JWT_PLATFORM_SECRET", "")
+
+	cfg, err := Load(filepath.Join("..", "..", "configs", "app.ini.example"))
+	if err != nil {
+		t.Fatalf("Load(app.ini.example): %v", err)
+	}
+	if err := cfg.JWT.ValidateAuthSecrets(); err != nil {
+		t.Fatalf("app.ini.example 必须能通过启动校验：%v", err)
+	}
+	if cfg.JWT.Secret == cfg.JWT.PlatformSecret {
+		t.Fatal("app.ini.example 的两把密钥占位符必须不同")
+	}
+}
+
 // release 模式下误配通配符只告警、不阻断启动；其他模式或非通配配置不应产生告警。
 func TestAppConfigCORSConfigWarning(t *testing.T) {
 	cases := []struct {

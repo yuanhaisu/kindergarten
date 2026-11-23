@@ -62,6 +62,7 @@ cp configs/app.ini configs/app.local.ini
 ```bash
 export MYSQL_DSN="user:pass@tcp(127.0.0.1:3306)/kindergarten?charset=utf8mb4&parseTime=True&loc=Local"
 export JWT_SECRET="your-jwt-secret"
+export JWT_PLATFORM_SECRET="your-platform-jwt-secret"   # 必须与 JWT_SECRET 不同
 export REDIS_ADDR="127.0.0.1:6379"
 export WECHAT_APP_ID="your-wechat-app-id"
 export WECHAT_SECRET="your-wechat-secret"

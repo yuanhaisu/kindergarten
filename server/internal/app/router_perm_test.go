@@ -14,7 +14,7 @@ import (
 // 任务 2.3 / TC-NEW-PERM-0007 正例）。用空 Handler 构建：注册只取方法值，不调用服务，
 // resolver 传 nil 也不影响注册与自检。
 func TestAdminPermissionRegistryCoversAllRoutes(t *testing.T) {
-	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), nil, nil, nil, nil)
+	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), PlatformJWTSecret("test-platform-secret"), nil, nil, nil, nil)
 	require.NoError(t, err, "登记表存在缺口时 NewRouter 必须报错并列出缺口路由")
 	assert.NotNil(t, engine)
 }
@@ -24,7 +24,7 @@ func TestAdminPermissionRegistryCoversAllRoutes(t *testing.T) {
 // 路由漏登记权限码会让 NewRouter 启动失败（fail-closed），因此本用例同时覆盖权限登记
 // 与精确路由集合；后续 slice 新增 diet 路由时必须同步更新此断言。
 func TestRouterPerm_DietConfigRoutesRegistered(t *testing.T) {
-	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), nil, nil, nil, nil)
+	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), PlatformJWTSecret("test-platform-secret"), nil, nil, nil, nil)
 	require.NoError(t, err, "diet 路由漏登记权限码时 NewRouter 必须启动失败")
 
 	var got []string
