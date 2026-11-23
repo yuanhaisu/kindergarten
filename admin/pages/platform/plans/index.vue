@@ -79,7 +79,7 @@
         <el-form-item label="档位">
           <el-input-number v-model="form.tier" :min="1" :max="9" />
         </el-form-item>
-        <el-form-item label="价格（元）">
+        <el-form-item label="价格（元）" prop="price_cents">
           <el-input-number v-model="priceYuan" :min="0" :precision="2" :step="100" />
           <span class="ml-2 text-xs text-platform-textMuted">每个计费周期、每所园</span>
         </el-form-item>
@@ -202,6 +202,11 @@ const priceYuan = computed({
 const formRules: FormRules = {
   code: [{ required: true, message: '请输入编码', trigger: 'blur' }],
   name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  // 0 元订单没有收款意义，服务端同样以 PLAN_PRICE_NOT_POSITIVE 拒绝（#202）。
+  price_cents: [
+    { required: true, message: '请输入价格', trigger: 'change' },
+    { type: 'number', min: 1, message: '价格必须大于 0', trigger: 'change' },
+  ],
 }
 
 const tiersVisible = ref(false)
@@ -267,7 +272,13 @@ function openEdit(row: PlanRow) {
 }
 
 async function submitEdit() {
-  await formRef.value?.validate().catch(() => Promise.reject())
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+  // 兜底：校验器不可用时也不能把 0 元套餐发到服务端（服务端同样会 422）。
+  if (!(form.price_cents > 0)) {
+    ElMessage.error('价格必须大于 0')
+    return
+  }
   submitting.value = true
   try {
     const body = { ...form, module_codes: uniqueCodes(form.module_codes) }

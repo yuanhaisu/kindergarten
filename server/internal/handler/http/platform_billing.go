@@ -112,6 +112,10 @@ func writeCreateOrderError(c *gin.Context, err error) {
 		response.ErrValidation(c, "按在园幼儿数无法落入该套餐的任何档位：档位配置不完整，请先修正套餐档位后重试")
 	case errors.Is(err, service.ErrInvalidPayDueAt):
 		response.ErrValidation(c, "付款到期日格式不合法，应为 YYYY-MM-DD")
+	case errors.Is(err, service.ErrPayDueAtInPast):
+		response.ErrValidation(c, "付款到期日不能早于今天")
+	case errors.Is(err, service.ErrOrderAmountNotPositive):
+		response.ErrValidation(c, "订单应收金额必须大于 0")
 	default:
 		response.ErrInternal(c, "创建订单失败")
 	}

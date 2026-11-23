@@ -27,6 +27,11 @@ var (
 	ErrInvalidIdempotencyKey   = errors.New("INVALID_IDEMPOTENCY_KEY")
 	// ErrInvalidPayDueAt 表示创建订单时显式传入的付款到期日不是 YYYY-MM-DD。
 	ErrInvalidPayDueAt = errors.New("INVALID_PAY_DUE_AT")
+	// ErrPayDueAtInPast 表示创建订单时显式传入的付款到期日早于本地日历今天。
+	ErrPayDueAtInPast = errors.New("PAY_DUE_AT_IN_PAST")
+	// ErrOrderAmountNotPositive 表示按套餐价与档位折算后的应收金额不大于 0，
+	// 这样的订单永远收不清，必须拒绝创建。
+	ErrOrderAmountNotPositive = errors.New("ORDER_AMOUNT_NOT_POSITIVE")
 	// ErrCreditReasonRequired 表示净收款为零的确认缺少信用开通理由。
 	ErrCreditReasonRequired = errors.New("CREDIT_REASON_REQUIRED")
 	// ErrCreditReasonTooLong 表示信用开通理由超出 credit_reason 列宽。
@@ -177,6 +182,18 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 	if err != nil {
 		return nil, err
 	}
+	// 显式到期日按本地日历日比较：当天仍可付款，昨天及更早一律拒绝。
+	// 缺省仍回落到 starts_at，保持既有 API 兼容；管理端总会显式发送未来日期。
+	if !payDueAt.IsZero() {
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		if payDueAt.Before(today) {
+			return nil, ErrPayDueAtInPast
+		}
+	}
+	amountDue := plan.PriceCents * int64(multiplier) / 100
+	if amountDue <= 0 {
+		return nil, ErrOrderAmountNotPositive
+	}
 	snapshot, err := json.Marshal(PlanSnapshot{
 		PlanCode: plan.Code, PlanName: plan.Name, ModuleCodes: modules,
 		PriceCents: plan.PriceCents, TermMonths: plan.TermMonths,
@@ -195,7 +212,7 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 		PlanID:         plan.ID,
 		PlanSnapshot:   string(snapshot),
 		StudentTier:    tier,
-		AmountDueCents: plan.PriceCents * int64(multiplier) / 100,
+		AmountDueCents: amountDue,
 		Status:         domain.OrderStatusUnpaid,
 		DistributorID:  req.DistributorID,
 		CommissionRate: rate,

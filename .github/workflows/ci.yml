@@ -188,7 +188,10 @@ jobs:
             TestPaymentIntegrity_PositivePaymentCannotExceedAmountDue \
             TestBillingCreditGrant_ZeroPaidConfirmRequiresReason \
             TestDeriveOrderStatus_PayDueAt \
-            TestOrderCreate_PastDueReturnsDerivedStatus \
+            TestOrderCreate_RejectsPastPayDueAt \
+            TestOrderCreate_SameDayPayDueAtAllowed \
+            TestOrderCreate_RejectsZeroAmount \
+            TestPlan_ZeroPriceCreateRejected \
             TestPlatformOnboard_ReusesExistingParentAccount; do
             if ! grep -q "^--- PASS: $name " "$RUNNER_TEMP/db-tests.log"; then
               echo "::error::关键 DB 用例 $name 未执行或未通过"

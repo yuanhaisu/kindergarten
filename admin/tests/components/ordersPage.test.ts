@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, onMounted, reactive, ref } from 'vue'
 
@@ -111,6 +111,10 @@ beforeEach(() => {
   cancelOrder.mockReset()
   addPayment.mockReset()
   MessageBox.prompt.mockReset()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 function mountPage() {
@@ -282,5 +286,36 @@ describe('订单页面', () => {
     expect(labels).not.toContain('确认订单')
     expect(labels).not.toContain('登记收款')
     expect(labels).not.toContain('取消订单')
+  })
+})
+
+/**
+ * #202：新建订单必须填写付款到期日，默认今天 +15 天，且过去日期在客户端不可选。
+ * 服务端仍有 PAY_DUE_AT_IN_PAST 兜底。
+ */
+describe('新建订单付款到期日', () => {
+  it('默认今天 +15 天，并禁用过去日期', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 10, 23, 10, 0, 0))
+
+    const wrapper = mountPage()
+    await flushPromises()
+    clickButton(wrapper, '新建订单')
+    await flushPromises()
+
+    const dueItem = wrapper
+      .findAllComponents({ name: 'ElFormItem' })
+      .find((c) => c.props('label') === '付款到期日')
+    expect(dueItem, '新建订单弹窗必须包含付款到期日').toBeTruthy()
+
+    const picker = wrapper
+      .findAllComponents({ name: 'ElDatePicker' })
+      .find((c) => c.props('type') === 'date')
+    expect(picker, '新建订单弹窗必须包含日期选择器').toBeTruthy()
+    expect(picker!.props('modelValue')).toBe('2026-12-08')
+    const disabledDate = picker!.props('disabledDate') as (d: Date) => boolean
+    expect(disabledDate(new Date(2026, 10, 22))).toBe(true)
+    expect(disabledDate(new Date(2026, 10, 23))).toBe(false)
+    expect(disabledDate(new Date(2026, 10, 24))).toBe(false)
   })
 })

@@ -23,6 +23,9 @@ var (
 	ErrTierCoverageUnboundedNotLast = errors.New("TIER_COVERAGE_UNBOUNDED_NOT_LAST")
 	// ErrTierCoverageUnresolved 表示历史遗留的档位配置落不到任何一档。
 	ErrTierCoverageUnresolved = errors.New("TIER_COVERAGE_UNRESOLVED")
+	// ErrPlanPriceNotPositive 表示套餐价不大于 0。0 元套餐会生成
+	// 永远收不清的订单，因此创建与更新都必须拒绝。
+	ErrPlanPriceNotPositive = errors.New("PLAN_PRICE_NOT_POSITIVE")
 )
 
 // PlanService 套餐目录。目录可改，但已成交订单只认快照（ADR-0013）。
@@ -238,8 +241,8 @@ func validatePlanRequest(req PlanRequest, requireCode bool) error {
 			return fmt.Errorf("PLAN_CODE_REQUIRED")
 		}
 	}
-	if req.PriceCents < 0 {
-		return fmt.Errorf("INVALID_PRICE")
+	if req.PriceCents <= 0 {
+		return ErrPlanPriceNotPositive
 	}
 	for _, code := range req.ModuleCodes {
 		if !IsRegisteredModule(code) {

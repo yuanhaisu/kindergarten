@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildOrderListParams } from '../../utils/platformOrders'
+import {
+  buildOrderListParams,
+  defaultPayDueAt,
+  isPastPayDueAt,
+} from '../../utils/platformOrders'
 
 /**
  * 订单检索参数是页面与后端契约之间的唯一翻译点：
@@ -40,5 +44,27 @@ describe('buildOrderListParams', () => {
     expect(
       buildOrderListParams({ page: 1, pageSize: 20, kindergartenId: 7, status: 'expired' }),
     ).toMatchObject({ kindergarten_id: 7, status: 'expired' })
+  })
+})
+
+/**
+ * #202：新建订单的付款到期日默认今天 +15 天，过去日期（不含当天）必须在客户端拒绝，
+ * 与服务端 PAY_DUE_AT_IN_PAST 的口径一致。
+ */
+describe('付款到期日', () => {
+  const now = new Date(2026, 10, 23, 10, 0, 0)
+
+  it('默认今天 +15 天', () => {
+    expect(defaultPayDueAt(now)).toBe('2026-12-08')
+  })
+
+  it('跨月时 +15 天正确滚动', () => {
+    expect(defaultPayDueAt(new Date(2026, 11, 20, 8, 0, 0))).toBe('2027-01-04')
+  })
+
+  it('当天允许，昨天拒绝，明天允许', () => {
+    expect(isPastPayDueAt('2026-11-22', now)).toBe(true)
+    expect(isPastPayDueAt('2026-11-23', now)).toBe(false)
+    expect(isPastPayDueAt('2026-11-24', now)).toBe(false)
   })
 })
