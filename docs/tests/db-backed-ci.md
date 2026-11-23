@@ -12,9 +12,9 @@
    - `-p 1`：两个包共享同一个 MySQL service，串行执行避免互相清表。
    - `-timeout 15m` + step `timeout-minutes: 30`：有界，跑飞不会拖死流水线。
    - `-v`：失败输出能定位到具体测试。
-3. 跳过守卫：日志中出现 `跳过：` 或 `authharness:` 即失败（这两类只会在库/配置缺失时出现；`recognition` 等用例的数据依赖跳过仍允许）。
+3. 跳过守卫：日志中出现**缺库/缺配置**的具体跳过原因（`跳过：找不到 …configs/app.ini`、`跳过：MySQL DSN 为空`、`跳过：本地无可用 DB 配置`、`跳过：MySQL 未配置`、`authharness:`）即失败；`recognition` 等用例的数据依赖跳过仍允许。随后再断言一组关键商业用例确实出现 `--- PASS`（订单确认、收款上限、零收款理由、派生状态、平台开通复用账号），防止 `-run` 选空或测试改名后门禁静默失效。
 
-MySQL 来自 job 内 `services.mysql`（`mysql:8.0`，库名 `kindergarten_migrate_test`），DSN 通过 job 级环境变量 `MYSQL_DSN` 注入，不引用 staging / 生产凭据。
+MySQL 来自 job 内 `services.mysql`（`mysql:8.0`，库名 `kindergarten_migrate_test`），DSN 通过 job 级环境变量 `MYSQL_DSN` 注入，不引用 staging / 生产凭据。商业测试内的 Redis 依赖一律走 `fakeredis`（进程内实现），job 不提供 Redis service；已用「`REDIS_ADDR` 指向关闭端口」的 MySQL-only 环境实测本选取可全绿。
 
 ### 为什么按测试名选取，而不是整包
 
