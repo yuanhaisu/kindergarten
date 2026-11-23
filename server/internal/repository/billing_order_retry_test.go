@@ -10,7 +10,8 @@ import (
 
 // 建单撞号重试只认 order_no 唯一键：其他唯一约束冲突必须原样抛给调用方，
 // 否则重试会掩盖真实的数据冲突（例如同一手机号并发开通）。
-func TestIsDuplicateKeyFor_OnlyMatchesTargetKey(t *testing.T) {
+// 名字以 TestOrder 开头才能进 CI clean-DB 的商业域过滤（#197）。
+func TestOrderIsDuplicateKeyFor_OnlyMatchesTargetKey(t *testing.T) {
 	cases := []struct {
 		name    string
 		err     error
