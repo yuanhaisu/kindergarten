@@ -98,6 +98,15 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
     env:
       CONFIG_PATH: configs/app.ini
       MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_migrate_test?charset=utf8mb4&parseTime=True&loc=Local"
@@ -107,7 +116,11 @@ jobs:
         with:
           go-version: '1.25'
       - name: Prepare config
-        run: cp server/configs/app.ini.example server/configs/app.ini
+        run: |
+          cp server/configs/app.ini.example server/configs/app.ini
+          # 模板的 redis 密码是占位符；CI 的 redis service 无鉴权，
+          # 不置空会因 AUTH CHANGE_ME 被拒。REDIS_PASSWORD 空值不会覆盖文件，所以改文件。
+          sed -i '/^\[redis\]/,/^\[/ s/^password = CHANGE_ME$/password = /' server/configs/app.ini
       - name: goose up (clean DB)
         working-directory: server
         run: go run ./cmd/migrate up
