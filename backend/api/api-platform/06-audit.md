@@ -24,7 +24,7 @@
       "target_type": "order",
       "target_id": 12,
       "kindergarten_id": 7,
-      "detail": "ORD20261106001",
+      "detail": "ORD202611061000001234567891234",
       "ip": "203.0.113.10",
       "request_id": "7f3c0f0e-6f1a-4c39-9f3e-6a2d8b5c1e44",
       "created_at": "2026-11-06T10:00:00+08:00",

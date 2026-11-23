@@ -180,7 +180,6 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 		invoice = string(req.InvoiceInfo)
 	}
 	order := &domain.Order{
-		OrderNo:        newOrderNo(now),
 		KindergartenID: kg.ID,
 		PlanID:         plan.ID,
 		PlanSnapshot:   string(snapshot),
@@ -195,8 +194,21 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 		PayDueAt:       payDueAt,
 		CreatedBy:      operator,
 	}
-	if err := s.orders.Create(ctx, order); err != nil {
-		return nil, err
+	// order_no 撞号是并发建单的正常竞争，不是业务失败：换号重试。
+	// 只对 order_no 冲突重试，其他唯一键/数据库错误直接返回。
+	var createErr error
+	for attempt := 0; attempt < orderNoMaxAttempts; attempt++ {
+		order.OrderNo = newOrderNo(time.Now())
+		createErr = s.orders.Create(ctx, order)
+		if createErr == nil {
+			break
+		}
+		if !repository.IsDuplicateKeyFor(createErr, "order_no") {
+			return nil, createErr
+		}
+	}
+	if createErr != nil {
+		return nil, createErr
 	}
 	// 建单响应与列表/详情同口径：状态按付款到期日与已收金额（创建时为 0）
 	// 读时派生，不把存储的 unpaid 直接回给客户端（design D1/D3）。
@@ -713,8 +725,16 @@ func (s *OrderService) invalidate(ctx context.Context, kgID uint64) {
 	}
 }
 
+// orderNoMaxAttempts 建单撞号时的重试上限。唯一索引是最终裁决：
+// 正常路径一次成功，只有并发极端撞号才换号重试。
+const orderNoMaxAttempts = 3
+
+// newOrderNo 生成订单号：ORD + yyyyMMddHHmmss + 9 位纳秒 + 4 位随机数（共 30 字符，
+// order_no 列宽 32）。旧格式「秒级时间戳 + 3 位随机数」在同一秒并发建单时会撞
+// order_no 唯一索引（#200 CI），现在的组合把这个概率压到可忽略，再由 Create
+// 的撞号重试兜底。
 func newOrderNo(now time.Time) string {
-	return fmt.Sprintf("ORD%s%03d", now.Format("20060102150405"), rand.Intn(1000))
+	return fmt.Sprintf("ORD%s%09d%04d", now.Format("20060102150405"), now.Nanosecond(), rand.Intn(10000))
 }
 
 // OrderRow 平台订单列表行。
