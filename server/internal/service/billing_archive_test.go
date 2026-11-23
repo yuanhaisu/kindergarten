@@ -48,7 +48,8 @@ func TestPlan_RejectsUnknownModule(t *testing.T) {
 	t.Cleanup(func() { cleanupBillingFlow(t, db) })
 
 	_, err := planSvc.Create(ctx, PlanRequest{
-		Code: "s1b_unknown", Name: "S1B非法模块版", ModuleCodes: []string{"base", "not_a_module"},
+		Code: "s1b_unknown", Name: "S1B非法模块版", PriceCents: 100000, TermMonths: 6,
+		ModuleCodes: []string{"base", "not_a_module"},
 	}, "s1b_ops", "127.0.0.1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "UNKNOWN_MODULE")

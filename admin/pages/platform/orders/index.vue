@@ -123,6 +123,19 @@
             <el-option v-for="p in plans" :key="p.id" :label="`${p.name}（${formatMoney(p.price_cents)}）`" :value="p.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="付款到期日" prop="pay_due_at">
+          <el-date-picker
+            v-model="form.pay_due_at"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="选择到期日"
+            :disabled-date="isDisabledDueDate"
+            class="w-full"
+          />
+          <div class="mt-1 text-xs text-platform-textMuted">
+            默认今天起 15 天；到期日当天仍可付款，次日起算逾期。
+          </div>
+        </el-form-item>
         <el-form-item label="分销商">
           <el-select v-model="form.distributor_id" clearable placeholder="无" class="w-full">
             <el-option v-for="d in distributors" :key="d.id" :label="`${d.name}（${d.commission_rate}%）`" :value="d.id" />
@@ -263,7 +276,7 @@ import { addPayment, cancelOrder, confirmOrder, createOrder, getOrder, listOrder
 import { listDistributors, type DistributorRow } from '~/api/platform/distributors'
 import { listKindergartens, type PlatformKindergartenRow } from '~/api/platform/kindergartens'
 import { listPlans, type PlanRow } from '~/api/platform/plans'
-import { buildOrderListParams } from '~/utils/platformOrders'
+import { buildOrderListParams, defaultPayDueAt, formatLocalDate, isPastPayDueAt } from '~/utils/platformOrders'
 import { formatMoney } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
@@ -286,10 +299,30 @@ const distributors = ref<DistributorRow[]>([])
 
 const createVisible = ref(false)
 const formRef = ref<FormInstance>()
-const form = reactive<{ kindergarten_id?: number; plan_id?: number; distributor_id?: number }>({})
+const form = reactive<{
+  kindergarten_id?: number
+  plan_id?: number
+  distributor_id?: number
+  pay_due_at: string
+}>({ pay_due_at: '' })
 const formRules: FormRules = {
   kindergarten_id: [{ required: true, message: '请选择园所', trigger: 'change' }],
   plan_id: [{ required: true, message: '请选择套餐', trigger: 'change' }],
+  pay_due_at: [
+    { required: true, message: '请选择付款到期日', trigger: 'change' },
+    {
+      validator: (_rule, value: string, callback) => {
+        if (value && isPastPayDueAt(value)) callback(new Error('付款到期日不能早于今天'))
+        else callback()
+      },
+      trigger: 'change',
+    },
+  ],
+}
+
+/** 日期选择器只允许今天及以后；服务端仍会兜底返回 422 PAY_DUE_AT_IN_PAST。 */
+function isDisabledDueDate(date: Date): boolean {
+  return isPastPayDueAt(formatLocalDate(date))
 }
 
 const detailVisible = ref(false)
@@ -368,12 +401,19 @@ async function loadOptions() {
 }
 
 function openCreate() {
-  Object.assign(form, { kindergarten_id: undefined, plan_id: undefined, distributor_id: undefined })
+  Object.assign(form, {
+    kindergarten_id: undefined,
+    plan_id: undefined,
+    distributor_id: undefined,
+    // UI 必须显式发送未来日期：服务端缺省仍回落 starts_at（当天），次日即不可确认。
+    pay_due_at: defaultPayDueAt(),
+  })
   createVisible.value = true
 }
 
 async function submitCreate() {
-  await formRef.value?.validate().catch(() => Promise.reject())
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   submitting.value = true
   try {
     const res = await createOrder({ ...form })

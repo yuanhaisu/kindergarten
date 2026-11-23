@@ -280,19 +280,25 @@ func (h *Handler) PlatformCreatePlan(c *gin.Context) {
 	}
 	plan, err := h.planSvc.Create(c.Request.Context(), req, h.operatorOf(c), c.ClientIP())
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "UNKNOWN_MODULE") || strings.HasPrefix(err.Error(), "PLAN_") ||
-			strings.HasPrefix(err.Error(), "INVALID_") {
-			if err.Error() == "PLAN_CODE_EXISTS" {
-				response.ErrConflict(c, "套餐编码已存在")
-				return
-			}
-			response.ErrValidation(c, "套餐参数不合法")
-			return
-		}
-		response.ErrInternal(c, "创建套餐失败")
+		writePlanCreateError(c, err)
 		return
 	}
 	response.Created(c, gin.H{"id": plan.ID})
+}
+
+// writePlanCreateError 是新建套餐错误的唯一映射出口。
+func writePlanCreateError(c *gin.Context, err error) {
+	switch {
+	case err.Error() == "PLAN_CODE_EXISTS":
+		response.ErrConflict(c, "套餐编码已存在")
+	case errors.Is(err, service.ErrPlanPriceNotPositive):
+		response.ErrValidation(c, "套餐价格必须大于 0")
+	case strings.HasPrefix(err.Error(), "UNKNOWN_MODULE") || strings.HasPrefix(err.Error(), "PLAN_") ||
+		strings.HasPrefix(err.Error(), "INVALID_"):
+		response.ErrValidation(c, "套餐参数不合法")
+	default:
+		response.ErrInternal(c, "创建套餐失败")
+	}
 }
 
 func (h *Handler) PlatformUpdatePlan(c *gin.Context) {
@@ -307,17 +313,24 @@ func (h *Handler) PlatformUpdatePlan(c *gin.Context) {
 		return
 	}
 	if err := h.planSvc.Update(c.Request.Context(), id, req, h.operatorOf(c), c.ClientIP()); err != nil {
-		switch {
-		case err.Error() == "PLAN_NOT_FOUND":
-			response.ErrNotFound(c, "套餐不存在")
-		case strings.HasPrefix(err.Error(), "UNKNOWN_MODULE"), strings.HasPrefix(err.Error(), "INVALID_"):
-			response.ErrValidation(c, "套餐参数不合法")
-		default:
-			response.ErrInternal(c, "更新套餐失败")
-		}
+		writePlanUpdateError(c, err)
 		return
 	}
 	response.OK(c, gin.H{"updated_at": time.Now().Format(time.RFC3339)})
+}
+
+// writePlanUpdateError 是修改套餐错误的唯一映射出口。
+func writePlanUpdateError(c *gin.Context, err error) {
+	switch {
+	case err.Error() == "PLAN_NOT_FOUND":
+		response.ErrNotFound(c, "套餐不存在")
+	case errors.Is(err, service.ErrPlanPriceNotPositive):
+		response.ErrValidation(c, "套餐价格必须大于 0")
+	case strings.HasPrefix(err.Error(), "UNKNOWN_MODULE"), strings.HasPrefix(err.Error(), "INVALID_"):
+		response.ErrValidation(c, "套餐参数不合法")
+	default:
+		response.ErrInternal(c, "更新套餐失败")
+	}
 }
 
 func (h *Handler) PlatformListPlanTiers(c *gin.Context) {
