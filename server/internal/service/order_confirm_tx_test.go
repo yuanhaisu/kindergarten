@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
@@ -336,6 +337,59 @@ func TestOrderConfirm_ConcurrentWithRefundKeepsInvariants(t *testing.T) {
 		require.NoError(t, err)
 		assert.Zero(t, detail.AmountPaidCents, "round %d: 退款后已收净额归零", round)
 	}
+}
+
+// 并发建单：order_no 必须唯一。旧实现是「秒级时间戳 + 3 位随机数」，
+// 同一秒内建单量一多就会撞 `order_no` 唯一索引，Create 直接把 1062 抛给调用方；
+// 上面的并发确认/退款用例正是因此在 CI 干净库上批量建单时被拖红（#200）。
+func TestOrderCreate_ConcurrentOrderNumbersStayUnique(t *testing.T) {
+	db := openPlatformTestDB(t)
+	ctx := context.Background()
+	cleanupConfirmTx(t, db)
+	t.Cleanup(func() { cleanupConfirmTx(t, db) })
+
+	f := newConfirmTxFixture(t, db, "-并发建单")
+	plan, err := repository.NewPlanRepo(db).FindByCode(ctx, confirmTxPlanCode)
+	require.NoError(t, err)
+	require.NotNil(t, plan)
+
+	// 同一秒内并发建单：3 位随机数在 120 张订单（约 7140 对）下几乎必然撞号。
+	const workers = 120
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	orderNos := make([]string, workers)
+	errs := make([]error, workers)
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			order, err := f.svc.Create(ctx, CreateOrderRequest{KindergartenID: f.kg.ID, PlanID: plan.ID}, confirmTxOperator, "127.0.0.1")
+			errs[i] = err
+			if err == nil {
+				orderNos[i] = order.OrderNo
+			}
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+
+	seen := make(map[string]int, workers)
+	for i, err := range errs {
+		require.NoError(t, err, "worker %d: 并发建单不得因订单号冲突失败", i)
+		require.NotEmpty(t, orderNos[i])
+		require.LessOrEqual(t, len(orderNos[i]), 32, "订单号不得超出 order_no 列宽")
+		assert.True(t, strings.HasPrefix(orderNos[i], "ORD"), "订单号前缀保持 ORD：%s", orderNos[i])
+		if prev, dup := seen[orderNos[i]]; dup {
+			t.Fatalf("订单号重复：%s（worker %d 与 %d）", orderNos[i], prev, i)
+		}
+		seen[orderNos[i]] = i
+	}
+	assert.Len(t, seen, workers)
+
+	var stored int64
+	require.NoError(t, db.Model(&domain.Order{}).Where("kindergarten_id = ?", f.kg.ID).Count(&stored).Error)
+	assert.EqualValues(t, workers, stored, "并发建单必须全部落库")
 }
 
 // 并发取消：锁单后恰好一个成功，另一个 409，审计只留一条。

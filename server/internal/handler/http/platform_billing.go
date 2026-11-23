@@ -170,6 +170,18 @@ func (h *Handler) PlatformConfirmOrder(c *gin.Context) {
 // 零收款确认缺理由必须返回可识别的 422，管理端据此提示补充理由，
 // 而不是让运营把 500 当成系统故障。
 func writeConfirmOrderError(c *gin.Context, err error) {
+	// 部分收款一律不可确认：除了提示先收清，还要把尚欠金额结构化返回，
+	// 管理端据此直接展示，不必解析文案（#201）。
+	var underpaid *service.OrderUnderpaidError
+	if errors.As(err, &underpaid) {
+		response.JSON(c, http.StatusUnprocessableEntity, response.Envelope{
+			Code: 42200,
+			Message: fmt.Sprintf("订单未收清，尚欠 %.2f 元；部分收款不可确认，请先收清或退款后取消订单",
+				float64(underpaid.RemainingCents)/100),
+			Data: gin.H{"remaining_cents": underpaid.RemainingCents},
+		})
+		return
+	}
 	if errors.Is(err, service.ErrCreditReasonRequired) {
 		response.ErrValidation(c, "零收款确认必须填写信用开通理由")
 		return

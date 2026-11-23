@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	mysqldriver "github.com/go-sql-driver/mysql"
@@ -21,6 +22,19 @@ func IsDuplicateKey(err error) bool {
 		return me.Number == 1062
 	}
 	return errors.Is(err, gorm.ErrDuplicatedKey)
+}
+
+// IsDuplicateKeyFor 判断唯一键冲突（MySQL 1062）是否命中指定键名片段。
+// 订单号的唯一索引在 goose 迁移里叫 uk_order_no，AutoMigrate 建的是
+// idx_orders_order_no，两者都包含列名，所以按列名匹配而不是写死索引名。
+// 无法从错误信息确认命中哪个键时一律返回 false——只有确认是目标键才允许重试，
+// 其他唯一约束冲突必须原样抛给调用方。
+func IsDuplicateKeyFor(err error, keyPart string) bool {
+	var me *mysqldriver.MySQLError
+	if errors.As(err, &me) {
+		return me.Number == 1062 && strings.Contains(me.Message, keyPart)
+	}
+	return false
 }
 
 // OrderFilter 平台侧订单查询。平台查询必须显式给出过滤条件，

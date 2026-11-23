@@ -194,8 +194,13 @@
             <div class="mt-1 text-platform-textPrimary">{{ detail.credit_reason || '—' }}</div>
           </div>
 
+          <div v-if="isUnderpaid(detail)" class="rounded-lg bg-platform-bg p-3 text-sm text-platform-dangerStrong">
+            订单未收清，尚欠 {{ formatMoney(detail.amount_due_cents - detail.amount_paid_cents) }}；
+            部分收款不可确认，收清后才能确认订单。
+          </div>
+
           <div class="flex flex-wrap gap-2">
-            <el-button v-if="canConfirm(detail.status)" size="small" type="primary" @click="onConfirm">
+            <el-button v-if="canConfirm(detail)" size="small" type="primary" @click="onConfirm">
               确认订单
             </el-button>
             <el-button v-if="!detail.status.startsWith('cancelled')" size="small" type="success" @click="openPayment">
@@ -444,12 +449,25 @@ async function refreshDetail() {
 }
 
 /**
- * 确认按钮只在「尚未收清且未结束」的订单上出现：
- * 已收清（paid）与已过付款到期日（expired）不再提供确认，已取消的订单由调用处的
- * cancelled 判断隐藏全部操作（design D2 / D9）。
+ * 确认按钮的显示规则（#201）：
+ * - 已确认（confirmed_at 非空）不再提供确认；
+ * - 已过付款到期日（expired）与已取消的订单不提供确认；
+ * - 部分收款（0 < 已收 < 应收）一律不可确认，理由不能替代收清；
+ * - 零收款（信用开通）与已收清（含超收）可确认。
  */
-function canConfirm(status: string) {
-  return status !== 'paid' && status !== 'expired' && !status.startsWith('cancelled')
+function canConfirm(order: OrderDetail) {
+  if (order.confirmed_at) return false
+  if (order.status === 'expired' || order.status.startsWith('cancelled')) return false
+  return order.amount_paid_cents === 0 || order.amount_paid_cents >= order.amount_due_cents
+}
+
+function isUnderpaid(order: OrderDetail) {
+  return (
+    !order.confirmed_at &&
+    !order.status.startsWith('cancelled') &&
+    order.amount_paid_cents > 0 &&
+    order.amount_paid_cents < order.amount_due_cents
+  )
 }
 
 async function onConfirm() {
@@ -477,7 +495,13 @@ async function onConfirm() {
     ElMessage.success('订单已确认，授权已发放')
     await Promise.all([refreshDetail(), load()])
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '确认失败')
+    // 详情可能已过期：后端仍会返回部分收款 422，直接展示尚欠金额。
+    const remaining = (e as Error & { data?: { remaining_cents?: number } }).data?.remaining_cents
+    if (typeof remaining === 'number') {
+      ElMessage.error(`订单未收清，尚欠 ${formatMoney(remaining)}；请先收清后再确认`)
+    } else {
+      ElMessage.error(e instanceof Error ? e.message : '确认失败')
+    }
   }
 }
 

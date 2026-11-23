@@ -3,10 +3,11 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { computed, onMounted, reactive, ref } from 'vue'
 
 /**
- * 订单页行为验收（#118 / TC-NEW-ORD-0015、0017）：
+ * 订单页行为验收（#118 / #201 / TC-NEW-ORD-0015、0017）：
  * - 列表展示「信用开通」标签，详情展示信用开通理由；
  * - 零收款确认必须先填写理由，理由随请求提交；取消填写则不提交；
- * - 按钮规则：paid/expired 隐藏确认，cancelled 隐藏全部，expired 未收款仍可取消。
+ * - 部分收款不出现确认按钮，展示尚欠金额；收清后确认可用且不弹理由；
+ * - 已确认、expired、cancelled 隐藏确认，cancelled 隐藏全部。
  */
 
 const listOrders = vi.fn()
@@ -48,6 +49,7 @@ const baseDetail = {
   starts_at: '2026-11-06',
   expires_at: '2027-05-05',
   pay_due_at: '2026-11-06',
+  confirmed_at: null,
   credit_granted: false,
   credit_reason: '',
   plan_snapshot: { plan_name: '旗舰版', module_codes: ['growth'], price_cents: 200000 },
@@ -184,6 +186,7 @@ describe('订单页面', () => {
     await openDetail(wrapper, {
       status: 'partial',
       amount_paid_cents: 100000,
+      confirmed_at: '2026-11-06T10:00:00+08:00',
       credit_granted: true,
       credit_reason: '合同已签署，对公转账到账后补录',
     })
@@ -217,10 +220,10 @@ describe('订单页面', () => {
     expect(confirmOrder).not.toHaveBeenCalled()
   })
 
-  it('已有收款的确认不弹理由', async () => {
+  it('收清后可确认且不弹理由', async () => {
     const wrapper = mountPage()
     await flushPromises()
-    await openDetail(wrapper, { status: 'partial', amount_paid_cents: 100000 })
+    await openDetail(wrapper, { status: 'paid', amount_paid_cents: 200000, confirmed_at: null })
 
     clickButton(wrapper, '确认订单')
     await flushPromises()
@@ -229,10 +232,40 @@ describe('订单页面', () => {
     expect(confirmOrder).toHaveBeenCalledWith(12)
   })
 
-  it('paid 隐藏确认，cancelled 隐藏全部，expired 未收款仍可取消', async () => {
+  it('部分收款隐藏确认并显示尚欠金额', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await openDetail(wrapper, { status: 'partial', amount_paid_cents: 100000, confirmed_at: null })
+
+    expect(buttonLabels(wrapper)).not.toContain('确认订单')
+    const text = `${wrapper.text()}\n${document.body.textContent || ''}`
+    expect(text).toContain('尚欠')
+    expect(text).toContain('¥1000.00')
+    expect(confirmOrder).not.toHaveBeenCalled()
+  })
+
+  it('已确认订单不再出现确认按钮', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await openDetail(wrapper, {
+      status: 'unpaid',
+      amount_paid_cents: 0,
+      confirmed_at: '2026-11-06T10:00:00+08:00',
+      credit_granted: true,
+      credit_reason: '合同已签署，先开课',
+    })
+
+    expect(buttonLabels(wrapper)).not.toContain('确认订单')
+  })
+
+  it('paid 且已确认隐藏确认，cancelled 隐藏全部，expired 未收款仍可取消', async () => {
     const paid = mountPage()
     await flushPromises()
-    await openDetail(paid, { status: 'paid', amount_paid_cents: 200000 })
+    await openDetail(paid, {
+      status: 'paid',
+      amount_paid_cents: 200000,
+      confirmed_at: '2026-11-06T10:00:00+08:00',
+    })
     let labels = buttonLabels(paid)
     expect(labels).not.toContain('确认订单')
     expect(labels).toContain('取消订单')
@@ -240,7 +273,7 @@ describe('订单页面', () => {
     document.body.innerHTML = ''
     const expired = mountPage()
     await flushPromises()
-    await openDetail(expired, { status: 'expired', amount_paid_cents: 0 })
+    await openDetail(expired, { status: 'expired', amount_paid_cents: 0, confirmed_at: null })
     labels = buttonLabels(expired)
     expect(labels).not.toContain('确认订单')
     expect(labels).toContain('取消订单')
@@ -248,7 +281,7 @@ describe('订单页面', () => {
     document.body.innerHTML = ''
     const cancelled = mountPage()
     await flushPromises()
-    await openDetail(cancelled, { status: 'cancelled', amount_paid_cents: 0 })
+    await openDetail(cancelled, { status: 'cancelled', amount_paid_cents: 0, confirmed_at: null })
     labels = buttonLabels(cancelled)
     expect(labels).not.toContain('确认订单')
     expect(labels).not.toContain('登记收款')

@@ -20,7 +20,7 @@
   "list": [
     {
       "id": 12,
-      "order_no": "ORD20261106001",
+      "order_no": "ORD202611061000001234567891234",
       "kindergarten_id": 7,
       "kindergarten_name": "阳光幼儿园",
       "plan_name": "旗舰版",
@@ -79,7 +79,7 @@
 // Response
 {
   "id": 12,
-  "order_no": "ORD20261106001",
+  "order_no": "ORD202611061000001234567891234",
   "status": "unpaid",
   "amount_due_cents": 195000,
   "student_tier": 2,
@@ -95,6 +95,9 @@
 > `pay_due_at` 可选，`YYYY-MM-DD`；缺省等于服务起始日（兼容既有 API 调用），服务端保证非空。
 > 管理端「新建订单」必须显式填写，默认今天 **+15 天**。
 > `invoice_info` 可缺省，缺失不阻断确认。
+> `order_no` 由服务端生成、全局唯一，客户端不可传入：格式为
+> `ORD` + `yyyyMMddHHmmss`（建单时刻）+ 9 位纳秒 + 4 位随机数，定长 30 字符（列宽 32）。
+> 并发建单若撞上唯一索引，服务端自动换号重试，调用方无需处理。
 >
 > **到期日与金额校验（422）**
 >
@@ -129,7 +132,7 @@
 // Response
 {
   "id": 12,
-  "order_no": "ORD20261106001",
+  "order_no": "ORD202611061000001234567891234",
   "kindergarten_id": 7,
   "kindergarten_name": "阳光幼儿园",
   "status": "partial",
@@ -138,6 +141,7 @@
   "starts_at": "2026-11-06",
   "expires_at": "2027-05-05",
   "pay_due_at": "2026-11-06",
+  "confirmed_at": "2026-11-06T10:00:00+08:00",
   "credit_granted": true,
   "credit_reason": "合同已签署，对公转账到账后补录",
   "plan_snapshot": { "module_codes": ["attendance", "notice", "pickup", "growth", "diet"] },
@@ -170,15 +174,18 @@
 
 > `credit_reason` 只在详情返回：非信用开通订单为 `false` / 空串。
 > 列表只暴露 `credit_granted` 标记，不返回理由。
+> `confirmed_at` 为 null 表示尚未确认；`status` 只由收付款金额与付款到期日派生，不包含确认状态。
+> 管理端据 `confirmed_at` 与金额决定是否显示「确认订单」。
 
 ---
 
 ## POST `/platform/orders/:id/confirm`
 
-> 确认订单：冻结快照、发放模块授权。净收款为零时确认即「信用开通」，必须填写理由。
+> 确认订单：冻结快照、发放模块授权。净收款为零时确认即「信用开通」，必须填写理由；
+> 部分收款一律不可确认。
 
 ```json
-// Request（净收款为零时 reason 必填；有实收时可省略）
+// Request（净收款为零时 reason 必填；已收清时可省略；部分收款不可确认）
 { "reason": "合同已签署，对公转账到账后补录" }
 
 // Response
@@ -191,10 +198,15 @@
 }
 ```
 
-> 净收款为零（`已收净额 = 正数收款 − 负数退款 = 0`）时，`reason` 必填；缺失返回 422
-> `CREDIT_REASON_REQUIRED`。确认成功后订单被标记 `credit_granted=true` 并保存 `credit_reason`
-> （理由只在详情返回），同时写入审计（操作账号、时间与理由）。
-> 有实收的确认不需要理由，也不会被标记为信用开通。
+> 确认前按事务内重算的净收款（`已收净额 = 正数收款 − 负数退款`）判定：
+>
+> - **净收款为零** → 信用开通，`reason` 必填；缺失或纯空白返回 422
+>   `CREDIT_REASON_REQUIRED`。确认成功后订单被标记 `credit_granted=true` 并保存
+>   `credit_reason`（理由只在详情返回），同时写入审计（操作账号、时间与理由）。
+> - **`0 < 净收款 < 应收`** → 一律拒绝，返回 422 `ORDER_UNDERPAID` 与 `data.remaining_cents`。
+>   理由不能替代收清：带理由也同样拒绝，且不写 `confirmed_at`、不发授权、不写确认审计。
+> - **`净收款 >= 应收`**（含超收）→ 无需理由，正常确认。
+>
 > 信用开通不改金额口径：应收全额仍计入未收余额。
 > `reason` 超过 255 个字符返回 422 `CREDIT_REASON_TOO_LONG`。
 > 确认后不得再修改分销商归因。
@@ -209,6 +221,18 @@
   "data": null
 }
 ```
+
+**部分收款不可确认（422）**
+
+```json
+{
+  "code": 42200,
+  "message": "订单未收清，尚欠 999.99 元；部分收款不可确认，请先收清或退款后取消订单",
+  "data": { "remaining_cents": 99999 }
+}
+```
+
+- `data.remaining_cents` 为尚欠金额（分，= 应收 − 已收净额），管理端据此展示。
 
 ---
 
