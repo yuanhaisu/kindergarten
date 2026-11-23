@@ -194,7 +194,21 @@
             <div class="mt-1 text-platform-textPrimary">{{ detail.credit_reason || '—' }}</div>
           </div>
 
-          <div v-if="isUnderpaid(detail)" class="rounded-lg bg-platform-bg p-3 text-sm text-platform-dangerStrong">
+          <div
+            v-if="isServiceEnded(detail) && !detail.confirmed_at && !detail.status.startsWith('cancelled')"
+            class="rounded-lg bg-platform-bg p-3 text-sm text-platform-dangerStrong"
+          >
+            服务期已结束，订单不可确认；请取消后重新创建订单。
+          </div>
+
+          <div
+            v-else-if="!detail.confirmed_at && detail.status === 'expired'"
+            class="rounded-lg bg-platform-bg p-3 text-sm text-platform-dangerStrong"
+          >
+            订单已过付款到期日且未收清，不可确认；请取消后重新创建订单。
+          </div>
+
+          <div v-else-if="isUnderpaid(detail)" class="rounded-lg bg-platform-bg p-3 text-sm text-platform-dangerStrong">
             订单未收清，尚欠 {{ formatMoney(detail.amount_due_cents - detail.amount_paid_cents) }}；
             部分收款不可确认，收清后才能确认订单。
           </div>
@@ -449,22 +463,40 @@ async function refreshDetail() {
 }
 
 /**
- * 确认按钮的显示规则（#201）：
+ * 确认按钮的显示规则（#201 / #203）：
  * - 已确认（confirmed_at 非空）不再提供确认；
+ * - 服务期已结束（expires_at 已过）的订单不提供确认，即使已全额收款；
  * - 已过付款到期日（expired）与已取消的订单不提供确认；
  * - 部分收款（0 < 已收 < 应收）一律不可确认，理由不能替代收清；
- * - 零收款（信用开通）与已收清（含超收）可确认。
+ * - 零收款（信用开通）与已收清（含超收、全额晚付）可确认。
  */
 function canConfirm(order: OrderDetail) {
   if (order.confirmed_at) return false
-  if (order.status === 'expired' || order.status.startsWith('cancelled')) return false
+  if (order.status.startsWith('cancelled')) return false
+  if (isServiceEnded(order)) return false
+  if (order.status === 'expired') return false
   return order.amount_paid_cents === 0 || order.amount_paid_cents >= order.amount_due_cents
+}
+
+/**
+ * 服务期结束判断（#203）。后端按 expires_at <= now 裁决；详情只返回日期，
+ * 这里按日历日比较：服务期最后一天仍显示确认入口，真正越界时由服务端 409 兜底。
+ */
+function isServiceEnded(order: OrderDetail) {
+  if (!order.expires_at) return false
+  const end = new Date(`${order.expires_at}T00:00:00`)
+  if (Number.isNaN(end.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return end < today
 }
 
 function isUnderpaid(order: OrderDetail) {
   return (
     !order.confirmed_at &&
     !order.status.startsWith('cancelled') &&
+    order.status !== 'expired' &&
+    !isServiceEnded(order) &&
     order.amount_paid_cents > 0 &&
     order.amount_paid_cents < order.amount_due_cents
   )

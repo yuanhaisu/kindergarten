@@ -38,6 +38,12 @@ var (
 	ErrCreditReasonTooLong = errors.New("CREDIT_REASON_TOO_LONG")
 	// ErrOrderUnderpaid 表示确认时净收款不足且不为零：部分收款一律不可确认。
 	ErrOrderUnderpaid = errors.New("ORDER_UNDERPAID")
+	// ErrOrderServiceEnded 表示订单服务期已结束（expires_at <= now）：
+	// 即使全额已付也不可确认，避免发放「入职即过期」的授权，且不隐式顺延（#203）。
+	ErrOrderServiceEnded = errors.New("ORDER_SERVICE_ENDED")
+	// ErrOrderExpired 表示订单已过付款到期日的本地日历日且仍未收清：
+	// 不可确认，零收款信用开通理由也不能绕过（#203）。
+	ErrOrderExpired = errors.New("ORDER_EXPIRED")
 )
 
 // OrderUnderpaidError 携带尚欠金额，供管理端直接展示给运营。
@@ -314,6 +320,18 @@ func (s *OrderService) Confirm(ctx context.Context, id uint64, reason, operator,
 			return err
 		}
 		status = deriveOrderStatus(locked, paid, now)
+
+		// #203 守卫，顺序即优先级，且全部排在任何写入之前：
+		// 1) 服务期已结束：即使全额已付也拒绝，避免发放发完即过期的授权；
+		// 2) 派生状态为过期且未收清：零收款信用开通理由也不能绕过。
+		//    全额晚付的派生状态是 paid，不会命中这里——不要改用 pay_due_at < now
+		//    的原始时间比较，那会把到期日当天也判成过期。
+		if !locked.ExpiresAt.IsZero() && !locked.ExpiresAt.After(now) {
+			return ErrOrderServiceEnded
+		}
+		if status == domain.OrderStatusExpired && paid < locked.AmountDueCents {
+			return ErrOrderExpired
+		}
 
 		// 部分收款一律不可确认：理由不能替代收清（#201）。零收款仍可信用开通，
 		// 收清（含超收）直接放行；校验必须在任何写入之前，被拒请求不留痕迹。
