@@ -109,6 +109,61 @@
       </el-form>
     </el-card>
 
+    <el-card shadow="never">
+      <template #header><span>家长入口二维码</span></template>
+      <div class="max-w-3xl space-y-4">
+        <p class="text-sm text-text-muted">
+          家长扫描二维码进入本园家长端首页。二维码只代表本园入口，可下载后打印或用于入园物料。
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+          <el-select v-model="qrEnvVersion" class="!w-48" :disabled="qrLoading">
+            <el-option label="跟随服务端配置" value="" />
+            <el-option label="正式版" value="release" />
+            <el-option label="体验版" value="trial" />
+            <el-option label="开发版" value="develop" />
+          </el-select>
+          <el-button type="primary" :loading="qrLoading" @click="generateQr">生成二维码</el-button>
+          <el-button :disabled="!qrDownloadable" @click="downloadQr">下载二维码</el-button>
+        </div>
+
+        <el-alert
+          v-if="qrState === 'error'"
+          type="error"
+          :closable="false"
+          show-icon
+          :title="qrError"
+        />
+        <el-alert
+          v-else-if="qrState === 'missing'"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="未生成"
+          description="后端未返回完整的家长入口码或二维码图片，暂时无法查看或下载。请稍后重试；若持续出现请联系平台。"
+        />
+
+        <div v-if="qrImageSrc" class="flex flex-wrap items-start gap-5">
+          <div class="rounded-lg border border-border-subtle bg-bg-card p-3">
+            <img
+              :src="qrImageSrc"
+              alt="家长端园所入口二维码"
+              class="block h-56 w-56 max-w-full"
+            />
+          </div>
+          <div class="space-y-1 text-sm">
+            <div class="text-text-primary">
+              入口码：<span class="font-mono select-all">{{ qrData?.public_code }}</span>
+            </div>
+            <div class="text-text-muted">扫码进入：{{ qrData?.page }}</div>
+            <div class="text-text-muted">小程序版本：{{ qrEnvLabel }}</div>
+          </div>
+        </div>
+        <div v-else-if="qrState === 'idle'" class="text-sm text-text-muted">
+          尚未生成，点击「生成二维码」获取家长入口物料。
+        </div>
+      </div>
+    </el-card>
+
     <el-card v-loading="yearsLoading" shadow="never">
       <template #header>
         <div class="flex items-center justify-between gap-4">
@@ -156,9 +211,15 @@
 <script setup lang="ts">
 import type { KindergartenInfo } from '~/types/api'
 import { getSettings, updateSettings, getAcademicYears, createAcademicYear } from '~/api/settings'
-import { getKindergartenInfo, updateKindergartenInfo } from '~/api/kindergarten'
+import {
+  getKindergartenInfo,
+  getParentEntryQRCode,
+  updateKindergartenInfo,
+  type ParentEntryQRCode,
+} from '~/api/kindergarten'
 import { uploadFile } from '~/api/common'
 import { BRAND_COLOR_PRESETS, normalizeBrandColorInput } from '~/utils/brandColor'
+import { downloadBlob } from '~/utils/export'
 import type { CreateAcademicYearBody, SystemSettingsWithAlbum } from '~/api/settings'
 
 const loading = ref(true)
@@ -300,6 +361,97 @@ async function saveKg() {
     ElMessage.error(e instanceof Error ? e.message : '保存失败')
   } finally {
     kgSaving.value = false
+  }
+}
+
+// ---- 家长入口二维码（#205） ----
+// 后端在首次生成时会补齐 public_code 并落库；前端只负责展示/下载，
+// 任何失败都不得画占位码，避免园所把假物料发出去。
+type QrState = 'idle' | 'loading' | 'ready' | 'missing' | 'error'
+
+const QR_ENV_LABELS: Record<string, string> = {
+  release: '正式版',
+  trial: '体验版',
+  develop: '开发版',
+}
+
+const qrState = ref<QrState>('idle')
+const qrData = ref<ParentEntryQRCode | null>(null)
+const qrError = ref('')
+const qrEnvVersion = ref('')
+
+const qrLoading = computed(() => qrState.value === 'loading')
+const qrImageSrc = computed(() => {
+  if (qrState.value !== 'ready' || !qrData.value?.image_base64) return ''
+  return `data:image/png;base64,${qrData.value.image_base64}`
+})
+const qrDownloadable = computed(
+  () => qrState.value === 'ready' && !!qrData.value?.public_code && !!qrData.value?.image_base64,
+)
+const qrEnvLabel = computed(() => {
+  const version = qrData.value?.env_version || qrEnvVersion.value
+  return version ? (QR_ENV_LABELS[version] ?? version) : '服务端配置'
+})
+
+/** 端点错误 -> 可操作提示。409/503 是园所通道、客户端部署问题，必须指向平台处理。 */
+function qrFailureMessage(e: unknown): string {
+  const err = e as { status?: number; message?: string }
+  switch (err?.status) {
+    case 409:
+      return '当前园所通道与家长端小程序不匹配，无法生成二维码。请联系平台处理后再试。'
+    case 503:
+      return '家长端小程序未就绪，暂时无法生成二维码。请稍后重试；若持续失败请联系平台。'
+    case 422:
+      return '小程序版本参数不合法，请重新选择版本后再试。'
+    case 403:
+      return '当前账号无权生成园所二维码，请使用园长账号或联系平台。'
+    default: {
+      const detail = err?.message?.trim()
+      return detail
+        ? `生成家长入口二维码失败：${detail}。请稍后重试；若持续失败请联系平台。`
+        : '生成家长入口二维码失败，请稍后重试；若持续失败请联系平台。'
+    }
+  }
+}
+
+async function generateQr() {
+  qrState.value = 'loading'
+  qrError.value = ''
+  try {
+    const data = await getParentEntryQRCode(qrEnvVersion.value || undefined)
+    qrData.value = data
+    if (!data?.public_code || !data?.image_base64) {
+      // 后端理论上会自动补码；这里兜底契约违约，绝不渲染半成品或假码
+      qrState.value = 'missing'
+      return
+    }
+    qrState.value = 'ready'
+  } catch (e: unknown) {
+    qrData.value = null
+    qrError.value = qrFailureMessage(e)
+    qrState.value = 'error'
+  }
+}
+
+/** 微信返回的是裸 base64；先解码成 PNG Blob 再交给浏览器下载。 */
+function base64ToBlob(base64: string, mime: string): Blob {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return new Blob([bytes], { type: mime })
+}
+
+function downloadQr() {
+  if (!qrDownloadable.value || !qrData.value) return
+  try {
+    const blob = base64ToBlob(qrData.value.image_base64, 'image/png')
+    downloadBlob(blob, `家长入口二维码-${qrData.value.public_code}.png`)
+  } catch (e: unknown) {
+    // base64 损坏时明确提示并留痕，不静默失败
+    console.error('[settings] decode parent entry qr failed', e)
+    ElMessage.error('二维码图片解析失败，请重新生成')
   }
 }
 
