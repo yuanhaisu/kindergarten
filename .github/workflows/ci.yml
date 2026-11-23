@@ -148,6 +148,66 @@ jobs:
           go run ./cmd/dbcheck --query "SHOW COLUMNS FROM payments LIKE 'idempotency_key'" | grep -q idempotency_key
           go run ./cmd/dbcheck --query "SHOW COLUMNS FROM commission_ledger LIKE 'reversed_amount_cents'" | grep -q reversed_amount_cents
 
+  authharness:
+    name: 认证测试（authharness / MySQL 8）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 测试库名统一用 kindergarten_test：带 test 标记、与 configs/app.ini 的开发库不同名
+    # （#207 测试库守卫的约束）；root 账号拥有 CREATE DATABASE，足以支撑测试内建库/派生库。
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: kindergarten_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CONFIG_PATH: configs/app.ini
+      KDG_TEST_REQUIRE_MYSQL: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Prepare config
+        run: cp server/configs/app.ini.example server/configs/app.ini
+      # 先在同一临时库上跑生产同款 bootstrap，再让 authharness 复用它。
+      - name: goose up (temporary DB)
+        working-directory: server
+        env:
+          MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: go run ./cmd/migrate up
+      - name: seedbase (temporary DB)
+        working-directory: server
+        env:
+          MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: go run ./cmd/seedbase
+      # 测试步骤刻意不设置 MYSQL_DSN：harness 把配置里的 DSN 视为「开发库」，
+      # 指向同名库会被拒绝。这里显式指定 kindergarten_test（含 test 标记、与开发库
+      # 不同名），且 KDG_TEST_REQUIRE_MYSQL=1 让缺库/漏配直接失败，绝不允许静默 skip。
+      - name: Run authharness (fail closed, no skips)
+        working-directory: server
+        env:
+          KDG_TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: |
+          set -o pipefail
+          go test -json ./internal/testutil/authharness -count=1 -timeout 600s | tee /tmp/authharness.json
+          if grep -q '"Action":"skip"' /tmp/authharness.json; then
+            echo "::error::authharness 出现 skip：CI 不允许静默跳过（检查 KDG_TEST_MYSQL_DSN 与 MySQL service）"
+            grep -E '"Action":"skip"' /tmp/authharness.json | tail -20
+            exit 1
+          fi
+          if ! grep -q '"Action":"pass".*"Test":' /tmp/authharness.json; then
+            echo "::error::authharness 没有执行任何测试（覆盖不允许降低）"
+            exit 1
+          fi
+
   admin:
     name: 管理端静态构建
     runs-on: ubuntu-latest

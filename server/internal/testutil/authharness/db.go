@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	mysqldrv "github.com/go-sql-driver/mysql"
@@ -27,10 +29,40 @@ const (
 	// TestDSNEnv 显式指定一个**已存在的独立测试库**。设置后不再按分支派生库名，
 	// 但仍然会执行迁移；指向开发库会被拒绝。
 	TestDSNEnv = "KDG_TEST_MYSQL_DSN"
-	configEnv  = "CONFIG_PATH"
+	// RequireDBEnv 设为真值时，测试库不可用直接失败而不是跳过。CI 必须显式
+	// 设置：缺 MySQL 或漏配 DSN 时让门禁变红，而不是把「没跑」当成「通过」。
+	RequireDBEnv = "KDG_TEST_REQUIRE_MYSQL"
+	configEnv    = "CONFIG_PATH"
 
 	migrationLockTimeoutSec = 120
 )
+
+// requireMySQL 读取 RequireDBEnv。值写错时按「要求」处理：宁可失败关闭，
+// 也不能因为拼错开关而静默跳过。
+func requireMySQL() bool {
+	v := strings.TrimSpace(os.Getenv(RequireDBEnv))
+	if v == "" {
+		return false
+	}
+	required, err := strconv.ParseBool(v)
+	if err != nil {
+		return true
+	}
+	return required
+}
+
+// failOrSkip 处理「测试库不可用」：默认跳过，让没有 MySQL 的本地环境仍能跑
+// 其余测试；RequireDBEnv 生效时一律 Fatal。
+func (s *dbSetup) failOrSkip(t testing.TB) {
+	t.Helper()
+	if s.skipReason == "" {
+		return
+	}
+	if requireMySQL() {
+		t.Fatalf("authharness: %s（%s 已设置，缺库必须失败而不是跳过）", s.skipReason, RequireDBEnv)
+	}
+	t.Skipf("authharness: %s", s.skipReason)
+}
 
 // dbSetup 是包级共享的测试库句柄：同一 go test 进程里的多个用例复用同一个
 // 派生库，迁移只跑一次（GET_LOCK 保证跨包、跨进程也只跑一次）。
