@@ -111,6 +111,9 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		// 需要认证的接口
 		authed := v1.Group("")
 		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker))
+		// 首登强制改密（#198）：必须在 Casbin/ModuleGate 之前，未改密的管理端
+		// 会话连权限判定都不该走到。只作用于 admin_web 凭证。
+		authed.Use(middleware.RequirePasswordChange(h.passwordChange))
 		// 停用园所：凭证有效也一律拒绝（PLT-0005/0006）。
 		authed.Use(middleware.RequireActiveKindergarten(kgStatus))
 		// 未绑定账号白名单（#175）：必须在 Casbin 之前，空角色无法匹配任何策略。
@@ -799,13 +802,23 @@ type AppHandler struct {
 	ready *readiness
 	// consent 由认证服务实现；nil 时门禁直接放行（测试用空 Handler）。
 	consent service.ConsentChecker
+	// passwordChange 由认证服务实现，供首登强制改密门禁每请求读取标记（#198）。
+	// 未装配时门禁失败关闭（503），不会放行未改密的管理端会话。
+	passwordChange middleware.PasswordChangeChecker
 }
 
 func NewAppHandler(h *handler.Handler) *AppHandler {
-	return &AppHandler{
+	authSvc := h.AuthService()
+	a := &AppHandler{
 		inner: h, tokenRevoker: h.TokenRevoker(),
-		platformEpochs: h.PlatformEpochStore(), consent: h.AuthService(),
+		platformEpochs: h.PlatformEpochStore(), consent: authSvc,
 	}
+	// 显式判空：把 typed-nil 存进接口会让门禁的 nil 检查失效，
+	// 请求期才在空指针上 panic。空 Handler（路由结构测试）保持 nil。
+	if authSvc != nil {
+		a.passwordChange = authSvc
+	}
+	return a
 }
 
 // WithCORS 设置允许跨域的来源；由装配层从配置传入。

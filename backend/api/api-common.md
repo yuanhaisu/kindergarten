@@ -157,6 +157,16 @@
 - **错误**：缺 `app_id` / 角色与客户端不一致 / 家长端携带 `invite_code` → `422`（`42200`）；
   客户端未注册或已停用 → `403`（`40300`）；`code` 无效 → `400`（`40002`）。
 - `must_change_password` 只对管理端密码登录生效，小程序登录恒为 `false`。
+- **首登强制改密门禁**：管理端（`admin_web`）账号在 `must_change_password=true` 期间，
+  服务端只放行 `GET|POST /common/consent`、`GET /common/user/profile`、
+  `PUT /common/user/password`、`POST /auth/logout`。其余业务接口（含 `/admin/*`、
+  upload、messages、`PUT /common/user/profile`）返回 `403` + `code=40303`。
+  客户端收到 40303 应跳转改密页，**不得当作登出**（不要清 token / 不要跳登录页）。
+  改密成功后 `must_change_password` 立即为 `false`，同一 access 的下一个请求即放行；
+  改密前签发的 refresh 仍可续期（`200`），但续出的新 access 同样返回 40303；
+  改密后旧 refresh 因密码指纹不匹配返回 `401`。
+- `must_change_password` 门禁只作用于管理端凭证；小程序（带 `app_id`）与平台
+  （`scope=platform`）凭证不受影响。
 
 ---
 
@@ -347,6 +357,10 @@
   "current_policy_version": "v1"
 }
 ```
+
+- 管理端账号在 `must_change_password=true` 时仍可续期（`200`），但新 access 仍受
+  40303 门禁；续期不会清除该标记，只有 `PUT /common/user/password` 会。
+- 改密成功后，改密前签发的 refresh 因密码指纹不匹配返回 `401`。
 
 ---
 
@@ -797,6 +811,11 @@ Content-Type: multipart/form-data
 ```
 
 > 原密码错误返回 422；新密码不满足强度要求返回 422。
+>
+> 该端点属于首登强制改密门禁的豁免列表：`must_change_password=true` 时仍可调用。
+> 改密成功后同一 access 的下一个业务请求立即放行；改密前签发的旧 refresh 自此刻起
+> 返回 `401`。其余业务接口在改密前返回 `403` + `code=40303`（客户端应跳转改密页，
+> 不得当作登出）。
 
 ---
 
