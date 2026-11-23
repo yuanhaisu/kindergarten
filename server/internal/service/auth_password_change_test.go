@@ -72,3 +72,40 @@ func TestAuthServiceMustChangePasswordFailsClosed(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+type stubAuthRoleRepo struct {
+	roles []domain.UserRole
+}
+
+func (s *stubAuthRoleRepo) FindByUserID(context.Context, uint64) ([]domain.UserRole, error) {
+	return s.roles, nil
+}
+
+// 硬刷新后管理端 store 为空，只能靠 profile 判断是否仍需强制改密（#199）。
+// 该接口在门禁期间被豁免，正是为了让客户端读到这个标记。
+func TestAuthServiceGetProfileCarriesMustChangePassword(t *testing.T) {
+	svc := &AuthService{
+		userRepo: &stubAuthUserRepo{
+			user: &domain.User{BaseModel: domain.BaseModel{ID: 42}, MustChangePassword: true},
+		},
+		userRoleRepo: &stubAuthRoleRepo{},
+	}
+
+	profile, err := svc.GetProfile(context.Background(), 42, RoleScope{})
+	require.NoError(t, err)
+	assert.True(t, profile.MustChangePassword)
+}
+
+// 与登录响应同一口径：小程序凭证永远看不到管理端的改密标记。
+func TestAuthServiceGetProfileHidesMustChangePasswordForClientScope(t *testing.T) {
+	svc := &AuthService{
+		userRepo: &stubAuthUserRepo{
+			user: &domain.User{BaseModel: domain.BaseModel{ID: 42}, MustChangePassword: true},
+		},
+		userRoleRepo: &stubAuthRoleRepo{},
+	}
+
+	profile, err := svc.GetProfile(context.Background(), 42, RoleScope{clientScoped: true})
+	require.NoError(t, err)
+	assert.False(t, profile.MustChangePassword)
+}

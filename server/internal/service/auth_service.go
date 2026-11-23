@@ -1025,6 +1025,9 @@ type ProfileInfo struct {
 	Gender    int        `json:"gender"`
 	Roles     []RoleInfo `json:"roles"`
 	CreatedAt time.Time  `json:"created_at"`
+	// 首登强制改密标记（#198/#199）：管理端硬刷新后 store 为空，
+	// 只能靠这个被门禁豁免的接口判断下一步去改密页还是业务页。
+	MustChangePassword bool `json:"must_change_password"`
 }
 
 func (s *AuthService) GetProfile(ctx context.Context, userID uint64, scope RoleScope) (*ProfileInfo, error) {
@@ -1068,6 +1071,8 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uint64, scope RoleS
 		Gender:    user.Gender,
 		Roles:     roleInfos,
 		CreatedAt: user.CreatedAt,
+		// 与登录响应同一口径：管理端密码登录才暴露真实值。
+		MustChangePassword: user.MustChangePassword && !scope.clientScoped,
 	}, nil
 }
 
