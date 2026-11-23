@@ -109,7 +109,7 @@ make tidy              # go mod tidy
 make check             # vet + lint + test
 ```
 
-Config file path: `CONFIG=configs/app.local.ini make run`（Makefile 的 `CONFIG` 变量会转成 `CONFIG_PATH` 传给进程；直接 `go run` 时用 `CONFIG_PATH`）。 Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
+Config file path: `CONFIG=configs/app.local.ini make run`（Makefile 的 `CONFIG` 变量会转成 `CONFIG_PATH` 传给进程；直接 `go run` 时用 `CONFIG_PATH`）。 Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `JWT_PLATFORM_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
 
 ### 数据库迁移（`server/`）
 

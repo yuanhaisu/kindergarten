@@ -63,7 +63,10 @@ type Harness struct {
 	// Enforcer 供需要验证角色裁剪的测试直接检查策略。
 	Enforcer *casbin.Enforcer
 
-	Secret []byte
+	// Secret 是园所信任域的签名密钥；PlatformSecret 是平台信任域的签名密钥（#183）。
+	// 两者必须不同，生产装配会拒绝相同/缺失的配置。
+	Secret         []byte
+	PlatformSecret []byte
 
 	DevDatabase  string
 	TestDatabase string
@@ -111,7 +114,7 @@ func New(t testing.TB) *Harness {
 	clientSvc := service.NewClientService(repository.NewClientRepo(setup.db))
 	identityRepo := repository.NewUserIdentityRepo(setup.db)
 
-	secret, atTTL, rtTTL := jwtConfig(setup.cfg)
+	secret, platformSecret, atTTL, rtTTL := jwtConfig(setup.cfg)
 	authSvc := service.NewAuthService(
 		userRepo,
 		userRoleRepo,
@@ -150,6 +153,7 @@ func New(t testing.TB) *Harness {
 		WeChat:         fakeWx,
 		Auth:           authSvc,
 		Secret:         secret,
+		PlatformSecret: platformSecret,
 		DevDatabase:    setup.devDatabase,
 		TestDatabase:   setup.testDatabase,
 		TestDSN:        setup.testDSN,
@@ -201,15 +205,21 @@ func New(t testing.TB) *Harness {
 	return h
 }
 
-func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
+func jwtConfig(cfg *config.Config) (secret, platformSecret []byte, atTTL, rtTTL time.Duration) {
 	secret = []byte("authharness-test-jwt-secret")
+	// 与园所密钥不同的固定默认值：开发用的 app.ini 可能还没有 platform_secret，
+	// 此时 harness 仍要能验证「跨域凭证被拒绝」。
+	platformSecret = []byte("authharness-test-platform-jwt-secret")
 	atTTL = 15 * time.Minute
 	rtTTL = 7 * 24 * time.Hour
 	if cfg == nil {
-		return secret, atTTL, rtTTL
+		return secret, platformSecret, atTTL, rtTTL
 	}
 	if cfg.JWT.Secret != "" {
 		secret = []byte(cfg.JWT.Secret)
+	}
+	if cfg.JWT.PlatformSecret != "" {
+		platformSecret = []byte(cfg.JWT.PlatformSecret)
 	}
 	if cfg.JWT.AccessTTLMin > 0 {
 		atTTL = time.Duration(cfg.JWT.AccessTTLMin) * time.Minute
@@ -217,7 +227,7 @@ func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
 	if cfg.JWT.RefreshTTLDay > 0 {
 		rtTTL = time.Duration(cfg.JWT.RefreshTTLDay) * 24 * time.Hour
 	}
-	return secret, atTTL, rtTTL
+	return secret, platformSecret, atTTL, rtTTL
 }
 
 // buildEngine 复刻 router.go 中认证与 common 分组的装配：
@@ -277,7 +287,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	// 平台方信任域（#172 平台支持）：与 router.go 同源装配 PlatformAuth +
 	// CasbinRBAC，验证平台凭证与园所 JWT 互不通用。
 	platformG := v1.Group("/platform")
-	platformG.Use(middleware.PlatformAuth(h.Secret, h.Auth.TokenRevoker(),
+	platformG.Use(middleware.PlatformAuth(h.PlatformSecret, h.Auth.TokenRevoker(),
 		auth.NewPlatformEpochStore(h.RedisClient, auth.PlatformEpochTTLFor(24*time.Hour, time.Hour))))
 	platformG.Use(middleware.CasbinRBAC(enforcer))
 	{

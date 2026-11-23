@@ -1,6 +1,10 @@
 package app
 
-import "testing"
+import (
+	"testing"
+
+	"kindergarten-server/internal/config"
+)
 
 // 业务日期依赖 DSN 的 loc 与进程时区同源；这里钉住几种配置的判定结果。
 // 不连库：ParseDSN 只解析字符串。
@@ -26,5 +30,48 @@ func TestDSNLocIssue(t *testing.T) {
 		if got != c.want {
 			t.Errorf("%s: dsnLocIssue(%q) 报问题=%v, 期望 %v", c.name, c.dsn, got, c.want)
 		}
+	}
+}
+
+// 启动装配必须拒绝缺失或相同的签名密钥：这是两个信任域隔离的唯一兜底，
+// 一旦放行，园所与平台凭证就重新共用一个可伪造的密钥。
+func TestProvideJWTSecretsRejectUnsafeConfig(t *testing.T) {
+	cases := []struct {
+		name    string
+		jwt     config.JWTConfig
+		wantErr bool
+	}{
+		{name: "缺失平台密钥", jwt: config.JWTConfig{Secret: "tenant-secret"}, wantErr: true},
+		{name: "缺失园所密钥", jwt: config.JWTConfig{PlatformSecret: "platform-secret"}, wantErr: true},
+		{name: "两者相同", jwt: config.JWTConfig{Secret: "shared", PlatformSecret: "shared"}, wantErr: true},
+		{name: "两者独立", jwt: config.JWTConfig{Secret: "tenant-secret", PlatformSecret: "platform-secret"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &config.Config{JWT: tc.jwt}
+
+			tenant, err := ProvideJWTSecret(cfg)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("ProvideJWTSecret() = nil error，不安全的密钥配置必须在启动时失败")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ProvideJWTSecret() unexpected error: %v", err)
+			}
+			if string(tenant) != tc.jwt.Secret {
+				t.Errorf("ProvideJWTSecret() = %q, want %q", tenant, tc.jwt.Secret)
+			}
+
+			platform, err := ProvidePlatformJWTSecret(cfg)
+			if err != nil {
+				t.Fatalf("ProvidePlatformJWTSecret() unexpected error: %v", err)
+			}
+			if string(platform) != tc.jwt.PlatformSecret {
+				t.Errorf("ProvidePlatformJWTSecret() = %q, want %q", platform, tc.jwt.PlatformSecret)
+			}
+		})
 	}
 }

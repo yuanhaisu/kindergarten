@@ -14,7 +14,7 @@ import (
 
 func TestRouterTrustsForwardedForFromLocalhost(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), nil, nil, nil, nil)
+	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), PlatformJWTSecret("test-platform-secret"), nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	// 复用生产路由后追加一个探针，验证 Nginx（127.0.0.1）传来的 X-Forwarded-For
@@ -35,7 +35,7 @@ func TestRouterTrustsForwardedForFromLocalhost(t *testing.T) {
 // 配置外的来源伪造转发头时 ClientIP 仍是真实对端地址（design D10）。
 func TestRouterUsesConfiguredTrustedProxies(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), nil, nil, nil,
+	engine, err := NewRouter(&AppHandler{inner: &handler.Handler{}}, nil, JWTSecret("test-secret"), PlatformJWTSecret("test-platform-secret"), nil, nil, nil,
 		TrustedProxies{"198.51.100.7"})
 	require.NoError(t, err)
 

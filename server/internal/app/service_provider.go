@@ -84,7 +84,7 @@ func ProvidePlatformService(
 	entrySvc *service.KindergartenEntryService,
 	rdb *redis.Client,
 	authSvc *service.AuthService,
-	secret JWTSecret,
+	secret PlatformJWTSecret,
 	atTTL AccessTTL,
 	rtTTL RefreshTTL,
 ) *service.PlatformService {

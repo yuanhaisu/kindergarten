@@ -98,10 +98,29 @@ func ProvideTrustedProxies(cfg *config.Config) TrustedProxies {
 	return TrustedProxies(cfg.Server.TrustedProxyList())
 }
 
+// JWTSecret / PlatformJWTSecret 用不同的具名类型区分两个信任域的签名密钥，
+// 装配时把其中一个传错给另一个域会是编译错误，而不是运行时才暴露。
 type JWTSecret []byte
 
-func ProvideJWTSecret(cfg *config.Config) JWTSecret {
-	return JWTSecret(cfg.JWT.Secret)
+// PlatformJWTSecret 签发/校验平台信任域（scope=platform）的访问凭证。
+type PlatformJWTSecret []byte
+
+// ProvideJWTSecret 同时是启动期的密钥校验点：两个域的密钥必须都存在且不同，
+// 否则拒绝启动（Wire 会因 provider 返回 error 而中止装配）。
+func ProvideJWTSecret(cfg *config.Config) (JWTSecret, error) {
+	if err := cfg.JWT.ValidateAuthSecrets(); err != nil {
+		return nil, err
+	}
+	return JWTSecret(cfg.JWT.Secret), nil
+}
+
+// ProvidePlatformJWTSecret 与 ProvideJWTSecret 各自做同一项启动校验：
+// 无论装配图只需要哪一个密钥，不安全配置都必须在启动时暴露。
+func ProvidePlatformJWTSecret(cfg *config.Config) (PlatformJWTSecret, error) {
+	if err := cfg.JWT.ValidateAuthSecrets(); err != nil {
+		return nil, err
+	}
+	return PlatformJWTSecret(cfg.JWT.PlatformSecret), nil
 }
 
 type AccessTTL time.Duration

@@ -22,6 +22,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		ProvideRedis,
 		ProvideWeChatClient,
 		ProvideJWTSecret,
+		ProvidePlatformJWTSecret,
 		ProvideAccessTTL,
 		ProvideRefreshTTL,
 		ProvideCasbinConfig,
