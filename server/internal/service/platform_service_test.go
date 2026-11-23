@@ -2,63 +2,27 @@ package service
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
 
 	"kindergarten-server/internal/auth"
-	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 	"kindergarten-server/internal/testutil/fakeredis"
+	"kindergarten-server/internal/testutil/testdb"
 )
 
-var (
-	platformTestDB   *gorm.DB
-	platformTestOnce sync.Once
-)
-
+// openPlatformTestDB 是 #208 首批 CI service 测试的统一数据库入口：
+// 设置 KDG_TEST_MYSQL_DSN 时连接包级派生测试库（自动 goose 迁移），
+// 未设置时维持原有本地行为（configs/app.ini 的开发库）；两者都不可用才跳过，
+// CI 用 `go test -json` 守卫把任何 skip 判为失败。
 func openPlatformTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	platformTestOnce.Do(func() {
-		cfgPath := filepath.Join("..", "..", "configs", "app.ini")
-		if _, err := os.Stat(cfgPath); err != nil {
-			return
-		}
-		cfg, err := config.Load(cfgPath)
-		if err != nil || cfg.MySQL.DSN == "" {
-			return
-		}
-		db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
-			Logger: gormlogger.Default.LogMode(gormlogger.Silent),
-		})
-		if err != nil {
-			return
-		}
-		if err := db.AutoMigrate(
-			&domain.Kindergarten{}, &domain.User{}, &domain.UserRole{},
-			&domain.AdminRole{}, &domain.AdminPermission{}, &domain.AdminRolePermission{},
-			&domain.UserAdminRole{}, &domain.PlatformAdmin{}, &domain.PlatformOperationLog{},
-			&domain.Entitlement{}, &domain.Order{}, &domain.Payment{},
-			&domain.Plan{}, &domain.PlanModule{}, &domain.PlanTier{},
-			&domain.Distributor{}, &domain.CommissionLedger{},
-		); err != nil {
-			return
-		}
-		platformTestDB = db
-	})
-	if platformTestDB == nil {
-		t.Skip("跳过：本地无可用 DB 配置")
-	}
-	return platformTestDB
+	return testdb.Open(t)
 }
 
 func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {

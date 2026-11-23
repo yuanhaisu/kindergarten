@@ -3,20 +3,16 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
 
-	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/testutil/testdb"
 )
 
 // B17：家长端班级信息（backend/api/api-parent/08-class.md）与幼儿档案
@@ -25,7 +21,8 @@ import (
 // 班级老师：title_label 映射、脱敏 phone、主班→副班→生活→其余排序、空数组；
 // 幼儿档案：birthday / enroll_date 输出 YYYY-MM-DD，零值空串。
 //
-// 打真实 MySQL（本地 configs/app.ini），9950xx 固定夹具，t.Cleanup 硬删 0 残留。
+// 打真实 MySQL（#207 testdb：设置 KDG_TEST_MYSQL_DSN 时用派生的包级测试库，
+// 未设置时回退本地 configs/app.ini），9950xx 固定夹具，t.Cleanup 硬删 0 残留。
 
 const (
 	testPCPKG      uint64 = 995001 // 园所
@@ -41,32 +38,11 @@ const (
 	testPCPClassBT uint64 = 995006 // 小二班老师
 )
 
-var pcpTestDB *gorm.DB
-
+// openPCPTestDB 是 #208 首批 CI service 测试的统一数据库入口（#207 testdb）：
+// 设置 KDG_TEST_MYSQL_DSN 时连接包级派生测试库，未设置时回退本地开发库。
 func openPCPTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	if pcpTestDB != nil {
-		return pcpTestDB
-	}
-	cfgPath := filepath.Join("..", "..", "configs", "app.ini")
-	if _, err := os.Stat(cfgPath); err != nil {
-		t.Skipf("跳过：找不到 %s（本地无 DB 配置）", cfgPath)
-	}
-	cfg, err := config.Load(cfgPath)
-	if err != nil {
-		t.Fatalf("load config: %v", err)
-	}
-	if cfg.MySQL.DSN == "" {
-		t.Skip("跳过：MySQL DSN 为空")
-	}
-	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
-		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
-	})
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	pcpTestDB = db
-	return db
+	return testdb.Open(t)
 }
 
 func cleanupPCPData(t *testing.T, db *gorm.DB) {
