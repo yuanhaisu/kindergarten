@@ -7,6 +7,8 @@ export interface PlatformKindergartenRow {
   principal: string
   status: 'active' | 'suspended'
   student_count: number
+  /** 家长入口码（10 位）；后端可能未返回，展示前必须兜底「未生成」。 */
+  public_code?: string
   active_plan_name: string
   soonest_expire_at: string | null
   created_at: string
@@ -29,8 +31,19 @@ export interface PlatformKindergartenDetail {
   principal: string
   status: 'active' | 'suspended'
   student_count: number
+  /** 家长入口码（10 位）；详情抽屉是关闭成功弹窗后的事后找回入口。 */
+  public_code?: string
   entitlements: PlatformEntitlementRow[]
   recent_orders: { id: number; order_no: string; amount_due_cents: number; status: string }[]
+}
+
+export interface OnboardKindergartenResult {
+  kindergarten_id: number
+  admin_phone: string
+  must_change_password: boolean
+  trial_expires_at: string
+  /** 开通时与园所同事务生成的家长入口码。 */
+  public_code?: string
 }
 
 export function listKindergartens(params: Record<string, unknown>) {
@@ -42,10 +55,7 @@ export function getKindergarten(id: number) {
 }
 
 export function onboardKindergarten(body: Record<string, unknown>) {
-  return usePlatformHttp().post<{ kindergarten_id: number; admin_phone: string; must_change_password: boolean; trial_expires_at: string }>(
-    '/platform/kindergartens',
-    body,
-  )
+  return usePlatformHttp().post<OnboardKindergartenResult>('/platform/kindergartens', body)
 }
 
 export function setKindergartenStatus(id: number, status: string) {
