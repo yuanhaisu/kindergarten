@@ -56,7 +56,8 @@ const onboardResult = {
   public_code: 'ab12cd34ef',
 }
 
-const PASSWORD = 'InitPass123'
+// 假口令需同时满足前端策略（大小写 + 数字）并含 dummy 占位词，避免 secret 扫描误报。
+const PASSWORD = 'Dummy-Pass-123'
 
 let Page: any
 let ElementPlus: any
