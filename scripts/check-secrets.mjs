@@ -85,6 +85,8 @@ const ALLOW = [
   { rule: 'password-assignment', file: /^server\/internal\/testutil\/authharness\/admin_session_test\.go$/ },
   // #173 测试库派生单测的假 DSN（tester:secret@tcp），不是凭据
   { rule: 'go-mysql-dsn', file: /^server\/internal\/testutil\/authharness\/db_test\.go$/ },
+  // #207 测试库护栏单测的假 DSN（kg_app:s3cret-pw@tcp / user:topsecret@tcp），不是凭据
+  { rule: 'go-mysql-dsn', file: /^server\/internal\/testutil\/testdb\/guard_test\.go$/ },
 ]
 
 function isAllowed(finding) {

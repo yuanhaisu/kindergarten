@@ -40,6 +40,10 @@ jobs:
         run: node scripts/check-secrets.mjs --all
       - name: Token lint (admin)
         run: node scripts/check-tokens.mjs admin
+      - name: Migration README drift check
+        run: node scripts/check-migrations-readme.mjs
+      - name: Migration README check self-test
+        run: npm run check-migrations-readme:test
       - name: Nginx staging auth template test
         run: npm run check-nginx-staging-auth:test
 

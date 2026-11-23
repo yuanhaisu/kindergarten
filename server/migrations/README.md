@@ -25,60 +25,52 @@ make seedbase   # 字典 / 膳食 / 园长角色（幂等）
 
    MySQL 的 DDL 会隐式提交，复杂迁移请在文件顶部加 `-- +goose NO TRANSACTION`。
 
-2. `make migrate` 执行。
-3. 用 `go run ./cmd/dbcheck <table>` 核对索引与行数。
-4. 不要修改 `00001_baseline.sql`。它是从开发库导出的历史基线，只用于新建库。
+2. **同步更新下方「版本清单」**：任何新增/删除 `server/migrations/*.sql` 的 PR
+   都必须更新该表格。CI 运行 `node scripts/check-migrations-readme.mjs` 比对
+   README 表格与目录内文件，漏列/多列时失败并打印缺失或多出的版本号（不依赖数据库）。
+3. `make migrate` 执行。
+4. 用 `go run ./cmd/dbcheck <table>` 核对索引与行数。
+5. 不要修改 `00001_baseline.sql`。它是从开发库导出的历史基线，只用于新建库。
 
-## 版本顺序与开发库修复（2026-11-15）
+## 版本清单
 
-### 线性顺序
+当前线性序列共 15 个版本。`00005` 曾与商业化迁移同号，PR #28 已顺延；
+新增迁移前先 `ls server/migrations`，确认版本号线性递增。
 
-`00005` 曾经与商业化迁移同号；PR #28 已把商业化迁移顺延。当前顺序：
+| 版本 | 用途 |
+| --- | --- |
+| 00001 | 初始基线：由开发库导出，只用于新建库，不得手改 |
+| 00002 | SaaS 商业化第一期：平台账号、套餐、订单收款、功能授权与分销佣金 |
+| 00003 | 为存量园所回填 base 永久授权与 premium 模块 30 天试用 |
+| 00004 | 园长账号强制改密标记 + 平台方操作留痕 |
+| 00005 | 隐私政策同意记录（用户 × 政策版本，追加不软删） |
+| 00006 | 佣金按净额结算：累计冲回金额 + 退款收款关联原收款 |
+| 00007 | 收款幂等：同一订单下幂等键唯一 |
+| 00008 | 平台控制台审计：目标园所、请求链路标识与检索索引 |
+| 00009 | 订单付款到期日 `pay_due_at`：回填老订单后置为 NOT NULL |
+| 00010 | 平台账号角色列（当前统一 `platform`，为平台内分权预留） |
+| 00011 | 订单信用开通：零收款确认需理由并留痕 |
+| 00012 | 小程序客户端注册表（#163）：每个客户端一个微信 AppID |
+| 00013 | 一人一账号：`users.phone_active` 唯一 + `user_identities` 拆分（#164） |
+| 00014 | 园所入口字段：租户通道、公开入口码、品牌主题色（#177） |
+| 00015 | 退役 `users.open_id` / `users.union_id`（#173） |
 
-```
-00001 baseline
-00002 SaaS 商业化
-00003 回填商业化授权
-00004 平台运维与强制改密标记
-00005 隐私同意
-00006 佣金净额结算
-00007 收款幂等
-```
+### 00012–00015：共用 v1 身份与会话底座（#160）
 
-### 开发库修复（一次性）
+这四个迁移属于 #160「共用 v1 身份与会话底座」：00012 建立客户端注册表，
+00013 把「一人一账号 + 多客户端身份」落到唯一键与 `user_identities`，
+00014 补齐园所入口字段，00015 删除已被 `user_identities` 取代的旧身份列。
+它们依赖 00001–00011 的顺序，不能单独重排。
 
-开发库的 schema 可能已经手工执行过 00006/00007，但 `goose_db_version` 只记到 5。
-先确认对象存在：
+### 历史：开发库版本补记（仅对 00006/00007，勿照搬）
 
-```sql
--- consent（version 5 已记录，确认表存在即可）
-SHOW TABLES LIKE 'user_consents';
+2026-11-15 曾出现开发库对象已被手工创建、而 `goose_db_version` 只记到 5 的情况，
+当时用手写 `INSERT` 补记 6/7。该步骤只适用于那一批开发库，**对当前迁移链
+（00001–00015）不再适用**：新环境与正常升级都让 `goose up` 按序执行即可。
+若 `migrate status` 与实际 schema 不一致，先确认对象是否存在，再让 `goose up`
+执行对应迁移；不要手写 `goose_db_version`。
 
--- commission（version 6）
-SHOW COLUMNS FROM commission_ledger LIKE 'reversed_amount_cents';
-SHOW COLUMNS FROM payments LIKE 'refund_of_payment_id';
-
--- payment（version 7）
-SHOW COLUMNS FROM payments LIKE 'idempotency_key';
-SHOW INDEX FROM payments WHERE Key_name = 'uk_payments_order_idem';
-```
-
-确认都存在后，补版本记录（可重复执行）：
-
-```sql
-INSERT INTO goose_db_version (version_id, is_applied, tstamp)
-SELECT 6, 1, NOW() FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM goose_db_version WHERE version_id = 6);
-
-INSERT INTO goose_db_version (version_id, is_applied, tstamp)
-SELECT 7, 1, NOW() FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM goose_db_version WHERE version_id = 7);
-```
-
-如果某个对象不存在，**不要**补对应版本；让 `goose up` 正常执行该迁移。
-补完后 `go run ./cmd/migrate status` 应显示 7 已应用，`go run ./cmd/migrate up` 应 no-op。
-
-### 干净库验证
+## 干净库验证
 
 ```bash
 cd server
@@ -89,9 +81,10 @@ go run ./cmd/migrate status
 go run ./cmd/dbcheck user_consents
 ```
 
-### 防复发
+## 防复发
 
 - 新增迁移前先 `ls server/migrations`，确认版本号线性递增。
+- 新增/删除迁移的 PR 必须同步「版本清单」；CI 的迁移 README 漂移检查会拦截漏改。
 - `server/migrations/**` 是共享文件；并行开发按 `docs/agents/parallel-development.md` 串行修改。
 - CI 的「数据库迁移（干净库）」job 会在干净 MySQL 上跑 `goose up`，同号会在 PR 阶段失败。
 
