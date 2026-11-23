@@ -6,5 +6,14 @@
  */
 export const ADMIN_AUTH_LOGIN_PATH = '/auth/login/password'
 export const ADMIN_AUTH_REFRESH_PATH = '/auth/refresh'
+export const ADMIN_AUTH_LOGOUT_PATH = '/auth/logout'
 export const ADMIN_LOGIN_PAGE_PATH = '/login'
 export const ADMIN_CONSENT_PAGE_PATH = '/consent'
+export const ADMIN_CHANGE_PASSWORD_PAGE_PATH = '/change-password'
+
+/** 只允许站内相对路径回跳，挡掉 `https://…` 与 `//host` 外跳。 */
+export function safeRedirectPath(raw: unknown, fallback = '/'): string {
+  if (typeof raw !== 'string') return fallback
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return fallback
+  return raw
+}

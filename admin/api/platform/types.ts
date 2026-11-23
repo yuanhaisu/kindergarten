@@ -5,9 +5,10 @@ export interface Paged<T> {
   page_size: number
 }
 
-/** 平台登录与续期共用的路径常量（续期拦截器也引用，避免字面量漂移）。 */
+/** 平台登录、续期与登出共用的路径常量（续期拦截器也引用，避免字面量漂移）。 */
 export const PLATFORM_AUTH_LOGIN_PATH = '/platform/auth/login'
 export const PLATFORM_AUTH_REFRESH_PATH = '/platform/auth/refresh'
+export const PLATFORM_AUTH_LOGOUT_PATH = '/platform/auth/logout'
 
 /** 登录与续期响应同构：访问凭证 + 轮换后的续期凭证。 */
 export interface PlatformAuthTokens {

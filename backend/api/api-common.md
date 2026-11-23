@@ -515,6 +515,7 @@ Content-Type: multipart/form-data
   "nickname": "李老师",
   "avatar": "https://cdn.example.com/avatar/1.jpg",
   "gender": 1,
+  "must_change_password": false,
   "roles": [
     {
       "role": "teacher",
@@ -541,6 +542,8 @@ Content-Type: multipart/form-data
 
 - `roles[]` 只含当前会话园所（token 的 `kindergarten_id`）的角色条目；字段随 `role` 取值不同。
   多园账号想拿全部成员关系，调 `GET /common/user/kindergartens`，不要期望 `roles` 里有多园。
+- `must_change_password` 供管理端硬刷新后判断首登改密是否仍未完成（#199）：门禁期间本接口
+  被豁免，客户端据此跳改密页而不是业务页。与登录响应同一口径，小程序凭证恒为 `false`。
 - `role: "admin"` 的条目承载管理端角色信息：
   - `admin_role`：管理端角色标记/名称（超管账号为 `super_admin` 标记）。
   - `permissions`：该账号在对应园所的权限码集合，供管理端渲染菜单与拦截路由使用；**超管为通配时返回 `["*"]`**。权限码目录见 `api-admin/17-roles.md` 的 `GET /admin/permissions`。

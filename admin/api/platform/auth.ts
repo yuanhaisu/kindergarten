@@ -4,7 +4,6 @@ import {
   PLATFORM_AUTH_REFRESH_PATH,
   type PlatformAuthTokens,
 } from '~/api/platform/types'
-import { PLATFORM_REFRESH_COOKIE, buildAuthCookieOptions } from '~/utils/authCookie'
 
 export function platformLogin(username: string, password: string) {
   return usePlatformHttp().post<PlatformAuthTokens>(
@@ -23,21 +22,4 @@ export function platformRefresh(refreshToken: string) {
     { refresh_token: refreshToken },
     { skipPlatformAuthRefresh: true },
   )
-}
-
-export async function platformLogout() {
-  const refreshCookie = useCookie<string | null>(
-    PLATFORM_REFRESH_COOKIE,
-    buildAuthCookieOptions(),
-  )
-  const refreshToken = refreshCookie.value
-  try {
-    // 带上续期凭证，服务端才能吊销它；否则登出后旧 refresh 仍可续期。
-    return await usePlatformHttp().post(
-      '/platform/auth/logout',
-      refreshToken ? { refresh_token: refreshToken } : {},
-    )
-  } finally {
-    refreshCookie.value = null
-  }
 }
