@@ -71,3 +71,70 @@ export function isPastPayDueAt(value: string, now: Date = new Date()): boolean {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   return new Date(y, m - 1, d).getTime() < today.getTime()
 }
+
+// ==================== 确认按钮判定（#201 / #203 / #209） ====================
+
+/** 订单确认判定需要的最小字段；详情接口的 OrderDetail 可直接结构匹配。 */
+export interface OrderConfirmView {
+  status: string
+  amount_due_cents: number
+  amount_paid_cents: number
+  confirmed_at: string | null
+  expires_at: string
+}
+
+/**
+ * 解析服务期结束时刻。
+ *
+ * 详情接口返回 RFC3339（如 2027-05-05T00:00:00+08:00），必须按绝对时刻解析；
+ * 旧实现拼 `${expires_at}T00:00:00` 会得到 Invalid Date，守卫永远不生效（#209）。
+ * 历史纯日期值按「服务期最后一天」解释：结束于次日 0 点，当天仍可确认。
+ */
+export function parseServiceEnd(value: string): Date | null {
+  const text = (value || '').trim()
+  if (!text) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    const [y, m, d] = text.split('-').map(Number)
+    const end = new Date(y, m - 1, d + 1)
+    return Number.isNaN(end.getTime()) ? null : end
+  }
+  const end = new Date(text)
+  return Number.isNaN(end.getTime()) ? null : end
+}
+
+/**
+ * 服务期是否已结束。与后端 `expires_at <= now` 同口径（order_service.go 的
+ * ErrOrderServiceEnded）；零值/无法解析的到期时间不判定为结束，交给服务端兜底。
+ */
+export function isServiceEnded(order: Pick<OrderConfirmView, 'expires_at'>, now: Date = new Date()): boolean {
+  const end = parseServiceEnd(order.expires_at)
+  return end !== null && end.getTime() <= now.getTime()
+}
+
+/**
+ * 确认按钮的显示规则（#201 / #203）：
+ * - 已确认（confirmed_at 非空）不再提供确认；
+ * - 服务期已结束的订单不提供确认，即使已全额收款；
+ * - 已过付款到期日（expired）与已取消的订单不提供确认；
+ * - 部分收款（0 < 已收 < 应收）一律不可确认，理由不能替代收清；
+ * - 零收款（信用开通）与已收清（含超收、全额晚付）可确认。
+ */
+export function canConfirm(order: OrderConfirmView, now: Date = new Date()): boolean {
+  if (order.confirmed_at) return false
+  if (order.status.startsWith('cancelled')) return false
+  if (isServiceEnded(order, now)) return false
+  if (order.status === 'expired') return false
+  return order.amount_paid_cents === 0 || order.amount_paid_cents >= order.amount_due_cents
+}
+
+/** 部分收款（尚欠）提示：仅在订单仍可能确认时才展示，避免与终止/过期提示叠加。 */
+export function isUnderpaid(order: OrderConfirmView, now: Date = new Date()): boolean {
+  return (
+    !order.confirmed_at &&
+    !order.status.startsWith('cancelled') &&
+    order.status !== 'expired' &&
+    !isServiceEnded(order, now) &&
+    order.amount_paid_cents > 0 &&
+    order.amount_paid_cents < order.amount_due_cents
+  )
+}

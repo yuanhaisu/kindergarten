@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { stubNuxtPageMeta, stubResizeObserver } from '../helpers/stubs'
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, onMounted, ref } from 'vue'
 
@@ -74,16 +75,11 @@ let Page: any
 let ElementPlus: any
 
 beforeAll(async () => {
-  class ResizeObserverStub {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+  stubResizeObserver()
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('onMounted', onMounted)
-  vi.stubGlobal('definePageMeta', vi.fn())
+  stubNuxtPageMeta()
   vi.stubGlobal('ElMessage', { error: vi.fn(), success: vi.fn() })
   ElementPlus = (await import('element-plus')).default
   Page = (await import('~/pages/platform/commissions/index.vue')).default

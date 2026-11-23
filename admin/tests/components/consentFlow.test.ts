@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { stubNuxtPageMeta, stubResizeObserver } from '../helpers/stubs'
 import { flushPromises, mount } from '@vue/test-utils'
 import { onMounted, ref } from 'vue'
 
@@ -27,17 +28,13 @@ const navigateTo = vi.fn()
 
 let Page: any
 let ElementPlus: any
+const message = { error: vi.fn(), success: vi.fn(), warning: vi.fn() }
 
 beforeAll(async () => {
-  class ResizeObserverStub {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+  stubResizeObserver()
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('onMounted', onMounted)
-  vi.stubGlobal('definePageMeta', vi.fn())
+  stubNuxtPageMeta()
   vi.stubGlobal('useAuthStore', () => ({
     get user() {
       return authUser.value
@@ -50,7 +47,7 @@ beforeAll(async () => {
   vi.stubGlobal('useRuntimeConfig', () => ({ public: { siteUrl: 'https://example.test' } }))
   // 页面通过 Nuxt 自动导入拿到 useAdminLogout，测试环境需手工挂到全局。
   vi.stubGlobal('useAdminLogout', () => adminLogout)
-  vi.stubGlobal('ElMessage', { error: vi.fn(), success: vi.fn(), warning: vi.fn() })
+  vi.stubGlobal('ElMessage', message)
   ElementPlus = (await import('element-plus')).default
   Page = (await import('~/pages/consent.vue')).default
 }, 60000)
@@ -62,6 +59,9 @@ beforeEach(() => {
   markConsented.mockReset()
   navigateTo.mockReset()
   adminLogout.mockReset()
+  message.error.mockReset()
+  message.success.mockReset()
+  message.warning.mockReset()
   getConsentStatus.mockReset().mockResolvedValue({ policy_version: 'v1', consented: false })
   recordConsent.mockReset().mockResolvedValue({ policy_version: 'v1' })
 })
@@ -113,6 +113,35 @@ describe('同意后去向', () => {
       path: '/change-password',
       query: { redirect: '/billing' },
     })
+  })
+
+  // #209：非 401 的 profile 读取失败不能静默当作已加载。
+  // 记录日志并给出可见告警后继续；服务端 40303 仍是强制改密的最终裁决。
+  it('非 401 的 profile 读取失败要记录并告警，不静默继续', async () => {
+    authUser.value = null
+    fetchProfile.mockRejectedValue(Object.assign(new Error('服务暂时不可用'), { status: 503 }))
+    getConsentStatus.mockResolvedValue({ policy_version: 'v1', consented: true })
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    mount(Page, { global: { plugins: [ElementPlus] } })
+    await flushPromises()
+
+    expect(consoleError).toHaveBeenCalled()
+    expect(message.warning).toHaveBeenCalledWith(expect.stringContaining('账号状态'))
+    expect(navigateTo).toHaveBeenCalledWith({ path: '/billing' })
+    consoleError.mockRestore()
+  })
+
+  it('401 时停留原页，不继续跳转也不告警', async () => {
+    authUser.value = null
+    fetchProfile.mockRejectedValue(Object.assign(new Error('未登录'), { status: 401 }))
+    getConsentStatus.mockResolvedValue({ policy_version: 'v1', consented: true })
+
+    mount(Page, { global: { plugins: [ElementPlus] } })
+    await flushPromises()
+
+    expect(navigateTo).not.toHaveBeenCalled()
+    expect(message.warning).not.toHaveBeenCalled()
   })
 
   it('拒绝政策走中心化退出，不再只清本地', async () => {

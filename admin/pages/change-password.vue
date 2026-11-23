@@ -91,7 +91,10 @@ function validateNewPassword(password: string): string {
 }
 
 async function onSubmit() {
-  await formRef.value?.validate().catch(() => Promise.reject())
+  // 校验失败由 Element Plus 在字段上展示；这里只负责中止提交，
+  // 不再把 reject 抛成未处理异常（与订单页等表单页保持同一写法）。
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   error.value = ''
 
   const weak = validateNewPassword(form.new_password)

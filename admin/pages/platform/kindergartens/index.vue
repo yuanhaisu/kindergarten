@@ -188,6 +188,7 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
+import type { Ref } from 'vue'
 import {
   getKindergarten,
   listKindergartens,
@@ -318,18 +319,21 @@ async function submitCreate() {
   }
 }
 
-async function copySuccessCode() {
-  const outcome = await copyPublicCode(onboarded.value?.public_code)
-  successCopyHint.value =
-    outcome === 'copied' ? '已复制家长入口码' : '当前环境无法访问剪贴板，请手动选中入口码复制'
-  if (outcome !== 'copied') ElMessage.warning(successCopyHint.value)
+const COPY_UNAVAILABLE_HINT = '当前环境无法访问剪贴板，请手动选中入口码复制'
+
+/** 成功弹窗与详情抽屉共用同一套复制反馈，避免两处文案/行为漂移。 */
+async function copyCode(code: string | null | undefined, hint: Ref<string>) {
+  const outcome = await copyPublicCode(code)
+  hint.value = outcome === 'copied' ? '已复制家长入口码' : COPY_UNAVAILABLE_HINT
+  if (outcome !== 'copied') ElMessage.warning(COPY_UNAVAILABLE_HINT)
 }
 
-async function copyDetailCode() {
-  const outcome = await copyPublicCode(detail.value?.public_code)
-  detailCopyHint.value =
-    outcome === 'copied' ? '已复制家长入口码' : '当前环境无法访问剪贴板，请手动选中入口码复制'
-  if (outcome !== 'copied') ElMessage.warning(detailCopyHint.value)
+function copySuccessCode() {
+  return copyCode(onboarded.value?.public_code, successCopyHint)
+}
+
+function copyDetailCode() {
+  return copyCode(detail.value?.public_code, detailCopyHint)
 }
 
 async function viewSuccessDetail() {

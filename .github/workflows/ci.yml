@@ -80,7 +80,11 @@ jobs:
           working-directory: server
           args: ./...
       - name: Unit tests (DB-free packages)
-        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
+        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./internal/handler/http ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
+      # handler 包的 409/422 映射是平台确认/套餐错误契约的一部分，纯单测、无 DB；
+      # 单独 -run 两个契约测试，避免把整包可能依赖 DB 的用例带进 DB-free 步骤。
+      - name: Handler error mapping tests
+        run: cd server && go test ./internal/handler/http -run 'TestWriteConfirmOrderErrorMapsCreditReason|TestWritePlanErrorSharedAndEntrySpecificMappings' -count=1
 
   migrate:
     name: 数据库迁移（干净库）

@@ -237,7 +237,7 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderRequest, opera
 		if createErr == nil {
 			break
 		}
-		if !repository.IsDuplicateKeyFor(createErr, "order_no") {
+		if !repository.IsDuplicateKeyFor(createErr, repository.OrderNoUniqueKey) {
 			return nil, createErr
 		}
 		// 失败的一次插入可能已被 GORM 回填主键与时间戳；重试前清零，
@@ -786,7 +786,9 @@ func (s *OrderService) invalidate(ctx context.Context, kgID uint64) {
 const orderNoMaxAttempts = 3
 
 // newOrderNo 当前订单号生成器；测试通过替换它精确构造撞号场景，
-// 生产路径永远使用 defaultNewOrderNo。
+// 生产路径永远使用 defaultNewOrderNo。刻意保留为包级变量而非构造依赖：
+// 生产只有建单一条调用路径，注入到 OrderService 只会扩大 Wire 装配面；
+// 测试用完必须恢复原值（t.Cleanup），避免污染同包其他用例。
 var newOrderNo = defaultNewOrderNo
 
 // defaultNewOrderNo 生成订单号：ORD + yyyyMMddHHmmss + 9 位纳秒 + 4 位随机数（共 30 字符，

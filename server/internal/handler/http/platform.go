@@ -288,17 +288,13 @@ func (h *Handler) PlatformCreatePlan(c *gin.Context) {
 
 // writePlanCreateError 是新建套餐错误的唯一映射出口。
 func writePlanCreateError(c *gin.Context, err error) {
-	switch {
-	case err.Error() == "PLAN_CODE_EXISTS":
-		response.ErrConflict(c, "套餐编码已存在")
-	case errors.Is(err, service.ErrPlanPriceNotPositive):
-		response.ErrValidation(c, "套餐价格必须大于 0")
-	case strings.HasPrefix(err.Error(), "UNKNOWN_MODULE") || strings.HasPrefix(err.Error(), "PLAN_") ||
-		strings.HasPrefix(err.Error(), "INVALID_"):
-		response.ErrValidation(c, "套餐参数不合法")
-	default:
-		response.ErrInternal(c, "创建套餐失败")
-	}
+	writePlanError(c, err, planErrorPolicy{
+		codeExistsConflict: true,
+		// 创建入口把 PLAN_* 参数校验错误（编码/名称必填等）也收敛为 422；
+		// 与拆分前一致：PLAN_NOT_FOUND 在创建路径同样落到「参数不合法」。
+		extraInvalidPrefix: "PLAN_",
+		fallback:           "创建套餐失败",
+	})
 }
 
 func (h *Handler) PlatformUpdatePlan(c *gin.Context) {
@@ -321,15 +317,41 @@ func (h *Handler) PlatformUpdatePlan(c *gin.Context) {
 
 // writePlanUpdateError 是修改套餐错误的唯一映射出口。
 func writePlanUpdateError(c *gin.Context, err error) {
+	writePlanError(c, err, planErrorPolicy{
+		notFound: true,
+		fallback: "更新套餐失败",
+	})
+}
+
+// planErrorPolicy 描述创建/更新两个入口的错误映射差异；其余分支完全一致。
+// 刻意保留各自的差异（例如 PLAN_CODE_EXISTS 在更新入口仍落到通用 500），
+// 本次只做去重，不改变任何已发布行为。
+type planErrorPolicy struct {
+	// notFound 为真时把 PLAN_NOT_FOUND 映射成 404（仅更新入口有「不存在」语义）。
+	notFound bool
+	// codeExistsConflict 为真时把 PLAN_CODE_EXISTS 映射成 409（仅创建入口会返回）。
+	codeExistsConflict bool
+	// extraInvalidPrefix 是入口特有的「参数不合法」错误前缀。
+	extraInvalidPrefix string
+	// fallback 是未识别错误的通用文案，两个入口各自不同。
+	fallback string
+}
+
+// writePlanError 是套餐创建/更新共用的错误映射出口，避免两个 switch 各自漂移。
+func writePlanError(c *gin.Context, err error, policy planErrorPolicy) {
+	msg := err.Error()
 	switch {
-	case err.Error() == "PLAN_NOT_FOUND":
+	case policy.notFound && msg == "PLAN_NOT_FOUND":
 		response.ErrNotFound(c, "套餐不存在")
+	case policy.codeExistsConflict && msg == "PLAN_CODE_EXISTS":
+		response.ErrConflict(c, "套餐编码已存在")
 	case errors.Is(err, service.ErrPlanPriceNotPositive):
 		response.ErrValidation(c, "套餐价格必须大于 0")
-	case strings.HasPrefix(err.Error(), "UNKNOWN_MODULE"), strings.HasPrefix(err.Error(), "INVALID_"):
+	case strings.HasPrefix(msg, "UNKNOWN_MODULE"), strings.HasPrefix(msg, "INVALID_"),
+		policy.extraInvalidPrefix != "" && strings.HasPrefix(msg, policy.extraInvalidPrefix):
 		response.ErrValidation(c, "套餐参数不合法")
 	default:
-		response.ErrInternal(c, "更新套餐失败")
+		response.ErrInternal(c, policy.fallback)
 	}
 }
 

@@ -84,6 +84,12 @@ async function goNext() {
       await auth.fetchProfile()
     } catch (e: unknown) {
       if ((e as { status?: number }).status === 401) return
+      // 非 401 是网络/服务端故障：store 仍无 user，无法判断是否需强制改密。
+      // 不能静默当作已加载——记录日志并显式告警；放行后服务端 40303 仍是
+      // 强制改密的最终裁决（useHttp 会把 40303 引导到改密页）。
+      console.error('[consent] 读取用户资料失败，按未强制改密继续', e)
+      error.value = '暂时无法确认账号状态，如被引导改密请按提示操作'
+      ElMessage.warning(error.value)
     }
   }
   await navigateTo(
