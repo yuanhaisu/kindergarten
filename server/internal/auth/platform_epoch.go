@@ -20,6 +20,7 @@ const (
 // PlatformEpochTTLFor 按会话配置推导 epoch 键的 TTL（design D5：
 // refresh TTL + access TTL + 1 天）。必须始终长于续期凭证，否则调大
 // refresh_ttl_day 后 epoch 会先过期，旧续期凭证复活。
+// 两个信任域的会话生命周期相同，园所 epoch 也复用本公式。
 func PlatformEpochTTLFor(refreshTTL, accessTTL time.Duration) time.Duration {
 	if refreshTTL <= 0 {
 		refreshTTL = defaultPlatformRefreshTTL
@@ -79,6 +80,7 @@ func (s *redisPlatformEpochStore) BumpPlatformEpoch(ctx context.Context, adminID
 	if adminID == "" {
 		return errors.New("platform epoch: empty admin id")
 	}
-	// 秒级精度与 JWT iat 对齐：中间件只比较「签发时间是否早于 epoch」。
+	// 秒级精度与 JWT iat 对齐：中间件只比较「签发时间是否严格早于 epoch」，
+	// 所以 iat == epoch 的凭证仍被放行，同秒失效存在不到 1 秒的窗口。
 	return s.rdb.Set(ctx, platformEpochKeyPrefix+adminID, at.Unix(), s.ttl).Err()
 }

@@ -46,11 +46,14 @@ type PlatformService struct {
 	kgStatus      *KindergartenStatusService
 	entry         *KindergartenEntryService
 	epochs        auth.PlatformEpochStore
-	revoker       auth.TokenRevoker
-	rdb           *redis.Client
-	secret        []byte
-	atTTL         time.Duration
-	rtTTL         time.Duration
+	// tenantEpochs 是园所账号（园长）的会话失效存储。开通复用既有账号会覆盖
+	// password_hash，等同凭据重置，必须同步推进它（#196）。
+	tenantEpochs auth.TenantEpochStore
+	revoker      auth.TokenRevoker
+	rdb          *redis.Client
+	secret       []byte
+	atTTL        time.Duration
+	rtTTL        time.Duration
 }
 
 func NewPlatformService(
@@ -81,7 +84,8 @@ func NewPlatformService(
 		userRepo: userRepo, userRoleRepo: userRoleRepo, adminRoleRepo: adminRoleRepo,
 		paymentRepo: paymentRepo, commRepo: commRepo, distRepo: distRepo,
 		logRepo: logRepo, dietSeed: dietSeed, kgStatus: kgStatus, entry: entry, epochs: epochs,
-		revoker: revoker, rdb: rdb, secret: secret, atTTL: atTTL, rtTTL: rtTTL,
+		tenantEpochs: auth.NewTenantEpochStore(rdb, auth.PlatformEpochTTLFor(rtTTL, atTTL)),
+		revoker:      revoker, rdb: rdb, secret: secret, atTTL: atTTL, rtTTL: rtTTL,
 	}
 }
 
@@ -293,6 +297,7 @@ type OnboardResult struct {
 //
 // 园长账号按手机号解析（FindOrCreateByPhone）：既有家长/老师账号直接复用，
 // 只补 admin 角色与管理端口令，昵称/头像/性别与各端档案保持原样。
+// 复用会覆盖口令，因此旧 access/refresh 会立即失效（园所账号 epoch，见 #196）。
 // 已在任一园所担任 admin 的手机号会被拒绝（一手机号一 admin，v1）。
 func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, operator, ip string) (*OnboardResult, error) {
 	if err := validatePhone(req.Phone); err != nil {
@@ -337,8 +342,17 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 		}
 
 		// 复用路径只重置管理端口令并打首登改密标记；其余资料字段一个都不碰。
+		// 覆盖既有口令等同凭据重置（#196）：必须先推进园所账号 epoch，使改密前
+		// 签发的 access/refresh 立即失效。Redis 写入不参与 DB 事务回滚——若后续
+		// 步骤失败，该账号会被登出，这是失败方向正确的代价（fail closed）。
 		fields := map[string]any{"must_change_password": true}
 		if !created {
+			if s.tenantEpochs == nil {
+				return fmt.Errorf("%w: 园所账号失效存储未配置", ErrAuthStorageUnavailable)
+			}
+			if err := s.tenantEpochs.BumpTenantEpoch(ctx, fmt.Sprintf("%d", user.ID), time.Now()); err != nil {
+				return fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
+			}
 			fields["password_hash"] = hash
 		}
 		if err := userRepo.UpdateFields(ctx, user.ID, fields); err != nil {
@@ -396,9 +410,13 @@ func (s *PlatformService) Onboard(ctx context.Context, req OnboardRequest, opera
 			return err
 		}
 		// 开通园所属于强一致清单（design D6）：审计失败时园所、园长与授权一并回滚。
+		detail := fmt.Sprintf("开通园所：%s", req.Name)
+		if !created {
+			detail += "（复用既有账号，已重置口令并使其旧会话失效）"
+		}
 		return s.logRepo.CreateTx(ctx, tx, &domain.PlatformOperationLog{
 			Operator: operator, Module: "kindergarten", Action: "onboard", TargetType: "kindergarten",
-			TargetID: kg.ID, KindergartenID: kg.ID, Detail: fmt.Sprintf("开通园所：%s", req.Name), IP: ip,
+			TargetID: kg.ID, KindergartenID: kg.ID, Detail: detail, IP: ip,
 		})
 	}); err != nil {
 		return nil, err

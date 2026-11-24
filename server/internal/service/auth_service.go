@@ -117,7 +117,7 @@ func NewAuthService(
 		kindergartens:     kindergartens,
 		rdb:               rdb,
 		revoker:           auth.NewTokenRevoker(rdb),
-		tenantEpochs:      auth.NewTenantEpochStore(rdb, auth.TenantEpochTTLFor(rtTTL, atTTL)),
+		tenantEpochs:      auth.NewTenantEpochStore(rdb, auth.PlatformEpochTTLFor(rtTTL, atTTL)),
 		secret:            secret,
 		atTTL:             atTTL,
 		rtTTL:             rtTTL,
@@ -1000,6 +1000,10 @@ func (s *AuthService) TenantEpochStore() auth.TenantEpochStore {
 
 // bumpTenantEpoch 推进账号级失效水位（#182）。改密 / 重置 / 删除管理员都必须
 // 先成功推进它再改库；写失败由调用方上抛，最终映射成 503（失败关闭）。
+//
+// epoch 写 Redis、不参与调用方的事务：若其后改库失败，账号会被多登出一次，
+// 而口令/角色未变。这个方向只会让用户重新登录，不会留下「凭据已换、旧会话
+// 仍有效」的窗口，因此可接受，也无需补偿写。
 func (s *AuthService) bumpTenantEpoch(ctx context.Context, userID uint64) error {
 	if s.tenantEpochs == nil {
 		return fmt.Errorf("tenant epoch store not configured")
@@ -1010,6 +1014,14 @@ func (s *AuthService) bumpTenantEpoch(ctx context.Context, userID uint64) error 
 // ensureTenantEpochCurrent 校验续期凭证签发于账号级失效水位之后（#182）。
 // 旧载荷 IssuedAt=0 在没有任何 epoch 时仍按原行为可用；一旦账号被改密/重置/
 // 删除，epoch 必然晚于 1970，旧载荷随之失效。存储故障失败关闭。
+//
+// 比较是「严格早于」：epoch 为秒级精度（与 JWT iat 对齐），iat == epoch 的凭证
+// 仍放行，失效动作与签发落在同一秒时旧凭证最多还能再用不到 1 秒。
+//
+// 调用点（Refresh / SwitchKindergarten）都先 GETDEL 消费 refresh 再到这里校验，
+// 所以一旦 epoch 读失败或判定失效，这次 refresh 已被烧掉：重试同一个 refresh
+// 只会得到 401，客户端必须重新登录。这是有意的失败关闭——不允许校验不过的
+// refresh 重放。
 func (s *AuthService) ensureTenantEpochCurrent(ctx context.Context, userID uint64, issuedAt int64) error {
 	if s.tenantEpochs == nil {
 		return fmt.Errorf("%w: tenant epoch store not configured", ErrAuthStorageUnavailable)

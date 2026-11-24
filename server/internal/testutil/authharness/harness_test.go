@@ -34,7 +34,9 @@ func TestHarnessFailsClosedWhenMySQLUnavailable(t *testing.T) {
 	exampleConfig, err := filepath.Abs(filepath.Join("..", "..", "..", "configs", "app.ini.example"))
 	require.NoError(t, err)
 	// 127.0.0.1:1 上没有 MySQL：连接会被立即拒绝，比等 2 分钟 ping 超时快。
-	unreachableDSN := "root:root@tcp(127.0.0.1:1)/kindergarten_authharness_probe?charset=utf8mb4&parseTime=True&loc=Local"
+	// 库名必须带 test 标记：显式 DSN 先过 testdb.Guard，否则会在护栏处失败，
+	// 测不到「缺库 → skip / fail-closed」这条路径。
+	unreachableDSN := "root:root@tcp(127.0.0.1:1)/kindergarten_test_probe?charset=utf8mb4&parseTime=True&loc=Local"
 
 	runChild := func(requireDB bool) (string, error) {
 		cmd := exec.Command(os.Args[0],

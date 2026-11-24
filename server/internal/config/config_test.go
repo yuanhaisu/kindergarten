@@ -318,7 +318,7 @@ func TestJWTConfigValidateAuthSecrets(t *testing.T) {
 // Load 必须读出 [jwt] platform_secret；缺键时保持空串（由启动校验决定是否可用），
 // 不能在加载阶段自行编造或回填成园所密钥。
 func TestLoadPlatformJWTSecret(t *testing.T) {
-	t.Setenv("JWT_SECRET", "")          // 避免宿主机环境变量覆盖测试输入
+	t.Setenv("JWT_SECRET", "") // 避免宿主机环境变量覆盖测试输入
 	t.Setenv("JWT_PLATFORM_SECRET", "")
 	path := filepath.Join(t.TempDir(), "app.ini")
 	content := "[jwt]\nsecret = tenant-secret\nplatform_secret = platform-secret\n"
