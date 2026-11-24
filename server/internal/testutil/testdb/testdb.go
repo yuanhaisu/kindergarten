@@ -8,6 +8,8 @@
 //     各写各的库，避免整表清理类用例互相踩踏。
 //   - 失败关闭：显式 DSN 无法确认是测试库、或与开发库同名时直接失败，
 //     报错只打印脱敏后的 host:port/db，绝不回显账号口令。
+//   - 门禁开关：设置 KDG_TEST_REQUIRE_MYSQL 后，「没有可用测试库」从跳过改为失败，
+//     CI 不会因为漏配 DSN 而把整个包静默记为通过。
 //   - 兼容现状：未设置 KDG_TEST_MYSQL_DSN 时保持现有本地行为（连 configs/app.ini
 //     的开发库）；开发库回退由后续票（#208）移除。
 //
@@ -16,6 +18,8 @@ package testdb
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 
 	mysqldrv "github.com/go-sql-driver/mysql"
@@ -24,6 +28,25 @@ import (
 // TestDSNEnv 显式指定测试库的 DSN。设置后测试只连由它派生的包级测试库；
 // 未设置时保持现有本地行为（连 configs/app.ini 的开发库）。
 const TestDSNEnv = "KDG_TEST_MYSQL_DSN"
+
+// RequireDBEnv 设为真值时，测试库不可用直接失败而不是跳过。CI 必须显式设置：
+// 缺 MySQL 或漏配 DSN 时让门禁变红，而不是把「没跑」当成「通过」。
+const RequireDBEnv = "KDG_TEST_REQUIRE_MYSQL"
+
+// RequireMySQL 读取 RequireDBEnv。值写错时按「要求」处理：宁可失败关闭，
+// 也不能因为拼错开关而静默跳过。authharness 复用同一判定，避免两套 helper
+// 对同一个开关给出不同答案。
+func RequireMySQL() bool {
+	v := strings.TrimSpace(os.Getenv(RequireDBEnv))
+	if v == "" {
+		return false
+	}
+	required, err := strconv.ParseBool(v)
+	if err != nil {
+		return true
+	}
+	return required
+}
 
 // UnparseableTarget 是无法解析成 tcp host:port/db 时的固定兜底文案。
 // 固定文案而不是回显原文，是为了杜绝对畸形 DSN 的凭据泄漏。

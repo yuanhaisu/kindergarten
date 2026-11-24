@@ -1,8 +1,10 @@
 package authharness_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -57,15 +59,20 @@ func findAdminAudit(t *testing.T, h *authharness.Harness, targetID uint64, actio
 // 本身也会失败关闭（否则会被 revoker 的同类错误掩盖）。
 func signLegacyAccess(t *testing.T, secret []byte, userID, kindergartenID uint64) string {
 	t.Helper()
-	now := time.Now()
+	return signLegacyAccessAt(t, secret, userID, kindergartenID, time.Now())
+}
+
+// signLegacyAccessAt 显式指定 iat，用来精确验证 epoch 的秒级比较边界。
+func signLegacyAccessAt(t *testing.T, secret []byte, userID, kindergartenID uint64, issuedAt time.Time) string {
+	t.Helper()
 	claims := auth.AccessClaims{
 		UserID:         fmt.Sprintf("%d", userID),
 		Roles:          []string{"admin"},
 		KindergartenID: kindergartenID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(issuedAt.Add(2 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(issuedAt),
+			NotBefore: jwt.NewNumericDate(issuedAt),
 			Issuer:    "kindergarten-api",
 			Subject:   fmt.Sprintf("%d", userID),
 		},
@@ -73,6 +80,28 @@ func signLegacyAccess(t *testing.T, secret []byte, userID, kindergartenID uint64
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
 	require.NoError(t, err)
 	return token
+}
+
+// epoch 与 JWT iat 都是秒级精度，比较用「严格早于」：iat == epoch 的凭证
+// 按设计放行，iat 早一秒即拒绝。用构造的 iat 固定边界，不依赖 sleep 抢秒。
+func TestAuthJWTTenantEpochIsSecondPrecise(t *testing.T) {
+	h := authharness.New(t)
+	kg := seedKindergarten(t, h, "epoch 秒级边界园")
+	phone := uniquePhone()
+	user := createAdminUser(t, h, phone, "Password@123", kg)
+	store := auth.NewTenantEpochStore(h.RedisClient, auth.PlatformEpochTTLFor(0, 0))
+	bump := func(at time.Time) {
+		t.Helper()
+		require.NoError(t, store.BumpTenantEpoch(context.Background(), strconv.FormatUint(user.ID, 10), at))
+	}
+
+	issuedAt := time.Now().Add(-time.Minute).Truncate(time.Second)
+	bump(issuedAt)
+	token := signLegacyAccessAt(t, h.Secret, user.ID, kg.ID, issuedAt)
+	assertProtectedStatus(t, h, token, http.StatusOK, "iat == epoch 的凭证按设计放行")
+
+	bump(issuedAt.Add(time.Second))
+	assertProtectedStatus(t, h, token, http.StatusUnauthorized, "iat 早于 epoch 一秒即必须拒绝")
 }
 
 func TestChangePasswordInvalidatesExistingSessions(t *testing.T) {

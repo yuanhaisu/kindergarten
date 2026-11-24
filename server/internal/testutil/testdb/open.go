@@ -43,6 +43,7 @@ type Info struct {
 //   - 设置了 KDG_TEST_MYSQL_DSN：校验后派生「分支 + 测试包」隔离的测试库并执行
 //     goose 迁移；不会连接开发库。
 //   - 未设置：保持现有本地行为，直接连接配置里的开发库；配置缺失时跳过测试。
+//   - 设置 KDG_TEST_REQUIRE_MYSQL 后，跳过改为失败（CI 用，缺库不得静默变绿）。
 //
 // 本函数不会删除任何数据库；调用方必须在 Cleanup 里硬删自己写入的行。
 func Open(t testing.TB) *gorm.DB {
@@ -55,6 +56,9 @@ func OpenInfo(t testing.TB) Info {
 	t.Helper()
 	s := sharedSetup()
 	if s.skipReason != "" {
+		if RequireMySQL() {
+			t.Fatalf("testdb: %s（%s 已设置，缺库必须失败而不是跳过）", s.skipReason, RequireDBEnv)
+		}
 		t.Skipf("testdb: %s", s.skipReason)
 	}
 	if s.err != nil {
@@ -109,7 +113,13 @@ func initSetup() *setup {
 
 	if explicit == "" {
 		if !configFound || devDSN == "" {
-			s.skipReason = fmt.Sprintf("未设置 %s，且未找到可用的 configs/app.ini；DB 测试需要其中之一", TestDSNEnv)
+			reason := fmt.Sprintf("未设置 %s，且未找到可用的 configs/app.ini；DB 测试需要其中之一", TestDSNEnv)
+			if RequireMySQL() {
+				// CI 要求必须真连库：缺库时 Fatal，避免整个包静默跳过。
+				s.err = fmt.Errorf("%s（%s 已设置，缺库必须失败而不是跳过）", reason, RequireDBEnv)
+				return s
+			}
+			s.skipReason = reason
 			return s
 		}
 		cfg, err := mysqldrv.ParseDSN(devDSN)

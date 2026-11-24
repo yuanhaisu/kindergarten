@@ -32,20 +32,22 @@ t.Log(info.Target)      // 127.0.0.1:3316/kindergarten_test_ab12cd34（已脱敏
 | 变量 | 作用 |
 | --- | --- |
 | `KDG_TEST_MYSQL_DSN` | 显式测试 MySQL DSN，例如 `user:pass@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True` |
+| `KDG_TEST_REQUIRE_MYSQL` | 设为真值时，「没有任何可用测试库」从 `t.Skip` 改为 `t.Fatalf`。CI 必须设置；值写错也按「要求」处理（失败关闭） |
 | `CONFIG_PATH` | 配置文件路径；不设时按仓库根目录找 `configs/app.ini`、`configs/app.local.ini`。开发库 DSN 只用于护栏比对与无 DSN 时的本地回退 |
 
 **不要**把真实 DSN 提交到仓库、写进文档或贴进工单；只在本地 shell / CI secret 里设置。
 
 ## 行为矩阵
 
-| `KDG_TEST_MYSQL_DSN` | 配置文件 | 行为 |
-| --- | --- | --- |
-| 已设置 | 有 | 校验 DSN → 派生包级测试库 → 执行 goose 迁移；**不连接开发库** |
-| 已设置 | 无 | 校验 DSN（只能靠库名含 `test` 判定）→ 派生测试库 → 迁移 |
-| 未设置 | 有 | 保持现有本地行为：直接连接配置里的开发库，不建库、不迁移 |
-| 未设置 | 无 | `t.Skip`（与现有“本地无 DB 配置就跳过”一致） |
+| `KDG_TEST_MYSQL_DSN` | 配置文件 | `KDG_TEST_REQUIRE_MYSQL` | 行为 |
+| --- | --- | --- | --- |
+| 已设置 | 有 | — | 校验 DSN → 派生包级测试库 → 执行 goose 迁移；**不连接开发库** |
+| 已设置 | 无 | — | 校验 DSN（只能靠库名含 `test` 判定）→ 派生测试库 → 迁移 |
+| 未设置 | 有 | — | 保持现有本地行为：直接连接配置里的开发库，不建库、不迁移 |
+| 未设置 | 无 | 未设置/假值 | `t.Skip`（本地无 DB 也能开发） |
+| 未设置 | 无 | 真值 | `t.Fatalf`（CI 门禁：缺库不得静默变绿） |
 
-第一行是 CI 的目标形态；第四行是本地无 MySQL 时的现状。**未设置时连接开发库
+第一行是 CI 的目标形态；最后一行是 CI 必须命中的形态。**未设置时连接开发库
 是待移除的过渡行为（#208 收口），新测试不要依赖它写真实数据。**
 
 ## 护栏规则（失败关闭）
@@ -74,6 +76,8 @@ t.Log(info.Target)      // 127.0.0.1:3316/kindergarten_test_ab12cd34（已脱敏
 ## 与 authharness 的关系
 
 `internal/testutil/authharness` 是认证 HTTP 单缝，自带一套测试库装配（它还需要
-配置里的 JWT/Casbin 参数）。本包面向 service/repository 测试，护栏更严格
-（库名必须含 `test`）。两者当前各自独立；把 authharness 也切到本包属于后续
-收口，不在 #207 范围。
+配置里的 JWT/Casbin 参数）。两者的**环境变量名与显式 DSN 护栏共用同一实现**：
+`KDG_TEST_REQUIRE_MYSQL` 的解析走 `testdb.RequireMySQL()`，显式 DSN 走
+`testdb.Guard`（含库名必须含 `test` 的规则），不会出现「同一个 DSN 在一个
+helper 里被拒、在另一个里被放行」。authharness 仍保留自己的派生库命名与迁移
+装配，把整段装配切到本包属于后续收口，不在 #207 范围。

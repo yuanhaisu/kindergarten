@@ -8,11 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 )
@@ -22,6 +25,10 @@ var ErrInvalidOptions = errors.New("参数不完整")
 
 // ErrKindergartenNotFound 目标园所不存在或已软删除。
 var ErrKindergartenNotFound = errors.New("园所不存在")
+
+// ErrEpochUnavailable 园所账号失效存储不可用。复用既有账号会覆盖口令，
+// 等同凭据重置，必须同步让旧会话失效；写不了失效记录就不允许继续。
+var ErrEpochUnavailable = errors.New("认证存储不可用")
 
 // Options 一次供给请求。Password 只用于计算哈希，不会出现在 Result 里。
 type Options struct {
@@ -37,6 +44,8 @@ type Result struct {
 	KindergartenID uint64
 	UserCreated    bool
 	RoleCreated    bool
+	// PasswordReset 表示目标账号此前已存在，本次口令被覆盖（凭据重置）。
+	PasswordReset bool
 }
 
 // Summary 供命令层原样打印。刻意不含口令：运维日志会留档。
@@ -44,6 +53,8 @@ func (r Result) Summary() string {
 	userAction := "已更新"
 	if r.UserCreated {
 		userAction = "已创建"
+	} else if r.PasswordReset {
+		userAction = "已更新并重置口令（旧会话已失效）"
 	}
 	roleAction := "已更新"
 	if r.RoleCreated {
@@ -63,7 +74,11 @@ func (r Result) Summary() string {
 //     其余按模型软删除语义置 deleted_at，不物理删历史数据。
 //
 // 园所查询走 GORM 默认作用域，已软删除的园所视为不存在。
-func EnsureTenantAdmin(ctx context.Context, db *gorm.DB, opts Options) (Result, error) {
+//
+// epochs 用于复用既有账号时推进园所账号失效时间（口令被覆盖等同凭据重置，
+// 旧 access/refresh 必须一并失效）。注意 epoch 写 Redis、不参与 MySQL 事务回滚：
+// 若其后事务失败，账号会被登出但口令未变——失败方向是「多登出一次」，可接受。
+func EnsureTenantAdmin(ctx context.Context, db *gorm.DB, opts Options, epochs auth.TenantEpochStore) (Result, error) {
 	if strings.TrimSpace(opts.Phone) == "" {
 		return Result{}, fmt.Errorf("%w: 手机号不能为空", ErrInvalidOptions)
 	}
@@ -86,12 +101,13 @@ func EnsureTenantAdmin(ctx context.Context, db *gorm.DB, opts Options) (Result, 
 
 	res := Result{Phone: opts.Phone, KindergartenID: opts.KindergartenID}
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		user, created, err := upsertUser(ctx, tx, opts.Phone, string(hash))
+		user, created, reset, err := upsertUser(ctx, tx, opts.Phone, string(hash), epochs)
 		if err != nil {
 			return err
 		}
 		res.UserID = user.ID
 		res.UserCreated = created
+		res.PasswordReset = reset
 
 		role, roleCreated, err := upsertAdminRole(tx, user.ID, kg)
 		if err != nil {
@@ -124,25 +140,34 @@ func findKindergarten(ctx context.Context, db *gorm.DB, id uint64) (*domain.Kind
 	return &kg, nil
 }
 
-// upsertUser 按手机号找用户：不存在则建，存在则只重置口令。
+// upsertUser 按手机号找用户：不存在则建，存在则推进园所账号 epoch 再重置口令。
 // 复用 #164 的统一解析入口（active 手机号唯一），避免 setadmin 与 Onboard
 // 出现两套建号口径；不改昵称等资料，避免覆盖已有账号的展示信息。
-func upsertUser(ctx context.Context, tx *gorm.DB, phone, passwordHash string) (*domain.User, bool, error) {
+//
+// 返回值第三项表示是否发生了口令重置（即复用既有账号）。epoch 必须先于
+// 口令覆盖写入：写失败就整个供给失败，不给「口令已换、旧会话仍有效」留窗口。
+func upsertUser(ctx context.Context, tx *gorm.DB, phone, passwordHash string, epochs auth.TenantEpochStore) (*domain.User, bool, bool, error) {
 	repo := repository.NewUserRepo(tx)
 	user, created, err := repo.FindOrCreateByPhone(ctx, phone, repository.UserProfileDefaults{
 		Nickname:     "admin",
 		PasswordHash: passwordHash,
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("解析用户失败: %w", err)
+		return nil, false, false, fmt.Errorf("解析用户失败: %w", err)
 	}
 	if created {
-		return user, true, nil
+		return user, true, false, nil
+	}
+	if epochs == nil {
+		return nil, false, false, fmt.Errorf("%w: 园所账号失效存储未配置", ErrEpochUnavailable)
+	}
+	if err := epochs.BumpTenantEpoch(ctx, strconv.FormatUint(user.ID, 10), time.Now()); err != nil {
+		return nil, false, false, fmt.Errorf("%w: %v", ErrEpochUnavailable, err)
 	}
 	if err := repo.UpdateFields(ctx, user.ID, map[string]any{"password_hash": passwordHash}); err != nil {
-		return nil, false, fmt.Errorf("更新口令失败: %w", err)
+		return nil, false, false, fmt.Errorf("更新口令失败: %w", err)
 	}
-	return user, false, nil
+	return user, false, true, nil
 }
 
 // upsertAdminRole 按 user_id + role 找管理员角色，绑定到 kg。

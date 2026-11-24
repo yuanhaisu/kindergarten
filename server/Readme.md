@@ -194,7 +194,9 @@ KDG_TEST_MYSQL_DSN='user:pass@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8
 ```
 
 - 设置 `KDG_TEST_MYSQL_DSN` 时，helper 会派生「分支 + 测试包」隔离的测试库并自动执行 goose 迁移，不改动开发库；
-- 不设置时保持原有本地行为（读 `configs/app.ini`），无配置则跳过；
+- 不设置时保持原有本地行为（读 `configs/app.ini`），无配置则跳过；设置
+  `KDG_TEST_REQUIRE_MYSQL=1` 后跳过改为失败（CI 用，缺库不得静默变绿；上面的
+  service 批次命令依赖这一点）；
 - 源码、行为矩阵与护栏规则见 [`internal/testutil/testdb/README.md`](internal/testutil/testdb/README.md)。
 
 ## API 概览

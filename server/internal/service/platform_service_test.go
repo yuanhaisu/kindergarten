@@ -32,9 +32,17 @@ func newPlatformTestService(t *testing.T, db *gorm.DB) *PlatformService {
 
 func newPlatformTestServiceWithEntry(t *testing.T, db *gorm.DB, entry *KindergartenEntryService) *PlatformService {
 	t.Helper()
+	svc, _ := newPlatformTestServiceWithRedis(t, db, entry)
+	return svc
+}
+
+// newPlatformTestServiceWithRedis 额外交出 fake Redis，供断言会话失效记录
+// （tenant epoch）或注入 Redis 写入故障。
+func newPlatformTestServiceWithRedis(t *testing.T, db *gorm.DB, entry *KindergartenEntryService) (*PlatformService, *fakeredis.Server) {
+	t.Helper()
 	f := fakeredis.New(t)
 	rdb := f.Client(t)
-	return NewPlatformService(
+	svc := NewPlatformService(
 		db,
 		repository.NewPlatformAdminRepo(db),
 		repository.NewKindergartenRepo(db),
@@ -57,6 +65,7 @@ func newPlatformTestServiceWithEntry(t *testing.T, db *gorm.DB, entry *Kindergar
 		time.Hour,
 		7*24*time.Hour,
 	)
+	return svc, f
 }
 
 // 授权查询失败不得被静默吞掉：否则园所列表会把整页的 soonest_expire_at

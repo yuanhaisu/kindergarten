@@ -1,8 +1,12 @@
 package authharness_test
 
 import (
+	"context"
+	"fmt"
+	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -280,4 +284,47 @@ func TestSwitchRequiresKindergartenAndRefresh(t *testing.T) {
 		"refresh_token":   login.RefreshToken,
 	})
 	require.Equal(t, 422, resp.Status, string(resp.Body))
+}
+
+// #182 × #169：切园所与其它受保护接口一样受园所账号 epoch 约束。
+// epoch 推进后，切换前签发的 access 与 refresh 都必须拒绝；重新登录后
+// 切换能力恢复，且新会话仍然只落在目标园。
+func TestSwitchKindergartenRejectsPreEpochSession(t *testing.T) {
+	h := authharness.New(t)
+	appID := uniqueAppID("switch-epoch")
+	seedSharedClient(t, h, appID, domain.ClientRoleParent)
+
+	kgA := seedKindergartenWithChannel(t, h, "epoch 甲园", domain.AppChannelShared)
+	kgB := seedKindergartenWithChannel(t, h, "epoch 乙园", domain.AppChannelShared)
+	openID := uniqueOpenID("switch-epoch")
+	user := seedMember(t, h, appID, openID,
+		memberRole{role: domain.ClientRoleParent, kg: kgA},
+		memberRole{role: domain.ClientRoleParent, kg: kgB},
+	)
+
+	login := loginWithClient(t, h, appID, openID)
+
+	// epoch 是秒级精度：失效动作必须落在签发 token 之后的时钟秒。
+	waitNextClockSecond(t)
+	require.NoError(t, auth.NewTenantEpochStore(h.Redis.Client(t), auth.PlatformEpochTTLFor(0, 0)).
+		BumpTenantEpoch(context.Background(), fmt.Sprintf("%d", user.ID), time.Now()))
+
+	stale := switchRequest(t, h, login.Token, kgB.ID, login.RefreshToken)
+	assert.Equal(t, http.StatusUnauthorized, stale.Status,
+		"epoch 之后的旧 access 不得发起切换：%s", stale.Body)
+
+	profile := h.Get(t, "/api/v1/common/user/profile", login.Token)
+	assert.Equal(t, http.StatusUnauthorized, profile.Status,
+		"epoch 之后的旧 access 不得访问受保护接口：%s", profile.Body)
+
+	replay := refreshRequest(t, h, login.RefreshToken)
+	assert.Equal(t, http.StatusUnauthorized, replay.Status,
+		"epoch 之前的旧 refresh 不得续期：%s", replay.Body)
+
+	fresh := loginWithClient(t, h, appID, openID)
+	switched := switchOK(t, h, fresh.Token, kgB.ID, fresh.RefreshToken)
+	claims, err := auth.ParseAccess(h.Secret, switched.Token)
+	require.NoError(t, err)
+	assert.Equal(t, kgB.ID, claims.KindergartenID, "重新登录后仍应能切换到目标园")
+	assert.Equal(t, appID, claims.AppID)
 }
