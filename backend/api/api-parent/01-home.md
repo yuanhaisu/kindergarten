@@ -144,6 +144,7 @@
         "title": "周末作业通知",
         "content_preview": "各位家长您好，本周作业如下...",
         "need_confirm": true,
+        "confirm_deadline": "2026-03-20T18:00:00Z",
         "is_read": false,
         "is_confirmed": false
       },
@@ -155,3 +156,5 @@
   "page_size": 10
 }
 ```
+
+> `confirm_deadline` 仅 `need_confirm=true` 时有值；截止后确认返回 409，详见 `02-notice.md`。
