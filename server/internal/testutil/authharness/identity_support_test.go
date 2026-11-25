@@ -470,7 +470,7 @@ func TestPlatformSupportSeesAllMembershipsAndAuditsSeparately(t *testing.T) {
 	target := seedParentAccount(t, h, phone, kgA, kgB)
 	identity := seedIdentityFor(t, h, target.ID, appID, uniqueOpenID("platform-support"))
 
-	platformToken, err := auth.SignPlatformAccess(h.Secret, "plat-001", time.Hour)
+	platformToken, err := auth.SignPlatformAccess(h.PlatformSecret, "plat-001", time.Hour)
 	require.NoError(t, err)
 
 	viewPath := fmt.Sprintf("/api/v1/platform/users/%d/support", target.ID)
@@ -488,12 +488,27 @@ func TestPlatformSupportSeesAllMembershipsAndAuditsSeparately(t *testing.T) {
 	assert.ElementsMatch(t, []uint64{kgA.ID, kgB.ID}, keysOf(gotKG),
 		"平台支持必须看到目标用户的全部园所成员关系")
 
-	// 信任域隔离：园所 JWT 不能进平台接口，平台凭证也不能进园所管理接口。
+	// 信任域隔离（#183）：两个域使用不同的签名密钥，跨域凭证在验签阶段就被
+	// 拒绝（401），而不再是验签通过后靠 scope claim 判 403。scope 检查仍保留
+	// 作为纵深防御，见 middleware 的单元测试。
 	adminToken := adminSupportToken(t, h, kgA.ID)
-	require.Equal(t, http.StatusForbidden, h.Get(t, viewPath, adminToken).Status)
-	require.Equal(t, http.StatusForbidden, h.Do(t, http.MethodDelete,
+	require.Equal(t, http.StatusUnauthorized, h.Get(t, viewPath, adminToken).Status,
+		"园所 JWT 用平台密钥验签必须失败")
+	require.Equal(t, http.StatusUnauthorized, h.Do(t, http.MethodDelete,
 		fmt.Sprintf("/api/v1/admin/parents/%d/identities/%d", target.ID, identity.ID),
-		platformToken, nil).Status)
+		platformToken, nil).Status, "平台凭证用园所密钥验签必须失败")
+
+	// 验收要求的两个伪造方向：用另一域的密钥签发本域凭证，HTTP 边界必须拒绝。
+	forgedTenant, err := auth.SignAccess(h.PlatformSecret, fmt.Sprint(target.ID), []string{"parent"}, kgA.ID, time.Hour)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized,
+		h.Get(t, "/api/v1/common/user/profile", forgedTenant).Status,
+		"用平台密钥签发的园所凭证必须被园所接口拒绝")
+
+	forgedPlatform, err := auth.SignPlatformAccess(h.Secret, "plat-001", time.Hour)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, h.Get(t, viewPath, forgedPlatform).Status,
+		"用园所密钥签发的平台凭证必须被平台接口拒绝")
 
 	// 平台解绑身份，审计必须落 platform_operation_logs，而不是园所 operation_logs。
 	unbindResp := h.Do(t, http.MethodDelete,

@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/service"
+	"kindergarten-server/pkg/log"
 	"kindergarten-server/pkg/pagination"
 	"kindergarten-server/pkg/response"
 )
@@ -57,6 +59,14 @@ func (h *Handler) CreateAdmin(c *gin.Context) {
 	if err != nil {
 		if err.Error() == "NO_KINDERGARTEN" {
 			response.ErrForbidden(c, "未绑定园所，请重新登录")
+			return
+		}
+		if errors.Is(err, service.ErrAuthStorageUnavailable) {
+			// #182：复用既有账号时会覆盖其口令，epoch 推进失败必须整体失败，
+			// 不能留下「口令已改、旧会话仍可用」。
+			log.L(c.Request.Context()).Error("create admin: tenant epoch unavailable",
+				"kg_id", kgID, "err", err)
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
 			return
 		}
 		if service.IsAdminClientErr(err) {
@@ -145,6 +155,13 @@ func (h *Handler) DeleteAdmin(c *gin.Context) {
 			response.ErrBadRequest(c, 40045, "至少保留一名管理员")
 			return
 		}
+		if errors.Is(err, service.ErrAuthStorageUnavailable) {
+			// #182：epoch 推进失败时身份未被删除，旧会话仍然有效但请求失败关闭。
+			log.L(c.Request.Context()).Error("delete admin: tenant epoch unavailable",
+				"kg_id", kgID, "target", id, "err", err)
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
+			return
+		}
 		response.ErrInternal(c, "删除管理员失败")
 		return
 	}
@@ -180,6 +197,13 @@ func (h *Handler) ResetAdminPassword(c *gin.Context) {
 		}
 		if err.Error() == "WEAK_PASSWORD" {
 			response.ErrValidation(c, err.Error())
+			return
+		}
+		if errors.Is(err, service.ErrAuthStorageUnavailable) {
+			// #182：epoch 推进失败时口令未被重置，必须让调用方重试。
+			log.L(c.Request.Context()).Error("reset admin password: tenant epoch unavailable",
+				"kg_id", kgID, "target", id, "err", err)
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
 			return
 		}
 		response.ErrInternal(c, "重置密码失败")

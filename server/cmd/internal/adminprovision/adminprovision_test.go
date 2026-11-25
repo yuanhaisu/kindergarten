@@ -2,9 +2,12 @@ package adminprovision_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,6 +20,37 @@ import (
 	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 )
+
+// fakeEpochStore 记录供给流程推进过的园所账号 epoch，不依赖 Redis
+// （CI 的 migrate job 只提供 MySQL）。
+type fakeEpochStore struct {
+	bumps map[uint64]time.Time
+	err   error
+}
+
+func newFakeEpochStore() *fakeEpochStore {
+	return &fakeEpochStore{bumps: map[uint64]time.Time{}}
+}
+
+func (f *fakeEpochStore) TenantEpoch(_ context.Context, userID string) (time.Time, error) {
+	id, err := strconv.ParseUint(userID, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return f.bumps[id], nil
+}
+
+func (f *fakeEpochStore) BumpTenantEpoch(_ context.Context, userID string, at time.Time) error {
+	if f.err != nil {
+		return f.err
+	}
+	id, err := strconv.ParseUint(userID, 10, 64)
+	if err != nil {
+		return err
+	}
+	f.bumps[id] = at
+	return nil
+}
 
 // issue #56：setadmin 改为显式租户管理员供给。
 // 沿用 service 层 MySQL 集成测试的缝隙：读 configs/app.ini，无配置则跳过。
@@ -37,7 +71,10 @@ func openTestDB(t *testing.T) *gorm.DB {
 	if testDB != nil {
 		return testDB
 	}
-	cfgPath := filepath.Join("..", "..", "..", "configs", "app.ini")
+	cfgPath := os.Getenv("CONFIG_PATH")
+	if cfgPath == "" {
+		cfgPath = filepath.Join("..", "..", "..", "configs", "app.ini")
+	}
 	if _, err := os.Stat(cfgPath); err != nil {
 		t.Skipf("跳过：找不到 %s（本地无 DB 配置）", cfgPath)
 	}
@@ -100,14 +137,17 @@ func TestEnsureTenantAdminCreatesUserAndRole(t *testing.T) {
 	ensureKindergarten(t, db, testKGID, "测试园所-供给")
 
 	ctx := context.Background()
+	epochs := newFakeEpochStore()
 	res, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone:          testPhone,
 		Password:       testPasswd,
 		KindergartenID: testKGID,
-	})
+	}, epochs)
 	require.NoError(t, err)
 	assert.True(t, res.UserCreated, "首次供给应创建用户")
 	assert.True(t, res.RoleCreated, "首次供给应创建管理员角色")
+	assert.Empty(t, epochs.bumps, "新建账号没有旧会话，不应推进 epoch")
+	assert.False(t, res.PasswordReset, "新建账号没有重置既有口令")
 
 	var user domain.User
 	require.NoError(t, db.Where("phone = ?", testPhone).First(&user).Error)
@@ -133,10 +173,10 @@ func TestEnsureTenantAdminIsIdempotent(t *testing.T) {
 
 	ctx := context.Background()
 	opts := adminprovision.Options{Phone: testPhone, Password: testPasswd, KindergartenID: testKGID}
-	first, err := adminprovision.EnsureTenantAdmin(ctx, db, opts)
+	first, err := adminprovision.EnsureTenantAdmin(ctx, db, opts, newFakeEpochStore())
 	require.NoError(t, err)
 
-	second, err := adminprovision.EnsureTenantAdmin(ctx, db, opts)
+	second, err := adminprovision.EnsureTenantAdmin(ctx, db, opts, newFakeEpochStore())
 	require.NoError(t, err)
 	assert.False(t, second.UserCreated, "重复执行不应新建用户")
 	assert.False(t, second.RoleCreated, "重复执行不应新建角色")
@@ -160,7 +200,7 @@ func TestEnsureTenantAdminRebindsExistingRole(t *testing.T) {
 	ctx := context.Background()
 	first, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 
 	var roleBefore domain.UserRole
@@ -168,7 +208,7 @@ func TestEnsureTenantAdminRebindsExistingRole(t *testing.T) {
 
 	second, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKG2ID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 	assert.False(t, second.UserCreated)
 	assert.False(t, second.RoleCreated, "改绑不应新建角色")
@@ -193,7 +233,7 @@ func TestEnsureTenantAdminNormalizesAdminRole(t *testing.T) {
 	ctx := context.Background()
 	first, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 
 	// 模拟历史数据：admin 角色的 admin_role 缺失或被写成别的值。
@@ -203,7 +243,7 @@ func TestEnsureTenantAdminNormalizesAdminRole(t *testing.T) {
 
 	second, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 	assert.False(t, second.RoleCreated, "已存在的角色不应新建")
 
@@ -222,7 +262,7 @@ func TestEnsureTenantAdminCollapsesDuplicateAdminRoles(t *testing.T) {
 	ctx := context.Background()
 	first, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 
 	var kept domain.UserRole
@@ -240,7 +280,7 @@ func TestEnsureTenantAdminCollapsesDuplicateAdminRoles(t *testing.T) {
 
 	_, err = adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKG2ID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 
 	var active []domain.UserRole
@@ -281,7 +321,7 @@ func TestEnsureTenantAdminRejectsMissingKindergarten(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := adminprovision.EnsureTenantAdmin(context.Background(), db, adminprovision.Options{
 				Phone: testPhone, Password: testPasswd, KindergartenID: tc.kgID,
-			})
+			}, newFakeEpochStore())
 			require.Error(t, err)
 			assert.ErrorIs(t, err, adminprovision.ErrKindergartenNotFound)
 
@@ -310,7 +350,7 @@ func TestEnsureTenantAdminRejectsIncompleteOptions(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := adminprovision.EnsureTenantAdmin(ctx, nil, tc.opts)
+			_, err := adminprovision.EnsureTenantAdmin(ctx, nil, tc.opts, newFakeEpochStore())
 			require.Error(t, err)
 			assert.ErrorIs(t, err, adminprovision.ErrInvalidOptions)
 		})
@@ -345,7 +385,7 @@ func TestEnsureTenantAdminMovesAdminAndDropsOldKindergartenAccess(t *testing.T) 
 
 	res, err := adminprovision.EnsureTenantAdmin(ctx, db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKG2ID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 	assert.False(t, res.UserCreated, "既有账号必须复用，不能新建第二个 user")
 	assert.Equal(t, user.ID, res.UserID)
@@ -383,7 +423,7 @@ func TestEnsureTenantAdminReusesExistingParentAccount(t *testing.T) {
 
 	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, adminprovision.Options{
 		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
-	})
+	}, newFakeEpochStore())
 	require.NoError(t, err)
 	assert.False(t, res.UserCreated)
 	assert.Equal(t, user.ID, res.UserID)
@@ -396,4 +436,57 @@ func TestEnsureTenantAdminReusesExistingParentAccount(t *testing.T) {
 	require.NoError(t, db.First(&got, user.ID).Error)
 	assert.Equal(t, "豆豆妈妈", got.Nickname)
 	assert.Equal(t, "https://cdn.example.com/a.png", got.Avatar)
+}
+
+// #196：复用既有账号会覆盖口令，等同凭据重置。必须同步推进园所账号 epoch，
+// 让此前签发的 access/refresh 立即失效，并在输出里标明这一点。
+func TestEnsureTenantAdminBumpsTenantEpochWhenReusingAccount(t *testing.T) {
+	db := openTestDB(t)
+	resetData(t, db)
+	t.Cleanup(func() { cleanupAfterTest(t, db) })
+	ensureKindergarten(t, db, testKGID, "测试园所-epoch")
+
+	user := domain.User{Phone: testPhone, Nickname: "豆豆妈妈", PasswordHash: "old-hash"}
+	require.NoError(t, db.Create(&user).Error)
+
+	epochs := newFakeEpochStore()
+	start := time.Now()
+	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
+	}, epochs)
+	require.NoError(t, err)
+	assert.False(t, res.UserCreated)
+	assert.True(t, res.PasswordReset, "复用账号必须标记为口令已重置")
+
+	bumped, ok := epochs.bumps[user.ID]
+	require.True(t, ok, "复用账号必须推进园所账号 epoch")
+	assert.False(t, bumped.Before(start), "epoch 必须落在本次供给之后")
+	assert.Contains(t, res.Summary(), "旧会话", "运维输出必须提示旧会话已失效")
+}
+
+// epoch 写入失败必须失败关闭：口令不得被覆盖，也不得授予管理员身份。
+func TestEnsureTenantAdminFailsClosedWhenEpochBumpFails(t *testing.T) {
+	db := openTestDB(t)
+	resetData(t, db)
+	t.Cleanup(func() { cleanupAfterTest(t, db) })
+	ensureKindergarten(t, db, testKGID, "测试园所-epoch 失败")
+
+	user := domain.User{Phone: testPhone, Nickname: "豆豆妈妈", PasswordHash: "old-hash"}
+	require.NoError(t, db.Create(&user).Error)
+
+	epochs := newFakeEpochStore()
+	epochs.err = errors.New("redis down")
+	_, err := adminprovision.EnsureTenantAdmin(context.Background(), db, adminprovision.Options{
+		Phone: testPhone, Password: testPasswd, KindergartenID: testKGID,
+	}, epochs)
+	require.ErrorIs(t, err, adminprovision.ErrEpochUnavailable)
+
+	var got domain.User
+	require.NoError(t, db.First(&got, user.ID).Error)
+	assert.Equal(t, "old-hash", got.PasswordHash, "epoch 写失败时不得覆盖口令")
+
+	var roles int64
+	require.NoError(t, db.Model(&domain.UserRole{}).
+		Where("user_id = ? AND role = ?", user.ID, "admin").Count(&roles).Error)
+	assert.Zero(t, roles, "epoch 写失败时不得授予管理员身份")
 }

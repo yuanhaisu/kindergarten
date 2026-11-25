@@ -58,14 +58,12 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
 import { changePassword } from '~/api/auth'
-import { safeRedirectPath } from '~/utils/authPaths'
 
 definePageMeta({ layout: 'auth' })
 
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const error = ref('')
-const route = useRoute()
 const auth = useAuthStore()
 const logout = useAdminLogout()
 
@@ -113,9 +111,11 @@ async function onSubmit() {
       old_password: form.old_password,
       new_password: form.new_password,
     })
-    if (auth.user) auth.user.must_change_password = false
-    ElMessage.success('密码已更新')
-    await navigateTo({ path: safeRedirectPath(route.query.redirect) })
+    // 改密会推进账号级失效时间（#182），当前 access / refresh 都已失效。
+    // 不能继续用旧会话回原页；清掉本地会话并让用户用新口令重新登录。
+    ElMessage.success('密码已更新，请使用新密码重新登录')
+    auth.clearSession()
+    await navigateTo({ path: '/login' })
   } catch (e: unknown) {
     // 原密码错 / 新密码强度不足等由服务端判定，必须让用户看到原因。
     error.value = e instanceof Error ? e.message : '修改密码失败'

@@ -6,14 +6,15 @@ import { reactive, ref } from 'vue'
 /**
  * 专用改密页（#199）：
  * - 原密码 + 新密码 + 确认，服务端错误必须展示，不能再被空 catch 吞掉；
- * - 成功后清掉 must_change_password 并回原页；
+ * - 成功后清会话并去登录页（改密使旧 access/refresh 失效）；
  * - 本地能先拦下明显弱口令与两次不一致，避免白跑服务端；
- * - 回跳只允许站内路径。
+ * - 成功后固定去登录页，不再使用回跳地址。
  */
 
 const changePassword = vi.fn()
 const navigateTo = vi.fn()
 const adminLogout = vi.fn()
+const clearSession = vi.fn()
 
 vi.mock('~/api/auth', () => ({
   changePassword: (...args: unknown[]) => changePassword(...args),
@@ -36,6 +37,7 @@ beforeAll(async () => {
       get user() {
         return authUser.value
       },
+      clearSession,
     }),
   )
   vi.stubGlobal('useRoute', () => ({ query: routeQuery.value }))
@@ -52,6 +54,8 @@ beforeEach(() => {
   changePassword.mockReset()
   navigateTo.mockReset()
   adminLogout.mockReset()
+  clearSession.mockReset()
+  clearSession.mockImplementation(() => { authUser.value = null })
   authUser.value = { must_change_password: true }
   routeQuery.value = { redirect: '/billing' }
 })
@@ -75,7 +79,7 @@ async function mountAndSubmit(
 }
 
 describe('专用改密页', () => {
-  it('提交成功后清标记并回原页', async () => {
+  it('提交成功后清会话并去登录页', async () => {
     changePassword.mockResolvedValue({ must_change_password: false })
 
     await mountAndSubmit()
@@ -84,8 +88,9 @@ describe('专用改密页', () => {
       old_password: 'initial-pass',
       new_password: 'NewPass123',
     })
-    expect(authUser.value?.must_change_password).toBe(false)
-    expect(navigateTo).toHaveBeenCalledWith({ path: '/billing' })
+    expect(clearSession).toHaveBeenCalled()
+    expect(authUser.value).toBeNull()
+    expect(navigateTo).toHaveBeenCalledWith({ path: '/login' })
   })
 
   it('服务端错误（原密码不正确）展示在页面上，不静默吞掉', async () => {
@@ -97,6 +102,7 @@ describe('专用改密页', () => {
 
     expect(wrapper.text()).toContain('原密码不正确')
     expect(navigateTo).not.toHaveBeenCalled()
+    expect(clearSession).not.toHaveBeenCalled()
     expect(authUser.value?.must_change_password).toBe(true)
   })
 
@@ -112,15 +118,6 @@ describe('专用改密页', () => {
 
     expect(changePassword).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('新密码须包含大写字母、小写字母和数字')
-  })
-
-  it('回跳地址为外链时回首页', async () => {
-    routeQuery.value = { redirect: 'https://evil.example.com' }
-    changePassword.mockResolvedValue({ must_change_password: false })
-
-    await mountAndSubmit()
-
-    expect(navigateTo).toHaveBeenCalledWith({ path: '/' })
   })
 
   it('「退出登录」走中心化登出', async () => {

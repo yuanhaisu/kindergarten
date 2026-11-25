@@ -41,30 +41,28 @@ API contracts live in `backend/api/` (spec-first). Data models live in `server/i
 
 ## Spec Workflow (功能规格化)
 
-**规格化工具：OpenSpec**（`openspec/` + `/opsx:*` 命令）。曾评估过 GitHub Spec Kit，结论是不引入——理由与翻盘条件见下方「为什么不是 Spec Kit」。
+**规格化工具：mattpocock-skills**（`/to-spec` + GitHub issues）。实现用 `mattpocock-skills:tdd`，评审用 `mattpocock-skills:code-review`，提 PR 用 `mattpocock-skills:pr`。**2026-11-21 起新开发不再使用 OpenSpec**；`openspec/` 与 `docs/specs/` 仅作历史参考，不再新增 change/spec。
 
 ### 先判断要不要走规格
 
 | 变更类型 | 用什么 |
 | --- | --- |
 | 触点 < 3 层（单点 bug、typo、样式微调、配置） | **不写规格**，直接改，commit message 说清 |
-| 诊断困难的 bug | `superpowers:systematic-debugging`，不写规格 |
-| 触点 ≥ 3 层的功能切片（跨 Go/契约/端页面/token） | **走 OpenSpec** |
-| 做不做的概念决策 | `/opsx:explore`，想清楚再决定要不要 propose |
+| 诊断困难的 bug | `mattpocock-skills:diagnosing-bugs`，不写规格 |
+| 触点 ≥ 3 层的功能切片（跨 Go/契约/端页面/token） | **`/to-spec` 产出 GitHub issue** |
+| 做不做的概念决策 | `mattpocock-skills:grilling` / `prototype`，想清楚再决定要不要开规格 |
 
-### 走 OpenSpec 的流程
+### 走 /to-spec 的流程
 
 ```
-/opsx:explore（可选，想清楚）→ /opsx:propose → 用户批准 → /opsx:apply → 验证 → /opsx:archive
+/to-spec → GitHub issue（ready-for-agent）→ 用户确认取舍 → mattpocock-skills:tdd → code-review → pr
 ```
 
-1. **propose 只产规划工件**（proposal / specs / design / tasks），不动代码。等用户明确批准后再 apply
-2. **design 必须给出「跨端触点清单」**：Go domain/repo/service/handler + Casbin + router + `backend/api/` + 各端页面 + token。每一项写「会改」或「不改」
-3. **specs 只写行为与验收**（`SHALL` + Scenario），每条场景引用 `docs/tests/TEST_CATALOG.md` 的 TC ID
-4. **archive 前必须逐条对照 specs 验证**，并把 delta 合并进 `openspec/specs/` 活基线
-
-详细约束已注入 `openspec/config.yaml` 的 `context` / `rules`，生成工件时自动生效。
-**日常使用手册（含大改/小改示例、命令速查、踩坑清单）见 `docs/openspec-usage.md`。**
+1. **规格即 issue**：`/to-spec` 把当前上下文合成规格，发布到 GitHub issue（约定见 `docs/agents/issue-tracker.md`），打 `ready-for-agent`。不再在 `openspec/` 下新建 change
+2. **规格必须给出「跨端触点清单」**：Go domain/repo/service/handler + Casbin + router + `backend/api/` + 各端页面 + token；每项写「会改」或「不改」
+3. **规格只写行为与验收**，不写接口形状/数据结构/样式；每条场景尽量引用 `docs/tests/TEST_CATALOG.md` 的 TC ID
+4. **实现用 `mattpocock-skills:tdd`**（red-green-refactor）；完成一个切片就跑对应 build/lint/test，别攒到最后
+5. **收尾用 `mattpocock-skills:code-review`，再 `mattpocock-skills:pr`**；验证结果回写 issue
 
 ### 语义所有权（谁是真相源）
 
@@ -77,17 +75,13 @@ API contracts live in `backend/api/` (spec-first). Data models live in `server/i
 | 架构铁律 / 硬规则 / 已知坑 | 本文件（CLAUDE.md） |
 | 样式 / 间距 / 色值 | `shared-design-tokens/tokens.json` |
 | 测试用例编号 | `docs/tests/TEST_CATALOG.md` |
-| **行为需求 + 验收标准** | **`openspec/specs/`** |
+| **行为需求 + 验收标准** | **GitHub issue（`/to-spec` 产出）** |
 
 ### 历史规格
 
-`docs/specs/` 是 **2026-06 之前的旧工作流产物，已冻结**，仅作回溯参考，不要再新增文件。新变更一律走 OpenSpec。
-
-### 为什么不是 Spec Kit
-
-OpenSpec 的 delta→archive 机械同步机制对上本项目「写了就烂」的失败模式（`docs/specs/`、`backend/model/`、`backend/model/README.md` 三处腐烂是实证）；Spec Kit 默认产出 `contracts/` / `data-model.md` 会制造新的真相源。其强项（跨端触点结构、验证收敛门）已写进 `openspec/config.yaml` 的 `rules.design` / `rules.tasks`，不必为此换工具链。
-
-**翻盘条件**（任一命中就重新评估 Spec Kit）：功能切片远多于小修；决定让规划步骤直接产出 `backend/api/` 契约；出现第二位协作者需要宪法+评审流程；OpenSpec 用 2–3 个 change 后规格照样腐烂。
+- `docs/specs/` 是 **2026-06 之前的旧工作流产物，已冻结**，仅作回溯参考。
+- `openspec/`（含 `openspec/specs/`、`openspec/changes/`、`docs/openspec-usage.md`）自 **2026-11-21 起停用**，仅作历史参考；新变更不再写入。
+- 已存在但未落地的 OpenSpec change（如 `platform-console-foundation`）按历史提案对待；要执行时先迁成 GitHub issue，不要直接 apply。
 
 Project-specific knowledge skills live in `.claude/skills/`:
 - `growth-records` — Growth records module business context
@@ -109,7 +103,7 @@ make tidy              # go mod tidy
 make check             # vet + lint + test
 ```
 
-Config file path: `CONFIG=configs/app.local.ini make run`（Makefile 的 `CONFIG` 变量会转成 `CONFIG_PATH` 传给进程；直接 `go run` 时用 `CONFIG_PATH`）。 Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
+Config file path: `CONFIG=configs/app.local.ini make run`（Makefile 的 `CONFIG` 变量会转成 `CONFIG_PATH` 传给进程；直接 `go run` 时用 `CONFIG_PATH`）。 Sensitive values can be overridden via env vars: `MYSQL_DSN`, `REDIS_ADDR`, `JWT_SECRET`, `JWT_PLATFORM_SECRET`, `WECHAT_TEACHER_APP_ID`, `WECHAT_TEACHER_SECRET`, `WECHAT_PARENT_APP_ID`, `WECHAT_PARENT_SECRET`, `OSS_*`, etc.（旧的 `WECHAT_APP_ID`/`WECHAT_SECRET` 仍被识别，仅用于回滚到共用 AppID）
 
 ### 数据库迁移（`server/`）
 
@@ -727,6 +721,42 @@ npm run design:test                                  # 门禁自身的结构断�
 - 新增 `/admin` 路由必须在 `server/internal/middleware/admin_perm.go` 的 `adminRoutePermission` 登记权限码，否则启动自检直接失败（`router.go` 拒绝启动）
 - 新增 premium 模块必须在 `server/internal/middleware/module_gate.go` 的 `premiumRouteRules` 命中至少一条已注册路由，否则启动失败
 - `teacher/src/components/`、`parent/src/components/` **禁止手改**：唯一真相源是 `shared-ui/`，由 `scripts/sync-ui.js` 在 `predev` / `prebuild` 同步
+
+## 🚦 发布 TODO（仅非开发事项）
+
+> 维护规则：开发项走 GitHub issue（`/to-spec`）+ `mattpocock-skills`，不在本清单；本节只放发布前必须有人完成的**非开发动作**（品牌、合规、微信、试点、运维、商业）。完成一项勾一项；新增项必须写清触发条件，不允许只有“待办”没有“何时必须做”。最后更新：2026-11-21。
+>
+> 开发项唯一一条（已完成）：共用 v1 身份与会话底座（一人一账号、`clients/app_id`、`user_identities`、token 角色裁剪、租户通道、单园会话 + 切换、园所入口/品牌）已由 PR #180 于 2026-11-21 合入 main（#160 completed）；规格见 #160。实现按 `mattpocock-skills`（tdd → code-review → pr），不在本节；本节其余均为非开发事项。
+
+### A. 品牌与合规（发布前硬门禁）
+- [ ] **App 名称/图标/简介定稿**：微信注册前一次性决策；发布后改名受限。共用 App 的名称就是平台名，UI 只能降噪、不能隐藏。
+- [ ] **品牌降噪规范**：启动页中性；登录后园所名/logo/主题优先；首页/“我的”只留“技术支持：养成星球”小字；入园物料以园所品牌为主；家长端不出现其他园所列表。
+- [ ] **隐私政策/用户协议定稿**：写清运营者与数据控制者（共用 App 为平台方）；UI 降噪不得模糊法律责任。
+- [ ] ICP 备案（域名）；公安联网备案；等保定级备案/测评；教育移动应用备案（提供者；小程序在范围内）。
+- [ ] `PRIVACY.md` / `NOTICE` / 合同模板（含 DPA）落地。
+
+### B. 微信与环境
+- [ ] 共用小程序：注册、微信认证（300 元/年）、小程序备案、类目（教育类目资质）、用户隐私保护指引。
+- [ ] 生产 API 域名 + 有效 CA 证书（非自签）；微信后台配置 `request` / `uploadFile` / `downloadFile` 合法域名。
+- [ ] `teacher/.env.production`、`parent/.env.production` 替换占位 `api.xxx.com`；`build:mp-weixin:prod` 真机验收登录/上传/看图/绑定。
+- [ ] 生产配置：`BILLING_ENFORCE_MODULES=1`、`[consent] enforce=true`、`[server] trusted_proxies`、双端 AppID/Secret、OSS、JWT。
+- [ ] 首次审核与发布；版本更新/回退流程；订阅消息模板/客服（若本期启用）。
+
+### C. 试点与验证
+- [ ] 选 1 所民办园、1–2 个班试点；先导名册，再按真实人数建订单（避免按 0 人锁最低档）。
+- [ ] 验证品牌降噪：家长是否仍认为“这是园所的服务”；物料是否清楚；记录异议。
+- [ ] 验证关键路径：园长登录/改密 → 班级/老师/学生导入 → 老师扫码绑定 → 家长绑定 → 通知/成长/接送。
+- [ ] 验证多园边界：同一家长两园、老师带两园、园长本人是别园家长。
+- [ ] 记录每园人力耗时（假设 20–60 人时）与家长求助率，作为第二个园的排期依据。
+
+### D. 运维与商业
+- [ ] RDS 备份策略 + 恢复演练；ECS/RDS/Redis/OSS 监控告警；停机通知渠道。
+- [ ] 弱网上传实测（20MB 视频）：决定限流/OSS 直传/升带宽。
+- [ ] 客服渠道与 FAQ（绑定失败、看不到孩子、收不到通知）。
+- [ ] 合同三形态：SaaS 租户 / 白标 / 私有化（私有化另起项目，不并入主线）。
+- [ ] **集团线索分类**：同一法人直营 → 私有化项目；多法人加盟 → SaaS 集团版（默认 aggregate-only，先访谈不写码）；要自己的 App → G2（签约后加 `clients` 的 group 行）。
+- [ ] 定价：共用版 / 白标（开户+年费+发版维护）/ 私有化（license+实施+年保）；白标/专属首年限 3 个，销售承诺需运维签核。
+- [ ] 白标/专属准入清单：主体能认证/备案/类目；愿意付开户+年费；接受发版窗口；接受“专属是客户端壳、不是基础设施隔离”；签 DPA/授权书。
 
 ## Agent skills
 

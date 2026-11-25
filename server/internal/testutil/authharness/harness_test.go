@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +19,74 @@ import (
 	"kindergarten-server/internal/middleware"
 	"kindergarten-server/internal/testutil/authharness"
 )
+
+// 缺库时默认跳过（本地无 MySQL 仍能跑不依赖 DB 的测试）；CI 设置
+// KDG_TEST_REQUIRE_MYSQL=1 后必须直接失败。用子进程验证真实的退出码，
+// 因为 t.Skip/t.Fatal 无法在同一进程内被断言。
+func TestHarnessFailsClosedWhenMySQLUnavailable(t *testing.T) {
+	const subprocessEnv = "AUTHHARNESS_FAILCLOSED_SUBPROCESS"
+
+	if os.Getenv(subprocessEnv) == "1" {
+		authharness.New(t)
+		return
+	}
+
+	exampleConfig, err := filepath.Abs(filepath.Join("..", "..", "..", "configs", "app.ini.example"))
+	require.NoError(t, err)
+	// 127.0.0.1:1 上没有 MySQL：连接会被立即拒绝，比等 2 分钟 ping 超时快。
+	// 库名必须带 test 标记：显式 DSN 先过 testdb.Guard，否则会在护栏处失败，
+	// 测不到「缺库 → skip / fail-closed」这条路径。
+	unreachableDSN := "root:root@tcp(127.0.0.1:1)/kindergarten_test_probe?charset=utf8mb4&parseTime=True&loc=Local"
+
+	runChild := func(requireDB bool) (string, error) {
+		cmd := exec.Command(os.Args[0],
+			"-test.run=^TestHarnessFailsClosedWhenMySQLUnavailable$",
+			"-test.v",
+			"-test.timeout=120s",
+		)
+		env := removeEnv(os.Environ(),
+			subprocessEnv, "CONFIG_PATH", authharness.TestDSNEnv, authharness.RequireDBEnv)
+		env = append(env,
+			subprocessEnv+"=1",
+			"CONFIG_PATH="+exampleConfig,
+			authharness.TestDSNEnv+"="+unreachableDSN,
+		)
+		if requireDB {
+			env = append(env, authharness.RequireDBEnv+"=1")
+		}
+		cmd.Env = env
+		out, err := cmd.CombinedOutput()
+		return string(out), err
+	}
+
+	t.Run("require flag turns skip into failure", func(t *testing.T) {
+		out, err := runChild(true)
+		require.Error(t, err, "设置 %s 后缺库必须失败；输出：\n%s", authharness.RequireDBEnv, out)
+		assert.Contains(t, out, "缺库必须失败而不是跳过",
+			"失败信息应说明 fail-closed 原因；输出：\n%s", out)
+	})
+
+	t.Run("without flag missing DB still skips", func(t *testing.T) {
+		out, err := runChild(false)
+		require.NoError(t, err, "未设置 %s 时本地无 MySQL 应跳过；输出：\n%s", authharness.RequireDBEnv, out)
+		assert.Contains(t, out, "--- SKIP", "应看到测试被跳过；输出：\n%s", out)
+	})
+}
+
+func removeEnv(env []string, names ...string) []string {
+	drop := make(map[string]bool, len(names))
+	for _, n := range names {
+		drop[n] = true
+	}
+	out := make([]string, 0, len(env))
+	for _, kv := range env {
+		name, _, _ := strings.Cut(kv, "=")
+		if !drop[name] {
+			out = append(out, kv)
+		}
+	}
+	return out
+}
 
 // 这是认证/身份单缝的入口测试：后续身份票复用同一个 harness，不再另建
 // service/中间件双缝。四个用例分别锁定独立测试库、HTTP 认证链、假微信

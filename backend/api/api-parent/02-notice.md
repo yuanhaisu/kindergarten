@@ -24,6 +24,7 @@
       "title": "周末作业通知",
       "content_preview": "各位家长您好，本周作业如下：1. 复习本周学过的儿歌...",
       "need_confirm": true,
+      "confirm_deadline": "2026-03-20T18:00:00Z",
       "is_read": false,
       "is_confirmed": false,
       "attachments_count": 2,
@@ -52,6 +53,7 @@
   "title": "周末作业通知",
   "content": "各位家长您好，本周作业如下：1. 复习本周学过的儿歌；2. 完成手工制作《我的家》；3. 请家长和孩子一起阅读绘本30分钟。请于下周一前完成，感谢配合！",
   "need_confirm": true,
+  "confirm_deadline": "2026-03-20T18:00:00Z",
   "is_read": true,
   "read_at": "2026-03-19T09:15:00Z",
   "is_confirmed": false,
@@ -76,6 +78,8 @@
 
 ---
 
+> `confirm_deadline` 仅 `need_confirm=true` 时有值（带时区 RFC3339）。客户端用它与当前时间判断「待确认 / 已截止」；服务端在确认接口做最终校验。
+
 ### PUT `/parent/notices/:id/confirm`
 
 > 确认通知
@@ -91,3 +95,5 @@
   "confirmed_at": "2026-03-19T09:20:00Z"
 }
 ```
+
+> 当前时间 `>=` `confirm_deadline` 时返回 `409`（业务码 `40900`，`确认已截止`），不得写入 `is_confirmed` / `confirmed_at`；家长端应隐藏确认栏并显示「已截止」。`need_confirm=false` 的通知不展示确认入口。

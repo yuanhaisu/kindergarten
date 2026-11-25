@@ -258,6 +258,7 @@ func newAdminAlbumFixture(t *testing.T) (*gorm.DB, *service.AdminService) {
 		repository.NewAdminRepo(db),
 		repository.NewKindergartenRepo(db),
 		repository.NewOperationLogRepo(db),
+		nil, // epochs：相册用例不涉及账号级失效
 	)
 }
 
@@ -561,7 +562,7 @@ func TestAdminAlbumRoutesHaveNoEditEndpoint(t *testing.T) {
 		nil, // parentEntryQR
 		nil, // support
 	)
-	engine, err := app.NewRouter(app.NewAppHandler(h), nil, app.JWTSecret("test-secret"), nil, nil, nil, nil)
+	engine, err := app.NewRouter(app.NewAppHandler(h), nil, app.JWTSecret("test-secret"), app.PlatformJWTSecret("test-platform-secret"), nil, nil, nil, nil)
 	require.NoError(t, err, "admin 路由权限登记缺口会让 NewRouter 启动失败")
 
 	var got []string

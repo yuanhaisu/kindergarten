@@ -165,6 +165,8 @@ func (h *Handler) PlatformOnboardKindergarten(c *gin.Context) {
 			response.ErrValidation(c, "手机号格式不正确")
 		case strings.HasPrefix(err.Error(), "WEAK_PASSWORD:"):
 			response.ErrValidation(c, "初始密码强度不足")
+		case errors.Is(err, service.ErrAuthStorageUnavailable):
+			response.ErrUnavailable(c, "认证服务暂不可用，请稍后再试")
 		default:
 			response.ErrInternal(c, "开通园所失败")
 		}

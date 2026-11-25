@@ -63,7 +63,10 @@ type Harness struct {
 	// Enforcer 供需要验证角色裁剪的测试直接检查策略。
 	Enforcer *casbin.Enforcer
 
-	Secret []byte
+	// Secret 是园所信任域的签名密钥；PlatformSecret 是平台信任域的签名密钥（#183）。
+	// 两者必须不同，生产装配会拒绝相同/缺失的配置。
+	Secret         []byte
+	PlatformSecret []byte
 
 	DevDatabase  string
 	TestDatabase string
@@ -80,24 +83,21 @@ type Harness struct {
 func NewDB(t testing.TB) *gorm.DB {
 	t.Helper()
 	setup := sharedTestDB()
-	if setup.skipReason != "" {
-		t.Skipf("authharness: %s", setup.skipReason)
-	}
+	setup.failOrSkip(t)
 	if setup.err != nil {
 		t.Fatalf("authharness: %v", setup.err)
 	}
 	return setup.db
 }
 
-// New 装配测试环境。测试库不可用时 t.Skip，配置/迁移错误时 t.Fatal：
-// 「跳过」只用于环境缺失，不允许把真实故障伪装成跳过。
+// New 装配测试环境。测试库不可用时默认 t.Skip（本地无 MySQL 仍能开发），
+// 设置 KDG_TEST_REQUIRE_MYSQL 后改为 t.Fatal（CI 不允许静默跳过）；
+// 配置/迁移错误始终 t.Fatal，不允许把真实故障伪装成跳过。
 func New(t testing.TB) *Harness {
 	t.Helper()
 
 	setup := sharedTestDB()
-	if setup.skipReason != "" {
-		t.Skipf("authharness: %s", setup.skipReason)
-	}
+	setup.failOrSkip(t)
 	if setup.err != nil {
 		t.Fatalf("authharness: %v", setup.err)
 	}
@@ -114,7 +114,7 @@ func New(t testing.TB) *Harness {
 	clientSvc := service.NewClientService(repository.NewClientRepo(setup.db))
 	identityRepo := repository.NewUserIdentityRepo(setup.db)
 
-	secret, atTTL, rtTTL := jwtConfig(setup.cfg)
+	secret, platformSecret, atTTL, rtTTL := jwtConfig(setup.cfg)
 	authSvc := service.NewAuthService(
 		userRepo,
 		userRoleRepo,
@@ -153,6 +153,7 @@ func New(t testing.TB) *Harness {
 		WeChat:         fakeWx,
 		Auth:           authSvc,
 		Secret:         secret,
+		PlatformSecret: platformSecret,
 		DevDatabase:    setup.devDatabase,
 		TestDatabase:   setup.testDatabase,
 		TestDSN:        setup.testDSN,
@@ -204,15 +205,21 @@ func New(t testing.TB) *Harness {
 	return h
 }
 
-func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
+func jwtConfig(cfg *config.Config) (secret, platformSecret []byte, atTTL, rtTTL time.Duration) {
 	secret = []byte("authharness-test-jwt-secret")
+	// 与园所密钥不同的固定默认值：开发用的 app.ini 可能还没有 platform_secret，
+	// 此时 harness 仍要能验证「跨域凭证被拒绝」。
+	platformSecret = []byte("authharness-test-platform-jwt-secret")
 	atTTL = 15 * time.Minute
 	rtTTL = 7 * 24 * time.Hour
 	if cfg == nil {
-		return secret, atTTL, rtTTL
+		return secret, platformSecret, atTTL, rtTTL
 	}
 	if cfg.JWT.Secret != "" {
 		secret = []byte(cfg.JWT.Secret)
+	}
+	if cfg.JWT.PlatformSecret != "" {
+		platformSecret = []byte(cfg.JWT.PlatformSecret)
 	}
 	if cfg.JWT.AccessTTLMin > 0 {
 		atTTL = time.Duration(cfg.JWT.AccessTTLMin) * time.Minute
@@ -220,7 +227,7 @@ func jwtConfig(cfg *config.Config) (secret []byte, atTTL, rtTTL time.Duration) {
 	if cfg.JWT.RefreshTTLDay > 0 {
 		rtTTL = time.Duration(cfg.JWT.RefreshTTLDay) * 24 * time.Hour
 	}
-	return secret, atTTL, rtTTL
+	return secret, platformSecret, atTTL, rtTTL
 }
 
 // buildEngine 复刻 router.go 中认证与 common 分组的装配：
@@ -238,7 +245,19 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		return nil, nil, nil, fmt.Errorf("初始化 Casbin：%w", err)
 	}
 
-	hnd := authOnlyHandler(h.Auth, settingsSvc, publicBrandSvc, bindInviteSvc,
+	// 管理员管理（#182）：重置 / 删除管理员必须与 AuthJWT 共用同一份账号级
+	// 失效存储，否则测试里「旧会话立即失效」验证的是另一份 epoch。
+	adminSvc := service.NewAdminService(
+		h.DB,
+		repository.NewUserRepo(h.DB),
+		repository.NewUserRoleRepo(h.DB),
+		repository.NewAdminRepo(h.DB),
+		repository.NewKindergartenRepo(h.DB),
+		repository.NewOperationLogRepo(h.DB),
+		h.Auth.TenantEpochStore(),
+	)
+
+	hnd := authOnlyHandler(h.Auth, adminSvc, settingsSvc, publicBrandSvc, bindInviteSvc,
 		parentEntryQRSvc, buildSupportService(h), buildParentPortalService(h),
 		// 会话建立审计（#160 L205）落在 HTTP 边界，必须给 handler 真实的
 		// oplog 服务，否则登录/绑定/切换的审计在测试里无处可查。
@@ -268,7 +287,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	// 平台方信任域（#172 平台支持）：与 router.go 同源装配 PlatformAuth +
 	// CasbinRBAC，验证平台凭证与园所 JWT 互不通用。
 	platformG := v1.Group("/platform")
-	platformG.Use(middleware.PlatformAuth(h.Secret, h.Auth.TokenRevoker(),
+	platformG.Use(middleware.PlatformAuth(h.PlatformSecret, h.Auth.TokenRevoker(),
 		auth.NewPlatformEpochStore(h.RedisClient, auth.PlatformEpochTTLFor(24*time.Hour, time.Hour))))
 	platformG.Use(middleware.CasbinRBAC(enforcer))
 	{
@@ -278,7 +297,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 	}
 
 	authed := v1.Group("")
-	authed.Use(middleware.AuthJWT(h.Secret, h.Auth.TokenRevoker()))
+	authed.Use(middleware.AuthJWT(h.Secret, h.Auth.TokenRevoker(), h.Auth.TenantEpochStore()))
 	// 首登强制改密（#198）：与 router.go 同源装配，只作用于 admin_web 凭证。
 	authed.Use(middleware.RequirePasswordChange(h.Auth))
 	authed.Use(middleware.RequireActiveKindergarten(kgStatus))
@@ -291,7 +310,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.POST("/auth/switch-kindergarten", hnd.SwitchKindergarten)
 		authed.GET("/common/user/profile", hnd.GetProfile)
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
-		// 首登改密（#198）：门禁豁免端点，必须在 harness 里可真实调用。
+		// 首登/自助改密（#198/#182）：门禁豁免端点；改密后旧 access / refresh 立即失效。
 		authed.PUT("/common/user/password", hnd.ChangePassword)
 		authed.GET("/common/user/kindergartens", hnd.GetMyKindergartens)
 
@@ -317,6 +336,13 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 			// 家长端园所二维码（#176）：生产还叠 RequirePermission
 			// （system:kindergarten），这里与 #178 一样只保留 Casbin。
 			adminG.GET("/kindergarten/parent-qrcode", hnd.GetParentEntryQRCode)
+			// 添加管理员（#182）：复用既有账号时会覆盖其口令，同样属于
+			// 凭据重置，旧会话必须立即失效。
+			adminG.POST("/admins", hnd.CreateAdmin)
+			// 管理员重置密码 / 删除（#182）：两条路径都必须让目标账号的
+			// 旧 access 与旧 refresh 立即失效。
+			adminG.PUT("/admins/:id/reset-password", hnd.ResetAdminPassword)
+			adminG.DELETE("/admins/:id", hnd.DeleteAdmin)
 			// 身份支持（#172）：解绑客户端身份、支持视图与手机号更正。
 			adminG.DELETE("/parents/:id/identities/:identity_id", hnd.AdminUnbindParentIdentity)
 			adminG.GET("/parents/:id/support", hnd.AdminGetParentSupport)
@@ -341,7 +367,7 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 // 这些路由只依赖上述服务，无需为了一条测试缝拉起整棵依赖树。
 // 这里显式传全参而不是反射/零值构造：handler.NewHandler 增删参数时编译失败，
 // 强制同步，避免测试缝悄悄错位。
-func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService, supportSvc *service.IdentitySupportService, parentPortalSvc *service.ParentPortalService, oplogSvc *service.OperationLogService) *handler.Handler {
+func authOnlyHandler(authSvc *service.AuthService, adminSvc *service.AdminService, settingsSvc *service.SettingsService, publicBrandSvc *service.PublicBrandService, bindInviteSvc *service.BindInviteService, parentEntryQRSvc *service.ParentEntryQRService, supportSvc *service.IdentitySupportService, parentPortalSvc *service.ParentPortalService, oplogSvc *service.OperationLogService) *handler.Handler {
 	return handler.NewHandler(
 		authSvc,
 		nil, // fileSvc
@@ -353,7 +379,7 @@ func authOnlyHandler(authSvc *service.AuthService, settingsSvc *service.Settings
 		nil, // teacherSvc
 		nil, // parentSvc
 		settingsSvc,
-		nil, // adminSvc
+		adminSvc,
 		nil, // roleSvc
 		nil, // attendanceSvc
 		nil, // leaveSvc

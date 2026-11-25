@@ -33,7 +33,10 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	adminAuthzService := service.NewAdminAuthzService(adminRepo, userRoleRepo)
 	kindergartenRepo := repository.NewKindergartenRepo(db)
 	kindergartenStatusService := service.NewKindergartenStatusService(kindergartenRepo, client)
-	jwtSecret := ProvideJWTSecret(cfg)
+	jwtSecret, err := ProvideJWTSecret(cfg)
+	if err != nil {
+		return nil, err
+	}
 	accessTTL := ProvideAccessTTL(cfg)
 	refreshTTL := ProvideRefreshTTL(cfg)
 	consentRepo := repository.NewConsentRepo(db)
@@ -67,7 +70,8 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	academicYearRepo := repository.NewAcademicYearRepo(db)
 	kindergartenAppSettingRepo := repository.NewKindergartenAppSettingRepo(db)
 	settingsService := service.NewSettingsService(db, kindergartenRepo, academicYearRepo, kindergartenAppSettingRepo, classRepo, studentRepo, userRoleRepo, operationLogRepo)
-	adminService := service.NewAdminService(db, userRepo, userRoleRepo, adminRepo, kindergartenRepo, operationLogRepo)
+	tenantEpochStore := ProvideTenantEpochStore(authService)
+	adminService := service.NewAdminService(db, userRepo, userRoleRepo, adminRepo, kindergartenRepo, operationLogRepo, tenantEpochStore)
 	roleService := service.NewRoleService(db, adminRepo, operationLogRepo)
 	attendanceRepo := repository.NewAttendanceRepo(db)
 	attendanceService := service.NewAttendanceService(attendanceRepo, classRepo, dashboardRepo)
@@ -125,7 +129,11 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 	distributorRepo := repository.NewDistributorRepo(db)
 	platformLogRepo := repository.NewPlatformLogRepo(db)
 	kindergartenEntryService := service.NewKindergartenEntryService(kindergartenRepo)
-	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, paymentRepo, commissionRepo, distributorRepo, platformLogRepo, dietSeedService, kindergartenStatusService, kindergartenEntryService, client, authService, jwtSecret, accessTTL, refreshTTL)
+	platformJWTSecret, err := ProvidePlatformJWTSecret(cfg)
+	if err != nil {
+		return nil, err
+	}
+	platformService := ProvidePlatformService(db, platformAdminRepo, kindergartenRepo, entitlementRepo, orderRepo, userRepo, userRoleRepo, adminRepo, paymentRepo, commissionRepo, distributorRepo, platformLogRepo, dietSeedService, kindergartenStatusService, kindergartenEntryService, client, authService, platformJWTSecret, accessTTL, refreshTTL)
 	planRepo := repository.NewPlanRepo(db)
 	planService := service.NewPlanService(planRepo, platformLogRepo)
 	entitlementCache := service.NewEntitlementCache(client)
@@ -150,7 +158,7 @@ func InjectEngine(cfg *config.Config) (*gin.Engine, error) {
 		return nil, err
 	}
 	trustedProxies := ProvideTrustedProxies(cfg)
-	engine, err := NewRouter(appHandler, enforcer, jwtSecret, adminAuthzService, entitlementService, kindergartenStatusService, trustedProxies)
+	engine, err := NewRouter(appHandler, enforcer, jwtSecret, platformJWTSecret, adminAuthzService, entitlementService, kindergartenStatusService, trustedProxies)
 	if err != nil {
 		return nil, err
 	}

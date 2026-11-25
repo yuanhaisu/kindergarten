@@ -40,7 +40,7 @@ var passwordChangeAllowedRoutes = map[string]struct{}{
 //
 // 只对管理端（admin_web）凭证生效：小程序凭证没有可完成的改密流程，
 // 平台凭证走独立信任域、不经过本中间件。判定真相源是 users.must_change_password，
-// 不信任 token claim——改密后同一 access 的下一个请求必须立即放行。
+// 不信任 token claim——改密会推进账号级失效时间（#182），客户端应重新登录；本门禁只负责改密前拦截。
 //
 // 每请求一次主键读取是刻意的：缓存会把「刚改完密」的用户继续挡住，
 // 也会让 flag 的变更延迟一个 TTL。读取失败按 fail closed 返回 503。

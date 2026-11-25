@@ -22,8 +22,8 @@ func setMustChangePassword(t *testing.T, h *authharness.Harness, userID uint64) 
 }
 
 // 平台开通 → 园长登录（flag=true）→ 业务接口 403/40303；精确豁免 200；
-// 未改密 refresh 仍 200 但新 access 仍被拦；改密后同一 access 立即放行，
-// 旧 refresh 401。这是 #198 的完整验收链路。
+// 未改密 refresh 仍 200 但新 access 仍被拦；改密后旧 access / refresh 全部 401，
+// 必须用新口令重新登录。这是 #198 + #182 的完整验收链路。
 func TestForcedPasswordChangeGateEndToEnd(t *testing.T) {
 	h := authharness.New(t)
 	kg := seedKindergarten(t, h, "首登改密园")
@@ -55,22 +55,27 @@ func TestForcedPasswordChangeGateEndToEnd(t *testing.T) {
 	require.Equal(t, 403, renewedBlocked.Status, string(renewedBlocked.Body))
 	assert.Equal(t, middleware.PasswordChangeRequiredCode, renewedBlocked.EnvelopeCode(t))
 
-	// 改密成功：标记落库为 false，同一 access 的下一个请求立即放行。
+	// 改密成功：标记落库为 false，但 #182 会推进账号级失效时间，
+	// 当前 access / refresh 都必须失效，客户端需要重新登录。
 	changed := h.PutJSONWithToken(t, "/api/v1/common/user/password", renewed.Token,
 		map[string]string{"old_password": "Password@123", "new_password": "NewPassword@456"})
 	require.Equal(t, 200, changed.Status, string(changed.Body))
 
-	allowed := h.Get(t, "/api/v1/admin/kindergarten/info", renewed.Token)
-	assert.Equal(t, 200, allowed.Status, "改密后同一 access 必须立即放行：%s", allowed.Body)
+	oldAccess := h.Get(t, "/api/v1/admin/kindergarten/info", renewed.Token)
+	assert.Equal(t, 401, oldAccess.Status, "改密后旧 access 必须 401：%s", oldAccess.Body)
 
-	// 改密前签发的 refresh 因密码指纹失效。
 	oldRefresh := refreshRequest(t, h, renewed.RefreshToken)
 	assert.Equal(t, 401, oldRefresh.Status, "改密后旧 refresh 必须 401：%s", oldRefresh.Body)
 
-	// 登出也在豁免列表内，且仍能正常吊销当前 access。
-	logout := h.PostJSONWithToken(t, "/api/v1/auth/logout", renewed.Token, map[string]any{})
+	// 用新口令重新登录后，会话才恢复；登出仍能正常吊销新 access。
+	relogin := loginWithPassword(t, h, phone, "NewPassword@456")
+	require.Equal(t, 200, relogin.Status, string(relogin.Body))
+	var second service.LoginResult
+	relogin.DecodeData(t, &second)
+	assert.Equal(t, 200, h.Get(t, "/api/v1/admin/kindergarten/info", second.Token).Status)
+	logout := h.PostJSONWithToken(t, "/api/v1/auth/logout", second.Token, map[string]any{})
 	assert.Equal(t, 200, logout.Status, string(logout.Body))
-	afterLogout := h.Get(t, "/api/v1/admin/kindergarten/info", renewed.Token)
+	afterLogout := h.Get(t, "/api/v1/admin/kindergarten/info", second.Token)
 	assert.Equal(t, 401, afterLogout.Status, "登出后 access 必须失效：%s", afterLogout.Body)
 }
 

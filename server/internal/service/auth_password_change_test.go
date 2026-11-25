@@ -33,7 +33,7 @@ func (s *stubAuthUserRepo) UpdateFields(context.Context, uint64, map[string]any)
 }
 
 // 首登改密门禁的真相源是 users.must_change_password，每请求读一次；
-// 改密后同一 access 必须立即放行。
+// 改密后由账号级失效（#182）让旧 access 失效，客户端重新登录。
 func TestAuthServiceMustChangePasswordReadsUserRow(t *testing.T) {
 	svc := &AuthService{userRepo: &stubAuthUserRepo{
 		user: &domain.User{BaseModel: domain.BaseModel{ID: 42}, MustChangePassword: true},

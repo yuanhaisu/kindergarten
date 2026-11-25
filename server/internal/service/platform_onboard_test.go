@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
 )
@@ -169,6 +171,90 @@ func TestPlatformOnboard_ReusesExistingTeacherAccount(t *testing.T) {
 		ResolveAdminCodes(ctx, res.KindergartenID, teacher.ID)
 	require.NoError(t, err)
 	assert.True(t, wildcard)
+}
+
+// #196 复查：复用既有账号时开通会覆盖 password_hash，这等同一次凭据重置。
+// 必须同步推进园所账号 epoch，否则改密前签发的 access/refresh 仍然可用。
+func TestPlatformOnboard_ReuseBumpsTenantEpoch(t *testing.T) {
+	db := openPlatformTestDB(t)
+	svc, redisServer := newPlatformTestServiceWithRedis(t, db, NewKindergartenEntryService(repository.NewKindergartenRepo(db)))
+	ctx := context.Background()
+	phone := "19900017108"
+	cleanupOnboardTestData(t, db, phone)
+	t.Cleanup(func() { cleanupOnboardTestData(t, db, phone) })
+
+	otherKG := onboardTestKindergarten(t, db, "epoch 既有园")
+	parent := onboardTestUser(t, db, phone, "圆圆妈妈", "", 2, "ParentSecret1")
+	otherKGID := otherKG.ID
+	require.NoError(t, db.Create(&domain.UserRole{
+		UserID: parent.ID, Role: "parent", KindergartenID: &otherKGID, KindergartenName: otherKG.Name,
+	}).Error)
+
+	start := time.Now().Unix()
+	res, err := svc.Onboard(ctx, OnboardRequest{
+		Name: onboardTestNamePrefix + "epoch 新园", Principal: "钱园长", Phone: phone, AdminPassword: "InitPass1",
+	}, onboardTestOperator, "127.0.0.1")
+	require.NoError(t, err)
+	require.NotZero(t, res.KindergartenID)
+
+	// 通过生产读取接口（TenantEpochStore）观察，而不是直接摸 Redis 键。
+	epochs := auth.NewTenantEpochStore(redisServer.Client(t), auth.PlatformEpochTTLFor(0, 0))
+	epoch, err := epochs.TenantEpoch(ctx, fmt.Sprintf("%d", parent.ID))
+	require.NoError(t, err)
+	require.False(t, epoch.IsZero(), "复用账号覆盖口令必须推进 tenant epoch")
+	assert.GreaterOrEqual(t, epoch.Unix(), start, "epoch 必须落在本次开通时刻之后")
+
+	var log domain.PlatformOperationLog
+	require.NoError(t, db.Where("operator = ? AND action = ? AND target_id = ?",
+		onboardTestOperator, "onboard", res.KindergartenID).First(&log).Error)
+	assert.Contains(t, log.Detail, "重置口令", "开通审计必须标明既有账号的凭据被重置")
+}
+
+// 复用路径上的 epoch 写入失败必须失败关闭：口令不得被覆盖、园所不得半开、
+// 也不得留下成功审计。Redis 写入不随 DB 事务回滚，这里验证顺序把失败挡在
+// 口令落库之前。
+func TestPlatformOnboard_ReuseFailsClosedWhenEpochWriteFails(t *testing.T) {
+	db := openPlatformTestDB(t)
+	svc, redisServer := newPlatformTestServiceWithRedis(t, db, NewKindergartenEntryService(repository.NewKindergartenRepo(db)))
+	ctx := context.Background()
+	phone := "19900017109"
+	name := onboardTestNamePrefix + "epoch 失败园"
+	cleanupOnboardTestData(t, db, phone)
+	t.Cleanup(func() { cleanupOnboardTestData(t, db, phone) })
+
+	otherKG := onboardTestKindergarten(t, db, "epoch 失败既有园")
+	parent := onboardTestUser(t, db, phone, "失败妈妈", "", 2, "ParentSecret1")
+	before := parent.PasswordHash
+	otherKGID := otherKG.ID
+	require.NoError(t, db.Create(&domain.UserRole{
+		UserID: parent.ID, Role: "parent", KindergartenID: &otherKGID, KindergartenName: otherKG.Name,
+	}).Error)
+
+	redisServer.SetFailWrites(true)
+	_, err := svc.Onboard(ctx, OnboardRequest{
+		Name: name, Principal: "孙园长", Phone: phone, AdminPassword: "InitPass1",
+	}, onboardTestOperator, "127.0.0.1")
+	redisServer.SetFailWrites(false)
+
+	require.ErrorIs(t, err, ErrAuthStorageUnavailable, "epoch 写失败必须映射为认证存储不可用")
+
+	var after domain.User
+	require.NoError(t, db.First(&after, parent.ID).Error)
+	assert.Equal(t, before, after.PasswordHash, "epoch 写失败时不得覆盖既有口令")
+
+	var kindergartens int64
+	require.NoError(t, db.Model(&domain.Kindergarten{}).Where("name = ?", name).Count(&kindergartens).Error)
+	assert.Zero(t, kindergartens, "失败的开通不得留下半开园所")
+
+	var roles int64
+	require.NoError(t, db.Model(&domain.UserRole{}).
+		Where("user_id = ? AND role = ?", parent.ID, "admin").Count(&roles).Error)
+	assert.Zero(t, roles, "失败的开通不得授予管理员身份")
+
+	var logs int64
+	require.NoError(t, db.Model(&domain.PlatformOperationLog{}).
+		Where("operator = ? AND action = ?", onboardTestOperator, "onboard").Count(&logs).Error)
+	assert.Zero(t, logs, "失败的操作不得留下成功审计")
 }
 
 // TestPlatformOnboard_AssignsUniquePublicCode 新园必须拿到公开入口码，

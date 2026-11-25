@@ -34,6 +34,13 @@ func (allowAllRevoker) Revoke(context.Context, string, time.Duration) error {
 	return nil
 }
 
+type zeroTenantEpochs struct{}
+
+func (zeroTenantEpochs) TenantEpoch(context.Context, string) (time.Time, error) {
+	return time.Time{}, nil
+}
+func (zeroTenantEpochs) BumpTenantEpoch(context.Context, string, time.Time) error { return nil }
+
 // 生产路由必须把改密门禁接在 AuthJWT 之后、Casbin/ModuleGate 之前：
 // 未改密的 admin_web 凭证访问园所业务接口应得到 403/40303，而不是落到业务 handler。
 func TestRouterEnforcesPasswordChangeForAdminWeb(t *testing.T) {
@@ -42,9 +49,10 @@ func TestRouterEnforcesPasswordChangeForAdminWeb(t *testing.T) {
 		&AppHandler{
 			inner:          &handler.Handler{},
 			tokenRevoker:   allowAllRevoker{},
+			tenantEpochs:   zeroTenantEpochs{},
 			passwordChange: stubPasswordChangeChecker{must: true},
 		},
-		nil, JWTSecret(testJWTSecret), nil, nil, nil, nil,
+		nil, JWTSecret(testJWTSecret), PlatformJWTSecret("test-platform-secret"), nil, nil, nil, nil,
 	)
 	require.NoError(t, err)
 

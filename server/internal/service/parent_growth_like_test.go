@@ -2,21 +2,17 @@ package service
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
 
-	"kindergarten-server/internal/config"
 	"kindergarten-server/internal/domain"
 	"kindergarten-server/internal/repository"
+	"kindergarten-server/internal/testutil/testdb"
 )
 
 // 回归背景（2026-10-17）：growth_likes 是软删除模型，但唯一索引 idx_log_user(log_id, user_id)
@@ -35,22 +31,11 @@ const (
 	testLikeTeacher uint64 = 990236
 )
 
+// openLikeTestDB 是 #207 的迁移样例：显式设置 KDG_TEST_MYSQL_DSN 时连包级派生
+// 测试库（自动迁移）；未设置时保持原有本地行为（连 configs/app.ini 的开发库）。
 func openLikeTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	cfgPath := filepath.Join("..", "..", "configs", "app.ini")
-	if _, err := os.Stat(cfgPath); err != nil {
-		t.Skipf("跳过：找不到 %s（本地无 DB 配置）", cfgPath)
-	}
-	cfg, err := config.Load(cfgPath)
-	require.NoError(t, err)
-	if cfg.MySQL.DSN == "" {
-		t.Skip("跳过：MySQL DSN 为空")
-	}
-	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
-		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
-	})
-	require.NoError(t, err)
-	return db
+	return testdb.Open(t)
 }
 
 // countLikeRows 统计测试家长在该记录上的点赞行；unscoped=true 时把软删行也算进来。
