@@ -63,6 +63,7 @@
       "content": "各位家长您好，本周作业如下：1. 复习本周学过的儿歌...",
       "class_names": ["小一班", "小二班"],
       "need_confirm": true,
+      "confirm_deadline": "2026-03-20T18:00:00Z",
       "status": 2,
       "status_label": "已发布",
       "read_count": 25,
@@ -95,6 +96,7 @@
   "content": "各位家长您好，本周作业如下：1. 复习本周学过的儿歌；2. 完成手工制作《我的家》...",
   "class_names": ["小一班", "小二班"],
   "need_confirm": true,
+  "confirm_deadline": "2026-03-20T18:00:00Z",
   "status": 2,
   "scheduled_at": null,
   "published_at": "2026-03-19T09:00:00Z",
@@ -146,6 +148,7 @@
     }
   ],
   "need_confirm": true,
+  "confirm_deadline": "2026-03-20T18:00:00Z", // need_confirm=true 且 status=1/2 时必填：带时区 RFC3339，且晚于发送时间（status=1 晚于 scheduled_at，status=2 晚于当前时间）
   "scheduled_at": null,           // status=1 必填：带时区 RFC3339 且晚于当前时间；其余状态忽略
   "template_id": null             // 使用的模板 ID，可选
 }
@@ -154,6 +157,7 @@
 // status=0 草稿：标题或正文至少一项非空；class_ids 可为空
 // status=1 定时：标题、正文、class_ids 均非空；scheduled_at 必须是 `2026-11-01T09:00:00+08:00` 形式
 // status=2 发布：标题、正文、class_ids 均非空
+// need_confirm=true 且 status=1/2 时，confirm_deadline 必填且晚于发送时间；need_confirm=false 时忽略并置空
 // 附件校验先于落库：非 image / 超过 9 张 / 单张超 20MB → 400，整单不保存
 
 // Response
@@ -166,6 +170,8 @@
 ```
 
 ---
+
+> `confirm_deadline` 仅 `need_confirm=true` 时有值；家长端在截止后不可确认。老师端可用该字段显示「确认截止 / 已截止」。
 
 ### PUT `/teacher/notices/:id`
 
@@ -190,10 +196,11 @@
     }
   ],
   "need_confirm": true,
+  "confirm_deadline": "2026-03-20T18:00:00Z", // need_confirm=true 且 status=1/2 时必填：带时区 RFC3339，且晚于发送时间
   "scheduled_at": null            // status=1 必填：带时区 RFC3339 且晚于当前时间
 }
 
-// 完整性：status=0 要求标题或正文至少一项非空；status=1/2 要求标题、正文、class_ids 均非空。
+// 完整性：status=0 要求标题或正文至少一项非空；status=1/2 要求标题、正文、class_ids 均非空；need_confirm=true 时 confirm_deadline 必填且晚于发送时间。
 // 发布失败（如正文为空）返回 400 且草稿内容不变。
 
 // Response
