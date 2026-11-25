@@ -73,6 +73,7 @@ type AuthService struct {
 	kindergartens  KindergartenMembershipRepository
 	rdb            *redis.Client
 	revoker        auth.TokenRevoker
+	tenantEpochs   auth.TenantEpochStore
 	secret         []byte
 	atTTL          time.Duration
 	rtTTL          time.Duration
@@ -116,6 +117,7 @@ func NewAuthService(
 		kindergartens:     kindergartens,
 		rdb:               rdb,
 		revoker:           auth.NewTokenRevoker(rdb),
+		tenantEpochs:      auth.NewTenantEpochStore(rdb, auth.PlatformEpochTTLFor(rtTTL, atTTL)),
 		secret:            secret,
 		atTTL:             atTTL,
 		rtTTL:             rtTTL,
@@ -272,6 +274,11 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uint64, oldPass
 	if err != nil {
 		return err
 	}
+	// 账号级失效（#182）：先推进 epoch 再改库，Redis 不可用时失败关闭——
+	// 不能出现「口令已换、旧会话仍能用旧 access/refresh」。
+	if err := s.bumpTenantEpoch(ctx, userID); err != nil {
+		return fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
+	}
 	return s.userRepo.UpdateFields(ctx, userID, map[string]any{
 		"password_hash":        hash,
 		"must_change_password": false,
@@ -406,7 +413,7 @@ func (s *AuthService) issueTokensFor(ctx context.Context, user *domain.User, rol
 	}
 
 	// refresh 存储带上完整作用域（#169）：刷新/切换时按同一客户端与园所续签。
-	refreshScope := auth.RefreshScope{UID: user.ID, KindergartenID: kgID}
+	refreshScope := auth.RefreshScope{UID: user.ID, KindergartenID: kgID, IssuedAt: time.Now().Unix()}
 	if client != nil {
 		refreshScope.AppID = client.AppID
 		refreshScope.ScopeKind = client.ScopeKind
@@ -729,6 +736,10 @@ func (s *AuthService) SwitchKindergarten(ctx context.Context, userID uint64, cla
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh token: %w", err)
 	}
+	// 切换同样消耗 refresh：账号级失效后旧凭证不得再换出目标园会话（#182）。
+	if err := s.ensureTenantEpochCurrent(ctx, scope.UID, scope.IssuedAt); err != nil {
+		return nil, err
+	}
 	// 凭证必须属于同一个账号、同一个客户端，不能拿别人的 refresh 切自己的会话。
 	if scope.UID != userID || scope.AppID != claims.AppID {
 		return nil, fmt.Errorf("invalid refresh token: scope mismatch")
@@ -832,6 +843,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 	scope, err := auth.DecodeRefreshScope(value)
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh token: %w", err)
+	}
+	// 账号级失效（#182）：改密/重置/删除后，此前签发的 refresh 一律作废。
+	// 与 AuthJWT 同源比较；存储故障失败关闭。
+	if err := s.ensureTenantEpochCurrent(ctx, scope.UID, scope.IssuedAt); err != nil {
+		return nil, err
 	}
 
 	user, err := s.userRepo.FindByID(ctx, scope.UID)
@@ -971,6 +987,53 @@ func (s *AuthService) TokenRevoker() auth.TokenRevoker {
 		return nil
 	}
 	return s.revoker
+}
+
+// TenantEpochStore 暴露园所账号级失效存储给路由与中间件装配（#182）。
+// AuthJWT、续期与新会话的 epoch 比较必须使用同一份存储。
+func (s *AuthService) TenantEpochStore() auth.TenantEpochStore {
+	if s == nil {
+		return nil
+	}
+	return s.tenantEpochs
+}
+
+// bumpTenantEpoch 推进账号级失效水位（#182）。改密 / 重置 / 删除管理员都必须
+// 先成功推进它再改库；写失败由调用方上抛，最终映射成 503（失败关闭）。
+//
+// epoch 写 Redis、不参与调用方的事务：若其后改库失败，账号会被多登出一次，
+// 而口令/角色未变。这个方向只会让用户重新登录，不会留下「凭据已换、旧会话
+// 仍有效」的窗口，因此可接受，也无需补偿写。
+func (s *AuthService) bumpTenantEpoch(ctx context.Context, userID uint64) error {
+	if s.tenantEpochs == nil {
+		return fmt.Errorf("tenant epoch store not configured")
+	}
+	return s.tenantEpochs.BumpTenantEpoch(ctx, fmt.Sprintf("%d", userID), time.Now())
+}
+
+// ensureTenantEpochCurrent 校验续期凭证签发于账号级失效水位之后（#182）。
+// 旧载荷 IssuedAt=0 在没有任何 epoch 时仍按原行为可用；一旦账号被改密/重置/
+// 删除，epoch 必然晚于 1970，旧载荷随之失效。存储故障失败关闭。
+//
+// 比较是「严格早于」：epoch 为秒级精度（与 JWT iat 对齐），iat == epoch 的凭证
+// 仍放行，失效动作与签发落在同一秒时旧凭证最多还能再用不到 1 秒。
+//
+// 调用点（Refresh / SwitchKindergarten）都先 GETDEL 消费 refresh 再到这里校验，
+// 所以一旦 epoch 读失败或判定失效，这次 refresh 已被烧掉：重试同一个 refresh
+// 只会得到 401，客户端必须重新登录。这是有意的失败关闭——不允许校验不过的
+// refresh 重放。
+func (s *AuthService) ensureTenantEpochCurrent(ctx context.Context, userID uint64, issuedAt int64) error {
+	if s.tenantEpochs == nil {
+		return fmt.Errorf("%w: tenant epoch store not configured", ErrAuthStorageUnavailable)
+	}
+	epoch, err := s.tenantEpochs.TenantEpoch(ctx, fmt.Sprintf("%d", userID))
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrAuthStorageUnavailable, err)
+	}
+	if time.Unix(issuedAt, 0).Before(epoch) {
+		return ErrTokenRevoked
+	}
+	return nil
 }
 
 func maskPhone(phone string) string {

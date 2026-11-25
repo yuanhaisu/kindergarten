@@ -75,6 +75,8 @@ const ALLOW = [
   { rule: 'password-assignment', file: /^admin\/pages\/admins\/index\.vue$/ },
   // 测试夹具
   { rule: 'password-assignment', file: /^server\/internal\/config\/config_test\.go$/ },
+  // #183 启动校验单测的假密钥（tenant-secret / platform-secret / shared），不是凭据
+  { rule: 'password-assignment', file: /^server\/internal\/app\/provider_test\.go$/ },
   // 平台会话单测里的假 token（new-access / new-refresh），不是凭据
   { rule: 'password-assignment', file: /^admin\/tests\/unit\/usePlatformHttp\.test\.ts$/ },
   // 平台账号服务测试的假口令（Abc12345），不是凭据
@@ -85,6 +87,8 @@ const ALLOW = [
   { rule: 'password-assignment', file: /^server\/internal\/testutil\/authharness\/admin_session_test\.go$/ },
   // #173 测试库派生单测的假 DSN（tester:secret@tcp），不是凭据
   { rule: 'go-mysql-dsn', file: /^server\/internal\/testutil\/authharness\/db_test\.go$/ },
+  // #207 测试库护栏单测的假 DSN（kg_app:s3cret-pw@tcp / user:topsecret@tcp），不是凭据
+  { rule: 'go-mysql-dsn', file: /^server\/internal\/testutil\/testdb\/guard_test\.go$/ },
 ]
 
 function isAllowed(finding) {

@@ -2,7 +2,7 @@
 ; 真正的 app.ini 已被 .gitignore 忽略，不会入库
 ;
 ; 所有敏感项都支持环境变量覆盖（优先级高于本文件）：
-;   MYSQL_DSN  REDIS_ADDR  REDIS_PASSWORD  JWT_SECRET
+;   MYSQL_DSN  REDIS_ADDR  REDIS_PASSWORD  JWT_SECRET  JWT_PLATFORM_SECRET
 ;   WECHAT_TEACHER_APP_ID  WECHAT_TEACHER_SECRET
 ;   WECHAT_PARENT_APP_ID   WECHAT_PARENT_SECRET
 ;   OSS_ENDPOINT  OSS_ACCESS_KEY_ID  OSS_ACCESS_KEY_SECRET  OSS_BUCKET
@@ -34,7 +34,12 @@ password = CHANGE_ME
 db       = 0
 
 [jwt]
+; 两个信任域各用一把签名密钥（ADR-0014 / #183），都必填且必须不同：
+;   secret          → 园所域（老师端 / 家长端 / 管理端）
+;   platform_secret → 平台域（scope=platform）
+; 任一为空或两者相同，进程拒绝启动。
 secret           = CHANGE_ME
+platform_secret  = CHANGE_ME_PLATFORM
 access_ttl_min   = 15
 refresh_ttl_day  = 7
 

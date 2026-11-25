@@ -243,6 +243,8 @@ func actionLabelFor(action string) string {
 	// 会话建立审计（module=auth，#160 L205）。
 	case "login":
 		return "登录"
+	case "change_password":
+		return "修改密码"
 	case "bind_parent_phone":
 		return "家长绑定手机号"
 	case "bind_invite":

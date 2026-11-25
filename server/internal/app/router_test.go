@@ -29,10 +29,13 @@ import (
 
 const testJWTSecret = "b09-test-secret"
 
+// 平台信任域使用独立密钥（#183）；两个值必须不同，否则装配校验会拒绝。
+const testPlatformJWTSecret = "b09-platform-test-secret"
+
 func newRouterForTest(t *testing.T) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	engine, err := NewRouter(NewAppHandler(&handler.Handler{}), nil, JWTSecret(testJWTSecret), nil, nil, nil, nil)
+	engine, err := NewRouter(NewAppHandler(&handler.Handler{}), nil, JWTSecret(testJWTSecret), PlatformJWTSecret(testPlatformJWTSecret), nil, nil, nil, nil)
 	require.NoError(t, err)
 	return engine
 }
@@ -431,7 +434,7 @@ func newTestEngineWithRoleRepo(t *testing.T, rdb *redis.Client, roles fakeRoleRe
 		nil, // support
 	)
 
-	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), nil, nil, nil, nil)
+	engine, err := NewRouter(NewAppHandler(h), nil, JWTSecret(testJWTSecret), PlatformJWTSecret(testPlatformJWTSecret), nil, nil, nil, nil)
 	require.NoError(t, err)
 	return engine
 }

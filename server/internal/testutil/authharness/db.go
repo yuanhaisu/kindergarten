@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	mysqldrv "github.com/go-sql-driver/mysql"
@@ -20,17 +21,40 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 
 	"kindergarten-server/internal/config"
+	"kindergarten-server/internal/testutil/testdb"
 	migrations "kindergarten-server/migrations"
 )
 
 const (
 	// TestDSNEnv 显式指定一个**已存在的独立测试库**。设置后不再按分支派生库名，
-	// 但仍然会执行迁移；指向开发库会被拒绝。
-	TestDSNEnv = "KDG_TEST_MYSQL_DSN"
-	configEnv  = "CONFIG_PATH"
+	// 但仍然会执行迁移；指向开发库或库名不含 test 会被拒绝（护栏与 testdb 共用）。
+	TestDSNEnv = testdb.TestDSNEnv
+	// RequireDBEnv 设为真值时，测试库不可用直接失败而不是跳过。CI 必须显式
+	// 设置：缺 MySQL 或漏配 DSN 时让门禁变红，而不是把「没跑」当成「通过」。
+	RequireDBEnv = testdb.RequireDBEnv
+	configEnv    = "CONFIG_PATH"
 
 	migrationLockTimeoutSec = 120
 )
+
+// requireMySQL 与 testdb 共用同一判定：值写错时按「要求」处理，
+// 宁可失败关闭，也不能因为拼错开关而静默跳过。
+func requireMySQL() bool {
+	return testdb.RequireMySQL()
+}
+
+// failOrSkip 处理「测试库不可用」：默认跳过，让没有 MySQL 的本地环境仍能跑
+// 其余测试；RequireDBEnv 生效时一律 Fatal。
+func (s *dbSetup) failOrSkip(t testing.TB) {
+	t.Helper()
+	if s.skipReason == "" {
+		return
+	}
+	if requireMySQL() {
+		t.Fatalf("authharness: %s（%s 已设置，缺库必须失败而不是跳过）", s.skipReason, RequireDBEnv)
+	}
+	t.Skipf("authharness: %s", s.skipReason)
+}
 
 // dbSetup 是包级共享的测试库句柄：同一 go test 进程里的多个用例复用同一个
 // 派生库，迁移只跑一次（GET_LOCK 保证跨包、跨进程也只跑一次）。
@@ -73,7 +97,8 @@ func initTestDB() *dbSetup {
 		cfg, err := config.Load(cfgPath)
 		if err != nil {
 			// 配置文件存在却读不了，说明环境本身坏了，必须显式失败而不是跳过。
-			s.err = fmt.Errorf("加载 %s 失败：%w", cfgPath, err)
+			// 不展开解析器原文：它可能回显 `dsn = user:pass@...` 这一行。
+			s.err = fmt.Errorf("加载 %s 失败（为避免回显敏感行，未展开原始错误）", cfgPath)
 			return s
 		}
 		s.cfg = cfg
@@ -89,25 +114,27 @@ func initTestDB() *dbSetup {
 	if s.cfg != nil && s.cfg.MySQL.DSN != "" {
 		devCfg, err := mysqldrv.ParseDSN(s.cfg.MySQL.DSN)
 		if err != nil {
-			s.err = fmt.Errorf("解析开发库 DSN 失败：%w", err)
+			s.err = fmt.Errorf("解析开发库 DSN 失败（目标：%s），拒绝运行", testdb.Target(s.cfg.MySQL.DSN))
 			return s
 		}
 		s.devDatabase = devCfg.DBName
 	}
 
 	if explicitDSN != "" {
+		devDSN := ""
+		if s.cfg != nil {
+			devDSN = s.cfg.MySQL.DSN
+		}
+		// 与 testdb.Open 共用同一护栏：tcp DSN、必须有库名、库名须含 test，
+		// 且不得与开发库同名。错误只含脱敏目标，不回显账号口令。
+		if err := testdb.Guard(explicitDSN, devDSN); err != nil {
+			s.err = err
+			return s
+		}
 		testCfg, err := mysqldrv.ParseDSN(explicitDSN)
 		if err != nil {
-			s.err = fmt.Errorf("解析 %s 失败：%w", TestDSNEnv, err)
-			return s
-		}
-		if testCfg.DBName == "" {
-			s.err = fmt.Errorf("%s 必须包含数据库名", TestDSNEnv)
-			return s
-		}
-		if testCfg.DBName == s.devDatabase && s.devDatabase != "" {
-			s.err = fmt.Errorf("%s 指向开发库 %q；测试会写入并硬删真实数据，必须换成独立测试库",
-				TestDSNEnv, testCfg.DBName)
+			// Guard 已经解析成功过；这里只是兜底，且不回显原始解析错误。
+			s.err = fmt.Errorf("%s 无法解析，拒绝运行（目标：%s）", TestDSNEnv, testdb.Target(explicitDSN))
 			return s
 		}
 		s.testDatabase = testCfg.DBName

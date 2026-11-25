@@ -4,7 +4,8 @@
 > 解绑绑错的微信、更正录入错误的手机号。
 >
 > 基础路径：`/api/v1/platform`。凭证必须带 `scope=platform`；
-> 园所管理端 JWT 调用一律 `403`，平台凭证同样不能调用 `/admin/*`。
+> 园所管理端 JWT 用另一把签名密钥，调用平台接口**验签失败，一律 `401`**（不是 `403`）；
+> 平台凭证同样不能调用 `/admin/*`（同样 `401`）。
 >
 > 与园所管理端的同名能力（`GET|PUT /admin/parents/:id/*`）共用 service，
 > 但**审计落不同表**：平台侧写 `platform_operation_logs`（`module=support`）。

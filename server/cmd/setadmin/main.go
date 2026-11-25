@@ -7,9 +7,14 @@
 //
 // -phone 与 -kg 必填；口令只从 -password 或环境变量 SETADMIN_PASSWORD 读取
 // （推荐环境变量，避免进入 shell 历史与进程参数）。没有默认口令，也不会回显。
-// 目标园所必须存在，软删除视为不存在。重复执行是幂等的。
+// 目标园所必须存在，软删除视为不存在。重复执行是幂等的：复用既有账号会
+// 覆盖口令并推进园所账号 epoch，使此前的 access/refresh 立即失效。
 //
-// CONFIG_PATH 可覆盖配置文件路径（默认 configs/app.ini）；MYSQL_DSN 可覆盖连接串。
+// 因此本命令需要可用的 Redis（与 API 服务同一实例）。会话 Redis 不可用时
+// 直接失败，而不是跳过失效——否则「口令已换、旧会话仍有效」会留下静默缺口。
+//
+// CONFIG_PATH 可覆盖配置文件路径（默认 configs/app.ini）；MYSQL_DSN / REDIS_ADDR
+// 可覆盖连接配置。
 package main
 
 import (
@@ -22,12 +27,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	gormlogger "gorm.io/gorm/logger"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
 	"kindergarten-server/cmd/internal/adminprovision"
+	"kindergarten-server/internal/auth"
 	"kindergarten-server/internal/config"
 )
 
@@ -87,6 +94,9 @@ func main() {
 	if cfg.MySQL.DSN == "" {
 		log.Fatal("MySQL DSN 为空：请检查配置或设置 MYSQL_DSN")
 	}
+	if cfg.Redis.Addr == "" {
+		log.Fatal("Redis 地址为空：复用既有账号需要写入会话失效记录，请检查配置或设置 REDIS_ADDR")
+	}
 	db, err := gorm.Open(mysql.Open(cfg.MySQL.DSN), &gorm.Config{
 		// 首次供给时按手机号/角色查询会命中 record-not-found，属正常分支；
 		// 不忽略会把「命令成功」刷成一片红色错误日志，误导运维。
@@ -100,9 +110,29 @@ func main() {
 		log.Fatal("open db: ", err)
 	}
 
-	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, opts)
+	res, err := adminprovision.EnsureTenantAdmin(context.Background(), db, opts, newTenantEpochStore(cfg))
 	if err != nil {
 		log.Fatal("setadmin: ", err)
 	}
 	fmt.Println(res.Summary())
+}
+
+// newTenantEpochStore 按与 API 服务相同的公式构造园所账号失效存储。
+// TTL 覆盖 refresh + access + 1 天；默认值（15 分钟 / 7 天）与
+// internal/app 的 Provide*TTL 保持一致，配置缺省时不会把 epoch 写短。
+func newTenantEpochStore(cfg *config.Config) auth.TenantEpochStore {
+	atTTL := time.Duration(cfg.JWT.AccessTTLMin) * time.Minute
+	if atTTL <= 0 {
+		atTTL = 15 * time.Minute
+	}
+	rtTTL := time.Duration(cfg.JWT.RefreshTTLDay) * 24 * time.Hour
+	if rtTTL <= 0 {
+		rtTTL = 7 * 24 * time.Hour
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+	return auth.NewTenantEpochStore(rdb, auth.PlatformEpochTTLFor(rtTTL, atTTL))
 }

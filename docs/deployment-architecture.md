@@ -144,6 +144,8 @@ Website Release（手动） ─→ website 静态包 ──SSH──→ /opt/kg/
 - `[casbin]` 的 `rbac_model.conf` / `rbac_policy.csv` 随镜像发布，路径改为容器内绝对路径（如 `/app/configs/...`）。
 - 容器与数据库统一 `Asia/Shanghai`：容器 `TZ=Asia/Shanghai`，DSN `loc=Asia%2FShanghai`。
 - 生产配置示例：`gin_mode=release`、`log.format=json`、`log.level=info`。
+- **两个信任域各用一把 JWT 签名密钥**（#183）：`[jwt] secret` 用于园所域（老师端 / 家长端 / 管理端），`[jwt] platform_secret`（环境变量 `JWT_PLATFORM_SECRET`）用于平台域（`scope=platform`）。两把都必须配置且值不同；任一为空或相同，进程拒绝启动。两把密钥独立生成、独立轮换：轮换其中一把不影响另一域。`staging` / `production` 各自在 GitHub Environment Secrets 中保存 `JWT_SECRET` 与 `JWT_PLATFORM_SECRET`。
+- ⚠️ **轮换密钥只终止访问凭证，不终止续期凭证**：续期凭证是不透明 jti，存在 Redis（园所域 `refresh:<jti>`，平台域 `refresh:platform:<jti>`），不由 JWT 密钥签名。密钥轮换后，已签发的 access 立即因验签失败而 `401`，但旧 refresh 仍可兑换出用新密钥签发的新 access。要真正清空该域的在线会话，须在轮换窗口内清掉对应前缀的键（`redis-cli --scan --pattern 'refresh:*' | xargs redis-cli del`，平台域同理用 `refresh:platform:*`），或者等 refresh TTL（默认 7 天）自然过期。园所域也可以对受影响账号推进 epoch，但无法批量，通常用清键。
 - **平台访问凭证 TTL 是行为变更**：`[jwt] access_ttl_min`（默认 15）现在同时决定平台访问凭证有效期——平台会话从旧版硬编码的 24 小时缩短为 15 分钟，靠 7 天续期凭证维持（`refresh_ttl_day`，默认 7）。这不是「维持现状」，上线前须在 staging 验证 `登录 → access 过期 → 自动续期` 全链路；把 `access_ttl_min` 调成 1 可缩短验证时间。
 - **可信代理**：`[server] trusted_proxies`（默认 `127.0.0.1,::1`）决定 `ClientIP()`。API 跑在容器、Nginx 跑在宿主机时，必须把网桥网关地址（如 `172.17.0.1`）加入，否则限流会退化成全站共享配额、平台审计 IP 失真。上线前在 staging 反代后核对一次日志中的 `ClientIP()` 是真实客户端地址。
 - **平台审计保留**：平台操作审计至少保留 3 年，本期不做自动清理（见 `backend/api/api-platform/06-audit.md`）。
@@ -155,7 +157,8 @@ Website Release（手动） ─→ website 静态包 ──SSH──→ /opt/kg/
 | RDS 密码 | git 历史、`.githooks/pre-commit` | 轮换；历史清理另行处理 |
 | Redis 口令 | `start.bat`、`app.ini` | 轮换；删除明文文件 |
 | 模型 API key | `cc.ps1` | 轮换；删除或改为本地环境变量 |
-| JWT secret | `app.ini` | 轮换（会使现有会话失效，选停机窗口） |
+| JWT secret（园所域） | `app.ini` | 轮换（旧 access 立即失效；须同时清 `refresh:*` 才能终止续期，见上） |
+| JWT platform secret（平台域） | `app.ini` | 与园所密钥分开轮换；须同时清 `refresh:platform:*`；必须与 `JWT_SECRET` 不同，否则启动失败 |
 | 微信 / OSS / 腾讯云密钥 | `app.ini` | 确认未被跟踪；按环境重新签发 |
 
 ## 7. 数据、迁移与存储

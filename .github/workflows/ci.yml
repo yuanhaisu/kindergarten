@@ -40,6 +40,10 @@ jobs:
         run: node scripts/check-secrets.mjs --all
       - name: Token lint (admin)
         run: node scripts/check-tokens.mjs admin
+      - name: Migration README drift check
+        run: node scripts/check-migrations-readme.mjs
+      - name: Migration README check self-test
+        run: npm run check-migrations-readme:test
       - name: Nginx staging auth template test
         run: npm run check-nginx-staging-auth:test
 
@@ -80,7 +84,7 @@ jobs:
           working-directory: server
           args: ./...
       - name: Unit tests (DB-free packages)
-        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
+        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./internal/auth ./internal/testutil/testdb ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
 
   migrate:
     name: 数据库迁移（干净库）
@@ -147,6 +151,116 @@ jobs:
           go run ./cmd/dbcheck user_consents
           go run ./cmd/dbcheck --query "SHOW COLUMNS FROM payments LIKE 'idempotency_key'" | grep -q idempotency_key
           go run ./cmd/dbcheck --query "SHOW COLUMNS FROM commission_ledger LIKE 'reversed_amount_cents'" | grep -q reversed_amount_cents
+
+  authharness:
+    name: 认证测试（authharness / MySQL 8）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 测试库名统一用 kindergarten_test：带 test 标记、与 configs/app.ini 的开发库不同名
+    # （#207 测试库守卫的约束）；root 账号拥有 CREATE DATABASE，足以支撑测试内建库/派生库。
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: kindergarten_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      # go test 的 cwd 是包目录，相对路径会解析到 internal/testutil/authharness 下；
+      # 这里必须用绝对路径，否则 harness 加载配置失败。
+      CONFIG_PATH: ${{ github.workspace }}/server/configs/app.ini
+      KDG_TEST_REQUIRE_MYSQL: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Prepare config
+        run: cp server/configs/app.ini.example server/configs/app.ini
+      # 先在同一临时库上跑生产同款 bootstrap，再让 authharness 复用它。
+      - name: goose up (temporary DB)
+        working-directory: server
+        env:
+          MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: go run ./cmd/migrate up
+      - name: seedbase (temporary DB)
+        working-directory: server
+        env:
+          MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: go run ./cmd/seedbase
+      # 测试步骤刻意不设置 MYSQL_DSN：harness 把配置里的 DSN 视为「开发库」，
+      # 指向同名库会被拒绝。这里显式指定 kindergarten_test（含 test 标记、与开发库
+      # 不同名），且 KDG_TEST_REQUIRE_MYSQL=1 让缺库/漏配直接失败，绝不允许静默 skip。
+      - name: Run authharness (fail closed, no skips)
+        working-directory: server
+        env:
+          KDG_TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: |
+          set -o pipefail
+          go test -json ./internal/testutil/authharness -count=1 -timeout 600s | tee /tmp/authharness.json
+          if grep -q '"Action":"skip"' /tmp/authharness.json; then
+            echo "::error::authharness 出现 skip：CI 不允许静默跳过（检查 KDG_TEST_MYSQL_DSN 与 MySQL service）"
+            grep -E '"Action":"skip"' /tmp/authharness.json | tail -20
+            exit 1
+          fi
+          if ! grep -q '"Action":"pass".*"Test":' /tmp/authharness.json; then
+            echo "::error::authharness 没有执行任何测试（覆盖不允许降低）"
+            exit 1
+          fi
+      # testdb 的派生库路径（含 KDG_TEST_REQUIRE_MYSQL 失败关闭）需要真实 MySQL。
+      # 与 authharness 共用本 job 的 service。设置 DSN 时唯一按设计 skip 的是
+      # 「未设置 DSN 才走配置回退」这个互斥用例；除此之外出现 skip 判失败。
+      # 另外单独断言派生库用例确实通过，防止选择器漂移后「零测试」变绿。
+      - name: Run testdb derived-database tests (fail closed, no unexpected skips)
+        working-directory: server
+        env:
+          KDG_TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: |
+          set -o pipefail
+          go test -json ./internal/testutil/testdb -count=1 -timeout 300s | tee /tmp/testdb.json
+          if ! grep -q '"Action":"pass".*"Test":"TestOpenConnectsToDerivedDatabaseWhenTestDSNSet"' /tmp/testdb.json; then
+            echo "::error::testdb 派生库用例未通过（KDG_TEST_MYSQL_DSN 未生效，或 MySQL service 不可用）"
+            exit 1
+          fi
+          unexpected_skips=$(grep '"Action":"skip"' /tmp/testdb.json | grep -v '"Test":"TestOpenFallsBackToConfigWhenTestDSNAbsent"' || true)
+          if [ -n "$unexpected_skips" ]; then
+            echo "::error::testdb 出现非预期 skip：CI 不允许静默跳过（检查 KDG_TEST_MYSQL_DSN 与 MySQL service）"
+            printf '%s\n' "$unexpected_skips" | tail -20
+            exit 1
+          fi
+          if ! grep -q '"Action":"pass".*"Test":' /tmp/testdb.json; then
+            echo "::error::testdb 没有执行任何测试（覆盖不允许降低）"
+            exit 1
+          fi
+      # #208 首批 service 数据库测试：认证/园所入口、家长档案、平台服务三个域。
+      # 复用本 job 的 MySQL service 与 bootstrap；testdb 在测试内再派生
+      # kindergarten_test_<branch|pkg 哈希> 库并执行 goose 迁移，与上面的
+      # kindergarten_test 隔离。串行（-p 1）、不重试；skip 与零测试都判失败。
+      # 运行时基线见 server/Readme.md「#208 首批 service 测试」。
+      - name: Run first service batch (fail closed, no skips)
+        working-directory: server
+        env:
+          KDG_TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_test?charset=utf8mb4&parseTime=True&loc=Local"
+        run: |
+          set -o pipefail
+          go test -json ./internal/service -count=1 -timeout 300s -p 1 \
+            -run '^(TestKindergartenStatusService_SuspendedReadsDB|TestKindergartenEntryFieldsDefaultToSharedChannel|TestKindergartenFindByPublicCodeReturnsActiveOnly|TestGeneratePublicCode\w*|TestBackfillPublicCodesFillsMissingOnly|TestSetPublicCodeIfEmpty\w*|TestEntryServiceFindByPublicCode|TestParentClassInfo_\w+|TestParentStudentProfile_\w+|TestParentClassProfile_\w+|TestPlatformService_\w+|TestPlatformOnboard_\w+)$' \
+            | tee /tmp/service-batch.json
+          if grep -q '"Action":"skip"' /tmp/service-batch.json; then
+            echo "::error::service 首批出现 skip：CI 不允许静默跳过（检查 KDG_TEST_MYSQL_DSN 与 MySQL service）"
+            grep -E '"Action":"skip"' /tmp/service-batch.json | tail -20
+            exit 1
+          fi
+          if ! grep -q '"Action":"pass".*"Test":' /tmp/service-batch.json; then
+            echo "::error::service 首批没有执行任何测试（-run 选择器与测试名漂移？）"
+            exit 1
+          fi
 
   admin:
     name: 管理端静态构建

@@ -32,14 +32,20 @@ func newPlatformEngine(revoker auth.TokenRevoker, epochs auth.PlatformEpochStore
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	g := r.Group("")
-	g.Use(PlatformAuth([]byte(middlewareTestSecret), revoker, epochs))
+	g.Use(PlatformAuth([]byte(middlewarePlatformTestSecret), revoker, epochs))
 	g.GET("/platform/protected", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	return r
 }
 
 func signedPlatformToken(t *testing.T) string {
 	t.Helper()
-	token, err := auth.SignPlatformAccess([]byte(middlewareTestSecret), "7", time.Minute)
+	return signedPlatformTokenWith(t, middlewarePlatformTestSecret)
+}
+
+// signedPlatformTokenWith 用指定密钥签发平台 scope 的 token，用于跨信任域验签测试。
+func signedPlatformTokenWith(t *testing.T, secret string) string {
+	t.Helper()
+	token, err := auth.SignPlatformAccess([]byte(secret), "7", time.Minute)
 	require.NoError(t, err)
 	return token
 }
@@ -60,18 +66,28 @@ func TestPlatformAuthAcceptsPlatformToken(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
 
-// 两类凭证互不可代换：园所凭证进不了平台接口。
+// 两类凭证互不可代换：园所密钥签发的凭证进不了平台接口。
+// #183 起两个域密钥不同，验签阶段即失败（401）。
 func TestPlatformAuthRejectsTenantToken(t *testing.T) {
 	engine := newPlatformEngine(&stubRevoker{}, &stubEpochs{})
 	w := doPlatformRequest(engine, signedToken(t))
-	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-// 反方向：平台凭证进不了园所接口。
+// 反方向：平台密钥签发的凭证进不了园所接口（验签失败，401）。
 func TestAuthJWTRejectsPlatformToken(t *testing.T) {
-	engine := newGuardedEngine(&stubRevoker{})
+	engine := newGuardedEngine(&stubRevoker{}, &stubTenantEpochs{})
 	code := callProtected(engine, signedPlatformToken(t))
-	assert.Equal(t, http.StatusForbidden, code)
+	assert.Equal(t, http.StatusUnauthorized, code)
+}
+
+// #183：平台 scope 的 token 若用园所密钥签发，PlatformAuth 必须拒绝（401）。
+// 这是「共用一把密钥」退化的直接回归：一旦平台验收园所密钥，园所侧泄漏的
+// 密钥就能伪造平台凭证。
+func TestPlatformAuthRejectsPlatformScopeTokenSignedWithTenantKey(t *testing.T) {
+	engine := newPlatformEngine(&stubRevoker{}, &stubEpochs{})
+	w := doPlatformRequest(engine, signedPlatformTokenWith(t, middlewareTestSecret))
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestPlatformAuthRejectsRevokedToken(t *testing.T) {

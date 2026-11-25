@@ -34,6 +34,10 @@ type RefreshScope struct {
 	// PasswordVersion 是管理端口令哈希的短指纹（#166）。改密后旧 refresh
 	// 必须失效；小程序没有口令登录，不需要该字段。
 	PasswordVersion string `json:"pwv,omitempty"`
+	// IssuedAt 是签发时刻（unix 秒）。账号级失效（#182）用它和
+	// tenant:auth_epoch:<uid> 比较：只有 epoch 之后签发的续期凭证才能续期。
+	// 旧载荷没有该字段（0），在没有 epoch 时仍按原行为可用。
+	IssuedAt int64 `json:"iat"`
 }
 
 // PasswordFingerprint 把口令哈希收敛成可放进续期载荷的短指纹。

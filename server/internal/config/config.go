@@ -110,9 +110,29 @@ type RedisConfig struct {
 }
 
 type JWTConfig struct {
-	Secret        string `ini:"secret"`
-	AccessTTLMin  int    `ini:"access_ttl_min"`
-	RefreshTTLDay int    `ini:"refresh_ttl_day"`
+	// Secret 签发/校验园所信任域（老师端、家长端、管理端）的访问凭证。
+	Secret string `ini:"secret"`
+	// PlatformSecret 签发/校验平台信任域（scope=platform）的访问凭证。
+	// 两个信任域必须使用不同密钥：共用一把密钥时，任一域的密钥泄漏都会
+	// 让另一域的凭证可被伪造（ADR-0014）。
+	PlatformSecret string `ini:"platform_secret"`
+	AccessTTLMin   int    `ini:"access_ttl_min"`
+	RefreshTTLDay  int    `ini:"refresh_ttl_day"`
+}
+
+// ValidateAuthSecrets 校验两个信任域的签名密钥都已配置且互不相同。
+// 启动装配阶段调用；空密钥或同一密钥直接拒绝启动，避免静默退化成单密钥。
+func (c JWTConfig) ValidateAuthSecrets() error {
+	if c.Secret == "" {
+		return fmt.Errorf("jwt.secret is required: tenant access tokens need a dedicated signing secret")
+	}
+	if c.PlatformSecret == "" {
+		return fmt.Errorf("jwt.platform_secret is required: platform access tokens need a dedicated signing secret (set JWT_PLATFORM_SECRET)")
+	}
+	if c.Secret == c.PlatformSecret {
+		return fmt.Errorf("jwt.secret and jwt.platform_secret must not be the same: sharing one signing key collapses the tenant and platform trust domains")
+	}
+	return nil
 }
 
 // WeChatConfig 微信小程序凭据，按端各一对。
@@ -243,6 +263,9 @@ func overrideFromEnv(c *Config) {
 	}
 	if v := os.Getenv("JWT_SECRET"); v != "" {
 		c.JWT.Secret = v
+	}
+	if v := os.Getenv("JWT_PLATFORM_SECRET"); v != "" {
+		c.JWT.PlatformSecret = v
 	}
 	if v := os.Getenv("WECHAT_TEACHER_APP_ID"); v != "" {
 		c.WeChat.TeacherAppID = v

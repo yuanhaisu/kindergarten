@@ -16,7 +16,7 @@ import (
 	"kindergarten-server/internal/service"
 )
 
-func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker, trustedProxies TrustedProxies) (*gin.Engine, error) {
+func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, platformSecret PlatformJWTSecret, resolver middleware.PermissionResolver, moduleAuthz service.ModuleAuthorizer, kgStatus service.KindergartenStatusChecker, trustedProxies TrustedProxies) (*gin.Engine, error) {
 	r := gin.New()
 	// 只采信配置里的反向代理来源的 X-Forwarded-For（[server] trusted_proxies，
 	// 默认本机回环）；直连公网时客户端伪造的转发头会被忽略，ClientIP 仍是真实对端地址。
@@ -68,7 +68,7 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 		v1.POST("/platform/auth/login", platformLoginLimit, h.inner.PlatformLogin)
 		v1.POST("/platform/auth/refresh", h.inner.PlatformRefresh)
 		platformG := v1.Group("/platform")
-		platformG.Use(middleware.PlatformAuth([]byte(secret), h.tokenRevoker, h.platformEpochs))
+		platformG.Use(middleware.PlatformAuth([]byte(platformSecret), h.tokenRevoker, h.platformEpochs))
 		platformG.Use(middleware.CasbinRBAC(e))
 		{
 			platformG.POST("/auth/logout", h.inner.PlatformLogout)
@@ -110,7 +110,7 @@ func NewRouter(h *AppHandler, e *casbin.Enforcer, secret JWTSecret, resolver mid
 
 		// 需要认证的接口
 		authed := v1.Group("")
-		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker))
+		authed.Use(middleware.AuthJWT([]byte(secret), h.tokenRevoker, h.tenantEpochs))
 		// 停用园所：凭证有效也一律拒绝（PLT-0005/0006）。
 		authed.Use(middleware.RequireActiveKindergarten(kgStatus))
 		// 未绑定账号白名单（#175）：必须在 Casbin 之前，空角色无法匹配任何策略。
@@ -789,6 +789,8 @@ type AppHandler struct {
 	inner *handler.Handler
 	// tokenRevoker 由认证服务提供，AuthJWT 用它校验登出黑名单；两处必须是同一份存储。
 	tokenRevoker auth.TokenRevoker
+	// tenantEpochs 由认证服务提供，AuthJWT 用它拒绝改密/重置/删除前的旧凭证（#182）。
+	tenantEpochs auth.TenantEpochStore
 	// platformEpochs 由平台服务提供，PlatformAuth 用它拒绝改密/停用前的旧凭证。
 	platformEpochs auth.PlatformEpochStore
 	// rdb 用于平台登录限流；nil 时限流失败关闭（design D5）。
@@ -803,7 +805,7 @@ type AppHandler struct {
 
 func NewAppHandler(h *handler.Handler) *AppHandler {
 	return &AppHandler{
-		inner: h, tokenRevoker: h.TokenRevoker(),
+		inner: h, tokenRevoker: h.TokenRevoker(), tenantEpochs: h.TenantEpochStore(),
 		platformEpochs: h.PlatformEpochStore(), consent: h.AuthService(),
 	}
 }
