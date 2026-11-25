@@ -96,4 +96,4 @@
 }
 ```
 
-> 当前时间晚于 `confirm_deadline` 时返回 409（`确认已截止`），不得写入 `is_confirmed` / `confirmed_at`；家长端应隐藏确认栏并显示「已截止」。`need_confirm=false` 的通知不展示确认入口。
+> 当前时间 `>=` `confirm_deadline` 时返回 `409`（业务码 `40900`，`确认已截止`），不得写入 `is_confirmed` / `confirmed_at`；家长端应隐藏确认栏并显示「已截止」。`need_confirm=false` 的通知不展示确认入口。

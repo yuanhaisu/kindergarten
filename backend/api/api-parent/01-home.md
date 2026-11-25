@@ -156,3 +156,5 @@
   "page_size": 10
 }
 ```
+
+> `confirm_deadline` 仅 `need_confirm=true` 时有值；截止后确认返回 409，详见 `02-notice.md`。
