@@ -57,6 +57,8 @@ func TestForcedPasswordChangeGateEndToEnd(t *testing.T) {
 
 	// 改密成功：标记落库为 false，但 #182 会推进账号级失效时间，
 	// 当前 access / refresh 都必须失效，客户端需要重新登录。
+	// epoch 是秒级精度：等过签发秒，避免「同一秒内旧 token 仍有效」的设计行为。
+	waitNextClockSecond(t)
 	changed := h.PutJSONWithToken(t, "/api/v1/common/user/password", renewed.Token,
 		map[string]string{"old_password": "Password@123", "new_password": "NewPassword@456"})
 	require.Equal(t, 200, changed.Status, string(changed.Body))

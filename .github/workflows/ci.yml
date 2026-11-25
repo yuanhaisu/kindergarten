@@ -116,7 +116,8 @@ jobs:
           --health-timeout=3s
           --health-retries=20
     env:
-      CONFIG_PATH: configs/app.ini
+      # testdb 在包目录下运行 go test，相对路径会找不到 server/configs/app.ini。
+      CONFIG_PATH: ${{ github.workspace }}/server/configs/app.ini
       MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_migrate_test?charset=utf8mb4&parseTime=True&loc=Local"
     steps:
       - uses: actions/checkout@v4
