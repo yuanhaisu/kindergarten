@@ -1,10 +1,9 @@
-# OpenSpec 使用指南
+# OpenSpec 使用指南（已停用）
 
-> 本项目的规格化工具是 **OpenSpec**。本文是日常查阅手册。
+> ⚠️ **2026-11-21 起停用**：新开发不再使用 OpenSpec，改用 `mattpocock-skills`（`/to-spec` + GitHub issue；`tdd` 实现；`code-review` / `pr` 收尾）。本文仅作历史手册，不要照此新建 change。
 >
-> - 语义所有权与工作流总览 → 根目录 `CLAUDE.md` 的「Spec Workflow」一节
-> - 项目约束与 artifact 规则 → `openspec/config.yaml`
-> - 历史规格（已冻结）→ `docs/specs/`
+> - 当前工作流 → 根目录 `CLAUDE.md` 的「Spec Workflow」一节
+> - 历史规格（已冻结）→ `docs/specs/`、`openspec/`
 
 ---
 

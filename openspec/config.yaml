@@ -1,3 +1,5 @@
+# 2026-11-21 起停用：新开发使用 mattpocock-skills（/to-spec + GitHub issue），不再新建 OpenSpec change。
+# 本文件仅保留供历史 change 参考。
 schema: spec-driven
 
 # 注入到所有 artifact 指令的项目上下文（≤50KB）。
