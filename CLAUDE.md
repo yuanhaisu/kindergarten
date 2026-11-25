@@ -726,7 +726,7 @@ npm run design:test                                  # 门禁自身的结构断�
 
 > 维护规则：开发项走 GitHub issue（`/to-spec`）+ `mattpocock-skills`，不在本清单；本节只放发布前必须有人完成的**非开发动作**（品牌、合规、微信、试点、运维、商业）。完成一项勾一项；新增项必须写清触发条件，不允许只有“待办”没有“何时必须做”。最后更新：2026-11-21。
 >
-> 开发项唯一一条：共用 v1 身份与会话底座（一人一账号、`clients/app_id`、`user_identities`、token 角色裁剪、租户通道、单园会话 + 切换、园所入口/品牌）——规格见 #160；实现按 `mattpocock-skills`（tdd → code-review → pr），不在本节；本节其余均为非开发事项。
+> 开发项唯一一条（已完成）：共用 v1 身份与会话底座（一人一账号、`clients/app_id`、`user_identities`、token 角色裁剪、租户通道、单园会话 + 切换、园所入口/品牌）已由 PR #180 于 2026-11-21 合入 main（#160 completed）；规格见 #160。实现按 `mattpocock-skills`（tdd → code-review → pr），不在本节；本节其余均为非开发事项。
 
 ### A. 品牌与合规（发布前硬门禁）
 - [ ] **App 名称/图标/简介定稿**：微信注册前一次性决策；发布后改名受限。共用 App 的名称就是平台名，UI 只能降噪、不能隐藏。
