@@ -283,8 +283,7 @@
 - `participant_count`：该任务**已提交过的去重学生数**（`COUNT(DISTINCT student_id)`，软删提交不计）。
   与详情 stats 的 `submission_count`（打卡行数）不同：同一学生多次打卡只算 1 人。
   列表级一次 `GROUP BY task_id` 聚合，不逐任务查询；查询失败时整个列表失败（不返回 `null` 或 0）。
-- `student_count` / `unsubmitted_count`：当前班在读学生数，以及其中**没有未删除提交**的人数。
-  个体任务按目标孩子计（`student_count` 为 0 或 1）。`unsubmitted_count` 是 09「待提交」筛选依据；
+- `student_count` / `unsubmitted_count`：班级任务取当前班在读学生数，以及其中**没有未删除提交**的人数；个体任务按目标孩子计：目标仍在当前班在读时 `student_count=1`，否则 0；`unsubmitted_count` 同理（0/1）。`unsubmitted_count` 是 09「待提交」筛选依据；
   **不要用 `participant_count < student_count` 代替**——`participant_count` 是历史去重提交者
   （含已转班/离班孩子），转班场景两者会不等（见 §9.7）。列表级一次聚合，不逐任务查询。
 - `requirements`：提交要求，**始终数组**（`[]` 表示无要求），与创建请求同名字段一致；供 09 卡片、10 详情与分享卡使用。
@@ -439,11 +438,11 @@
 - `submission_count`：打卡**行数**（同一孩子跨天多次提交会多次计），用于待回应/回应进度。
 - `participant_count`：**已提交过的去重学生数**（`COUNT(DISTINCT student_id)`），用于「已参与 N/M」。
   与 `submission_count` 语义不同：同一学生多次打卡只算 1 人，客户端不要把行数当人数。
-- `total_students`：当前班**在读**学生数（`students.status=1` 且未删除）。
+- `total_students`：班级任务 = 当前班**在读**学生数（`students.status=1` 且未删除）；个体任务 = 目标孩子仍在当前班在读时返回 1，否则返回 0。
   **查询失败返回 500，不得静默返回 0**——那会把整班显示成「没有孩子」。
 - `responded_count`：已回应的提交数 = `response_id > 0` **或** `teacher_read_at` 非空的提交数（标记已阅计入，§9.3）。
 - `pending_count`：`submission_count - responded_count`。
-- `unsubmitted_count`：当前在读且没有未删除提交的学生数（§9.7）；它按当前在读学生计算，不能用 `total_students - participant_count` 反推（`participant_count` 含已转班/离班的历史提交者）。
+- `unsubmitted_count`：班级任务 = 当前在读且没有未删除提交的学生数；个体任务 = 目标孩子仍在读且没有未删除提交时返回 1，否则 0。它按当前 scope 计算，不能用 `total_students - participant_count` 反推（`participant_count` 含已转班/离班的历史提交者）。
 - 计数限定当前老师当前班级；任务不属于当前班级/园所 → 404。
 - 不再返回 `checkin_count` / `not_checkin_count` / `total_points_awarded`。
 
@@ -729,7 +728,7 @@
 ## 9. 记录型任务 P0 增量（2026-11-21）
 
 > **契约先行**：本节端点与字段用于老师端 09 / 10 / 10a 的记录型任务 P0，**服务端实现是后续工作**，未实现前客户端不得调用。
-> 产品依据：`docs/design-previews/2026-11-19-teacher-dna-validation/TASK-RECORD-PRODUCT.md`（2026-11-21 决策）；字段落库以 `server/internal/domain/` 为准。
+> 产品依据：2026-11-21 记录型任务 P0 产品决策（原产品文档未入库，本文 §9 为唯一契约口径）；字段落库以 `server/internal/domain/` 为准。
 > 本节不改动既有端点的已实现行为；新增字段对旧客户端是兼容的（多返回字段不应导致报错）。
 
 ### 9.1 任务字段增量（创建 / 更新 / 列表 / 详情）
@@ -741,13 +740,13 @@
 | `ended_at` | string\|null | — | — | — | 返回 | 仅手动结束非空 |
 | `ended_by` | int | — | — | — | 返回 | 手动结束老师 id；未结束为 0 |
 | `target_student` | object\|null | — | — | — | 返回 | 个体任务目标孩子；班级任务 `null` |
-| `student_count` | int | — | — | 返回 | — | 当前班在读学生数 |
-| `unsubmitted_count` | int | — | — | 返回 | — | 当前在读且无未删除提交的学生数 |
+| `student_count` | int | — | — | 返回 | — | 班级任务=当前班在读学生数；个体任务=目标孩子在读 1/0 |
+| `unsubmitted_count` | int | — | — | 返回 | — | 班级任务=当前在读且无未删除提交人数；个体任务=目标孩子未提交 1/0 |
 
 - `requirements`：字符串数组，原样存取；`[]` 表示无提交要求。创建缺省 `[]`；更新不传 = 保留原值。有提交后仍可修改，只影响后续家长的提交提示，不改变已提交内容（§9.6）。
 - `allow_late_submission`：创建缺省 `false`；更新不传 = 保留原值。有提交后仍可修改；只影响后续到期判定，不追溯已手动结束的任务（§9.5）。
-- `student_count`：班级任务取当前班在读学生数；个体任务取 `1`（目标孩子仍在读）或 `0`。列表级一次班级查询，不逐任务查询。
-- `unsubmitted_count`：当前班在读学生中**没有**未删除提交的人数；个体任务按目标孩子计（0/1）。它是 09「待提交」筛选的依据，**不能用 `participant_count < student_count` 代替**：`participant_count` 是历史去重提交者（含已转班/离班孩子），转班场景两者会不等（§9.7）。
+- `student_count`：班级任务取当前班在读学生数；个体任务取 `1`（目标孩子仍在当前班在读）或 `0`（目标已不在当前班在读）。列表级一次班级查询，不逐任务查询。
+- `unsubmitted_count`：班级任务取当前班在读学生中**没有**未删除提交的人数；个体任务按目标孩子计（0/1；目标已不在当前班在读 → 0）。它是 09「待提交」筛选的依据，**不能用 `participant_count < student_count` 代替**：`participant_count` 是历史去重提交者（含已转班/离班孩子），转班场景两者会不等（§9.7）。
 - `target_student`：仅详情返回，形状 `{ "id", "name", "avatar" }`；`target_student_id=0` 时为 `null`。用于详情头部与个体任务分享卡，客户端不需要再拉全班名单。
 
 ### 9.2 选中提交批量回应
@@ -900,10 +899,12 @@
 }
 ```
 
-- 范围：任务所属班级的**当前在读**学生（`students.status=1` 且未删除）；个体任务只有 `target_student_id` 一个孩子（不在读 → 空列表）。不扫描其它班级、不跨园。
+- 范围：任务所属班级的**当前在读**学生（`students.status=1` 且未删除）；个体任务只有 `target_student_id` 一个孩子；目标孩子已不在当前班在读时返回空列表，且 `total=0`、`submitted_count=0`、`unsubmitted_count=0`（stats 的 `total_students` 也为 0）。不扫描其它班级、不跨园。
+- `total`：当前 `status` 筛选后的名单条数（`list.length`），不是 `total_students`；`unsubmitted` 时等于 `unsubmitted_count`，`submitted` 时等于 `submitted_count`，`all` 时等于两者之和。
 - `submitted` = 至少有一条未删除提交；`unsubmitted` = 没有；`all` = 两者并集。
 - 排序：`student_id ASC`；不分页（班级规模有限，一次全量）。
-- `submitted_count + unsubmitted_count = total_students`，与 `GET /teacher/tasks/:id/stats` 的 `total_students` 同口径。
+- `submitted_count` / `unsubmitted_count`：当前 scope 内已提交 / 未提交人数；班级任务按当前在读，个体任务按目标孩子 0/1。
+- `submitted_count + unsubmitted_count = total_students`，与 `GET /teacher/tasks/:id/stats` 的 `total_students` 同口径；个体任务的 `total_students` 同样按目标孩子是否在读取 1/0。
 - 与 `stats.participant_count` 的差异：后者是**历史去重提交者**，包含已转班/离班孩子；`submitted_count` 只算当前在读。转班场景 `participant_count` 可能大于 `submitted_count`。09 的「参与 N/M」如果要求严格 `N ≤ M`，应改用 `submitted_count / total_students`（待确认，§9.11）。
 - 任务不属于当前老师班级/园所 → **404**；`status` 非法 → **422**。
 - 实现为当前任务 + 当前班级的一次查询，不新增全班逐人扫描端点。
@@ -981,7 +982,8 @@
 
 ### 9.11 与产品文档的差异 / 待确认
 
-- **手动提醒 vs 产品 2.2**：`TASK-RECORD-PRODUCT.md` 2.2 写「不做发布后未提交提醒、待回应提醒」，但 2026-11-21 用户决定保留**手动**未提交提醒、不做自动提醒。本节按后者编写；产品文档需要回写这一条。
+- **产品文档**：记录型任务的产品原文未入库；本 PR 不新增该文件，以 §9 的决策口径为准。
+- **手动提醒 vs 产品 2.2**：产品 2.2（2026-11-21 决策，原产品文档未入库）写「不做发布后未提交提醒、待回应提醒」，但 2026-11-21 用户决定保留**手动**未提交提醒、不做自动提醒。本节按后者编写；产品文档需要回写这一条。
 - **仍待定：标记已阅对家长是否可见**。产品 3.2 要求「仅标记已阅」，但未说明家长端看到什么。本契约把它定义为老师端效率字段（家长端 `responded` 不变）；若要让家长看到「老师已阅」，需要家长端新增状态。同时老师端 `responded_count` 与 `completed` 都把已阅视为已处理；如果产品要求「已完成」必须有主回应（`response_id > 0`），这两处要一起改。
 - **活动任务能否单独结束**：本契约按 DELETE 同口径禁止（422）。如果活动任务允许老师单条结束，需要产品确认后放宽。
 - **仍待定：结束任务是否通知家长**。本契约定义为**不通知**（与产品 2.2 不做提醒一致）。如果要在结束时推「任务已结束」，需要另补通知文案与计数。
