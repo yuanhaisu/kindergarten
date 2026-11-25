@@ -68,7 +68,7 @@ web
 ## Brand Commitments
 
 - **名称**：养成星球 / Nurture Planet
-- **Logo 资产**：新 kit `assets/logo-v2/`（A1 弧巢；teacher 已接入，parent 待接入）；旧 `assets/logo.png`、`logo-32/64/128/256.png` 保留归档
+- **Logo 资产**：新 kit `assets/logo-v2/`（A1 弧巢；teacher 已接入，parent 待接入）；旧 `assets/logo.png`、`logo-32/64/128/256.png` 及 `assets/logo-v2/directions-ellipse/` 已过时，不再保留（2026-11-25 移除）。
 - **Logo 设计哲学**：`assets/logo-design-philosophy.md`（"Tender Cosmos"）——温柔的惊奇感。核心词：柔和、圆润、无锐角、温暖的天体色（暖蓝/嫩绿/琥珀橙）、大面积留白、亲子比例结构。**这是既有视觉资产的身份约束，不因新设计而推翻。**
 
 ## Evidence on Hand
