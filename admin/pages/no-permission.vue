@@ -14,11 +14,6 @@
 <script setup lang="ts">
 import { Lock } from '@element-plus/icons-vue'
 
-const auth = useAuthStore()
-const router = useRouter()
-
-function logout() {
-  auth.clearSession()
-  router.push('/login')
-}
+// 无权限页的退出同样是显式登出：必须吊销服务端会话。
+const logout = useAdminLogout()
 </script>

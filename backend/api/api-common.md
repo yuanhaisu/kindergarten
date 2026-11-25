@@ -172,6 +172,16 @@
 - **错误**：缺 `app_id` / 角色与客户端不一致 / 家长端携带 `invite_code` → `422`（`42200`）；
   客户端未注册或已停用 → `403`（`40300`）；`code` 无效 → `400`（`40002`）。
 - `must_change_password` 只对管理端密码登录生效，小程序登录恒为 `false`。
+- **首登强制改密门禁**：管理端（`admin_web`）账号在 `must_change_password=true` 期间，
+  服务端只放行 `GET|POST /common/consent`、`GET /common/user/profile`、
+  `PUT /common/user/password`、`POST /auth/logout`。其余业务接口（含 `/admin/*`、
+  upload、messages、`PUT /common/user/profile`）返回 `403` + `code=40303`。
+  客户端收到 40303 应跳转改密页，**不得当作登出**（不要清 token / 不要跳登录页）。
+  改密成功后 `must_change_password` 立即为 `false`，同一 access 的下一个请求即放行；
+  改密前签发的 refresh 仍可续期（`200`），但续出的新 access 同样返回 40303；
+  改密后旧 refresh 因密码指纹不匹配返回 `401`。
+- `must_change_password` 门禁只作用于管理端凭证；小程序（带 `app_id`）与平台
+  （`scope=platform`）凭证不受影响。
 
 ---
 
@@ -363,10 +373,13 @@
 }
 ```
 
+- 管理端账号在 `must_change_password=true` 时仍可续期（`200`），但新 access 仍受
+  40303 门禁；续期不会清除该标记，只有 `PUT /common/user/password` 会。
 - **轮换**：refresh token 是不透明字符串（服务端 Redis 中的 jti），每次续期都换发新的，
   旧值立即失效、不能重放；并发用同一个 refresh 续期只有一个成功。
 - **401（`40100`）**：refresh 不存在 / 已被消费 / 已吊销 / 已过期；账号已改密、被管理员
-  重置密码或管理员被删除（签发时间早于账号级失效时间）；身份已解绑。
+  重置密码或管理员被删除（签发时间早于账号级失效时间）；身份已解绑。改密前签发的
+  refresh 同样返回 401，客户端应清理会话并重新登录，不要重试。
 - **先消费再校验**：服务端先 `GETDEL` 消费 refresh，再校验 epoch 等条件。因此校验
   失败时这次 refresh 已被烧掉，**重试同一个 refresh 也只会得到 401**；客户端应清理本地
   会话并重新登录，而不是重试。
@@ -526,6 +539,7 @@ Content-Type: multipart/form-data
   "nickname": "李老师",
   "avatar": "https://cdn.example.com/avatar/1.jpg",
   "gender": 1,
+  "must_change_password": false,
   "roles": [
     {
       "role": "teacher",
@@ -552,6 +566,8 @@ Content-Type: multipart/form-data
 
 - `roles[]` 只含当前会话园所（token 的 `kindergarten_id`）的角色条目；字段随 `role` 取值不同。
   多园账号想拿全部成员关系，调 `GET /common/user/kindergartens`，不要期望 `roles` 里有多园。
+- `must_change_password` 供管理端硬刷新后判断首登改密是否仍未完成（#199）：门禁期间本接口
+  被豁免，客户端据此跳改密页而不是业务页。与登录响应同一口径，小程序凭证恒为 `false`。
 - `role: "admin"` 的条目承载管理端角色信息：
   - `admin_role`：管理端角色标记/名称（超管账号为 `super_admin` 标记）。
   - `permissions`：该账号在对应园所的权限码集合，供管理端渲染菜单与拦截路由使用；**超管为通配时返回 `["*"]`**。权限码目录见 `api-admin/17-roles.md` 的 `GET /admin/permissions`。
@@ -823,9 +839,12 @@ Content-Type: multipart/form-data
 
 > 原密码错误返回 422；新密码不满足强度要求返回 422。
 >
+> 该端点属于首登强制改密门禁的豁免列表：`must_change_password=true` 时仍可调用。
 > **改密成功会推进账号级失效时间（#182）**：包括本次调用所用 access 在内的所有旧
 > access / refresh 立即 `401`，客户端必须用新口令重新登录。失效时间写入失败时返回
 > `503`（`50300`）且**口令不变**，调用方可稍后重试。
+> 其余业务接口在改密前返回 `403` + `code=40303`（客户端应跳转改密页，
+> 不得当作登出）。
 
 ---
 

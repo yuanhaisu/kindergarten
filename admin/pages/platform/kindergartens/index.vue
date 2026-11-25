@@ -69,7 +69,7 @@
       />
     </div>
 
-    <el-dialog v-model="createVisible" title="开通园所" width="480px">
+    <el-dialog v-model="createVisible" title="开通园所" width="min(480px, 92vw)">
       <el-form ref="formRef" :model="form" :rules="formRules" label-position="top">
         <el-form-item label="园所名称" prop="name">
           <el-input v-model="form.name" placeholder="如：阳光幼儿园" />
@@ -93,7 +93,44 @@
       </template>
     </el-dialog>
 
-    <el-drawer v-model="detailVisible" title="园所详情" size="520px">
+    <!-- 入口码是开通链路最后一环：toast 会消失，这里保持到显式关闭。 -->
+    <el-dialog
+      v-model="successVisible"
+      title="开通成功"
+      width="min(480px, 92vw)"
+      :close-on-click-modal="false"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-platform-textBody">
+          园所已开通。请把家长入口码交给园长；园长登录园所后台后可生成家长扫码入口。
+        </p>
+        <div class="rounded-xl border border-platform-borderLight bg-platform-brandBg p-4">
+          <div class="text-sm text-platform-textMuted">园所 ID</div>
+          <div class="mt-1 text-lg font-semibold tabular-nums text-platform-textPrimary">
+            {{ onboarded?.kindergarten_id }}
+          </div>
+          <div class="mt-4 text-sm text-platform-textMuted">家长入口码</div>
+          <div class="mt-1 flex items-center gap-2">
+            <el-input
+              readonly
+              :model-value="successCodeText"
+              class="font-mono"
+              aria-label="家长入口码"
+            />
+            <el-button type="primary" :disabled="!successHasCode" @click="copySuccessCode">复制</el-button>
+          </div>
+          <p v-if="successCopyHint" class="mt-2 text-sm text-platform-warningStrong" aria-live="polite">
+            {{ successCopyHint }}
+          </p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="successVisible = false">关闭</el-button>
+        <el-button type="primary" @click="viewSuccessDetail">查看该园详情</el-button>
+      </template>
+    </el-dialog>
+
+    <el-drawer v-model="detailVisible" title="园所详情" size="min(520px, 92vw)">
       <div v-loading="detailLoading" class="space-y-5">
         <div v-if="detail">
           <div class="text-lg font-semibold text-platform-textPrimary">{{ detail.name }}</div>
@@ -101,6 +138,23 @@
             园长 {{ detail.principal }} · 在园 {{ detail.student_count }} 人 ·
             {{ detail.status === 'active' ? '在营' : '停用' }}
           </div>
+        </div>
+        <div v-if="detail">
+          <div class="mb-2 text-sm font-medium text-platform-textPrimary">家长入口码</div>
+          <div class="flex items-center gap-2">
+            <el-input
+              readonly
+              :model-value="publicCodeText(detail.public_code)"
+              class="font-mono"
+              aria-label="家长入口码"
+            />
+            <el-button link type="primary" :disabled="!hasPublicCode(detail.public_code)" @click="copyDetailCode">
+              复制
+            </el-button>
+          </div>
+          <p v-if="detailCopyHint" class="mt-1 text-sm text-platform-warningStrong" aria-live="polite">
+            {{ detailCopyHint }}
+          </p>
         </div>
         <div>
           <div class="mb-2 text-sm font-medium text-platform-textPrimary">功能授权</div>
@@ -134,11 +188,13 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
+import type { Ref } from 'vue'
 import {
   getKindergarten,
   listKindergartens,
   onboardKindergarten,
   setKindergartenStatus,
+  type OnboardKindergartenResult,
   type PlatformKindergartenDetail,
   type PlatformKindergartenRow,
 } from '~/api/platform/kindergartens'
@@ -147,6 +203,7 @@ import {
   validateAdminPassword,
   validatePhone,
 } from '~/utils/platformKindergarten'
+import { copyPublicCode, hasPublicCode, publicCodeText } from '~/utils/publicCode'
 import { formatMoney } from '~/utils/format'
 
 definePageMeta({ layout: 'platform' })
@@ -162,7 +219,8 @@ const loading = ref(false)
 const createVisible = ref(false)
 const submitting = ref(false)
 const formRef = ref<FormInstance>()
-const form = reactive({ name: '', principal: '', phone: '', admin_password: '', address: '' })
+const EMPTY_FORM = { name: '', principal: '', phone: '', admin_password: '', address: '' }
+const form = reactive({ ...EMPTY_FORM })
 const formRules: FormRules = {
   name: [{ required: true, message: '请输入园所名称', trigger: 'blur' }],
   principal: [{ required: true, message: '请输入园长姓名', trigger: 'blur' }],
@@ -194,6 +252,13 @@ const detailVisible = ref(false)
 const detailLoading = ref(false)
 const detail = ref<PlatformKindergartenDetail | null>(null)
 const detailId = ref<number | null>(null)
+const detailCopyHint = ref('')
+
+const successVisible = ref(false)
+const onboarded = ref<OnboardKindergartenResult | null>(null)
+const successCopyHint = ref('')
+const successCodeText = computed(() => publicCodeText(onboarded.value?.public_code))
+const successHasCode = computed(() => hasPublicCode(onboarded.value?.public_code))
 
 async function load() {
   loading.value = true
@@ -227,7 +292,8 @@ function onSizeChange() {
 }
 
 function openCreate() {
-  Object.assign(form, { name: '', principal: '', phone: '', admin_password: '', address: '' })
+  Object.assign(form, EMPTY_FORM)
+  formRef.value?.clearValidate()
   createVisible.value = true
 }
 
@@ -237,8 +303,14 @@ async function submitCreate() {
   submitting.value = true
   try {
     const res = await onboardKindergarten({ ...form })
-    ElMessage.success(`已开通，园所 ID ${res.kindergarten_id}，请把初始口令告知园长`)
+    // 成功弹窗只交付入口码；清空表单（含初始口令）避免口令残留在页面上。
+    Object.assign(form, EMPTY_FORM)
+    formRef.value?.clearValidate()
     createVisible.value = false
+    onboarded.value = res
+    successCopyHint.value = ''
+    successVisible.value = true
+    ElMessage.success('已开通')
     await load()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '开通失败')
@@ -247,10 +319,39 @@ async function submitCreate() {
   }
 }
 
-async function openDetail(row: PlatformKindergartenRow) {
-  detailId.value = row.id
+const COPY_UNAVAILABLE_HINT = '当前环境无法访问剪贴板，请手动选中入口码复制'
+
+/** 成功弹窗与详情抽屉共用同一套复制反馈，避免两处文案/行为漂移。 */
+async function copyCode(code: string | null | undefined, hint: Ref<string>) {
+  const outcome = await copyPublicCode(code)
+  hint.value = outcome === 'copied' ? '已复制家长入口码' : COPY_UNAVAILABLE_HINT
+  if (outcome !== 'copied') ElMessage.warning(COPY_UNAVAILABLE_HINT)
+}
+
+function copySuccessCode() {
+  return copyCode(onboarded.value?.public_code, successCopyHint)
+}
+
+function copyDetailCode() {
+  return copyCode(detail.value?.public_code, detailCopyHint)
+}
+
+async function viewSuccessDetail() {
+  const id = onboarded.value?.kindergarten_id
+  successVisible.value = false
+  if (id == null) return
+  await openDetailById(id)
+}
+
+function openDetail(row: PlatformKindergartenRow) {
+  return openDetailById(row.id)
+}
+
+async function openDetailById(id: number) {
+  detailId.value = id
   // 先清空上一所园的数据，避免加载期间抽屉里短暂显示错误的授权/订单。
   detail.value = null
+  detailCopyHint.value = ''
   detailVisible.value = true
   await refreshDetail()
 }

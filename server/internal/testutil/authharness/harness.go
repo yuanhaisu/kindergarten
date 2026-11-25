@@ -231,7 +231,7 @@ func jwtConfig(cfg *config.Config) (secret, platformSecret []byte, atTTL, rtTTL 
 }
 
 // buildEngine 复刻 router.go 中认证与 common 分组的装配：
-// AuthJWT → RequireActiveKindergarten → CasbinRBAC → ModuleGate。
+// AuthJWT → RequirePasswordChange → RequireActiveKindergarten → CasbinRBAC → ModuleGate。
 //
 // 只注册这些分组，不拉整棵业务依赖树；后续票需要业务组时在 h.Handler 上追加，
 // 继续复用同一套中间件与同一个测试库。
@@ -298,6 +298,8 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 
 	authed := v1.Group("")
 	authed.Use(middleware.AuthJWT(h.Secret, h.Auth.TokenRevoker(), h.Auth.TenantEpochStore()))
+	// 首登强制改密（#198）：与 router.go 同源装配，只作用于 admin_web 凭证。
+	authed.Use(middleware.RequirePasswordChange(h.Auth))
 	authed.Use(middleware.RequireActiveKindergarten(kgStatus))
 	// 未绑定 token 白名单（#175）必须在 Casbin 之前：空角色过不了任何策略。
 	authed.Use(middleware.RequireBoundAccount())
@@ -308,9 +310,9 @@ func buildEngine(h *Harness, repoRoot string, kgStatus service.KindergartenStatu
 		authed.POST("/auth/switch-kindergarten", hnd.SwitchKindergarten)
 		authed.GET("/common/user/profile", hnd.GetProfile)
 		authed.PUT("/common/user/profile", hnd.UpdateProfile)
-		authed.GET("/common/user/kindergartens", hnd.GetMyKindergartens)
-		// 自助改密（#182）：改密后旧 access / refresh 必须立即失效。
+		// 首登/自助改密（#198/#182）：门禁豁免端点；改密后旧 access / refresh 立即失效。
 		authed.PUT("/common/user/password", hnd.ChangePassword)
+		authed.GET("/common/user/kindergartens", hnd.GetMyKindergartens)
 
 		// 老师邀请绑定（#168）：与 router.go 同源装配限流。
 		authed.POST("/common/user/bind-invite",

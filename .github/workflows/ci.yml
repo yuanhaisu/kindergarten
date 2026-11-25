@@ -84,7 +84,11 @@ jobs:
           working-directory: server
           args: ./...
       - name: Unit tests (DB-free packages)
-        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./internal/auth ./internal/testutil/testdb ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
+        run: cd server && go test ./internal/app ./internal/config ./internal/middleware ./internal/auth ./internal/testutil/testdb ./internal/handler/http ./pkg/... ./cmd/internal/seedutil ./cmd/setadmin -count=1
+      # handler 包的 409/422 映射是平台确认/套餐错误契约的一部分，纯单测、无 DB；
+      # 单独 -run 两个契约测试，避免把整包可能依赖 DB 的用例带进 DB-free 步骤。
+      - name: Handler error mapping tests
+        run: cd server && go test ./internal/handler/http -run 'TestWriteConfirmOrderErrorMapsCreditReason|TestWritePlanErrorSharedAndEntrySpecificMappings' -count=1 -v
 
   migrate:
     name: 数据库迁移（干净库）
@@ -102,8 +106,18 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
     env:
-      CONFIG_PATH: configs/app.ini
+      # testdb 在包目录下运行 go test，相对路径会找不到 server/configs/app.ini。
+      CONFIG_PATH: ${{ github.workspace }}/server/configs/app.ini
       MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/kindergarten_migrate_test?charset=utf8mb4&parseTime=True&loc=Local"
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +125,11 @@ jobs:
         with:
           go-version: '1.25'
       - name: Prepare config
-        run: cp server/configs/app.ini.example server/configs/app.ini
+        run: |
+          cp server/configs/app.ini.example server/configs/app.ini
+          # 模板的 redis 密码是占位符；CI 的 redis service 无鉴权，
+          # 不置空会因 AUTH CHANGE_ME 被拒。REDIS_PASSWORD 空值不会覆盖文件，所以改文件。
+          sed -i '/^\[redis\]/,/^\[/ s/^password = CHANGE_ME$/password = /' server/configs/app.ini
       - name: goose up (clean DB)
         working-directory: server
         run: go run ./cmd/migrate up
@@ -151,6 +169,45 @@ jobs:
           go run ./cmd/dbcheck user_consents
           go run ./cmd/dbcheck --query "SHOW COLUMNS FROM payments LIKE 'idempotency_key'" | grep -q idempotency_key
           go run ./cmd/dbcheck --query "SHOW COLUMNS FROM commission_ledger LIKE 'reversed_amount_cents'" | grep -q reversed_amount_cents
+      # DB-backed 商业/开通测试（订单确认、收款、授权、平台开通）只在有真实库时才有意义。
+      # 复用上面已迁移到最新的干净库，不引入第二套流水线。
+      # 这里按测试名选取商业域用例：仓库里另有一批历史用例假设开发库存在 kg 4 / class 6
+      # 等固定数据，在干净库上会因外键失败；新增商业用例请沿用这些前缀，才能进这道门禁。
+      - name: DB-backed commercial tests (race)
+        working-directory: server
+        timeout-minutes: 30
+        run: |
+          set -o pipefail
+          go test ./internal/repository ./internal/service -race -p 1 -count=1 -timeout 15m -v \
+            -run '^(TestBilling|TestPayment|TestOrder|TestEntitlement|TestCommission|TestPlan_|TestPlanTier|TestPlatform|TestSubscription|TestCommercial|TestActiveStudentCount|TestDeriveOrderStatus|TestCancelGuard)' \
+            2>&1 | tee "$RUNNER_TEMP/db-tests.log"
+      # 这些测试在缺少 configs/app.ini、DSN 或独立测试库时会 t.Skip。跳过等于没有门禁。
+      # 只匹配「缺库/缺配置」的具体原因（数据依赖的合法跳过不在此列），
+      # 再断言关键商业用例确实执行并通过，防止 -run 选空或改名后门禁静默失效。
+      - name: DB-backed tests must not skip
+        working-directory: server
+        run: |
+          if grep -Eq '跳过：找不到 .*configs/app\.ini|跳过：MySQL DSN 为空|跳过：本地无可用 DB 配置|跳过：MySQL 未配置|authharness:' "$RUNNER_TEMP/db-tests.log"; then
+            echo "::error::DB-backed 测试因缺少数据库配置被跳过；CI 必须连到 MySQL service。"
+            grep -En '跳过：|authharness:' "$RUNNER_TEMP/db-tests.log" || true
+            exit 1
+          fi
+          for name in \
+            TestBillingFlow_SnapshotPaymentsAndCancel \
+            TestPaymentIntegrity_PositivePaymentCannotExceedAmountDue \
+            TestBillingCreditGrant_ZeroPaidConfirmRequiresReason \
+            TestDeriveOrderStatus_PayDueAt \
+            TestOrderCreate_RejectsPastPayDueAt \
+            TestOrderCreate_SameDayPayDueAtAllowed \
+            TestOrderCreate_RejectsZeroAmount \
+            TestPlan_ZeroPriceCreateRejected \
+            TestPlatformOnboard_ReusesExistingParentAccount; do
+            if ! grep -q "^--- PASS: $name " "$RUNNER_TEMP/db-tests.log"; then
+              echo "::error::关键 DB 用例 $name 未执行或未通过"
+              exit 1
+            fi
+          done
+          echo "DB-backed tests ran without config skips."
 
   authharness:
     name: 认证测试（authharness / MySQL 8）

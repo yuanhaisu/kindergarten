@@ -78,7 +78,8 @@
 > 同一手机号已在任一园所担任管理员时返回 `409`（v1 一手机号一 admin），园所不被创建。
 > `public_code` 为开通时生成的公开入口码，与园所同事务落库，创建后立即可用于家长端入口。
 > `admin_password` 必填，由平台运营在开通时设置：至少 8 位，且同时包含大写字母、小写字母和数字；
-> 强度不足返回 `422`。园长用该口令首次登录后必须改密（响应中 `must_change_password=true`）。
+> 强度不足返回 `422`。园长用该口令首次登录后必须改密（响应中 `must_change_password=true`）；
+> 改密前管理端业务接口返回 `403` + `code=40303`，语义与豁免端点见 `api-common.md` §1。
 
 ---
 
@@ -106,7 +107,7 @@
     }
   ],
   "recent_orders": [
-    { "id": 12, "order_no": "ORD20261106001", "amount_due_cents": 150000, "status": "unpaid" }
+    { "id": 12, "order_no": "ORD202611061000001234567891234", "amount_due_cents": 150000, "status": "unpaid" }
   ]
 }
 ```

@@ -255,7 +255,7 @@ func (s *AuthService) buildUserInfo(ctx context.Context, user *domain.User, scop
 }
 
 // ChangePassword 自助改密。平台开通园所时创建的园长账号首次登录后必须走这里，
-// 改密成功后清除 must_change_password。
+// 改密成功后清除 must_change_password，并推进账号级失效时间（旧 access/refresh 全部 401）。
 func (s *AuthService) ChangePassword(ctx context.Context, userID uint64, oldPassword, newPassword string) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -283,6 +283,22 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uint64, oldPass
 		"password_hash":        hash,
 		"must_change_password": false,
 	})
+}
+
+// MustChangePassword 是首登强制改密门禁的每请求检查器（#198）。
+//
+// 直接读 users.must_change_password，不缓存：改密会推进账号级失效时间
+// （#182），旧 access 不再可用；本检查器只负责读取标记。账号不存在也返回 error——门禁必须失败关闭，不能把
+// 「查不到用户」解释成「无需改密」。
+func (s *AuthService) MustChangePassword(ctx context.Context, userID uint64) (bool, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return false, fmt.Errorf("USER_NOT_FOUND")
+	}
+	return user.MustChangePassword, nil
 }
 
 // issueAdminTokens 签发管理端会话（#166）：先收敛出唯一园所的管理员角色，
@@ -1072,6 +1088,9 @@ type ProfileInfo struct {
 	Gender    int        `json:"gender"`
 	Roles     []RoleInfo `json:"roles"`
 	CreatedAt time.Time  `json:"created_at"`
+	// 首登强制改密标记（#198/#199）：管理端硬刷新后 store 为空，
+	// 只能靠这个被门禁豁免的接口判断下一步去改密页还是业务页。
+	MustChangePassword bool `json:"must_change_password"`
 }
 
 func (s *AuthService) GetProfile(ctx context.Context, userID uint64, scope RoleScope) (*ProfileInfo, error) {
@@ -1115,6 +1134,8 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uint64, scope RoleS
 		Gender:    user.Gender,
 		Roles:     roleInfos,
 		CreatedAt: user.CreatedAt,
+		// 与登录响应同一口径：管理端密码登录才暴露真实值。
+		MustChangePassword: user.MustChangePassword && !scope.clientScoped,
 	}, nil
 }
 

@@ -112,6 +112,10 @@ func writeCreateOrderError(c *gin.Context, err error) {
 		response.ErrValidation(c, "按在园幼儿数无法落入该套餐的任何档位：档位配置不完整，请先修正套餐档位后重试")
 	case errors.Is(err, service.ErrInvalidPayDueAt):
 		response.ErrValidation(c, "付款到期日格式不合法，应为 YYYY-MM-DD")
+	case errors.Is(err, service.ErrPayDueAtInPast):
+		response.ErrValidation(c, "付款到期日不能早于今天")
+	case errors.Is(err, service.ErrOrderAmountNotPositive):
+		response.ErrValidation(c, "订单应收金额必须大于 0")
 	default:
 		response.ErrInternal(c, "创建订单失败")
 	}
@@ -166,6 +170,28 @@ func (h *Handler) PlatformConfirmOrder(c *gin.Context) {
 // 零收款确认缺理由必须返回可识别的 422，管理端据此提示补充理由，
 // 而不是让运营把 500 当成系统故障。
 func writeConfirmOrderError(c *gin.Context, err error) {
+	// #203 守卫与 service 内的优先级一致：服务期结束 > 过期 > 部分收款 > 零收款理由。
+	// 服务期已结束的订单即使全额已付也不可确认；过期且未收清时理由不能绕过。
+	if errors.Is(err, service.ErrOrderServiceEnded) {
+		response.ErrConflict(c, "订单服务期已结束，不可确认；请取消后重新创建订单")
+		return
+	}
+	if errors.Is(err, service.ErrOrderExpired) {
+		response.ErrValidation(c, "订单已过付款到期日且未收清，不可确认；请取消后重新创建订单")
+		return
+	}
+	// 部分收款一律不可确认：除了提示先收清，还要把尚欠金额结构化返回，
+	// 管理端据此直接展示，不必解析文案（#201）。
+	var underpaid *service.OrderUnderpaidError
+	if errors.As(err, &underpaid) {
+		response.JSON(c, http.StatusUnprocessableEntity, response.Envelope{
+			Code: 42200,
+			Message: fmt.Sprintf("订单未收清，尚欠 %.2f 元；部分收款不可确认，请先收清或退款后取消订单",
+				float64(underpaid.RemainingCents)/100),
+			Data: gin.H{"remaining_cents": underpaid.RemainingCents},
+		})
+		return
+	}
 	if errors.Is(err, service.ErrCreditReasonRequired) {
 		response.ErrValidation(c, "零收款确认必须填写信用开通理由")
 		return

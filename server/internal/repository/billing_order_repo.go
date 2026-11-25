@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	mysqldriver "github.com/go-sql-driver/mysql"
@@ -21,6 +22,24 @@ func IsDuplicateKey(err error) bool {
 		return me.Number == 1062
 	}
 	return errors.Is(err, gorm.ErrDuplicatedKey)
+}
+
+// OrderNoUniqueKey 是订单号唯一约束在 MySQL 错误信息里的片段。goose 迁移建的是
+// uk_order_no，AutoMigrate 建的是 idx_orders_order_no，两者都包含列名，
+// 因此按它匹配而不是写死索引名。调用方应使用本常量，不要重复裸字面量。
+const OrderNoUniqueKey = "order_no"
+
+// IsDuplicateKeyFor 判断唯一键冲突（MySQL 1062）是否命中指定键名片段。
+// 订单号的唯一索引在 goose 迁移里叫 uk_order_no，AutoMigrate 建的是
+// idx_orders_order_no，两者都包含列名，所以按列名匹配而不是写死索引名。
+// 无法从错误信息确认命中哪个键时一律返回 false——只有确认是目标键才允许重试，
+// 其他唯一约束冲突必须原样抛给调用方。
+func IsDuplicateKeyFor(err error, keyPart string) bool {
+	var me *mysqldriver.MySQLError
+	if errors.As(err, &me) {
+		return me.Number == 1062 && strings.Contains(me.Message, keyPart)
+	}
+	return false
 }
 
 // OrderFilter 平台侧订单查询。平台查询必须显式给出过滤条件，
@@ -156,6 +175,19 @@ func (r *OrderRepo) UpdateTx(ctx context.Context, tx *gorm.DB, id uint64, cols m
 		return nil
 	}
 	return tx.WithContext(ctx).Model(&domain.Order{}).Where("id = ?", id).Updates(cols).Error
+}
+
+// ConfirmTx 条件更新订单：仅当订单仍未确认、未取消时写入，返回实际影响行数。
+// 这是确认幂等的最终裁决——调用方已持有该行的 FOR UPDATE 锁并复核过状态，
+// 条件更新仍是防止「解锁后状态被并发改掉」的兜底；影响行数为 0 即视为重复确认。
+func (r *OrderRepo) ConfirmTx(ctx context.Context, tx *gorm.DB, id uint64, cols map[string]any) (int64, error) {
+	if len(cols) == 0 {
+		return 0, nil
+	}
+	res := tx.WithContext(ctx).Model(&domain.Order{}).
+		Where("id = ? AND confirmed_at IS NULL AND cancelled_at IS NULL", id).
+		Updates(cols)
+	return res.RowsAffected, res.Error
 }
 
 // FindLatestActiveByKindergarten 返回园所最近一张已确认且未取消的订单，

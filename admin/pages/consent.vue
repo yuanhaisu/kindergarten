@@ -58,11 +58,14 @@
 
 <script setup lang="ts">
 import { getConsentStatus, recordConsent, type ConsentStatus } from '~/api/consent'
+import { resolveAuthGate } from '~/utils/authFlow'
+import { safeRedirectPath } from '~/utils/authPaths'
 
 definePageMeta({ layout: 'auth' })
 
 const route = useRoute()
 const auth = useAuthStore()
+const logout = useAdminLogout()
 const config = useRuntimeConfig()
 const siteUrl = (config.public.siteUrl as string) || ''
 
@@ -72,9 +75,29 @@ const submitting = ref(false)
 const agreed = ref(false)
 const error = ref('')
 
-function goNext() {
-  const redirect = (route.query.redirect as string) || '/'
-  navigateTo(redirect)
+async function goNext() {
+  const redirect = safeRedirectPath(route.query.redirect)
+  // 硬刷新后 store 里没有 user（会话只在 Cookie 里）。用 profile 校准一次，
+  // 否则同一账号换设备登录会漏掉强制改密，被 40303 半路拦下。
+  if (!auth.user) {
+    try {
+      await auth.fetchProfile()
+    } catch (e: unknown) {
+      if ((e as { status?: number }).status === 401) return
+      // 非 401 是网络/服务端故障：store 仍无 user，无法判断是否需强制改密。
+      // 不能静默当作已加载——记录日志并显式告警；放行后服务端 40303 仍是
+      // 强制改密的最终裁决（useHttp 会把 40303 引导到改密页）。
+      console.error('[consent] 读取用户资料失败，按未强制改密继续', e)
+      error.value = '暂时无法确认账号状态，如被引导改密请按提示操作'
+      ElMessage.warning(error.value)
+    }
+  }
+  await navigateTo(
+    resolveAuthGate(
+      { mustChangePassword: Boolean(auth.user?.must_change_password) },
+      redirect,
+    ),
+  )
 }
 
 async function loadStatus() {
@@ -115,7 +138,7 @@ async function submit() {
 }
 
 function decline() {
-  auth.clearSession()
-  navigateTo('/login')
+  // 拒绝政策也是显式退出：走中心化登出吊销服务端会话。
+  logout()
 }
 </script>

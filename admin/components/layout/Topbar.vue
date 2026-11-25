@@ -86,12 +86,8 @@ import { getTeachers } from '~/api/teachers'
 
 const app = useAppStore()
 const auth = useAuthStore()
-const router = useRouter()
-
-function logout() {
-  auth.clearSession()
-  router.push('/login')
-}
+// 中心化退出：吊销服务端 access/refresh，而不是只清本地。
+const logout = useAdminLogout()
 
 // ---- 人员速查 ----
 type Hit = { id: number; name: string; sub?: string }

@@ -48,12 +48,17 @@ function adapterOf(handler: (config: InternalAxiosRequestConfig) => HandlerResul
 }
 
 function createSession(
-  initial: { accessToken?: string | null; refreshToken?: string | null; onLoginPage?: boolean } = {},
+  initial: {
+    accessToken?: string | null
+    refreshToken?: string | null
+    onLoginPage?: boolean
+    onChangePasswordPage?: boolean
+  } = {},
 ) {
   let accessToken = initial.accessToken === undefined ? 'old-access' : initial.accessToken
   let refreshToken = initial.refreshToken === undefined ? 'old-refresh' : initial.refreshToken
   const saved: AdminAuthTokens[] = []
-  const calls = { clear: 0, redirect: 0, consent: 0 }
+  const calls = { clear: 0, redirect: 0, consent: 0, changePassword: 0 }
 
   const session: AdminSessionAdapter = {
     getAccessToken: () => accessToken,
@@ -75,6 +80,10 @@ function createSession(
     redirectToConsent: () => {
       calls.consent += 1
     },
+    redirectToChangePassword: () => {
+      calls.changePassword += 1
+    },
+    onChangePasswordPage: () => Boolean(initial.onChangePasswordPage),
   }
 
   return {
@@ -141,7 +150,7 @@ describe('useHttp 管理端单飞续期', () => {
     expect(fake.saved).toEqual([
       expect.objectContaining({ token: 'new-access', refresh_token: 'new-refresh' }),
     ])
-    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0 })
+    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0, changePassword: 0 })
     expect(students.data).toEqual({ path: '/admin/students' })
     expect(classes.data).toEqual({ path: '/admin/classes' })
   })
@@ -166,7 +175,7 @@ describe('useHttp 管理端单飞续期', () => {
 
     await expect(client.get('/admin/dashboard/summary')).rejects.toMatchObject({ status: 401 })
     expect(refreshCount).toBe(0)
-    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0 })
+    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0, changePassword: 0 })
   })
 
   it('登录接口 401（密码错误）不触发续期', async () => {
@@ -192,7 +201,7 @@ describe('useHttp 管理端单飞续期', () => {
       status: 401,
     })
     expect(refreshCount).toBe(0)
-    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0 })
+    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0, changePassword: 0 })
   })
 
   it('续期接口自身 401 不再次续期', async () => {
@@ -217,7 +226,7 @@ describe('useHttp 管理端单飞续期', () => {
       status: 401,
     })
     expect(refreshCount).toBe(1)
-    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0 })
+    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0, changePassword: 0 })
   })
 
   it('续期失败只清一次态、只跳转一次，所有等待的请求都失败', async () => {
@@ -246,7 +255,7 @@ describe('useHttp 管理端单飞续期', () => {
 
     expect(results.map((r) => r.status)).toEqual(['rejected', 'rejected', 'rejected'])
     expect(refreshCount).toBe(1)
-    expect(fake.calls).toEqual({ clear: 1, redirect: 1, consent: 0 })
+    expect(fake.calls).toEqual({ clear: 1, redirect: 1, consent: 0, changePassword: 0 })
     expect(fake.accessToken).toBeNull()
     expect(fake.refreshToken).toBeNull()
   })
@@ -275,7 +284,7 @@ describe('useHttp 管理端单飞续期', () => {
 
     await expect(client.get('/admin/students')).rejects.toMatchObject({ status: 401 })
     expect(refreshCount).toBe(1)
-    expect(fake.calls).toEqual({ clear: 1, redirect: 1, consent: 0 })
+    expect(fake.calls).toEqual({ clear: 1, redirect: 1, consent: 0, changePassword: 0 })
   })
 
   it('没有续期凭证时直接清态跳登录，不发续期请求', async () => {
@@ -298,7 +307,7 @@ describe('useHttp 管理端单飞续期', () => {
 
     await expect(client.get('/admin/students')).rejects.toBeInstanceOf(Error)
     expect(refreshCount).toBe(0)
-    expect(fake.calls).toEqual({ clear: 1, redirect: 1, consent: 0 })
+    expect(fake.calls).toEqual({ clear: 1, redirect: 1, consent: 0, changePassword: 0 })
   })
 
   it('403 + 40301 走隐私同意页，不触发续期', async () => {
@@ -325,6 +334,59 @@ describe('useHttp 管理端单飞续期', () => {
       code: 40301,
     })
     expect(refreshCount).toBe(0)
-    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 1 })
+    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 1, changePassword: 0 })
+  })
+
+  it('403 + 40303 跳改密页：不清会话、不续期、不跳登录', async () => {
+    const fake = createSession()
+    let refreshCount = 0
+
+    const adapter = adapterOf((config) => {
+      if (config.url === REFRESH_URL) {
+        refreshCount += 1
+        return { status: 200, data: { code: 0, data: { token: 'x', refresh_token: 'y' } } }
+      }
+      return { status: 403, data: { code: 40303, message: '请先修改初始密码' } }
+    })
+
+    const client = createAdminHttpClient({
+      baseURL: '/api/v1',
+      session: fake.session,
+      adapter,
+    })
+
+    await expect(client.get('/admin/kindergarten/info')).rejects.toMatchObject({
+      message: '请先修改初始密码',
+      status: 403,
+      code: 40303,
+    })
+    expect(refreshCount).toBe(0)
+    // 40303 不是会话失效：不能清态、不能走登录跳转，只引导到改密页。
+    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0, changePassword: 1 })
+    expect(fake.accessToken).toBe('old-access')
+    expect(fake.refreshToken).toBe('old-refresh')
+  })
+
+  it('改密页自身收到 40303 不再跳转，避免重定向循环', async () => {
+    const fake = createSession({ onChangePasswordPage: true })
+    let refreshCount = 0
+
+    const adapter = adapterOf((config) => {
+      if (config.url === REFRESH_URL) {
+        refreshCount += 1
+        return { status: 200, data: { code: 0, data: { token: 'x', refresh_token: 'y' } } }
+      }
+      return { status: 403, data: { code: 40303, message: '请先修改初始密码' } }
+    })
+
+    const client = createAdminHttpClient({
+      baseURL: '/api/v1',
+      session: fake.session,
+      adapter,
+    })
+
+    await expect(client.get('/admin/students')).rejects.toMatchObject({ code: 40303 })
+    expect(refreshCount).toBe(0)
+    expect(fake.calls).toEqual({ clear: 0, redirect: 0, consent: 0, changePassword: 0 })
   })
 })

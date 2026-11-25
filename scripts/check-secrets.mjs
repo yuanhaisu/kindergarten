@@ -83,6 +83,9 @@ const ALLOW = [
   { rule: 'password-assignment', file: /^server\/internal\/service\/platform_account_test\.go$/ },
   // #166 管理端会话单测的假 token（new-access / new-refresh），不是凭据
   { rule: 'password-assignment', file: /^admin\/tests\/unit\/useHttp\.test\.ts$/ },
+  // #199 中心化登出单测的假 token（old-refresh / rotated-access），不是凭据
+  { rule: 'password-assignment', file: /^admin\/tests\/unit\/logout\.test\.ts$/ },
+  { rule: 'password-assignment', file: /^admin\/tests\/unit\/useLogoutWiring\.test\.ts$/ },
   // #166 管理端会话测试的假园长口令，不是凭据
   { rule: 'password-assignment', file: /^server\/internal\/testutil\/authharness\/admin_session_test\.go$/ },
   // #173 测试库派生单测的假 DSN（tester:secret@tcp），不是凭据

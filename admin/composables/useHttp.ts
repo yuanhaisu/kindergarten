@@ -8,6 +8,7 @@ import type { ApiEnvelope } from '~/types/api'
 import {
   ADMIN_AUTH_LOGIN_PATH,
   ADMIN_AUTH_REFRESH_PATH,
+  ADMIN_CHANGE_PASSWORD_PAGE_PATH,
   ADMIN_CONSENT_PAGE_PATH,
   ADMIN_LOGIN_PAGE_PATH,
 } from '~/utils/authPaths'
@@ -53,6 +54,10 @@ export interface AdminSessionAdapter {
   onLoginPage(): boolean
   /** 未同意当前隐私政策（403 + 40301）时跳到同意页并带回跳地址 */
   redirectToConsent(): void
+  /** 首登未改密（403 + 40303）时跳到改密页；不得清会话 */
+  redirectToChangePassword(): void
+  /** 当前已在改密页：40303 不再跳转，避免循环 */
+  onChangePasswordPage(): boolean
 }
 
 export interface CreateAdminHttpOptions {
@@ -220,6 +225,11 @@ export function createAdminHttpClient(options: CreateAdminHttpOptions): AxiosIns
       if (status === 403 && bizCode === 40301) {
         session.redirectToConsent()
       }
+      // 首登未改密：403 + 40303 只引导到改密页。这不是会话失效，
+      // 不能清态/续期/跳登录，否则用户会被莫名登出；在改密页上则不再跳转。
+      if (status === 403 && bizCode === 40303 && !session.onChangePasswordPage()) {
+        session.redirectToChangePassword()
+      }
 
       throw wrapError(err)
     },
@@ -228,7 +238,7 @@ export function createAdminHttpClient(options: CreateAdminHttpOptions): AxiosIns
   return instance
 }
 
-function createNuxtAdminSession(): AdminSessionAdapter {
+export function createNuxtAdminSession(): AdminSessionAdapter {
   const accessCookie = () =>
     useCookie<string | null>(
       ADMIN_TOKEN_COOKIE,
@@ -262,6 +272,13 @@ function createNuxtAdminSession(): AdminSessionAdapter {
         navigateTo({ path: ADMIN_CONSENT_PAGE_PATH, query: { redirect: route.fullPath } })
       }
     },
+    redirectToChangePassword: () => {
+      const route = useRoute()
+      if (route.path !== ADMIN_CHANGE_PASSWORD_PAGE_PATH) {
+        navigateTo({ path: ADMIN_CHANGE_PASSWORD_PAGE_PATH, query: { redirect: route.fullPath } })
+      }
+    },
+    onChangePasswordPage: () => useRoute().path === ADMIN_CHANGE_PASSWORD_PAGE_PATH,
   }
 }
 

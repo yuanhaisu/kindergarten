@@ -23,13 +23,22 @@ func TestWriteConfirmOrderErrorMapsCreditReason(t *testing.T) {
 		status      int
 		code        int
 		messagePart string
+		data        map[string]int64
 	}{
-		{"missing reason", service.ErrCreditReasonRequired, 422, 42200, "理由"},
-		{"reason too long", service.ErrCreditReasonTooLong, 422, 42200, "255"},
-		{"not found", errors.New("ORDER_NOT_FOUND"), 404, 40400, "订单不存在"},
-		{"already confirmed", errors.New("ORDER_ALREADY_CONFIRMED"), 409, 40900, "订单状态不允许确认"},
-		{"cancelled", errors.New("ORDER_CANCELLED"), 409, 40900, "订单状态不允许确认"},
-		{"unexpected error", errors.New("UNEXPECTED"), 500, 50000, "确认订单失败"},
+		{"missing reason", service.ErrCreditReasonRequired, 422, 42200, "理由", nil},
+		{"reason too long", service.ErrCreditReasonTooLong, 422, 42200, "255", nil},
+		{
+			"partial payment underpaid",
+			&service.OrderUnderpaidError{RemainingCents: 99999},
+			422, 42200, "尚欠",
+			map[string]int64{"remaining_cents": 99999},
+		},
+		{"order expired", service.ErrOrderExpired, 422, 42200, "付款到期日", nil},
+		{"service ended", service.ErrOrderServiceEnded, 409, 40900, "服务期", nil},
+		{"not found", errors.New("ORDER_NOT_FOUND"), 404, 40400, "订单不存在", nil},
+		{"already confirmed", errors.New("ORDER_ALREADY_CONFIRMED"), 409, 40900, "订单状态不允许确认", nil},
+		{"cancelled", errors.New("ORDER_CANCELLED"), 409, 40900, "订单状态不允许确认", nil},
+		{"unexpected error", errors.New("UNEXPECTED"), 500, 50000, "确认订单失败", nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -38,12 +47,14 @@ func TestWriteConfirmOrderErrorMapsCreditReason(t *testing.T) {
 			writeConfirmOrderError(c, tc.err)
 			require.Equal(t, tc.status, w.Code)
 			var body struct {
-				Code    int    `json:"code"`
-				Message string `json:"message"`
+				Code    int              `json:"code"`
+				Message string           `json:"message"`
+				Data    map[string]int64 `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 			assert.Equal(t, tc.code, body.Code)
 			assert.Contains(t, body.Message, tc.messagePart)
+			assert.Equal(t, tc.data, body.Data)
 		})
 	}
 }
